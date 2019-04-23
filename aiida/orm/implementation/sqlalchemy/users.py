@@ -22,14 +22,14 @@ __all__ = ('SqlaUserCollection', 'SqlaUser')
 class SqlaUserCollection(BackendUserCollection):
     """Collection of SQLA Users"""
 
-    def create(self, email, first_name='', last_name='', institution=''):
+    def create(self, email, first_name='', last_name='', institution='', password=''):
         """
         Create a user with the provided email address
 
         :return: A new user object
         :rtype: :class:`aiida.orm.User`
         """
-        return SqlaUser(self.backend, email, first_name, last_name, institution)
+        return SqlaUser(self.backend, email, first_name, last_name, institution, password)
 
     def find(self, email=None, id=None):  # pylint: disable=redefined-builtin, invalid-name
         """
@@ -67,10 +67,11 @@ class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
 
     MODEL_CLASS = DbUser
 
-    def __init__(self, backend, email, first_name, last_name, institution):
+    def __init__(self, backend, email, first_name, last_name, institution, password):
+        # pylint: disable=too-many-arguments
         super(SqlaUser, self).__init__(backend)
         self._dbmodel = utils.ModelWrapper(
-            DbUser(email=email, first_name=first_name, last_name=last_name, institution=institution))
+            DbUser(email=email, first_name=first_name, last_name=last_name, institution=institution, password=password))
 
     @property
     def email(self):

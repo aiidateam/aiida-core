@@ -41,14 +41,14 @@ def has_icsd_config():
     """
     :return: True if the currently loaded profile has a ICSD configuration
     """
-
-    from aiida.settings import PROFILE_CONF
+    from aiida.manage.configuration import get_profile
+    profile = get_profile()
 
     required_keywords = {
         'ICSD_SERVER_URL', 'ICSD_MYSQL_HOST', 'ICSD_MYSQL_USER', 'ICSD_MYSQL_PASSWORD', 'ICSD_MYSQL_DB'
     }
 
-    return required_keywords <= set(PROFILE_CONF.keys())
+    return required_keywords <= set(profile.dictionary.keys())
 
 
 @unittest.skipUnless(has_mysqldb() and has_icsd_config(), "ICSD configuration in profile required")
@@ -61,14 +61,15 @@ class TestIcsd(AiidaTestCase):
         """
         Set up IcsdDbImporter for web and mysql db query.
         """
-        from aiida.settings import PROFILE_CONF
+        from aiida.manage.configuration import get_profile
+        profile = get_profile()
 
-        self.server = PROFILE_CONF['ICSD_SERVER_URL']
-        self.host = PROFILE_CONF['ICSD_MYSQL_HOST']
-        self.user = PROFILE_CONF['ICSD_MYSQL_USER']
-        self.password = PROFILE_CONF['ICSD_MYSQL_PASSWORD']
-        self.dbname = PROFILE_CONF['ICSD_MYSQL_DB']
-        self.dbport = PROFILE_CONF.get('ICSD_MYSQL_PORT', 3306)
+        self.server = profile.dictionary['ICSD_SERVER_URL']
+        self.host = profile.dictionary['ICSD_MYSQL_HOST']
+        self.user = profile.dictionary['ICSD_MYSQL_USER']
+        self.password = profile.dictionary['ICSD_MYSQL_PASSWORD']
+        self.dbname = profile.dictionary['ICSD_MYSQL_DB']
+        self.dbport = profile.dictionary.get('ICSD_MYSQL_PORT', 3306)
 
         self.importerdb = icsd.IcsdDbImporter(server=self.server, host=self.host)
         self.importerweb = icsd.IcsdDbImporter(server=self.server, host=self.host, querydb=False)

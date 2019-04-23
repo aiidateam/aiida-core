@@ -14,6 +14,8 @@ from __future__ import absolute_import
 
 import click
 
+__all__ = ('ConfigOptionParamType',)
+
 
 class ConfigOptionParamType(click.types.StringParamType):
     """ParamType for configuration options."""

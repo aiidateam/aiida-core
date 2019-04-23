@@ -28,9 +28,9 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import table, select, func
 
-from aiida import settings
 from aiida.common import json
 from aiida.cmdline.utils import echo
+from aiida.manage import configuration
 
 # revision identifiers, used by Alembic.
 revision = '1b8ed3425af9'
@@ -69,7 +69,7 @@ def export_workflow_data(connection):
     if count_workflow == 0 and count_workflow_data == 0 and count_workflow_step == 0:
         return
 
-    if not settings.TESTING_MODE:
+    if not configuration.PROFILE.is_test_profile:
         echo.echo('\n')
         echo.echo_warning('The legacy workflow tables contain data but will have to be dropped to continue.')
         echo.echo_warning('If you continue, the content will be dumped to a JSON file, before dropping the tables.')
@@ -78,7 +78,7 @@ def export_workflow_data(connection):
         if not click.confirm('Are you sure you want to continue', default=True):
             sys.exit(1)
 
-    delete_on_close = settings.TESTING_MODE
+    delete_on_close = configuration.PROFILE.is_test_profile
 
     data = {
         'workflow': [dict(row) for row in connection.execute(select(['*']).select_from(DbWorkflow))],

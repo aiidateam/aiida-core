@@ -452,6 +452,24 @@ class ProcessNode(Sealable, Node):
 
         return None
 
+    def validate_incoming(self, source, link_type, link_label):
+        """Validate adding a link of the given type from a given node to ourself.
+
+        Adding an input link to a `ProcessNode` once it is stored is illegal because this should be taken care of
+        by the engine in one go. If a link is being added after the node is stored, it is most likely not by the engine
+        and it should not be allowed.
+
+        :param source: the node from which the link is coming
+        :param link_type: the link type
+        :param link_label: the link label
+        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
+        """
+        super(ProcessNode, self).validate_incoming(source, link_type, link_label)
+        # if self.is_stored and link_type in [LinkType.INPUT_CALC, LinkType.INPUT_WORK]:
+        if self.is_stored:
+            raise ValueError('attempted to add an input link after the process node was already stored.')
+
     @property
     def is_valid_cache(self):
         """

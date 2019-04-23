@@ -25,7 +25,7 @@ from django.db.models.query import QuerySet
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 from aiida.common.exceptions import (ConfigurationError, DbContentError)
-from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
+from aiida.backends.djsite.settings import AUTH_USER_MODEL
 import aiida.backends.djsite.db.migrations as migrations
 from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
 

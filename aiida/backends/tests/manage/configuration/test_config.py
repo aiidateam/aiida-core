@@ -170,7 +170,7 @@ class TestConfig(AiidaTestCase):
                 Config.KEY_VERSION_OLDEST_COMPATIBLE: OLDEST_COMPATIBLE_CONFIG_VERSION,
             },
             Config.KEY_PROFILES: {
-                self.profile_name: self.profile
+                self.profile_name: self.profile.dictionary
             },
         }
 
@@ -227,13 +227,13 @@ class TestConfig(AiidaTestCase):
             config.set_default_profile('non_existing_profile')
 
         # After setting a default profile, it should return the right name
-        config.add_profile(self.profile_name, create_mock_profile(self.profile_name))
+        config.add_profile(create_mock_profile(self.profile_name))
         config.set_default_profile(self.profile_name)
         self.assertTrue(config.default_profile_name, self.profile_name)
 
         # Setting it when a default is already set, should not overwrite by default
-        alternative_profile_name = 'alterantive_profile_name'
-        config.add_profile(alternative_profile_name, create_mock_profile(alternative_profile_name))
+        alternative_profile_name = 'alternative_profile_name'
+        config.add_profile(create_mock_profile(alternative_profile_name))
         config.set_default_profile(self.profile_name)
         self.assertTrue(config.default_profile_name, self.profile_name)
 
@@ -254,11 +254,10 @@ class TestConfig(AiidaTestCase):
         self.assertEqual(config.profile_names, list(self.config_dictionary[Config.KEY_PROFILES]))
 
         # Test get_profile
-        profile = Profile(self.profile_name, self.profile)
-        self.assertEqual(config.get_profile(self.profile_name).dictionary, profile.dictionary)
+        self.assertEqual(config.get_profile(self.profile_name).dictionary, self.profile.dictionary)
 
         # Update a profile
-        updated_profile = Profile(self.profile_name, create_mock_profile(self.profile_name))
+        updated_profile = create_mock_profile(self.profile_name)
         config.update_profile(updated_profile)
         self.assertEqual(config.get_profile(self.profile_name).dictionary, updated_profile.dictionary)
 
@@ -279,37 +278,37 @@ class TestConfig(AiidaTestCase):
         config = Config(self.config_filepath, self.config_dictionary)
 
         # Getting option that does not exist, should simply return the option default
-        self.assertEqual(config.option_get(option_name, scope=self.profile_name), option.default)
-        self.assertEqual(config.option_get(option_name, scope=None), option.default)
+        self.assertEqual(config.get_option(option_name, scope=self.profile_name), option.default)
+        self.assertEqual(config.get_option(option_name, scope=None), option.default)
 
         # Unless we set default=False, in which case it should return None
-        self.assertEqual(config.option_get(option_name, scope=self.profile_name, default=False), None)
-        self.assertEqual(config.option_get(option_name, scope=None, default=False), None)
+        self.assertEqual(config.get_option(option_name, scope=self.profile_name, default=False), None)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), None)
 
         # Setting an option profile configuration wide
-        config.option_set(option_name, option_value)
+        config.set_option(option_name, option_value)
 
         # Getting configuration wide should get new value but None for profile specific
-        self.assertEqual(config.option_get(option_name, scope=None, default=False), option_value)
-        self.assertEqual(config.option_get(option_name, scope=self.profile_name, default=False), None)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value)
+        self.assertEqual(config.get_option(option_name, scope=self.profile_name, default=False), None)
 
         # Setting an option profile specific
-        config.option_set(option_name, option_value, scope=self.profile_name)
-        self.assertEqual(config.option_get(option_name, scope=self.profile_name), option_value)
+        config.set_option(option_name, option_value, scope=self.profile_name)
+        self.assertEqual(config.get_option(option_name, scope=self.profile_name), option_value)
 
         # Unsetting profile specific
-        config.option_unset(option_name, scope=self.profile_name)
-        self.assertEqual(config.option_get(option_name, scope=self.profile_name, default=False), None)
+        config.unset_option(option_name, scope=self.profile_name)
+        self.assertEqual(config.get_option(option_name, scope=self.profile_name, default=False), None)
 
         # Unsetting configuration wide
-        config.option_unset(option_name, scope=None)
-        self.assertEqual(config.option_get(option_name, scope=None, default=False), None)
-        self.assertEqual(config.option_get(option_name, scope=None, default=True), option.default)
+        config.unset_option(option_name, scope=None)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), None)
+        self.assertEqual(config.get_option(option_name, scope=None, default=True), option.default)
 
         # Setting a `None` like option
         option_value = 0
-        config.option_set(option_name, option_value)
-        self.assertEqual(config.option_get(option_name, scope=None, default=False), option_value)
+        config.set_option(option_name, option_value)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value)
 
     def test_option_global_only(self):
         """Test that `global_only` options are only set globally even if a profile specific scope is set."""
@@ -319,13 +318,33 @@ class TestConfig(AiidaTestCase):
         config = Config(self.config_filepath, self.config_dictionary)
 
         # Setting an option globally should be fine
-        config.option_set(option_name, option_value, scope=None)
-        self.assertEqual(config.option_get(option_name, scope=None, default=False), option_value)
+        config.set_option(option_name, option_value, scope=None)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value)
 
         # Setting an option profile specific should actually not set it on the profile since it is `global_only`
-        config.option_set(option_name, option_value, scope=None)
-        self.assertEqual(config.option_get(option_name, scope=self.profile_name, default=False), None)
-        self.assertEqual(config.option_get(option_name, scope=None, default=False), option_value)
+        config.set_option(option_name, option_value, scope=None)
+        self.assertEqual(config.get_option(option_name, scope=self.profile_name, default=False), None)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value)
+
+    def test_set_option_override(self):
+        """Test that `global_only` options are only set globally even if a profile specific scope is set."""
+        option_name = 'user.email'
+        option_value_one = 'first@email.com'
+        option_value_two = 'second@email.com'
+
+        config = Config(self.config_filepath, self.config_dictionary)
+
+        # Setting an option if it does not exist should work
+        config.set_option(option_name, option_value_one)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value_one)
+
+        # Setting it again will override it by default
+        config.set_option(option_name, option_value_two)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value_two)
+
+        # If we set override to False, it should not override, big surprise
+        config.set_option(option_name, option_value_one, override=False)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value_two)
 
     def test_store(self):
         """Test that the store method writes the configuration properly to disk."""

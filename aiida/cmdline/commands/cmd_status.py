@@ -68,6 +68,7 @@ def verdi_status():
         sys.exit(exit_code)  # stop here - without a profile we cannot access anything
 
     # getting the repository
+    repo_folder = 'undefined'
     try:
         repo_folder = get_repository_folder()
     except Exception as exc:
@@ -93,11 +94,10 @@ def verdi_status():
             exit_code = ExitCode.CRITICAL
 
     except Exception as exc:
-        pd_dict = profile.dictionary
         print_status(
             ServiceStatus.ERROR,
             'postgres',
-            "Error connecting to {}:{}".format(pd_dict['AIIDADB_HOST'], pd_dict['AIIDADB_PORT']),
+            "Error connecting to {}:{}".format(profile.database_hostname, profile.database_port),
             exception=exc)
         exit_code = ExitCode.CRITICAL
 

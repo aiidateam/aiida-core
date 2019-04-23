@@ -116,12 +116,19 @@ class Node(Entity):
             raise ValueError('the computer is not stored')
 
         computer = computer.backend_entity if computer else None
-        user = user.backend_entity if user else User.objects(backend).get_default().backend_entity
+        user = user.backend_entity if user else User.objects(backend).get_default()
 
         if user is None:
+            from aiida.manage.configuration import get_config, get_profile
+            config = get_config()
+            profile = get_profile()
+            print('CONFIG', config.dictionary)
+            print('PROFILE', profile.dictionary)
+            print('USERS', [user.email for user in User.objects(backend).all()])
             raise ValueError('the user cannot be None')
 
-        backend_entity = backend.nodes.create(node_type=self.class_node_type, user=user, computer=computer, **kwargs)
+        backend_entity = backend.nodes.create(
+            node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs)
         super(Node, self).__init__(backend_entity)
 
     def __repr__(self):

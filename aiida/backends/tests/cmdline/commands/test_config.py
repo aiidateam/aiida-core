@@ -27,7 +27,7 @@ class TestVerdiConfig(AiidaTestCase):
         self.cli_runner = CliRunner()
 
     @with_temporary_config_instance
-    def test_config_option_set(self):
+    def test_config_set_option(self):
         """Test the `verdi config` command when setting an option."""
         config = get_config()
 
@@ -39,10 +39,10 @@ class TestVerdiConfig(AiidaTestCase):
             result = self.cli_runner.invoke(cmd_verdi.verdi, options)
 
             self.assertClickSuccess(result)
-            self.assertEqual(str(config.option_get(option_name, scope=config.current_profile.name)), option_value)
+            self.assertEqual(str(config.get_option(option_name, scope=config.current_profile.name)), option_value)
 
     @with_temporary_config_instance
-    def test_config_option_get(self):
+    def test_config_get_option(self):
         """Test the `verdi config` command when getting an option."""
         option_name = 'daemon.timeout'
         option_value = str(30)
@@ -58,7 +58,7 @@ class TestVerdiConfig(AiidaTestCase):
         self.assertIn(option_value, result.output.strip())
 
     @with_temporary_config_instance
-    def test_config_option_unset(self):
+    def test_config_unset_option(self):
         """Test the `verdi config` command when unsetting an option."""
         option_name = 'daemon.timeout'
         option_value = str(30)
@@ -83,7 +83,7 @@ class TestVerdiConfig(AiidaTestCase):
         self.assertEqual(result.output, '')
 
     @with_temporary_config_instance
-    def test_config_option_set_global_only(self):
+    def test_config_set_option_global_only(self):
         """Test that `global_only` options are only set globally even if the `--global` flag is not set."""
         config = get_config()
         option_name = 'user.email'

@@ -24,7 +24,6 @@ except ImportError:
 
 from aiida.common import json
 
-from aiida.manage.configuration import Config
 from aiida.manage.configuration.migrations.utils import check_and_migrate_config
 from aiida.manage.configuration.migrations.migrations import _MIGRATION_LOOKUP
 
@@ -38,7 +37,7 @@ class TestConfigMigration(unittest.TestCase):
         currdir = os.path.dirname(os.path.abspath(__file__))
         filepath = os.path.join(currdir, 'test_samples', filename)
         with io.open(filepath, 'r', encoding='utf8') as handle:
-            return Config(filepath, json.load(handle))
+            return json.load(handle)
 
     def setUp(self):
         super(TestConfigMigration, self).setUp()
@@ -48,7 +47,7 @@ class TestConfigMigration(unittest.TestCase):
         """Test the full config migration."""
         config_initial = self.load_config_sample('input/0.json')
         with mock.patch.object(uuid, 'uuid4', return_value=uuid.UUID(hex='0' * 32)):
-            config_migrated = check_and_migrate_config(config_initial, store=False)
+            config_migrated = check_and_migrate_config(config_initial)
         config_reference = self.load_config_sample('reference/final.json')
         self.assertEqual(config_migrated, config_reference)
 

@@ -82,7 +82,7 @@ class DaemonClient(object):  # pylint: disable=too-many-public-methods,useless-o
         config = get_config()
         self._profile = profile
         self._SOCKET_DIRECTORY = None  # pylint: disable=invalid-name
-        self._DAEMON_TIMEOUT = config.option_get('daemon.timeout')  # pylint: disable=invalid-name
+        self._DAEMON_TIMEOUT = config.get_option('daemon.timeout')  # pylint: disable=invalid-name
 
     @property
     def profile(self):

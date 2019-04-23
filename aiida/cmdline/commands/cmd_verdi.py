@@ -27,9 +27,8 @@ def verdi(ctx, profile, version):
     """The command line interface of AiiDA."""
     import sys
     from aiida import get_version
-    from aiida.backends import settings
     from aiida.cmdline.utils import echo
-    from aiida.manage.configuration import get_config
+    from aiida.manage.configuration import get_config, load_profile
 
     if version:
         echo.echo('AiiDA version {}'.format(get_version()))
@@ -38,20 +37,16 @@ def verdi(ctx, profile, version):
     if ctx.obj is None:
         ctx.obj = AttributeDict()
 
-    try:
-        config = get_config()
-    except exceptions.ConfigurationError:
-        config = None
-    else:
+    config = get_config(create=True)
 
-        if not profile:
-            try:
-                profile = config.get_profile()
-            except exceptions.ProfileConfigurationError:
-                profile = None
+    if not profile:
+        try:
+            profile = config.get_profile()
+        except exceptions.ProfileConfigurationError:
+            profile = None
 
     if profile:
-        settings.AIIDADB_PROFILE = profile.name
+        load_profile(profile.name)
 
     ctx.obj.config = config
     ctx.obj.profile = profile

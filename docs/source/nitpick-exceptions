@@ -152,3 +152,4 @@ py:class  aiida.work.interstep.Builder
 py:class  Builder
 py:class  Data
 py:meth   aiida.orm.group.Group.get_from_string
+py:class  _WorkChainSpec

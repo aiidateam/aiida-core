@@ -25,9 +25,7 @@ DUPL_SUFFIX = ' (Imported #{})'
 # entities but we will refer to them as entities in the file (to simplify
 # references to them).
 NODE_ENTITY_NAME = "Node"
-LINK_ENTITY_NAME = "Link"
 GROUP_ENTITY_NAME = "Group"
-ATTRIBUTE_ENTITY_NAME = "Attribute"
 COMPUTER_ENTITY_NAME = "Computer"
 USER_ENTITY_NAME = "User"
 LOG_ENTITY_NAME = "Log"
@@ -35,22 +33,18 @@ COMMENT_ENTITY_NAME = "Comment"
 
 # The signatures used to reference the entities in the import/export file
 NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode"
-LINK_SIGNATURE = "aiida.backends.djsite.db.models.DbLink"
 GROUP_SIGNATURE = "aiida.backends.djsite.db.models.DbGroup"
 COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer"
 USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser"
-ATTRIBUTE_SIGNATURE = "aiida.backends.djsite.db.models.DbAttribute"
 LOG_SIGNATURE = "aiida.backends.djsite.db.models.DbLog"
 COMMENT_SIGNATURE = "aiida.backends.djsite.db.models.DbComment"
 
 # Mapping from entity names to signatures (used by the SQLA import/export)
 entity_names_to_signatures = {
     NODE_ENTITY_NAME: NODE_SIGNATURE,
-    LINK_ENTITY_NAME: LINK_SIGNATURE,
     GROUP_ENTITY_NAME: GROUP_SIGNATURE,
     COMPUTER_ENTITY_NAME: COMPUTER_SIGNATURE,
     USER_ENTITY_NAME: USER_SIGNATURE,
-    ATTRIBUTE_ENTITY_NAME: ATTRIBUTE_SIGNATURE,
     LOG_ENTITY_NAME: LOG_SIGNATURE,
     COMMENT_ENTITY_NAME: COMMENT_SIGNATURE
 }
@@ -58,11 +52,9 @@ entity_names_to_signatures = {
 # Mapping from signatures to entity names (used by the SQLA import/export)
 signatures_to_entity_names = {
     NODE_SIGNATURE: NODE_ENTITY_NAME,
-    LINK_SIGNATURE: LINK_ENTITY_NAME,
     GROUP_SIGNATURE: GROUP_ENTITY_NAME,
     COMPUTER_SIGNATURE: COMPUTER_ENTITY_NAME,
     USER_SIGNATURE: USER_ENTITY_NAME,
-    ATTRIBUTE_SIGNATURE: ATTRIBUTE_ENTITY_NAME,
     LOG_SIGNATURE: LOG_ENTITY_NAME,
     COMMENT_SIGNATURE: COMMENT_ENTITY_NAME
 }
@@ -80,7 +72,6 @@ entity_names_to_entities = {
 # Mapping of entity names to SQLA class paths
 entity_names_to_sqla_schema = {
     NODE_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbNode",
-    LINK_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbLink",
     GROUP_ENTITY_NAME: "aiida.backends.sqlalchemy.models.group.DbGroup",
     COMPUTER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.computer.DbComputer",
     USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser",
@@ -116,7 +107,6 @@ model_fields_to_file_fields = {
         "dbcomputer_id": "dbcomputer",
         "user_id": "user"
     },
-    LINK_ENTITY_NAME: {},
     GROUP_ENTITY_NAME: {
         "user_id": "user"
     },
@@ -144,9 +134,7 @@ def get_all_fields_info():
     unique_identifiers = {
         USER_ENTITY_NAME: "email",
         COMPUTER_ENTITY_NAME: "uuid",
-        LINK_ENTITY_NAME: None,
         NODE_ENTITY_NAME: "uuid",
-        ATTRIBUTE_ENTITY_NAME: None,
         GROUP_ENTITY_NAME: "uuid",
         LOG_ENTITY_NAME: "uuid",
         COMMENT_ENTITY_NAME: "uuid"
@@ -162,18 +150,6 @@ def get_all_fields_info():
         "metadata": {},
         "uuid": {},
         "name": {}
-    }
-    all_fields_info[LINK_ENTITY_NAME] = {
-        "input": {
-            "requires": NODE_ENTITY_NAME,
-            "related_name": "output_links"
-        },
-        "type": {},
-        "output": {
-            "requires": NODE_ENTITY_NAME,
-            "related_name": "input_links"
-        },
-        "label": {}
     }
     all_fields_info[NODE_ENTITY_NAME] = {
         "ctime": {
@@ -195,21 +171,6 @@ def get_all_fields_info():
         },
         "description": {},
         "process_type": {}
-    }
-    all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
-        "dbnode": {
-            "requires": NODE_ENTITY_NAME,
-            "related_name": "dbattributes"
-        },
-        "key": {},
-        "tval": {},
-        "fval": {},
-        "bval": {},
-        "datatype": {},
-        "dval": {
-            "convert_type": "date"
-        },
-        "ival": {}
     }
     all_fields_info[GROUP_ENTITY_NAME] = {
         "description": {},

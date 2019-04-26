@@ -16,9 +16,8 @@ from __future__ import print_function
 
 from six.moves.html_parser import HTMLParser
 
-from aiida.tools.importexport.config import (NODE_ENTITY_NAME, LINK_ENTITY_NAME, GROUP_ENTITY_NAME,
-                                             COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME,
-                                             COMMENT_ENTITY_NAME)
+from aiida.tools.importexport.config import (NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME,
+                                             USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME)
 
 
 def schema_to_entity_names(class_string):
@@ -32,9 +31,6 @@ def schema_to_entity_names(class_string):
 
     if class_string in ("aiida.backends.djsite.db.models.DbNode", "aiida.backends.sqlalchemy.models.node.DbNode"):
         return NODE_ENTITY_NAME
-
-    if class_string in ("aiida.backends.djsite.db.models.DbLink", "aiida.backends.sqlalchemy.models.node.DbLink"):
-        return LINK_ENTITY_NAME
 
     if class_string in ("aiida.backends.djsite.db.models.DbGroup", "aiida.backends.sqlalchemy.models.group.DbGroup"):
         return GROUP_ENTITY_NAME

@@ -29,9 +29,8 @@ from aiida.common.utils import grouper, export_shard_uuid, get_object_from_strin
 from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group
 from aiida.tools.importexport.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION
-from aiida.tools.importexport.config import (NODE_ENTITY_NAME, LINK_ENTITY_NAME, GROUP_ENTITY_NAME,
-                                             COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME,
-                                             COMMENT_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)
+from aiida.tools.importexport.config import (NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME,
+                                             USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME)
 from aiida.tools.importexport.config import entity_names_to_signatures
 from aiida.tools.importexport.dbimport.backends.utils import deserialize_field, merge_comment, merge_extras
 
@@ -179,16 +178,15 @@ def import_data_dj(in_path,
 
         model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
                        COMMENT_ENTITY_NAME)
-        # Models that do appear in the import file, but whose import is managed manually
-        model_manual = (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)
 
-        all_known_models = model_order + model_manual
+        all_known_models = model_order
 
         for import_field_name in metadata['all_fields_info']:
             if import_field_name not in all_known_models:
-                raise NotImplementedError("Apparently, you are importing a "
-                                          "file with a model '{}', but this does not appear in "
-                                          "all_known_models!".format(import_field_name))
+                if import_field_name not in ['Attribute', 'Link']:
+                    raise NotImplementedError("Apparently, you are importing a "
+                                              "file with a model '{}', but this does not appear in "
+                                              "all_known_models!".format(import_field_name))
 
         for idx, model_name in enumerate(model_order):
             dependencies = []
@@ -526,9 +524,9 @@ def import_data_dj(in_path,
                                 output_id=out_id,
                                 label=link['label'],
                                 type=LinkType(link['type']).value))
-                        if LINK_ENTITY_NAME not in ret_dict:
-                            ret_dict[LINK_ENTITY_NAME] = {'new': []}
-                        ret_dict[LINK_ENTITY_NAME]['new'].append((in_id, out_id))
+                        if "Link" not in ret_dict:
+                            ret_dict["Link"] = {'new': []}
+                        ret_dict["Link"]['new'].append((in_id, out_id))
 
             # Store new links
             if links_to_store:

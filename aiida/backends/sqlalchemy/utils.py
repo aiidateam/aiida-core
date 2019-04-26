@@ -10,19 +10,10 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-try:
-    import ultrajson as json
-    from functools import partial
+from aiida.common import json
 
-    # double_precision = 15, to replicate what PostgreSQL numerical type is
-    # using
-    json_dumps = partial(json.dumps, double_precision=15)
-    json_loads = partial(json.loads, precise_float=True)
-except ImportError:
-    from aiida.common import json
-
-    json_dumps = json.dumps
-    json_loads = json.loads
+json_dumps = json.dumps
+json_loads = json.loads
 
 import datetime
 import re

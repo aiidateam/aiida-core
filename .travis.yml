@@ -36,11 +36,8 @@ before_install:
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip==18.1 wheel setuptools coveralls
-    # Need numpy version that is compatible with pymatgen, see #2420
-    # Specifying it in pyproject.toml is not sufficient for travis (unknown reason)
-    - pip install numpy==1.15.4
     # Install AiiDA with some optional dependencies
-    - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
+    - if [ "$TEST_TYPE" == "docs" ]; then pip install --no-cache-dir . && pip install --no-cache-dir -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
 
 env:
     ## Build matrix to test both backends, and the docs

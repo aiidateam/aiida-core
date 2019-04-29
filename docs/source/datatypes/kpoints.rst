@@ -41,7 +41,7 @@ For a full description of the accepted parameters, we refer to the docstring of 
 :py:func:`aiida.tools.data.array.kpoints.seekpath.get_kpoints_path`, and for more general information
 to the `seekpath documentation <https://seekpath.readthedocs.io/>`_.
 
-If you use this implementation, please cite the `Hinuma paper <http://doi.org/10.1016/j.commatsci.2016.10.015>`_::
+If you use this implementation, please cite the `Hinuma paper <https://doi.org/10.1016/j.commatsci.2016.10.015>`_::
 
   Y. Hinuma, G. Pizzi, Y. Kumagai, F. Oba, I. Tanaka,
   Band structure diagram paths based on crystallography,
@@ -60,7 +60,7 @@ This refers to the implementation that has been available since the early versio
 
   We therefore suggest that you use the seekpath implementation, that is able to automatically correctly identify the
   standardized crystal structure (primitive and conventional) as described in the
-  `Hinuma paper <http://doi.org/10.1016/j.commatsci.2016.10.015>`_.
+  `Hinuma paper <https://doi.org/10.1016/j.commatsci.2016.10.015>`_.
 
 For a full description of the accepted parameters, we refer to the docstring of the underlying methods
 :py:func:`aiida.tools.data.array.kpoints.legacy.get_explicit_kpoints_path` and
@@ -69,14 +69,14 @@ to the `seekpath documentation <https://seekpath.readthedocs.io/>`_.
 
 If you use this implementation, please cite the correct reference from the following ones:
 
-- The 3D implementation is based on the `Setyawan paper <http://doi.org/10.1016/j.commatsci.2010.05.010>`_::
+- The 3D implementation is based on the `Setyawan paper <https://doi.org/10.1016/j.commatsci.2010.05.010>`_::
 
     W. Setyawan, S. Curtarolo,
     High-throughput electronic band structure calculations: Challenges and tools,
     Comp. Mat. Sci. 49, 299 (2010)
     DOI: 10.1016/j.commatsci.2010.05.010
 
-- The 2D implementation is based on the `Ramirez paper <http://doi.org/10.1002/qua.560300306>`_::
+- The 2D implementation is based on the `Ramirez paper <https://doi.org/10.1002/qua.560300306>`_::
 
     R. Ramirez and M. C. Bohm,
     Simple geometric generation of special points in brillouin-zone integrations. Two-dimensional bravais lattices

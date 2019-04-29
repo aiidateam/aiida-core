@@ -7,8 +7,8 @@ Calculations
 A calculation is a process (see the :ref:`process section<concepts_processes>` for details) that *creates* new data.
 Currently, there are two ways of implementing a calculation process:
 
- * :ref:`calculation function<concepts_calcfunctions>`
- * :ref:`calculation job<concepts_calcjobs>`
+ * :ref:`calculation function<working_calcfunctions>`
+ * :ref:`calculation job<working_calcjobs>`
 
 This section will provide detailed information and best practices on how to implement these two calculation types.
 
@@ -21,8 +21,42 @@ This section will provide detailed information and best practices on how to impl
 Calculation functions
 =====================
 
-`Issue [#2627] <https://github.com/aiidateam/aiida_core/issues/2627>`_
+The section on the :ref:`concept of calculation functions<concepts_calcfunctions>` already addressed their aim: automatic recording of their execution with their inputs and outputs in the provenance graph.
+The :ref:`section on process functions<working_process_functions>` subsequently detailed the rules that apply when implementing them, all of which to calculation functions, which are a sub type, just like work functions.
+However, there are some differences given that calculation functions are 'calculation'-like processes and work function behave like 'workflow'-like processes.
+What this entails in terms of intended usage and limitations for calculation functions is the scope of this section.
 
+Creating data
+-------------
+It has been said many times before: calculation functions, like all 'calculation'-like processes, `create` data, but what does `create` mean exactly?
+In this context, the term 'create' is not intended to refer to the simple creation of a new data node in the graph, in an interactive shell or a script for example.
+But rather it indicates the creation of a new piece of data from some other data through a computation implemented by a process.
+This is then exactly what the calculation function does.
+It takes one or more data nodes as inputs and returns one or more data nodes as outputs, whose content is based on those inputs.
+As explained in the :ref:`technical section<working_process_functions>`, outputs are created simply by returning the nodes from the function.
+The engine will inspect the return value from the function and attach the output nodes to the calculation node that represents the calculation function.
+To verify that the output nodes are in fact 'created', the engine will check that the nodes are not stored.
+Therefore, it is very important that you **do not store the nodes you create yourself**, or the engine will raise an exception, as shown in the following example:
+
+.. include:: include/snippets/calculations/calcfunctions/add_calcfunction_store.py
+    :code: python
+
+Because the returned node is already stored, the engine will raise the following exception:
+
+.. code:: bash
+
+	ValueError: trying to return an already stored Data node from a @calcfunction, however, @calcfunctions cannot return data. If you stored the node yourself, simply do not call `store()` yourself. If you want to return an input node, use a @workfunction instead.
+
+The reason for this strictness is that a node that was stored after being created in the function body, is indistinguishable from a node that was already stored and had simply been loaded in the function body and returned, e.g.:
+
+.. include:: include/snippets/calculations/calcfunctions/add_calcfunction_load_node.py
+    :code: python
+
+The loaded node would also have gotten a `create` link from the calculation function, even though it was not really created by it at all.
+It is exactly to prevent this ambiguity that calculation functions require all returned output nodes to be *unstored*.
+
+Note that work functions have exactly the opposite required and all the outputs that it returns **have to be stored**, because as a 'workflow'-like process, it *cannot* create new data.
+For more details refer to the :ref:`work function section<working_workfunctions>`.
 
 .. _working_calcjobs:
 
@@ -54,7 +88,7 @@ Calculation jobs
 .. For example, it can be used to define inputs that the calculation job takes.
 .. In our example, we need to be able to pass two integers as input, so we define those in the spec by calling ``spec.input()``.
 .. The first argument is the name of the input.
-.. This name should be used later to specify the inputs when launching the calculation job and it will also be used as the label for link to connect the data node and the calculation node in the provenance graph. 
+.. This name should be used later to specify the inputs when launching the calculation job and it will also be used as the label for link to connect the data node and the calculation node in the provenance graph.
 .. Additionally, as we have done here, you can specify which types are valid for that particular input.
 .. Since we expect integers, we specify that the valid type is the database storable :py:class:`~aiida.orm.nodes.data.int.Int` class.
 .. Next we should define what outputs we expect the calculation to produce:

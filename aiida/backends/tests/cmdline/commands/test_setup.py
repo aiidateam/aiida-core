@@ -30,6 +30,7 @@ class TestVerdiSetup(AiidaPostgresTestCase):
     def setUp(self):
         """Create a CLI runner to invoke the CLI commands."""
         super(TestVerdiSetup, self).setUp()
+        self.backend = configuration.PROFILE.database_backend
         self.cli_runner = CliRunner()
 
     @with_temporary_config_instance
@@ -45,7 +46,8 @@ class TestVerdiSetup(AiidaPostgresTestCase):
 
         options = [
             '--non-interactive', '--profile', profile_name, '--email', user_email, '--first-name', user_first_name,
-            '--last-name', user_last_name, '--institution', user_institution, '--db-port', self.pg_test.dsn['port']
+            '--last-name', user_last_name, '--institution', user_institution, '--db-port', self.pg_test.dsn['port'],
+            '--db-backend', self.backend
         ]
 
         result = self.cli_runner.invoke(cmd_setup.quicksetup, options)
@@ -57,6 +59,9 @@ class TestVerdiSetup(AiidaPostgresTestCase):
 
         profile = config.get_profile(profile_name)
         profile.default_user = user_email
+
+        # Verify that the backend type of the created profile matches that of the profile for the current test session
+        self.assertEqual(self.backend, profile.database_backend)
 
         user = orm.User.objects.get(email=user_email)
         self.assertEqual(user.first_name, user_first_name)
@@ -104,7 +109,7 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         options = [
             '--non-interactive', '--profile', profile_name, '--email', user_email, '--first-name', user_first_name,
             '--last-name', user_last_name, '--institution', user_institution, '--db-name', db_name, '--db-username',
-            db_user, '--db-password', db_pass
+            db_user, '--db-password', db_pass, '--db-port', self.pg_test.dsn['port'], '--db-backend', self.backend
         ]
 
         result = self.cli_runner.invoke(cmd_setup.setup, options)
@@ -116,6 +121,9 @@ class TestVerdiSetup(AiidaPostgresTestCase):
 
         profile = config.get_profile(profile_name)
         profile.default_user = user_email
+
+        # Verify that the backend type of the created profile matches that of the profile for the current test session
+        self.assertEqual(self.backend, profile.database_backend)
 
         user = orm.User.objects.get(email=user_email)
         self.assertEqual(user.first_name, user_first_name)

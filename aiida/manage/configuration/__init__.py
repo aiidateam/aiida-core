@@ -38,7 +38,7 @@ def load_profile(profile=None):
     """
     from aiida.common import InvalidOperation
     from aiida.common.log import configure_logging
-    from aiida.manage.manager import reset_manager
+    from aiida.manage.manager import get_manager, reset_manager
 
     global PROFILE
     global BACKEND_UUID
@@ -60,6 +60,8 @@ def load_profile(profile=None):
     # Also set `with_orm=True` to make sure that the `DBLogHandler` is configured as well.
     configure_logging(with_orm=True)
 
+    manager = get_manager()
+    manager.unload_backend()
     reset_manager()
 
     return PROFILE

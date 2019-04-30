@@ -13,10 +13,12 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import traceback
+import unittest
 
 from click.testing import CliRunner
 
 from aiida import orm
+from aiida.backends import BACKEND_DJANGO
 from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.backends.tests.utils.configuration import with_temporary_config_instance
 from aiida.cmdline.commands import cmd_setup
@@ -24,6 +26,7 @@ from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
 
 
+@unittest.skipIf(configuration.PROFILE.database_backend == BACKEND_DJANGO, 'Reenable when #2813 is addressed')
 class TestVerdiSetup(AiidaPostgresTestCase):
     """Tests for `verdi quicksetup`."""
 

@@ -50,21 +50,19 @@ def temporary_config_instance():
     """Create a temporary AiiDA instance."""
     current_config = None
     current_config_path = None
-    current_profile = None
-    current_backend_uuid = None
+    current_profile_name = None
     temporary_config_directory = None
 
     from aiida.manage import configuration
-    from aiida.manage.configuration import settings, reset_profile
+    from aiida.manage.configuration import settings, load_profile, reset_profile
 
     try:
         from aiida.manage.configuration.settings import create_instance_directories
 
         # Store the current configuration instance and config directory path
         current_config = configuration.CONFIG
-        current_profile = configuration.PROFILE
-        current_backend_uuid = configuration.BACKEND_UUID
         current_config_path = current_config.dirpath
+        current_profile_name = configuration.PROFILE.name
 
         reset_profile()
         configuration.CONFIG = None
@@ -78,20 +76,20 @@ def temporary_config_instance():
         create_instance_directories()
         configuration.CONFIG = configuration.load_config(create=True)
         profile = create_mock_profile(name=profile_name, repository_dirpath=temporary_config_directory)
-        configuration.PROFILE = profile
 
         # Add the created profile and set it as the default
         configuration.CONFIG.add_profile(profile)
         configuration.CONFIG.set_default_profile(profile_name, overwrite=True)
         configuration.CONFIG.store()
+        load_profile()
 
         yield configuration.CONFIG
     finally:
         # Reset the config folder path and the config instance
+        reset_profile()
         settings.AIIDA_CONFIG_FOLDER = current_config_path
         configuration.CONFIG = current_config
-        configuration.PROFILE = current_profile
-        configuration.BACKEND_UUID = current_backend_uuid
+        load_profile(current_profile_name)
 
         # Destroy the temporary instance directory
         if temporary_config_directory and os.path.isdir(temporary_config_directory):

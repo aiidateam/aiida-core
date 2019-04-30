@@ -7,8 +7,8 @@ Workflows
 A workflow in AiiDA is a process (see the :ref:`process section<concepts_processes>` for details) that calls other workflows and calculations and optionally *returns* data and as such can encode the logic of a typical scientific workflow.
 Currently, there are two ways of implementing a workflow process:
 
- * :ref:`work function<concepts_workfunctions>`
- * :ref:`work chain<concepts_workchains>`
+ * :ref:`work function<working_workfunctions>`
+ * :ref:`work chain<working_workchains>`
 
 This section will provide detailed information and best practices on how to implement these two workflow types.
 
@@ -21,7 +21,84 @@ This section will provide detailed information and best practices on how to impl
 Work functions
 ==============
 
-`Issue [#2629] <https://github.com/aiidateam/aiida_core/issues/2629>`_
+The concept of work functions and the basic rules of implementation are documented in detail elsewhere:
+
+  * :ref:`concept of work functions<concepts_workfunctions>`
+  * :ref:`implementation of process functions<working_process_functions>`
+
+Since work functions are a sub type of process functions, just like calculation functions, their implementation rules are as good as identical.
+However, their intended aim and heuristics are very different.
+Where :ref:`calculation functions<working_calcfunctions>` are 'calculation'-like processes that *create* new data, work functions behave like 'workflow'-like processes and can only *return* data.
+What this entails in terms of intended usage and limitations for work functions is the scope of this section.
+
+Returning data
+--------------
+It has been said many times before: work functions, like all 'workflow'-like processes, `return` data, but what does `return` mean exactly?
+In this context, the term 'return' is not intended to refer to a piece of python code returning a value.
+Instead it refers to a workflow process recording a data node as one of its outputs, that *it itself did not create*, but which rather was created by some other process, that was called by the workflow.
+The calculation process was responsable for *creating* the data node and the workflow is merely *returning* it as one of its outputs.
+
+This is then exactly what the workfunction function does.
+It takes one or more data nodes as inputs, calls other processes to which it passes those inputs and optionally returns some or all of the outputs created by the calculation processes it called.
+As explained in the :ref:`technical section<working_process_functions>`, outputs are recorded as 'returned' nodes simply by returning the nodes from the function.
+The engine will inspect the return value from the function and attach the output nodes to the node that represents the work function.
+To verify that the output nodes are in fact not 'created', the engine will check that the nodes are stored.
+Therefore, it is very important that you **do not store the nodes you create yourself**, or the engine will raise an exception, as shown in the following example:
+
+.. include:: include/snippets/workflows/workfunctions/workfunction_store.py
+    :code: python
+
+Because the returned node is a newly created node and not stored, the engine will raise the following exception:
+
+.. code:: bash
+
+    ValueError: Workflow<illegal_workfunction> tried returning an unstored `Data` node.
+    This likely means new `Data` is being created inside the workflow.
+    In order to preserve data provenance, use a `calcfunction` to create this node and return its output from the workflow
+
+Note that you could of course circumvent this check by calling ``store`` yourself on the node, but that misses the point.
+The problem with using a ``workfunction`` to 'create' new data, is that the provenance is lost.
+To illustrate this problem, let's go back to the simple problem of implementing a workflow to add two integer and multiply the result with a third.
+The :ref:`correct implementation<concepts_workfunctions>` has a resulting provenance graph that clearly captures the addition and the multiplication as separate calculation nodes, as shown in :numref:`fig_work_functions_provenance_add_multiply_full`.
+To illustrate what would happen if one does does not call calculation functions to perform the computations, but instead directly perform them in the work function itself and return the result, consider the following example:
+
+.. include:: include/snippets/workflows/workfunctions/workfunction_add_multiply_internal.py
+    :code: python
+
+.. warning:: For the documentation skimmers: this is an explicit example on **how not to use** work functions. The :ref:`correct implementation<concepts_workfunctions>` calls calculation functions to perform the computation
+
+Note that in this example implementation we explicitly had to call ``store`` on the result before returning it to avoid the exception thrown by the engine.
+The resulting provenance would look like the following:
+
+.. _fig_work_functions_provenance_add_multiply_internal:
+.. figure:: include/images/add_multiply_workfunction_internal.png
+
+    The provenance generated by the incorrect work function implementation. Note how the addition and multiplication are not explicitly represented, but are implicitly hidden inside the workflow node. Moreover, the result node does not have a 'create' link, because a work function cannot create new data.
+
+However, looking at the generated provenance shows exactly why we shouldn't.
+This faulty implementation loses provenance as it has no explicit representations of the addition and the multiplication and the `result` node does not have a `create` link, which means that if only the data provenance is followed, it is as if it appears out of thin air!
+Compare this to the provenance graph of :numref:`fig_work_functions_provenance_add_multiply_full`, which was generated by a solution that correctly uses calculation functions to perform the computations.
+In this trivial example, one may think that this loss of information is not so important, because it is implicitly captured by the workflow node.
+But a halfway solution may make the problem more apparent, as demonstrated by the following snippet where the addition is properly done by calling a calculation function, but the final product is still performed by the work function itself:
+
+.. include:: include/snippets/workflows/workfunctions/workfunction_add_multiply_halfway.py
+    :code: python
+
+.. warning:: For the documentation skimmers: this is an explicit example on **how not to use** work functions. The :ref:`correct implementation<concepts_workfunctions>` calls calculation functions to perform the computation
+
+This time around the addition is correctly performed by a calculation function as it should, however, its result is multiplied by the work function itself and returned.
+Note that once again ``store`` had to be called explicitly on ``product`` to avoid the engine throwing a ``ValueError``, which is only for the purpose of this example **and should not be done in practice**.
+The resulting provenance would look like the following:
+
+.. _fig_work_functions_provenance_add_multiply_halfway:
+.. figure:: include/images/add_multiply_workfunction_halfway.png
+
+    The provenance generated by the incorrect work function implementation that uses only a calculation function for the addition but performs the multiplication itself.
+    The red cross is there to indicate that there is no actual connection between the intermediate sum `D4` and the final result `D5`, even though the latter in reality derives from the former.
+
+The generated provenance shows, that although the addition is explicitly represented because the work function called the calculation function, there is no connection between the sum and the final result.
+That is to say, there is no direct link between the sum `D4` and the final result `D5`, as indicated by the red cross, even though we know that the final answer was based on the intermediate sum.
+This is a direct cause of the work function 'creating' new data and illustrates how, in doing so, the provenance of data creation is lost.
 
 
 .. _working_workchains:
@@ -710,5 +787,5 @@ Context
 .. * The method ``.is_alloy()`` for classes ``StructureData`` and ``Kind`` is now accessed through the ``.is_alloy`` property.
 .. * The method ``.has_vacancies()`` for classes ``StructureData`` and ``Kind`` is now accessed through the ``.has_vacancies`` property.
 .. * The arguments ``stepids`` and ``cells`` of the :meth:`TrajectoryData.set_trajectory()<aiida.orm.nodes.data.array.trajectory.TrajectoryData.set_trajectory>` method are made optional
-..   which has implications on the ordering of the arguments passed to this method. 
+..   which has implications on the ordering of the arguments passed to this method.
 .. * The list of atomic symbols for trajectories is no longer stored as array data but is now accessible through the ``TrajectoryData.symbols`` attribute.

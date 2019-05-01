@@ -55,9 +55,9 @@ class BandsDataTranslator(DataTranslator):
         BandsData) so that it returns a python object rather than a string.
         """
 
-        import ujson as uj
+        from aiida.common import json
         json_string = node._exportcontent('json', comments=False)  # pylint: disable=protected-access
-        json_content = uj.decode(json_string[0])
+        json_content = json.loads(json_string[0])
 
         # Add Ylabel which by default is not exported
         y_label = node.label + ' ({})'.format(node.get_attribute('units'))

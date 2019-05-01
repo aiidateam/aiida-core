@@ -14,6 +14,13 @@
 /.idea/
 *.egg-info
 .eggs
+.vscode
 
-# produced by coverage.py
+# files created by coverage
+.cache
+.pytest_cache
 .coverage
+
+# Build files
+dist/
+pip-wheel-metadata

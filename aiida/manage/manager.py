@@ -45,6 +45,26 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         from .configuration import get_profile
         return get_profile()
 
+    def unload_backend(self):
+        """Unload the current backend and its corresponding database environment."""
+        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+        from aiida.common import ConfigurationError
+
+        profile = self.get_profile()
+        backend = profile.database_backend
+
+        if backend == BACKEND_DJANGO:
+            from aiida.backends.djsite.utils import unload_dbenv
+            unload_backend = unload_dbenv
+        elif backend == BACKEND_SQLA:
+            from aiida.backends.sqlalchemy.utils import unload_dbenv
+            unload_backend = unload_dbenv
+        else:
+            raise ConfigurationError('Invalid backend type {} in profile: {}'.format(backend, profile.name))
+
+        unload_backend()
+        self._backend = None
+
     def _load_backend(self, schema_check=True):
         """Load the backend for the currently configured profile and return it.
 

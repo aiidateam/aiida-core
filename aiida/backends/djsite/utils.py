@@ -7,10 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This modules contains a number of utility functions specific to the
-Django backend.
-"""
+# pylint: disable=no-name-in-module, no-member, import-error
+"""Utility functions specific to the Django backend."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -18,31 +16,33 @@ from __future__ import absolute_import
 import os
 import django
 
-# pylint: disable=no-name-in-module, no-member, import-error
-
 
 def load_dbenv(profile):
-    """
-    Load the database environment (Django) and perform some checks.
+    """Load the database environment and ensure that the code and database schema versions are compatible.
 
-    :param profile: the string with the profile to use
+    :param profile: instance of `Profile` whose database to load
     """
     _load_dbenv_noschemacheck(profile)
-    # Check schema version and the existence of the needed tables
     check_schema_version(profile_name=profile.name)
 
 
 def _load_dbenv_noschemacheck(profile):  # pylint: disable=unused-argument
-    """
-    Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
+    """Load the database environment without checking that code and database schema versions are compatible.
 
-    :param profile: the string with the profile to use
+    This should ONLY be used internally, inside load_dbenv, and for schema migrations. DO NOT USE OTHERWISE!
 
-    This should ONLY be used internally, inside load_dbenv, and for schema
-    migrations. DO NOT USE OTHERWISE!
+    :param profile: instance of `Profile` whose database to load
     """
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings'
     django.setup()
+
+
+def unload_dbenv():
+    """Unload the database environment.
+
+    This means that the settings in `aiida.backends.djsite.settings` are "unset".
+    This needs to implemented and will address #2813
+    """
 
 
 _aiida_autouser_cache = None  # pylint: disable=invalid-name
@@ -54,7 +54,7 @@ def migrate_database():
     call_command('migrate')
 
 
-def check_schema_version(profile_name=None):
+def check_schema_version(profile_name):
     """
     Check if the version stored in the database is the same of the version
     of the code.
@@ -89,11 +89,6 @@ def check_schema_version(profile_name=None):
         db_schema_version = get_db_schema_version()
 
     if code_schema_version != db_schema_version:
-        if profile_name is None:
-            from aiida.manage.manager import get_manager
-            manager = get_manager()
-            profile_name = manager.get_profile().name
-
         raise ConfigurationError('Database schema version {} is outdated compared to the code schema version {}\n'
                                  'To migrate the database to the current version, run the following commands:'
                                  '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(

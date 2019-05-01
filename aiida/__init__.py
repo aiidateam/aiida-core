@@ -38,7 +38,7 @@ __version__ = '1.0.0b2'
 __authors__ = 'The AiiDA team.'
 __paper__ = (u'G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky,'
              u'"AiiDA: automated interactive infrastructure and database for computational science", '
-             u'Comp. Mat. Sci 111, 218-230 (2016); http://dx.doi.org/10.1016/j.commatsci.2015.09.013 '
+             u'Comp. Mat. Sci 111, 218-230 (2016); https://doi.org/10.1016/j.commatsci.2015.09.013 '
              u'- http://www.aiida.net.')
 __paper_short__ = 'G. Pizzi et al., Comp. Mat. Sci 111, 218 (2016).'
 

@@ -125,7 +125,7 @@ If we were to reimplement our work function solution of the simple example probl
 
 Don't be intimidated by all the code in this snippet.
 The point of this example is not to explain the exact syntax, which will be done in greater detail in the :ref:`advanced workflows<working_workchains>` section, but to merely introduce the concept of the work chain.
-The core attributes of a work chain are defined by its :ref:`process specification<working_process_spec>` which is setup in the :py:meth:`~aiida.engine.processes.workchains.workchain.WorkChain.define` method.
+The core attributes of a work chain are defined by its :ref:`process specification<working_process_spec>` which is setup in the :py:meth:`~aiida.engine.processes.process.Process.define` method.
 The only thing you need to notice here is that it defines the *inputs* that the work chain takes, its logical *outline* and the *outputs* that it will produce.
 The steps of the outline are implemented as class methods of the work chain.
 The ``add`` step will add the first two integers and store the sum temporarily in the :ref:`context<working_workchain_context>`.

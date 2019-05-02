@@ -65,6 +65,7 @@ class SerializeWorkChain(WorkChain):
         )
 
         spec.outline(cls.echo)
+        spec.outputs.dynamic = True
 
     def echo(self):
         self.out('output', self.inputs.test)

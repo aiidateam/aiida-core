@@ -2060,8 +2060,18 @@ class QueryBuilder(object):
         return query
 
     @staticmethod
-    def get_aiida_entity_res(backend_entity):
-        return convert.get_orm_entity(backend_entity)
+    def get_aiida_entity_res(value):
+        """Convert a projected query result to front end class if it is an instance of a `BackendEntity`.
+
+        Values that are not an `BackendEntity` instance will be returned unaltered
+
+        :param value: a projected query result to convert
+        :return: the converted value
+        """
+        try:
+            return convert.get_orm_entity(value)
+        except TypeError:
+            return value
 
     def inject_query(self, query):
         """
@@ -2108,21 +2118,21 @@ class QueryBuilder(object):
             One row of results as a list
         """
         query = self.get_query()
-        resultrow = self._impl.first(query)
-        try:
-            returnval = [
-                self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
-                for colindex, rowitem in enumerate(resultrow)
-            ]
-        except TypeError:
-            if resultrow is None:
-                returnval = None
-            elif len(self._attrkeys_as_in_sql_result) > 1:
-                raise Exception("I have not received an iterable\n" "but the number of projections is > 1")
-            # It still returns a list!
-            else:
-                returnval = [convert.get_orm_entity(self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow))]
-        return returnval
+        result = self._impl.first(query)
+
+        if result is None:
+            return None
+
+        if not isinstance(result, (list, tuple)):
+            result = [result]
+
+        if len(result) != len(self._attrkeys_as_in_sql_result):
+            raise Exception('length of query result does not match the number of specified projections')
+
+        return [
+            self.get_aiida_entity_res(self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem))
+            for colindex, rowitem in enumerate(result)
+        ]
 
     def one(self):
         """
@@ -2167,11 +2177,7 @@ class QueryBuilder(object):
         for item in self._impl.iterall(query, batch_size, self._attrkeys_as_in_sql_result):
             # Convert to AiiDA frontend entities (if they are such)
             for i, item_entry in enumerate(item):
-                try:
-                    item[i] = convert.get_orm_entity(item_entry)
-                except TypeError:
-                    # Keep the current value
-                    pass
+                item[i] = self.get_aiida_entity_res(item_entry)
 
             yield item
         return
@@ -2190,15 +2196,11 @@ class QueryBuilder(object):
 
         :returns: a generator of dictionaries
         """
-
         query = self.get_query()
+
         for item in self._impl.iterdict(query, batch_size, self.tag_to_projected_entity_dict):
             for key, value in item.items():
-                try:
-                    item[key] = convert.get_orm_entity(value)
-                except TypeError:
-                    # Keep the current value
-                    pass
+                item[key] = self.get_aiida_entity_res(value)
 
             yield item
 

@@ -234,6 +234,7 @@ def set_computer_builder(ctx, param, value):
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
+@options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()
 def computer_setup(ctx, non_interactive, **kwargs):

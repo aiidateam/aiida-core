@@ -72,6 +72,24 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         self.assertEqual(user.institution, user_institution)
 
     @with_temporary_config_instance
+    def test_quicksetup_from_config_file(self):
+        """Test `verdi quicksetup` from configuration file."""
+        import tempfile
+        import os
+
+        with tempfile.NamedTemporaryFile('w') as handle:
+            handle.write("""---
+profile: testing
+first_name: Leopold
+last_name: Talirz
+institution: EPFL
+backend: django
+email: 123@234.de""")
+            handle.flush()
+            result = self.cli_runner.invoke(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)])
+        self.assertClickResultNoException(result)
+
+    @with_temporary_config_instance
     def test_quicksetup_wrong_port(self):
         """Test `verdi quicksetup` exits if port is wrong."""
         configuration.reset_profile()

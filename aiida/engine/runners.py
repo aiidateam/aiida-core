@@ -154,6 +154,9 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         if not process.metadata.store_provenance:
             raise exceptions.InvalidOperation('cannot submit a process with `store_provenance=False`')
 
+        if process.metadata.get('dry_run', False):
+            raise exceptions.InvalidOperation('cannot submit a process from within another with `dry_run=True`')
+
         if self._rmq_submit:
             self.persister.save_checkpoint(process)
             process.close()

@@ -202,8 +202,9 @@ def draw_graph(origin_node,
     try:
         exit_code = subprocess.call(['dot', '-T', image_format, fname, '-o', output_file_name])
     except OSError:
-        from aiida.cmdline.utils import echo
-        echo.echo_critical('Operating system error - perhaps Graphviz is not installed?')
+        raise OSError('call to `dot` failed: perhaps graphviz is not installed?')
+
     # cleaning up by removing the temporary file
     os.remove(fname)
+
     return exit_code, output_file_name

@@ -19,6 +19,7 @@ import tornado.ioloop
 
 import plumpy
 
+from aiida.common import exceptions
 from aiida.orm import load_node
 from .processes import futures
 from .processes.calcjobs import manager
@@ -149,6 +150,9 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         assert not self._closed
 
         process = instantiate_process(self, process, *args, **inputs)
+
+        if not process.metadata.store_provenance:
+            raise exceptions.InvalidOperation('cannot submit a process with `store_provenance=False`')
 
         if self._rmq_submit:
             self.persister.save_checkpoint(process)

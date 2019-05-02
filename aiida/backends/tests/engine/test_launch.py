@@ -12,7 +12,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.engine import run, run_get_node, run_get_pk, Process, WorkChain, calcfunction
+from aiida.common import exceptions
+from aiida.engine import launch, run, run_get_node, run_get_pk, Process, WorkChain, calcfunction
 from aiida.orm import Int, WorkChainNode, CalcFunctionNode
 
 
@@ -98,3 +99,8 @@ class TestLaunchers(AiidaTestCase):
         result, pk = run_get_pk(builder)
         self.assertEquals(result['result'], self.result)
         self.assertTrue(isinstance(pk, int))
+
+    def test_submit_store_provenance_false(self):
+        """Verify that submitting with `store_provenance=False` raises."""
+        with self.assertRaises(exceptions.InvalidOperation):
+            launch.submit(AddWorkChain, a=self.a, b=self.b, metadata={'store_provenance': False})

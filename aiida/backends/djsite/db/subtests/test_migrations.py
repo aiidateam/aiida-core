@@ -293,6 +293,14 @@ class TestCalcAttributeKeysMigration(TestMigrationsModelModifierV0025):
         self.set_attribute(self.node_calc, self.KEY_ENVIRONMENT_VARIABLES_OLD, self.environment_variables)
         self.set_attribute(self.node_calc, self.KEY_PARSER_NAME_OLD, self.parser_name)
 
+        # Create a node of a different type to ensure that its attributes are not updated
+        self.node_other = self.DbNode(type='node.othernode.', user_id=self.default_user.id)
+        self.node_other.save()
+        self.set_attribute(self.node_other, self.KEY_PROCESS_LABEL_OLD, self.process_label)
+        self.set_attribute(self.node_other, self.KEY_RESOURCES_OLD, self.resources)
+        self.set_attribute(self.node_other, self.KEY_ENVIRONMENT_VARIABLES_OLD, self.environment_variables)
+        self.set_attribute(self.node_other, self.KEY_PARSER_NAME_OLD, self.parser_name)
+
     def test_attribute_key_changes(self):
         """Verify that the keys are successfully changed of the affected attributes."""
         NOT_FOUND = tuple([0])
@@ -308,6 +316,17 @@ class TestCalcAttributeKeysMigration(TestMigrationsModelModifierV0025):
         self.assertEqual(self.get_attribute(self.node_calc, self.KEY_RESOURCES_OLD, default=NOT_FOUND), NOT_FOUND)
         self.assertEqual(self.get_attribute(self.node_calc, self.KEY_ENVIRONMENT_VARIABLES_OLD, default=NOT_FOUND), NOT_FOUND)
         self.assertEqual(self.get_attribute(self.node_calc, self.KEY_PARSER_NAME_OLD, default=NOT_FOUND), NOT_FOUND)
+
+        # The following node should not be migrated even if its attributes have the matching keys because
+        # the node is not a ProcessNode
+        self.assertEqual(self.get_attribute(self.node_other, self.KEY_PROCESS_LABEL_OLD), self.process_label)
+        self.assertEqual(self.get_attribute(self.node_other, self.KEY_RESOURCES_OLD), self.resources)
+        self.assertEqual(self.get_attribute(self.node_other, self.KEY_ENVIRONMENT_VARIABLES_OLD), self.environment_variables)
+        self.assertEqual(self.get_attribute(self.node_other, self.KEY_PARSER_NAME_OLD), self.parser_name)
+        self.assertEqual(self.get_attribute(self.node_other, self.KEY_PROCESS_LABEL_NEW, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(self.get_attribute(self.node_other, self.KEY_RESOURCES_NEW, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(self.get_attribute(self.node_other, self.KEY_ENVIRONMENT_VARIABLES_NEW, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(self.get_attribute(self.node_other, self.KEY_PARSER_NAME_NEW, default=NOT_FOUND), NOT_FOUND)
 
 
 class TestDbLogMigrationRecordCleaning(TestMigrations):

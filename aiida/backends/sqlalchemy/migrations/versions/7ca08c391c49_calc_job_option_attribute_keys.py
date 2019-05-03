@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Migration of CalcJobNode attributes for metadata options whose key changed.
+"""Migration of ProcessNode attributes for metadata options whose key changed.
 
 Revision ID: 7ca08c391c49
 Revises: e72ad251bcdb
@@ -32,14 +32,14 @@ depends_on = None
 
 
 def upgrade():
-    """Migration of CalcJobNode attributes for metadata options whose key changed.
+    """Migration of ProcessNode attributes for metadata options whose key changed.
 
     Renamed attribute keys:
 
-      * `custom_environment_variables` -> `environment_variables`
-      * `jobresource_params` -> `resources`
-      * `_process_label` -> `process_label`
-      * `parser` -> `parser_name`
+      * `custom_environment_variables` -> `environment_variables` (CalcJobNode)
+      * `jobresource_params` -> `resources` (CalcJobNode)
+      * `_process_label` -> `process_label` (ProcessNode)
+      * `parser` -> `parser_name` (CalcJobNode)
 
     Deleted attributes:
       * `linkname_retrieved` (We do not actually delete it just in case some relies on it)

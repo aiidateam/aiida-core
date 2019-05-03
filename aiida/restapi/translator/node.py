@@ -66,8 +66,9 @@ class NodeTranslator(BaseTranslator):
         super(NodeTranslator, self).__init__(Class=Class, **kwargs)
 
         self._default_projections = [
-            "id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"
+            "id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "attributes", "extras"
         ]
+        self._default_user_projections = ["email"]
 
         ## node schema
         # All the values from column_order must present in additional info dict
@@ -258,8 +259,7 @@ class NodeTranslator(BaseTranslator):
         if not self._is_qb_initialized:
             raise InvalidOperation("query builder object has not been initialized.")
 
-        ## Count the total number of rows returned by the query (if not
-        # already done)
+        # Count the total number of rows returned by the query (if not already done)
         if self._total_count is None:
             self.count()
 
@@ -268,7 +268,7 @@ class NodeTranslator(BaseTranslator):
             return {}
 
         # otherwise ...
-        node = self.qbobj.first()[0]
+        node = self.qbobj.first()[1]
 
         # content/attributes
         if self._content_type == "attributes":
@@ -715,12 +715,12 @@ class NodeTranslator(BaseTranslator):
         # count total no of nodes
         builder = QueryBuilder()
         builder.append(Node, tag="main", project=['id'], filters=self._id_filter)
-        builder.append(Node, tag="in", project=['id'], input_of='main')
+        builder.append(Node, tag="in", project=['id'], with_outgoing='main')
         total_no_of_incomings = builder.count()
 
         builder = QueryBuilder()
         builder.append(Node, tag="main", project=['id'], filters=self._id_filter)
-        builder.append(Node, tag="out", project=['id'], output_of='main')
+        builder.append(Node, tag="out", project=['id'], with_incoming='main')
         total_no_of_outgoings = builder.count()
 
         return {

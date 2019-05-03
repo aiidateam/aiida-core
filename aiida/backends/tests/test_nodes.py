@@ -489,14 +489,14 @@ class TestNodeBasic(AiidaTestCase):
         a = orm.Data()
         a.set_attribute('object', object(), clean=False)
 
-        # django raises ValueError
+        # django raises TypeError
         # sqlalchemy raises StatementError
-        with self.assertRaises((ValueError, StatementError)):
+        with self.assertRaises((TypeError, StatementError)):
             a.store()
 
         b = orm.Data()
         b.set_attribute('object_list', [object(), object()], clean=False)
-        with self.assertRaises((ValueError, StatementError)):
+        with self.assertRaises((TypeError, StatementError)):
             # objects are not json-serializable
             b.store()
 
@@ -902,10 +902,9 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEqual(get_global_setting_description('aaa'), "pippo")
         self.assertEqual(get_global_setting('aaa.b'), 'c')
 
-        # The following is disabled because it is not supported in SQLAlchemy
+        # The following is disabled because it is not supported in JSONB
         # Only top level elements can have descriptions
         # self.assertEqual(get_global_setting_description('aaa.b'), "")
-
         del_global_setting('aaa')
 
         with self.assertRaises(KeyError):
@@ -913,6 +912,17 @@ class TestNodeBasic(AiidaTestCase):
 
         with self.assertRaises(KeyError):
             get_global_setting('aaa')
+
+        set_global_setting(key="bbb", value={'c': 'd1'}, description="pippo2")
+        self.assertEqual(get_global_setting('bbb'), {'c': 'd1'})
+        self.assertEqual(get_global_setting('bbb.c'), 'd1')
+        self.assertEqual(get_global_setting_description('bbb'), "pippo2")
+        set_global_setting(key="bbb", value={'c': 'd2'})
+        self.assertEqual(get_global_setting('bbb'), {'c': 'd2'})
+        self.assertEqual(get_global_setting('bbb.c'), 'd2')
+        self.assertEqual(get_global_setting_description('bbb'), "pippo2")
+
+        del_global_setting('bbb')
 
     def test_attr_listing(self):
         """

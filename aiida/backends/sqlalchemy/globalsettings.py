@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from aiida.backends.sqlalchemy.models.settings import DbSetting
 from sqlalchemy.orm.exc import NoResultFound
 from aiida.backends.sqlalchemy import get_scoped_session
+from aiida.backends.utils import validate_attribute_key
 
 
 def set_global_setting(key, value, description=None):
@@ -25,7 +26,13 @@ def set_global_setting(key, value, description=None):
     Set a global setting in the DbSetting table (therefore, stored at the DB
     level).
     """
-    DbSetting.set_value(key, value, other_attribs={"description": description})
+    # Before storing, validate the key
+    validate_attribute_key(key)
+
+    other_attribs = dict()
+    if description is not None:
+        other_attribs["description"] = description
+    DbSetting.set_value(key, value, other_attribs=other_attribs)
 
 
 def del_global_setting(key):
@@ -49,7 +56,7 @@ def get_global_setting(key):
     
     :raise KeyError: if the setting does not exist in the DB
     """
-    from aiida.backends.sqlalchemy.models.utils import get_value_of_sub_field
+    from aiida.backends.utils import get_value_of_sub_field
 
     # Check first that the table exists
     table_check_test()
@@ -68,7 +75,7 @@ def get_global_setting_description(key):
     DB, or raise a KeyError if the setting is not present in the DB or the
     table doesn't exist.
     """
-    from aiida.backends.sqlalchemy.models.utils import validate_key
+    from aiida.backends.utils import validate_key
 
     # Check first that the table exists
     table_check_test()
@@ -87,7 +94,6 @@ def table_check_test():
     it rainses a KeyError.
     """
     from sqlalchemy.engine import reflection
-    from aiida.backends import sqlalchemy as sa
     inspector = reflection.Inspector.from_engine(get_scoped_session().bind)
     if 'db_dbsetting' not in inspector.get_table_names():
         raise KeyError("No table found")

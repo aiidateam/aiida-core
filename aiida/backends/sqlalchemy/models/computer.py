@@ -37,6 +37,10 @@ class DbComputer(Base):
         # TODO SP: it's supposed to be nullable, but there is a NOT constraint inside the DB.
         self.description = ""
 
+        # If someone passes metadata in **kwargs we change it to _metadata
+        if 'metadata' in kwargs.keys():
+            kwargs['_metadata'] = kwargs.pop('metadata')
+
         super(DbComputer, self).__init__(*args, **kwargs)
 
     @property

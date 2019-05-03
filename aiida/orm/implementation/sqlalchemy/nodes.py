@@ -24,7 +24,8 @@ from aiida.common.lang import type_check
 
 from .. import BackendNode, BackendNodeCollection
 from . import entities
-from . import utils
+from . import utils as sqla_utils
+from .. import utils as gen_utils
 from .computers import SqlaComputer
 from .users import SqlaUser
 
@@ -82,7 +83,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
             type_check(mtime, datetime, 'the given mtime is of type {}'.format(type(mtime)))
             arguments['mtime'] = mtime
 
-        self._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))
+        self._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments))
 
     def clone(self):
         """Return an unstored clone of ourselves.
@@ -102,7 +103,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
         clone = self.__class__.__new__(self.__class__)  # pylint: disable=no-value-for-parameter
         clone.__init__(self.backend, self.node_type, self.user)
-        clone._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))  # pylint: disable=protected-access
+        clone._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments))  # pylint: disable=protected-access
         return clone
 
     @property
@@ -156,7 +157,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :raises AttributeError: if the attribute does not exist
         """
         try:
-            return utils.get_attr(self._dbmodel.attributes, key)
+            return gen_utils.get_attr(self._dbmodel.attributes, key)
         except (KeyError, IndexError):
             raise AttributeError('Attribute `{}` does not exist'.format(key))
 
@@ -176,7 +177,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :param value: value of the attribute
         """
         try:
-            self.dbmodel.set_attr(key, value)
+            self.dbmodel.set_attribute(key, value)
         except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
@@ -217,7 +218,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :raises AttributeError: if the attribute does not exist
         """
         try:
-            self._dbmodel.del_attr(key)
+            self._dbmodel.del_attribute(key)
         except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
@@ -262,7 +263,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :raises AttributeError: if the extra does not exist
         """
         try:
-            return utils.get_attr(self._dbmodel.extras, key)
+            return gen_utils.get_attr(self._dbmodel.extras, key)
         except (KeyError, IndexError):
             raise AttributeError('Extra `{}` does not exist'.format(key))
 

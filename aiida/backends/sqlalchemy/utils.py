@@ -15,17 +15,13 @@ from aiida.common import json
 json_dumps = json.dumps
 json_loads = json.loads
 
-import datetime
-import re
-
-import six
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
 from alembic.script import ScriptDirectory
-from dateutil import parser
 
 from aiida.backends import sqlalchemy as sa
+from aiida.backends.utils import isoformat_to_datetime, datetime_to_isoformat
 
 ALEMBIC_FILENAME = "alembic.ini"
 ALEMBIC_REL_PATH = "migrations"
@@ -81,48 +77,15 @@ def dumps_json(d):
     """
     Transforms all datetime object into isoformat and then returns the JSON
     """
-
-    def f(v):
-        if isinstance(v, list):
-            return [f(_) for _ in v]
-        elif isinstance(v, dict):
-            return dict((key, f(val)) for key, val in v.items())
-        elif isinstance(v, datetime.datetime):
-            return v.isoformat()
-        return v
-
-    return json_dumps(f(d))
-
-
-date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
+    return json_dumps(datetime_to_isoformat(d))
 
 
 def loads_json(s):
     """
     Loads the json and try to parse each basestring as a datetime object
     """
-
     ret = json_loads(s)
-
-    def f(d):
-        if isinstance(d, list):
-            for i, val in enumerate(d):
-                d[i] = f(val)
-            return d
-        elif isinstance(d, dict):
-            for k, v in d.items():
-                d[k] = f(v)
-            return d
-        elif isinstance(d, six.string_types):
-            if date_reg.match(d):
-                try:
-                    return parser.parse(d)
-                except (ValueError, TypeError):
-                    return d
-            return d
-        return d
-
-    return f(ret)
+    return isoformat_to_datetime(ret)
 
 
 # XXX the code here isn't different from the one use in Django. We may be able

@@ -73,6 +73,7 @@ class TestSpecificImport(AiidaTestCase):
 
             # Clean the database and verify there are no nodes left
             self.clean_db()
+            self.create_user()
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), 0)
 
             # After importing we should have the original number of nodes again
@@ -136,6 +137,7 @@ class TestSpecificImport(AiidaTestCase):
 
             # Clean the database and verify there are no nodes left
             self.clean_db()
+            self.create_user()
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), 0)
 
             # After importing we should have the original number of nodes again
@@ -198,6 +200,7 @@ class TestSimple(AiidaTestCase):
         export(nodes, outfile=filename, silent=True)
         # cleaning:
         self.clean_db()
+        self.create_user()
         # Importing back the data:
         import_data(filename, silent=True)
         # Checking whether values are preserved:
@@ -234,6 +237,7 @@ class TestSimple(AiidaTestCase):
         export([calc], outfile=filename, silent=True)
 
         self.clean_db()
+        self.create_user()
 
         # NOTE: it is better to load new nodes by uuid, rather than assuming
         # that they will have the first 3 pks. In fact, a recommended policy in
@@ -417,6 +421,7 @@ class TestUsers(AiidaTestCase):
 
         export([sd3], outfile=filename, silent=True)
         self.clean_db()
+        self.create_user()
         import_data(filename, silent=True)
 
         # Check that the imported nodes are correctly imported and that
@@ -849,6 +854,7 @@ class TestComplex(AiidaTestCase):
         export([fd1], outfile=filename, silent=True)
 
         self.clean_db()
+        self.create_user()
 
         import_data(filename, silent=True, ignore_unknown_nodes=True)
 
@@ -963,6 +969,7 @@ class TestComplex(AiidaTestCase):
             export([g] + [n for n in g.nodes], outfile=filename, silent=True)
             # cleaning the DB!
             self.clean_db()
+            self.create_user()
             # reimporting the data from the file
             import_data(filename, silent=True, ignore_unknown_nodes=True)
             # creating the hash from db content
@@ -1026,6 +1033,7 @@ class TestComputer(AiidaTestCase):
 
         # Clean the local database
         self.clean_db()
+        self.create_user()
 
         # Check that there are no computers
         builder = orm.QueryBuilder()
@@ -1127,6 +1135,7 @@ class TestComputer(AiidaTestCase):
 
         # Clean the local database
         self.clean_db()
+        self.create_user()
 
         # Check that there are no computers
         builder = orm.QueryBuilder()
@@ -1232,6 +1241,7 @@ class TestComputer(AiidaTestCase):
 
         # Clean the local database
         self.clean_db()
+        self.create_user()
 
         # Check that there are no computers
         builder = orm.QueryBuilder()
@@ -1294,17 +1304,16 @@ class TestComputer(AiidaTestCase):
 
         # Clean the local database
         self.clean_db()
+        self.create_user()
         # Import the data
         import_data(filename1, silent=True)
 
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['_metadata'], tag="comp")
+        builder.append(orm.Computer, project=['metadata'], tag="comp")
         self.assertEqual(builder.count(), 1, "Expected only one computer")
 
         res = builder.dict()[0]
-        self.assertEqual(res['comp']['_metadata'],
-                            comp1_metadata,
-                            "Not the expected metadata were found")
+        self.assertEqual(res['comp']['metadata'], comp1_metadata, "Not the expected metadata were found")
 
     def test_import_of_django_sqla_export_file(self):
         """Check that sqla import manages to import the django export file correctly"""
@@ -1325,13 +1334,13 @@ class TestComputer(AiidaTestCase):
             # Check that we got the correct metadata
             # Make sure to exclude the default computer
             builder = orm.QueryBuilder()
-            builder.append(orm.Computer, project=['_metadata'], tag="comp",
+            builder.append(orm.Computer, project=['metadata'], tag="comp",
                       filters={'name': {'!==': self.computer.name}})
             self.assertEqual(builder.count(), 1, "Expected only one computer")
 
             res = builder.dict()[0]
 
-            self.assertEqual(res['comp']['_metadata'], comp1_metadata)
+            self.assertEqual(res['comp']['metadata'], comp1_metadata)
 
 
 class TestLinks(AiidaTestCase):
@@ -1391,6 +1400,7 @@ class TestLinks(AiidaTestCase):
             tar.add(unpack.abspath, arcname="")
 
         self.clean_db()
+        self.create_user()
 
         with self.assertRaises(ValueError):
             import_data(filename, silent=True)

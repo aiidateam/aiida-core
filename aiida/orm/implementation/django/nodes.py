@@ -23,7 +23,8 @@ from aiida.common.lang import type_check
 
 from .. import BackendNode, BackendNodeCollection
 from . import entities
-from . import utils
+from . import utils as dj_utils
+from .. import utils as gen_utils
 from .computers import DjangoComputer
 from .users import DjangoUser
 
@@ -34,8 +35,6 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
     # pylint: disable=too-many-public-methods
 
     MODEL_CLASS = models.DbNode
-    ATTRIBUTE_CLASS = models.DbAttribute
-    EXTRA_CLASS = models.DbExtra
     LINK_CLASS = models.DbLink
 
     def __init__(self,
@@ -84,7 +83,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
             type_check(mtime, datetime, 'the given mtime is of type {}'.format(type(mtime)))
             arguments['mtime'] = mtime
 
-        self._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))
+        self._dbmodel = dj_utils.ModelWrapper(models.DbNode(**arguments))
 
     def clone(self):
         """Return an unstored clone of ourselves.
@@ -102,7 +101,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         clone = self.__class__.__new__(self.__class__)  # pylint: disable=no-value-for-parameter
         clone.__init__(self.backend, self.node_type, self.user)
-        clone._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))  # pylint: disable=protected-access
+        clone._dbmodel = dj_utils.ModelWrapper(models.DbNode(**arguments))  # pylint: disable=protected-access
         return clone
 
     @property
@@ -156,9 +155,9 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :raises AttributeError: if the attribute does not exist
         """
         try:
-            return self.ATTRIBUTE_CLASS.get_value_for_node(dbnode=self.dbmodel, key=key)
-        except AttributeError:
-            raise AttributeError('Attribute `{}` does not exist'.format(key))
+            return gen_utils.get_attr(self.dbmodel.get_attributes(), key)
+        except (KeyError, IndexError):
+            raise AttributeError("Attribute '{}' does not exist".format(key))
 
     def get_attributes(self, keys):
         """Return a set of attributes.
@@ -175,7 +174,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param key: name of the attribute
         :param value: value of the attribute
         """
-        self.ATTRIBUTE_CLASS.set_value_for_node(self.dbmodel, key, value)
+        self.dbmodel.set_attribute(key, value)
 
     def set_attributes(self, attributes):
         """Set attributes.
@@ -185,7 +184,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param attributes: the new attributes to set
         """
         for key, value in attributes.items():
-            self.ATTRIBUTE_CLASS.set_value_for_node(self.dbmodel, key, value)
+            self.dbmodel.set_attribute(key, value)
 
     def reset_attributes(self, attributes):
         """Reset the attributes.
@@ -194,7 +193,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         :param attributes: the new attributes to set
         """
-        self.ATTRIBUTE_CLASS.reset_values_for_node(self.dbmodel, attributes)
+        self.dbmodel.reset_attributes(attributes)
 
     def delete_attribute(self, key):
         """Delete an attribute.
@@ -202,10 +201,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param key: name of the attribute
         :raises AttributeError: if the attribute does not exist
         """
-        if not self.ATTRIBUTE_CLASS.has_key(self.dbmodel, key):
-            raise AttributeError('Attribute `{}` does not exist'.format(key))
-
-        self.ATTRIBUTE_CLASS.del_value_for_node(self.dbmodel, key)
+        self.dbmodel.del_attribute(key)
 
     def delete_attributes(self, keys):
         """Delete multiple attributes.
@@ -246,8 +242,8 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :raises AttributeError: if the extra does not exist
         """
         try:
-            return self.EXTRA_CLASS.get_value_for_node(dbnode=self.dbmodel, key=key)
-        except AttributeError:
+            return gen_utils.get_attr(self.dbmodel.extras, key)
+        except (KeyError, AttributeError):
             raise AttributeError('Extra `{}` does not exist'.format(key))
 
     def get_extras(self, keys):
@@ -265,7 +261,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param key: name of the extra
         :param value: value of the extra
         """
-        self.EXTRA_CLASS.set_value_for_node(self.dbmodel, key, value)
+        self.dbmodel.set_extra(key, value)
 
     def set_extras(self, extras):
         """Set extras.
@@ -274,8 +270,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         :param extras: the new extras to set
         """
-        for key, value in extras.items():
-            self.EXTRA_CLASS.set_value_for_node(self.dbmodel, key, value)
+        self.dbmodel.set_extras(extras)
 
     def reset_extras(self, extras):
         """Reset the extras.
@@ -284,7 +279,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         :param extras: the new extras to set
         """
-        raise NotImplementedError
+        self.dbmodel.reset_extras(extras)
 
     def delete_extra(self, key):
         """Delete an extra.
@@ -292,10 +287,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param key: name of the extra
         :raises AttributeError: if the extra does not exist
         """
-        if not self.EXTRA_CLASS.has_key(self.dbmodel, key):
-            raise AttributeError('Extra `{}` does not exist'.format(key))
-
-        self.EXTRA_CLASS.del_value_for_node(self.dbmodel, key)
+        self.dbmodel.del_extra(key)
 
     def delete_extras(self, keys):
         """Delete multiple extras.
@@ -317,7 +309,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         :return: an iterator with extra key value pairs
         """
-        for key, value in self._dbmodel.extras.items():
+        for key, value in self.dbmodel.extras.items():
             yield key, value
 
     def extras_keys(self):
@@ -325,7 +317,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         :return: an iterator with extras keys
         """
-        for key in self._dbmodel.extras.keys():
+        for key in self.dbmodel.extras.keys():
             yield key
 
     def add_incoming(self, source, link_type, link_label):
@@ -383,7 +375,8 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
                 self.dbmodel.save()
 
                 if attributes:
-                    self.ATTRIBUTE_CLASS.reset_values_for_node(self.dbmodel, attributes, with_transaction=False)
+                    for key, value in attributes.items():
+                        self.dbmodel.set_attribute(key, value)
 
                 if links:
                     for link_triple in links:

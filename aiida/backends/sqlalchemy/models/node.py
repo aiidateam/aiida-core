@@ -133,7 +133,7 @@ class DbNode(Base):
             thistype = thistype[:-1]  # Strip final dot
             return thistype.rpartition('.')[2]
 
-    def set_attr(self, key, value):
+    def set_attribute(self, key, value):
         DbNode._set_attr(self.attributes, key, value)
         flag_modified(self, "attributes")
         self.save()
@@ -165,7 +165,7 @@ class DbNode(Base):
         flag_modified(self, "extras")
         self.save()
 
-    def del_attr(self, key):
+    def del_attribute(self, key):
         DbNode._del_attr(self.attributes, key)
         flag_modified(self, "attributes")
         self.save()

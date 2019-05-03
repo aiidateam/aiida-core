@@ -16,18 +16,39 @@ import six
 from django.core.exceptions import ObjectDoesNotExist
 from aiida.common.exceptions import AiidaException, DbContentError
 from six.moves import range
+from aiida.backends.djsite.utils import SCHEMA_VERSION_DB_KEY, SCHEMA_VERSION_DB_DESCRIPTION
 
 
 class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0036_drop_computer_transport_params'
+LATEST_MIGRATION = '0037_attributes_extras_settings_json'
 
 
 def _update_schema_version(version, apps, schema_editor):
-    from aiida.backends.djsite.utils import set_db_schema_version
-    set_db_schema_version(version)
+    """
+    The update schema uses the current models (and checks if the value is stored in EAV mode or JSONB)
+    to avoid to use the DbSettings schema that may change (as it changed with the migration of the
+    settings table to JSONB)
+    """
+    db_setting_model = apps.get_model('db', 'DbSetting')
+    res = db_setting_model.objects.filter(key=SCHEMA_VERSION_DB_KEY).first()
+    # If there is no schema record, create ones
+    if res is None:
+        res = db_setting_model()
+        res.key = SCHEMA_VERSION_DB_KEY
+        res.description = SCHEMA_VERSION_DB_DESCRIPTION
+
+    # If it stores the values in an EAV format, add the value in the tval field
+    if hasattr(res, 'tval'):
+        res.tval = str(version)
+    # Otherwise add it to the val (JSON) fiels
+    else:
+        res.val = str(version)
+
+    # Store the final result
+    res.save()
 
 
 def upgrade_schema_version(up_revision, down_revision):
@@ -54,7 +75,7 @@ def current_schema_version():
 # This was done because:
 # 1) The DbAttribute object loaded with apps.get_model() does not provide the class methods
 # 2) When the django model changes the migration will continue to work
-# 3) If we defined in the migration a new class with these methodds as an extension of the DbAttribute class,
+# 3) If we defined in the migration a new class with these methods as an extension of the DbAttribute class,
 # django detects a change in the model and creates a new migration
 
 
@@ -94,7 +115,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
       from the number declared in the ival field).
 
     :return: the deserialized value
-    :raise aiida.backends.djsite.db.models.DeserializationException: if an error occurs
+    :raise aiida.backends.djsite.db.migrations.DeserializationException: if an error occurs
     """
     from aiida.common import json
     from aiida.common.timezone import (

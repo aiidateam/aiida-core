@@ -258,3 +258,14 @@ py:class Collection
 
 # psychopg2
 py:class psycopg2.extensions.cursor
+
+# Aldjemy exceptions
+py:class aldjemy.orm.DbNode
+py:class aldjemy.orm.DbLink
+py:class aldjemy.orm.DbComputer
+py:class aldjemy.orm.DbUser
+py:class aldjemy.orm.DbGroup
+py:class aldjemy.orm.DbAuthInfo
+py:class aldjemy.orm.DbComment
+py:class aldjemy.orm.DbLog
+py:class aldjemy.orm.DbSetting

@@ -111,7 +111,21 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def insert_data(cls):
-        cls.__backend_instance.insert_data()
+        """
+        This method setups the database (by creating a default user) and
+        inserts default data into the database (which is for the moment a
+        default computer).
+        """
+        cls.create_user()
+        cls.create_computer()
+
+    @classmethod
+    def create_user(cls):
+        cls.__backend_instance.create_user()
+
+    @classmethod
+    def create_computer(cls):
+        cls.__backend_instance.create_computer()
 
     @classmethod
     def clean_db(cls):

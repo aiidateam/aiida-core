@@ -22,7 +22,7 @@ import sqlalchemy.exc
 from aiida.common import exceptions
 from aiida.backends.sqlalchemy import get_scoped_session
 
-__all__ = ('django_filter', 'get_attr')
+__all__ = ['django_filter']
 
 
 class ModelWrapper(object):
@@ -131,19 +131,6 @@ def iter_dict(attrs):
                 yield new_key, v
     else:
         yield "", attrs
-
-
-def get_attr(attrs, key):
-    path = key.split('.')
-
-    d = attrs
-    for p in path:
-        if p.isdigit():
-            p = int(p)
-        # Let it raise the appropriate exception
-        d = d[p]
-
-    return d
 
 
 def _create_op_func(op):

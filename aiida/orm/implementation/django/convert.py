@@ -22,8 +22,7 @@ except ImportError:  # Python2
 
 # pylint: disable=cyclic-import
 
-from aiida.backends.djsite.db import models
-from aiida.orm.implementation.django import dummy_model as dummy_models
+import aiida.backends.djsite.db.models as djmodels
 
 __all__ = ('get_backend_entity',)
 
@@ -39,7 +38,7 @@ def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument
         dbmodel.__class__.__name__))
 
 
-@get_backend_entity.register(models.DbUser)
+@get_backend_entity.register(djmodels.DbUser)
 def _(dbmodel, backend):
     """
     get_backend_entity for Django DbUser
@@ -48,7 +47,7 @@ def _(dbmodel, backend):
     return users.DjangoUser.from_dbmodel(dbmodel, backend)
 
 
-@get_backend_entity.register(models.DbGroup)
+@get_backend_entity.register(djmodels.DbGroup)
 def _(dbmodel, backend):
     """
     get_backend_entity for Django DbGroup
@@ -57,7 +56,7 @@ def _(dbmodel, backend):
     return groups.DjangoGroup.from_dbmodel(dbmodel, backend)
 
 
-@get_backend_entity.register(models.DbComputer)
+@get_backend_entity.register(djmodels.DbComputer)
 def _(dbmodel, backend):
     """
     get_backend_entity for Django DbGroup
@@ -66,7 +65,7 @@ def _(dbmodel, backend):
     return computers.DjangoComputer.from_dbmodel(dbmodel, backend)
 
 
-@get_backend_entity.register(models.DbNode)
+@get_backend_entity.register(djmodels.DbNode)
 def _(dbmodel, backend):
     """
     get_backend_entity for Django DbNode. It will return an ORM instance since
@@ -76,7 +75,7 @@ def _(dbmodel, backend):
     return nodes.DjangoNode.from_dbmodel(dbmodel, backend)
 
 
-@get_backend_entity.register(models.DbAuthInfo)
+@get_backend_entity.register(djmodels.DbAuthInfo)
 def _(dbmodel, backend):
     """
     get_backend_entity for Django DbAuthInfo
@@ -85,26 +84,26 @@ def _(dbmodel, backend):
     return authinfos.DjangoAuthInfo.from_dbmodel(dbmodel, backend)
 
 
-@get_backend_entity.register(models.DbComment)
+@get_backend_entity.register(djmodels.DbComment)
 def _(dbmodel, backend):
     from . import comments
     return comments.DjangoComment.from_dbmodel(dbmodel, backend)
 
 
-@get_backend_entity.register(models.DbLog)
+@get_backend_entity.register(djmodels.DbLog)
 def _(dbmodel, backend):
     from . import logs
     return logs.DjangoLog.from_dbmodel(dbmodel, backend)
 
 
-@get_backend_entity.register(dummy_models.DbUser)
+@get_backend_entity.register(djmodels.DbUser.sa)
 def _(dbmodel, backend):
     """
     get_backend_entity for DummyModel DbUser.
     DummyModel instances are created when QueryBuilder queries the Django backend.
     """
     from . import users
-    djuser_instance = models.DbUser(
+    djuser_instance = djmodels.DbUser(
         id=dbmodel.id,
         email=dbmodel.email,
         first_name=dbmodel.first_name,
@@ -113,14 +112,14 @@ def _(dbmodel, backend):
     return users.DjangoUser.from_dbmodel(djuser_instance, backend)
 
 
-@get_backend_entity.register(dummy_models.DbGroup)
+@get_backend_entity.register(djmodels.DbGroup.sa)
 def _(dbmodel, backend):
     """
     get_backend_entity for DummyModel DbGroup.
     DummyModel instances are created when QueryBuilder queries the Django backend.
     """
     from . import groups
-    djgroup_instance = models.DbGroup(
+    djgroup_instance = djmodels.DbGroup(
         id=dbmodel.id,
         type_string=dbmodel.type_string,
         uuid=dbmodel.uuid,
@@ -132,14 +131,14 @@ def _(dbmodel, backend):
     return groups.DjangoGroup.from_dbmodel(djgroup_instance, backend)
 
 
-@get_backend_entity.register(dummy_models.DbComputer)
+@get_backend_entity.register(djmodels.DbComputer.sa)
 def _(dbmodel, backend):
     """
     get_backend_entity for DummyModel DbComputer.
     DummyModel instances are created when QueryBuilder queries the Django backend.
     """
     from . import computers
-    djcomputer_instance = models.DbComputer(
+    djcomputer_instance = djmodels.DbComputer(
         id=dbmodel.id,
         uuid=dbmodel.uuid,
         name=dbmodel.name,
@@ -147,17 +146,17 @@ def _(dbmodel, backend):
         description=dbmodel.description,
         transport_type=dbmodel.transport_type,
         scheduler_type=dbmodel.scheduler_type,
-        metadata=dbmodel._metadata)  # pylint: disable=protected-access
+        metadata=dbmodel.metadata)
     return computers.DjangoComputer.from_dbmodel(djcomputer_instance, backend)
 
 
-@get_backend_entity.register(dummy_models.DbNode)
+@get_backend_entity.register(djmodels.DbNode.sa)
 def _(dbmodel, backend):
     """
     get_backend_entity for DummyModel DbNode.
     DummyModel instances are created when QueryBuilder queries the Django backend.
     """
-    djnode_instance = models.DbNode(
+    djnode_instance = djmodels.DbNode(
         id=dbmodel.id,
         node_type=dbmodel.node_type,
         process_type=dbmodel.process_type,
@@ -173,31 +172,31 @@ def _(dbmodel, backend):
     return nodes.DjangoNode.from_dbmodel(djnode_instance, backend)
 
 
-@get_backend_entity.register(dummy_models.DbAuthInfo)
+@get_backend_entity.register(djmodels.DbAuthInfo.sa)
 def _(dbmodel, backend):
     """
     get_backend_entity for DummyModel DbAuthInfo.
     DummyModel instances are created when QueryBuilder queries the Django backend.
     """
     from . import authinfos
-    djauthinfo_instance = models.DbAuthInfo(
+    djauthinfo_instance = djmodels.DbAuthInfo(
         id=dbmodel.id,
         aiidauser_id=dbmodel.aiidauser_id,
         dbcomputer_id=dbmodel.dbcomputer_id,
-        metadata=dbmodel._metadata,  # pylint: disable=protected-access
+        metadata=dbmodel.metadata,  # pylint: disable=protected-access
         auth_params=dbmodel.auth_params,
         enabled=dbmodel.enabled,
     )
     return authinfos.DjangoAuthInfo.from_dbmodel(djauthinfo_instance, backend)
 
 
-@get_backend_entity.register(dummy_models.DbComment)
+@get_backend_entity.register(djmodels.DbComment.sa)
 def _(dbmodel, backend):
     """
     Convert a dbcomment to the backend entity
     """
     from . import comments
-    djcomment = models.DbComment(
+    djcomment = djmodels.DbComment(
         id=dbmodel.id,
         uuid=dbmodel.uuid,
         dbnode_id=dbmodel.dbnode_id,
@@ -208,19 +207,19 @@ def _(dbmodel, backend):
     return comments.DjangoComment.from_dbmodel(djcomment, backend)
 
 
-@get_backend_entity.register(dummy_models.DbLog)
+@get_backend_entity.register(djmodels.DbLog.sa)
 def _(dbmodel, backend):
     """
     Convert a dbcomment to the backend entity
     """
     from . import logs
-    djlog = models.DbLog(
+    djlog = djmodels.DbLog(
         id=dbmodel.id,
         time=dbmodel.time,
         loggername=dbmodel.loggername,
         levelname=dbmodel.levelname,
         dbnode_id=dbmodel.dbnode_id,
         message=dbmodel.message,
-        metadata=dbmodel._metadata  # pylint: disable=protected-access
+        metadata=dbmodel.metadata  # pylint: disable=protected-access
     )
     return logs.DjangoLog.from_dbmodel(djlog, backend)

@@ -14,24 +14,23 @@ table.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from django.db import IntegrityError
-from aiida.common.exceptions import UniquenessError
+from aiida.backends.djsite.db.models import DbSetting
+from aiida.backends.utils import validate_attribute_key
+from aiida.backends.utils import get_value_of_sub_field
+from aiida.common.exceptions import NotExistent
 
 
 def set_global_setting(key, value, description=None):
     """
     Set a global setting in the DbSetting table (therefore, stored at the DB level).
     """
-    from aiida.backends.djsite.db.models import DbSetting
-
     # Before storing, validate the key
-    DbSetting.validate_key(key)
+    validate_attribute_key(key)
 
-    # This also saves in the DB
-    try:
-        DbSetting.set_value(key, value, other_attribs={"description": description})
-    except IntegrityError as exception:
-        raise UniquenessError(exception)
+    other_attribs = dict()
+    if description is not None:
+        other_attribs["description"] = description
+    DbSetting.set_value(key, value, other_attribs=other_attribs)
 
 
 def del_global_setting(key):
@@ -42,15 +41,11 @@ def del_global_setting(key):
     :raise KeyError: if the setting does not exist in the DB
     """
     from aiida.backends.djsite.db.models import DbSetting
-    from django.core.exceptions import ObjectDoesNotExist
 
     try:
-        setting = DbSetting.objects.get(key=key)
-    except ObjectDoesNotExist:
+        DbSetting.del_value(key=key)
+    except KeyError:
         raise KeyError("No global setting with key={}".format(key))
-
-    # This does not raise exceptions
-    DbSetting.del_value(key=key)
 
 
 def get_global_setting(key):
@@ -61,14 +56,16 @@ def get_global_setting(key):
     :raise KeyError: if the setting does not exist in the DB
     """
     from aiida.backends.djsite.db.models import DbSetting
-    from django.core.exceptions import ObjectDoesNotExist
 
     # Check first that the table exists
     table_check_test()
 
     try:
-        return DbSetting.objects.get(key=key).getvalue()
-    except ObjectDoesNotExist:
+        res = get_value_of_sub_field(key, lambda given_key: DbSetting.objects.filter(key=given_key).first().getvalue())
+        if res is None:
+            raise NotExistent
+        return res
+    except NotExistent:
         raise KeyError("No global setting with key={}".format(key))
 
 

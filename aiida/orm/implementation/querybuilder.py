@@ -27,6 +27,9 @@ class BackendQueryBuilder(object):
 
     # pylint: disable=invalid-name,too-many-public-methods,useless-object-inheritance
 
+    outer_to_inner_schema = None
+    inner_to_outer_schema = None
+
     def __init__(self, backend):
         """
         :param backend: the backend
@@ -34,6 +37,8 @@ class BackendQueryBuilder(object):
         from . import backends
         type_check(backend, backends.Backend)
         self._backend = backend
+        self.inner_to_outer_schema = dict()
+        self.outer_to_inner_schema = dict()
 
     @abc.abstractmethod
     def Node(self):
@@ -132,6 +137,39 @@ class BackendQueryBuilder(object):
         """
 
     @classmethod
+    def get_corresponding_properties(cls, entity_table, given_properties, mapper):
+        """
+        This method returns a list of updated properties for a given list of properties.
+        If there is no update for the property, the given property is returned in the list.
+        """
+        if entity_table in mapper.keys():
+            res = list()
+            for given_property in given_properties:
+                res.append(cls.get_corresponding_property(entity_table, given_property, mapper))
+            return res
+
+        return given_properties
+
+    @classmethod
+    def get_corresponding_property(cls, entity_table, given_property, mapper):
+        """
+        This method returns an updated property for a given a property.
+        If there is no update for the property, the given property is returned.
+        """
+        try:
+            # Get the mapping for the specific entity_table
+            property_mapping = mapper[entity_table]
+            try:
+                # Get the mapping for the specific property
+                return property_mapping[given_property]
+            except KeyError:
+                # If there is no mapping, the property remains unchanged
+                return given_property
+        except KeyError:
+            # If it doesn't exist, it means that the given_property remains v
+            return given_property
+
+    @classmethod
     def get_filter_expr_from_column(cls, operator, value, column):
         """
         A method that returns an valid SQLAlchemy expression.
@@ -224,10 +262,17 @@ class BackendQueryBuilder(object):
         """
 
     @abc.abstractmethod
-    def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
+    def iterdict(self, query, batch_size, tag_to_projected_properties_dict, tag_to_alias_map):
         """
         :returns: An iterator over all the results of a list of dictionaries.
         """
+
+    @abc.abstractmethod
+    def get_column_names(self, alias):
+        """
+        Return the column names of the given table (alias).
+        """
+        pass
 
     def get_column(self, colname, alias):  # pylint: disable=no-self-use
         """

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-name-in-module, no-member, import-error
+# pylint: disable=no-name-in-module,no-member,import-error
 """Utility functions specific to the Django backend."""
 from __future__ import division
 from __future__ import print_function
@@ -15,6 +15,9 @@ from __future__ import absolute_import
 
 import os
 import django
+
+SCHEMA_VERSION_DB_KEY = 'db|schemaversion'
+SCHEMA_VERSION_DB_DESCRIPTION = "The version of the schema used in this database."
 
 
 def load_dbenv(profile):
@@ -101,8 +104,7 @@ def set_db_schema_version(version):
     you are doing.
     """
     from aiida.backends.utils import set_global_setting
-    return set_global_setting(
-        'db|schemaversion', version, description="The version of the schema used in this database.")
+    return set_global_setting(SCHEMA_VERSION_DB_KEY, version, description=SCHEMA_VERSION_DB_DESCRIPTION)
 
 
 def get_db_schema_version():
@@ -112,7 +114,7 @@ def get_db_schema_version():
     """
     from aiida.backends.utils import get_global_setting
     try:
-        return get_global_setting('db|schemaversion')
+        return get_global_setting(SCHEMA_VERSION_DB_KEY)
     except KeyError:
         return None
 

@@ -502,7 +502,7 @@ class TestQueryBuilder(AiidaTestCase):
         # pylint: disable=protected-access
         self.assertTrue('s' not in qb._projections)
         self.assertTrue('s' not in qb._filters)
-        self.assertTrue('s' not in qb._tag_to_alias_map)
+        self.assertTrue('s' not in qb.tag_to_alias_map)
         self.assertTrue(len(qb._path) == 0)
         self.assertTrue(orm.StructureData not in qb._cls_to_tag_map)
         # So this should work now:
@@ -614,7 +614,7 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         # a JSON field (in both backends).
         qb = orm.QueryBuilder()
         qb.append(orm.CalculationNode, project=['id'], tag='calc')
-        qb.append(orm.Computer, project=['id', '_metadata'], outerjoin=True, with_node='calc')
+        qb.append(orm.Computer, project=['id', 'metadata'], outerjoin=True, with_node='calc')
         qb.all()
 
 
@@ -711,6 +711,8 @@ class QueryBuilderDateTimeAttribute(AiidaTestCase):
 
     @unittest.skipIf(configuration.PROFILE.database_backend == u'sqlalchemy',
                      "SQLA doesn't have full datetime support in attributes")
+    @unittest.skipIf(configuration.PROFILE.database_backend == u'django',
+                     "Django JSONB doesn't have full datetime support in attributes")
     def test_date(self):
         from aiida.common import timezone
         from datetime import timedelta
@@ -906,6 +908,53 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
 
         self.assertEqual(qb.count(), 1, "The expected user that owns the " "selected group was not found.")
+
+    def test_joins_group_node(self):
+        """
+        This test checks that the querying for the nodes that belong to a group works correctly (using QueryBuilder).
+        This is important for the Django backend with the use of aldjemy for the Django to SQLA schema translation.
+        Since this is not backend specific test (even if it is mainly used to test the querying of Django backend
+        with QueryBuilder), we keep it at the general tests (ran by both backends).
+        """
+        new_email = "newuser@new.n2"
+        user = orm.User(email=new_email).store()
+
+        # Create a group that belongs to that user
+        group = orm.Group(label="node_group_2")
+        group.user = user
+        group.store()
+
+        # Create nodes and add them to the created group
+        n1 = orm.Data()
+        n1.label = 'node1'
+        n1.set_attribute('foo', ['hello', 'goodbye'])
+        n1.store()
+
+        n2 = orm.CalculationNode()
+        n2.label = 'node2'
+        n2.set_attribute('foo', 1)
+        n2.store()
+
+        n3 = orm.Data()
+        n3.label = 'node3'
+        n3.set_attribute('foo', 1.0000)  # Stored as fval
+        n3.store()
+
+        n4 = orm.CalculationNode()
+        n4.label = 'node4'
+        n4.set_attribute('foo', 'bar')
+        n4.store()
+
+        group.add_nodes([n1, n2, n3, n4])
+
+        # Check that the nodes are in the group
+        qb = orm.QueryBuilder()
+        qb.append(orm.Node, tag='node', project=['id'])
+        qb.append(orm.Group, with_node='node', filters={'id': {'==': group.id}})
+        self.assertEqual(qb.count(), 4, "There should be 4 nodes in the group")
+        id_res = [_ for [_] in qb.all()]
+        for curr_id in [n1.id, n2.id, n3.id, n4.id]:
+            self.assertIn(curr_id, id_res)
 
 
 class QueryBuilderPath(AiidaTestCase):
@@ -1221,3 +1270,46 @@ class TestManager(AiidaTestCase):
         }
 
         self.assertEqual(new_db_statistics, expected_db_statistics)
+
+
+class TestDoubleStar(AiidaTestCase):
+    """
+    In this test class we check if QueryBuilder returns the correct results
+    when double star is provided as projection.
+    """
+
+    def test_statistics_default_class(self):
+
+        # The expected result
+        # pylint: disable=no-member
+        expected_dict = {
+            u'description': self.computer.description,
+            u'scheduler_type': self.computer.get_scheduler_type(),
+            u'hostname': self.computer.hostname,
+            u'uuid': self.computer.uuid,
+            u'name': self.computer.name,
+            u'transport_type': self.computer.get_transport_type(),
+            u'id': self.computer.id,
+            u'metadata': self.computer.get_metadata(),
+        }
+
+        qb = orm.QueryBuilder()
+        qb.append(orm.Computer, project=['**'])
+        # We expect one result
+        self.assertEqual(qb.count(), 1)
+
+        # Get the one result record and check that the returned
+        # data are correct
+        res = list(qb.dict()[0].values())[0]
+        self.assertDictEqual(res, expected_dict)
+
+        # Ask the same query as above using queryhelp
+        qh = {'project': {'computer': ['**']}, 'path': [{'tag': 'computer', 'cls': orm.Computer}]}
+        qb = orm.QueryBuilder(**qh)
+        # We expect one result
+        self.assertEqual(qb.count(), 1)
+
+        # Get the one result record and check that the returned
+        # data are correct
+        res = list(qb.dict()[0].values())[0]
+        self.assertDictEqual(res, expected_dict)

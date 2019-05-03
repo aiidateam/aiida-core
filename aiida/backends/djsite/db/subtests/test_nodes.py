@@ -15,12 +15,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.links import LinkType
-from aiida.orm import Data, Node
-from aiida.orm import CalculationNode
+from aiida.orm import Data
+from unittest import skip
 
 
 class TestNodeBasicDjango(AiidaTestCase):
+    @skip("This seems not to be needed. It should be a more general tests for both backends.")
     def test_replace_extras_2(self):
         """
         This is a Django specific test which checks (manually) that,
@@ -73,6 +73,7 @@ class TestNodeBasicDjango(AiidaTestCase):
         self.assertEquals(len(DbExtra.objects.filter(
             dbnode=a.backend_entity.dbmodel, key__startswith=('dict' + DbExtra._sep))), 0)
 
+    @skip("This seems not to be needed. It should be a more general tests for both backends.")
     def test_attrs_and_extras_wrong_keyname(self):
         """
         Attribute keys cannot include the separator symbol in the key

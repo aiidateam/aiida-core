@@ -48,14 +48,6 @@ class WorkChain(Process):
     _STEPPER_STATE = 'stepper_state'
     _CONTEXT = 'CONTEXT'
 
-    @classmethod
-    def define(cls, spec):
-        super(WorkChain, cls).define(spec)
-        # For now workchains can accept any input and emit any output
-        # If this changes in the future the spec should be updated here.
-        spec.inputs.dynamic = True
-        spec.outputs.dynamic = True
-
     def __init__(self, inputs=None, logger=None, runner=None, enable_persistence=True):
         """Construct the instance only if it is a sub class of `WorkChain` otherwise raise `InvalidOperation`."""
         if self.__class__ == WorkChain:

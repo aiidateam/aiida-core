@@ -71,6 +71,8 @@ def submit(process, **inputs):
     .. warning: this should not be used within another process. Instead, there one should use the `submit` method of
         the wrapping process itself, i.e. use `self.submit`.
 
+    .. warning: submission of processes requires `store_provenance=True`
+
     :param process: the process class to submit
     :param inputs: the inputs to be passed to the process
     :return: the calculation node of the process
@@ -84,6 +86,16 @@ def submit(process, **inputs):
     controller = manager.get_manager().get_process_controller()
 
     process = instantiate_process(runner, process, **inputs)
+
+    # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
+    # instead of raising, because in this way the user does not have to change the launcher when testing.
+    if process.metadata.get('dry_run', False):
+        _, node = run_get_node(process)
+        return node
+
+    if not process.metadata.store_provenance:
+        raise InvalidOperation('cannot submit a process with `store_provenance=False`')
+
     runner.persister.save_checkpoint(process)
     process.close()
 

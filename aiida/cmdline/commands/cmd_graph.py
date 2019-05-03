@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -31,36 +32,38 @@ def verdi_graph():
 @click.option(
     '-a',
     '--ancestor-depth',
-    help="The maximum depth when recursing upwards, if not set it will recurse to the end",
+    help='The maximum depth when recursing upwards, if not set it will recurse to the end.',
     type=click.IntRange(min=0))
 @click.option(
     '-d',
     '--descendant-depth',
-    help="The maximum depth when recursing through the descendants, if not set it will recurse to the end",
+    help='The maximum depth when recursing through the descendants, if not set it will recurse to the end',
     type=click.IntRange(min=0))
-@click.option('-o', '--outputs', is_flag=True, help="Always show all outputs of a calculation")
-@click.option('-i', '--inputs', is_flag=True, help="Always show all inputs of a calculation")
+@click.option('-o', '--outputs', is_flag=True, help='Always show all outputs of a calculation.')
+@click.option('-i', '--inputs', is_flag=True, help='Always show all inputs of a calculation.')
 @click.option(
     '-f',
     '--output-format',
-    help="The output format, something that can be recognized by graphviz"
-    "(see http://www.graphviz.org/doc/info/output.html)",
+    help='The output format, something that can be recognized by graphviz'
+    '(see http://www.graphviz.org/doc/info/output.html).',
     default='dot')
 @decorators.with_dbenv()
 def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, output_format):
-    """
-    Generate a graph from a given ROOT_NODE user-specified by its pk.
-    """
+    """Generate a graph for a given ROOT_NODE."""
     from aiida.tools.visualization.graphviz import draw_graph
 
-    exit_status, output_file_name = draw_graph(
-        root_node,
-        ancestor_depth=ancestor_depth,
-        descendant_depth=descendant_depth,
-        image_format=output_format,
-        include_calculation_inputs=inputs,
-        include_calculation_outputs=outputs)
+    try:
+        exit_status, output_file_name = draw_graph(
+            root_node,
+            ancestor_depth=ancestor_depth,
+            descendant_depth=descendant_depth,
+            image_format=output_format,
+            include_calculation_inputs=inputs,
+            include_calculation_outputs=outputs)
+    except OSError as exception:
+        echo.echo_critical(str(exception))
+
     if exit_status:
-        echo.echo_critical("Failed to generate graph")
+        echo.echo_critical('Failed to generate graph')
     else:
-        echo.echo_success("Output file is {}".format(output_file_name))
+        echo.echo_success('Output file is {}'.format(output_file_name))

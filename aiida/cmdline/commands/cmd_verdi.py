@@ -21,10 +21,9 @@ from aiida.common import exceptions
 
 @click.group(context_settings={'help_option_names': ['-h', '--help']})
 @options.PROFILE()
-@click.option('--version', is_flag=True, is_eager=True, help='Print the version of AiiDA that is currently installed.')
 @click.version_option(None, "-v", "--version", message="AiiDA version %(version)s")
 @click.pass_context
-def verdi(ctx, profile, version):  # pylint: disable=unused-argument
+def verdi(ctx, profile):
     """The command line interface of AiiDA."""
     from aiida.manage.configuration import get_config, load_profile
 

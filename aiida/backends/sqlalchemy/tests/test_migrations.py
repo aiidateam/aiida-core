@@ -575,7 +575,6 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
 
     def test_attribute_key_changes(self):
         """Verify that the keys are successfully changed of the affected attributes."""
-        import ast
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
@@ -590,15 +589,12 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 self.assertEqual(node_work.attributes.get(self.KEY_PROCESS_LABEL_NEW), self.process_label)
                 self.assertEqual(node_work.attributes.get(self.KEY_PROCESS_LABEL_OLD, not_found), not_found)
 
-                # The dictionaries need to be cast with ast.literal_eval, because the `get` will return a string
-                # representation of the dictionary that the attribute contains
                 node_calc = session.query(DbNode).filter(DbNode.id == self.node_calc_id).one()
                 self.assertEqual(node_calc.attributes.get(self.KEY_PROCESS_LABEL_NEW), self.process_label)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_NEW), self.parser_name)
-                self.assertEqual(ast.literal_eval(node_calc.attributes.get(self.KEY_RESOURCES_NEW)), self.resources)
+                self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_NEW), self.resources)
                 self.assertEqual(
-                    ast.literal_eval(node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW)),
-                    self.environment_variables)
+                    node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PROCESS_LABEL_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_OLD, not_found), not_found)

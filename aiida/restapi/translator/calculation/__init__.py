@@ -18,6 +18,7 @@ import os
 
 from aiida.restapi.translator.node import NodeTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
+from aiida.orm.utils.repository import FileType
 
 
 class CalculationTranslator(NodeTranslator):
@@ -28,12 +29,12 @@ class CalculationTranslator(NodeTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "calculations"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm import CalcJobNode
-    _aiida_class = CalcJobNode
+    from aiida.orm import CalculationNode
+    _aiida_class = CalculationNode
     # The string name of the AiiDA class
-    _aiida_type = "process.calculation.calcjob.CalcJobNode"
+    _aiida_type = "process.calculation.calculation.CalculationNode"
     # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = _aiida_type + '.'
+    _qb_type = "process.calculation."
 
     _result_type = __label__
 
@@ -91,25 +92,34 @@ class CalculationTranslator(NodeTranslator):
         }
 
     @staticmethod
-    def get_files_list(dirobj, files=None, prefix=None):
+    def get_files_list(node_obj, dir_obj=None, files=None, prefix=None):
         """
-        Get list of all files present in given directory.
+        Return the list of all files contained in the node object repository
+        If a directory object `dir_obj` of the repository is passed, get the list of all files
+        recursively in the specified directory
 
-        :param dirobj: Directory in which files will be searched
+        :param node_obj: node object
+        :param dir_obj: directory in which files will be searched
         :param files: list of files if any
         :param prefix: file name prefix if any
-        :return:
+        :return: the list of files
         """
         if files is None:
             files = []
         if prefix is None:
             prefix = []
-        for fname in dirobj.get_content_list():
-            if dirobj.isfile(fname):
+
+        if dir_obj:
+            flist = node_obj.list_objects(dir_obj)
+        else:
+            flist = node_obj.list_objects()
+
+        for fname, ftype in flist:
+            if ftype == FileType.FILE:
                 filename = os.path.join(*(prefix + [fname]))
                 files.append(filename)
-            elif dirobj.isdir(fname):
-                CalculationTranslator.get_files_list(dirobj.get_subfolder(fname), files, prefix + [fname])
+            elif ftype == FileType.DIRECTORY:
+                CalculationTranslator.get_files_list(node_obj, fname, files, prefix + [fname])
         return files
 
     @staticmethod
@@ -121,8 +131,6 @@ class CalculationTranslator(NodeTranslator):
         """
         if node.node_type.startswith("process.calculation.calcjob"):
 
-            input_folder = node._raw_input_folder  # pylint: disable=protected-access
-
             if filename is not None:
                 response = {}
 
@@ -131,7 +139,7 @@ class CalculationTranslator(NodeTranslator):
 
                 if rtype == "download":
                     try:
-                        content = NodeTranslator.get_file_content(input_folder, filename)
+                        content = node.get_object_content(filename)
                     except IOError:
                         error = "Error in getting {} content".format(filename)
                         raise RestInputValidationError(error)
@@ -146,7 +154,7 @@ class CalculationTranslator(NodeTranslator):
                 return response
 
             # if filename is not provided, return list of all retrieved files
-            retrieved = CalculationTranslator.get_files_list(input_folder)
+            retrieved = CalculationTranslator.get_files_list(node)
             return retrieved
 
         return []
@@ -160,15 +168,13 @@ class CalculationTranslator(NodeTranslator):
         """
         if node.node_type.startswith("process.calculation.calcjob"):
 
-            retrieved_folder = node.outputs.retrieved
+            retrieved_folder_node = node.outputs.retrieved
             response = {}
 
-            if retrieved_folder is None:
+            if retrieved_folder_node is None:
                 response["status"] = 200
                 response["data"] = "This node does not have retrieved folder"
                 return response
-
-            output_folder = retrieved_folder._get_folder_pathsubfolder  # pylint: disable=protected-access
 
             if filename is not None:
 
@@ -177,7 +183,7 @@ class CalculationTranslator(NodeTranslator):
 
                 if rtype == "download":
                     try:
-                        content = NodeTranslator.get_file_content(output_folder, filename)
+                        content = retrieved_folder_node.get_object_content(filename)
                     except IOError:
                         error = "Error in getting {} content".format(filename)
                         raise RestInputValidationError(error)
@@ -192,7 +198,7 @@ class CalculationTranslator(NodeTranslator):
                 return response
 
             # if filename is not provided, return list of all retrieved files
-            retrieved = CalculationTranslator.get_files_list(output_folder)
+            retrieved = CalculationTranslator.get_files_list(retrieved_folder_node)
             return retrieved
 
         return []

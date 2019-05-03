@@ -14,6 +14,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import tempfile
+
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import json
@@ -31,7 +33,7 @@ class RESTApiTestCase(AiidaTestCase):
     _LIMIT_DEFAULT = 400
 
     @classmethod
-    def setUpClass(cls, *args, **kwargs):
+    def setUpClass(cls, *args, **kwargs):  # pylint: disable=too-many-locals, too-many-statements
         """
         Basides the standard setup we need to add few more objects in the
         database to be able to explore different requests/filters/orderings etc.
@@ -69,6 +71,9 @@ class RESTApiTestCase(AiidaTestCase):
 
         resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
 
+        calcfunc = orm.CalcFunctionNode(computer=cls.computer)
+        calcfunc.store()
+
         calc = orm.CalcJobNode(computer=cls.computer)
         calc.set_option('resources', resources)
         calc.set_attribute("attr1", "OK")
@@ -76,7 +81,27 @@ class RESTApiTestCase(AiidaTestCase):
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
+
+        aiida_in = 'The input file\nof the CalcJob node'
+        # Add the calcjob_inputs folder with the aiida.in file to the CalcJobNode repository
+        with tempfile.NamedTemporaryFile(mode='w+') as handle:
+            handle.write(aiida_in)
+            handle.flush()
+            handle.seek(0)
+            calc.put_object_from_filelike(handle, key='calcjob_inputs/aiida.in', force=True)
         calc.store()
+
+        aiida_out = 'The output file\nof the CalcJob node'
+        retrieved_outputs = orm.FolderData()
+        # Add the calcjob_outputs folder with the aiida.out file to the FolderData node
+        with tempfile.NamedTemporaryFile(mode='w+') as handle:
+            handle.write(aiida_out)
+            handle.flush()
+            handle.seek(0)
+            retrieved_outputs.put_object_from_filelike(handle, key='calcjob_outputs/aiida.out', force=True)
+        retrieved_outputs.store()
+        retrieved_outputs.add_incoming(calc, link_type=LinkType.CREATE, link_label='retrieved')
+
         kpoint.add_incoming(calc, link_type=LinkType.CREATE, link_label='create')
 
         calc1 = orm.CalcJobNode(computer=cls.computer)
@@ -148,7 +173,7 @@ class RESTApiTestCase(AiidaTestCase):
 
         calculation_projections = ["id", "uuid", "user_id", "node_type"]
         calculations = orm.QueryBuilder().append(
-            orm.CalcJobNode, tag="calc", project=calculation_projections).order_by({
+            orm.CalculationNode, tag="calc", project=calculation_projections).order_by({
                 'calc': [{
                     'id': {
                         'order': 'desc'
@@ -677,7 +702,54 @@ class RESTApiTestSuite(RESTApiTestCase):
         database starting from the no. specified in offset
         """
         RESTApiTestCase.process_test(
-            self, "calculations", "/calculations?limit=1&offset=1&orderby=+id", expected_list_ids=[0])
+            self, "calculations", "/calculations?limit=1&offset=1&orderby=+id", expected_list_ids=[1])
+
+    ############### calculation retrieved_inputs and retrieved_outputs  #############
+    def test_calculation_retrieved_inputs(self):
+        """
+        Get the list of given calculation retrieved_inputs
+        """
+        node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
+        url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/io/retrieved_inputs'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+            self.assertEqual(response["data"]["retrieved_inputs"], ["calcjob_inputs/aiida.in"])
+
+    def test_calculation_retrieved_outputs(self):
+        """
+        Get the list of given calculation retrieved_outputs
+        """
+        node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
+        url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/io/retrieved_outputs'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+            self.assertEqual(response["data"]["retrieved_outputs"], ["calcjob_outputs/aiida.out"])
+
+    def test_calcfunction_retrieved_inputs(self):
+        """
+        Check that the given calcfunction does not have retrieved_inputs
+        """
+        node_uuid = self.get_dummy_data()["calculations"][2]["uuid"]
+        self.process_test(
+            "calculations",
+            "/calculations/" + str(node_uuid) + "/io/retrieved_inputs",
+            uuid=node_uuid,
+            result_name="retrieved_inputs",
+            empty_list=True)
+
+    def test_calcfunction_retrieved_outputs(self):
+        """
+        Check that the given calcfunction does not have retrieved_outputs
+        """
+        node_uuid = self.get_dummy_data()["calculations"][2]["uuid"]
+        self.process_test(
+            "calculations",
+            "/calculations/" + str(node_uuid) + "/io/retrieved_outputs",
+            uuid=node_uuid,
+            result_name="retrieved_outputs",
+            empty_list=True)
 
     ############### calculation inputs  #############
     def test_calculation_inputs(self):
@@ -688,7 +760,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         self.process_test(
             "calculations",
             "/calculations/" + str(node_uuid) + "/io/inputs?orderby=id",
-            expected_list_ids=[4, 2],
+            expected_list_ids=[5, 3],
             uuid=node_uuid,
             result_node_type="data",
             result_name="inputs")
@@ -701,7 +773,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         self.process_test(
             "calculations",
             '/calculations/' + str(node_uuid) + '/io/inputs?node_type="data.dict.Dict."',
-            expected_list_ids=[2],
+            expected_list_ids=[3],
             uuid=node_uuid,
             result_node_type="data",
             result_name="inputs")

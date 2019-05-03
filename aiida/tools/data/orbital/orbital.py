@@ -18,6 +18,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.common.exceptions import ValidationError
+from aiida.plugins.entry_point import get_entry_point_from_class
 
 
 def validate_int(value):
@@ -99,8 +100,9 @@ class Orbital(object):  # pylint: disable=useless-object-inheritance
                         units are reciprocal Angstrom.
     """
     # len-2 tuples, with name and validator function
-    # Validator function should either return, or raise ValidationError
-    _base_fields_required = (('position', validate_len3_list),)
+    _base_fields_required = (('position', validate_len3_list),
+                             #NOTE: _orbital_type is internally used to manage the orbital type
+                            )
 
     # len-3 tuples, with (name, validator, default_value)
     # See how it is defined in the RealhydrogenOrbital class
@@ -127,6 +129,16 @@ class Orbital(object):  # pylint: disable=useless-object-inheritance
         """
 
         validated_dict = {}
+        if '_orbital_type' in input_dict:
+            raise ValidationError("You cannot manually set the _orbital_type")
+        entry_point = get_entry_point_from_class(self.__class__.__module__, self.__class__.__name__)[1]
+        if entry_point is None:
+            raise ValidationError(
+                "Unable to detect entry point for current class {}, maybe you did not register an entry point for it?".
+                format(self.__class__))
+
+        validated_dict['_orbital_type'] = entry_point.name
+
         for name, validator in self._base_fields_required:
             try:
                 value = input_dict.pop(name)

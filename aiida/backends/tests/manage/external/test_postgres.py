@@ -39,18 +39,15 @@ class PostgresTest(unittest.TestCase):
         self.pg_test.close()
 
     def _setup_postgres(self):
-        postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
-        postgres.determine_setup()
-        return postgres
+        return Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
 
     def test_determine_setup_fail(self):
         postgres = Postgres(interactive=False, quiet=True, dbinfo={'port': '11111'})
-        setup_success = postgres.determine_setup()
-        self.assertFalse(setup_success)
+        self.assertFalse(postgres.is_connected)
 
     def test_determine_setup_success(self):
         postgres = self._setup_postgres()
-        self.assertTrue(postgres.pg_execute)
+        self.assertTrue(postgres.is_connected)
 
     def test_setup_fail_callback(self):
         """Make sure `determine_setup` works despite wrong initial values in case of correct callback"""
@@ -58,13 +55,13 @@ class PostgresTest(unittest.TestCase):
         def correct_setup(interactive, dbinfo):  # pylint: disable=unused-argument
             return self.pg_test.dsn
 
-        postgres = Postgres(interactive=False, quiet=True, dbinfo={'port': '11111'})
+        postgres = Postgres(interactive=False, quiet=True, dbinfo={'port': '11111'}, determine_setup=False)
         postgres.set_setup_fail_callback(correct_setup)
-        postgres.determine_setup()
-        self.assertTrue(postgres.pg_execute)
+        setup_success = postgres.determine_setup()
+        self.assertTrue(setup_success)
 
-    @mock.patch('aiida.manage.external.postgres._try_connect_psycopg', new=_try_connect_always_fail)
-    @mock.patch('aiida.manage.external.postgres._try_subcmd')
+    @mock.patch('aiida.manage.external.pgsu._try_connect_psycopg', new=_try_connect_always_fail)
+    @mock.patch('aiida.manage.external.pgsu._try_subcmd')
     def test_fallback_on_subcmd(self, try_subcmd):
         """Ensure that accessing postgres via subcommand is tried if psycopg does not work."""
         self._setup_postgres()

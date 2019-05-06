@@ -240,9 +240,9 @@ def set_process_state_change_timestamp(process):
     :param process: the Process instance that changed its state
     """
     from aiida.backends.utils import set_global_setting
+    from aiida.common import timezone
     from aiida.common.exceptions import UniquenessError
     from aiida.orm import ProcessNode, CalculationNode, WorkflowNode
-    from aiida.common import timezone
 
     if isinstance(process.node, CalculationNode):
         process_type = 'calculation'

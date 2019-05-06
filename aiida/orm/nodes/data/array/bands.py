@@ -993,7 +993,7 @@ class BandsData(KpointsData):
         script.append(u'plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
 
         script_data = u"\n".join(script) + u"\n"
-        extra_files = {dat_filename: raw_data.encode('utf-8')}
+        extra_files = {dat_filename: raw_data}
 
         return script_data.encode('utf-8'), extra_files
 
@@ -1661,7 +1661,6 @@ print_comment = False
 # see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
 matplotlib_header_template = Template('''# -*- coding: utf-8 -*-
 
-from __future__ import print_statement
 from matplotlib import rc
 # Uncomment to change default font
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})

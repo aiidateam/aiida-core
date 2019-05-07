@@ -38,6 +38,7 @@ from aiida.manage.manager import get_manager
 @options_setup.SETUP_DATABASE_USERNAME()
 @options_setup.SETUP_DATABASE_PASSWORD()
 @options_setup.SETUP_REPOSITORY_URI()
+@options.CONFIG_FILE()
 def setup(non_interactive, profile, email, first_name, last_name, institution, password, db_engine, db_backend, db_host,
           db_port, db_name, db_username, db_password, repository):
     """Setup a new profile."""
@@ -111,6 +112,7 @@ def setup(non_interactive, profile, email, first_name, last_name, institution, p
 @options_setup.QUICKSETUP_DATABASE_USERNAME()
 @options_setup.QUICKSETUP_DATABASE_PASSWORD()
 @options_setup.QUICKSETUP_REPOSITORY_URI()
+@options.CONFIG_FILE()
 @click.pass_context
 def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, institution, password, db_engine,
                db_backend, db_host, db_port, db_name, db_username, db_password, repository):

@@ -36,7 +36,7 @@ class TestProcessFunction(AiidaTestCase):
     function would complain as the dummy node class is not recognized as a valid process node.
     """
 
-    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-public-methods,too-many-instance-attributes
 
     def setUp(self):
         super(TestProcessFunction, self).setUp()
@@ -87,6 +87,11 @@ class TestProcessFunction(AiidaTestCase):
             return data_a
 
         @workfunction
+        def function_default_from_docs():
+            """Description taken from the docs."""
+            return
+
+        @workfunction
         def function_exit_code(exit_status, exit_message):
             return ExitCode(exit_status.value, exit_message.value)
 
@@ -107,6 +112,7 @@ class TestProcessFunction(AiidaTestCase):
         self.function_args_and_kwargs = function_args_and_kwargs
         self.function_args_and_default = function_args_and_default
         self.function_defaults = function_defaults
+        self.function_default_from_docs = function_default_from_docs
         self.function_exit_code = function_exit_code
         self.function_excepts = function_excepts
         self.function_out_unstored = function_out_unstored
@@ -297,6 +303,18 @@ class TestProcessFunction(AiidaTestCase):
         self.assertEqual(node.description, DEFAULT_DESCRIPTION)
 
         _, node = self.function_defaults.run_get_node(metadata=metadata)
+        self.assertEqual(node.label, CUSTOM_LABEL)
+        self.assertEqual(node.description, CUSTOM_DESCRIPTION)
+
+    def test_function_default_label_description(self):
+        """Verify unless specified label and description are taken from function name and docstring respectively."""
+        metadata = {'label': CUSTOM_LABEL, 'description': CUSTOM_DESCRIPTION}
+
+        _, node = self.function_default_from_docs.run_get_node()
+        self.assertEqual(node.label, 'function_default_from_docs')
+        self.assertEqual(node.description, 'Description taken from the docs.')
+
+        _, node = self.function_default_from_docs.run_get_node(metadata=metadata)
         self.assertEqual(node.label, CUSTOM_LABEL)
         self.assertEqual(node.description, CUSTOM_DESCRIPTION)
 

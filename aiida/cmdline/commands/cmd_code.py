@@ -74,6 +74,7 @@ def set_code_builder(ctx, param, value):
 @options.PREPEND_TEXT()
 @options.APPEND_TEXT()
 @options.NON_INTERACTIVE()
+@options.CONFIG_FILE()
 @with_dbenv()
 def setup_code(non_interactive, **kwargs):
     """Setup a new Code."""

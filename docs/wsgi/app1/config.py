@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import os
-import ujson as uj
+import json
 
 ## Pagination defaults
 LIMIT_DEFAULT = 400
@@ -72,7 +72,7 @@ Schema customization (if file schema_custom.json is present in this same folder)
 schema_custom_config = os.path.join(os.path.split(__file__)[0], 'schema_custom.json')
 try:
     with open(schema_custom_config) as fin:
-        custom_schema = uj.load(fin)
+        custom_schema = json.load(fin)
 except IOError:
     custom_schema = {}
 

@@ -119,7 +119,7 @@ class SqlaBackend(SqlBackend[base.Base]):
         """
         from aiida.backends import sqlalchemy as sa
         try:
-            connection = sa.engine.raw_connection()
+            connection = sa.ENGINE.raw_connection()
             yield connection.cursor()
         finally:
             self.get_connection().close()
@@ -143,4 +143,4 @@ class SqlaBackend(SqlBackend[base.Base]):
         :return: the SQLA database connection
         """
         from aiida.backends import sqlalchemy as sa
-        return sa.engine.raw_connection()
+        return sa.ENGINE.raw_connection()

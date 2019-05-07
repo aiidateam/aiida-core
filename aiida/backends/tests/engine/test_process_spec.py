@@ -35,19 +35,19 @@ class TestProcessSpec(AiidaTestCase):
         """Test a process spec with dynamic input enabled."""
         node = Node()
         data = Data()
-        self.assertIsNotNone(self.spec.validate_inputs({'key': 'foo'}))
-        self.assertIsNotNone(self.spec.validate_inputs({'key': 5}))
-        self.assertIsNotNone(self.spec.validate_inputs({'key': node}))
-        self.assertIsNone(self.spec.validate_inputs({'key': data}))
+        self.assertIsNotNone(self.spec.inputs.validate({'key': 'foo'}))
+        self.assertIsNotNone(self.spec.inputs.validate({'key': 5}))
+        self.assertIsNotNone(self.spec.inputs.validate({'key': node}))
+        self.assertIsNone(self.spec.inputs.validate({'key': data}))
 
     def test_dynamic_output(self):
         """Test a process spec with dynamic output enabled."""
         node = Node()
         data = Data()
-        self.assertIsNotNone(self.spec.validate_outputs({'key': 'foo'}))
-        self.assertIsNotNone(self.spec.validate_outputs({'key': 5}))
-        self.assertIsNotNone(self.spec.validate_outputs({'key': node}))
-        self.assertIsNone(self.spec.validate_outputs({'key': data}))
+        self.assertIsNotNone(self.spec.outputs.validate({'key': 'foo'}))
+        self.assertIsNotNone(self.spec.outputs.validate({'key': 5}))
+        self.assertIsNotNone(self.spec.outputs.validate({'key': node}))
+        self.assertIsNone(self.spec.outputs.validate({'key': data}))
 
     def test_exit_code(self):
         """Test the definition of error codes through the ProcessSpec."""

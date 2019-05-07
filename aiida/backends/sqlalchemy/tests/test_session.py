@@ -169,7 +169,7 @@ class TestSessionSqla(AiidaTestCase):
         import aiida.backends.sqlalchemy as sa
         from sqlalchemy.orm import sessionmaker
 
-        Session = sessionmaker(bind=sa.engine)
+        Session = sessionmaker(bind=sa.ENGINE)
         custom_session = Session()
 
         user = self.backend.users.create(email='test@localhost').store()

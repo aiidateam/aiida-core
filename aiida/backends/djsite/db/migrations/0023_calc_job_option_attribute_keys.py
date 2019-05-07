@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,too-few-public-methods
-"""Migration of CalcJobNode attributes for metadata options whose key changed."""
+"""Migration of ProcessNode attributes for metadata options whose key changed."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -25,14 +25,14 @@ DOWN_REVISION = '1.0.22'
 
 
 class Migration(migrations.Migration):
-    """Migration of CalcJobNode attributes for metadata options whose key changed.
+    """Migration of ProcessNode attributes for metadata options whose key changed.
 
     Renamed attribute keys:
 
-      * `custom_environment_variables` -> `environment_variables`
-      * `jobresource_params` -> `resources`
-      * `_process_label` -> `process_label`
-      * `parser` -> `parser_name`
+      * `custom_environment_variables` -> `environment_variables` (CalcJobNode)
+      * `jobresource_params` -> `resources` (CalcJobNode)
+      * `_process_label` -> `process_label` (ProcessNode)
+      * `parser` -> `parser_name` (CalcJobNode)
 
     Deleted attributes:
       * `linkname_retrieved` (We do not actually delete it just in case some relies on it)
@@ -54,7 +54,8 @@ class Migration(migrations.Migration):
                     attribute.key = 'custom_environment_variables' OR
                     attribute.key LIKE 'custom\_environment\_variables.%'
                 ) AND
-                node.type = 'node.process.calculation.calcjob.CalcJobNode.';
+                node.type = 'node.process.calculation.calcjob.CalcJobNode.' AND
+                node.id = attribute.dbnode_id;
             -- custom_environment_variables -> environment_variables
 
             UPDATE db_dbattribute AS attribute
@@ -65,7 +66,8 @@ class Migration(migrations.Migration):
                     attribute.key = 'jobresource_params' OR
                     attribute.key LIKE 'jobresource\_params.%'
                 ) AND
-                node.type = 'node.process.calculation.calcjob.CalcJobNode.';
+                node.type = 'node.process.calculation.calcjob.CalcJobNode.' AND
+                node.id = attribute.dbnode_id;
             -- jobresource_params -> resources
 
             UPDATE db_dbattribute AS attribute
@@ -73,7 +75,8 @@ class Migration(migrations.Migration):
             FROM db_dbnode AS node
             WHERE
                 attribute.key = '_process_label' AND
-                node.type LIKE 'node.process.%';
+                node.type LIKE 'node.process.%' AND
+                node.id = attribute.dbnode_id;
             -- _process_label -> process_label
 
             UPDATE db_dbattribute AS attribute
@@ -81,7 +84,8 @@ class Migration(migrations.Migration):
             FROM db_dbnode AS node
             WHERE
                 attribute.key = 'parser' AND
-                node.type = 'node.process.calculation.calcjob.CalcJobNode.';
+                node.type = 'node.process.calculation.calcjob.CalcJobNode.' AND
+                node.id = attribute.dbnode_id;
             -- parser -> parser_name
             """,
             reverse_sql=r"""
@@ -93,7 +97,8 @@ class Migration(migrations.Migration):
                     attribute.key = 'environment_variables' OR
                     attribute.key LIKE 'environment\_variables.%'
                 ) AND
-                node.type = 'node.process.calculation.calcjob.CalcJobNode.';
+                node.type = 'node.process.calculation.calcjob.CalcJobNode.' AND
+                node.id = attribute.dbnode_id;
             -- environment_variables -> custom_environment_variables
 
             UPDATE db_dbattribute AS attribute
@@ -104,7 +109,8 @@ class Migration(migrations.Migration):
                     attribute.key = 'resources' OR
                     attribute.key LIKE 'resources.%'
                 ) AND
-                node.type = 'node.process.calculation.calcjob.CalcJobNode.';
+                node.type = 'node.process.calculation.calcjob.CalcJobNode.' AND
+                node.id = attribute.dbnode_id;
             -- resources -> jobresource_params
 
             UPDATE db_dbattribute AS attribute
@@ -112,7 +118,8 @@ class Migration(migrations.Migration):
             FROM db_dbnode AS node
             WHERE
                 attribute.key = 'process_label' AND
-                node.type LIKE 'node.process.%';
+                node.type LIKE 'node.process.%' AND
+                node.id = attribute.dbnode_id;
             -- process_label -> _process_label
 
             UPDATE db_dbattribute AS attribute
@@ -120,7 +127,8 @@ class Migration(migrations.Migration):
             FROM db_dbnode AS node
             WHERE
                 attribute.key = 'parser_name' AND
-                node.type = 'node.process.calculation.calcjob.CalcJobNode.';
+                node.type = 'node.process.calculation.calcjob.CalcJobNode.' AND
+                node.id = attribute.dbnode_id;
             -- parser_name -> parser
             """),
         upgrade_schema_version(REVISION, DOWN_REVISION)

@@ -299,6 +299,28 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertIsInstance(result.exception, SystemExit)
         self.assertIn("unknown replacement field 'unknown_key'", str(result.output))
 
+    def test_noninteractive_from_config(self):
+        """Test setting up a computer from a config file"""
+        from aiida.orm import Computer
+        import tempfile
+        import os
+
+        label = 'noninteractive_config'
+
+        with tempfile.NamedTemporaryFile('w') as handle:
+            handle.write("""---
+label: {l}
+hostname: {l}
+transport: local
+scheduler: direct
+""".format(l=label))
+            handle.flush()
+            result = self.cli_runner.invoke(computer_setup,
+                                            ['--non-interactive', '--config', os.path.realpath(handle.name)])
+
+        self.assertClickResultNoException(result)
+        self.assertIsInstance(Computer.objects.get(name=label), Computer)
+
 
 class TestVerdiComputerConfigure(AiidaTestCase):
 

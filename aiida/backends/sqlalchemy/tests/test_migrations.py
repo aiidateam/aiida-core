@@ -84,7 +84,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         :param destination: the name of the destination migration
         """
         # Undo all previous real migration of the database
-        with sa.engine.connect() as connection:
+        with sa.ENGINE.connect() as connection:
             self.alembic_cfg.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
             command.upgrade(self.alembic_cfg, destination)
 
@@ -94,7 +94,7 @@ class TestMigrationsSQLA(AiidaTestCase):
 
         :param destination: the name of the destination migration
         """
-        with sa.engine.connect() as connection:
+        with sa.ENGINE.connect() as connection:
             self.alembic_cfg.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
             command.downgrade(self.alembic_cfg, destination)
 
@@ -130,7 +130,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         Utility method to get the current revision string
         """
         from alembic.migration import MigrationContext  # pylint: disable=import-error
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             context = MigrationContext.configure(connection)
             current_rev = context.get_current_revision()
         return current_rev
@@ -147,7 +147,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         from alembic.migration import MigrationContext  # pylint: disable=import-error
         from sqlalchemy.ext.automap import automap_base  # pylint: disable=import-error,no-name-in-module
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             context = MigrationContext.configure(connection)
             bind = context.bind
 
@@ -165,7 +165,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         """
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             session = Session(connection.engine)
             yield session
             session.close()
@@ -302,7 +302,7 @@ class TestMigrationSchemaVsModelsSchema(AiidaTestCase):
 
         # The correction URL to the SQLA database of the current
         # AiiDA connection
-        curr_db_url = sa.engine.url
+        curr_db_url = sa.ENGINE.url
 
         # Create new urls for the two new databases
         self.db_url_left = get_temporary_uri(str(curr_db_url))
@@ -356,7 +356,7 @@ class TestProvenanceRedesignMigration(TestMigrationsSQLA):
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
         DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -402,7 +402,7 @@ class TestProvenanceRedesignMigration(TestMigrationsSQLA):
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -537,7 +537,7 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
         DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -559,26 +559,29 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 node_work = DbNode(type='node.process.workflow.WorkflowNode.', attributes=attributes, user_id=user.id)
                 node_calc = DbNode(
                     type='node.process.calculation.calcjob.CalcJobNode.', attributes=attributes, user_id=user.id)
+                # Create a node of a different type to ensure that its attributes are not updated
+                node_other = DbNode(type='node.othernode.', attributes=attributes, user_id=user.id)
 
                 session.add(node_work)
                 session.add(node_calc)
+                session.add(node_other)
                 session.commit()
 
                 self.node_work_id = node_work.id
                 self.node_calc_id = node_calc.id
+                self.node_other_id = node_other.id
             finally:
                 session.close()
 
     def test_attribute_key_changes(self):
         """Verify that the keys are successfully changed of the affected attributes."""
-        import ast
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
 
         not_found = tuple([0])
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -587,19 +590,28 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 self.assertEqual(node_work.attributes.get(self.KEY_PROCESS_LABEL_OLD, not_found), not_found)
 
                 node_calc = session.query(DbNode).filter(DbNode.id == self.node_calc_id).one()
-
-                # The dictionaries need to be cast with ast.literal_eval, because the `get` will return a string
-                # representation of the dictionary that the attribute contains
                 self.assertEqual(node_calc.attributes.get(self.KEY_PROCESS_LABEL_NEW), self.process_label)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_NEW), self.parser_name)
-                self.assertEqual(ast.literal_eval(node_calc.attributes.get(self.KEY_RESOURCES_NEW)), self.resources)
+                self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_NEW), self.resources)
                 self.assertEqual(
-                    ast.literal_eval(node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW)),
-                    self.environment_variables)
+                    node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PROCESS_LABEL_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_OLD, not_found), not_found)
+
+                # The following node should not be migrated even if its attributes have the matching keys because
+                # the node is not a ProcessNode
+                node_other = session.query(DbNode).filter(DbNode.id == self.node_other_id).one()
+                self.assertEqual(node_other.attributes.get(self.KEY_PROCESS_LABEL_OLD), self.process_label)
+                self.assertEqual(node_other.attributes.get(self.KEY_PARSER_NAME_OLD), self.parser_name)
+                self.assertEqual(node_other.attributes.get(self.KEY_RESOURCES_OLD), self.resources)
+                self.assertEqual(
+                    node_other.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_OLD), self.environment_variables)
+                self.assertEqual(node_other.attributes.get(self.KEY_PROCESS_LABEL_NEW, not_found), not_found)
+                self.assertEqual(node_other.attributes.get(self.KEY_PARSER_NAME_NEW, not_found), not_found)
+                self.assertEqual(node_other.attributes.get(self.KEY_RESOURCES_NEW, not_found), not_found)
+                self.assertEqual(node_other.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW, not_found), not_found)
             finally:
                 session.close()
 
@@ -621,7 +633,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
 
         DbWorkflow = self.get_auto_base().classes.db_dbworkflow  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
                 session.query(DbWorkflow).delete()
@@ -645,7 +657,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
         DbWorkflow = self.get_auto_base().classes.db_dbworkflow  # pylint: disable=invalid-name
         DbLog = self.get_auto_base().classes.db_dblog  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -809,7 +821,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
 
         DbLog = self.get_auto_base().classes.db_dblog  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -853,7 +865,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
 
         DbLog = self.get_auto_base().classes.db_dblog  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
                 metadata = list(session.query(DbLog).with_entities(getattr(DbLog, 'metadata')).all())
@@ -881,7 +893,7 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
         DbLog = self.get_auto_base().classes.db_dblog  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -944,7 +956,7 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
 
         DbLog = self.get_auto_base().classes.db_dblog  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -991,7 +1003,7 @@ class TestDbLogUUIDAddition(TestMigrationsSQLA):
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
         DbLog = self.get_auto_base().classes.db_dblog  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -1027,7 +1039,7 @@ class TestDbLogUUIDAddition(TestMigrationsSQLA):
 
         DbLog = self.get_auto_base().classes.db_dblog  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
                 l_uuids = list(session.query(DbLog).with_entities(getattr(DbLog, 'uuid')).all())
@@ -1049,7 +1061,7 @@ class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
         DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -1078,7 +1090,7 @@ class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -1115,7 +1127,7 @@ class TestTrajectoryDataMigration(TestMigrationsSQLA):
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
         DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -1147,7 +1159,7 @@ class TestTrajectoryDataMigration(TestMigrationsSQLA):
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -1175,7 +1187,7 @@ class TestNodePrefixRemovalMigration(TestMigrationsSQLA):
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
         DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -1204,7 +1216,7 @@ class TestNodePrefixRemovalMigration(TestMigrationsSQLA):
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -1230,7 +1242,7 @@ class TestParameterDataToDictMigration(TestMigrationsSQLA):
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
         DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 
@@ -1256,7 +1268,7 @@ class TestParameterDataToDictMigration(TestMigrationsSQLA):
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
 

@@ -126,6 +126,7 @@ DB_TEST_LIST = {
         'orm.mixins': ['aiida.backends.tests.orm.test_mixins'],
         'orm.node.calcjob': ['aiida.backends.tests.orm.node.test_calcjob'],
         'orm.node.node': ['aiida.backends.tests.orm.node.test_node'],
+        'orm.querybuilder': ['aiida.backends.tests.orm.test_querybuilder'],
         'orm.utils.calcjob': ['aiida.backends.tests.orm.utils.test_calcjob'],
         'orm.utils.node': ['aiida.backends.tests.orm.utils.test_node'],
         'orm.utils.loaders': ['aiida.backends.tests.orm.utils.test_loaders'],

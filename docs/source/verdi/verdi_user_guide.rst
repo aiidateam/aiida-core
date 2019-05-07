@@ -445,7 +445,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      generate  Generate a graph from a given ROOT_NODE user-specified by its...
+      generate  Generate a graph for a given ROOT_NODE.
 
 
 .. _verdi_group:
@@ -644,6 +644,8 @@ Below is a list with all available subcommands.
       --db-password TEXT              Password to connect to the database.
       --repository DIRECTORY          Absolute path for the file system
                                       repository.
+      --config FILE                   Load option values from configuration file
+                                      in yaml format.
       --help                          Show this message and exit.
 
 
@@ -748,6 +750,8 @@ Below is a list with all available subcommands.
                                       [required]
       --repository DIRECTORY          Absolute path for the file system
                                       repository.
+      --config FILE                   Load option values from configuration file
+                                      in yaml format.
       --help                          Show this message and exit.
 
 

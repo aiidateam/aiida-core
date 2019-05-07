@@ -201,6 +201,7 @@
       "tcod = aiida.tools.dbimporters.plugins.tcod:TcodDbImporter"
     ],
     "aiida.tools.data.orbitals": [
+      "orbital = aiida.tools.data.orbital.orbital:Orbital",
       "realhydrogen = aiida.tools.data.orbital.realhydrogen:RealhydrogenOrbital"
     ],
     "aiida.workflows": []

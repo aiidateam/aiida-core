@@ -45,7 +45,9 @@ Because the returned node is already stored, the engine will raise the following
 
 .. code:: bash
 
-	ValueError: trying to return an already stored Data node from a @calcfunction, however, @calcfunctions cannot return data. If you stored the node yourself, simply do not call `store()` yourself. If you want to return an input node, use a @workfunction instead.
+    ValueError: trying to return an already stored Data node from a @calcfunction, however, @calcfunctions cannot return data.
+    If you stored the node yourself, simply do not call `store()` yourself.
+    If you want to return an input node, use a @workfunction instead.
 
 The reason for this strictness is that a node that was stored after being created in the function body, is indistinguishable from a node that was already stored and had simply been loaded in the function body and returned, e.g.:
 

@@ -213,7 +213,7 @@ def _show_xmgrace(exec_name, list_bands):
             'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % max_num_agr_colors))
         # write a tempfile
         tempf = tempfile.NamedTemporaryFile('w+', suffix='.agr')
-        tempf.write(text)
+        tempf.write(text.decode("utf-8"))
         tempf.flush()
         list_files.append(tempf)
         # update the number of bands already plotted

@@ -133,7 +133,7 @@ def run_api(flask_app, flask_api, *args, **kwargs):
         aiida_profile = confs.DEFAULT_AIIDA_PROFILE
 
     else:
-        aiida_profile = "default"
+        aiida_profile = None
 
     # Load the default profile
     load_profile(aiida_profile)

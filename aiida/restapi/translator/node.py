@@ -570,6 +570,20 @@ class NodeTranslator(BaseTranslator):
 
             return shape
 
+        def get_node_description(node):
+            """
+            Get the description of the node.
+            CalcJobNodes migrated from AiiDA < 1.0.0 do not have a valid CalcJobState,
+            in this case the function returns as description the type of the node (CalcJobNode)
+            :param node: node object
+            :return: description of the node
+            """
+            try:
+                description = node.get_description()
+            except ValueError:
+                description = node.node_type.split('.')[-2]
+            return description
+
         # Check whether uuid_pattern identifies a unique node
         self._check_id_validity(uuid_pattern)
 
@@ -587,9 +601,7 @@ class NodeTranslator(BaseTranslator):
             nodetype = main_node.node_type
             nodelabel = main_node.label
             display_type = nodetype.split('.')[-2]
-            description = main_node.get_description()
-            if description == '':
-                description = main_node.node_type.split('.')[-2]
+            description = get_node_description(main_node)
 
             nodes.append({
                 "id": node_count,
@@ -628,9 +640,7 @@ class NodeTranslator(BaseTranslator):
                     nodetype = node.node_type
                     nodelabel = node.label
                     display_type = nodetype.split('.')[-2]
-                    description = node.get_description()
-                    if description == '':
-                        description = node.node_type.split('.')[-2]
+                    description = get_node_description(node)
 
                     nodes.append({
                         "id": node_count,
@@ -682,9 +692,7 @@ class NodeTranslator(BaseTranslator):
                     nodetype = node.node_type
                     nodelabel = node.label
                     display_type = nodetype.split('.')[-2]
-                    description = node.get_description()
-                    if description == '':
-                        description = node.node_type.split('.')[-2]
+                    description = get_node_description(node)
 
                     nodes.append({
                         "id": node_count,

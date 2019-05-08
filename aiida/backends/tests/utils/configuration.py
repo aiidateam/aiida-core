@@ -25,6 +25,7 @@ def create_mock_profile(name, repository_dirpath=None, **kwargs):
     :param repository_dirpath: optional absolute path to use as the base for the repository path
     """
     from aiida.manage.configuration import get_config, Profile
+    from aiida.manage.external.postgres import DEFAULT_DBINFO
 
     if repository_dirpath is None:
         config = get_config()
@@ -34,9 +35,9 @@ def create_mock_profile(name, repository_dirpath=None, **kwargs):
         'default_user': kwargs.pop('default_user', 'dummy@localhost'),
         'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
         'database_backend': kwargs.pop('database_backend', 'django'),
+        'database_hostname': kwargs.pop('database_hostname', DEFAULT_DBINFO['host']),
+        'database_port': kwargs.pop('database_port', DEFAULT_DBINFO['port']),
         'database_name': kwargs.pop('database_name', name),
-        'database_port': kwargs.pop('database_port', '5432'),
-        'database_hostname': kwargs.pop('database_hostname', 'localhost'),
         'database_username': kwargs.pop('database_username', 'user'),
         'database_password': kwargs.pop('database_password', 'pass'),
         'repository_uri': 'file:///' + os.path.join(repository_dirpath, 'repository_' + name),

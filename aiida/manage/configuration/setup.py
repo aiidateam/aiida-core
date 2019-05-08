@@ -64,11 +64,10 @@ def delete_db(profile, non_interactive=True, verbose=False):
     from aiida.common import json
 
     postgres = Postgres.from_profile(profile, interactive=not non_interactive, quiet=False)
-    postgres.determine_setup()
 
     if verbose:
         echo.echo_info("Parameters used to connect to postgres:")
-        echo.echo(json.dumps(postgres.get_dbinfo(), indent=4))
+        echo.echo(json.dumps(postgres.dbinfo, indent=4))
 
     database_name = profile.database_name
     if not postgres.db_exists(database_name):

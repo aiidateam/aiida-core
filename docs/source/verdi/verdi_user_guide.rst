@@ -639,9 +639,14 @@ Below is a list with all available subcommands.
                                       Backend type to use to map the database.
       --db-host TEXT                  Hostname to connect to the database.
       --db-port INTEGER               Port to connect to the database.
-      --db-name TEXT                  Name of the database to connect to.
-      --db-username TEXT              User name to connect to the database.
+      --db-name TEXT                  Name of the database to create.
+      --db-username TEXT              Name of the database user to create.
       --db-password TEXT              Password to connect to the database.
+      --su-db-name TEXT               Name of the template database to connect to
+                                      as the database superuser.
+      --su-db-username TEXT           User name of the database super user.
+      --su-db-password TEXT           Password to connect as the database
+                                      superuser.
       --repository DIRECTORY          Absolute path for the file system
                                       repository.
       --config FILE                   Load option values from configuration file
@@ -742,9 +747,8 @@ Below is a list with all available subcommands.
                                       Backend type to use to map the database.
       --db-host TEXT                  Hostname to connect to the database.
       --db-port INTEGER               Port to connect to the database.
-      --db-name TEXT                  Name of the database to connect to.
-                                      [required]
-      --db-username TEXT              User name to connect to the database.
+      --db-name TEXT                  Name of the database to create.  [required]
+      --db-username TEXT              Name of the database user to create.
                                       [required]
       --db-password TEXT              Password to connect to the database.
                                       [required]

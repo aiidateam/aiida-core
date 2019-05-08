@@ -158,10 +158,7 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
         if not self.db_params:
             self.create_db_cluster()
         self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.db_params)
-        self.postgres.determine_setup()
-        self.db_params = self.postgres.get_dbinfo()
-        if not self.postgres.pg_execute:
-            raise FixtureError('Could not connect to the test postgres instance')
+        self.db_params = self.postgres.dbinfo.copy()
         self.postgres.create_dbuser(self.db_user, self.db_pass)
         self.postgres.create_db(self.db_user, self.db_name)
         self.__is_running_on_test_db = True

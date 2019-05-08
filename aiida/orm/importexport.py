@@ -20,10 +20,10 @@ from six.moves import zip
 from six.moves.html_parser import HTMLParser
 from distutils.version import StrictVersion
 from aiida.common import exceptions
+from aiida.common.timezone import datetime_to_isoformat
 from aiida.common.utils import export_shard_uuid, get_class_string, grouper, get_new_uuid
 from aiida.orm import Computer, Group, GroupTypeString, Node, QueryBuilder, User, Log, Comment
 from aiida.orm.utils.repository import Repository
-from aiida.backends.utils import datetime_to_isoformat
 
 IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE.value
 DUPL_SUFFIX = ' (Imported #{})'

@@ -24,7 +24,6 @@ from pytz import UTC
 
 import aiida.backends.djsite.db.migrations as migrations
 from aiida.backends.djsite.settings import AUTH_USER_MODEL
-from aiida.backends.utils import datetime_to_isoformat, isoformat_to_datetime
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 
@@ -147,12 +146,12 @@ class DbNode(m.Model):
         if self.attributes is None:
             self.attributes = dict()
         else:
-            self.attributes = datetime_to_isoformat(self.attributes)
+            self.attributes = timezone.datetime_to_isoformat(self.attributes)
 
         if self.extras is None:
             self.extras = dict()
         else:
-            self.extras = datetime_to_isoformat(self.extras)
+            self.extras = timezone.datetime_to_isoformat(self.extras)
 
     def set_attribute(self, key, value):
         DbNode._set_attr(self.attributes, key, value)
@@ -190,17 +189,17 @@ class DbNode(m.Model):
         self.save()
 
     def get_attributes(self):
-        return isoformat_to_datetime(self.attributes)
+        return timezone.isoformat_to_datetime(self.attributes)
 
     def get_extras(self):
-        return isoformat_to_datetime(self.extras)
+        return timezone.isoformat_to_datetime(self.extras)
 
     @ staticmethod
     def _set_attr(d, key, value):
         if '.' in key:
             raise ValueError("We don't know how to treat key with dot in it yet")
         # This is important in order to properly handle datetime objects
-        d[key] = datetime_to_isoformat(value)
+        d[key] = timezone.datetime_to_isoformat(value)
 
     @ staticmethod
     def _del_attr(d, key):
@@ -290,7 +289,7 @@ class DbSetting(m.Model):
             setting = cls()
 
         setting.key = key
-        setting.val = datetime_to_isoformat(value)
+        setting.val = timezone.datetime_to_isoformat(value)
         setting.time = timezone.datetime.now(tz=UTC)
         if "description" in other_attribs.keys():
             setting.description = other_attribs["description"]
@@ -300,7 +299,7 @@ class DbSetting(m.Model):
         """
         This can be called on a given row and will get the corresponding value.
         """
-        return isoformat_to_datetime(self.val)
+        return timezone.isoformat_to_datetime(self.val)
 
     def get_description(self):
         """

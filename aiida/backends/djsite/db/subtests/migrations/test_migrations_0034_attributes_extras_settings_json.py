@@ -26,7 +26,7 @@ from django.db import transaction
 from django.utils.encoding import python_2_unicode_compatible
 
 from aiida.backends.djsite.db.subtests.migrations.test_migrations_common import TestMigrations
-from aiida.backends.utils import isoformat_to_datetime
+from aiida.common.timezone import isoformat_to_datetime
 
 # The following sample dictionary can be used for the conversion test of attributes and extras
 SAMPLE_DICT = {

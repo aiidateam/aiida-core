@@ -20,8 +20,9 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy import get_scoped_session
-from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting, isoformat_to_datetime, datetime_to_isoformat
+from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting
 from aiida.common import NotExistent
+from aiida.common.timezone import isoformat_to_datetime, datetime_to_isoformat
 
 
 ALEMBIC_FILENAME = "alembic.ini"

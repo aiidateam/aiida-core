@@ -20,8 +20,8 @@ from django.db import migrations, models
 from django.db import transaction
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-from aiida.backends.utils import datetime_to_isoformat
 from aiida.cmdline.utils import echo
+from aiida.common.timezone import datetime_to_isoformat
 
 REVISION = '1.0.37'
 DOWN_REVISION = '1.0.36'

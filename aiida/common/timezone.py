@@ -13,6 +13,12 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from datetime import datetime
+import re
+import six
+
+import dateutil
+
+ISOFORMAT_DATETIME_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
 
 
 def get_current_timezone():
@@ -55,11 +61,9 @@ def is_aware(value):
 
 
 def make_aware(value, timezone=None, is_dst=None):
-    """
-    Make the given datetime object timezone aware
+    """Make the given datetime object timezone aware.
 
-    :param value: The datetime to make aware
-    :type value: :class:`!datetime.datetime`
+    :param value: datetime object to make aware
     :param timezone:
     :param is_dst:
     :return:
@@ -76,19 +80,19 @@ def make_aware(value, timezone=None, is_dst=None):
 
 
 def localtime(value, timezone=None):
-    """
-    Converts an aware datetime.datetime to local time.
-    Local time is defined by the current time zone, unless another time zone
-    is specified.
+    """Converts an aware datetime.datetime to local time.
+
+    Local time is defined by the current time zone, unless another time zone is specified.
     """
     if timezone is None:
         timezone = get_current_timezone()
-    # If `value` is naive, astimezone() will raise a ValueError,
-    # so we don't need to perform a redundant check.
+
+    # If `value` is naive, astimezone() will raise a ValueError, so we don't need to perform a redundant check.
     value = value.astimezone(timezone)
     if hasattr(timezone, 'normalize'):
         # This method is available for pytz time zones.
         value = timezone.normalize(value)
+
     return value
 
 
@@ -112,3 +116,42 @@ def delta(from_time, to_time=None):
         to_time_aware = to_time
 
     return to_time_aware - from_time_aware
+
+
+def datetime_to_isoformat(value):
+    """Convert all datetime objects in the given value to string representations in ISO format.
+
+    :param value: a mapping, sequence or single value optionally containing datetime objects
+    """
+    if isinstance(value, list):
+        return [datetime_to_isoformat(_) for _ in value]
+
+    if isinstance(value, dict):
+        return dict((key, datetime_to_isoformat(val)) for key, val in value.items())
+
+    if isinstance(value, datetime):
+        return value.isoformat()
+
+    return value
+
+
+def isoformat_to_datetime(value):
+    """Convert all string representations of a datetime in ISO format in the given value to datetime objects.
+
+    :param value: a mapping, sequence or single value optionally containing datetime objects
+    """
+    if isinstance(value, list):
+        return [isoformat_to_datetime(_) for _ in value]
+
+    if isinstance(value, dict):
+        return dict((key, isoformat_to_datetime(val)) for key, val in value.items())
+
+    if isinstance(value, six.string_types):
+        if ISOFORMAT_DATETIME_REGEX.match(value):
+            try:
+                return dateutil.parser.parse(value)
+            except (ValueError, TypeError):
+                return value
+        return value
+
+    return value

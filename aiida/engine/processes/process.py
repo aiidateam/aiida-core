@@ -33,7 +33,6 @@ from aiida.common.lang import classproperty, override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 
-from .. import utils
 from .exit_code import ExitCode
 from .builder import ProcessBuilder
 from .ports import InputPort, OutputPort, PortNamespace, PORT_NAMESPACE_SEPARATOR
@@ -282,10 +281,12 @@ class Process(plumpy.Process):
         # Update the node attributes every time we enter a new state
 
     def on_entered(self, from_state):
+        # pylint: disable=cyclic-import
+        from aiida.engine.utils import set_process_state_change_timestamp
         self.update_node_state(self._state)
         self._save_checkpoint()
         # Update the latest process state change timestamp
-        utils.set_process_state_change_timestamp(self)
+        set_process_state_change_timestamp(self)
         super(Process, self).on_entered(from_state)
 
     @override

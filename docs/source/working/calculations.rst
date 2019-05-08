@@ -140,3 +140,5 @@ Calculation jobs
 
 .. By default the method will create a folder ``submit_test`` in the current working directory and within it a directory with an automatically generated unique name, each time the method is called.
 .. The method takes two optional arguments ``folder`` and ``subfolder_name``, to change the base folder and the name of the test directory, respectively.
+
+.. _working_calcjobs_parsers:

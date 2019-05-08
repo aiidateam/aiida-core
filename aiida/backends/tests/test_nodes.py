@@ -892,38 +892,6 @@ class TestNodeBasic(AiidaTestCase):
         # No problem, they are two different nodes
         n2.set_extra('samename', 1)
 
-    def test_settings_methods(self):
-        from aiida.backends.utils import (get_global_setting_description, get_global_setting, set_global_setting,
-                                          del_global_setting)
-
-        set_global_setting(key="aaa", value={'b': 'c'}, description="pippo")
-
-        self.assertEqual(get_global_setting('aaa'), {'b': 'c'})
-        self.assertEqual(get_global_setting_description('aaa'), "pippo")
-        self.assertEqual(get_global_setting('aaa.b'), 'c')
-
-        # The following is disabled because it is not supported in JSONB
-        # Only top level elements can have descriptions
-        # self.assertEqual(get_global_setting_description('aaa.b'), "")
-        del_global_setting('aaa')
-
-        with self.assertRaises(KeyError):
-            get_global_setting('aaa.b')
-
-        with self.assertRaises(KeyError):
-            get_global_setting('aaa')
-
-        set_global_setting(key="bbb", value={'c': 'd1'}, description="pippo2")
-        self.assertEqual(get_global_setting('bbb'), {'c': 'd1'})
-        self.assertEqual(get_global_setting('bbb.c'), 'd1')
-        self.assertEqual(get_global_setting_description('bbb'), "pippo2")
-        set_global_setting(key="bbb", value={'c': 'd2'})
-        self.assertEqual(get_global_setting('bbb'), {'c': 'd2'})
-        self.assertEqual(get_global_setting('bbb.c'), 'd2')
-        self.assertEqual(get_global_setting_description('bbb'), "pippo2")
-
-        del_global_setting('bbb')
-
     def test_attr_listing(self):
         """
         Checks that the list of attributes and extras is ok.

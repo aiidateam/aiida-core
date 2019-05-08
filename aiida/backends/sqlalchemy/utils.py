@@ -10,21 +10,88 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-from aiida.common import json
-
-json_dumps = json.dumps
-json_loads = json.loads
 
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
 from alembic.script import ScriptDirectory
 
+from sqlalchemy.orm.exc import NoResultFound
+
 from aiida.backends import sqlalchemy as sa
-from aiida.backends.utils import isoformat_to_datetime, datetime_to_isoformat
+from aiida.backends.sqlalchemy import get_scoped_session
+from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting, isoformat_to_datetime, datetime_to_isoformat
+from aiida.common import NotExistent
+
 
 ALEMBIC_FILENAME = "alembic.ini"
 ALEMBIC_REL_PATH = "migrations"
+
+
+class SqlaSettingsManager(SettingsManager):
+    """Class to get, set and delete settings from the `DbSettings` table."""
+
+    table_name = 'db_dbsetting'
+
+    def validate_table_existence(self):
+        """Verify that the `DbSetting` table actually exists.
+
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
+        """
+        from sqlalchemy.engine import reflection
+        inspector = reflection.Inspector.from_engine(get_scoped_session().bind)
+        if self.table_name not in inspector.get_table_names():
+            raise NotExistent('the settings table does not exist')
+
+    def get(self, key):
+        """Return the setting with the given key.
+
+        :param key: the key identifying the setting
+        :return: Setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        self.validate_table_existence()
+
+        try:
+            setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
+        except NoResultFound:
+            raise NotExistent('setting `{}` does not exist'.format(key))
+
+        return Setting(key, setting.getvalue(), setting.description, setting.time)
+
+    def set(self, key, value, description=None):
+        """Return the settings with the given key.
+
+        :param key: the key identifying the setting
+        :param value: the value for the setting
+        :param description: optional setting description
+        """
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        self.validate_table_existence()
+        validate_attribute_key(key)
+
+        other_attribs = dict()
+        if description is not None:
+            other_attribs['description'] = description
+
+        DbSetting.set_value(key, value, other_attribs=other_attribs)
+
+    def delete(self, key):
+        """Delete the setting with the given key.
+
+        :param key: the key identifying the setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        self.validate_table_existence()
+
+        try:
+            setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
+            setting.delete()
+        except NoResultFound:
+            raise NotExistent('setting `{}` does not exist'.format(key))
+
 
 
 def flag_modified(instance, key):
@@ -77,14 +144,16 @@ def dumps_json(d):
     """
     Transforms all datetime object into isoformat and then returns the JSON
     """
-    return json_dumps(datetime_to_isoformat(d))
+    from aiida.common import json
+    return json.dumps(datetime_to_isoformat(d))
 
 
 def loads_json(s):
     """
     Loads the json and try to parse each basestring as a datetime object
     """
-    ret = json_loads(s)
+    from aiida.common import json
+    ret = json.loads(s)
     return isoformat_to_datetime(ret)
 
 

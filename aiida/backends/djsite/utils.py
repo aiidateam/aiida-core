@@ -16,8 +16,76 @@ from __future__ import absolute_import
 import os
 import django
 
+from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting
+from aiida.common import NotExistent
+
 SCHEMA_VERSION_DB_KEY = 'db|schemaversion'
 SCHEMA_VERSION_DB_DESCRIPTION = "The version of the schema used in this database."
+
+
+class DjangoSettingsManager(SettingsManager):
+    """Class to get, set and delete settings from the `DbSettings` table."""
+
+    table_name = 'db_dbsetting'
+
+    def validate_table_existence(self):
+        """Verify that the `DbSetting` table actually exists.
+
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
+        """
+        from django.db import connection
+        if self.table_name not in connection.introspection.table_names():
+            raise NotExistent('the settings table does not exist')
+
+    def get(self, key):
+        """Return the setting with the given key.
+
+        :param key: the key identifying the setting
+        :return: Setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        from aiida.backends.djsite.db.models import DbSetting
+
+        self.validate_table_existence()
+        setting = DbSetting.objects.filter(key=key).first()
+
+        if setting is None:
+            raise NotExistent('setting `{}` does not exist'.format(key))
+
+        return Setting(setting.key, setting.val, setting.description, setting.time)
+
+    def set(self, key, value, description=None):
+        """Return the settings with the given key.
+
+        :param key: the key identifying the setting
+        :param value: the value for the setting
+        :param description: optional setting description
+        """
+        from aiida.backends.djsite.db.models import DbSetting
+
+        self.validate_table_existence()
+        validate_attribute_key(key)
+
+        other_attribs = dict()
+        if description is not None:
+            other_attribs['description'] = description
+
+        DbSetting.set_value(key, value, other_attribs=other_attribs)
+
+    def delete(self, key):
+        """Delete the setting with the given key.
+
+        :param key: the key identifying the setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        from aiida.backends.djsite.db.models import DbSetting
+
+        self.validate_table_existence()
+
+        try:
+            DbSetting.del_value(key=key)
+        except KeyError:
+            raise NotExistent('setting `{}` does not exist'.format(key))
 
 
 def load_dbenv(profile):
@@ -100,11 +168,11 @@ def check_schema_version(profile_name):
 
 def set_db_schema_version(version):
     """
-    Set the schema version stored in the DB. Use only if you know what
-    you are doing.
+    Set the schema version stored in the DB. Use only if you know what you are doing.
     """
-    from aiida.backends.utils import set_global_setting
-    return set_global_setting(SCHEMA_VERSION_DB_KEY, version, description=SCHEMA_VERSION_DB_DESCRIPTION)
+    from aiida.backends.utils import get_settings_manager
+    manager = get_settings_manager()
+    return manager.set(SCHEMA_VERSION_DB_KEY, version, description=SCHEMA_VERSION_DB_DESCRIPTION)
 
 
 def get_db_schema_version():
@@ -112,11 +180,16 @@ def get_db_schema_version():
     Get the current schema version stored in the DB. Return None if
     it is not stored.
     """
-    from aiida.backends.utils import get_global_setting
+    from django.db.utils import ProgrammingError
+    from aiida.manage.manager import get_manager
+    backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+
     try:
-        return get_global_setting(SCHEMA_VERSION_DB_KEY)
-    except KeyError:
-        return None
+        result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
+    except ProgrammingError:
+        result = backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'db|schemaversion';""")
+
+    return result[0][0]
 
 
 def delete_nodes_and_connections_django(pks_to_delete):  # pylint: disable=invalid-name

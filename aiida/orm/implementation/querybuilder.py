@@ -272,7 +272,6 @@ class BackendQueryBuilder(object):
         """
         Return the column names of the given table (alias).
         """
-        pass
 
     def get_column(self, colname, alias):  # pylint: disable=no-self-use
         """

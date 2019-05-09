@@ -687,13 +687,18 @@ Below is a list with all available subcommands.
 
       Example Usage:
 
-              verdi -p <profile_name> restapi --host 127.0.0.5 --port 6789 --config-dir <location of the config.py file>
+              verdi -p <profile_name> restapi --hostname 127.0.0.5 --port 6789 --config-dir <location of the config.py file>
+              --debug --wsgi-profile --hookup
 
     Options:
-      -H, --host TEXT        the hostname to use
-      -p, --port INTEGER     the port to use
-      -c, --config-dir PATH  the path of the configuration directory
-      --help                 Show this message and exit.
+      -H, --hostname TEXT     Hostname.
+      -P, --port INTEGER      Port number.
+      -c, --config-dir PATH   the path of the configuration directory
+      --debug                 run app in debug mode
+      --wsgi-profile          to use WSGI profiler middleware for finding
+                              bottlenecks in web application
+      --hookup / --no-hookup  to hookup app
+      --help                  Show this message and exit.
 
 
 .. _verdi_run:

@@ -27,7 +27,7 @@ class RESTApiTestCase(AiidaTestCase):
     """
     Setup of the tests for the AiiDA RESTful-api
     """
-    _url_prefix = "/api/v2"
+    _url_prefix = "/api/v3"
     _dummy_data = {}
     _PERPAGE_DEFAULT = 20
     _LIMIT_DEFAULT = 400

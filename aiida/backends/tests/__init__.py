@@ -59,6 +59,7 @@ DB_TEST_LIST = {
         'cmdline.commands.status': ['aiida.backends.tests.cmdline.commands.test_status'],
         'cmdline.commands.user': ['aiida.backends.tests.cmdline.commands.test_user'],
         'cmdline.commands.verdi': ['aiida.backends.tests.cmdline.commands.test_verdi'],
+        'cmdline.commands.restapi': ['aiida.backends.tests.cmdline.commands.test_restapi'],
         'cmdline.params.types.calculation': ['aiida.backends.tests.cmdline.params.types.test_calculation'],
         'cmdline.params.types.code': ['aiida.backends.tests.cmdline.params.types.test_code'],
         'cmdline.params.types.computer': ['aiida.backends.tests.cmdline.params.types.test_computer'],

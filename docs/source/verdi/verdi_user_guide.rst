@@ -520,6 +520,10 @@ Below is a list with all available subcommands.
                                       Comments (based on mtime)
                                       (default).overwrite: Replace existing
                                       Comments with those from the import file.
+      --migration / --no-migration    Force migration of export file archives, if
+                                      needed.  [default: True]
+      -n, --non-interactive           Non-interactive mode: never prompt for
+                                      input.
       --help                          Show this message and exit.
 
 

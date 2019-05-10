@@ -403,8 +403,7 @@ def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_ext
     singlefiles = []
     for (linkname, subclassname, filename) in singlefile_list:
         SinglefileSubclass = DataFactory(subclassname)
-        singlefile = SinglefileSubclass()
-        singlefile.put_object_from_file(filename)
+        singlefile = SinglefileSubclass(file=filename)
         singlefile.add_incoming(job, link_type=LinkType.CREATE, link_label=linkname)
         singlefiles.append(singlefile)
 

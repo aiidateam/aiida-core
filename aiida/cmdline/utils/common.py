@@ -410,3 +410,60 @@ def print_process_spec(process_spec):
     for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
         message = exit_code.message.capitalize()
         click.secho('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))
+
+
+def get_num_workers():  #pylint: disable=inconsistent-return-statements
+    """
+    Get the number of active daemon workers from the circus client
+    """
+    from aiida.common.exceptions import CircusCallError
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    client = manager.get_daemon_client()
+
+    if client.is_daemon_running:
+        response = client.get_numprocesses()
+        if response['status'] != 'ok':
+            if response['status'] == client.DAEMON_ERROR_TIMEOUT:
+                raise CircusCallError('verdi thought the daemon was alive, but the call to the daemon timed-out')
+            elif response['status'] == client.DAEMON_ERROR_NOT_RUNNING:
+                raise CircusCallError('verdi thought the daemon was running, but really it is not')
+            else:
+                raise CircusCallError
+        try:
+            return response['numprocesses']
+        except KeyError:
+            raise CircusCallError('Circus did not return the number of daemon processes')
+
+
+def check_worker_load(active_slots):
+    """
+    Check if the percentage usage of the daemon worker slots exceeds a threshold.
+    If it does, print a warning.
+
+    The purpose of this check is to warn the user if they are close to running out of worker slots
+    which could lead to their processes becoming stuck indefinitely.
+
+    :param active_slots: the number of currently active worker slots
+    """
+    from aiida.common.exceptions import CircusCallError
+    from aiida.cmdline.utils import echo
+    from aiida.manage.external.rmq import _RMQ_TASK_PREFETCH_COUNT
+
+    warning_threshold = 0.9  # 90%
+
+    slots_per_worker = _RMQ_TASK_PREFETCH_COUNT
+
+    try:
+        active_workers = get_num_workers()
+    except CircusCallError:
+        echo.echo_critical("Could not contact Circus to get the number of active workers")
+
+    if active_workers is not None:
+        available_slots = active_workers * slots_per_worker
+        percent_load = (active_slots / available_slots)
+        if percent_load > warning_threshold:
+            echo.echo('')  # New line
+            echo.echo_warning("{:.0f}% of the available daemon worker slots have been used!".format(percent_load * 100))
+            echo.echo_warning("Increase the number of workers with 'verdi daemon incr'.\n")

@@ -19,7 +19,7 @@ from __future__ import absolute_import
 
 # pylint: disable=no-name-in-module, import-error, invalid-name
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import (Column, Table, ForeignKey, UniqueConstraint, select)
+from sqlalchemy import (Column, Table, ForeignKey, UniqueConstraint)
 
 from sqlalchemy.types import (
     Integer,
@@ -31,7 +31,6 @@ from sqlalchemy.types import (
 )
 from sqlalchemy.orm import (relationship, backref, sessionmaker)
 
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.postgresql import UUID
 
 # MISC
@@ -175,35 +174,6 @@ class DbNode(Base):
         secondaryjoin="DbNode.id == DbLink.output_id",
         backref=backref("inputs", passive_deletes=True),
         passive_deletes=True)
-
-    @hybrid_property
-    def user_email(self):
-        """
-        Returns: the email of the user
-        """
-        return self.user.email
-
-    @user_email.expression
-    def user_email(self):
-        """
-        Returns: the email of the user at a class level (i.e. in the database)
-        """
-        return select([DbUser.email]).where(DbUser.id == self.user_id).label('user_email')
-
-    # Computer name
-    @hybrid_property
-    def computer_name(self):
-        """
-        Returns: the of the computer
-        """
-        return self.dbcomputer.name
-
-    @computer_name.expression
-    def computer_name(self):
-        """
-        Returns: the name of the computer at a class level (i.e. in the database)
-        """
-        return select([DbComputer.name]).where(DbComputer.id == self.dbcomputer_id).label('computer_name')
 
 
 class DbAuthInfo(Base):

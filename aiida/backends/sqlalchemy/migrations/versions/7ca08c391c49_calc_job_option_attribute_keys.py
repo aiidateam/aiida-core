@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Migration of CalcJobNode attributes for metadata options whose key changed.
+"""Migration of ProcessNode attributes for metadata options whose key changed.
 
 Revision ID: 7ca08c391c49
 Revises: e72ad251bcdb
@@ -32,14 +32,14 @@ depends_on = None
 
 
 def upgrade():
-    """Migration of CalcJobNode attributes for metadata options whose key changed.
+    """Migration of ProcessNode attributes for metadata options whose key changed.
 
     Renamed attribute keys:
 
-      * `custom_environment_variables` -> `environment_variables`
-      * `jobresource_params` -> `resources`
-      * `_process_label` -> `process_label`
-      * `parser` -> `parser_name`
+      * `custom_environment_variables` -> `environment_variables` (CalcJobNode)
+      * `jobresource_params` -> `resources` (CalcJobNode)
+      * `_process_label` -> `process_label` (ProcessNode)
+      * `parser` -> `parser_name` (CalcJobNode)
 
     Deleted attributes:
       * `linkname_retrieved` (We do not actually delete it just in case some relies on it)
@@ -49,7 +49,7 @@ def upgrade():
 
     statement = text("""
         UPDATE db_dbnode
-        SET attributes = jsonb_set(attributes, '{environment_variables}', to_jsonb(attributes->>'custom_environment_variables'))
+        SET attributes = jsonb_set(attributes, '{environment_variables}', attributes->'custom_environment_variables')
         WHERE
             attributes ? 'custom_environment_variables' AND
             type = 'node.process.calculation.calcjob.CalcJobNode.';
@@ -60,7 +60,7 @@ def upgrade():
         -- custom_environment_variables -> environment_variables
 
         UPDATE db_dbnode
-        SET attributes = jsonb_set(attributes, '{resources}', to_jsonb(attributes->>'jobresource_params'))
+        SET attributes = jsonb_set(attributes, '{resources}', attributes->'jobresource_params')
         WHERE
             attributes ? 'jobresource_params' AND
             type = 'node.process.calculation.calcjob.CalcJobNode.';
@@ -71,7 +71,7 @@ def upgrade():
         -- jobresource_params -> resources
 
         UPDATE db_dbnode
-        SET attributes = jsonb_set(attributes, '{process_label}', to_jsonb(attributes->>'_process_label'))
+        SET attributes = jsonb_set(attributes, '{process_label}', attributes->'_process_label')
         WHERE
             attributes ? '_process_label' AND
             type like 'node.process.%';
@@ -82,7 +82,7 @@ def upgrade():
         -- _process_label -> process_label
 
         UPDATE db_dbnode
-        SET attributes = jsonb_set(attributes, '{parser_name}', to_jsonb(attributes->>'parser'))
+        SET attributes = jsonb_set(attributes, '{parser_name}', attributes->'parser')
         WHERE
             attributes ? 'parser' AND
             type = 'node.process.calculation.calcjob.CalcJobNode.';

@@ -19,7 +19,7 @@ Since the calculation function and work function are both process functions and 
     It is therefore crucial that, before you continue, you have read and understood the basic concept of :ref:`calculation functions<concepts_calcfunctions>` and :ref:`work functions<concepts_workfunctions>`.
 
 The simple example in the :ref:`introductory section on calculation functions<concepts_calcfunctions>` showed how a simple python function can be turned into a calculation function simply by adorning it with the :py:func:`~aiida.engine.processes.functions.calcfunction` decorator.
-When the function is run, AiiDA will dynamically generate a :py:class:`~aiida.engine.processes.functions.FunctionProcess` and build its :ref:`process specification<working_process_spec>` based on the function signature.
+When the function is run, AiiDA will dynamically generate a :py:class:`~aiida.engine.processes.functions.FunctionProcess` and build its :ref:`process specification<working_processes_spec>` based on the function signature.
 Here we will explain how this is accomplished and what features of the python function signature standard are supported.
 
 Function signatures

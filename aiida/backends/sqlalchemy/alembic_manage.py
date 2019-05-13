@@ -80,7 +80,7 @@ if __name__ == "__main__":
         command = getattr(alembic_command, args.command)
         alembic_cfg = get_alembic_conf()
 
-        with sa.engine.begin() as connection:
+        with sa.ENGINE.begin() as connection:
             alembic_cfg.attributes['connection'] = connection
             if command.__name__ == CURRENT_CMD:
                 command(alembic_cfg, verbose=args.verbose)

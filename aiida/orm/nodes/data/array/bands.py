@@ -1661,7 +1661,7 @@ print_comment = False
 # see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
 matplotlib_header_template = Template('''# -*- coding: utf-8 -*-
 
-from __future__ import print_statement
+from __future__ import print_function
 from matplotlib import rc
 # Uncomment to change default font
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})

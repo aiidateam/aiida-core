@@ -22,7 +22,7 @@ from aiida.backends.tests import get_db_test_list
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
 from aiida.common.lang import classproperty
 from aiida.manage import configuration
-from aiida.manage.manager import reset_manager
+from aiida.manage.manager import get_manager, reset_manager
 
 
 def check_if_tests_can_run():
@@ -78,6 +78,9 @@ class AiidaTestCase(unittest.TestCase):
         # to avoid that it is run
         check_if_tests_can_run()
 
+        # Force the loading of the backend which will load the required database environment
+        get_manager().get_backend()
+
         cls.__backend_instance = cls.get_backend_class()()
         cls.__backend_instance.setUpClass_method(*args, **kwargs)
         cls.backend = cls.__backend_instance.backend
@@ -128,7 +131,6 @@ class AiidaTestCase(unittest.TestCase):
 
         cls.__backend_instance.clean_db()
 
-        # Reset AiiDA manager cache
         reset_manager()
 
     @classmethod

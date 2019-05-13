@@ -178,8 +178,7 @@ def downgrade():
         sa.ForeignKeyConstraint(['dbworkflowstep_id'], [u'db_dbworkflowstep.id'],
                                 name=u'db_dbworkflowstep_calculations_dbworkflowstep_id_fkey'),
         sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_calculations_pkey'),
-        sa.UniqueConstraint(
-            'dbworkflowstep_id', 'dbnode_id', name=u'db_dbworkflowstep_calculations_dbworkflowstep_id_dbnode_id_key'))
+        sa.UniqueConstraint('dbworkflowstep_id', 'dbnode_id', name=u'db_dbworkflowstep_calculations_id_dbnode_id_key'))
     op.create_table(
         'db_dbworkflowstep_sub_workflows', sa.Column('id', sa.INTEGER(), autoincrement=True, nullable=False),
         sa.Column('dbworkflowstep_id', sa.INTEGER(), autoincrement=False, nullable=True),
@@ -190,6 +189,4 @@ def downgrade():
                                 name=u'db_dbworkflowstep_sub_workflows_dbworkflowstep_id_fkey'),
         sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_sub_workflows_pkey'),
         sa.UniqueConstraint(
-            'dbworkflowstep_id',
-            'dbworkflow_id',
-            name=u'db_dbworkflowstep_sub_workflows_dbworkflowstep_id_dbworkflow__key'))
+            'dbworkflowstep_id', 'dbworkflow_id', name=u'db_dbworkflowstep_sub_workflows_id_dbworkflow__key'))

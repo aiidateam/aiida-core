@@ -11,9 +11,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.engine import run, run_get_node, run_get_pk, Process, WorkChain, calcfunction
-from aiida.orm import Int, WorkChainNode, CalcFunctionNode
+from aiida.common import exceptions
+from aiida.engine import launch, Process, WorkChain, calcfunction
 
 
 @calcfunction
@@ -26,13 +27,13 @@ class AddWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super(AddWorkChain, cls).define(spec)
-        spec.input('a', valid_type=Int)
-        spec.input('b', valid_type=Int)
+        spec.input('a', valid_type=orm.Int)
+        spec.input('b', valid_type=orm.Int)
         spec.outline(cls.add)
-        spec.output('result', valid_type=Int)
+        spec.output('result', valid_type=orm.Int)
 
     def add(self):
-        self.out('result', Int(self.inputs.a + self.inputs.b).store())
+        self.out('result', orm.Int(self.inputs.a + self.inputs.b).store())
 
 
 class TestLaunchers(AiidaTestCase):
@@ -40,8 +41,8 @@ class TestLaunchers(AiidaTestCase):
     def setUp(self):
         super(TestLaunchers, self).setUp()
         self.assertIsNone(Process.current())
-        self.a = Int(1)
-        self.b = Int(2)
+        self.a = orm.Int(1)
+        self.b = orm.Int(2)
         self.result = 3
 
     def tearDown(self):
@@ -49,30 +50,30 @@ class TestLaunchers(AiidaTestCase):
         self.assertIsNone(Process.current())
 
     def test_calcfunction_run(self):
-        result = run(add, a=self.a, b=self.b)
+        result = launch.run(add, a=self.a, b=self.b)
         self.assertEquals(result, self.result)
 
     def test_calcfunction_run_get_node(self):
-        result, node = run_get_node(add, a=self.a, b=self.b)
+        result, node = launch.run_get_node(add, a=self.a, b=self.b)
         self.assertEquals(result, self.result)
-        self.assertTrue(isinstance(node, CalcFunctionNode))
+        self.assertTrue(isinstance(node, orm.CalcFunctionNode))
 
     def test_calcfunction_run_get_pk(self):
-        result, pk = run_get_pk(add, a=self.a, b=self.b)
+        result, pk = launch.run_get_pk(add, a=self.a, b=self.b)
         self.assertEquals(result, self.result)
         self.assertTrue(isinstance(pk, int))
 
     def test_workchain_run(self):
-        result = run(AddWorkChain, a=self.a, b=self.b)
+        result = launch.run(AddWorkChain, a=self.a, b=self.b)
         self.assertEquals(result['result'], self.result)
 
     def test_workchain_run_get_node(self):
-        result, node = run_get_node(AddWorkChain, a=self.a, b=self.b)
+        result, node = launch.run_get_node(AddWorkChain, a=self.a, b=self.b)
         self.assertEquals(result['result'], self.result)
-        self.assertTrue(isinstance(node, WorkChainNode))
+        self.assertTrue(isinstance(node, orm.WorkChainNode))
 
     def test_workchain_run_get_pk(self):
-        result, pk = run_get_pk(AddWorkChain, a=self.a, b=self.b)
+        result, pk = launch.run_get_pk(AddWorkChain, a=self.a, b=self.b)
         self.assertEquals(result['result'], self.result)
         self.assertTrue(isinstance(pk, int))
 
@@ -80,21 +81,62 @@ class TestLaunchers(AiidaTestCase):
         builder = AddWorkChain.get_builder()
         builder.a = self.a
         builder.b = self.b
-        result = run(builder)
+        result = launch.run(builder)
         self.assertEquals(result['result'], self.result)
 
     def test_workchain_builder_run_get_node(self):
         builder = AddWorkChain.get_builder()
         builder.a = self.a
         builder.b = self.b
-        result, node = run_get_node(builder)
+        result, node = launch.run_get_node(builder)
         self.assertEquals(result['result'], self.result)
-        self.assertTrue(isinstance(node, WorkChainNode))
+        self.assertTrue(isinstance(node, orm.WorkChainNode))
 
     def test_workchain_builder_run_get_pk(self):
         builder = AddWorkChain.get_builder()
         builder.a = self.a
         builder.b = self.b
-        result, pk = run_get_pk(builder)
+        result, pk = launch.run_get_pk(builder)
         self.assertEquals(result['result'], self.result)
         self.assertTrue(isinstance(pk, int))
+
+    def test_submit_store_provenance_false(self):
+        """Verify that submitting with `store_provenance=False` raises."""
+        with self.assertRaises(exceptions.InvalidOperation):
+            launch.submit(AddWorkChain, a=self.a, b=self.b, metadata={'store_provenance': False})
+
+    def test_launchers_dry_run(self):
+        """All launchers should work with `dry_run=True`, even `submit` which forwards to `run`."""
+        from aiida.plugins import CalculationFactory
+
+        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+
+        code = orm.Code(
+            input_plugin_name='arithmetic.add',
+            remote_computer_exec=[self.computer, '/bin/true'])
+
+        inputs = {
+            'code': code,
+            'x': orm.Int(1),
+            'y': orm.Int(1),
+            'metadata': {
+                'dry_run': True,
+                'options': {
+                    'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+                }
+            }
+        }
+
+        result = launch.run(ArithmeticAddCalculation, **inputs)
+        self.assertEqual(result, {})
+
+        result, pk = launch.run_get_pk(ArithmeticAddCalculation, **inputs)
+        self.assertEqual(result, {})
+        self.assertIsInstance(pk, int)
+
+        result, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
+        self.assertEqual(result, {})
+        self.assertIsInstance(node, orm.CalcJobNode)
+
+        node = launch.submit(ArithmeticAddCalculation, **inputs)
+        self.assertIsInstance(node, orm.CalcJobNode)

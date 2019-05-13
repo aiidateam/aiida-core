@@ -10,19 +10,10 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-try:
-    import ultrajson as json
-    from functools import partial
+from aiida.common import json
 
-    # double_precision = 15, to replicate what PostgreSQL numerical type is
-    # using
-    json_dumps = partial(json.dumps, double_precision=15)
-    json_loads = partial(json.loads, precise_float=True)
-except ImportError:
-    from aiida.common import json
-
-    json_dumps = json.dumps
-    json_loads = json.loads
+json_dumps = json.dumps
+json_loads = json.loads
 
 import datetime
 import re
@@ -33,9 +24,6 @@ from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
 from alembic.script import ScriptDirectory
 from dateutil import parser
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session
-from sqlalchemy.orm import sessionmaker
 
 from aiida.backends import sqlalchemy as sa
 
@@ -60,56 +48,30 @@ def flag_modified(instance, key):
     flag_modified_sqla(instance, key)
 
 
-def recreate_after_fork(engine):
-    """
-    :param engine: the engine that will be used by the sessionmaker
-
-    Callback called after a fork. Not only disposes the engine, but also recreates a new scoped session
-    to use independent sessions in the forked process.
-    """
-    sa.engine.dispose()
-    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
-
-
-def reset_session(profile):
-    """
-    :param profile: the profile whose configuration to use to connect to the database
-
-    Resets (global) engine and sessionmaker classes, to create a new one
-    (or creates a new one from scratch if not already available)
-    """
-    from multiprocessing.util import register_after_fork
-
-    separator = ':' if profile.database_port else ''
-    engine_url = 'postgresql://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
-        separator=separator,
-        user=profile.database_username,
-        password=profile.database_password,
-        hostname=profile.database_hostname,
-        port=profile.database_port,
-        name=profile.database_name)
-
-    sa.engine = create_engine(engine_url, json_serializer=dumps_json, json_deserializer=loads_json, encoding='utf-8')
-    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
-    register_after_fork(sa.engine, recreate_after_fork)
-
-
 def load_dbenv(profile):
-    """
-    Load the database environment (SQLAlchemy) and perform some checks.
+    """Load the database environment and ensure that the code and database schema versions are compatible.
 
     :param profile: the string with the profile to use
     """
     _load_dbenv_noschemacheck(profile)
-    # Check schema version and the existence of the needed tables
     check_schema_version(profile_name=profile.name)
 
 
 def _load_dbenv_noschemacheck(profile):
+    """Load the database environment without checking that code and database schema versions are compatible.
+
+    This should ONLY be used internally, inside load_dbenv, and for schema migrations. DO NOT USE OTHERWISE!
+
+    :param profile: instance of `Profile` whose database to load
     """
-    Load the SQLAlchemy database.
-    """
-    reset_session(profile)
+    sa.reset_session(profile)
+
+
+def unload_dbenv():
+    """Unload the database environment, which boils down to destroying the current engine and session."""
+    if sa.ENGINE is not None:
+        sa.ENGINE.dispose()
+    sa.SCOPED_SESSION_CLASS = None
 
 
 _aiida_autouser_cache = None
@@ -375,12 +337,12 @@ def migrate_database(alembic_cfg=None):
     if alembic_cfg is None:
         alembic_cfg = get_alembic_conf()
 
-    with sa.engine.connect() as connection:
+    with sa.ENGINE.connect() as connection:
         alembic_cfg.attributes['connection'] = connection
         command.upgrade(alembic_cfg, "head")
 
 
-def check_schema_version(profile_name=None):
+def check_schema_version(profile_name):
     """
     Check if the version stored in the database is the same of the version of the code.
 
@@ -392,15 +354,12 @@ def check_schema_version(profile_name=None):
     alembic_cfg = get_alembic_conf()
 
     # Getting the version of the code and the database, reusing the existing engine (initialized by AiiDA)
-    with sa.engine.begin() as connection:
+    with sa.ENGINE.begin() as connection:
         alembic_cfg.attributes['connection'] = connection
         code_schema_version = get_migration_head(alembic_cfg)
         db_schema_version = get_db_schema_version(alembic_cfg)
 
     if code_schema_version != db_schema_version:
-        from aiida.manage.manager import get_manager
-        manager = get_manager()
-        profile_name = manager.get_profile().name
         raise ConfigurationError('Database schema version {} is outdated compared to the code schema version {}\n'
                                  'To migrate the database to the current version, run the following commands:'
                                  '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(

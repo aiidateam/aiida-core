@@ -15,7 +15,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.data import DataTranslator
-from aiida.restapi.translator.node import NodeTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
 
 
@@ -56,32 +55,24 @@ class UpfDataTranslator(DataTranslator):
     @staticmethod
     def get_downloadable_data(node, download_format=None):
         """
-        Generic function extented for kpoints data. Currently
-        it is not implemented.
+        Generic function extended for upf data
 
-        :param node: node object that has to be visualized
+        :param node: node object that has to be downloaded
         :param download_format: file extension format
-        :returns: raise RestFeatureNotAvailable exception
+        :returns: data in selected format to download
         """
 
         response = {}
 
-        if node.folder.exists():
-            folder_node = node._repository._get_folder_pathsubfolder  # pylint: disable=protected-access
-            filename = node.filename
+        filename = node.filename
+        try:
+            content = node.get_content()
+        except IOError:
+            error = "Error in getting {} content".format(filename)
+            raise RestInputValidationError(error)
 
-            try:
-                content = NodeTranslator.get_file_content(folder_node, filename)
-            except IOError:
-                error = "Error in getting {} content".format(filename)
-                raise RestInputValidationError(error)
-
-            response["status"] = 200
-            response["data"] = content
-            response["filename"] = filename
-
-        else:
-            response["status"] = 200
-            response["data"] = "file does not exist"
+        response["status"] = 200
+        response["data"] = content
+        response["filename"] = filename
 
         return response

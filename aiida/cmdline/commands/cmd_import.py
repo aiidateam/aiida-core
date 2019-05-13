@@ -143,9 +143,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     cls=options.MultipleValueOption,
     help="Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. "
     "Automatically discovered archive URLs will be downloadeded and added to ARCHIVES for importing")
-@click.option(
-    '-G',
-    '--group',
+@options.GROUP(
     type=GroupParamType(create_if_not_exist=True),
     help='Specify group to which all the import nodes will be added. If such a group does not exist, it will be'
     ' created automatically.')

@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 from aiida.common import InvalidOperation
 from aiida.manage import manager
+from .processes.functions import FunctionProcess
 from .processes.process import Process
 from .utils import is_process_function, is_process_scoped, instantiate_process
 
@@ -79,7 +80,9 @@ def submit(process, **inputs):
     """
     assert not is_process_function(process), 'Cannot submit a process function'
 
-    if is_process_scoped():
+    # Submitting from within another process requires `self.submit` unless it is a work function, in which case the
+    # current process in the scope should be an instance of `FunctionProcess`
+    if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
     runner = manager.get_manager().get_runner()

@@ -21,7 +21,7 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
     # This tuple serves to mark compound projections that cannot explicitly be projected in the QueryBuilder, but will
     # have to be manually projected from composing its individual projection constituents
     _compound_projections = ('state',)
-    _default_projections = ('pk', 'ctime', 'state', 'process_label', 'process_status')
+    _default_projections = ('pk', 'ctime', 'process_label', 'state', 'process_status')
     _valid_projections = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status',
                           'sealed', 'process_label', 'label', 'description', 'node_type', 'paused', 'process_type',
                           'job_state', 'scheduler_state')

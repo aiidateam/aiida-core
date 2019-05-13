@@ -172,30 +172,32 @@ def _generate_node_label(node, node_attr, show_pk):
     return label
 
 
-def calc_info(calc_node):
+def calc_info(node):
     """Return a string with the summary of the state of a CalculationNode."""
-    from aiida.orm import CalculationNode, CalcJobNode, WorkChainNode, WorkflowNode
+    from aiida.orm import ProcessNode, WorkChainNode
 
-    if isinstance(calc_node, WorkChainNode):
-        plabel = calc_node.process_label
-        pstate = calc_node.process_state
-        winfo = calc_node.stepper_state_info
+    if not isinstance(node, ProcessNode):
+        raise TypeError('Unknown type: {}'.format(type(node)))
+
+    if isinstance(node, WorkChainNode):
+        plabel = node.process_label
+        pstate = node.process_state.value.capitalize()
+        exit_status = node.exit_status
+        winfo = node.stepper_state_info
 
         if winfo is None:
-            string = u'{} <pk={}> [{}]'.format(plabel, calc_node.pk, pstate)
+            string = u'{}<{}> {}'.format(plabel, node.pk, pstate)
         else:
-            string = u'{} <pk={}> [{}] [{}]'.format(plabel, calc_node.pk, pstate, winfo)
+            string = u'{}<{}> {} [{}]'.format(plabel, node.pk, pstate, winfo)
 
-    elif isinstance(calc_node, CalcJobNode):
-        clabel = type(calc_node).__name__
-        cstate = str(calc_node.get_state())
-        string = u'{} <pk={}> [{}]'.format(clabel, calc_node.pk, cstate)
-    elif isinstance(calc_node, (CalculationNode, WorkflowNode)):
-        plabel = calc_node.process_label
-        pstate = calc_node.process_state
-        string = u'{} <pk={}> [{}]'.format(plabel, calc_node.pk, pstate)
     else:
-        raise TypeError('Unknown type: {}'.format(type(calc_node)))
+        plabel = node.process_label
+        pstate = node.process_state.value.capitalize()
+        exit_status = node.exit_status
+        if exit_status is not None:
+            string = u'{}<{}> {} [{}]'.format(plabel, node.pk, pstate, exit_status)
+        else:
+            string = u'{}<{}> {}'.format(plabel, node.pk, pstate)
 
     return string
 

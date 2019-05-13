@@ -28,6 +28,9 @@ from .utils import get_repository_folder
 # Otherwise, tries to make everything only readable and writable by the user.
 GROUP_WRITABLE = True
 
+# Name of directory in which to place the input files created by running a dry run for a `CalcJob`
+CALC_JOB_DRY_RUN_BASE_PATH = 'submit_test'
+
 VALID_SECTIONS = ['node']
 
 
@@ -472,7 +475,7 @@ class SubmitTestFolder(Folder):
 
     _sub_folder = None
 
-    def __init__(self, basepath='submit_test'):
+    def __init__(self, basepath=CALC_JOB_DRY_RUN_BASE_PATH):
         """Construct and create the sandbox folder.
 
         The directory will be created in the current working directory with the name given by `basepath`.

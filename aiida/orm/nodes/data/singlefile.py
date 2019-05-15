@@ -97,7 +97,7 @@ class SinglefileData(Data):
             pass
 
         if is_filelike:
-            self.put_object_from_filelike(file, key)
+            self.put_object_from_filelike(file, key, mode='wb')
         else:
             self.put_object_from_file(file, key)
 

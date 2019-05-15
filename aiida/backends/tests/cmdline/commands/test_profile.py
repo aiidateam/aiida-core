@@ -17,7 +17,7 @@ import six
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaPostgresTestCase
-from aiida.cmdline.commands import cmd_profile
+from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.backends.tests.utils.configuration import create_mock_profile, with_temporary_config_instance
 from aiida.manage import configuration
 
@@ -112,6 +112,23 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
             if isinstance(value, six.string_types):
                 self.assertIn(key.lower(), result.output)
                 self.assertIn(value, result.output)
+
+    @with_temporary_config_instance
+    def test_show_with_profile_option(self):
+        """Test the `verdi profile show` command in combination with `-p/--profile."""
+        self.mock_profiles()
+
+        profile_name_non_default = self.profile_list[1]
+
+        # Specifying the non-default profile as argument should override the default
+        result = self.cli_runner.invoke(cmd_profile.profile_show, [profile_name_non_default])
+        self.assertClickSuccess(result)
+        self.assertTrue(profile_name_non_default in result.output)
+
+        # Specifying `-p/--profile` should override the configured default
+        result = self.cli_runner.invoke(cmd_verdi.verdi, ['-p', profile_name_non_default, 'profile', 'show'])
+        self.assertClickSuccess(result)
+        self.assertTrue(profile_name_non_default in result.output)
 
     @with_temporary_config_instance
     def test_delete_partial(self):

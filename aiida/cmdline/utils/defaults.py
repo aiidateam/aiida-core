@@ -22,13 +22,20 @@ def get_default_profile(ctx, param, value):  # pylint: disable=unused-argument
 
     This should be used if the default profile should be returned lazily, at a point for example when the config
     is not created at import time. Otherwise, the preference should go to calling `get_config` to load the actual
-    config and using `config.default_profile_name` to get the default profile name
+    config and using `config.default_profile_name` to get the default profile name.
+
+    This all of course unless the `-p/--profile` option was used by the user which trumps everything, in which case the
+    `profile_option_used` attribute on the `ctx.obj` object will have been set and we simply return the profile that
+    was already loaded by `verdi` itself and set in `ctx.obj.profile`.
 
     :raises click.UsageError: if the config could not be loaded or no default profile exists
     :return: the default profile
     """
     if value:
         return value
+
+    if ctx.obj.profile_option_used:
+        return ctx.obj.profile
 
     try:
         config = get_config()

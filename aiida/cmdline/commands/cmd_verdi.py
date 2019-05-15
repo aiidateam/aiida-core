@@ -21,7 +21,7 @@ from aiida.common import exceptions
 
 @click.group(context_settings={'help_option_names': ['-h', '--help']})
 @options.PROFILE()
-@click.version_option(None, "-v", "--version", message="AiiDA version %(version)s")
+@click.version_option(None, '-v', '--version', message="AiiDA version %(version)s")
 @click.pass_context
 def verdi(ctx, profile):
     """The command line interface of AiiDA."""
@@ -31,6 +31,10 @@ def verdi(ctx, profile):
         ctx.obj = AttributeDict()
 
     config = get_config(create=True)
+
+    # This flag will be useful for commands that need to know if the current `ctx.obj.profile` is simply the default
+    # or is set because the user specified an explicit profile through `-p/--profile`
+    ctx.obj.profile_option_used = profile is not None
 
     if not profile:
         try:

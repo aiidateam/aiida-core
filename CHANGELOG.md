@@ -1,19 +1,19 @@
 ## v1.0.0b3
 
 ### Improvements
-- Add a configuration default user configurable through `verdi config` [[#2734]](https://github.com/aiidateam/aiida_core/pull/2734)
-- Try multiple ways to get default path for `verdi calcjob [in/out]putcat` [[#2615]](https://github.com/aiidateam/aiida_core/pull/2615)
-- Raise when returning an unstored `Data` from a `WorkflowNode` [[#2747]](https://github.com/aiidateam/aiida_core/pull/2747)
+- Add a default user in the AiiDA configuration, which is used to provide defaults for user information in `verdi setup` and `verdi quicksetup`, eliminating the need to retype it for every new profile [[#2734]](https://github.com/aiidateam/aiida_core/pull/2734)
+- Make `verdi calcjob [in/out]putcat` more robust by trying multiple ways to get default path [[#2615]](https://github.com/aiidateam/aiida_core/pull/2615)
+- Raise when returning an unstored `Data` from a `WorkflowNode`, since this breaks data provenance [[#2747]](https://github.com/aiidateam/aiida_core/pull/2747)
 - Hide `verdi daemon start-circus` from auto-completion and help [[#2755]](https://github.com/aiidateam/aiida_core/pull/2755)
 - Print formatted spec for `verdi plugin list <entry_point>` [[#2757]](https://github.com/aiidateam/aiida_core/pull/2757)
 - Create transparent interface for the `Config` and `Profile` class [[#2712]](https://github.com/aiidateam/aiida_core/pull/2712)
-- Implement `ConfigFileOption` reusable command line option type [[#2723]](https://github.com/aiidateam/aiida_core/pull/2723)
+- Implement `ConfigFileOption` reusable command line option type that allows to read values of any click option of the same command from a configuration file in YAML format [[#2723]](https://github.com/aiidateam/aiida_core/pull/2723)
 - Forward `submit` to `run` for `dry_run=True` [[#2827]](https://github.com/aiidateam/aiida_core/pull/2827)
 - REST API: add separate user projection in query help [[#2793]](https://github.com/aiidateam/aiida_core/pull/2793)
 - Use process function name and docstring as default label and description [[#2830]](https://github.com/aiidateam/aiida_core/pull/2830)
-- Update documentation using systemd unit template [[#2849]](https://github.com/aiidateam/aiida_core/pull/2849)
+- Update documentation for AiiDA daemon system service with systemd unit template [[#2849]](https://github.com/aiidateam/aiida_core/pull/2849)
 - Add slots warning to `verdi process list` [[#2774]](https://github.com/aiidateam/aiida_core/pull/2774)
-- Automate export file migration for `verdi import` [[#2820]](https://github.com/aiidateam/aiida_core/pull/2820)
+- `verdi import` automatically migrates export files of old formats [[#2820]](https://github.com/aiidateam/aiida_core/pull/2820)
 - Improve output of `verdi process status`[[#2871]](https://github.com/aiidateam/aiida_core/pull/2871)
 - Automatically set `CalcInfo.uuid` in `CalcJob.run` [[#2874]](https://github.com/aiidateam/aiida_core/pull/2874)
 - Capture `KeyboardInterrupt` in `Runner.run` and kill processes [[#2744]](https://github.com/aiidateam/aiida_core/pull/2744)
@@ -29,28 +29,29 @@
     [[#2852]](https://github.com/aiidateam/aiida_core/pull/2852)
 
 ### Bugs
-- Fix bug in process control in direct scheduler [[#2721]](https://github.com/aiidateam/aiida_core/pull/2721)
+- Direct scheduler was incorrectly considering running processes as completed [[#2721]](https://github.com/aiidateam/aiida_core/pull/2721)
 - Do not treat `None` like values as `None` in `Config.option_set` [[#2731]](https://github.com/aiidateam/aiida_core/pull/2731)
 - `Orbital` code is refactored and some bugs have been fixed [[#2737]](https://github.com/aiidateam/aiida_core/pull/2737)
 - Catch `IOError` in `CalcJobNode` methods to get scheduler output [[#2750]](https://github.com/aiidateam/aiida_core/pull/2750)
-- Prevent additional incoming links for a stored `ProcessNode` [[#2777]](https://github.com/aiidateam/aiida_core/pull/2777)
+- Prevent addition of incoming links to a stored `ProcessNode`[[#2777]](https://github.com/aiidateam/aiida_core/pull/2777)
 - Fix bug in `KpointsData.reciprocal_cell()` [[#2779]](https://github.com/aiidateam/aiida_core/pull/2779)
 - Raise `InvalidOperation` for global `submit` in nested process [[#2781]](https://github.com/aiidateam/aiida_core/pull/2781)
-- Bug fixes and cleanup for `aiida.manage.external.Postgres` [[#2769]](https://github.com/aiidateam/aiida_core/pull/2769)
+- Bug fixes and cleanup for `aiida.manage.external.Postgres`, making it work on ubuntu 18.04 [[#2769]](https://github.com/aiidateam/aiida_core/pull/2769)
 - Fix bug in `QuerBuilder.first()` for multiple projections [[#2824]](https://github.com/aiidateam/aiida_core/pull/2824)
 - Require `store_provenance=True` in `submit` or raise [[#2828]](https://github.com/aiidateam/aiida_core/pull/2828)
 - Fix bug in Django migration `0023_calc_job_option_attribute_keys` [[#2798]](https://github.com/aiidateam/aiida_core/pull/2798)
 - Fix bug in SqlAlchemy migration `7ca08c391c49_calc_job_option_attribute_keys` [[#2798]](https://github.com/aiidateam/aiida_core/pull/2798)
 - REST API: Adapt calculation input/output file endpoints to new repository interface [[#2840]](https://github.com/aiidateam/aiida_core/pull/2840)
-- REST API: fix and update the `verdi restapi` command[[#XXXXX]](https://github.com/aiidateam/aiida_core/pull/XXXXX)
+- REST API: fix and update the `verdi restapi` command[[#2853]](https://github.com/aiidateam/aiida_core/pull/2853)
 - Fix bug in creation of `SinglefileData` in `retrieve_calculation` [[#2860]](https://github.com/aiidateam/aiida_core/pull/2860)
 - Fix calling show_mpl() on a BandsData object [[#2818]](https://github.com/aiidateam/aiida_core/pull/2818)
 - Use binary mode for local copy list in `upload_calculation` [[#2748]](https://github.com/aiidateam/aiida_core/pull/2748)
 - Respect option `-p/--profile` in `verdi profile show` [[#2876]](https://github.com/aiidateam/aiida_core/pull/2876)
 
 ### Backwards incompatible
-- Remove `aiida.tests` entry point group and `parser_tests` [[#2778]](https://github.com/aiidateam/aiida_core/pull/2778)
-- Remove default dynamicity of `WorkChain` port namespaces [[#2825]](https://github.com/aiidateam/aiida_core/pull/2825)
+- Profile name in `verdi setup` and `verdi quicksetup` is now an option instead of an argument [[#2734]](https://github.com/aiidateam/aiida_core/pull/2734)
+- Remove `aiida.tests` and obsolete `aiida.backends.tests.test_parsers` entry point group [[#2778]](https://github.com/aiidateam/aiida_core/pull/2778)
+- Change `WorkChain` input and output port namespaces from `dynamic=True` to `dynamic=False` by default to avoid unexpected behavior for novice users [[#2825]](https://github.com/aiidateam/aiida_core/pull/2825)
 
 
 ## v1.0.0b2

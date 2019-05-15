@@ -1,4 +1,60 @@
-## v1.0.0
+## v1.0.0b3
+
+### Improvements
+- Add a default user in the AiiDA configuration, which is used to provide defaults for user information in `verdi setup` and `verdi quicksetup`, eliminating the need to retype it for every new profile [[#2734]](https://github.com/aiidateam/aiida_core/pull/2734)
+- Make `verdi calcjob [in/out]putcat` more robust by trying multiple ways to get default path [[#2615]](https://github.com/aiidateam/aiida_core/pull/2615)
+- Raise when returning an unstored `Data` from a `WorkflowNode`, since this breaks data provenance [[#2747]](https://github.com/aiidateam/aiida_core/pull/2747)
+- Hide `verdi daemon start-circus` from auto-completion and help [[#2755]](https://github.com/aiidateam/aiida_core/pull/2755)
+- Print formatted spec for `verdi plugin list <entry_point>` [[#2757]](https://github.com/aiidateam/aiida_core/pull/2757)
+- Create transparent interface for the `Config` and `Profile` class [[#2712]](https://github.com/aiidateam/aiida_core/pull/2712)
+- Implement `ConfigFileOption` reusable command line option type that allows to read values of any click option of the same command from a configuration file in YAML format [[#2723]](https://github.com/aiidateam/aiida_core/pull/2723)
+- Forward `submit` to `run` for `dry_run=True` [[#2827]](https://github.com/aiidateam/aiida_core/pull/2827)
+- REST API: add separate user projection in query help [[#2793]](https://github.com/aiidateam/aiida_core/pull/2793)
+- Use process function name and docstring as default label and description [[#2830]](https://github.com/aiidateam/aiida_core/pull/2830)
+- Update documentation for AiiDA daemon system service with systemd unit template [[#2849]](https://github.com/aiidateam/aiida_core/pull/2849)
+- Add slots warning to `verdi process list` [[#2774]](https://github.com/aiidateam/aiida_core/pull/2774)
+- `verdi import` automatically migrates export files of old formats [[#2820]](https://github.com/aiidateam/aiida_core/pull/2820)
+- Improve output of `verdi process status`[[#2871]](https://github.com/aiidateam/aiida_core/pull/2871)
+- Automatically set `CalcInfo.uuid` in `CalcJob.run` [[#2874]](https://github.com/aiidateam/aiida_core/pull/2874)
+- Capture `KeyboardInterrupt` in `Runner.run` and kill processes [[#2744]](https://github.com/aiidateam/aiida_core/pull/2744)
+- Documentation of the new process system
+    [[#2751]](https://github.com/aiidateam/aiida_core/pull/2751)
+    [[#2752]](https://github.com/aiidateam/aiida_core/pull/2752)
+    [[#2753]](https://github.com/aiidateam/aiida_core/pull/2753)
+    [[#2754]](https://github.com/aiidateam/aiida_core/pull/2754)
+    [[#2802]](https://github.com/aiidateam/aiida_core/pull/2802)
+    [[#2805]](https://github.com/aiidateam/aiida_core/pull/2805)
+    [[#2806]](https://github.com/aiidateam/aiida_core/pull/2806)
+    [[#2848]](https://github.com/aiidateam/aiida_core/pull/2848)
+    [[#2852]](https://github.com/aiidateam/aiida_core/pull/2852)
+
+### Bugs
+- Direct scheduler was incorrectly considering running processes as completed [[#2721]](https://github.com/aiidateam/aiida_core/pull/2721)
+- Do not treat `None` like values as `None` in `Config.option_set` [[#2731]](https://github.com/aiidateam/aiida_core/pull/2731)
+- `Orbital` code is refactored and some bugs have been fixed [[#2737]](https://github.com/aiidateam/aiida_core/pull/2737)
+- Catch `IOError` in `CalcJobNode` methods to get scheduler output [[#2750]](https://github.com/aiidateam/aiida_core/pull/2750)
+- Prevent addition of incoming links to a stored `ProcessNode`[[#2777]](https://github.com/aiidateam/aiida_core/pull/2777)
+- Fix bug in `KpointsData.reciprocal_cell()` [[#2779]](https://github.com/aiidateam/aiida_core/pull/2779)
+- Raise `InvalidOperation` for global `submit` in nested process [[#2781]](https://github.com/aiidateam/aiida_core/pull/2781)
+- Bug fixes and cleanup for `aiida.manage.external.Postgres`, making it work on ubuntu 18.04 [[#2769]](https://github.com/aiidateam/aiida_core/pull/2769)
+- Fix bug in `QuerBuilder.first()` for multiple projections [[#2824]](https://github.com/aiidateam/aiida_core/pull/2824)
+- Require `store_provenance=True` in `submit` or raise [[#2828]](https://github.com/aiidateam/aiida_core/pull/2828)
+- Fix bug in Django migration `0023_calc_job_option_attribute_keys` [[#2798]](https://github.com/aiidateam/aiida_core/pull/2798)
+- Fix bug in SqlAlchemy migration `7ca08c391c49_calc_job_option_attribute_keys` [[#2798]](https://github.com/aiidateam/aiida_core/pull/2798)
+- REST API: Adapt calculation input/output file endpoints to new repository interface [[#2840]](https://github.com/aiidateam/aiida_core/pull/2840)
+- REST API: fix and update the `verdi restapi` command[[#2853]](https://github.com/aiidateam/aiida_core/pull/2853)
+- Fix bug in creation of `SinglefileData` in `retrieve_calculation` [[#2860]](https://github.com/aiidateam/aiida_core/pull/2860)
+- Fix calling show_mpl() on a BandsData object [[#2818]](https://github.com/aiidateam/aiida_core/pull/2818)
+- Use binary mode for local copy list in `upload_calculation` [[#2748]](https://github.com/aiidateam/aiida_core/pull/2748)
+- Respect option `-p/--profile` in `verdi profile show` [[#2876]](https://github.com/aiidateam/aiida_core/pull/2876)
+
+### Backwards incompatible
+- Profile name in `verdi setup` and `verdi quicksetup` is now an option instead of an argument [[#2734]](https://github.com/aiidateam/aiida_core/pull/2734)
+- Remove `aiida.tests` and obsolete `aiida.backends.tests.test_parsers` entry point group [[#2778]](https://github.com/aiidateam/aiida_core/pull/2778)
+- Change `WorkChain` input and output port namespaces from `dynamic=True` to `dynamic=False` by default to avoid unexpected behavior for novice users [[#2825]](https://github.com/aiidateam/aiida_core/pull/2825)
+
+
+## v1.0.0b2
 
 ### General
 
@@ -345,9 +401,9 @@
 - REST API: update endpoints for structure visualization, calculation (includes retrieved input & output list), add endpoints for `UpfData` and more [[#977]](https://github.com/aiidateam/aiida_core/pull/977) [[#991]](https://github.com/aiidateam/aiida_core/pull/991)
 - Tests using daemon run faster [[#870]](https://github.com/aiidateam/aiida_core/pull/870)
 - Documentation: updated outdated workflow examples [[#948]](https://github.com/aiidateam/aiida_core/pull/948)
-- Documentation: updated import/export [[#994]](https://github.com/aiidateam/aiida_core/pull/994), 
-- Documentation: plugin quickstart [[#996]](https://github.com/aiidateam/aiida_core/pull/996), 
-- Documentation: parser example [[#1003]](https://github.com/aiidateam/aiida_core/pull/1003) 
+- Documentation: updated import/export [[#994]](https://github.com/aiidateam/aiida_core/pull/994),
+- Documentation: plugin quickstart [[#996]](https://github.com/aiidateam/aiida_core/pull/996),
+- Documentation: parser example [[#1003]](https://github.com/aiidateam/aiida_core/pull/1003)
 
 ### Minor bug fixes
 - Fix bug with repository on external hard drive [[#982]](https://github.com/aiidateam/aiida_core/pull/982)
@@ -458,7 +514,7 @@
 
 ### New plugin system
 - New plugin system implemented, allowing to load aiida entrypoints, and working in parallel with old system (still experimental, though - command line entry points are not fully implemented yet)
-- Support for the plugin registry 
+- Support for the plugin registry
 
 ### Code refactoring
 - Refactoring of `Node` to move as much as possible of the caching code into the abstract class
@@ -513,7 +569,7 @@
 ## v0.8.0
 
 ### Installation and setup
-- Simplified installation procedure by adopting standard python package installation method through  
+- Simplified installation procedure by adopting standard python package installation method through
 setuptools and pip
 - Verdi install replaced by verdi setup
 - New verdi command `quicksetup` to simplify the setup procedure
@@ -525,12 +581,12 @@ setuptools and pip
 - Application-wide logging is now abstracted and implemented for all backends
 - Added a REST API layer with hook through verdi cli: `verdi restapi`
 - Improved `QueryBuilder`
-    * Composition model instead of inheritance removing the requirement of determining the  
+    * Composition model instead of inheritance removing the requirement of determining the
     implementation on import
-    * Added keyword `with_dbpath` that makes `QueryBuilder` switch between using the `DbPath`and not  
+    * Added keyword `with_dbpath` that makes `QueryBuilder` switch between using the `DbPath`and not
     using it.
     * Updated and improved documentation
-- The QueryTool as well as the `class Node.query()` method are now deprecated in favor of the  
+- The QueryTool as well as the `class Node.query()` method are now deprecated in favor of the
 `QueryBuilder`
 - Migration of verdi cli to use the `QueryBuilder` in order to support both database backends
 - Added option `--project` to `verdi calculation list` to specify which attributes to print
@@ -540,9 +596,9 @@ setuptools and pip
 - Added pseudopotential tutorial
 
 ### Database
-- Dropped support for MySQL and SQLite to fully support efficient features in Postgres like JSONB  
+- Dropped support for MySQL and SQLite to fully support efficient features in Postgres like JSONB
 fields
-- Database efficiency improvements with orders of magnitude speedup for large databases  
+- Database efficiency improvements with orders of magnitude speedup for large databases
 [added indices for daemon queries and node UUID queries]
 - Replace deprecated `commit_on_success` with atomic for Django transactions
 - Change of how SQLAlchemy internally uses the session and the engine to work also with forks (e.g. in celery)
@@ -564,14 +620,14 @@ fields
 - New Quantum ESPRESSO and scheduler plugins contributed from EPFL
     * ASE/GPAW plugins: Andrea Cepellotti (EPFL and Berkeley)
     * Quantum ESPRESSO DOS, Projwfc: Daniel Marchand (EPFL and McGill)
-    * Quantum ESPRESSO phonon, matdyn, q2r, force constants plugins: Giovanni Pizzi,  
+    * Quantum ESPRESSO phonon, matdyn, q2r, force constants plugins: Giovanni Pizzi,
     Nicolas Mounet (EPFL); Andrea Cepellotti (EPFL and Berkeley)
     * Quantum ESPRESSO cp.x plugin: Giovanni Pizzi (EPFL)
     * Quantum ESPRESSO neb.x plugin: Marco Gibertini (EPFL)
     * LSF scheduler: Nicolas Mounet (EPFL)
-- Implemented functionality to export and visualize molecular dynamics trajectories  
+- Implemented functionality to export and visualize molecular dynamics trajectories
 (using e.g. matplotlib, mayavi)
-- Improved the TCODExporter (some fixes to adapt to changes of external libraries, added some  
+- Improved the TCODExporter (some fixes to adapt to changes of external libraries, added some
 additional TCOD CIF tags, various bugfixes)
 
 ### Various fixes and improvements
@@ -593,34 +649,34 @@ additional TCOD CIF tags, various bugfixes)
 - Added codespecific tools for Quantumespresso.
 - `verdi code list`now shows local codes too.
 - `verdi export` can now export non user-defined groups (from their pk).
-     
+
 ### Fixes
 - Fixed bugs in (old) workflow manager and daemon.
 - Improvements of the efficiency of the (old) workflow manager.
 - Fixed JobCalculation text prepend with multiple codes.
-    
+
 
 ## v0.7.0
 
 This release introduces a lot and significant changes & enhancements.
 
-We worked on our new backend and now AiiDA can be installed using SQLAlchemy too. Many of the verdi  
-commands and functionalities have been tested and are working with this backend. The full JSON  
-support provided by SQLAlchemy and the latest versions of PostgreSQL enable significant speed  
-increase in attribute related queries. SQLAlchemy backend choice is a beta option since some last  
-functionalities and commands need to be implemented or improved for this backend. Scripts are  
+We worked on our new backend and now AiiDA can be installed using SQLAlchemy too. Many of the verdi
+commands and functionalities have been tested and are working with this backend. The full JSON
+support provided by SQLAlchemy and the latest versions of PostgreSQL enable significant speed
+increase in attribute related queries. SQLAlchemy backend choice is a beta option since some last
+functionalities and commands need to be implemented or improved for this backend. Scripts are
 provided for the transition of databases from Django backend to SQLAlchemy backend.
 
-In this release we have included a new querying tool called `QueryBuilder`. It is a powerfull tool  
-allowing users to write complex graph queries to explore the AiiDA graph database. It provides  
-various features like selection of entity properties, filtering of results, combination of entities  
-on specific properties as well as various ways to obtain the final result. It also provides the  
+In this release we have included a new querying tool called `QueryBuilder`. It is a powerfull tool
+allowing users to write complex graph queries to explore the AiiDA graph database. It provides
+various features like selection of entity properties, filtering of results, combination of entities
+on specific properties as well as various ways to obtain the final result. It also provides the
 users an abstract way to query their data without enforcing them to write backend dependent queries.
 
-Last but not least we have included a new workflow engine (in beta version) which is available  
-through the `verdi workflow2` command. The new workflows are easier to write (it is as close as  
-writing python as possible), there is seamless mixing of short running tasks with long running  
-(remote) tasks and they encourage users to write reusable workflows. Moreover, debugging of  
+Last but not least we have included a new workflow engine (in beta version) which is available
+through the `verdi workflow2` command. The new workflows are easier to write (it is as close as
+writing python as possible), there is seamless mixing of short running tasks with long running
+(remote) tasks and they encourage users to write reusable workflows. Moreover, debugging of
 workflows has been made easier and it is possible both in-IDE and through logging.
 
 ### List of changes:
@@ -628,18 +684,18 @@ workflows has been made easier and it is possible both in-IDE and through loggin
 - Most of the verdi commands work with SQLAlchemy backend.
 - Transition script from Django schema of version 0.7.0 to SQLAlchemy schema of version 0.7.0.
 - AiiDA daemon redesigned and working with both backends (Django & SQLAlchemy).
-- Introducing new workflow engine that allows better debugging and easier to write workflows. It is  
+- Introducing new workflow engine that allows better debugging and easier to write workflows. It is
 available under the `verdi workflows2` command. Examples are also added.
 - Old workflows are still supported and available under the "verdi workflow" command.
-- Introducing new querying tool (called `QueryBuilder`). It allows to easily write complex graph  
+- Introducing new querying tool (called `QueryBuilder`). It allows to easily write complex graph
 queries that will be executed on the AiiDA graph database. Extensive documentation also added.
 - Unifying behaviour of verdi commands in both backends.
 - Upped to version 0.4.2 of plum (needed for workflows2)
 - Implemented the validator and input helper for Quantum ESPRESSO pw.x.
-- Improved the documentation for the pw (and cp) input plugins (for all the flags in the Settings  
+- Improved the documentation for the pw (and cp) input plugins (for all the flags in the Settings
 node).
-- Fixed a wrong behavior in the QE pw/cp plugins when checking for the parser options and checking  
-if there were further unknown flags in the Settings node. However, this does not solve yet  
+- Fixed a wrong behavior in the QE pw/cp plugins when checking for the parser options and checking
+if there were further unknown flags in the Settings node. However, this does not solve yet
 completely the problem (see issue #219).
 - Implemented validator and input helper for Quantum ESPRESSO pw.x.
 - Added elements with Z=104-112, 114 and 116, in `aiida.common.constants`.
@@ -650,25 +706,25 @@ completely the problem (see issue #219).
 - SSH transport, to connect to remote computers via SSH/SFTP.
 - Support for the SGE and SLURM schedulers.
 - Support for Quantum ESPRESSO Car-Parrinello calculations.
-- Support for data nodes to store electronic bands, phonon dispersion and generally arrays defined  
+- Support for data nodes to store electronic bands, phonon dispersion and generally arrays defined
 over the Brillouin zone.
 
 
 ## v0.6.0
 
-We performed a lot of changes to introduce in one of our following releases a second  
-object-relational mapper (we will refer to it as back-end) for the management of the used DBMSs and  
-more specifically of PostgreSQL. SQLAlchemy and the latest version of PostgreSQL allows AiiDA to  
-store JSON documents directly to the database and also to query them. Moreover the JSON query  
-optimization is left to the database including also the use of the JSON specific indexes. There was  
-major code restructuring to accommodate the new back-end resulting to abstracting many classes of  
+We performed a lot of changes to introduce in one of our following releases a second
+object-relational mapper (we will refer to it as back-end) for the management of the used DBMSs and
+more specifically of PostgreSQL. SQLAlchemy and the latest version of PostgreSQL allows AiiDA to
+store JSON documents directly to the database and also to query them. Moreover the JSON query
+optimization is left to the database including also the use of the JSON specific indexes. There was
+major code restructuring to accommodate the new back-end resulting to abstracting many classes of
 the orm package of AiiDA.
 
-Even if most of the needed restructuring & code addition has been finished, a bit of more work is  
+Even if most of the needed restructuring & code addition has been finished, a bit of more work is
 needed. Therefore even in this version, Django is the only available back-end for the end user.
 
-However, the users have to update their AiiDA configuration files by executing the migration file  
-that can be found at `YOUR_AIIDA_DIR/aiida/common/additions/migration.py` as the Linux user that  
+However, the users have to update their AiiDA configuration files by executing the migration file
+that can be found at `YOUR_AIIDA_DIR/aiida/common/additions/migration.py` as the Linux user that
 installed AiiDA in your system.
 (e.g. `python YOUR_AIIDA_DIR/aiida/common/additions/migration.py`)
 
@@ -678,7 +734,7 @@ installed AiiDA in your system.
 - Enriched link description in the database (to enrich the provenance model).
 - Corrections for numpy array and cell. List will be used with cell.
 - Fixed backend import. Verdi commands load as late as possible the needed backend.
-- Abstraction of the basic AiiDA orm classes (like node, computer, data etc). This is needed to  
+- Abstraction of the basic AiiDA orm classes (like node, computer, data etc). This is needed to
 support different backends (e.g. Django and SQLAlchemy).
 - Fixes on the structure import from QE-input files.
 - SQLAlchemy and Django benchmarks.
@@ -692,15 +748,15 @@ support different backends (e.g. Django and SQLAlchemy).
 ## v0.5.0
 
 ### General
-- Final paper published, ref: G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky,  
-AiiDA: automated interactive infrastructure and database for computational science,  
+- Final paper published, ref: G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky,
+AiiDA: automated interactive infrastructure and database for computational science,
 Comp. Mat. Sci 111, 218-230 (2016)
-- Core, concrete, requirements kept in `requirements.txt` and optionals moved to  
+- Core, concrete, requirements kept in `requirements.txt` and optionals moved to
 `optional_requirements.txt`
 - Schema change to v1.0.2: got rid of `calc_states.UNDETERMINED`
 
 ### Import/export, backup and code interaction
-- [non-back-compatible] Now supporting multiple codes execution in the same submission script.  
+- [non-back-compatible] Now supporting multiple codes execution in the same submission script.
 Plugin interface changed, requires adaptation of the code plugins.
 - Added import support for XYZ files
 - Added support for van der Waals table in QE input
@@ -718,30 +774,30 @@ Plugin interface changed, requires adaptation of the code plugins.
 - Added option to sort by a field in the query tool
 - Implemented selection of data nodes and calculations by group
 - Added NWChem plugin
-- Change default behaviour of symbolic link copy in the transport plugins: "put"/"get"  
-methods -> symbolic links are followed before copy; "copy" methods -> symbolic links are not  
+- Change default behaviour of symbolic link copy in the transport plugins: "put"/"get"
+methods -> symbolic links are followed before copy; "copy" methods -> symbolic links are not
 followed (copied "as is").
 
 ### Schedulers
 - Explicit Torque support (some slightly different flags)
 - Improved PBSPro scheduler
-- Added new `num_cores_per_machine` and `num_cores_per_mpiproc fields` for pbs and torque schedulers  
+- Added new `num_cores_per_machine` and `num_cores_per_mpiproc fields` for pbs and torque schedulers
  (giving full support for MPI+OpenMP hybrid codes)
-- Direct scheduler added, allowing calculations to be run without batch system  
+- Direct scheduler added, allowing calculations to be run without batch system
 (i.e. directly call executable)
 
 ### verdi
 - Support for profiles added: it allows user to switch between database configurations using the `verdi profile` command
 - Added `verdi data structure import --file file.xyz` for importing XYZ
 - Added a `verdi data upf exportfamily` command (to export an upf pseudopotential family into a folder)
-- Added new functionalities to the `verdi group` command (show list of nodes, add and remove nodes  
+- Added new functionalities to the `verdi group` command (show list of nodes, add and remove nodes
 from the command line)
 - Allowing verdi export command to take group PKs
 - Added ASE as a possible format for visualizing structures from command line
 - Added possibility to export trajectory data in xsf format
 - Added possibility to show trajectory data with xcrysden
 - Added filters on group name in `verdi group list`
-- Added possibility to load custom modules in the verdi shell (additional property  
+- Added possibility to load custom modules in the verdi shell (additional property
 verdishell.modules created; can be set with `verdi devel setproperty verdishell.modules`)
 - Added `verdi data array show` command, using `json_date` serialization to display the contents of `ArrayData`
 - Added `verdi data trajectory deposit` command line command

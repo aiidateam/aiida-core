@@ -8,15 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi import` command."""
-# pylint: disable=too-many-locals
+# pylint: disable=broad-except,too-many-arguments,too-many-locals,too-many-branches
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from enum import Enum
+import traceback
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params.options import MultipleValueOption
+from aiida.cmdline.params import options
 from aiida.cmdline.params.types import GroupParamType, ImportPath
 from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
@@ -36,13 +37,110 @@ class ExtrasImportCode(Enum):
     ask = 'kca'
 
 
+def _try_import(migration_performed, file_to_import, archive, group, migration, non_interactive, **kwargs):
+    """Utility function for `verdi import` to try to import archive
+
+    :param migration_performed: Boolean to determine the exception message to throw for IncompatibleArchiveVersionError
+    :param file_to_import: Absolute path, including filename, of file to be migrated.
+    :param archive: Filename of archive to be migrated, and later attempted imported.
+    :param group: AiiDA Group into which the import will be associated.
+    :param migration: Whether or not to force migration of archive, if needed.
+    :param non_interactive: Whether or not the user should be asked for input for any reason.
+    :param kwargs: Key-word-arguments that _must_ contain:
+
+    `'extras_mode_existing'`: `import_data`'s `'extras_mode_existing'` keyword, determining import rules for Extras.
+    `'extras_mode_new'`: `import_data`'s `'extras_mode_new'` keyword, determining import rules for Extras.
+    `'comment_mode'`: `import_data`'s `'comment_mode'` keyword, determining import rules for Comments.
+    """
+    from aiida.orm.importexport import import_data
+
+    # Checks
+    expected_keys = ['extras_mode_existing', 'extras_mode_new', 'comment_mode']
+    for key in expected_keys:
+        if key not in kwargs:
+            raise ValueError("{} needed for utility function '{}' to use in 'import_data'".format(key, '_try_import'))
+
+    # Initialization
+    migrate_archive = False
+
+    try:
+        import_data(file_to_import, group, **kwargs)
+    except exceptions.IncompatibleArchiveVersionError as exception:
+        if migration_performed:
+            # Migration has been performed, something is still wrong
+            crit_message = "{} has been migrated, but it still cannot be imported.\n{}".format(archive, exception)
+            echo.echo_critical(crit_message)
+        else:
+            # Migration has not yet been tried.
+            if migration:
+                # Confirm migration
+                echo.echo_warning(str(exception).splitlines()[0])
+                if non_interactive:
+                    migrate_archive = True
+                else:
+                    migrate_archive = click.confirm(
+                        "Do you want to try and migrate {} to the newest export file version?\n"
+                        "Note: This will not change your current file.".format(archive),
+                        default=True,
+                        abort=True)
+            else:
+                # Abort
+                echo.echo_critical(str(exception))
+    except Exception:
+        echo.echo_error('an exception occurred while importing the archive {}'.format(archive))
+        echo.echo(traceback.format_exc())
+        if not non_interactive:
+            click.confirm('do you want to continue?', abort=True)
+    else:
+        echo.echo_success('imported archive {}'.format(archive))
+
+    return migrate_archive
+
+
+def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive, **kwargs):  # pylint: disable=unused-argument
+    """Utility function for `verdi import` to migrate archive
+    Invoke click command `verdi export migrate`, passing in the archive,
+    outputting the migrated archive in a temporary SandboxFolder.
+    Try again to import the now migrated file, after a successful migration.
+
+    :param ctx: Click context used to invoke `verdi export migrate`.
+    :param temp_folder: SandboxFolder, where the migrated file will be temporarily outputted.
+    :param file_to_import: Absolute path, including filename, of file to be migrated.
+    :param archive: Filename of archive to be migrated, and later attempted imported.
+    :param non_interactive: Whether or not the user should be asked for input for any reason.
+    :return: Absolute path to migrated archive within SandboxFolder.
+    """
+    from aiida.cmdline.commands.cmd_export import migrate
+
+    # Echo start
+    echo.echo_info("migrating archive {}".format(archive))
+
+    # Initialization
+    temp_out_file = 'migrated_importfile.aiida'
+
+    # Migration
+    try:
+        ctx.invoke(
+            migrate, input_file=file_to_import, output_file=temp_folder.get_abs_path(temp_out_file), silent=False)
+    except Exception:
+        echo.echo_error("an exception occurred while migrating the archive {}.\n"
+                        "Use 'verdi export migrate' to update this export file.".format(archive))
+        echo.echo(traceback.format_exc())
+        if not non_interactive:
+            click.confirm('do you want to continue?', abort=True)
+    else:
+        echo.echo_success("archive migrated, proceeding with import")
+
+        return temp_folder.get_abs_path(temp_out_file)
+
+
 @verdi.command('import')
 @click.argument('archives', nargs=-1, type=ImportPath(exists=True, readable=True))
 @click.option(
     '-w',
     '--webpages',
     type=click.STRING,
-    cls=MultipleValueOption,
+    cls=options.MultipleValueOption,
     help="Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. "
     "Automatically discovered archive URLs will be downloadeded and added to ARCHIVES for importing")
 @click.option(
@@ -78,28 +176,36 @@ class ExtrasImportCode(Enum):
     help="Specify the way to import Comments with identical UUIDs: "
     "newest: Only the newest Comments (based on mtime) (default)."
     "overwrite: Replace existing Comments with those from the import file.")
+@click.option(
+    '--migration/--no-migration',
+    default=True,
+    show_default=True,
+    help="Force migration of export file archives, if needed.")
+@options.NON_INTERACTIVE()
 @decorators.with_dbenv()
-def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode):
+@click.pass_context
+def cmd_import(ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration,
+               non_interactive):
     """Import one or multiple exported AiiDA archives
 
     The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.
     """
-    # pylint: disable=too-many-branches,too-many-statements,broad-except
-    import traceback
     from six.moves import urllib
 
     from aiida.common.folders import SandboxFolder
-    from aiida.orm.importexport import get_valid_import_links, import_data
+    from aiida.orm.importexport import get_valid_import_links
 
     archives_url = []
     archives_file = []
 
+    # Build list of archives to be imported
     for archive in archives:
         if archive.startswith('http://') or archive.startswith('https://'):
             archives_url.append(archive)
         else:
             archives_file.append(archive)
 
+    # Discover and retrieve *.aiida files at URL(s)
     if webpages is not None:
         for webpage in webpages:
             try:
@@ -108,35 +214,51 @@ def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new,
             except Exception:
                 echo.echo_error('an exception occurred while trying to discover archives at URL {}'.format(webpage))
                 echo.echo(traceback.format_exc())
-                click.confirm('do you want to continue?', abort=True)
+                if not non_interactive:
+                    click.confirm('do you want to continue?', abort=True)
             else:
                 echo.echo_success('{} archive URLs discovered and added'.format(len(urls)))
                 archives_url += urls
 
+    # Preliminary sanity check
     if not archives_url + archives_file:
         echo.echo_critical('no valid exported archives were found')
 
+    # Import initialization
+    import_opts = {
+        "file_to_import": '',
+        "archive": '',
+        "group": group,
+        "migration": migration,
+        "extras_mode_existing": ExtrasImportCode[extras_mode_existing].value,
+        "extras_mode_new": extras_mode_new,
+        "comment_mode": comment_mode,
+        "non_interactive": non_interactive
+    }
+
+    # Import local archives
     for archive in archives_file:
 
         echo.echo_info('importing archive {}'.format(archive))
 
-        try:
-            import_data(
-                archive,
-                group,
-                extras_mode_existing=ExtrasImportCode[extras_mode_existing].value,
-                extras_mode_new=extras_mode_new,
-                comment_mode=comment_mode)
-        except exceptions.IncompatibleArchiveVersionError as exception:
-            echo.echo_critical('{} cannot be imported: {}'.format(archive, exception))
-        except Exception:
-            echo.echo_error('an exception occurred while importing the archive {}'.format(archive))
-            echo.echo(traceback.format_exc())
-            click.confirm('do you want to continue?', abort=True)
-        else:
-            echo.echo_success('imported archive {}'.format(archive))
+        # Initialization
+        import_opts['archive'] = archive
+        import_opts['file_to_import'] = import_opts['archive']
 
+        # First attempt to import archive
+        migrate_archive = _try_import(migration_performed=False, **import_opts)
+
+        # Migrate archive if needed and desired
+        if migrate_archive:
+            with SandboxFolder() as temp_folder:
+                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, **import_opts)
+                _try_import(migration_performed=True, **import_opts)
+
+    # Import web-archives
     for archive in archives_url:
+
+        # Initialization
+        import_opts['archive'] = archive
 
         echo.echo_info('downloading archive {}'.format(archive))
 
@@ -147,24 +269,16 @@ def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new,
 
         with SandboxFolder() as temp_folder:
             temp_file = 'importfile.tar.gz'
+
+            # Download archive to temporary file
             temp_folder.create_file_from_filelike(response, temp_file)
             echo.echo_success('archive downloaded, proceeding with import')
 
-            try:
-                import_data(
-                    temp_folder.get_abs_path(temp_file),
-                    group,
-                    extras_mode_existing=ExtrasImportCode[extras_mode_existing].value,
-                    extras_mode_new=extras_mode_new,
-                    comment_mode=comment_mode)
-            except exceptions.IncompatibleArchiveVersionError as exception:
-                crit_message = '{} cannot be imported.\n' \
-                    'Download the archive file and run `verdi export migrate` to update it.\n{}'.format(
-                    archive, exception)
-                echo.echo_critical(crit_message)
-            except Exception:
-                echo.echo_error('an exception occurred while importing the archive {}'.format(archive))
-                echo.echo(traceback.format_exc())
-                click.confirm('do you want to continue?', abort=True)
-            else:
-                echo.echo_success('imported archive {}'.format(archive))
+            # First attempt to import archive
+            import_opts['file_to_import'] = temp_folder.get_abs_path(temp_file)
+            migrate_archive = _try_import(migration_performed=False, **import_opts)
+
+            # Migrate archive if needed and desired
+            if migrate_archive:
+                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, **import_opts)
+                _try_import(migration_performed=True, **import_opts)

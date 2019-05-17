@@ -332,7 +332,10 @@ class DaemonClient(object):  # pylint: disable=too-many-public-methods,useless-o
         Return an instance of the CircusClient with the endpoint defined by the controller endpoint, which
         used the port that was written to the port file upon starting of the daemon
 
-        :return: CircucClient instance
+        N.B. This is quite slow the first time it is run due to the import of zmq.ssh
+        in circus/utils.py in circus 0.15.0, which ultimately follows the import of CircusClient.
+
+        :return: CircusClient instance
         """
         from circus.client import CircusClient
         return CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._DAEMON_TIMEOUT)
@@ -368,6 +371,16 @@ class DaemonClient(object):  # pylint: disable=too-many-public-methods,useless-o
         :return: the client call response
         """
         command = {'command': 'status', 'properties': {'name': self.daemon_name}}
+
+        return self.call_client(command)
+
+    def get_numprocesses(self):
+        """
+        Get the number of running daemon processes
+
+        :return: the client call response
+        """
+        command = {'command': 'numprocesses', 'properties': {'name': self.daemon_name}}
 
         return self.call_client(command)
 

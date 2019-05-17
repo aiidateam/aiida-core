@@ -97,12 +97,7 @@ class CalculationProjectionMapper(ProjectionMapper):
         process_status_key = 'attributes.{}'.format(ProcessNode.PROCESS_STATUS_KEY)
         exit_status_key = 'attributes.{}'.format(ProcessNode.EXIT_STATUS_KEY)
 
-        default_labels = {
-            'pk': 'PK',
-            'uuid': 'UUID',
-            'ctime': 'Created',
-            'mtime': 'Modified',
-        }
+        default_labels = {'pk': 'PK', 'uuid': 'UUID', 'ctime': 'Created', 'mtime': 'Modified', 'state': 'Process State'}
 
         default_attributes = {
             'pk': 'id',

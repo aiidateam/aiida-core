@@ -226,10 +226,10 @@ QUICKSETUP_DATABASE_PORT = OverridableOption(
     '--db-port', help='Port to connect to the database.', default=DEFAULT_DBINFO['port'], type=click.INT)
 
 QUICKSETUP_DATABASE_NAME = OverridableOption(
-    '--db-name', help='Name of the database to connect to.', type=click.STRING, callback=get_quicksetup_database_name)
+    '--db-name', help='Name of the database to create.', type=click.STRING, callback=get_quicksetup_database_name)
 
 QUICKSETUP_DATABASE_USERNAME = OverridableOption(
-    '--db-username', help='User name to connect to the database.', type=click.STRING, callback=get_quicksetup_username)
+    '--db-username', help='Name of the database user to create.', type=click.STRING, callback=get_quicksetup_username)
 
 QUICKSETUP_DATABASE_PASSWORD = OverridableOption(
     '--db-password',
@@ -237,6 +237,22 @@ QUICKSETUP_DATABASE_PASSWORD = OverridableOption(
     type=click.STRING,
     hide_input=True,
     callback=get_quicksetup_password)
+
+QUICKSETUP_SUPERUSER_DATABASE_USERNAME = OverridableOption(
+    '--su-db-username', help='User name of the database super user.', type=click.STRING, default=DEFAULT_DBINFO['user'])
+
+QUICKSETUP_SUPERUSER_DATABASE_NAME = OverridableOption(
+    '--su-db-name',
+    help='Name of the template database to connect to as the database superuser.',
+    type=click.STRING,
+    default=DEFAULT_DBINFO['database'])
+
+QUICKSETUP_SUPERUSER_DATABASE_PASSWORD = OverridableOption(
+    '--su-db-password',
+    help='Password to connect as the database superuser.',
+    type=click.STRING,
+    hide_input=True,
+    default=DEFAULT_DBINFO['password'])
 
 QUICKSETUP_REPOSITORY_URI = OverridableOption(
     '--repository',

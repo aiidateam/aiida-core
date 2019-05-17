@@ -19,6 +19,7 @@ from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from .. import types
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
+from .config import ConfigFileOption
 
 __all__ = (
     'PROFILE', 'CALCULATION', 'CALCULATIONS', 'CODE', 'CODES', 'COMPUTER', 'COMPUTERS', 'DATUM', 'DATA', 'GROUP',
@@ -377,3 +378,6 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
     cls=MultipleValueOption,
     default=None,
     help='Only select objects containing only these and no other elements.')
+
+CONFIG_FILE = ConfigFileOption(
+    '--config', help='Load option values from configuration file in yaml format.')

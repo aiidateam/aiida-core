@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -31,15 +32,15 @@ def verdi_graph():
 @click.option(
     '-a',
     '--ancestor-depth',
-    help="The maximum depth when recursing upwards, if not set it will recurse to the end",
+    help='The maximum depth when recursing upwards, if not set it will recurse to the end.',
     type=click.IntRange(min=0))
 @click.option(
     '-d',
     '--descendant-depth',
-    help="The maximum depth when recursing through the descendants, if not set it will recurse to the end",
+    help='The maximum depth when recursing through the descendants, if not set it will recurse to the end',
     type=click.IntRange(min=0))
-@click.option('-o', '--outputs', is_flag=True, help="Always show all outputs of a calculation")
-@click.option('-i', '--inputs', is_flag=True, help="Always show all inputs of a calculation")
+@click.option('-o', '--outputs', is_flag=True, help='Always show all outputs of a calculation.')
+@click.option('-i', '--inputs', is_flag=True, help='Always show all inputs of a calculation.')
 @click.option(
     '-e',
     '--engine',

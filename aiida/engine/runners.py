@@ -13,12 +13,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from collections import namedtuple
+import collections
 import logging
+import signal
 import tornado.ioloop
 
 import plumpy
 
+from aiida.common import exceptions
 from aiida.orm import load_node
 from .processes import futures
 from .processes.calcjobs import manager
@@ -30,8 +32,8 @@ __all__ = ('Runner',)
 
 LOGGER = logging.getLogger(__name__)
 
-ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
-ResultAndPk = namedtuple('ResultAndPk', ['result', 'pk'])
+ResultAndNode = collections.namedtuple('ResultAndNode', ['result', 'node'])
+ResultAndPk = collections.namedtuple('ResultAndPk', ['result', 'pk'])
 
 
 class Runner(object):  # pylint: disable=useless-object-inheritance
@@ -150,6 +152,12 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
 
         process = instantiate_process(self, process, *args, **inputs)
 
+        if not process.metadata.store_provenance:
+            raise exceptions.InvalidOperation('cannot submit a process with `store_provenance=False`')
+
+        if process.metadata.get('dry_run', False):
+            raise exceptions.InvalidOperation('cannot submit a process from within another with `dry_run=True`')
+
         if self._rmq_submit:
             self.persister.save_checkpoint(process)
             process.close()
@@ -191,6 +199,15 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
 
         with utils.loop_scope(self.loop):
             process = instantiate_process(self, process, *args, **inputs)
+
+            def kill_process(_num, _frame):
+                """Send the kill signal to the process in the current scope."""
+                LOGGER.critical('runner received interrupt, killing process %s', process.pid)
+                process.kill(msg='Process was killed because the runner received an interrupt')
+
+            signal.signal(signal.SIGINT, kill_process)
+            signal.signal(signal.SIGTERM, kill_process)
+
             process.execute()
             return process.outputs, process.node
 

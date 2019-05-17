@@ -45,7 +45,7 @@ def verdi_process():
 def process_list(all_entries, group, process_state, exit_status, failed, past_days, limit, project, raw):
     """Show a list of processes that are still running."""
     from tabulate import tabulate
-    from aiida.cmdline.utils.common import print_last_process_state_change
+    from aiida.cmdline.utils.common import print_last_process_state_change, check_worker_load
 
     relationships = {}
 
@@ -67,6 +67,15 @@ def process_list(all_entries, group, process_state, exit_status, failed, past_da
         echo.echo(tabulated)
         echo.echo('\nTotal results: {}\n'.format(len(projected)))
         print_last_process_state_change()
+        # Second query to get active process count
+        # Currently this is slow but will be fixed wiith issue #2770
+        # We place it at the end so that the user can Ctrl+C after getting the process table.
+        builder = CalculationQueryBuilder()
+        filters = builder.get_filters(process_state=('created', 'waiting', 'running'))
+        query_set = builder.get_query_set(filters=filters)
+        projected = builder.get_projected(query_set, projections=['pk'])
+        worker_slot_use = len(projected) - 1
+        check_worker_load(worker_slot_use)
 
 
 @verdi_process.command('show')

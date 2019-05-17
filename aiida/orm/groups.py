@@ -15,7 +15,6 @@ from __future__ import absolute_import
 from enum import Enum
 import six
 
-from aiida.cmdline.utils import echo
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.manage.manager import get_manager
@@ -67,7 +66,7 @@ class Group(entities.Entity):
                 kwargs['type_string'] = kwargs.pop('type')
                 warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
             if not label:
-                echo.echo_critical("Group label must be provided")
+                raise ValueError('Group label must be provided')
 
             filters = {'label': label}
 
@@ -131,7 +130,7 @@ class Group(entities.Entity):
             type_string = type
             warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
         if not label:
-            echo.echo_critical("Group label must be provided")
+            raise ValueError('Group label must be provided')
 
         # Check that chosen type_string is allowed
         if not isinstance(type_string, six.string_types):

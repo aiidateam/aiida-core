@@ -559,19 +559,22 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 node_work = DbNode(type='node.process.workflow.WorkflowNode.', attributes=attributes, user_id=user.id)
                 node_calc = DbNode(
                     type='node.process.calculation.calcjob.CalcJobNode.', attributes=attributes, user_id=user.id)
+                # Create a node of a different type to ensure that its attributes are not updated
+                node_other = DbNode(type='node.othernode.', attributes=attributes, user_id=user.id)
 
                 session.add(node_work)
                 session.add(node_calc)
+                session.add(node_other)
                 session.commit()
 
                 self.node_work_id = node_work.id
                 self.node_calc_id = node_calc.id
+                self.node_other_id = node_other.id
             finally:
                 session.close()
 
     def test_attribute_key_changes(self):
         """Verify that the keys are successfully changed of the affected attributes."""
-        import ast
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
@@ -587,19 +590,28 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 self.assertEqual(node_work.attributes.get(self.KEY_PROCESS_LABEL_OLD, not_found), not_found)
 
                 node_calc = session.query(DbNode).filter(DbNode.id == self.node_calc_id).one()
-
-                # The dictionaries need to be cast with ast.literal_eval, because the `get` will return a string
-                # representation of the dictionary that the attribute contains
                 self.assertEqual(node_calc.attributes.get(self.KEY_PROCESS_LABEL_NEW), self.process_label)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_NEW), self.parser_name)
-                self.assertEqual(ast.literal_eval(node_calc.attributes.get(self.KEY_RESOURCES_NEW)), self.resources)
+                self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_NEW), self.resources)
                 self.assertEqual(
-                    ast.literal_eval(node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW)),
-                    self.environment_variables)
+                    node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PROCESS_LABEL_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_OLD, not_found), not_found)
+
+                # The following node should not be migrated even if its attributes have the matching keys because
+                # the node is not a ProcessNode
+                node_other = session.query(DbNode).filter(DbNode.id == self.node_other_id).one()
+                self.assertEqual(node_other.attributes.get(self.KEY_PROCESS_LABEL_OLD), self.process_label)
+                self.assertEqual(node_other.attributes.get(self.KEY_PARSER_NAME_OLD), self.parser_name)
+                self.assertEqual(node_other.attributes.get(self.KEY_RESOURCES_OLD), self.resources)
+                self.assertEqual(
+                    node_other.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_OLD), self.environment_variables)
+                self.assertEqual(node_other.attributes.get(self.KEY_PROCESS_LABEL_NEW, not_found), not_found)
+                self.assertEqual(node_other.attributes.get(self.KEY_PARSER_NAME_NEW, not_found), not_found)
+                self.assertEqual(node_other.attributes.get(self.KEY_RESOURCES_NEW, not_found), not_found)
+                self.assertEqual(node_other.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW, not_found), not_found)
             finally:
                 session.close()
 

@@ -44,6 +44,11 @@ pipeline {
     stages {
         stage('Pre-build') {
             steps {
+                // Clean work dir (often runs reshare the same folder, and it might
+                // contain old data from previous runs - this is particularly 
+                // problematic when a folder is deleted from git but .pyc files
+                // are left in)
+                sh 'git clean -fdx'
                 sh 'sudo /etc/init.d/ssh restart'
                 sh 'sudo chown -R jenkins:jenkins /home/jenkins/.cache/'
                 // (re)start rabbitmq (both to start it or to reload the configuration)
@@ -160,7 +165,7 @@ pipeline {
         always {
             // Some debug stuff
             sh 'whoami ; pwd; echo $TEST_AIIDA_BACKEND'
-            cleanWs()
+	    cleanWs()
         }
         success {
             echo 'The run finished successfully!'

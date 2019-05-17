@@ -96,6 +96,27 @@ class TestVerdiCodeSetup(AiidaTestCase):
         self.assertClickResultNoException(result)
         self.assertIsInstance(Code.get_from_string('{}'.format(label)), Code)
 
+    def test_from_config(self):
+        """Test setting up a code from a config file"""
+        from aiida.orm import Code
+        import tempfile
+        import os
+
+        label = 'noninteractive_config'
+
+        with tempfile.NamedTemporaryFile('w') as handle:
+            handle.write("""---
+label: {l}
+input_plugin: arithmetic.add
+computer: {c}
+remote_abs_path: /remote/abs/path
+""".format(l=label, c=self.comp.name))
+            handle.flush()
+            result = self.cli_runner.invoke(setup_code, ['--non-interactive', '--config', os.path.realpath(handle.name)])
+
+        self.assertClickResultNoException(result)
+        self.assertIsInstance(Code.get_from_string('{}'.format(label)), Code)
+
     def test_mixed(self):
         from aiida.orm import Code
         label = 'mixed_remote'

@@ -164,7 +164,7 @@ class PotentialFailureWorkChain(WorkChain):
         spec.input('through_exit_code', valid_type=Bool, default=Bool(False))
         spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
         spec.outline(if_(cls.should_return_out_of_outline)(return_(cls.EXIT_STATUS)), cls.failure, cls.success)
-        spec.output('optional', required=False)
+        spec.output(cls.OUTPUT_LABEL, required=False)
 
     def should_return_out_of_outline(self):
         return self.inputs.through_return.value
@@ -415,6 +415,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(ReturnA, cls).define(spec)
                 spec.outline(cls.result)
+                spec.outputs.dynamic = True
 
             def result(self):
                 self.out('res', A)
@@ -425,6 +426,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(ReturnB, cls).define(spec)
                 spec.outline(cls.result)
+                spec.outputs.dynamic = True
 
             def result(self):
                 self.out('res', B)
@@ -549,7 +551,6 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(subwc=self.submit(SubWorkChain))
 
             def check(self):
-                pass
                 assert self.ctx.subwc.outputs.value == Int(5)
 
         class SubWorkChain(WorkChain):
@@ -558,6 +559,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(SubWorkChain, cls).define(spec)
                 spec.outline(cls.do_run)
+                spec.outputs.dynamic = True
 
             def do_run(self):
                 self.out("value", Int(5).store())
@@ -588,6 +590,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(SubWorkChain, cls).define(spec)
                 spec.outline(cls.do_run)
+                spec.outputs.dynamic = True
 
             def do_run(self):
                 self.out('value', node)
@@ -666,6 +669,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(SimpleWc, cls).define(spec)
                 spec.outline(cls.result)
+                spec.outputs.dynamic = True
 
             def result(self):
                 self.out('result', val)

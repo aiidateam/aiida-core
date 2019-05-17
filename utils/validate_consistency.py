@@ -119,7 +119,13 @@ def cli():
 @cli.command('verdi-autodocs')
 def validate_verdi_documentation():
     """Auto-generate the documentation for `verdi` through `click`."""
+    from click import Context
     from aiida.cmdline.commands.cmd_verdi import verdi
+
+    # Set the `verdi data` command to isolated mode such that external plugin commands are not discovered
+    ctx = Context(verdi)
+    command = verdi.get_command(ctx, 'data')
+    command.set_exclude_external_plugins(True)
 
     # Replacing the block with the overview of `verdi`
     filepath_verdi_overview = os.path.join(ROOT_DIR, 'docs', 'source', 'working_with_aiida', 'index.rst')

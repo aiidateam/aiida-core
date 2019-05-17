@@ -145,6 +145,7 @@ class CalcJob(Process):
                 raise exceptions.InvalidOperation('calculation node has unstored links in cache')
 
             calc_info, script_filename = self.presubmit(folder)
+            calc_info.uuid = str(self.uuid)
             input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in calc_info.codes_info]
 
             for code in input_codes:

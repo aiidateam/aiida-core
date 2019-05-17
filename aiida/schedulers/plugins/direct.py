@@ -104,7 +104,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                 command += ' {}'.format(escape_for_bash(jobs))
             else:
                 try:
-                    command += ' {}'.format(' '.join(escape_for_bash(j) for j in jobs))
+                    command += ' {}'.format(' '.join(escape_for_bash(job) for job in jobs if job))
                 except TypeError:
                     raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
 

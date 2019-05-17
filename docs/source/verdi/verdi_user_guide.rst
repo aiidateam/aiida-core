@@ -520,6 +520,10 @@ Below is a list with all available subcommands.
                                       Comments (based on mtime)
                                       (default).overwrite: Replace existing
                                       Comments with those from the import file.
+      --migration / --no-migration    Force migration of export file archives, if
+                                      needed.  [default: True]
+      -n, --non-interactive           Non-interactive mode: never prompt for
+                                      input.
       --help                          Show this message and exit.
 
 
@@ -639,9 +643,14 @@ Below is a list with all available subcommands.
                                       Backend type to use to map the database.
       --db-host TEXT                  Hostname to connect to the database.
       --db-port INTEGER               Port to connect to the database.
-      --db-name TEXT                  Name of the database to connect to.
-      --db-username TEXT              User name to connect to the database.
+      --db-name TEXT                  Name of the database to create.
+      --db-username TEXT              Name of the database user to create.
       --db-password TEXT              Password to connect to the database.
+      --su-db-name TEXT               Name of the template database to connect to
+                                      as the database superuser.
+      --su-db-username TEXT           User name of the database super user.
+      --su-db-password TEXT           Password to connect as the database
+                                      superuser.
       --repository DIRECTORY          Absolute path for the file system
                                       repository.
       --config FILE                   Load option values from configuration file
@@ -682,13 +691,18 @@ Below is a list with all available subcommands.
 
       Example Usage:
 
-              verdi -p <profile_name> restapi --host 127.0.0.5 --port 6789 --config-dir <location of the config.py file>
+              verdi -p <profile_name> restapi --hostname 127.0.0.5 --port 6789 --config-dir <location of the config.py file>
+              --debug --wsgi-profile --hookup
 
     Options:
-      -H, --host TEXT        the hostname to use
-      -p, --port INTEGER     the port to use
-      -c, --config-dir PATH  the path of the configuration directory
-      --help                 Show this message and exit.
+      -H, --hostname TEXT     Hostname.
+      -P, --port INTEGER      Port number.
+      -c, --config-dir PATH   the path of the configuration directory
+      --debug                 run app in debug mode
+      --wsgi-profile          to use WSGI profiler middleware for finding
+                              bottlenecks in web application
+      --hookup / --no-hookup  to hookup app
+      --help                  Show this message and exit.
 
 
 .. _verdi_run:
@@ -742,9 +756,8 @@ Below is a list with all available subcommands.
                                       Backend type to use to map the database.
       --db-host TEXT                  Hostname to connect to the database.
       --db-port INTEGER               Port to connect to the database.
-      --db-name TEXT                  Name of the database to connect to.
-                                      [required]
-      --db-username TEXT              User name to connect to the database.
+      --db-name TEXT                  Name of the database to create.  [required]
+      --db-username TEXT              Name of the database user to create.
                                       [required]
       --db-password TEXT              Password to connect to the database.
                                       [required]

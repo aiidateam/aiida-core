@@ -15,6 +15,8 @@ from __future__ import absolute_import
 import collections
 import functools
 import inspect
+import logging
+import signal
 
 from six.moves import zip  # pylint: disable=unused-import
 
@@ -24,6 +26,8 @@ from aiida.manage.manager import get_manager
 from .process import Process
 
 __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
+
+LOGGER = logging.getLogger(__name__)
 
 
 def calcfunction(function):
@@ -122,6 +126,15 @@ def process_function(node_class):
                 raise ValueError('{} does not support these kwargs: {}'.format(function.__name__, kwargs.keys()))
 
             process = process_class(inputs=inputs, runner=runner)
+
+            def kill_process(_num, _frame):
+                """Send the kill signal to the process in the current scope."""
+                LOGGER.critical('runner received interrupt, killing process %s', process.pid)
+                process.kill(msg='Process was killed because the runner received an interrupt')
+
+            signal.signal(signal.SIGINT, kill_process)
+            signal.signal(signal.SIGTERM, kill_process)
+
             result = process.execute()
 
             # Close the runner properly
@@ -220,6 +233,16 @@ class FunctionProcess(Process):
                         valid_type = (orm.Data,)
 
                     spec.input(arg, valid_type=valid_type, default=default)
+
+            # Set defaults for label and description based on function name and docstring, if not explicitly defined
+            port_label = spec.inputs['metadata']['label']
+            port_description = spec.inputs['metadata']['description']
+
+            if not port_label.has_default():
+                port_label.default = func.__name__
+
+            if not port_description.has_default() and func.__doc__:
+                port_description.default = func.__doc__
 
             # If the function support kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = keywords is not None

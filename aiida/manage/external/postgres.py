@@ -19,15 +19,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-try:
-    import subprocess32 as subprocess
-except ImportError:
-    import subprocess
+__all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
 
-from enum import IntEnum
 import click
 
 from aiida.cmdline.utils import echo
+from .pgsu import PGSU, PostgresConnectionMode, DEFAULT_DBINFO
 
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
 _DROP_USER_COMMAND = 'DROP USER "{}"'
@@ -40,157 +37,46 @@ _GET_USERS_COMMAND = "SELECT usename FROM pg_user WHERE usename='{}'"
 _CHECK_DB_EXISTS_COMMAND = "SELECT datname FROM pg_database WHERE datname='{}'"
 _COPY_DB_COMMAND = 'CREATE DATABASE "{}" WITH TEMPLATE "{}" OWNER "{}"'
 
-DEFAULT_DBINFO = {
-    'host': 'localhost',
-    'port': 5432,
-    'user': None,
-    'database': None,
-    'password': None,
-}
 
-
-class PostgresConnectionMode(IntEnum):
-    """Describe mode of connecting to postgres."""
-
-    DISCONNECTED = 0
-    PSYCOPG = 1
-    SHELL = 2
-
-
-class Postgres(object):  # pylint: disable=useless-object-inheritance
+class Postgres(PGSU):
     """
-    Provides postgres database manipulation assuming no prior setup
+    Adds convenience functions to pgsu.Postgres.
 
-    * Can be used to create the initial aiida database and database user.
-    * Works in every reasonable environment, provided the user can sudo
+    Provides conenience functions for
+      * creating/dropping users
+      * creating/dropping databases
 
-    Tries to use psycopg2 with a fallback to psql subcommands (using ``sudo su`` to run as postgres user).
+    etc. See pgsu.Postgres for implementation details.
 
-    :param port: (str) Assume the database server runs on this port
-    :param interactive: (bool) Allow prompting the user for information
-        Will also be passed to ``sudo`` (if using ``psycopg2`` fails) and to
-        the callback that can be set to be called when automatic setup detection fails
-    :param quiet: (bool) Suppress messages
-
-    Simple Example::
+    Example::
 
         postgres = Postgres()
-        postgres.determine_setup()
         postgres.create_dbuser('username', 'password')
         if not postgres.db_exists('dbname'):
             postgres.create_db('username', 'dbname')
-
-    Complex Example::
-
-        postgres = Postgres(interactive=True, dbinfo={'port': 5433})
-        postgres.setup_fail_callback = prompt_db_info
-        postgres.determine_setup()
-        if postgres.pg_execute:
-            print('setup sucessful!')
-
-    Note: In postgresql
-     * you cannot drop databases you are currently connected to
-     * 'template0' is the unmodifiable template database (which you cannot connect to)
-     * 'template1' is the modifiable template database (which you can connect to)
     """
-
-    def __init__(self, interactive=False, quiet=True, dbinfo=None):
-        """Store postgres connection info.
-
-        :param interactive: use True for verdi commands
-        :param quiet: use False to show warnings/exceptions
-        :param dbinfo: psycopg dictionary containing keys like 'host', 'user', 'port', 'database'
-        """
-        self.interactive = interactive
-        self.quiet = quiet
-        self._pg_connection_mode = PostgresConnectionMode.DISCONNECTED
-        self.setup_fail_callback = None
-        self.setup_fail_counter = 0
-        self.setup_max_tries = 1
-
-        if dbinfo is None:
-            self._dbinfo = DEFAULT_DBINFO
-        else:
-            self._dbinfo = dbinfo
 
     @classmethod
     def from_profile(cls, profile, **kwargs):
-        """Create Postgres instance with dbinfo from profile data."""
+        """Create Postgres instance with dbinfo from AiiDA profile data.
+
+        Note: This only uses host and port from the profile, since the others are not going to be relevant for the
+          database superuser.
+
+        :param profile: AiiDA profile instance
+        :param kwargs: keyword arguments forwarded to Postgres constructor
+
+        :returns: Postgres instance pre-populated with data from AiiDA profile
+        """
+        dbinfo = DEFAULT_DBINFO.copy()
+
         get = profile.dictionary.get
-        dbinfo = dict(
-            host=get('AIIDADB_HOST', DEFAULT_DBINFO['host']),
-            port=get('AIIDADB_PORT', DEFAULT_DBINFO['port']),
-            user=get('AIIDADB_USER', DEFAULT_DBINFO['user']),
-            database=get('AIIDADB_NAME', DEFAULT_DBINFO['database']),
-            password=get('AIIDADB_PASS', DEFAULT_DBINFO['password']),
-        )
+        dbinfo.update(
+            dict(
+                host=get('AIIDADB_HOST', DEFAULT_DBINFO['host']),
+                port=get('AIIDADB_PORT', DEFAULT_DBINFO['port']),
+            ))
         return Postgres(dbinfo=dbinfo, **kwargs)
-
-    def pg_execute(self, command, **kwargs):
-        """Execute postgres command using determined connection mode.
-
-        :param command: A psql command line as a str
-        :param kwargs: will be forwarded to _pg_execute_... function
-        """
-        from aiida.common.exceptions import FailedError
-
-        if self._pg_connection_mode == PostgresConnectionMode.PSYCOPG:  # pylint: disable=no-else-return
-            return _pg_execute_psyco(command, **kwargs)
-        elif self._pg_connection_mode == PostgresConnectionMode.SHELL:
-            return _pg_execute_sh(command, **kwargs)
-
-        raise FailedError('Could not connect to postgres.')
-
-    def set_setup_fail_callback(self, callback):
-        """
-        Set a callback to be called when setup cannot be determined automatically
-
-        :param callback: a callable with signature ``callback(interactive, dbinfo)``
-        """
-        self.setup_fail_callback = callback
-
-    def set_dbinfo(self, dbinfo):
-        """Set the dbinfo manually"""
-        self._dbinfo = dbinfo
-
-    def get_dbinfo(self):
-        return self._dbinfo.copy()
-
-    def determine_setup(self):
-        """ Find out how postgres can be accessed.
-
-        Depending on how postgres is set up, psycopg2 can be used to create dbs and db users,
-        otherwise a subprocess has to be used that executes psql as an os user with the right permissions.
-
-        Note: We aim for a setup that is can manipulate (create/drop) databases and database users.
-         We therefore do *not* want to connect to databases of AiiDA profiles and will connect to 'template1'.
-
-        """
-        # find out if we run as a postgres superuser or can connect as postgres
-        # This will work on OSX in some setups but not in the default Debian one
-        dbinfo = self._dbinfo.copy()
-        dbinfo['database'] = 'template1'
-        for pg_user in (None, 'postgres'):
-            dbinfo['user'] = pg_user
-            if _try_connect_psycopg(**dbinfo):
-                self._dbinfo = dbinfo
-                self._pg_connection_mode = PostgresConnectionMode.PSYCOPG
-                return True
-
-        # This will work for the default Debian postgres setup, assuming that sudo is available to the user
-        # Check if the user can find the sudo command
-        if _sudo_exists():
-            dbinfo['user'] = 'postgres'
-            if _try_subcmd(non_interactive=bool(not self.interactive), **dbinfo):
-                self._dbinfo = dbinfo
-                self._pg_connection_mode = PostgresConnectionMode.SHELL
-                return True
-        elif not self.quiet:
-            echo.echo_warning('Could not find `sudo` for connecting to the database.')
-
-        self.setup_fail_counter += 1
-        self._no_setup_detected()
-        return False
 
     def check_db_name(self, dbname):
         """Looks up if a database with the name exists, prompts for using or creating a differently named one."""
@@ -210,7 +96,7 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
         :param dbuser: (str), Name of the user to be created.
         :param dbpass: (str), Password the user should be given.
         """
-        self.pg_execute(_CREATE_USER_COMMAND.format(dbuser, dbpass), **self._dbinfo)
+        self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass))
 
     def drop_dbuser(self, dbuser):
         """
@@ -218,7 +104,7 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
 
         :param dbuser: (str), Name of the user to be dropped.
         """
-        self.pg_execute(_DROP_USER_COMMAND.format(dbuser), **self._dbinfo)
+        self.execute(_DROP_USER_COMMAND.format(dbuser))
 
     def dbuser_exists(self, dbuser):
         """
@@ -227,7 +113,7 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
         :param dbuser: (str) database user to check for
         :return: (bool) True if user exists, False otherwise
         """
-        return bool(self.pg_execute(_GET_USERS_COMMAND.format(dbuser), **self._dbinfo))
+        return bool(self.execute(_GET_USERS_COMMAND.format(dbuser)))
 
     def create_db(self, dbuser, dbname):
         """
@@ -236,8 +122,8 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
         :param dbuser: (str), Name of the user which should own the db.
         :param dbname: (str), Name of the database.
         """
-        self.pg_execute(_CREATE_DB_COMMAND.format(dbname, dbuser), **self._dbinfo)
-        self.pg_execute(_GRANT_PRIV_COMMAND.format(dbname, dbuser), **self._dbinfo)
+        self.execute(_CREATE_DB_COMMAND.format(dbname, dbuser))
+        self.execute(_GRANT_PRIV_COMMAND.format(dbname, dbuser))
 
     def drop_db(self, dbname):
         """
@@ -245,10 +131,10 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
 
         :param dbname: (str), Name of the database.
         """
-        self.pg_execute(_DROP_DB_COMMAND.format(dbname), **self._dbinfo)
+        self.execute(_DROP_DB_COMMAND.format(dbname))
 
     def copy_db(self, src_db, dest_db, dbuser):
-        self.pg_execute(_COPY_DB_COMMAND.format(dest_db, src_db, dbuser), **self._dbinfo)
+        self.execute(_COPY_DB_COMMAND.format(dest_db, src_db, dbuser))
 
     def db_exists(self, dbname):
         """
@@ -257,25 +143,7 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
         :param dbname: Name of the database to check for
         :return: (bool), True if database exists, False otherwise
         """
-        return bool(self.pg_execute(_CHECK_DB_EXISTS_COMMAND.format(dbname), **self._dbinfo))
-
-    def _no_setup_detected(self):
-        """Print a warning message and calls the failed setup callback"""
-        message = '\n'.join([
-            'Detected no known postgres setup, some information is needed to create the aiida database and grant ',
-            'aiida access to it. If you feel unsure about the following parameters, first check if postgresql is ',
-            'installed. If postgresql is not installed please exit and install it, then run verdi quicksetup again.',
-            'If postgresql is installed, please ask your system manager to provide you with the following parameters:'
-        ])
-        if not self.quiet:
-            echo.echo_warning(message)
-        if self.interactive and self.setup_fail_callback and self.setup_fail_counter <= self.setup_max_tries:
-            self._dbinfo = self.setup_fail_callback(self.interactive, self._dbinfo)
-            self.determine_setup()
-
-    def try_connect(self):
-        """Try connecting using stored dbinfo."""
-        return _try_connect_psycopg(**self._dbinfo)
+        return bool(self.execute(_CHECK_DB_EXISTS_COMMAND.format(dbname)))
 
 
 def manual_setup_instructions(dbuser, dbname):
@@ -290,140 +158,3 @@ def manual_setup_instructions(dbuser, dbname):
         '\t==> ' + _GRANT_PRIV_COMMAND.format(dbname, dbuser),
     ])
     return instructions
-
-
-def prompt_db_info(*args):  # pylint: disable=unused-argument
-    """
-    Prompt interactively for postgres database connection details
-
-    Can be used as a setup fail callback for :py:class:`aiida.manage.external.postgres.Postgres`
-
-    :return: dictionary with the following keys: host, port, database, user
-    """
-    access = False
-    while not access:
-        dbinfo = {}
-        dbinfo['host'] = click.prompt('postgres host', default=DEFAULT_DBINFO['host'], type=str)
-        dbinfo['port'] = click.prompt('postgres port', default=DEFAULT_DBINFO['port'], type=int)
-        dbinfo['database'] = click.prompt('template', default='template1', type=str)
-        dbinfo['user'] = click.prompt('postgres super user', default='postgres', type=str)
-        echo.echo('')
-        echo.echo('trying to access postgres..')
-        if _try_connect_psycopg(**dbinfo):
-            access = True
-        else:
-            dbinfo['password'] = click.prompt(
-                'postgres password of {}'.format(dbinfo['user']), hide_input=True, type=str, default='')
-            if not dbinfo.get('password'):
-                dbinfo.pop('password')
-    return dbinfo
-
-
-def _try_connect_psycopg(**kwargs):
-    """
-    try to start a psycopg2 connection.
-
-    :return: True if successful, False otherwise
-    """
-    from psycopg2 import connect
-    success = False
-    try:
-        conn = connect(**kwargs)
-        success = True
-        conn.close()
-    except Exception:  # pylint: disable=broad-except
-        pass
-    return success
-
-
-def _sudo_exists():
-    """
-    Check that the sudo command can be found
-
-    :return: True if successful, False otherwise
-    """
-    try:
-        subprocess.check_output(['sudo', '-V'])
-    except subprocess.CalledProcessError:
-        return False
-    except OSError:
-        return False
-
-    return True
-
-
-def _try_subcmd(**kwargs):
-    """
-    try to run psql in a subprocess.
-
-    :return: True if successful, False otherwise
-    """
-    success = False
-    try:
-        kwargs['stderr'] = subprocess.STDOUT
-        _pg_execute_sh(r'\q', **kwargs)
-        success = True
-    except subprocess.CalledProcessError:
-        pass
-    return success
-
-
-def _pg_execute_psyco(command, **kwargs):
-    """
-    executes a postgres commandline through psycopg2
-
-    :param command: A psql command line as a str
-    :param kwargs: will be forwarded to psycopg2.connect
-    """
-    from psycopg2 import connect, ProgrammingError
-    conn = connect(**kwargs)
-    conn.autocommit = True
-    output = None
-    with conn:
-        with conn.cursor() as cur:
-            cur.execute(command)
-            try:
-                output = cur.fetchall()
-            except ProgrammingError:
-                pass
-    conn.close()
-    return output
-
-
-def _pg_execute_sh(command, user='postgres', **kwargs):
-    """
-    executes a postgres command line as another system user in a subprocess.
-
-    :param command: A psql command line as a str
-    :param user: Name of a system user with postgres permissions
-    :param kwargs: connection details to forward to psql, signature as in psycopg2.connect
-
-    To stop `sudo` from asking for a password and fail if one is required,
-    pass `non_interactive=True` as a kwarg.
-    """
-    options = ''
-    database = kwargs.pop('database', None)
-    if database:
-        options += '-d {}'.format(database)
-    kwargs.pop('password', None)
-    host = kwargs.pop('host', None)
-    if host:
-        options += ' -h {}'.format(host)
-    port = kwargs.pop('port', None)
-    if port:
-        options += ' -p {}'.format(port)
-
-    # Build command line
-    sudo_cmd = ['sudo']
-    non_interactive = kwargs.pop('non_interactive', None)
-    if non_interactive:
-        sudo_cmd += ['-n']
-    su_cmd = ['su', user, '-c']
-    from aiida.common.escaping import escape_for_bash
-    psql_cmd = ['psql {options} -tc {}'.format(escape_for_bash(command), options=options)]
-    sudo_su_psql = sudo_cmd + su_cmd + psql_cmd
-    result = subprocess.check_output(sudo_su_psql, **kwargs)
-    result = result.decode('utf-8').strip().split('\n')
-    result = [i for i in result if i]
-
-    return result

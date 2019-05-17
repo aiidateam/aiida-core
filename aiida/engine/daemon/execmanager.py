@@ -161,9 +161,11 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
 
         # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
         # combination with the new `Transport.put_object_from_filelike`
-        with NamedTemporaryFile(mode='w+') as handle:
-            handle.write(data_node.get_object_content(filename))
+        # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
+        with NamedTemporaryFile(mode='wb+') as handle:
+            handle.write(data_node.get_object_content(filename, mode='rb'))
             handle.flush()
+            handle.seek(0)
             transport.put(handle.name, target)
 
     if dry_run:
@@ -403,8 +405,7 @@ def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_ext
     singlefiles = []
     for (linkname, subclassname, filename) in singlefile_list:
         SinglefileSubclass = DataFactory(subclassname)
-        singlefile = SinglefileSubclass()
-        singlefile.put_object_from_file(filename)
+        singlefile = SinglefileSubclass(file=filename)
         singlefile.add_incoming(job, link_type=LinkType.CREATE, link_label=linkname)
         singlefiles.append(singlefile)
 

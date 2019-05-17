@@ -82,10 +82,9 @@ def verdi_status():
         with Capturing(capture_stderr=True):
 
             postgres = Postgres.from_profile(profile)
-            pg_connected = postgres.try_connect()
 
-        dbinfo = postgres.get_dbinfo()
-        if pg_connected:
+        dbinfo = postgres.dbinfo.copy()
+        if postgres.is_connected:
             print_status(ServiceStatus.UP, 'postgres', "Connected to {}@{}:{}".format(
                 dbinfo['user'], dbinfo['host'], dbinfo['port']))
         else:

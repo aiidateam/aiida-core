@@ -45,7 +45,9 @@ Because the returned node is already stored, the engine will raise the following
 
 .. code:: bash
 
-	ValueError: trying to return an already stored Data node from a @calcfunction, however, @calcfunctions cannot return data. If you stored the node yourself, simply do not call `store()` yourself. If you want to return an input node, use a @workfunction instead.
+    ValueError: trying to return an already stored Data node from a @calcfunction, however, @calcfunctions cannot return data.
+    If you stored the node yourself, simply do not call `store()` yourself.
+    If you want to return an input node, use a @workfunction instead.
 
 The reason for this strictness is that a node that was stored after being created in the function body, is indistinguishable from a node that was already stored and had simply been loaded in the function body and returned, e.g.:
 
@@ -138,3 +140,5 @@ Calculation jobs
 
 .. By default the method will create a folder ``submit_test`` in the current working directory and within it a directory with an automatically generated unique name, each time the method is called.
 .. The method takes two optional arguments ``folder`` and ``subfolder_name``, to change the base folder and the name of the test directory, respectively.
+
+.. _working_calcjobs_parsers:

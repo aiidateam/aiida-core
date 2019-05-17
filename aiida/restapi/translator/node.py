@@ -66,8 +66,9 @@ class NodeTranslator(BaseTranslator):
         super(NodeTranslator, self).__init__(Class=Class, **kwargs)
 
         self._default_projections = [
-            "id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"
+            "id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "attributes", "extras"
         ]
+        self._default_user_projections = ["email"]
 
         ## node schema
         # All the values from column_order must present in additional info dict
@@ -258,8 +259,7 @@ class NodeTranslator(BaseTranslator):
         if not self._is_qb_initialized:
             raise InvalidOperation("query builder object has not been initialized.")
 
-        ## Count the total number of rows returned by the query (if not
-        # already done)
+        # Count the total number of rows returned by the query (if not already done)
         if self._total_count is None:
             self.count()
 
@@ -268,7 +268,7 @@ class NodeTranslator(BaseTranslator):
             return {}
 
         # otherwise ...
-        node = self.qbobj.first()[0]
+        node = self.qbobj.first()[1]
 
         # content/attributes
         if self._content_type == "attributes":
@@ -570,6 +570,20 @@ class NodeTranslator(BaseTranslator):
 
             return shape
 
+        def get_node_description(node):
+            """
+            Get the description of the node.
+            CalcJobNodes migrated from AiiDA < 1.0.0 do not have a valid CalcJobState,
+            in this case the function returns as description the type of the node (CalcJobNode)
+            :param node: node object
+            :return: description of the node
+            """
+            try:
+                description = node.get_description()
+            except ValueError:
+                description = node.node_type.split('.')[-2]
+            return description
+
         # Check whether uuid_pattern identifies a unique node
         self._check_id_validity(uuid_pattern)
 
@@ -587,9 +601,7 @@ class NodeTranslator(BaseTranslator):
             nodetype = main_node.node_type
             nodelabel = main_node.label
             display_type = nodetype.split('.')[-2]
-            description = main_node.get_description()
-            if description == '':
-                description = main_node.node_type.split('.')[-2]
+            description = get_node_description(main_node)
 
             nodes.append({
                 "id": node_count,
@@ -628,9 +640,7 @@ class NodeTranslator(BaseTranslator):
                     nodetype = node.node_type
                     nodelabel = node.label
                     display_type = nodetype.split('.')[-2]
-                    description = node.get_description()
-                    if description == '':
-                        description = node.node_type.split('.')[-2]
+                    description = get_node_description(node)
 
                     nodes.append({
                         "id": node_count,
@@ -682,9 +692,7 @@ class NodeTranslator(BaseTranslator):
                     nodetype = node.node_type
                     nodelabel = node.label
                     display_type = nodetype.split('.')[-2]
-                    description = node.get_description()
-                    if description == '':
-                        description = node.node_type.split('.')[-2]
+                    description = get_node_description(node)
 
                     nodes.append({
                         "id": node_count,
@@ -715,12 +723,12 @@ class NodeTranslator(BaseTranslator):
         # count total no of nodes
         builder = QueryBuilder()
         builder.append(Node, tag="main", project=['id'], filters=self._id_filter)
-        builder.append(Node, tag="in", project=['id'], input_of='main')
+        builder.append(Node, tag="in", project=['id'], with_outgoing='main')
         total_no_of_incomings = builder.count()
 
         builder = QueryBuilder()
         builder.append(Node, tag="main", project=['id'], filters=self._id_filter)
-        builder.append(Node, tag="out", project=['id'], output_of='main')
+        builder.append(Node, tag="out", project=['id'], with_incoming='main')
         total_no_of_outgoings = builder.count()
 
         return {

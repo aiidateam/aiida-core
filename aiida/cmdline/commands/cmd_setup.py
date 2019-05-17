@@ -111,25 +111,28 @@ def setup(non_interactive, profile, email, first_name, last_name, institution, p
 @options_setup.QUICKSETUP_DATABASE_NAME()
 @options_setup.QUICKSETUP_DATABASE_USERNAME()
 @options_setup.QUICKSETUP_DATABASE_PASSWORD()
+@options_setup.QUICKSETUP_SUPERUSER_DATABASE_NAME()
+@options_setup.QUICKSETUP_SUPERUSER_DATABASE_USERNAME()
+@options_setup.QUICKSETUP_SUPERUSER_DATABASE_PASSWORD()
 @options_setup.QUICKSETUP_REPOSITORY_URI()
 @options.CONFIG_FILE()
 @click.pass_context
 def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, institution, password, db_engine,
-               db_backend, db_host, db_port, db_name, db_username, db_password, repository):
+               db_backend, db_host, db_port, db_name, db_username, db_password, su_db_name, su_db_username,
+               su_db_password, repository):
     """Setup a new profile where the database is automatically created and configured."""
     # pylint: disable=too-many-arguments,too-many-locals
-    from aiida.manage.external.postgres import Postgres, manual_setup_instructions, prompt_db_info
+    from aiida.manage.external.postgres import Postgres, manual_setup_instructions
 
-    dbinfo = {
+    dbinfo_su = {
         'host': db_host,
         'port': db_port,
-        'user': db_username,
-        'password': db_password,
+        'user': su_db_username,
+        'password': su_db_password,
     }
-    postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo)
-    postgres.set_setup_fail_callback(prompt_db_info)
+    postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo_su)
 
-    if not postgres.determine_setup():
+    if not postgres.is_connected:
         echo.echo_critical('failed to determine the PostgreSQL setup')
 
     try:
@@ -138,13 +141,14 @@ def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, inst
             postgres.create_dbuser(db_username, db_password)
         else:
             db_name, create = postgres.check_db_name(db_name)
+
         if create:
             postgres.create_db(db_username, db_name)
     except Exception as exception:
         echo.echo_error('\n'.join([
             'Oops! quicksetup was unable to create the AiiDA database for you.',
             'For AiiDA to work, please either create the database yourself as follows:',
-            manual_setup_instructions(dbuser=db_username, dbname=db_name), '',
+            manual_setup_instructions(dbuser=su_db_username, dbname=su_db_name), '',
             'Alternatively, give your (operating system) user permission to create postgresql databases' +
             'and run quicksetup again.', ''
         ]))
@@ -163,7 +167,8 @@ def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, inst
         'db_engine': db_engine,
         'db_backend': db_backend,
         'db_name': db_name,
-        'db_host': db_host,
+        # from now on we connect as the AiiDA DB user, which may be forbidden when going via sockets
+        'db_host': db_host or 'localhost',
         'db_port': db_port,
         'db_username': db_username,
         'db_password': db_password,

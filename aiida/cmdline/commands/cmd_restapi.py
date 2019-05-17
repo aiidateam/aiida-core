@@ -21,39 +21,50 @@ import click
 
 import aiida.restapi
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.params.options import HOSTNAME, PORT
 
-DEFAULT_CONFIG_DIR = os.path.join(os.path.split(os.path.abspath(aiida.restapi.__file__))[0], 'common')
+CONFIG_DIR = os.path.join(os.path.split(os.path.abspath(aiida.restapi.__file__))[0], 'common')
 
 
 @verdi.command('restapi')
-@click.option('-H', '--host', type=click.STRING, default='127.0.0.1', help='the hostname to use')
-@click.option('-p', '--port', type=click.INT, default=5000, help='the port to use')
+@HOSTNAME(default='127.0.0.1')
+@PORT(default=5000)
 @click.option(
     '-c',
     '--config-dir',
     type=click.Path(exists=True),
-    default=DEFAULT_CONFIG_DIR,
+    default=CONFIG_DIR,
     help='the path of the configuration directory')
-def restapi(host, port, config_dir):
+@click.option('--debug', 'debug', is_flag=True, default=False, help='run app in debug mode')
+@click.option(
+    '--wsgi-profile',
+    'wsgi_profile',
+    is_flag=True,
+    default=False,
+    help='to use WSGI profiler middleware for finding bottlenecks in web application')
+@click.option('--hookup/--no-hookup', 'hookup', is_flag=True, default=True, help='to hookup app')
+def restapi(hostname, port, config_dir, debug, wsgi_profile, hookup):
     """
     Run the AiiDA REST API server
 
     Example Usage:
 
         \b
-        verdi -p <profile_name> restapi --host 127.0.0.5 --port 6789 --config-dir <location of the config.py file>
+        verdi -p <profile_name> restapi --hostname 127.0.0.5 --port 6789 --config-dir <location of the config.py file>
+        --debug --wsgi-profile --hookup
     """
     from aiida.restapi.api import App, AiidaApi
     from aiida.restapi.run_api import run_api
 
     # Construct parameter dictionary
     kwargs = dict(
-        hookup=True,
         prog_name='verdi-restapi',
-        default_host=host,
-        default_port=port,
-        default_config=config_dir,
-        parse_aiida_profile=False,
+        hostname=hostname,
+        port=port,
+        config=config_dir,
+        debug=debug,
+        wsgi_profile=wsgi_profile,
+        hookup=hookup,
         catch_internal_server=True)
 
     # Invoke the runner

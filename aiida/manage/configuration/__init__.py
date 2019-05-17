@@ -82,6 +82,7 @@ def load_config(create=False):
     from .config import Config
     from .migrations import check_and_migrate_config
     from .settings import AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME
+    from aiida.manage.external.postgres import DEFAULT_DBINFO
 
     if IN_RT_DOC_MODE:
         # The following is a dummy config.json configuration that it is used for the
@@ -92,10 +93,10 @@ def load_config(create=False):
                 'default': {
                     'AIIDADB_ENGINE': 'postgresql_psycopg2',
                     'AIIDADB_BACKEND': 'django',
-                    'AIIDADB_HOST': 'localhost',
+                    'AIIDADB_HOST': DEFAULT_DBINFO['host'],
+                    'AIIDADB_PORT': DEFAULT_DBINFO['port'],
                     'AIIDADB_NAME': 'aiidadb',
                     'AIIDADB_PASS': '123',
-                    'AIIDADB_PORT': '5432',
                     'default_user_email': 'aiida@epfl.ch',
                     'TIMEZONE': 'Europe/Zurich',
                     'AIIDADB_REPOSITORY_URI': 'file:///repository',

@@ -227,6 +227,10 @@ py:class  collections.abc.Sized
 # backend-dependent implementation
 py:class  WorkChainSpec
 py:class  aiida.orm.nodes.Node
+py:meth   aiida.engine.processes.process_spec.ProcessSpec.input
+py:meth   aiida.engine.processes.process_spec.ProcessSpec.output
+py:meth   aiida.engine.processes.process_spec.ProcessSpec.outline
+
 # This comes from ABCMeta
 py:meth   aiida.orm.groups.Group.get_from_string
 

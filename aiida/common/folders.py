@@ -28,6 +28,9 @@ from .utils import get_repository_folder
 # Otherwise, tries to make everything only readable and writable by the user.
 GROUP_WRITABLE = True
 
+# Name of directory in which to place the input files created by running a dry run for a `CalcJob`
+CALC_JOB_DRY_RUN_BASE_PATH = 'submit_test'
+
 VALID_SECTIONS = ['node']
 
 
@@ -227,6 +230,9 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
         filename = six.text_type(filename)
         filepath = self.get_abs_path(filename)
 
+        if 'b' in mode:
+            encoding = None
+
         with io.open(filepath, mode=mode, encoding=encoding) as handle:
 
             # In python 2 a string literal can either be of unicode or string (bytes) type. Since we do not know what
@@ -240,6 +246,7 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
                 try:
                     shutil.copyfileobj(utf8reader(filelike), handle)
                 except (UnicodeDecodeError, UnicodeEncodeError):
+                    filelike.seek(0)
                     shutil.copyfileobj(filelike, handle)
             else:
                 shutil.copyfileobj(filelike, handle)
@@ -472,7 +479,7 @@ class SubmitTestFolder(Folder):
 
     _sub_folder = None
 
-    def __init__(self, basepath='submit_test'):
+    def __init__(self, basepath=CALC_JOB_DRY_RUN_BASE_PATH):
         """Construct and create the sandbox folder.
 
         The directory will be created in the current working directory with the name given by `basepath`.

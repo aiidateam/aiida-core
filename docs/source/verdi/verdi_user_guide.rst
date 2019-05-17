@@ -445,7 +445,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      generate  Generate a graph for a given ROOT_NODE.
+      generate  Generate a graph from a given ROOT_NODE user-specified by its...
 
 
 .. _verdi_group:

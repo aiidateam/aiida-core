@@ -112,8 +112,8 @@ def default_data_sublabels(node):
     elif class_node_type == "data.structure.StructureData.":
         sublabel = node.get_formula()
     elif class_node_type == "data.cif.CifData.":
-        formulae = [str(f).replace(" ", "") for f in node.get_attribute('formulae', []) if f]
-        sg_numbers = [str(s) for s in node.get_attribute('spacegroup_numbers', []) if s]
+        formulae = [str(f).replace(" ", "") for f in node.get_attribute('formulae') or []]
+        sg_numbers = [str(s) for s in node.get_attribute('spacegroup_numbers') or []]
         sublabel_lines = []
         if formulae:
             sublabel_lines.append(", ".join(formulae))

@@ -343,20 +343,20 @@ class Graph(object):
     def _load_node(node):
         """ load a node (if not already loaded)
 
-        :param node: node or node pk
-        :type node: int or aiida.orm.nodes.node.Node
+        :param node: node or node pk/uuid
+        :type node: int or str or aiida.orm.nodes.node.Node
         :returns: aiida.orm.nodes.node.Node
 
         """
-        if isinstance(node, int):
+        if isinstance(node, (int, six.string_types)):
             return load_node(node)
         return node
 
     def add_node(self, node, style_override=None, overwrite=False):
         """add single node to the graph
 
-        :param node: node or node pk
-        :type node: int or aiida.orm.nodes.node.Node
+        :param node: node or node pk/uuid
+        :type node: int or str or aiida.orm.nodes.node.Node
         :param style_override: graphviz style parameters that will override default values
         :type style_override: dict or None
         :param overwrite: whether to overrite an existing node (Default value = False)
@@ -380,10 +380,10 @@ class Graph(object):
     def add_edge(self, in_node, out_node, style=None, overwrite=False):
         """add single node to the graph
 
-        :param in_node: node or node pk
+        :param in_node: node or node pk/uuid
         :type in_node: int or aiida.orm.nodes.node.Node
-        :param out_node: node or node pk
-        :type out_node: int or aiida.orm.nodes.node.Node
+        :param out_node: node or node pk/uuid
+        :type out_node: int or str or aiida.orm.nodes.node.Node
         :param style: graphviz style parameters (Default value = None)
         :type style: dict or None
         :param overwrite: whether to overrite existing edge (Default value = False)
@@ -407,7 +407,7 @@ class Graph(object):
     def add_incoming(self, node, link_types=(), annotate_links=False, return_pks=True):
         """add nodes and edges for incoming links to a node
 
-        :param node: node or node pk
+        :param node: node or node pk/uuid
         :type node: aiida.orm.nodes.node.Node or int
         :param link_types: filter by link types (Default value = ())
         :type link_types: str or tuple[str] or aiida.common.links.LinkType or tuple[aiida.common.links.LinkType]
@@ -490,7 +490,7 @@ class Graph(object):
         """add nodes and edges from an origin recursively,
         following outgoing links
 
-        :param origin: node or node pk
+        :param origin: node or node pk/uuid
         :type origin: aiida.orm.nodes.node.Node or int
         :param depth: if not None, stop after travelling a certain depth into the graph (Default value = None)
         :type depth: None or int
@@ -537,7 +537,7 @@ class Graph(object):
         """add nodes and edges from an origin recursively,
         following incoming links
 
-        :param origin: node or node pk
+        :param origin: node or node pk/uuid
         :type origin: aiida.orm.nodes.node.Node or int
         :param depth: if not None, stop after travelling a certain depth into the graph (Default value = None)
         :type depth: None or int
@@ -584,7 +584,7 @@ class Graph(object):
                              annotate_links=False):
         """add nodes and edges from an origin node to target nodes
 
-        :param origin: node or node pk
+        :param origin: node or node pk/uuid
         :type origin: aiida.orm.nodes.node.Node or int
         :param target_cls: target node class
         :param target_filters:  (Default value = None)

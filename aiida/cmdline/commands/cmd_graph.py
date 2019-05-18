@@ -43,20 +43,20 @@ def verdi_graph():
 @click.option(
     '-d',
     '--descendant-depth',
-    help='The maximum depth when recursing through the descendants, if not set it will recurse to the end',
+    help='The maximum depth when recursing through the descendants, if not set it will recurse to the end.',
     type=click.IntRange(min=0))
 @click.option('-o', '--process-out', is_flag=True, help='Show outgoing links for all processes.')
 @click.option('-i', '--process-in', is_flag=True, help='Show incoming links for all processes.')
-@click.option('-p', '--print-info', is_flag=True, help="print verbose information of the graph traversal")
+@click.option('-p', '--print-info', is_flag=True, help="Print verbose information of the graph traversal.")
 @click.option(
     '-e',
     '--engine',
-    help="the graphviz engine, e.g. dot, circo"
+    help="the graphviz engine, e.g. dot, circo "
     "(see http://www.graphviz.org/doc/info/output.html)",
     default='dot')
 @click.option(
-    '-f', '--output-format', help="The output format used for rendering (``'pdf'``, ``'png'``, etc.).", default='pdf')
-@click.option('-v', '--view', is_flag=True, help="Open the rendered result with the default application")
+    '-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
+@click.option('-v', '--view', is_flag=True, help="Open the rendered result with the default application.")
 @decorators.with_dbenv()
 def generate(root_node, link_types, ancestor_depth, descendant_depth, process_out, process_in, engine, print_info,
              output_format, view):

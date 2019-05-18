@@ -56,6 +56,7 @@ class EntryPointFormat(enum.Enum):
 
 entry_point_group_to_module_path_map = {
     'aiida.calculations': 'aiida.orm.nodes.process.calculation.calcjob',
+    'aiida.cmdline.data': 'aiida.cmdline.data',
     'aiida.data': 'aiida.orm.nodes.data',
     'aiida.node': 'aiida.orm.nodes',
     'aiida.parsers': 'aiida.parsers.plugins',

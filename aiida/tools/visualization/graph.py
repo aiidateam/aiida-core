@@ -486,7 +486,7 @@ class Graph(object):
                             link_types=(),
                             annotate_links=False,
                             origin_style=(),
-                            include_calculation_inputs=False,
+                            include_process_inputs=False,
                             print_func=None):
         """add nodes and edges from an origin recursively,
         following outgoing links
@@ -501,7 +501,7 @@ class Graph(object):
         :type annotate_links: bool or str
         :param origin_style: node style map for origin node (Default value = ())
         :type origin_style: dict or tuple
-        :param include_calculation_inputs:  (Default value = False)
+        :param include_calculation_inputs: include incoming links for all processes (Default value = False)
         :type include_calculation_inputs: bool
         :param print_func: a function to stream information to, i.e. print_func(str)
 
@@ -529,8 +529,7 @@ class Graph(object):
                     print_func("  {} -> {}".format(node.pk, [on.pk for on in outgoing_nodes]))
                 new_nodes.extend(outgoing_nodes)
 
-                if include_calculation_inputs and isinstance(node,
-                                                             BaseFactory("aiida.node", "process.calculation.calcjob")):
+                if include_process_inputs and isinstance(node, BaseFactory("aiida.node", "process")):
                     self.add_incoming(node, link_types=link_types, annotate_links=annotate_links)
 
             # ensure the same path isn't traversed multiple times
@@ -547,7 +546,7 @@ class Graph(object):
                           link_types=(),
                           annotate_links=False,
                           origin_style=(),
-                          include_calculation_outputs=False,
+                          include_process_outputs=False,
                           print_func=None):
         """add nodes and edges from an origin recursively,
         following incoming links
@@ -562,8 +561,8 @@ class Graph(object):
         :type annotate_links: bool
         :param origin_style: node style map for origin node (Default value = ())
         :type origin_style: dict or tuple
-        :param include_calculation_outputs:  (Default value = False)
-        :type include_calculation_outputs: bool
+        :param include_process_outputs:  include outgoing links for all processes (Default value = False)
+        :type include_process_outputs: bool
         :param print_func: a function to stream information to, i.e. print_func(str)
 
         """
@@ -573,6 +572,7 @@ class Graph(object):
         self.add_node(origin_node, style_override=dict(origin_style))
 
         last_nodes = [origin_node]
+        traversed_pks = [origin_node.pk]
         cur_depth = 0
         while last_nodes:
             cur_depth += 1
@@ -589,11 +589,16 @@ class Graph(object):
                     print_func("  {} -> {}".format(node.pk, [n.pk for n in incoming_nodes]))
                 new_nodes.extend(incoming_nodes)
 
-                if include_calculation_outputs and isinstance(node,
-                                                              BaseFactory("aiida.node", "process.calculation.calcjob")):
+                if include_process_outputs and isinstance(node, BaseFactory("aiida.node", "process")):
                     self.add_outgoing(node, link_types=link_types, annotate_links=annotate_links)
 
-            last_nodes = new_nodes
+            # ensure the same path isn't traversed multiple times
+            last_nodes = []
+            for new_node in new_nodes:
+                if new_node.pk in traversed_pks:
+                    continue
+                last_nodes.append(new_node)
+                traversed_pks.append(new_node.pk)
 
     def add_origin_to_target(self,
                              origin,

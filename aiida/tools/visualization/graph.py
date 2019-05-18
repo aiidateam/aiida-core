@@ -486,7 +486,8 @@ class Graph(object):
                             link_types=(),
                             annotate_links=False,
                             origin_style=(),
-                            include_calculation_inputs=False):
+                            include_calculation_inputs=False,
+                            print_func=None):
         """add nodes and edges from an origin recursively,
         following outgoing links
 
@@ -502,6 +503,7 @@ class Graph(object):
         :type origin_style: dict or tuple
         :param include_calculation_inputs:  (Default value = False)
         :type include_calculation_inputs: bool
+        :param print_func: a function to stream information to, i.e. print_func(str)
 
         """
         # pylint: disable=too-many-arguments
@@ -516,15 +518,19 @@ class Graph(object):
             # checking of maximum descendant depth is set and applies.
             if depth is not None and cur_depth > depth:
                 break
+            if print_func:
+                print_func("- Depth: {}".format(cur_depth))
             new_nodes = []
             for node in last_nodes:
-                new_nodes.extend(
-                    self.add_outgoing(node, link_types=link_types, annotate_links=annotate_links, return_pks=False))
+                outgoing_nodes = self.add_outgoing(
+                    node, link_types=link_types, annotate_links=annotate_links, return_pks=False)
+                if outgoing_nodes and print_func:
+                    print_func("  {} -> {}".format(node.pk, [n.pk for n in outgoing_nodes]))
+                new_nodes.extend(outgoing_nodes)
 
                 if include_calculation_inputs and isinstance(node,
                                                              BaseFactory("aiida.node", "process.calculation.calcjob")):
                     self.add_incoming(node, link_types=link_types, annotate_links=annotate_links)
-
             last_nodes = new_nodes
 
     def recurse_ancestors(self,
@@ -533,7 +539,8 @@ class Graph(object):
                           link_types=(),
                           annotate_links=False,
                           origin_style=(),
-                          include_calculation_outputs=False):
+                          include_calculation_outputs=False,
+                          print_func=None):
         """add nodes and edges from an origin recursively,
         following incoming links
 
@@ -549,6 +556,7 @@ class Graph(object):
         :type origin_style: dict or tuple
         :param include_calculation_outputs:  (Default value = False)
         :type include_calculation_outputs: bool
+        :param print_func: a function to stream information to, i.e. print_func(str)
 
         """
         # pylint: disable=too-many-arguments
@@ -563,10 +571,15 @@ class Graph(object):
             # checking of maximum descendant depth is set and applies.
             if depth is not None and cur_depth > depth:
                 break
+            if print_func:
+                print_func("- Depth: {}".format(cur_depth))
             new_nodes = []
             for node in last_nodes:
-                new_nodes.extend(
-                    self.add_incoming(node, link_types=link_types, annotate_links=annotate_links, return_pks=False))
+                incoming_nodes = self.add_incoming(
+                    node, link_types=link_types, annotate_links=annotate_links, return_pks=False)
+                if incoming_nodes and print_func:
+                    print_func("  {} -> {}".format(node.pk, [n.pk for n in incoming_nodes]))
+                new_nodes.extend(incoming_nodes)
 
                 if include_calculation_outputs and isinstance(node,
                                                               BaseFactory("aiida.node", "process.calculation.calcjob")):

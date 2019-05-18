@@ -47,22 +47,36 @@ def verdi_graph():
     help="the graphviz engine, e.g. dot, circo"
     "(see http://www.graphviz.org/doc/info/output.html)",
     default='dot')
+@click.option('-p', '--print-info', is_flag=True, help="print verbose information of the graph traversal")
 @click.option(
     '-f', '--output-format', help="The output format used for rendering (``'pdf'``, ``'png'``, etc.).", default='pdf')
 @click.option('-v', '--view', is_flag=True, help="Open the rendered result with the default application")
 @decorators.with_dbenv()
-def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, engine, output_format, view):
+def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, engine, print_info, output_format, view):
     """
     Generate a graph from a given ROOT_NODE user-specified by its pk.
     """
     # pylint: disable=too-many-arguments
     from aiida.tools.visualization.graph import Graph
+    print_func = echo.echo_info if print_info else None
 
+    echo.echo_info("Initiating graphviz engine: {}".format(engine))
     graph = Graph(engine=engine)
-    graph.recurse_ancestors(root_node, depth=ancestor_depth, annotate_links="both", include_calculation_outputs=outputs)
+    echo.echo_info("Recursing ancestors, max depth={}".format(ancestor_depth))
+    graph.recurse_ancestors(
+        root_node,
+        depth=ancestor_depth,
+        annotate_links="both",
+        include_calculation_outputs=outputs,
+        print_func=print_func)
+    echo.echo_info("Recursing descendants, max depth={}".format(descendant_depth))
     graph.recurse_descendants(
-        root_node, depth=descendant_depth, annotate_links="both", include_calculation_inputs=inputs)
+        root_node,
+        depth=descendant_depth,
+        annotate_links="both",
+        include_calculation_inputs=inputs,
+        print_func=print_func)
     output_file_name = graph.graphviz.render(
         filename='{}.dot'.format(root_node.pk), format=output_format, view=view, cleanup=True)
 
-    echo.echo_success("Output file is {}".format(output_file_name))
+    echo.echo_success("Output file to {}".format(output_file_name))

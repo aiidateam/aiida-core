@@ -63,19 +63,20 @@ To install the requirements for the ``postgres`` database run the following:
     sudo apt-get install postgresql postgresql-server-dev-all postgresql-client
 
 For a more detailed description of database requirements and usage see the :ref:`database<database>` section.
-Finally, to install the RabbitMQ message broker, run the following command:
+Finally, install the RabbitMQ message broker:
 
 .. code-block:: bash
 
     sudo apt-get install rabbitmq-server
 
-After a reboot, RabbitMQ should be started automatically as it is added as a self starting service. You can check whether it is running by checking the status through the command:
+This adds RabbitMQ as a system service. To check whether it is running:
 
 .. code-block:: bash
 
     sudo rabbitmqctl status
 
-If you are having problems installing RabbitMQ, please refer to the detailed instructions  provided on the `website of RabbitMQ itself for Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
+If it is not running already, it should after a reboot.
+For problems with installing RabbitMQ, refer to the detailed instructions  provided on the `website of RabbitMQ itself for Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
 
 
 .. _details_brew:

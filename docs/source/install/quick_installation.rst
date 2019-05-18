@@ -13,7 +13,6 @@ Prerequisites
     .. code-block:: bash
 
         sudo apt-get install git python2.7-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client rabbitmq-server
-        sudo reboot
 
     See :ref:`Ubuntu instructions<details_ubuntu>` for details.
 
@@ -46,7 +45,6 @@ Prerequisites
 
         emerge -av git python postgresql rabbitmq-server
         rc-update add rabbitmq
-        sudo reboot
 
     See :ref:`Gentoo Linux instructions<details_gentoo>` for details.
 
@@ -67,11 +65,11 @@ Prerequisites
 Installation
 ============
 
-Install the ``aiida`` python package:
+Install the ``aiida-core`` python package:
 
 .. code-block:: bash
 
-    pip install --pre aiida
+    pip install --pre aiida-core
 
 Set up your AiiDA profile:
 
@@ -79,31 +77,28 @@ Set up your AiiDA profile:
 
     verdi quicksetup
 
-After completing the setup, your newly created profile should show up in the list:
+Start the AiiDA daemon process:
 
 .. code-block:: bash
 
-    verdi profile list
+    verdi daemon start
 
-    Info: configuration folder: /path.to/.aiida
-    Info: default profile is highlighted and marked by the * symbol
-    * coding_day
-
-To make sure all the required resources such as the database and RabbitMQ are up and running, you can run the following command:
+Check that all services are up and running:
 
 .. code-block:: bash
 
     verdi status
 
-     ✓ profile:     On profile django
-     ✓ repository:  /repo/aiida_dev/django
+     ✓ profile:     On profile quicksetup
+     ✓ repository:  /repo/aiida_dev/quicksetup
      ✓ postgres:    Connected to aiida@localhost:5432
      ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
      ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
 
-If everything is up and running, it is time to :ref:`get started<get_started>`!
+If you see all checkmarks, it is time to :ref:`get started<get_started>`!
 
-If the quick installation failed at any point, please refer 
+If the quick installation fails at any point, please refer 
 to the :ref:`full installation guide<installation>` for more details 
 or the :ref:`troubleshooting section<troubleshooting>`.
-For additional configuration, please refer to the :ref:`configuration section<configure_aiida>`.
+
+For configuration of tab completion or using AiiDA in jupyter, see the :ref:`configuration instructions <configure_aiida>` before moving on.

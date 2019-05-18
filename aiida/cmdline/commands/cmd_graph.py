@@ -54,14 +54,13 @@ def verdi_graph():
     help="the graphviz engine, e.g. dot, circo "
     "(see http://www.graphviz.org/doc/info/output.html)",
     default='dot')
-@click.option(
-    '-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
+@click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
 @click.option('-v', '--view', is_flag=True, help="Open the rendered result with the default application.")
 @decorators.with_dbenv()
 def generate(root_node, link_types, ancestor_depth, descendant_depth, process_out, process_in, engine, print_info,
              output_format, view):
     """
-    Generate a graph from a given ROOT_NODE user-specified by its pk or uuid.
+    Generate a graph from a ROOT_NODE (specified by pk or uuid).
     """
     # pylint: disable=too-many-arguments
     from aiida.tools.visualization.graph import Graph

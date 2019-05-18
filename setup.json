@@ -136,6 +136,15 @@
       "local = aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD",
       "ssh = aiida.transports.plugins.ssh:CONFIGURE_SSH_CMD"
     ],
+    "aiida.cmdline.data": [
+      "array = aiida.cmdline.commands.cmd_data.cmd_array:array",
+      "bands = aiida.cmdline.commands.cmd_data.cmd_bands:bands",
+      "cif = aiida.cmdline.commands.cmd_data.cmd_cif:cif",
+      "dict = aiida.cmdline.commands.cmd_data.cmd_dict:dictionary",
+      "structure = aiida.cmdline.commands.cmd_data.cmd_structure:structure",
+      "trajectory = aiida.cmdline.commands.cmd_data.cmd_trajectory:trajectory",
+      "upf = aiida.cmdline.commands.cmd_data.cmd_upf:upf"
+    ],
     "aiida.data": [
       "array = aiida.orm.nodes.data.array.array:ArrayData",
       "array.bands = aiida.orm.nodes.data.array.bands:BandsData",
@@ -170,7 +179,6 @@
       "process.workflow.workchain = aiida.orm.nodes.process.workflow.workchain:WorkChainNode",
       "process.workflow.workfunction = aiida.orm.nodes.process.workflow.workfunction:WorkFunctionNode"
     ],
-    "aiida.cmdline.data": [],
     "aiida.parsers": [
       "arithmetic.add = aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser",
       "templatereplacer.doubler = aiida.parsers.plugins.templatereplacer.doubler:TemplatereplacerDoublerParser"

@@ -164,7 +164,7 @@ class TestVerdiGraph(AiidaTestCase):
         root_node = str(self.node.pk)
         filename = root_node + '.dot.pdf'
 
-        for flag in ['-i', '--inputs', '-o', '--outputs']:
+        for flag in ['-i', '--process-in', '-o', '--process-out']:
             options = [flag, root_node]
             try:
                 result = self.cli_runner.invoke(cmd_graph.generate, options)

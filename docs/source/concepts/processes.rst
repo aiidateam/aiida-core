@@ -28,7 +28,7 @@ Processes in AiiDA come in two flavors:
  * Calculation-like
  * Workflow-like
 
-The calculation-like processes have the capability to *create* data, whereas the workflow-like processes orchestrate other processes and have the ability to *return* data produced by other calculations.
+The calculation-like processes have the capability to *create* data, whereas the workflow-like processes orchestrate other processes and have the ability to *return* data produced by calculations.
 Again, this is a distinction that plays a big role in AiiDA and is crucial to understand.
 For this reason, these different types of processes also get a different sub class of the ``ProcessNode`` class.
 The hierarchy of these node classes and the link types that are allowed between them and ``Data`` nodes, is explained in detail in the :ref:`provenance implementation<concepts_provenance_implementation>` documentation.
@@ -40,14 +40,14 @@ Process class                                                         Node class
 ===================================================================   ==============================================================================  ===============================================================
 :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`          :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`            Calculations performed by external codes
 :py:class:`~aiida.engine.processes.workchains.workchain.WorkChain`    :py:class:`~aiida.orm.nodes.process.workflow.workchain.WorkChainNode`           Workflows that run multiple calculations
-:py:class:`~aiida.engine.processes.functions.FunctionProcess`         :py:class:`~aiida.orm.nodes.process.calculation.calcfunction.CalcFunctionNode`  Python functions decorated with the ``calcfunction`` decorator
-:py:class:`~aiida.engine.processes.functions.FunctionProcess`         :py:class:`~aiida.orm.nodes.process.workflow.workfunction.WorkFunctionNode`     Python functions decorated with the ``workfunction`` decorator
+:py:class:`~aiida.engine.processes.functions.FunctionProcess`         :py:class:`~aiida.orm.nodes.process.calculation.calcfunction.CalcFunctionNode`  Python functions decorated with the ``@calcfunction`` decorator
+:py:class:`~aiida.engine.processes.functions.FunctionProcess`         :py:class:`~aiida.orm.nodes.process.workflow.workfunction.WorkFunctionNode`     Python functions decorated with the ``@workfunction`` decorator
 ===================================================================   ==============================================================================  ===============================================================
 
 For basic information on the concept of a ``CalcJob`` or ``calcfunction``, refer to the :ref:`calculations concept<concepts_calculations>` and the same for the ``WorkChain`` and ``workfunction`` is described in the :ref:`workflows concept<concepts_workflows>`.
 After having read and understood the basic concept of calculation and workflow processes, detailed information on how to implement and use them can be found in the dedicated developing sections for :ref:`calculations<working_calculations>` and :ref:`workflows<working_workflows>`, respectively.
 
-.. note:: A ``FunctionProcess`` is never explicitly implemented but will be generated dynamically by the engine when a python function decorated with a :py:meth:`~aiida.engine.processes.functions.calcfunction` or :py:meth:`~aiida.engine.processes.functions.workfunction` is run.
+.. note:: A ``FunctionProcess`` is never explicitly implemented but will be generated dynamically by the engine when a python function decorated with a :py:func:`~aiida.engine.processes.functions.calcfunction` or :py:func:`~aiida.engine.processes.functions.workfunction` is run.
 
 
 .. _concepts_process_state:
@@ -57,7 +57,7 @@ Process state
 Each instance of a ``Process`` class that is being executed has a process state.
 This property tells you about the current status of the process.
 It is stored in the instance of the ``Process`` itself and the workflow engine, the ``plumpy`` library, operates only on that value.
-However, the ``Process`` instance 'dies' as soon as its is terminated, so therefore we also write the process state to the calculation node that the process uses as its database record, under the ``process_state`` attribute.
+However, the ``Process`` instance 'dies' as soon as it is terminated, therefore the process state is also written to the calculation node that the process uses as its database record, under the ``process_state`` attribute.
 The process can be in one of six states:
 
 ========  ============
@@ -69,19 +69,20 @@ Waiting   Finished
 ========  ============
 
 The three states in the left column are 'active' states, whereas the right column displays the three 'terminal' states.
-Once a process reaches a terminal state, it will never leave it, its execution is permanently terminated.
+Once a process reaches a terminal state, it will never leave it; its execution is permanently terminated.
 When a process is first created, it is put in the ``Created`` state.
 As soon as it is picked up by a runner and it is active, it will be in the ``Running`` state.
 If the process is waiting for another process, that it called, to be finished, it will be in the ``Waiting`` state.
-A process that is in the ``Killed`` state, means that the user issued a command to kill it, or its parent process was killed.
-The ``Excepted`` state indicates that during execution an exception occurred that was not caught and the process was unexpectedly terminated.
-The final option is the ``Finished`` state, which means that the process was successfully executed, and the execution was nominal.
-Note that this does not automatically mean that the result of the process can also considered to be successful, it just executed without any problems.
+If a process is in the ``Killed`` state, it means the user issued a command to kill it, or its parent process was killed.
+The ``Excepted`` state indicates that during execution an exception occurred that was not caught, and the process was unexpectedly terminated.
+The final option is the ``Finished`` state, which means that the process was successfully executed, and the excecution was nominal.
+Note that this does not automatically mean that the result of the process can also be considered to be successful, it was just executed without any problems.
 
-To distinghuis between a successful and a failed execution, there is the :ref:`exit status<concepts_process_exit_codes>`.
+To distinguish between a successful and a failed execution, there is the :ref:`exit status<concepts_process_exit_codes>`.
 This is another attribute that is stored in the node of the process and is an integer that can be set by the process.
-A zero means that the result of the process was successful, and a non-zero value indicates a failure.
-All the process nodes used by the various processes are a sub class of :py:class:`~aiida.orm.nodes.process.ProcessNode`, which defines handy properties to query the process state and exit status.
+A ``0`` (zero) means that the result of the process was successful, and a non-zero value indicates a failure.
+All the process nodes used by the various processes are sub-classes of :py:class:`~aiida.orm.nodes.process.ProcessNode`,
+which defines handy properties to query the process state and exit status.
 
 ===================   ============================================================================================
 Property              Meaning
@@ -89,7 +90,7 @@ Property              Meaning
 ``process_state``     Returns the current process state
 ``exit_status``       Returns the exit status, or None if not set
 ``exit_message``      Returns the exit message, or None if not set
-``is_terminated``     Returns ``True`` if the process was either ``Killed``, ``Excepted`` or ``Finished``
+``is_terminated``     Returns ``True`` if the process was either ``Killed``, ``Excepted``, or ``Finished``
 ``is_killed``         Returns ``True`` if the process is ``Killed``
 ``is_excepted``       Returns ``True`` if the process is ``Excepted``
 ``is_finished``       Returns ``True`` if the process is ``Finished``
@@ -105,10 +106,10 @@ When you load a calculation node from the database, you can use these property m
 Process exit codes
 ==================
 The previous section about the process state showed that a process that is ``Finished`` does not say anything about whether the result is 'successful' or 'failed'.
-The ``Finished`` state means nothing more than that the engine managed to run the process to the end of execution without it encountering exceptions or being killed.
+The ``Finished`` state means nothing more than that the engine succeeded to run the process to the end of execution, without it encountering exceptions or being killed.
 To distinguish between a 'successful' and 'failed' process, an 'exit status' can be defined.
 The `exit status is a common concept in programming <https://en.wikipedia.org/wiki/Exit_status>`_ and is a small integer, where zero means that the result of the process was successful, and a non-zero value indicates a failure.
-By default a process that terminates nominally will get a zero exit status.
+By default a process that terminates nominally will get a ``0`` (zero) exit status.
 To mark a process as failed, one can return an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` named tuple, which allows to set an integer ``exit_status`` and a string message as ``exit_message``.
 When the engine receives such an ``ExitCode`` as the return value from a process, it will set the exit status and message on the corresponding attributes of the process node representing the process in the provenance graph.
 How exit codes can be defined and returned depends on the process type and will be documented in detail in the respective :ref:`calculation<working_calculations>` and :ref:`workflow<working_workflows>` development sections.
@@ -135,24 +136,26 @@ This means that the output of many of the ``verdi`` commands, such as ``verdi pr
 Process tasks
 -------------
 The previous section explained how launching a process means creating an instance of the ``Process`` class in memory.
-When the process is being 'ran' (see the section on :ref:`launching processes<working_processes_launch>` for more details), that is to say in a local interpreter, that process instance will die as soon as the interpreter dies.
-This is what makes 'submitting' a process, often times the preferred launching method.
+When the process is being 'ran' (see the section on :ref:`launching processes<working_processes_launch>` for more details) that is to say in a local interpreter,
+the particular process instance will die as soon as the interpreter dies.
+This is what often makes 'submitting' a process the preferred method of launching a calculation or workflow.
 When a process is 'submitted', an instance of the ``Process`` is created, along with the node that represents it in the database, and its state is then persisted to the database.
 This is called a 'process checkpoint', more information on which :ref:`will follow later<concepts_process_checkpoints>`.
 Subsequently, the process instance is shutdown and a 'continuation task' is sent to the process queue of RabbitMQ.
 This task is simply a small message that just contains an identifier for the process.
 
 All the daemon runners, when they are launched, subscribe to the process queue and RabbitMQ will distribute the continuation tasks to them as they come in, making sure that each task is only sent to one runner at a time.
-The receiving daemon runner can restore the process instance in memory from the checkpoint that was stored in the database and continue the execution.
-As soon as the process reaches a terminal state, the daemon worker will acknowledge to RabbitMQ that the task has been completed.
+The receiving daemon runnerr can restore the process instance in memory from the checkpoint that was stored in the database and continue the execution.
+As soon as the process reaches a terminal state, the daemon runner will acknowledge to RabbitMQ that the task has been completed.
 Until the runner has confirmed that a task is completed, RabbitMQ will consider the task as incomplete.
-If a daemon runner is shutdown or dies before it got the chance to finish running a process, the task will automatically be requeued by RabbitMQ and sent to another.
-Together with the fact that all the tasks in the process queue are persisted to disk by RabbitMQ, guarantees that once a continuation task has been sent to RabbitMQ, it will at some point be finished, while allowing the machine to be shutdown.
+If a daemon runner is shutdown or dies before it got the chance to finish running a process, the task will automatically be requeued by RabbitMQ and sent to another daemon runner.
+Together with the fact that all the tasks in the process queue are persisted to disk by RabbitMQ, guarantees that once a continuation task has been sent to RabbitMQ,
+it will at some point be finished, while allowing the machine to be shutdown.
 
 Each daemon runner has a maximum number of tasks that it can run concurrently, which means that if there are more active tasks than available slots, some of the tasks will remain queued.
-Processes whose task is in the queue and not with any runner, though technically 'active' as it is not terminated, it is not actually being run at the moment.
-While a process is not actually being run, i.e. it is not in memory with a runner, one also cannot interact with it.
-Similarly, as soon as the task disappears, either because the process was intentionally terminated, or unintentionally due to a bug or problem, the process will never continue running again.
+Processes whose task is in the queue and not with any runner, though technically 'active' as it is not terminated, is not actually being run at the moment.
+While a process is not actually being run, i.e. it is not in memory with a runner, one cannot interact with it.
+Similarly, as soon as the task disappears, either because the process was intentionally terminated (or unintentionally), the process will never continue running again.
 
 
 .. _concepts_process_checkpoints:

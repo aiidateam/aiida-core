@@ -511,10 +511,10 @@ class Graph(object):
 
         self.add_node(origin_node, style_override=dict(origin_style))
 
-        last_nodes = [origin_node]
+        leaf_nodes = [origin_node]
         traversed_pks = [origin_node.pk]
         cur_depth = 0
-        while last_nodes:
+        while leaf_nodes:
             cur_depth += 1
             # checking of maximum descendant depth is set and applies.
             if depth is not None and cur_depth > depth:
@@ -522,7 +522,7 @@ class Graph(object):
             if print_func:
                 print_func("- Depth: {}".format(cur_depth))
             new_nodes = []
-            for node in last_nodes:
+            for node in leaf_nodes:
                 outgoing_nodes = self.add_outgoing(
                     node, link_types=link_types, annotate_links=annotate_links, return_pks=False)
                 if outgoing_nodes and print_func:
@@ -534,8 +534,12 @@ class Graph(object):
                     self.add_incoming(node, link_types=link_types, annotate_links=annotate_links)
 
             # ensure the same path isn't traversed multiple times
-            last_nodes = [nn for nn in new_nodes if nn.pk not in traversed_pks]
-            traversed_pks.extend([ln.pk for ln in last_nodes])
+            leaf_nodes = []
+            for new_node in new_nodes:
+                if new_node.pk in traversed_pks:
+                    continue
+                leaf_nodes.append(new_node)
+                traversed_pks.append(new_node.pk)
 
     def recurse_ancestors(self,
                           origin,

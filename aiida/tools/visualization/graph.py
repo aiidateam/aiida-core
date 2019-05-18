@@ -512,6 +512,7 @@ class Graph(object):
         self.add_node(origin_node, style_override=dict(origin_style))
 
         last_nodes = [origin_node]
+        traversed_pks = [origin_node.pk]
         cur_depth = 0
         while last_nodes:
             cur_depth += 1
@@ -525,13 +526,16 @@ class Graph(object):
                 outgoing_nodes = self.add_outgoing(
                     node, link_types=link_types, annotate_links=annotate_links, return_pks=False)
                 if outgoing_nodes and print_func:
-                    print_func("  {} -> {}".format(node.pk, [n.pk for n in outgoing_nodes]))
+                    print_func("  {} -> {}".format(node.pk, [on.pk for on in outgoing_nodes]))
                 new_nodes.extend(outgoing_nodes)
 
                 if include_calculation_inputs and isinstance(node,
                                                              BaseFactory("aiida.node", "process.calculation.calcjob")):
                     self.add_incoming(node, link_types=link_types, annotate_links=annotate_links)
-            last_nodes = new_nodes
+
+            # ensure the same path isn't traversed multiple times
+            last_nodes = [nn for nn in new_nodes if nn.pk not in traversed_pks]
+            traversed_pks.extend([ln.pk for ln in last_nodes])
 
     def recurse_ancestors(self,
                           origin,

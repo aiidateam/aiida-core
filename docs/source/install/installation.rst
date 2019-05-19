@@ -291,147 +291,41 @@ If you open a new terminal for example, be sure to activate it first with::
 
     source ~/aiidapy/bin/activate
 
-At this point, you can choose to read on for additional installation details and configuration options, or you can choose to start using
-AiiDA and go straight to the section :ref:`get started<get_started>`.
+.. _start_daemon:
 
+Start the daemon
+================
 
-.. _configure_aiida:
+The AiiDA daemon process runs in the background and takes care of processing your submitted calculations and workflows, checking their status, retrieving their results once they are finished and storing them in the AiiDA database.
 
-Configure AiiDA
-===============
+The AiiDA daemon is controlled using three simple commands:
 
-.. _tab-completion:
-
-Verdi tab-completion
---------------------
-The ``verdi`` command line interface has many commands and options,
-which can be tab-completed to simplify your life.
-Enable tab-completion with the following shell command::
-
-    eval "$(_VERDI_COMPLETE=source verdi)"
-
-Place this command in your startup file, i.e. one of
-
-* the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide
-* the `activate script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment
-* a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
-
-In order to enable tab completion in your current shell,
-make sure to source the startup file once.
+ * ``verdi daemon start``: start the daemon
+ * ``verdi daemon status``: check the status of the daemon
+ * ``verdi daemon stop``: stop the daemon
 
 .. note::
-    This line replaces the ``eval "$(verdi completioncommand)"`` line that was used in ``aiida-core<1.0.0``. While this continues to work, support for the old line may be dropped in the future.
+    While operational, the daemon logs its activity to a file in ``~/.aiida/daemon/log/`` (or, more generally, ``$AIIDA_PATH/.aiida/daemon/log``).
+    Get the latest log messages via ``verdi daemon logshow``.
 
 
-Adding AiiDA to the PATH
-------------------------
-If you used a virtual environment for the installation of AiiDA, the required commands such as ``verdi`` should have been added automatically to your ``PATH``.
-Otherwise, you may have to add the install directory of AiiDA manually to your ``PATH`` so that the binaries are found.
+Final checks
+============
 
-For Linux systems, the path to add is usually ``~/.local/bin``::
+Use the ``verdi status`` command to check that all services are up and running:
 
-    export PATH=~/.local/bin:${PATH}
+.. code-block:: bash
 
-For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
+    verdi status
 
-    export PATH=~/Library/Python/2.7/bin:${PATH}
+     ✓ profile:     On profile quicksetup
+     ✓ repository:  /repo/aiida_dev/quicksetup
+     ✓ postgres:    Connected to aiida@localhost:5432
+     ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+     ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
 
-After updating your ``PATH`` you can check if it worked in the following way:
+In the example output, all service have a green check mark and so should be running as expected.
 
-* type ``verdi`` on your terminal, and check if the program starts (it should
-  provide a list of valid commands). If it doesn't, check if you correctly set
-  up the ``PATH`` environment variable above.
-* go into your home folder or in another folder different from the AiiDA folder,
-  run ``python`` or ``ipython`` and try to import a module, e.g. by typing::
+At this point, you're ready to :ref:`get started<get_started>`.
 
-    import aiida
-
-  If the setup is ok, you shouldn't get any error. If you do get an ``ImportError`` instead, check
-  that you are in the correct virtual environment. If you did not install AiiDA
-  within a virtual environment, you will have to set up the ``PYTHONPATH``
-  environment variable in your ``.bashrc``::
-
-    export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
-
-.. _directory_location:
-
-
-Customizing the configuration directory location
-------------------------------------------------
-
-By default, the AiiDA configuration is stored in the directory ``~/.aiida``.
-This can be changed by setting the ``AIIDA_PATH`` environment variable.
-The value of ``AIIDA_PATH`` can be a colon-separated list of paths.
-For each of the paths in the list, AiiDA will look for a ``.aiida`` directory in the given path.
-The first configuration folder that is encountered will be used
-If no ``.aiida`` directory is found in any of the paths found in the environment variable, one will be created automatically in the last path that was considered.
-
-For example, the directory structure in your home might look like this ::
-
-    .
-    ├── .aiida
-    └── project_a
-        ├── .aiida
-        └── subfolder
-
-
-If you leave the ``AIIDA_PATH`` variable unset, the default location in your home will be used.
-However, if you set ::
-
-    export AIIDA_PATH='~/project_a:'
-
-The configuration directory used will be ``~/project_a/.aiida``.
-
-.. warning::
-    Note that even if the sub directory ``.aiida`` would not yet have existed in ``~/project_a``, AiiDA will automatically create it for you.
-    Be careful therefore to check that the path you set for ``AIIDA_PATH`` is correct.
-
-Using AiiDA in Jupyter
-----------------------
-
-`Jupyter <http://jupyter.org>`_ is an open-source web application that allows you to create in-browser notebooks containing live code, visualizations and formatted text.
-
-Originally born out of the iPython project, it now supports code written in many languages and customized iPython kernels.
-
-If you didn't already install AiiDA with the ``[notebook]`` option (during ``pip install``), run ``pip install jupyter`` **inside** the virtualenv, and then run **from within the virtualenv**::
-
-    jupyter notebook
-
-This will open a tab in your browser. Click on ``New -> Python`` and type::
-
-    import aiida
-
-followed by ``Shift-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
-
-If you want to set the same environment as in a ``verdi shell``,
-add the following code to a ``.py`` file (create one if there isn't any) in ``<home_folder>/.ipython/profile_default/startup/``::
-
-
-
-  try:
-      import aiida
-  except ImportError:
-      pass
-  else:
-      import IPython
-      from aiida.tools.ipython.ipython_magics import load_ipython_extension
-
-      # Get the current Ipython session
-      ipython = IPython.get_ipython()
-
-      # Register the line magic
-      load_ipython_extension(ipython)
-
-This file will be executed when the ipython kernel starts up and enable the line magic ``%aiida``.
-Alternatively, if you have a ``aiida_core`` repository checked out locally,
-you can just copy the file ``<aiida_core>/aiida/tools/ipython/aiida_magic_register.py`` to the same folder.
-The current ipython profile folder can be located using::
-
-  ipython locate profile
-
-After this, if you open a Jupyter notebook as explained above and type in a cell::
-
-    %aiida
-
-followed by ``Shift-Enter``. You should receive the message "Loaded AiiDA DB environment."
-This line magic should also be enabled in standard ipython shells.
+For configuration of tab completion or using AiiDA in jupyter, see the :ref:`configuration instructions <configure_aiida>` before moving on.

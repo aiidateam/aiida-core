@@ -25,15 +25,14 @@ class ArithmeticAddCalculation(CalcJob):
             handle.write(u'{} {}\n'.format(input_x.value, input_y.value))
 
         codeinfo = CodeInfo()
-        codeinfo.cmdline_params = ['-in', self.options.input_filename]
-        codeinfo.stdout_name = self.options.output_filename
         codeinfo.code_uuid = self.inputs.code.uuid
+        codeinfo.stdout_name = self.options.output_filename
+        codeinfo.cmdline_params = ['-in', self.options.input_filename]
 
         calcinfo = CalcInfo()
-        calcinfo.uuid = str(self.node.uuid)
         calcinfo.codes_info = [codeinfo]
-        calcinfo.retrieve_list = []
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = []
+        calcinfo.retrieve_list = []
 
         return calcinfo

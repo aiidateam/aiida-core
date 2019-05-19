@@ -1,7 +1,7 @@
 Design evolution
 ================
 
-This document records the evolution of the design and architecture of AiiDA, including the underyling reasoning.
+This document records the evolution of the design and architecture of AiiDA, including the underlying reasoning.
 
 Version 1.0.0
 +++++++++++++

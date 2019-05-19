@@ -291,16 +291,12 @@ If you open a new terminal for example, be sure to activate it first with::
 
     source ~/aiidapy/bin/activate
 
-At this point, you can choose to read on for additional installation details and configuration options, or you can choose to start using
-AiiDA and go straight to the section :ref:`get started<get_started>`.
-
 .. _start_daemon:
 
 Start the daemon
 ================
 
-The AiiDA daemon process runs in the background and takes care of
-submitting new calculations, checking their status, retrieving their results once they are finished and storing them in the AiiDA database.
+The AiiDA daemon process runs in the background and takes care of processing your submitted calculations and workflows, checking their status, retrieving their results once they are finished and storing them in the AiiDA database.
 
 The AiiDA daemon is controlled using three simple commands:
 
@@ -309,6 +305,27 @@ The AiiDA daemon is controlled using three simple commands:
  * ``verdi daemon stop``: stop the daemon
 
 .. note::
-    While operational, the daemon logs its activity to a file in ``in ~/.aiida/daemon/log/``.
+    While operational, the daemon logs its activity to a file in ``~/.aiida/daemon/log/`` (or, more generally, ``$AIIDA_PATH/.aiida/daemon/log``).
     Get the latest log messages via ``verdi daemon logshow``.
 
+
+Final checks
+============
+
+Use the ``verdi status`` command to check that all services are up and running:
+
+.. code-block:: bash
+
+    verdi status
+
+     ✓ profile:     On profile quicksetup
+     ✓ repository:  /repo/aiida_dev/quicksetup
+     ✓ postgres:    Connected to aiida@localhost:5432
+     ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+     ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
+
+In the example output, all service have a green check mark and so should be running as expected.
+
+At this point, you're ready to :ref:`get started<get_started>`.
+
+For configuration of tab completion or using AiiDA in jupyter, see the :ref:`configuration instructions <configure_aiida>` before moving on.

@@ -63,20 +63,19 @@ Implementation
 Graph nodes
 -----------
 
-The **nodes** of the AiiDA provenance graph can be grouped into two main **types**: **process nodes** (``ProcessNode``),
-that represent the execution of calculations or workflows, and **data nodes** (``Data``), that represent pieces of data.
+The **nodes** of the AiiDA provenance graph can be grouped into two main **types**: **process nodes** (``ProcessNode``), that represent the execution of calculations or workflows, and **data nodes** (``Data``), that represent pieces of data.
 
 In particular, **process nodes** are divided into two sub categories:
 
     - **calculation nodes** (``CalculationNode``): Represent code execution that creates new data. These are further subdivided in two subclasses:
 
-        - :py:class:`~aiida.orm.nodes.CalcJobNode`: Represents the execution of a calculation external to AiiDA, typically via a job batch scheduler (see the concept of :ref:`calculation jobs<concepts_calcjobs>`).
-        - :py:class:`~aiida.orm.nodes.CalcFunctionNode`: Represents the execution of a python function (see the concept of :ref:`calculation functions<concepts_calcfunctions>`).
+        - :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`: Represents the execution of a calculation external to AiiDA, typically via a job batch scheduler (see the concept of :ref:`calculation jobs<concepts_calcjobs>`).
+        - :py:class:`~aiida.orm.nodes.process.calculation.calcfunction.CalcFunctionNode`: Represents the execution of a python function (see the concept of :ref:`calculation functions<concepts_calcfunctions>`).
 
     - **workflow nodes** (``WorkflowNode``): Represent python code that orchestrates the execution of other workflows and calculations, that optionally return the data created by the processes they called. These are further subdivided in two subclasses:
 
-        - :py:class:`~aiida.orm.nodes.WorkChainNode`: Represents the execution of a python class instance with built-in checkpoints, such that the process may be paused/stopped/resumed (see the concept of :ref:`work chains<concepts_workchains>`).
-        - :py:class:`~aiida.orm.nodes.WorkFunctionNode`: Represents the execution of a python function calling other processes (see the concept of :ref:`work functions<concepts_workfunctions>`).
+        - :py:class:`~aiida.orm.nodes.process.workflow.workchain.WorkChainNode`: Represents the execution of a python class instance with built-in checkpoints, such that the process may be paused/stopped/resumed (see the concept of :ref:`work chains<concepts_workchains>`).
+        - :py:class:`~aiida.orm.nodes.process.workflow.workfunction.WorkFunctionNode`: Represents the execution of a python function calling other processes (see the concept of :ref:`work functions<concepts_workfunctions>`).
 
 The class hierarchy of the process nodes is shown in the figure below.
 
@@ -89,11 +88,11 @@ The class hierarchy of the process nodes is shown in the figure below.
 For what concerns data nodes, the base class (``Data``) is subclassed to provide functionalities specific to the data type and python methods to operate on it.
 Often, the name of the subclass contains the word “Data” appended to it, but this is not a requirement. A few examples:
 
-* :py:class:`~aiida.orm.nodes.Float`, :py:class:`~aiida.orm.nodes.Int`, :py:class:`~aiida.orm.nodes.Bool`, :py:class:`~aiida.orm.nodes.Str`, :py:class:`~aiida.orm.nodes.List`, ...
-* :py:class:`~aiida.orm.nodes.Dict`: represents a dictionary of key-value pairs - these are parameters of a general nature that do not need to belong to more specific data sub-classes
-* :py:class:`~aiida.orm.nodes.StructureData`: represents crystal structure data (containing chemical symbols, atomic positions of the atoms, periodic cell for periodic structures, …)
-* :py:class:`~aiida.orm.nodes.ArrayData`: represents generic numerical arrays of data (python numpy arrays)
-* :py:class:`~aiida.orm.nodes.KpointsData`: represents a numerical array of k-points data, is a sub-class of :py:class:`~aiida.orm.nodes.ArrayData`
+* :py:class:`~aiida.orm.nodes.data.float.Float`, :py:class:`~aiida.orm.nodes.data.int.Int`, :py:class:`~aiida.orm.nodes.data.bool.Bool`, :py:class:`~aiida.orm.nodes.data.str.Str`, :py:class:`~aiida.orm.nodes.data.list.List`, ...
+* :py:class:`~aiida.orm.nodes.data.dict.Dict`: represents a dictionary of key-value pairs - these are parameters of a general nature that do not need to belong to more specific data sub-classes
+* :py:class:`~aiida.orm.nodes.data.structure.StructureData`: represents crystal structure data (containing chemical symbols, atomic positions of the atoms, periodic cell for periodic structures, …)
+* :py:class:`~aiida.orm.nodes.data.array.array.ArrayData`: represents generic numerical arrays of data (python numpy arrays)
+* :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData`: represents a numerical array of k-points data, is a sub-class of ``ArrayData``
 
 For more detailed information see :ref:`AiiDA data types <DataTypes>`.
 
@@ -132,7 +131,7 @@ Graph examples
 --------------
 
 With these basic definitions of AiiDA’s provenance graph in place, let’s take a look at some examples.
-Consider the sequence of computations that adds two numbers `x` and `y` together, and then multiplies the result with a third number `z`.
+Consider the sequence of computations that adds two numbers `x` and `y`, and then multiplies the result with a third number `z`.
 This sequence as represented in the provenance graph would look something like what is shown in :numref:`fig_provenance_add_multiply_data`.
 
 .. _fig_provenance_add_multiply_data:
@@ -152,5 +151,4 @@ This may be imagined however, by adding a workflow that calls the two calculatio
     It then *calls* calculation C\ :sub:`2`, using as inputs D\ :sub:`3` and D\ :sub:`4` (which was *created* by C\ :sub:`2`\).
     Calculation C\ :sub:`2` *creates* data node D\ :sub:`5`, which is finally *returned* by workflow W\ :sub:`1`\.
 
-Notice that if we were to omit the workflow nodes and all its links from the provenance graph in :numref:`fig_provenance_add_multiply_full`,
-one would end up with the exact same graph as shown in :numref:`fig_provenance_add_multiply_data` (the **data provenance** graph).
+Notice that if we were to omit the workflow nodes and all its links from the provenance graph in :numref:`fig_provenance_add_multiply_full`, one would end up with the exact same graph as shown in :numref:`fig_provenance_add_multiply_data` (the **data provenance** graph).

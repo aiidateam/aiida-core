@@ -74,15 +74,14 @@ When a process is first created, it is put in the ``Created`` state.
 As soon as it is picked up by a runner and it is active, it will be in the ``Running`` state.
 If the process is waiting for another process, that it called, to be finished, it will be in the ``Waiting`` state.
 If a process is in the ``Killed`` state, it means the user issued a command to kill it, or its parent process was killed.
-The ``Excepted`` state indicates that during execution an exception occurred that was not caught, and the process was unexpectedly terminated.
-The final option is the ``Finished`` state, which means that the process was successfully executed, and the excecution was nominal.
+The ``Excepted`` state indicates that during execution an exception occurred that was not caught and the process was unexpectedly terminated.
+The final option is the ``Finished`` state, which means that the process was successfully executed, and the execution was nominal.
 Note that this does not automatically mean that the result of the process can also be considered to be successful, it was just executed without any problems.
 
 To distinguish between a successful and a failed execution, there is the :ref:`exit status<concepts_process_exit_codes>`.
 This is another attribute that is stored in the node of the process and is an integer that can be set by the process.
 A ``0`` (zero) means that the result of the process was successful, and a non-zero value indicates a failure.
-All the process nodes used by the various processes are sub-classes of :py:class:`~aiida.orm.nodes.process.ProcessNode`,
-which defines handy properties to query the process state and exit status.
+All the process nodes used by the various processes are sub-classes of :py:class:`~aiida.orm.nodes.process.ProcessNode`, which defines handy properties to query the process state and exit status.
 
 ===================   ============================================================================================
 Property              Meaning
@@ -106,7 +105,7 @@ When you load a calculation node from the database, you can use these property m
 Process exit codes
 ==================
 The previous section about the process state showed that a process that is ``Finished`` does not say anything about whether the result is 'successful' or 'failed'.
-The ``Finished`` state means nothing more than that the engine succeeded to run the process to the end of execution, without it encountering exceptions or being killed.
+The ``Finished`` state means nothing more than that the engine succeeded in running the process to the end of execution, without it encountering exceptions or being killed.
 To distinguish between a 'successful' and 'failed' process, an 'exit status' can be defined.
 The `exit status is a common concept in programming <https://en.wikipedia.org/wiki/Exit_status>`_ and is a small integer, where zero means that the result of the process was successful, and a non-zero value indicates a failure.
 By default a process that terminates nominally will get a ``0`` (zero) exit status.
@@ -136,24 +135,22 @@ This means that the output of many of the ``verdi`` commands, such as ``verdi pr
 Process tasks
 -------------
 The previous section explained how launching a process means creating an instance of the ``Process`` class in memory.
-When the process is being 'ran' (see the section on :ref:`launching processes<working_processes_launch>` for more details) that is to say in a local interpreter,
-the particular process instance will die as soon as the interpreter dies.
-This is what often makes 'submitting' a process the preferred method of launching a calculation or workflow.
+When the process is being 'ran' (see the section on :ref:`launching processes<working_processes_launch>` for more details) that is to say in a local interpreter, the particular process instance will die as soon as the interpreter dies.
+This is what often makes 'submitting' the preferred method of launching a process.
 When a process is 'submitted', an instance of the ``Process`` is created, along with the node that represents it in the database, and its state is then persisted to the database.
 This is called a 'process checkpoint', more information on which :ref:`will follow later<concepts_process_checkpoints>`.
 Subsequently, the process instance is shutdown and a 'continuation task' is sent to the process queue of RabbitMQ.
 This task is simply a small message that just contains an identifier for the process.
 
 All the daemon runners, when they are launched, subscribe to the process queue and RabbitMQ will distribute the continuation tasks to them as they come in, making sure that each task is only sent to one runner at a time.
-The receiving daemon runnerr can restore the process instance in memory from the checkpoint that was stored in the database and continue the execution.
+The receiving daemon runner can restore the process instance in memory from the checkpoint that was stored in the database and continue the execution.
 As soon as the process reaches a terminal state, the daemon runner will acknowledge to RabbitMQ that the task has been completed.
 Until the runner has confirmed that a task is completed, RabbitMQ will consider the task as incomplete.
 If a daemon runner is shutdown or dies before it got the chance to finish running a process, the task will automatically be requeued by RabbitMQ and sent to another daemon runner.
-Together with the fact that all the tasks in the process queue are persisted to disk by RabbitMQ, guarantees that once a continuation task has been sent to RabbitMQ,
-it will at some point be finished, while allowing the machine to be shutdown.
+Together with the fact that all the tasks in the process queue are persisted to disk by RabbitMQ, guarantees that once a continuation task has been sent to RabbitMQ, it will at some point be finished, while allowing the machine to be shutdown.
 
 Each daemon runner has a maximum number of tasks that it can run concurrently, which means that if there are more active tasks than available slots, some of the tasks will remain queued.
-Processes whose task is in the queue and not with any runner, though technically 'active' as it is not terminated, is not actually being run at the moment.
+Processes, whose task is in the queue and not with any runner, though technically 'active' as they are not terminated, are not actually being run at the moment.
 While a process is not actually being run, i.e. it is not in memory with a runner, one cannot interact with it.
 Similarly, as soon as the task disappears, either because the process was intentionally terminated (or unintentionally), the process will never continue running again.
 

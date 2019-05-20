@@ -53,14 +53,14 @@ To solve this, one only has to wrap them in the :py:class:`~aiida.orm.nodes.data
     :code: python
 
 The only difference with the previous snippet is that all inputs have been wrapped in the :py:class:`~aiida.orm.nodes.data.int.Int` class.
-The result that is returned by the function, is now also an :py:class:`~aiida.orm.nodes.data.int.Int` node that can be stored in the provenance graph,
-and contains the result of the computation.
+The result that is returned by the function, is now also an :py:class:`~aiida.orm.nodes.data.int.Int` node that can be stored in the provenance graph, and contains the result of the computation.
 
 .. note::
-	Since ``x`` and ``y`` inside the ``add`` and ``multiply`` functions are already :py:class:`~aiida.orm.nodes.data.int.Int` instances the sum will also be one.
-    This is true because all arithmetic operators also work on the base AiiDA classes (``Int``, ``Float``, etc.) as they would the equivalent python types.
-	It is important to realize though that only :py:class:`~aiida.orm.nodes.node.Node` instances, or sub classes thereof can be stored.
-	For more information on how to return results from process functions, refer to the :ref:`advanced section<working_calcfunctions>`
+
+    Since ``x`` and ``y`` inside the ``add`` and ``multiply`` functions are already :py:class:`~aiida.orm.nodes.data.int.Int` instances the sum will also be one.
+    This is true because all arithmetic operators also work on the base AiiDA classes (``Int``, ``Float``, etc.) as they would on the equivalent python types.
+    It is important to realize though that only :py:class:`~aiida.orm.nodes.node.Node` instances, or sub classes thereof can be stored.
+    For more information on how to return results from process functions, refer to the :ref:`advanced section<working_calcfunctions>`.
 
 With these trivial changes, the full provenance of the result produced by running the function is maintained and looks like the following:
 
@@ -94,7 +94,7 @@ A detailed explanation of how to implement it, the interface and best practices,
 Here, instead, we will focus on the big picture and explain in broad lines how a calculation job models the execution of an external code and what tasks it performs when launched.
 
 To illustrate how a calculation job operates, we need an external code.
-Let's imagine an external code that consists of a bash script that reads an input file containing two integers, sums them and displays the result in the standard output environment (usually done by using ``echo`` in a terminal), for example:
+Let's imagine an external code that consists of a bash script that reads an input file containing two integers, sums them and prints the result in the standard output using ``echo``, for example:
 
 .. code:: bash
 
@@ -105,7 +105,7 @@ Let's imagine an external code that consists of a bash script that reads an inpu
     echo $(( $x + $y ))
 
 When run, this script reads the contents of a file called ``aiida.in`` and expects that it contains two integers.
-It will then parse these into the variables ``x`` and ``y``, whose sum it will echo.
+It will parse these into the variables ``x`` and ``y`` and then print their sum.
 When you want to run this 'code' through AiiDA, you need to tell *how* AiiDA should run it.
 The :py:class:`~aiida.calculations.plugins.arithmetic.add.ArithmeticAddCalculation` is a calculation job implementation that forms an interface to accomplish exactly that for the example bash script.
 A ``CalcJob`` implementation for a specific code, often referred to as a calculation plugin, essentially instructs the engine how it should be run.
@@ -145,7 +145,7 @@ To arrive at the provenance graph shown above in :numref:`fig_calculation_jobs_p
 When a calculation job is launched, the engine will take it roughly through the following steps:
 
  * **Upload**: the calculation job implementation is used to transform the input nodes into the required input files, which are uploaded to a 'working' directory on the target machine
- * **Submit**: to execute a job, the calculation is submitted to the scheduler of the computer on which the input `code` is configured.
+ * **Submit**: to execute the calculation, a job is submitted to the scheduler of the computer on which the input `code` is configured.
  * **Update**: the engine will query the scheduler to check for the status of the calculation job
  * **Retrieve**: once the job has finished, the engine will retrieve the output files, specified by the plugin and store them in a node attached as an output node to the calculation
 

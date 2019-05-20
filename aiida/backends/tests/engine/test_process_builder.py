@@ -112,12 +112,15 @@ class TestProcessBuilder(AiidaTestCase):
 
     def test_builder_restart_work_chain(self):
         """Verify that nested namespaces imploded into flat link labels can be reconstructed into nested namespaces."""
+        caller = orm.WorkChainNode().store()
+
         node = orm.WorkChainNode(process_type=TestWorkChain.build_process_type())
         node.add_incoming(self.inputs['dynamic']['namespace']['alp'], LinkType.INPUT_WORK, 'dynamic__namespace__alp')
         node.add_incoming(self.inputs['name']['spaced'], LinkType.INPUT_WORK, 'name__spaced')
         node.add_incoming(self.inputs['name_spaced'], LinkType.INPUT_WORK, 'name_spaced')
         node.add_incoming(self.inputs['boolean'], LinkType.INPUT_WORK, 'boolean')
         node.add_incoming(orm.Int(DEFAULT_INT).store(), LinkType.INPUT_WORK, 'default')
+        node.add_incoming(caller, link_type=LinkType.CALL_WORK, link_label='CALL_WORK')
         node.store()
 
         builder = node.get_builder_restart()

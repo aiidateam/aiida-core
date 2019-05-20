@@ -96,7 +96,7 @@ class ProcessNode(Sealable, Node):
         :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
         """
         builder = self.process_class.get_builder()
-        builder._update(self.get_incoming().nested())  # pylint: disable=protected-access
+        builder._update(self.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested())  # pylint: disable=protected-access
 
         return builder
 

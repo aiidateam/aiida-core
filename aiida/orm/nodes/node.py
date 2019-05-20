@@ -682,12 +682,12 @@ class Node(Entity):
         """
         return self._repository.get_object(key)
 
-    def get_object_content(self, key):
+    def get_object_content(self, key, mode='r'):
         """Return the content of a object identified by key.
 
         :param key: fully qualified identifier for the object within the repository
         """
-        return self._repository.get_object_content(key)
+        return self._repository.get_object_content(key, mode)
 
     def put_object_from_tree(self, path, key=None, contents_only=True, force=False):
         """Store a new object under `key` with the contents of the directory located at `path` on this file system.

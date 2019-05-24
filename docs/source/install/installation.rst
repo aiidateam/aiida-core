@@ -22,11 +22,11 @@ Creating the virtual environment
 
 To create and activate a new virtual environment, run the following commands::
 
-    pip install --user --upgrade virtualenv   # install virtualenv tool
-    virtualenv ~/aiidapy                      # create "aiidapy" environment
-    source ~/aiidapy/bin/activate             # activate "aiidapy" environment
+    pip install --user --upgrade virtualenv        # install virtualenv tool
+    virtualenv ~/.virtualenvs/aiidapy              # create "aiidapy" environment
+    source ~/.virtualenvs/aiidapy/bin/activate     # activate "aiidapy" environment
 
-This will create a directory in your home directory named ``aiidapy`` where all the packages will be installed.
+This will create a directory in your home directory named ``.virtualenvs``, and a directory ``aiidapy`` inside of it where all the packages will be installed.
 After activation, your prompt should have ``(aiidapy)`` in front of it, indicating that you are working inside the virtual environment.
 The activation script ensures that the python executable of the virtualenv is the first in ``PATH``, and that python programs have access only to packages installed inside the virtualenv.
 
@@ -45,22 +45,22 @@ Isolating the configuration folder in your virtual environment
 --------------------------------------------------------------
 
 When you run AiiDA in multiple virtual environments, it can be convenient to use a separate ``.aiida`` configuration folder for each environment.
-To do this, you can use the :ref:```AIIDA_PATH`` mechanism <directory_location>` as follows:
+To do this, you can use the :ref:`AIIDA_PATH mechanism <directory_location>` as follows:
 
 1. Create your virtual environment, as described above
-2. At the end of ``~/.virtualenvs/my_env/bin/activate``, add the following line, which will set the ``AIIDA_PATH`` environment variable::
+2. At the end of ``~/.virtualenvs/aiidapy/bin/activate``, add the following line, which will set the ``AIIDA_PATH`` environment variable::
 
-    export AIIDA_PATH='~/.virtualenvs/my_env'
+    export AIIDA_PATH='~/.virtualenvs/aiidapy'
 
 3. Deactivate and re-activate the virtual environment
 4. You can test that everything is set up correctly if you can reproduce the following::
 
-    (my_env)$ echo $AIIDA_PATH
-    >>> ~/.virtualenvs/my_env
+    (aiidapy)$ echo $AIIDA_PATH
+    >>> ~/.virtualenvs/aiidapy
 
-    (my_env)$ verdi profile list
-    >>> Info: configuration folder: /home/my_username/.virtualenvs/my_env/.aiida
-    >>> Critical: configuration file /home/my_username/.virtualenvs/my_env/.aiida/config.json does not exist
+    (aiidapy)$ verdi profile list
+    >>> Info: configuration folder: /home/my_username/.virtualenvs/aiidapy/.aiida
+    >>> Critical: configuration file /home/my_username/.virtualenvs/aiidapy/.aiida/config.json does not exist
 
    Note: if you get the 'Critical' message, it simply means that you have not yet run `verdi setup` to configure at least one AiiDA profile.
 5. Continue setting up AiiDA with ``verdi setup`` or ``verdi quicksetup``.
@@ -289,7 +289,7 @@ Remember that in order to work with AiiDA through for example the ``verdi``
 command, you need to be in your virtual environment.
 If you open a new terminal for example, be sure to activate it first with::
 
-    source ~/aiidapy/bin/activate
+    source ~/.virtualenvs/aiidapy/bin/activate
 
 .. _start_daemon:
 

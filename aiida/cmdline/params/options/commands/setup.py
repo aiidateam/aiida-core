@@ -28,26 +28,35 @@ from aiida.manage.external.postgres import DEFAULT_DBINFO
 PASSWORD_UNCHANGED = '***'  # noqa
 
 
-def get_profile_attribute_default(attribute_tuple, ctx=None):
+def validate_profile_parameter(ctx):
+    """Validate that the context contains the option `profile` and it contains a `Profile` instance.
+
+    :param ctx: click context which should contain the selected profile
+    :raises: BadParameter if the context does not contain a `Profile` instance for option `profile`
+    """
+    option = 'profile'
+    if option not in ctx.params or ctx.params[option] is None or not isinstance(ctx.params[option], Profile):
+        raise click.BadParameter('specifying the name of the profile is required', param_hint='"--{}"'.format(option))
+
+
+def get_profile_attribute_default(attribute_tuple, ctx):
     """Return the default value for the given attribute of the profile passed in the context.
 
     :param attribute: attribute for which to get the current value
     :param ctx: click context which should contain the selected profile
     :return: profile attribute default value if set, or None
     """
-    if ctx.params['profile'] is None or not isinstance(ctx.params['profile'], Profile):
-        raise click.BadParameter('specifying the name of the profile is required', param_hint='"--profile"')
-
     attribute, default = attribute_tuple
-    profile = ctx.params['profile']
-
-    if not profile:
-        return default
 
     try:
-        return getattr(profile, attribute)
-    except KeyError:
+        validate_profile_parameter(ctx)
+    except click.BadParameter:
         return default
+    else:
+        try:
+            return getattr(ctx.params['profile'], attribute)
+        except KeyError:
+            return default
 
 
 def get_repository_path_default(ctx):
@@ -59,8 +68,7 @@ def get_repository_path_default(ctx):
     import os
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
-    if ctx.params['profile'] is None or not isinstance(ctx.params['profile'], Profile):
-        raise click.BadParameter('specifying the name of the profile is required', param_hint='"--profile"')
+    validate_profile_parameter(ctx)
 
     return os.path.join(AIIDA_CONFIG_FOLDER, 'repository', ctx.params['profile'].name)
 
@@ -150,6 +158,7 @@ SETUP_PROFILE = OverridableOption(
     prompt='Profile name',
     help='The name of the new profile.',
     required=True,
+    is_eager=True,
     type=types.ProfileParamType(cannot_exist=True),
     cls=InteractiveOption)
 

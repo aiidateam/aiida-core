@@ -136,7 +136,6 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         :param nowait: if True don't wait for the process to finish, just return the pid, otherwise wait and
             return the results
         :param tag: the tag of the checkpoint to continue from
-        :raises plumpy.TaskRejected: if the node corresponding to the task cannot be loaded
         """
         from aiida.common import exceptions
         from aiida.engine.exceptions import PastException
@@ -145,9 +144,14 @@ class ProcessLauncher(plumpy.ProcessLauncher):
 
         try:
             node = load_node(pk=pid)
-        except (exceptions.MultipleObjectsError, exceptions.NotExistent) as exception:
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+            # In this case, the process node corresponding to the process id, cannot be resolved uniquely or does not
+            # exist. The latter being the most common case, where someone deleted the node, before the process was
+            # properly terminated. Since the node is never coming back and so the process will never be able to continue
+            # we raise `Return` instead of `TaskRejected` because the latter would cause the task to be resent and start
+            # to ping-pong between RabbitMQ and the daemon workers.
             LOGGER.exception('Cannot continue process<%d>', pid)
-            raise plumpy.TaskRejected('Cannot continue process: {}'.format(exception))
+            raise gen.Return(False)
 
         if node.is_terminated:
 

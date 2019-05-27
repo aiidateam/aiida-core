@@ -179,6 +179,9 @@ def clean_value(value):
         if isinstance(val, numbers.Real) and (math.isnan(val) or math.isinf(val)):
             # see https://www.postgresql.org/docs/current/static/datatype-json.html#JSON-TYPE-MAPPING-TABLE
             raise exceptions.ValidationError("nan and inf/-inf can not be serialized to the database")
+        # This fixes #2773 - in python3, ``numpy.int64(-1)`` cannot be json-serialized
+        if isinstance(val, numbers.Integral) and not isinstance(val, bool):
+            val = int(val)
 
         return val
 

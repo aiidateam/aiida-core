@@ -29,6 +29,7 @@ The software is available at http://www.aiida.net.
     install/quick_installation
     install/prerequisites
     install/installation
+    install/configuration
     install/updating_installation
     install/troubleshooting
 
@@ -39,10 +40,8 @@ The software is available at http://www.aiida.net.
     :hidden:
 
     get_started/index
-    get_started/daemon
     get_started/computers
     get_started/codes
-    get_started/plugins
 
 
 .. toctree::

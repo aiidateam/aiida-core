@@ -69,13 +69,11 @@ class Postgres(PGSU):
         :returns: Postgres instance pre-populated with data from AiiDA profile
         """
         dbinfo = DEFAULT_DBINFO.copy()
-
-        get = profile.dictionary.get
         dbinfo.update(
             dict(
-                host=get('AIIDADB_HOST', DEFAULT_DBINFO['host']),
-                port=get('AIIDADB_PORT', DEFAULT_DBINFO['port']),
-            ))
+                host=profile.database_hostname or DEFAULT_DBINFO['host'],
+                port=profile.database_port or DEFAULT_DBINFO['port']))
+
         return Postgres(dbinfo=dbinfo, **kwargs)
 
     def check_db_name(self, dbname):

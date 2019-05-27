@@ -127,10 +127,13 @@ email: 123@234.de""")
         user_last_name = 'Smith'
         user_institution = 'ECMA'
 
+        # Keep the `--profile` option last as a regression test for #2897. Some of the other options depend on this
+        # value and so it needs to be eagerly parsed.
         options = [
-            '--non-interactive', '--profile', profile_name, '--email', user_email, '--first-name', user_first_name,
-            '--last-name', user_last_name, '--institution', user_institution, '--db-name', db_name, '--db-username',
-            db_user, '--db-password', db_pass, '--db-port', self.pg_test.dsn['port'], '--db-backend', self.backend
+            '--non-interactive', '--email', user_email, '--first-name', user_first_name, '--last-name', user_last_name,
+            '--institution', user_institution, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
+            '--db-port', self.pg_test.dsn['port'], '--db-backend', self.backend, '--repository',
+            '/project/aiida_repository', '--profile', profile_name
         ]
 
         result = self.cli_runner.invoke(cmd_setup.setup, options)

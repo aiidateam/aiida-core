@@ -1,7 +1,7 @@
-Design change justifications
-============================
+Design evolution
+================
 
-This document records big changes in the design and architecture of AiiDA and especially details the justification for the change
+This document records the evolution of the design and architecture of AiiDA, including the underlying reasoning.
 
 Version 1.0.0
 +++++++++++++

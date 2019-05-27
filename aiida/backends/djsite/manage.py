@@ -34,8 +34,10 @@ if __name__ == "__main__":
             # I remove the argument I just read
             actual_argv = [actual_argv[0]] + actual_argv[2:]
 
-    # Load the general load_dbenv.
-    from aiida.backends.utils import load_dbenv
-    load_dbenv(profile=profile_name)
+    # Load the profile
+    from aiida.manage.configuration import load_profile
+    from aiida.manage.manager import get_manager
+    load_profile(profile_name)
+    get_manager().get_backend()
 
     execute_from_command_line(actual_argv)

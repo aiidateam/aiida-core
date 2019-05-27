@@ -173,9 +173,7 @@ def _(dbmodel, backend):
         label=dbmodel.label,
         description=dbmodel.description,
         dbcomputer_id=dbmodel.dbcomputer_id,
-        user_id=dbmodel.user_id,
-        public=dbmodel.public,
-        nodeversion=dbmodel.nodeversion)
+        user_id=dbmodel.user_id)
 
     from . import nodes
     return nodes.DjangoNode.from_dbmodel(djnode_instance, backend)

@@ -156,8 +156,7 @@ class DbNode(m.Model):
     ctime = m.DateTimeField(default=timezone.now, db_index=True, editable=False)
     mtime = m.DateTimeField(auto_now=True, db_index=True, editable=False)
     # Cannot delete a user if something is associated to it
-    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT,
-                        related_name='dbnodes')
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT, related_name='dbnodes')
 
     # Direct links
     outputs = m.ManyToManyField('self', symmetrical=False,
@@ -166,15 +165,7 @@ class DbNode(m.Model):
     # Used only if dbnode is a calculation, or remotedata
     # Avoid that computers can be deleted if at least a node exists pointing
     # to it.
-    dbcomputer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT,
-                              related_name='dbnodes')
-
-    # Index that is incremented every time a modification is done on itself or on attributes.
-    # Managed by the aiida.orm.Node class. Do not modify
-    nodeversion = m.IntegerField(default=1, editable=False)
-
-    # For the API: whether this node
-    public = m.BooleanField(default=False)
+    dbcomputer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT, related_name='dbnodes')
 
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances

@@ -28,14 +28,12 @@ class DbComputer(Base):
     name = Column(String(255), unique=True, nullable=False)
     hostname = Column(String(255))
     description = Column(Text, nullable=True)
-    transport_type = Column(String(255))
     scheduler_type = Column(String(255))
-    transport_params = Column(JSONB)
+    transport_type = Column(String(255))
     _metadata = Column('metadata', JSONB)
 
     def __init__(self, *args, **kwargs):
         self._metadata = {}
-        self.transport_params = {}
         # TODO SP: it's supposed to be nullable, but there is a NOT constraint inside the DB.
         self.description = ""
 

@@ -213,7 +213,6 @@ def get_all_fields_info():
     }
     all_fields_info[COMPUTER_ENTITY_NAME] = {
         "transport_type": {},
-        "transport_params": {},
         "hostname": {},
         "description": {},
         "scheduler_type": {},
@@ -1496,10 +1495,6 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                                 if (isinstance(v['metadata'], six.string_types) or
                                         isinstance(v['metadata'], six.binary_type)):
                                     v['metadata'] = json.loads(v['metadata'])  # loads() can handle str and unicode/bytes
-
-                                if (isinstance(v['transport_params'], six.string_types) or
-                                        isinstance(v['transport_params'], six.binary_type)):
-                                    v['transport_params'] = json.loads(v['transport_params'])
 
                                 # Check if there is already a computer with the
                                 # same name in the database

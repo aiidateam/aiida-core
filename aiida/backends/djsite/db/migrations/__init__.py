@@ -22,7 +22,7 @@ class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0035_simplify_user_model'
+LATEST_MIGRATION = '0036_drop_computer_transport_params'
 
 
 def _update_schema_version(version, apps, schema_editor):

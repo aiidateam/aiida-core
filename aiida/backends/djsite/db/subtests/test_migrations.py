@@ -740,13 +740,11 @@ class TestTextFieldToJSONFieldMigration(TestMigrations):
         self.node.save()
 
         self.computer_metadata = {'shebang': '#!/bin/bash', 'workdir': '/scratch/', 'append_text': '', 'prepend_text': '', 'mpirun_command': ['mpirun', '-np', '{tot_num_mpiprocs}'], 'default_mpiprocs_per_machine': 1}
-        self.computer_transport_params = {'append_text': 'sometext\ntest', 'max_machines': 1}
         self.computer_kwargs = {
             'name': 'localhost_testing',
             'hostname': 'localhost',
             'transport_type': 'local',
             'scheduler_type': 'direct',
-            'transport_params': json.dumps(self.computer_transport_params),
             'metadata': json.dumps(self.computer_metadata),
         }
         self.computer = self.DbComputer(**self.computer_kwargs)
@@ -790,7 +788,6 @@ class TestTextFieldToJSONFieldMigration(TestMigrations):
 
         # Make sure that the migrated data matches the original
         self.assertDictEqual(computer.metadata, self.computer_metadata)
-        self.assertDictEqual(computer.transport_params, self.computer_transport_params)
         self.assertDictEqual(auth_info.metadata, self.auth_info_metadata)
         self.assertDictEqual(auth_info.auth_params, self.auth_info_auth_params)
         self.assertDictEqual(log.metadata, self.log_metadata)

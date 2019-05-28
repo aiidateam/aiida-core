@@ -19,8 +19,6 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
-PASSWORD_UNCHANGED = '***'  # noqa
-
 
 def set_default_user(profile, user):
     """Set the user as the default user for the given profile.
@@ -103,16 +101,6 @@ def user_list():
     contextual_default=partial(get_user_attribute_default, 'institution'),
     cls=options.interactive.InteractiveOption)
 @click.option(
-    '--password',
-    prompt='Password',
-    help='Optional password to connect to REST API.',
-    hide_input=True,
-    required=False,
-    type=click.STRING,
-    default=PASSWORD_UNCHANGED,
-    confirmation_prompt=True,
-    cls=options.interactive.InteractiveOption)
-@click.option(
     '--set-default',
     prompt='Set as default?',
     help='Set the user as the default user for the current profile.',
@@ -120,7 +108,7 @@ def user_list():
     cls=options.interactive.InteractiveOption)
 @click.pass_context
 @decorators.with_dbenv()
-def user_configure(ctx, user, first_name, last_name, institution, password, set_default):
+def user_configure(ctx, user, first_name, last_name, institution, set_default):
     """Configure a new or existing user.
 
     An e-mail address is used as the user name.
@@ -132,17 +120,12 @@ def user_configure(ctx, user, first_name, last_name, institution, password, set_
         user.last_name = last_name
     if institution is not None:
         user.institution = institution
-    if password != PASSWORD_UNCHANGED:
-        user.password = password
 
     action = 'updated' if user.is_stored else 'created'
 
     user.store()
 
     echo.echo_success('{} successfully {}'.format(user.email, action))
-
-    if not user.has_usable_password():
-        echo.echo_warning('no password set, so authentication for the REST API will be disabled')
 
     if set_default:
         ctx.invoke(user_set_default, user=user)

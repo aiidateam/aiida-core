@@ -107,14 +107,9 @@ def _(dbmodel, backend):
     djuser_instance = models.DbUser(
         id=dbmodel.id,
         email=dbmodel.email,
-        password=dbmodel.password,
         first_name=dbmodel.first_name,
         last_name=dbmodel.last_name,
-        institution=dbmodel.institution,
-        is_staff=dbmodel.is_staff,
-        is_active=dbmodel.is_active,
-        last_login=dbmodel.last_login,
-        date_joined=dbmodel.date_joined)
+        institution=dbmodel.institution)
     return users.DjangoUser.from_dbmodel(djuser_instance, backend)
 
 

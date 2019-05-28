@@ -636,7 +636,6 @@ Below is a list with all available subcommands.
       --first-name TEXT               First name of the user.  [required]
       --last-name TEXT                Last name of the user.  [required]
       --institution TEXT              Institution of the user.  [required]
-      --password TEXT                 Optional password to connect to REST API.
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
       --db-backend [django|sqlalchemy]
@@ -749,7 +748,6 @@ Below is a list with all available subcommands.
       --first-name TEXT               First name of the user.  [required]
       --last-name TEXT                Last name of the user.  [required]
       --institution TEXT              Institution of the user.  [required]
-      --password TEXT                 Optional password to connect to REST API.
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
       --db-backend [django|sqlalchemy]

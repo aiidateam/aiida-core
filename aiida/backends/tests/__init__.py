@@ -15,14 +15,13 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from six.moves import range
-from aiida.plugins.entry_point import ENTRYPOINT_MANAGER
 from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
 
 DB_TEST_LIST = {
     BACKEND_DJANGO: {
         'generic': ['aiida.backends.djsite.db.subtests.test_generic'],
         'nodes': ['aiida.backends.djsite.db.subtests.test_nodes'],
-        'migrations': ['aiida.backends.djsite.db.subtests.test_migrations'],
+        # 'migrations': ['aiida.backends.djsite.db.subtests.test_migrations'],
         'query': ['aiida.backends.djsite.db.subtests.test_query'],
     },
     BACKEND_SQLA: {

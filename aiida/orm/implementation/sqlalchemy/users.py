@@ -22,14 +22,14 @@ __all__ = ('SqlaUserCollection', 'SqlaUser')
 class SqlaUserCollection(BackendUserCollection):
     """Collection of SQLA Users"""
 
-    def create(self, email, first_name='', last_name='', institution='', password=''):
+    def create(self, email, first_name='', last_name='', institution=''):
         """
         Create a user with the provided email address
 
         :return: A new user object
         :rtype: :class:`aiida.orm.User`
         """
-        return SqlaUser(self.backend, email, first_name, last_name, institution, password)
+        return SqlaUser(self.backend, email, first_name, last_name, institution)
 
     def find(self, email=None, id=None):  # pylint: disable=redefined-builtin, invalid-name
         """
@@ -67,11 +67,11 @@ class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
 
     MODEL_CLASS = DbUser
 
-    def __init__(self, backend, email, first_name, last_name, institution, password):
+    def __init__(self, backend, email, first_name, last_name, institution):
         # pylint: disable=too-many-arguments
         super(SqlaUser, self).__init__(backend)
         self._dbmodel = utils.ModelWrapper(
-            DbUser(email=email, first_name=first_name, last_name=last_name, institution=institution, password=password))
+            DbUser(email=email, first_name=first_name, last_name=last_name, institution=institution))
 
     @property
     def email(self):
@@ -80,12 +80,6 @@ class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
     @email.setter
     def email(self, email):
         self._dbmodel.email = email
-
-    def set_password(self, new_pass):
-        self._dbmodel.password = new_pass
-
-    def get_password(self):
-        return self._dbmodel.password
 
     @property
     def first_name(self):
@@ -110,27 +104,3 @@ class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
     @institution.setter
     def institution(self, institution):
         self._dbmodel.institution = institution
-
-    @property
-    def is_active(self):
-        return self._dbmodel.is_active
-
-    @is_active.setter
-    def is_active(self, active):
-        self._dbmodel.is_active = active
-
-    @property
-    def last_login(self):
-        return self._dbmodel.last_login
-
-    @last_login.setter
-    def last_login(self, last_login):
-        self._dbmodel.last_login = last_login
-
-    @property
-    def date_joined(self):
-        return self._dbmodel.date_joined
-
-    @date_joined.setter
-    def date_joined(self, date_joined):
-        self._dbmodel.date_joined = date_joined

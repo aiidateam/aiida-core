@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
 from aiida.manage.manager import get_manager
 
@@ -73,16 +72,12 @@ class User(entities.Entity):
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 
-    def __init__(self, email, first_name='', last_name='', institution='', password=None, backend=None):
+    def __init__(self, email, first_name='', last_name='', institution='', backend=None):
         """Create a new `User`."""
         # pylint: disable=too-many-arguments
-        from aiida.common.hashing import create_unusable_pass
-        if password is None:
-            password = create_unusable_pass()
-
         backend = backend or get_manager().get_backend()
         email = self.normalize_email(email)
-        backend_entity = backend.users.create(email, first_name, last_name, institution, password)
+        backend_entity = backend.users.create(email, first_name, last_name, institution)
         super(User, self).__init__(backend_entity)
 
     def __str__(self):
@@ -109,25 +104,6 @@ class User(entities.Entity):
         self._backend_entity.email = email
 
     @property
-    def password(self):
-        return self._backend_entity.get_password()
-
-    @password.setter
-    def password(self, val):
-        from aiida.common.hashing import create_unusable_pass, pwd_context
-
-        if val is None:
-            pass_hash = create_unusable_pass()
-        else:
-            pass_hash = pwd_context.encrypt(val)
-
-        self._backend_entity.set_password(pass_hash)
-
-    def verify_password(self, password):
-        from aiida.common.hashing import pwd_context
-        return pwd_context.verify(password, self.password)
-
-    @property
     def first_name(self):
         return self._backend_entity.first_name
 
@@ -150,33 +126,6 @@ class User(entities.Entity):
     @institution.setter
     def institution(self, institution):
         self._backend_entity.institution = institution
-
-    @property
-    def is_active(self):
-        return self._backend_entity.is_active
-
-    @is_active.setter
-    def is_active(self, active):
-        self._backend_entity.is_active = active
-
-    @property
-    def last_login(self):
-        return self._backend_entity.last_login
-
-    @last_login.setter
-    def last_login(self, last_login):
-        self._backend_entity.last_login = last_login
-
-    @property
-    def date_joined(self):
-        return self._backend_entity.date_joined
-
-    @date_joined.setter
-    def date_joined(self, date_joined):
-        self._backend_entity.date_joined = date_joined
-
-    def has_usable_password(self):
-        return is_password_usable(self.password)
 
     def get_full_name(self):
         """

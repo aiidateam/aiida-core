@@ -16,14 +16,14 @@ then
 
     # Setup the main profile
     verdi setup --profile $TEST_AIIDA_BACKEND \
-        --email="aiida@localhost" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --password 'secret' \
+        --email="aiida@localhost" --first-name=AiiDA --last-name=test --institution="AiiDA Team" \
         --db-engine 'postgresql_psycopg2' --db-backend=$TEST_AIIDA_BACKEND --db-host="localhost" --db-port=5432 \
         --db-name="$TEST_AIIDA_BACKEND" --db-username=postgres --db-password='' \
         --repository="/tmp/repository_${TEST_AIIDA_BACKEND}/" --non-interactive
 
     # Setup the test profile
     verdi setup --profile test_$TEST_AIIDA_BACKEND \
-        --email="aiida@localhost" --first-name=AiiDA --last-name=test --institution="AiiDA Team" --password 'secret' \
+        --email="aiida@localhost" --first-name=AiiDA --last-name=test --institution="AiiDA Team" \
         --db-engine 'postgresql_psycopg2' --db-backend=$TEST_AIIDA_BACKEND --db-host="localhost" --db-port=5432 \
         --db-name="test_$TEST_AIIDA_BACKEND" --db-username=postgres --db-password='' \
          --repository="/tmp/test_repository_test_${TEST_AIIDA_BACKEND}/" --non-interactive

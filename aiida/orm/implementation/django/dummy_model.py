@@ -102,16 +102,9 @@ class DbUser(Base):
 
     id = Column(Integer, primary_key=True)
     email = Column(String(254), unique=True, index=True)
-    password = Column(String(128))  # Clear text password ?
     first_name = Column(String(254), nullable=True)
     last_name = Column(String(254), nullable=True)
     institution = Column(String(254), nullable=True)
-
-    is_staff = Column(Boolean, default=False)
-    is_active = Column(Boolean, default=False)
-
-    last_login = Column(DateTime(timezone=True), default=timezone.now)
-    date_joined = Column(DateTime(timezone=True), default=timezone.now)
 
 
 table_groups_nodes = Table(

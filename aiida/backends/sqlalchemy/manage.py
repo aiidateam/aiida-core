@@ -48,21 +48,21 @@ def alembic_cli(profile):
     manager._load_backend(schema_check=False)  # pylint: disable=protected-access
 
 
-@alembic_cli.command()
+@alembic_cli.command('revision')
 @click.argument('message')
 def alembic_revision(message):
     """Create a new database revision."""
     execute_alembic_command('revision', message=message, autogenerate=True)
 
 
-@alembic_cli.command()
+@alembic_cli.command('current')
 @options.VERBOSE()
 def alembic_current(verbose):
     """Show the current revision."""
     execute_alembic_command('current', verbose=verbose)
 
 
-@alembic_cli.command()
+@alembic_cli.command('history')
 @click.option('-r', '--rev-range')
 @options.VERBOSE()
 def alembic_history(rev_range, verbose):
@@ -70,14 +70,14 @@ def alembic_history(rev_range, verbose):
     execute_alembic_command('history', rev_range=rev_range, verbose=verbose)
 
 
-@alembic_cli.command()
+@alembic_cli.command('upgrade')
 @click.argument('revision', type=click.STRING)
 def alembic_upgrade(revision):
     """Upgrade the database to the given REVISION."""
     execute_alembic_command('upgrade', revision=revision)
 
 
-@alembic_cli.command()
+@alembic_cli.command('downgrade')
 @click.argument('revision', type=click.STRING)
 def alembic_downgrade(revision):
     """Downgrade the database to the given REVISION."""

@@ -617,7 +617,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.backends.djsite.db.models import suppress_auto_now
 
     # This is the export version expected by this function
-    expected_export_version = StrictVersion('0.4')
+    expected_export_version = StrictVersion('0.5')
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1258,7 +1258,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.common import json
 
     # This is the export version expected by this function
-    expected_export_version = StrictVersion('0.4')
+    expected_export_version = StrictVersion('0.5')
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -2203,7 +2203,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     if not silent:
         print("STARTING EXPORT...")
 
-    EXPORT_VERSION = '0.4'
+    EXPORT_VERSION = '0.5'
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 

@@ -160,10 +160,6 @@ class DbNode(Base):
     user_id = Column(Integer, ForeignKey('db_dbuser.id', deferrable=True, initially="DEFERRED"), nullable=False)
     user = relationship('DbUser', backref='dbnodes')
 
-    public = Column(Boolean, default=False)
-
-    nodeversion = Column(Integer, default=1)
-
     attributes = relationship('DbAttribute', uselist=True, backref='dbnode')
     extras = relationship('DbExtra', uselist=True, backref='dbnode')
 

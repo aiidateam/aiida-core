@@ -238,13 +238,11 @@ def get_all_fields_info():
             "convert_type": "date"
         },
         "uuid": {},
-        "public": {},
         "mtime": {
             "convert_type": "date"
         },
         "node_type": {},
         "label": {},
-        "nodeversion": {},
         "user": {
             "requires": USER_ENTITY_NAME,
             "related_name": "dbnodes"

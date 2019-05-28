@@ -176,7 +176,6 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param value: value of the attribute
         """
         self.ATTRIBUTE_CLASS.set_value_for_node(self.dbmodel, key, value)
-        self._increment_version_number()
 
     def set_attributes(self, attributes):
         """Set attributes.
@@ -187,7 +186,6 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         """
         for key, value in attributes.items():
             self.ATTRIBUTE_CLASS.set_value_for_node(self.dbmodel, key, value)
-        self._increment_version_number()
 
     def reset_attributes(self, attributes):
         """Reset the attributes.
@@ -197,7 +195,6 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param attributes: the new attributes to set
         """
         self.ATTRIBUTE_CLASS.reset_values_for_node(self.dbmodel, attributes)
-        self._increment_version_number()
 
     def delete_attribute(self, key):
         """Delete an attribute.
@@ -262,16 +259,13 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         """
         raise NotImplementedError
 
-    def set_extra(self, key, value, increase_version=True):
+    def set_extra(self, key, value):
         """Set an extra to the given value.
 
         :param key: name of the extra
         :param value: value of the extra
-        :param increase_version: boolean, if True will increase the node version upon successfully setting the extra
         """
         self.EXTRA_CLASS.set_value_for_node(self.dbmodel, key, value)
-        if increase_version:
-            self._increment_version_number()
 
     def set_extras(self, extras):
         """Set extras.
@@ -282,7 +276,6 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         """
         for key, value in extras.items():
             self.EXTRA_CLASS.set_value_for_node(self.dbmodel, key, value)
-        self._increment_version_number()
 
     def reset_extras(self, extras):
         """Reset the extras.
@@ -397,11 +390,6 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
                         self._add_link(*link_triple)
 
         return self
-
-    def _increment_version_number(self):
-        """Increment the node version number of this node by one directly in the database."""
-        self._dbmodel.nodeversion = self.version + 1
-        self._dbmodel.save()
 
 
 class DjangoNodeCollection(BackendNodeCollection):

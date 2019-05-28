@@ -126,6 +126,14 @@ class TestBackendNode(AiidaTestCase):
         self.assertEqual(node.ctime, ctime)
         self.assertEqual(node.mtime, mtime)
 
+    def test_mtime(self):
+        """Test the `mtime` is automatically updated when a database field is updated."""
+        node = self.node.store()
+        node_mtime = node.mtime
+
+        node.label = 'changed label'
+        self.assertTrue(node.mtime > node_mtime)
+
     def test_clone(self):
         """Test the `clone` method."""
         node = self.node.store()

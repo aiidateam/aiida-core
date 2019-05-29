@@ -21,7 +21,7 @@ from sqlalchemy.orm.session import make_transient
 
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.common import exceptions, json
+from aiida.common import exceptions
 from aiida.orm.implementation.computers import BackendComputerCollection, BackendComputer
 
 from . import utils
@@ -96,19 +96,6 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     def set_metadata(self, metadata):
         self._dbmodel._metadata = metadata  # pylint: disable=protected-access
-
-    def get_transport_params(self):
-        """
-        Return transport params stored in dbcomputer instance
-        """
-        return self._dbmodel.transport_params
-
-    def set_transport_params(self, val):
-        try:
-            json.dumps(val)  # Check if json compatible
-            self._dbmodel.transport_params = val
-        except ValueError:
-            raise ValueError("The set of transport_params are not JSON-able")
 
     def get_name(self):
         return self._dbmodel.name

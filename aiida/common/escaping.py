@@ -38,6 +38,9 @@ def escape_for_bash(str_to_escape):
     within triple quotes to make it work, getting finally: the complicated
     string found below.
     """
+    if str_to_escape is None:
+        return ''
+
     escaped_quotes = str_to_escape.replace("'", """'"'"'""")
     return "'{}'".format(escaped_quotes)
 

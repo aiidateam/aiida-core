@@ -64,7 +64,6 @@ class ArithmeticAddCalculation(CalcJob):
         codeinfo.code_uuid = input_code.uuid
 
         calcinfo = CalcInfo()
-        calcinfo.uuid = str(self.node.uuid)
         calcinfo.codes_info = [codeinfo]
         calcinfo.retrieve_list = retrieve_list
         calcinfo.local_copy_list = local_copy_list

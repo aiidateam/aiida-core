@@ -92,6 +92,36 @@ Installation phase
 
   But under Ubuntu 12.04 this is not needed.
 
+verdi not in PATH
+-----------------
+
+Installing the ``aiida-core`` python package *should* add the ``verdi`` CLI to your ``PATH`` automatically.
+
+If the ``verdi`` executable is not available in your terminal, the folder where ``pip`` places binaries may not be added to your ``PATH``
+
+For Linux systems, this folder is usually something like ``~/.local/bin``::
+
+    export PATH=~/.local/bin:${PATH}
+
+For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
+
+    export PATH=~/Library/Python/2.7/bin:${PATH}
+
+After updating your ``PATH``, the ``verdi`` command should be available.
+
+.. note::
+    A preprequisite for ``verdi`` to work is that the ``aiida`` python package is importable.
+    Test this by opening a ``python`` or ``ipython`` shell and typing::
+
+        import aiida
+
+   If you get an ``ImportError`` (and you are in the environment where AiiDA was installed), 
+   you can add it to the ``PYTHONPATH`` manually::
+
+       export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
+
+
+
 Configuring remote SSH computers
 --------------------------------
 

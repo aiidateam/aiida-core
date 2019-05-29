@@ -211,10 +211,6 @@ class TestSessionSqla(AiidaTestCase):
         for str_attr in ['label', 'description']:
             do_value_checks(str_attr, 'original', 'changed')
 
-        # Since we already changed an attribute twice, the starting nodeversion is 3 and not 1
-        do_value_checks('nodeversion', 3, 4)
-        do_value_checks('public', True, False)
-
         for str_attr in ['ctime', 'mtime']:
             do_value_checks(str_attr, timezone.now(), timezone.now())
 

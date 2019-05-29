@@ -52,8 +52,6 @@ class TestBackendNode(AiidaTestCase):
         self.assertTrue(isinstance(node.ctime, datetime))
         self.assertIsNone(node.mtime)
         self.assertIsNone(node.process_type)
-        self.assertEqual(node.public, False)
-        self.assertEqual(node.version, 1)
         self.assertEqual(node.attributes, dict())
         self.assertEqual(node.extras, dict())
         self.assertEqual(node.node_type, self.node_type)
@@ -81,8 +79,6 @@ class TestBackendNode(AiidaTestCase):
         self.assertTrue(isinstance(node.ctime, datetime))
         self.assertTrue(isinstance(node.mtime, datetime))
         self.assertIsNone(node.process_type)
-        self.assertEqual(node.public, False)
-        self.assertEqual(node.version, 1)
         self.assertEqual(node.attributes, dict())
         self.assertEqual(node.extras, dict())
         self.assertEqual(node.node_type, self.node_type)
@@ -92,11 +88,10 @@ class TestBackendNode(AiidaTestCase):
         # Try to construct a UUID from the UUID value to prove that it has a valid UUID
         UUID(node.uuid)
 
-        # Change a column, which should trigger the save, update the mtime and version, but leave the ctime untouched
+        # Change a column, which should trigger the save, update the mtime but leave the ctime untouched
         node.label = 'test'
         self.assertEqual(node.ctime, node_ctime)
         self.assertTrue(node.mtime > node_mtime)
-        self.assertEqual(node.version, 2)
 
     def test_creation_with_time(self):
         """
@@ -125,6 +120,14 @@ class TestBackendNode(AiidaTestCase):
         # Check that the given values remain even after storing
         self.assertEqual(node.ctime, ctime)
         self.assertEqual(node.mtime, mtime)
+
+    def test_mtime(self):
+        """Test the `mtime` is automatically updated when a database field is updated."""
+        node = self.node.store()
+        node_mtime = node.mtime
+
+        node.label = 'changed label'
+        self.assertTrue(node.mtime > node_mtime)
 
     def test_clone(self):
         """Test the `clone` method."""

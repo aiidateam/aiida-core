@@ -177,7 +177,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """
         try:
             self.dbmodel.set_attr(key, value)
-            self._increment_version_number()
         except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
@@ -192,7 +191,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """
         try:
             self.dbmodel.set_attributes(attributes)
-            self._increment_version_number()
         except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
@@ -207,7 +205,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """
         try:
             self.dbmodel.reset_attributes(attributes)
-            self._increment_version_number()
         except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
@@ -221,7 +218,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """
         try:
             self._dbmodel.del_attr(key)
-            self._increment_version_number()
         except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
@@ -279,17 +275,14 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """
         raise NotImplementedError
 
-    def set_extra(self, key, value, increase_version=True):
+    def set_extra(self, key, value):
         """Set an extra to the given value.
 
         :param key: name of the extra
         :param value: value of the extra
-        :param increase_version: boolean, if True will increase the node version upon successfully setting the extra
         """
         try:
             self._dbmodel.set_extra(key, value)
-            if increase_version:
-                self._increment_version_number()
         except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
@@ -304,7 +297,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """
         try:
             self.dbmodel.set_extras(extras)
-            self._increment_version_number()
         except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
@@ -319,7 +311,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """
         try:
             self._dbmodel.reset_extras(extras)
-            self._increment_version_number()
         except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
@@ -333,7 +324,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """
         try:
             self._dbmodel.del_extra(key)
-            self._increment_version_number()
         except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
@@ -435,16 +425,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
                 raise
 
         return self
-
-    def _increment_version_number(self):
-        """Increment the node version number of this node by one directly in the database."""
-        self._dbmodel.nodeversion = self.version + 1
-        try:
-            self._dbmodel.save()
-        except Exception:  # pylint: disable=bare-except
-            session = get_scoped_session()
-            session.rollback()
-            raise
 
 
 class SqlaNodeCollection(BackendNodeCollection):

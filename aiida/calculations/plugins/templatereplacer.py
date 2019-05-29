@@ -167,7 +167,6 @@ class TemplatereplacerCalculation(CalcJob):
         calcinfo.retrieve_list = []
         calcinfo.retrieve_temporary_list = []
 
-        calcinfo.uuid = self.node.uuid
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
 

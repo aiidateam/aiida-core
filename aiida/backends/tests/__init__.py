@@ -15,7 +15,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from six.moves import range
-from aiida.plugins.entry_point import ENTRYPOINT_MANAGER
 from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
 
 DB_TEST_LIST = {

@@ -246,7 +246,7 @@ class Computer(entities.Entity):
         try:
             mpirun_cmd = self.get_mpirun_command()
         except exceptions.DbContentError:
-            raise exceptions.ValidationError("Error in the DB content of the transport_params")
+            raise exceptions.ValidationError("Error in the DB content of the metadata")
 
         # To be called AFTER the validation of the scheduler
         self._mpirun_command_validator(mpirun_cmd)
@@ -441,12 +441,6 @@ class Computer(entities.Entity):
         :type interval: float
         """
         self.set_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, interval)
-
-    def get_transport_params(self):
-        return self._backend_entity.get_transport_params()
-
-    def set_transport_params(self, val):
-        self._backend_entity.set_transport_params(val)
 
     def get_transport(self, user=None):
         """
@@ -760,12 +754,6 @@ class Computer(entities.Entity):
                         "doc": "Subclass to support the Torque scheduler."
                     }
                 }
-            },
-            "transport_params": {
-                "display_name": "",
-                "help_text": "Transport Parameters",
-                "is_foreign_key": False,
-                "type": "str"
             },
             "transport_type": {
                 "display_name": "Transport type",

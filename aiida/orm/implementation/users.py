@@ -55,22 +55,6 @@ class BackendUser(backends.BackendEntity):
         :param val: the new email address
         """
 
-    @abc.abstractmethod
-    def get_password(self):
-        """
-        Get the password for the user
-
-        :return: the password
-        """
-
-    @abc.abstractmethod
-    def set_password(self, new_pass):
-        """
-        Set the password of the user
-
-        :param new_pass: the new password
-        """
-
     @abc.abstractproperty
     def first_name(self):
         """
@@ -125,33 +109,6 @@ class BackendUser(backends.BackendEntity):
 
         :param val: the new institution
         """
-
-    @abc.abstractproperty
-    def is_active(self):
-        pass
-
-    @abc.abstractmethod
-    @is_active.setter
-    def is_active(self, val):
-        pass
-
-    @abc.abstractproperty
-    def last_login(self):
-        pass
-
-    @abc.abstractmethod
-    @last_login.setter
-    def last_login(self, val):
-        pass
-
-    @abc.abstractproperty
-    def date_joined(self):
-        pass
-
-    @abc.abstractmethod
-    @date_joined.setter
-    def date_joined(self, val):
-        pass
 
 
 class BackendUserCollection(backends.BackendCollection[BackendUser]):

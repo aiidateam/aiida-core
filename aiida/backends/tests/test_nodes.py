@@ -949,44 +949,6 @@ class TestNodeBasic(AiidaTestCase):
 
         self.assertEquals(a.extras, all_extras)
 
-    def test_versioning(self):
-        """
-        Test the versioning of the node when setting attributes and extras
-        """
-        a = orm.Data()
-        attrs_to_set = {
-            'bool': self.boolval,
-            'integer': self.intval,
-            'float': self.floatval,
-            'string': self.stringval,
-            'dict': self.dictval,
-            'list': self.listval,
-        }
-
-        for key, value in attrs_to_set.items():
-            a.set_attribute(key, value)
-            self.assertEquals(a.get_attribute(key), value)
-
-        a.store()
-
-        # Check after storing
-        for key, value in attrs_to_set.items():
-            self.assertEquals(a.get_attribute(key), value)
-
-        # Even if I stored many attributes, this should stay at 1
-        self.assertEquals(a.version, 1)
-
-        # I check increment on new version
-        a.set_extra('a', 'b')
-        self.assertEquals(a.version, 2)
-
-        # In both cases, the node version must increase
-        a.label = 'test'
-        self.assertEquals(a.version, 3)
-
-        a.description = 'test description'
-        self.assertEquals(a.version, 4)
-
     def test_delete_extras(self):
         """
         Checks the ability of deleting extras, also when they are dictionaries
@@ -1144,25 +1106,6 @@ class TestNodeBasic(AiidaTestCase):
         n.set_extra('a', {'b': [orm.Str("sometext3")]})
         self.assertEqual(n.get_extra('a')['b'][0], "sometext3")
         self.assertIsInstance(n.get_extra('a')['b'][0], six.string_types)
-
-    def test_versioning_lowlevel(self):
-        """
-        Checks the versioning.
-        """
-        a = orm.Data()
-        a.store()
-
-        # Even if I stored many attributes, this should stay at 1
-        self.assertEquals(a.version, 1)
-
-        a.label = "label1"
-        a.label = "label2"
-        self.assertEquals(a.version, 3)
-
-        a.description = "desc1"
-        a.description = "desc2"
-        a.description = "desc3"
-        self.assertEquals(a.version, 6)
 
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead

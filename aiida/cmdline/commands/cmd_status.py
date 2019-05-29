@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import sys
+
 from enum import IntEnum
 import click
 
@@ -21,8 +22,7 @@ from ..utils.echo import ExitCode
 
 
 class ServiceStatus(IntEnum):
-    """Describe status of services for 'verdi status' command.
-    """
+    """Describe status of services for 'verdi status' command."""
     UP = 0  # pylint: disable=invalid-name
     ERROR = 1
     DOWN = 2
@@ -48,14 +48,14 @@ STATUS_SYMBOLS = {
 def verdi_status():
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements
-    from aiida.manage.external.rmq import get_rmq_url
-    from aiida.manage.external.postgres import Postgres
     from aiida.cmdline.utils.daemon import get_daemon_status
     from aiida.common.utils import Capturing, get_repository_folder
+    from aiida.manage.external.rmq import get_rmq_url
     from aiida.manage.manager import get_manager
 
     exit_code = ExitCode.SUCCESS
     manager = get_manager()
+    profile = manager.get_profile()
 
     # getting the profile
     try:
@@ -64,8 +64,7 @@ def verdi_status():
 
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'profile', "Unable to read AiiDA profile")
-        exit_code = ExitCode.CRITICAL
-        sys.exit(exit_code)  # stop here - without a profile we cannot access anything
+        sys.exit(ExitCode.CRITICAL)  # stop here - without a profile we cannot access anything
 
     # getting the repository
     repo_folder = 'undefined'
@@ -74,50 +73,37 @@ def verdi_status():
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'repository', "Error with repo folder", exception=exc)
         exit_code = ExitCode.CRITICAL
+    else:
+        print_status(ServiceStatus.UP, 'repository', repo_folder)
 
-    print_status(ServiceStatus.UP, 'repository', repo_folder)
-
-    # getting the postgres status
+    # Getting the postgres status by trying to get a database cursor
+    database_data = [profile.database_username, profile.database_hostname, profile.database_port]
     try:
-        with Capturing(capture_stderr=True):
-
-            postgres = Postgres.from_profile(profile)
-
-        dbinfo = postgres.dbinfo.copy()
-        if postgres.is_connected:
-            print_status(ServiceStatus.UP, 'postgres', "Connected to {}@{}:{}".format(
-                dbinfo['user'], dbinfo['host'], dbinfo['port']))
-        else:
-            print_status(ServiceStatus.DOWN, 'postgres', "Unable to connect to {}:{}".format(
-                dbinfo['host'], dbinfo['port']))
-            exit_code = ExitCode.CRITICAL
-
-    except Exception as exc:
-        print_status(
-            ServiceStatus.ERROR,
-            'postgres',
-            "Error connecting to {}:{}".format(profile.database_hostname, profile.database_port),
-            exception=exc)
+        backend = manager.get_backend()
+        backend.cursor()
+    except Exception:
+        print_status(ServiceStatus.DOWN, 'postgres', "Unable to connect as {}@{}:{}".format(*database_data))
         exit_code = ExitCode.CRITICAL
+    else:
+        print_status(ServiceStatus.UP, 'postgres', "Connected as {}@{}:{}".format(*database_data))
 
     # getting the rmq status
     try:
         with Capturing(capture_stderr=True):
             comm = manager.create_communicator(with_orm=False)
             comm.stop()
-
-        print_status(ServiceStatus.UP, 'rabbitmq', "Connected to {}".format(get_rmq_url()))
-
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'rabbitmq', "Unable to connect to rabbitmq", exception=exc)
         exit_code = ExitCode.CRITICAL
+    else:
+        print_status(ServiceStatus.UP, 'rabbitmq', "Connected to {}".format(get_rmq_url()))
 
     # getting the daemon status
     try:
         client = manager.get_daemon_client()
         daemon_status = get_daemon_status(client)
 
-        daemon_status = daemon_status.split("\n")[0]  # take only the first line
+        daemon_status = daemon_status.split('\n')[0]  # take only the first line
         if client.is_daemon_running:
             print_status(ServiceStatus.UP, 'daemon', daemon_status)
         else:
@@ -128,12 +114,11 @@ def verdi_status():
         print_status(ServiceStatus.ERROR, 'daemon', "Error getting daemon status", exception=exc)
         exit_code = ExitCode.CRITICAL
 
-    # Note: click does not forward return values to the exit code, see
-    # https://github.com/pallets/click/issues/747
+    # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747
     sys.exit(exit_code)
 
 
-def print_status(status, service, msg="", exception=None):
+def print_status(status, service, msg='', exception=None):
     """Print status message.
 
     Includes colored indicator.
@@ -141,7 +126,6 @@ def print_status(status, service, msg="", exception=None):
     :param status: a ServiceStatus code
     :param service: string for service name
     :param msg:  message string
-
     """
     symbol = STATUS_SYMBOLS[status]
     click.secho(u' {} '.format(symbol['string']), fg=symbol['color'], nl=False)

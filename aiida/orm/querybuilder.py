@@ -1043,7 +1043,7 @@ class QueryBuilder(object):
 
 
     def add_projection(self, tag_spec, projection_spec):
-        """
+        r"""
         Adds a projection
 
         :param tag_spec: A valid specification for a tag
@@ -1080,13 +1080,13 @@ class QueryBuilder(object):
             print type(qb.first()[0])
             # >>> aiida.orm.nodes.data.structure.StructureData
 
-        The double start *\*\** projects all possible projections of this entity:
+        The double star ``**`` projects all possible projections of this entity:
 
             QueryBuilder().append(StructureData,tag='s', project='**').limit(1).dict()[0]['s'].keys()
 
-            # >>> u'user_id, description, ctime, label, extras, mtime, id, attributes, dbcomputer_id, nodeversion, type, public, uuid'
+            # >>> u'user_id, description, ctime, label, extras, mtime, id, attributes, dbcomputer_id, type, uuid'
 
-        Be aware that the result of *\*\** depends on the backend implementation.
+        Be aware that the result of ``**`` depends on the backend implementation.
 
         """
         tag = self._get_tag_from_specification(tag_spec)

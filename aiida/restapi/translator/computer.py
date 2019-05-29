@@ -40,8 +40,7 @@ class ComputerTranslator(BaseTranslator):
     # All the values from column_order must present in additional info dict
     # Note: final schema will contain details for only the fields present in column order
     _schema_projections = {
-        "column_order":
-        ["id", "name", "hostname", "description", "scheduler_type", "transport_type", "transport_params", "uuid"],
+        "column_order": ["id", "name", "hostname", "description", "scheduler_type", "transport_type", "uuid"],
         "additional_info": {
             "id": {
                 "is_display": True
@@ -59,9 +58,6 @@ class ComputerTranslator(BaseTranslator):
                 "is_display": True
             },
             "transport_type": {
-                "is_display": False
-            },
-            "transport_params": {
                 "is_display": False
             },
             "uuid": {

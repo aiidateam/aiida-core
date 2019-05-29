@@ -90,10 +90,9 @@ class DbComputer(Base):
 
     description = Column(Text, nullable=True)
 
-    transport_type = Column(String(255))
     scheduler_type = Column(String(255))
+    transport_type = Column(String(255))
 
-    transport_params = Column(String(255))
     _metadata = Column('metadata', String(255), default="{}")
 
 

@@ -134,7 +134,6 @@ class AuthInfo(entities.Entity):
         """
         computer = self.computer
         transport_type = computer.get_transport_type()
-        transport_params = computer.get_transport_params()
 
         try:
             transport_class = TransportFactory(transport_type)
@@ -142,6 +141,4 @@ class AuthInfo(entities.Entity):
             raise exceptions.ConfigurationError('transport type `{}` could not be loaded: {}'.format(
                 transport_type, exception))
 
-        parameters = dict(list(transport_params.items()) + list(self.get_auth_params().items()))
-
-        return transport_class(machine=computer.hostname, **parameters)
+        return transport_class(machine=computer.hostname, **self.get_auth_params())

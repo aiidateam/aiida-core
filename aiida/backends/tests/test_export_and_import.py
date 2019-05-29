@@ -1230,28 +1230,21 @@ class TestComputer(AiidaTestCase):
     @with_temp_dir
     def test_correct_import_of_computer_json_params(self, temp_dir):
         """
-        This test checks that the metadata and transport params are
-        exported and imported correctly in both backends.
+        This test checks that the metadata is exported and imported correctly in both backends.
         """
         # Set the computer name
         comp1_name = "localhost_1"
         comp1_metadata = {
             u'workdir': u'/tmp/aiida'
         }
-        comp1_transport_params = {
-            u'key1': u'value1',
-            u'key2': 2
-        }
         self.computer.set_name(comp1_name)
         self.computer.set_metadata(comp1_metadata)
-        self.computer.set_transport_params(comp1_transport_params)
 
         # Store a calculation
         calc1_label = "calc1"
         calc1 = orm.CalcJobNode()
         calc1.computer = self.computer
-        calc1.set_option('resources', {"num_machines": 1,
-                                        "num_mpiprocs_per_machine": 1})
+        calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc1.label = calc1_label
         calc1.store()
 
@@ -1265,15 +1258,10 @@ class TestComputer(AiidaTestCase):
         import_data(filename1, silent=True)
 
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['transport_params', '_metadata'],
-                    tag="comp")
+        builder.append(orm.Computer, project=['_metadata'], tag="comp")
         self.assertEqual(builder.count(), 1, "Expected only one computer")
 
         res = builder.dict()[0]
-        self.assertEqual(res['comp']['transport_params'],
-                            comp1_transport_params,
-                            "Not the expected transport parameters "
-                            "were found")
         self.assertEqual(res['comp']['_metadata'],
                             comp1_metadata,
                             "Not the expected metadata were found")
@@ -1290,25 +1278,20 @@ class TestComputer(AiidaTestCase):
             # Import the needed data
             import_archive_fixture(archive)
 
-            # The expected metadata & transport parameters
+            # The expected metadata
             comp1_metadata = {
                 u'workdir': u'/tmp/aiida'
             }
-            comp1_transport_params = {
-                u'key1': u'value1',
-                u'key2': 2
-            }
 
-            # Check that we got the correct metadata & transport parameters
+            # Check that we got the correct metadata
             # Make sure to exclude the default computer
             builder = orm.QueryBuilder()
-            builder.append(orm.Computer, project=['transport_params', '_metadata'], tag="comp",
+            builder.append(orm.Computer, project=['_metadata'], tag="comp",
                       filters={'name': {'!==': self.computer.name}})
             self.assertEqual(builder.count(), 1, "Expected only one computer")
 
             res = builder.dict()[0]
 
-            self.assertEqual(res['comp']['transport_params'], comp1_transport_params)
             self.assertEqual(res['comp']['_metadata'], comp1_metadata)
 
 

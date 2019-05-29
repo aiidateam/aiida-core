@@ -1254,9 +1254,8 @@ class DbComputer(m.Model):
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
     # TODO: next three fields should not be blank...
-    transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)
-    transport_params = JSONField(default=dict)
+    transport_type = m.CharField(max_length=255)
     metadata = JSONField(default=dict)
 
     def __str__(self):

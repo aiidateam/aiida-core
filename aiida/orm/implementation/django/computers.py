@@ -89,12 +89,6 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
     def set_metadata(self, metadata):
         self._dbmodel.metadata = metadata
 
-    def get_transport_params(self):
-        return self._dbmodel.transport_params
-
-    def set_transport_params(self, val):
-        self._dbmodel.transport_params = val
-
     def get_name(self):
         return self._dbmodel.name
 

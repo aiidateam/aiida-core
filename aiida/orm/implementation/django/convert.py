@@ -147,7 +147,6 @@ def _(dbmodel, backend):
         description=dbmodel.description,
         transport_type=dbmodel.transport_type,
         scheduler_type=dbmodel.scheduler_type,
-        transport_params=dbmodel.transport_params,
         metadata=dbmodel._metadata)  # pylint: disable=protected-access
     return computers.DjangoComputer.from_dbmodel(djcomputer_instance, backend)
 

@@ -47,6 +47,7 @@ class TestMigrations(AiidaTestCase):
         self.migrate_to = [(self.app, self.migrate_to)]
         executor = MigrationExecutor(connection)
         self.apps = executor.loader.project_state(self.migrate_from).apps
+        self.schema_editor = connection.schema_editor()
 
         # Reverse to the original migration
         executor.migrate(self.migrate_from)
@@ -452,9 +453,9 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         serialized_param_data = dumps_json(list(param_data))
         # Getting the serialized logs for the unknown entity logs (as the export migration fuction
         # provides them) - this should coincide to the above
-        serialized_unknown_exp_logs = update_024.get_serialized_unknown_entity_logs(DbLog)
+        serialized_unknown_exp_logs = update_024.get_serialized_unknown_entity_logs(self.schema_editor)
         # Getting their number
-        unknown_exp_logs_number = update_024.get_unknown_entity_log_number(DbLog)
+        unknown_exp_logs_number = update_024.get_unknown_entity_log_number(self.schema_editor)
         self.to_check['Dict'] = (serialized_param_data, serialized_unknown_exp_logs,
                                           unknown_exp_logs_number)
 
@@ -466,8 +467,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         serialized_leg_wf_logs = dumps_json(list(leg_wf))
         # Getting the serialized logs for the legacy workflow logs (as the export migration function
         # provides them) - this should coincide to the above
-        serialized_leg_wf_exp_logs = update_024.get_serialized_legacy_workflow_logs(DbLog)
-        eg_wf_exp_logs_number = update_024.get_legacy_workflow_log_number(DbLog)
+        serialized_leg_wf_exp_logs = update_024.get_serialized_legacy_workflow_logs(self.schema_editor)
+        eg_wf_exp_logs_number = update_024.get_legacy_workflow_log_number(self.schema_editor)
         self.to_check['WorkflowNode'] = (serialized_leg_wf_logs, serialized_leg_wf_exp_logs, eg_wf_exp_logs_number)
 
         # Getting the serialized logs that don't correspond to a DbNode record
@@ -477,8 +478,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         serialized_logs_no_node = dumps_json(list(logs_no_node))
         # Getting the serialized logs that don't correspond to a node (as the export migration function
         # provides them) - this should coincide to the above
-        serialized_logs_exp_no_node = update_024.get_serialized_logs_with_no_nodes(DbLog, DbNode)
-        logs_no_node_number = update_024.get_logs_with_no_nodes_number(DbLog, DbNode)
+        serialized_logs_exp_no_node = update_024.get_serialized_logs_with_no_nodes(self.schema_editor)
+        logs_no_node_number = update_024.get_logs_with_no_nodes_number(self.schema_editor)
         self.to_check['NoNode'] = (serialized_logs_no_node, serialized_logs_exp_no_node, logs_no_node_number)
 
     def tearDown(self):

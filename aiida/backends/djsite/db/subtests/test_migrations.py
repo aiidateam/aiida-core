@@ -27,6 +27,7 @@ from aiida.manage.database.integrity.duplicate_uuid import deduplicate_uuids, ve
 
 
 class TestMigrations(AiidaTestCase):
+
     @property
     def app(self):
         return apps.get_containing_app_config(type(self).__module__).name.split('.')[-1]
@@ -50,8 +51,10 @@ class TestMigrations(AiidaTestCase):
         # Reverse to the original migration
         executor.migrate(self.migrate_from)
 
-        self.default_user = self.backend.users.create('{}@aiida.net'.format(self.id())).store()
         self.DbNode = self.apps.get_model('db', 'DbNode')
+        self.DbUser = self.apps.get_model('db', 'DbUser')
+        self.default_user = self.DbUser(1, 'aiida@localhost')
+        self.default_user.save()
 
         try:
             self.setUpBeforeMigration()
@@ -61,11 +64,10 @@ class TestMigrations(AiidaTestCase):
             executor.migrate(self.migrate_to)
 
             self.apps = executor.loader.project_state(self.migrate_to).apps
-        except Exception as exception:
+        except Exception:
             # Bring back the DB to the correct state if this setup part fails
             import traceback
             traceback.print_stack()
-            print('EXCEPTION', exception)
             self._revert_database_schema()
             raise
 

@@ -16,7 +16,7 @@ from __future__ import absolute_import
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error,no-member
-from django.db import migrations
+from django.db import migrations, models
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
@@ -32,6 +32,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AlterField(
+            model_name='dbuser',
+            name='password',
+            field=models.CharField(max_length=128, default='pass', verbose_name='password'),
+        ),
         migrations.RemoveField(
             model_name='dbuser',
             name='password',
@@ -51,6 +56,11 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name='dbuser',
             name='is_staff',
+        ),
+        migrations.AlterField(
+            model_name='dbuser',
+            name='is_superuser',
+            field=models.BooleanField(default=False, blank=True),
         ),
         migrations.RemoveField(
             model_name='dbuser',

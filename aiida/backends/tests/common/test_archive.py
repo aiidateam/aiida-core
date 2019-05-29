@@ -36,7 +36,7 @@ class TestCommonArchive(AiidaTestCase):
 
     def test_empty_archive(self):
         """Verify that attempting to unpack an empty archive raises a `CorruptArchive` exception."""
-        filepath = get_archive_file('empty.aiida')
+        filepath = get_archive_file('empty.aiida', filepath='export/migrate')
         with self.assertRaises(CorruptArchive):
             with Archive(filepath) as archive:
                 archive.version_format  # pylint: disable=pointless-statement

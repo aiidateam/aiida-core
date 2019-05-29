@@ -28,7 +28,7 @@ IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE.value
 DUPL_SUFFIX = ' (Imported #{})'
 
 # Current export version
-EXPORT_VERSION = '0.4'
+EXPORT_VERSION = '0.5'
 
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
@@ -623,7 +623,7 @@ def import_data_dj(in_path, group=None, ignore_unknown_nodes=False,
     from aiida.backends.djsite.db.models import suppress_auto_now
 
     # This is the export version expected by this function
-    expected_export_version = StrictVersion('0.5')
+    expected_export_version = StrictVersion(EXPORT_VERSION)
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1267,7 +1267,7 @@ def import_data_sqla(in_path, group=None, ignore_unknown_nodes=False,
     from aiida.common import json
 
     # This is the export version expected by this function
-    expected_export_version = StrictVersion('0.5')
+    expected_export_version = StrictVersion(EXPORT_VERSION)
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'

@@ -146,7 +146,8 @@ class TestVerdiExport(AiidaTestCase):
         archives = [
             'export_v0.1_simple.aiida',
             'export_v0.2_simple.aiida',
-            'export_v0.3_simple.aiida'
+            'export_v0.3_simple.aiida',
+            'export_v0.4_simple.aiida'
         ]
 
         for archive in archives:
@@ -166,7 +167,7 @@ class TestVerdiExport(AiidaTestCase):
     def test_migrate_versions_recent(self):
         """Migrating an archive with the current version should exit with non-zero status."""
         archives = [
-            'export_v0.4_simple.aiida',
+            'export_v0.5_simple.aiida',
         ]
 
         for archive in archives:
@@ -256,7 +257,8 @@ class TestVerdiExport(AiidaTestCase):
             ('export_v0.1_simple.aiida', '0.1'),
             ('export_v0.2_simple.aiida', '0.2'),
             ('export_v0.3_simple.aiida', '0.3'),
-            ('export_v0.4_simple.aiida', '0.4')
+            ('export_v0.4_simple.aiida', '0.4'),
+            ('export_v0.5_simple.aiida', '0.5')
         ]
 
         for archive, version_number in archives:
@@ -277,7 +279,7 @@ class TestVerdiExport(AiidaTestCase):
 
     def test_inspect_empty_archive(self):
         """Test the functionality of `verdi export inspect` for an empty archive."""
-        filename_input = get_archive_file('empty.aiida')
+        filename_input = get_archive_file('empty.aiida', filepath=self.fixture_archive)
 
         options = [filename_input]
         result = self.cli_runner.invoke(cmd_export.inspect, options)

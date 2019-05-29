@@ -107,6 +107,7 @@ DB_TEST_LIST = {
         'export_migration.v01_to_v02': ['aiida-export-migration-tests.tests.test_v01_to_v02'],
         'export_migration.v02_to_v03': ['aiida-export-migration-tests.tests.test_v02_to_v03'],
         'export_migration.v03_to_v04': ['aiida-export-migration-tests.tests.test_v03_to_v04'],
+        'export_migration.v04_to_v05': ['aiida-export-migration-tests.tests.test_v04_to_v05'],
         'generic': ['aiida.backends.tests.test_generic'],
         'manage.configuration.config.': ['aiida.backends.tests.manage.configuration.test_config'],
         'manage.configuration.migrations.': ['aiida.backends.tests.manage.configuration.migrations.test_migrations'],

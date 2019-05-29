@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 from __future__ import print_function
 import sys
+from six.moves import zip
 import click
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
@@ -36,44 +37,92 @@ node_prefix = 'node.'
 leg_workflow_prefix = 'aiida.workflows.user.'
 
 
-def get_legacy_workflow_log_number(dblog_model):
+def get_legacy_workflow_log_number(schema_editor):
     """ Get the number of the log records that correspond to legacy workflows """
-    return dblog_model.objects.filter(objname__startswith=leg_workflow_prefix).count()
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT COUNT(*) FROM db_dblog
+            WHERE
+                (db_dblog.objname LIKE 'aiida.workflows.user.%')
+            """)
+        return cursor.fetchall()[0][0]
 
 
-def get_unknown_entity_log_number(dblog_model):
+def get_unknown_entity_log_number(schema_editor):
     """ Get the number of the log records that correspond to unknown entities """
-    return dblog_model.objects.exclude(objname__startswith=node_prefix).exclude(
-        objname__startswith=leg_workflow_prefix).count()
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT COUNT(*) FROM db_dblog
+            WHERE
+                (db_dblog.objname NOT LIKE 'node.%') AND
+                (db_dblog.objname NOT LIKE 'aiida.workflows.user.%')
+            """)
+        return cursor.fetchall()[0][0]
 
 
-def get_logs_with_no_nodes_number(dblog_model, dbnode_model):
+def get_logs_with_no_nodes_number(schema_editor):
     """ Get the number of the log records that don't correspond to a node """
-    return dblog_model.objects.exclude(objpk__in=dbnode_model.objects.values('id')).filter(
-        objname__startswith=node_prefix).values(*values_to_export).count()
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT COUNT(*) FROM db_dblog
+            WHERE
+                (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
+                (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
+            """)
+        return cursor.fetchall()[0][0]
 
 
-def get_serialized_legacy_workflow_logs(dblog_model):
+def get_serialized_legacy_workflow_logs(schema_editor):
     """ Get the serialized log records that correspond to legacy workflows """
     from aiida.backends.sqlalchemy.utils import dumps_json
-    queryset = dblog_model.objects.filter(objname__startswith=leg_workflow_prefix).values(*values_to_export)
-    return dumps_json(list(queryset))
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute(("""
+            SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,
+            db_dblog.message, db_dblog.metadata FROM db_dblog
+            WHERE
+                (db_dblog.objname LIKE 'aiida.workflows.user.%')
+            """))
+        keys = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
+        res = list()
+        for row in cursor.fetchall():
+            res.append(dict(list(zip(keys, row))))
+        return dumps_json(res)
 
 
-def get_serialized_unknown_entity_logs(dblog_model):
+def get_serialized_unknown_entity_logs(schema_editor):
     """ Get the serialized log records that correspond to unknown entities """
     from aiida.backends.sqlalchemy.utils import dumps_json
-    queryset = dblog_model.objects.exclude(objname__startswith=node_prefix).exclude(
-        objname__startswith=leg_workflow_prefix).values(*values_to_export)
-    return dumps_json(list(queryset))
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute(("""
+            SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,
+            db_dblog.message, db_dblog.metadata FROM db_dblog
+            WHERE
+                (db_dblog.objname NOT LIKE 'node.%') AND
+                (db_dblog.objname NOT LIKE 'aiida.workflows.user.%')
+            """))
+        keys = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
+        res = list()
+        for row in cursor.fetchall():
+            res.append(dict(list(zip(keys, row))))
+        return dumps_json(res)
 
 
-def get_serialized_logs_with_no_nodes(dblog_model, dbnode_model):
+def get_serialized_logs_with_no_nodes(schema_editor):
     """ Get the serialized log records that don't correspond to a node """
     from aiida.backends.sqlalchemy.utils import dumps_json
-    queryset = dblog_model.objects.exclude(objpk__in=dbnode_model.objects.values('id')).filter(
-        objname__startswith=node_prefix).values(*values_to_export)
-    return dumps_json(list(queryset))
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute(("""
+            SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,
+            db_dblog.message, db_dblog.metadata FROM db_dblog
+            WHERE
+                (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
+                (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
+            """))
+        keys = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
+        res = list()
+        for row in cursor.fetchall():
+            res.append(dict(list(zip(keys, row))))
+        return dumps_json(res)
 
 
 def set_new_uuid(apps, _):
@@ -86,18 +135,17 @@ def set_new_uuid(apps, _):
         log.save(update_fields=['uuid'])
 
 
-def export_and_clean_workflow_logs(apps, _):
+def export_and_clean_workflow_logs(apps, schema_editor):
     """
     Export the logs records that correspond to legacy workflows and to unknown entities.
     """
     from tempfile import NamedTemporaryFile
 
     DbLog = apps.get_model('db', 'DbLog')
-    DbNode = apps.get_model('db', 'DbNode')
 
-    lwf_number = get_legacy_workflow_log_number(DbLog)
-    other_number = get_unknown_entity_log_number(DbLog)
-    log_no_node_number = get_logs_with_no_nodes_number(DbLog, DbNode)
+    lwf_number = get_legacy_workflow_log_number(schema_editor)
+    other_number = get_unknown_entity_log_number(schema_editor)
+    log_no_node_number = get_logs_with_no_nodes_number(schema_editor)
 
     # If there are no legacy workflow log records or log records of an unknown entity
     if lwf_number == 0 and other_number == 0 and log_no_node_number == 0:
@@ -120,7 +168,7 @@ def export_and_clean_workflow_logs(apps, _):
         with NamedTemporaryFile(
                 prefix='legagy_wf_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+') as handle:
             filename = handle.name
-            handle.write(get_serialized_legacy_workflow_logs(DbLog))
+            handle.write(get_serialized_legacy_workflow_logs(schema_editor))
 
         # If delete_on_close is False, we are running for the user and add additional message of file location
         if not delete_on_close:
@@ -128,6 +176,12 @@ def export_and_clean_workflow_logs(apps, _):
 
         # Now delete the records
         DbLog.objects.filter(objname__startswith=leg_workflow_prefix).delete()
+        with schema_editor.connection.cursor() as cursor:
+            cursor.execute(("""
+                DELETE FROM db_dblog
+                WHERE
+                    (db_dblog.objname LIKE 'aiida.workflows.user.%')
+                """))
 
     # Exporting unknown log records
     if other_number != 0:
@@ -135,7 +189,7 @@ def export_and_clean_workflow_logs(apps, _):
         with NamedTemporaryFile(
                 prefix='unknown_entity_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+') as handle:
             filename = handle.name
-            handle.write(get_serialized_unknown_entity_logs(DbLog))
+            handle.write(get_serialized_unknown_entity_logs(schema_editor))
 
         # If delete_on_close is False, we are running for the user and add additional message of file location
         if not delete_on_close:
@@ -143,6 +197,12 @@ def export_and_clean_workflow_logs(apps, _):
 
         # Now delete the records
         DbLog.objects.exclude(objname__startswith=node_prefix).exclude(objname__startswith=leg_workflow_prefix).delete()
+        with schema_editor.connection.cursor() as cursor:
+            cursor.execute(("""
+                DELETE FROM db_dblog WHERE
+                    (db_dblog.objname NOT LIKE 'node.%') AND
+                    (db_dblog.objname NOT LIKE 'aiida.workflows.user.%')
+                """))
 
     # Exporting log records that don't correspond to nodes
     if log_no_node_number != 0:
@@ -150,14 +210,19 @@ def export_and_clean_workflow_logs(apps, _):
         with NamedTemporaryFile(
                 prefix='no_node_entity_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+') as handle:
             filename = handle.name
-            handle.write(get_serialized_logs_with_no_nodes(DbLog, DbNode))
+            handle.write(get_serialized_logs_with_no_nodes(schema_editor))
 
         # If delete_on_close is False, we are running for the user and add additional message of file location
         if not delete_on_close:
             click.echo('Exported entity logs that don\'t correspond to nodes to {}'.format(filename))
 
         # Now delete the records
-        DbLog.objects.exclude(objpk__in=DbNode.objects.values('id')).filter(objname__startswith=node_prefix).delete()
+        with schema_editor.connection.cursor() as cursor:
+            cursor.execute(("""
+                DELETE FROM db_dblog WHERE
+                (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
+                (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
+                """))
 
 
 def clean_dblog_metadata(apps, _):

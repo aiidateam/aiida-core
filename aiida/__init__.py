@@ -61,6 +61,9 @@ if six.PY2:
 def load_dbenv(profile=None):
     """Alias for `load_dbenv` from `aiida.backends.utils`
 
+    :param profile: name of the profile to load
+    :type profile: str
+
     .. deprecated:: 1.0.0
         Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
@@ -77,6 +80,13 @@ def load_dbenv(profile=None):
 def try_load_dbenv(profile=None):
     """Run `load_dbenv` unless the dbenv has already been loaded.
 
+    :param profile: name of the profile to load
+    :type profile: str
+
+    :returns: whether profile was loaded
+    :rtype: bool
+
+
     .. deprecated:: 1.0.0
         Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
@@ -88,7 +98,9 @@ def try_load_dbenv(profile=None):
 
 
 def is_dbenv_loaded():
-    """Alias for `is_dbenv_loaded` from `aiida.backends.utils`
+    """Determine whether database environment is already loaded.
+
+    :rtype: bool
 
     .. deprecated:: 1.0.0
         Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
@@ -102,6 +114,7 @@ def get_strict_version():
     Return a distutils StrictVersion instance with the current distribution version
 
     :returns: StrictVersion instance with the current version
+    :rtype: :class:`distutils.version.StrictVersion`
     """
     from distutils.version import StrictVersion
     return StrictVersion(__version__)
@@ -109,19 +122,21 @@ def get_strict_version():
 
 def get_version():
     """
-    Return the current distribution version
+    Return the current AiiDA distribution version
 
-    :returns: a string with the current version
+    :returns: the current version
+    :rtype: str
     """
     return __version__
 
 
 def _get_raw_file_header():
     """
-    Get a string to be put as header of files created with AiiDA; no
-    comment character is put in front
+    Get the default header for source AiiDa source code files.
+    Note: is not preceded by comment character.
 
-    :return: a (multiline) string
+    :return: default AiiDA source file header
+    :rtype: str
     """
     return """This file has been created with AiiDA v. {}
 If you use AiiDA for publication purposes, please cite:
@@ -131,11 +146,14 @@ If you use AiiDA for publication purposes, please cite:
 
 def get_file_header(comment_char="# "):
     """
-    Get a string to be put as header of files created with AiiDA;
-    put in front a comment character as specified in the parameter
+    Get the default header for source AiiDa source code files.
+    Note: Prepend by comment character.
 
     :param comment_char: string put in front of each line
-    :return: a (multiline) string
+    :type comment_char: str
+
+    :return: default AiiDA source file header
+    :rtype: str
     """
     lines = _get_raw_file_header().splitlines()
     return '\n'.join('{}{}'.format(comment_char, line) for line in lines)

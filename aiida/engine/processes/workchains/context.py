@@ -26,6 +26,7 @@ def assign_(target):
     it will be assigned to the context for a key that is to be defined later
 
     :param target: an instance of a Process or Awaitable
+
     :returns: the awaitable
     :rtype: Awaitable
     """
@@ -41,6 +42,7 @@ def append_(target):
     it will be appended to a list in the context for a key that is to be defined later
 
     :param target: an instance of a Process or Awaitable
+
     :returns: the awaitable
     :rtype: Awaitable
     """

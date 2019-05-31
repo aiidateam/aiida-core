@@ -63,15 +63,25 @@ class Computer(entities.Entity):
 
     def __init__(self, name, hostname, description='', transport_type='', scheduler_type='', workdir=None,
                  backend=None):
-        """Construct a new computer"""
+        """Construct a new computer
+
+        :type name: str
+        :type hostname: str
+        :type description: str
+        :type transport_type: str
+        :type scheduler_type: str
+        :type workdir: str
+        :type backend: :class:`aiida.orm.implementation.Backend`
+
+        :rtype: :class:`aiida.orm.Computer`
+        """
         # pylint: disable=too-many-arguments
         backend = backend or get_manager().get_backend()
-        model = backend.computers.create(
-            name=name,
-            hostname=hostname,
-            description=description,
-            transport_type=transport_type,
-            scheduler_type=scheduler_type)
+        model = backend.computers.create(name=name,
+                                         hostname=hostname,
+                                         description=description,
+                                         transport_type=transport_type,
+                                         scheduler_type=scheduler_type)
         super(Computer, self).__init__(model)
         if workdir is not None:
             self.set_workdir(workdir)
@@ -87,7 +97,7 @@ class Computer(entities.Entity):
         """
         Return a (multiline) string with a human-readable detailed information on this computer.
 
-        :rypte: str
+        :rtype: str
         """
         ret_lines = []
         ret_lines.append("Computer name:     {}".format(self.name))
@@ -333,7 +343,10 @@ class Computer(entities.Entity):
         Delete a property from this computer
 
         :param name: the name of the property
+        :type name: str
+
         :param raise_exception: if True raise if the property does not exist, otherwise return None
+        :type raise_exception: bool
         """
         olddata = self.get_metadata()
         try:
@@ -359,7 +372,10 @@ class Computer(entities.Entity):
         Get a property of this computer
 
         :param name: the property name
+        :type name: str
+
         :param args: additional arguments
+
         :return: the property value
         """
         if len(args) > 1:

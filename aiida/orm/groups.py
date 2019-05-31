@@ -50,8 +50,12 @@ class Group(entities.Entity):
             Try to retrieve a group from the DB with the given arguments;
             create (and store) a new group if such a group was not present yet.
 
+            :param label: group label
+            :type label: str
+
             :return: (group, created) where group is the group (new or existing,
               in any case already stored) and created is a boolean saying
+            :rtype: (:class:`aiida.orm.Group`, bool)
             """
             if 'name' in kwargs:
                 import warnings
@@ -109,13 +113,18 @@ class Group(entities.Entity):
         a group from the DB (and then, no further parameters are allowed),
         or pass the parameters for the Group creation.
 
-        :param dbgroup: the dbgroup object, if you want to reload the group
-            from the DB rather than creating a new one.
         :param label: The group label, required on creation
+        :type label: str
+
         :param description: The group description (by default, an empty string)
+        :type description: str
+
         :param user: The owner of the group (by default, the automatic user)
+        :type user: :class:`aiida.orm.User`
+
         :param type_string: a string identifying the type of group (by default,
             an empty string, indicating an user-defined group.
+        :type type_string: str
         """
         if name:
             import warnings
@@ -141,8 +150,10 @@ class Group(entities.Entity):
         user = user or users.User.objects(backend).get_default()
         type_check(user, users.User)
 
-        model = backend.groups.create(
-            label=label, user=user.backend_entity, description=description, type_string=type_string)
+        model = backend.groups.create(label=label,
+                                      user=user.backend_entity,
+                                      description=description,
+                                      type_string=type_string)
         super(Group, self).__init__(model)
 
     def __repr__(self):
@@ -165,6 +176,7 @@ class Group(entities.Entity):
     def name(self):
         """
         :return: the label of the group as a string
+        :rtype: str
         """
         import warnings
         # pylint: disable=redefined-builtin
@@ -180,6 +192,8 @@ class Group(entities.Entity):
         UniquenessError will be raised
 
         :param label: the new group label
+        :type label: str
+
         :raises aiida.common.UniquenessError: if another group of same type and label already exists
         """
         self._backend_entity.label = label
@@ -192,6 +206,7 @@ class Group(entities.Entity):
         UniquenessError will be raised
 
         :param label: the new group label
+        :type label: str
         :raises aiida.common.UniquenessError: if another group of same type and label already exists
         """
         import warnings
@@ -204,13 +219,16 @@ class Group(entities.Entity):
     def description(self):
         """
         :return: the description of the group as a string
+        :rtype: str
         """
         return self._backend_entity.description
 
     @description.setter
     def description(self, description):
         """
-        :return: the description of the group as a string
+        :param description: the description of the group as a string
+        :type description: str
+
         """
         self._backend_entity.description = description
 
@@ -218,6 +236,7 @@ class Group(entities.Entity):
     def type(self):
         """
         :return: the string defining the type of the group
+        :rtype: str
         """
         import warnings
         # pylint: disable=redefined-builtin
@@ -241,6 +260,11 @@ class Group(entities.Entity):
 
     @user.setter
     def user(self, user):
+        """Set the user.
+
+        :param user: the user
+        :type user: :class:`aiida.orm.User`
+        """
         type_check(user, users.User)
         self._backend_entity.user = user.backend_entity
 
@@ -248,6 +272,7 @@ class Group(entities.Entity):
     def uuid(self):
         """
         :return: a string with the uuid
+        :rtype: str
         """
         return self._backend_entity.uuid
 
@@ -255,6 +280,7 @@ class Group(entities.Entity):
         """Return the number of entities in this group.
 
         :return: integer number of entities contained within the group
+        :rtype: int
         """
         return self._backend_entity.count()
 
@@ -264,6 +290,8 @@ class Group(entities.Entity):
         Return a generator/iterator that iterates over all nodes and returns
         the respective AiiDA subclasses of Node, and also allows to ask for
         the number of nodes in the group using len().
+
+        :rtype: :class:`aiida.orm.convert.ConvertIterator`
         """
         return convert.ConvertIterator(self._backend_entity.nodes)
 
@@ -271,7 +299,8 @@ class Group(entities.Entity):
     def is_empty(self):
         """Return whether the group is empty, i.e. it does not contain any nodes.
 
-        :return: boolean, True if it contains no nodes, False otherwise
+        :return: True if it contains no nodes, False otherwise
+        :rtype: bool
         """
         try:
             self.nodes[0]
@@ -290,6 +319,7 @@ class Group(entities.Entity):
         :note: all the nodes *and* the group itself have to be stored.
 
         :param nodes: a single `Node` or a list of `Nodes`
+        :type nodes: :class:`aiida.orm.Node` or list
         """
         from .nodes import Node
 
@@ -311,6 +341,7 @@ class Group(entities.Entity):
         :note: all the nodes *and* the group itself have to be stored.
 
         :param nodes: a single `Node` or a list of `Nodes`
+        :type nodes: :class:`aiida.orm.Node` or list
         """
         from .nodes import Node
 
@@ -332,8 +363,9 @@ class Group(entities.Entity):
         Custom get for group which can be used to get a group with the given attributes
 
         :param kwargs: the attributes to match the group to
+
         :return: the group
-        :rtype: :class:`aiida.orm.Group`
+        :type nodes: :class:`aiida.orm.Node` or list
         """
         from aiida.orm import QueryBuilder
 
@@ -376,6 +408,7 @@ class Group(entities.Entity):
 
         :return: (group, created) where group is the group (new or existing,
           in any case already stored) and created is a boolean saying
+        :rtype: (:class:`aiida.orm.Group`, bool)
         """
         import warnings
         # pylint: disable=redefined-builtin
@@ -388,11 +421,13 @@ class Group(entities.Entity):
     def get_from_string(cls, string):
         """
         Get a group from a string.
-        If only the label is provided, without colons,
-        only user-defined groups are searched;
-        add ':type_str' after the group label to choose also
-        the type of the group equal to 'type_str'
-        (e.g. 'data.upf', 'import', etc.)
+
+        Searches only user-defined groups by default.
+        Add ':type_str' after the group label string to filter also by the type of the group
+        (e.g. 'type_str' could be 'data.upf', 'import', etc.)
+
+        :param string: group label
+        :type string: str
 
         :raise ValueError: if the group type does not exist.
         :raise aiida.common.NotExistent: if the group is not found.
@@ -420,6 +455,7 @@ class Group(entities.Entity):
     def is_user_defined(self):
         """
         :return: True if the group is user defined, False otherwise
+        :rtype: bool
         """
         return not self.type_string
 
@@ -432,7 +468,8 @@ class Group(entities.Entity):
             - is_foreign_key: is the property foreign key to other type of the node
             - type: type of the property. e.g. str, dict, int
 
-        :return: get schema of the group
+        :return: schema of the group
+        :rtype: dict
         """
         return {
             "description": {

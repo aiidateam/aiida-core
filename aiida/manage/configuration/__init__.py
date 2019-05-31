@@ -33,7 +33,10 @@ def load_profile(profile=None):
     .. note:: if a profile is already loaded and no explicit profile is specified, nothing will be done
 
     :param profile: the name of the profile to load, by default will use the one marked as default in the config
+    :type profile: str
+
     :return: the loaded `Profile` instance
+    :rtype: :class:`~aiida.manage.configuration.Profile`
     :raises `aiida.common.exceptions.InvalidOperation`: if the backend of another profile has already been loaded
     """
     from aiida.common import InvalidOperation
@@ -70,7 +73,9 @@ def load_profile(profile=None):
 def load_config(create=False):
     """Instantiate the Config object representing the configuration file of the current AiiDA instance.
 
-    :param create: when set to True, will create the configuration file if it does not already exist
+    :param create: if True, will create the configuration file if it does not already exist
+    :type create: bool
+
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
@@ -129,6 +134,7 @@ def get_profile():
     """Return the currently loaded profile.
 
     :return: the globally loaded `Profile` instance or `None`
+    :rtype: :class:`~aiida.manage.configuration.Profile`
     """
     global PROFILE
     return PROFILE
@@ -154,6 +160,10 @@ def get_config(create=False):
     Note: this function should only be called by parts of the code that expect that a complete AiiDA instance exists,
     i.e. an AiiDA folder exists and contains a valid configuration file.
 
+    :param create: if True, will create the configuration file if it does not already exist
+    :type create: bool
+
+
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`
     :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
@@ -176,6 +186,8 @@ def get_config_option(option_name):
     preference should be given to retrieving the option through the Config instance and its `get_option` method.
 
     :param option_name: the name of the configuration option
+    :type option_name: str
+
     :return: option value as specified for the profile/configuration if loaded, otherwise option default
     """
     from aiida.common import exceptions

@@ -52,6 +52,7 @@ py:exc  ZeroDivisionError
 # python builtins
 py:class  classmethod
 py:class  dict
+py:class  callable
 py:class  list
 py:class  object
 py:class  unittest.case.TestCase

@@ -73,7 +73,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
 
         :param schema_check: force a database schema check if the database environment has not yet been loaded
         :return: the database backend
-        :rtype: :class:`aiida.orm.Backend`
+        :rtype: :class:`aiida.orm.implementation.Backend`
         """
         from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
         from aiida.common import ConfigurationError, InvalidOperation
@@ -118,7 +118,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         Get the database backend
 
         :return: the database backend
-        :rtype: :class:`aiida.orm.Backend`
+        :rtype: :class:`aiida.orm.implementation.Backend`
         """
         if self._backend is None:
             self._load_backend()
@@ -298,11 +298,10 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         runner_loop = runner.loop
 
         # Listen for incoming launch requests
-        task_receiver = rmq.ProcessLauncher(
-            loop=runner_loop,
-            persister=self.get_persister(),
-            load_context=plumpy.LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader())
+        task_receiver = rmq.ProcessLauncher(loop=runner_loop,
+                                            persister=self.get_persister(),
+                                            load_context=plumpy.LoadSaveContext(runner=runner),
+                                            loader=persistence.get_object_loader())
 
         def callback(*args, **kwargs):
             return plumpy.create_task(functools.partial(task_receiver, *args, **kwargs), loop=runner_loop)
@@ -331,7 +330,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
 
     def __init__(self):
         super(Manager, self).__init__()
-        self._backend = None  # type: aiida.orm.Backend
+        self._backend = None  # type: aiida.orm.implementation.Backend
         self._config = None  # type: aiida.manage.configuration.config.Config
         self._daemon_client = None  # type: aiida.daemon.client.DaemonClient
         self._profile = None  # type: aiida.manage.configuration.profile.Profile

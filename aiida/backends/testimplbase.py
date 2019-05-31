@@ -39,7 +39,7 @@ class AiidaTestImplementation(object):
     """
 
     # This should be set by the implementing class in setUpClass_method()
-    backend = None  # type: aiida.orm.Backend
+    backend = None  # type: aiida.orm.implementation.Backend
     computer = None  # type: aiida.orm.Computer
     user = None  # type: aiida.orm.User
     user_email = None  # type: str

@@ -470,7 +470,7 @@ class PluginTestCase(unittest.TestCase):
                 # execute tests
     """
     # Filled in during setUpClass
-    backend = None  # type :class:`aiida.orm.Backend`
+    backend = None  # type :class:`aiida.orm.implementation.Backend`
 
     @classmethod
     def setUpClass(cls):

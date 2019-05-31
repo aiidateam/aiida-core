@@ -51,6 +51,8 @@ def calcfunction(function):
     >>> r.get_incoming().get_node_by_label('result').get_incoming().all_nodes()
     [4, 5]
 
+    :param callable function: The function to decorate.
+    :return callable: The decorated function.
     """
     from aiida.orm import CalcFunctionNode
     return process_function(node_class=CalcFunctionNode)(function)
@@ -77,6 +79,8 @@ def workfunction(function):
     >>> r.get_incoming().get_node_by_label('result').get_incoming().all_nodes()
     [4, 5]
 
+    :param callable function: The function to decorate.
+    :return callable: The decorated function.
     """
     from aiida.orm import WorkFunctionNode
     return process_function(node_class=WorkFunctionNode)(function)
@@ -87,6 +91,7 @@ def process_function(node_class):
     The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
+    :type node_class: :class:`aiida.orm.ProcessNode`
     """
 
     @staticmethod
@@ -98,7 +103,8 @@ def process_function(node_class):
         """
         Turn the decorated function into a FunctionProcess.
 
-        :param function: the actual decorated function that the FunctionProcess represents
+        :param callable function: the actual decorated function that the FunctionProcess represents
+        :return callable: The decorated function.
         """
         process_class = FunctionProcess.build(function, node_class=node_class)
 
@@ -112,7 +118,8 @@ def process_function(node_class):
 
             :param args: input arguments to construct the FunctionProcess
             :param kwargs: input keyword arguments to construct the FunctionProcess
-            :return: tuple of the outputs of the process and the calculation node
+            :return: tuple of the outputs of the process and the process node
+            :rtype: (dict, :class:`aiida.orm.ProcessNode`)
             """
             runner = get_manager().create_runner(with_persistence=False)
             inputs = process_class.create_inputs(*args, **kwargs)
@@ -148,7 +155,13 @@ def process_function(node_class):
             return result, process.node
 
         def run_get_pk(*args, **kwargs):
-            """Recreate the `run_get_pk` utility launcher."""
+            """Recreate the `run_get_pk` utility launcher.
+
+            :param args: input arguments to construct the FunctionProcess
+            :param kwargs: input keyword arguments to construct the FunctionProcess
+            :return: tuple of the outputs of the process and the process node
+            :rtype: (dict, :class:`aiida.orm.ProcessNode`)
+            """
             result, node = run_get_node(*args, **kwargs)
             return result, node.pk
 
@@ -190,9 +203,12 @@ class FunctionProcess(Process):
         these will also become inputs.
 
         :param func: The function to build a process from
+        :type func: callable
+
         :param node_class: Provide a custom node class to be used, has to be constructable with no arguments. It has to
             be a sub class of `ProcessNode` and the mixin :class:`~aiida.orm.utils.mixins.FunctionCalculationMixin`.
         :type node_class: :class:`aiida.orm.nodes.process.process.ProcessNode`
+
         :return: A Process class that represents the function
         :rtype: :class:`FunctionProcess`
         """
@@ -281,7 +297,10 @@ class FunctionProcess(Process):
 
     @classmethod
     def create_inputs(cls, *args, **kwargs):
-        """Create the input args for the FunctionProcess"""
+        """Create the input args for the FunctionProcess.
+
+        :rtype: dict
+        """
         cls.validate_inputs(*args, **kwargs)
 
         ins = {}
@@ -294,10 +313,13 @@ class FunctionProcess(Process):
     @classmethod
     def args_to_dict(cls, *args):
         """
-        Create an input dictionary (i.e. label: value) from supplied args.
+        Create an input dictionary (of form label -> value) from supplied args.
 
-        :param args: The values to use
-        :return: A label: value dictionary
+        :param args: The values to use for the dictionary
+        :type args: list
+
+        :return: A label -> value dictionary
+        :rtype: dict
         """
         return dict(list(zip(cls._func_args, args)))
 
@@ -318,6 +340,9 @@ class FunctionProcess(Process):
         For a standard Process or sub class of Process, this is the class itself. However, for legacy reasons,
         the Process class is a wrapper around another class. This function returns that original class, i.e. the
         class that really represents what was being executed.
+
+        :return: A Process class that represents the function
+        :rtype: :class:`FunctionProcess`
         """
         return self._func
 
@@ -339,7 +364,10 @@ class FunctionProcess(Process):
 
     @override
     def run(self):
-        """Run the process"""
+        """Run the process.
+
+        :rtype: :class:`aiida.engine.ExitCode`
+        """
         from aiida.orm import Data
         from .exit_code import ExitCode
 

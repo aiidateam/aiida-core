@@ -26,7 +26,7 @@ __all__ = ('Entity', 'Collection')
 EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 
 
-class Collection(typing.Generic[EntityType]):
+class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable-object
     """Container class that represents the collection of objects of a particular type."""
 
     # A store for any backend specific collections that already exist
@@ -38,24 +38,39 @@ class Collection(typing.Generic[EntityType]):
         Get the collection for a given entity type and backend instance
 
         :param entity_type: the entity type e.g. User, Computer, etc
+        :type entity_type: :class:`aiida.orm.Entity`
+
         :param backend: the backend instance to get the collection for
-        :return: the collection instance
+        :type backend: :class:`aiida.orm.implementation.Backend`
+
+        :return: a new collection with the new backend
+        :rtype: :class:`aiida.orm.Collection`
         """
         # Lazily get the collection i.e. create only if we haven't done so yet
         return cls._COLLECTIONS.get((entity_type, backend), lambda: entity_type.Collection(backend, entity_type))
 
     def __init__(self, backend, entity_class):
-        """Construct a new entity collection"""
+        """ Construct a new entity collection.
+
+        :param backend: the backend instance to get the collection for
+        :type backend: :class:`aiida.orm.implementation.Backend`
+
+        :param entity_class: the entity type e.g. User, Computer, etc
+        :type entity_class: :class:`aiida.orm.Entity`
+
+        """
         assert issubclass(entity_class, Entity), "Must provide an entity type"
         self._backend = backend or get_manager().get_backend()
         self._entity_type = entity_class
 
     def __call__(self, backend):
-        """
-        Create a new objects collection using a different backend
+        """ Create a new objects collection using a new backend.
 
-        :param backend: the backend to use
-        :return: a new collection with the different backend
+        :param backend: the backend instance to get the collection for
+        :type backend: :class:`aiida.orm.implementation.Backend`
+
+        :return: a new collection with the new backend
+        :rtype: :class:`aiida.orm.Collection`
         """
         if backend is self._backend:
             # Special case if they actually want the same collection
@@ -65,11 +80,19 @@ class Collection(typing.Generic[EntityType]):
 
     @property
     def backend(self):
-        """Return the backend."""
+        """Return the backend.
+
+        :return: the backend instance of this collection
+        :rtype: :class:`aiida.orm.implementation.Backend`
+        """
         return self._backend
 
     @property
     def entity_type(self):
+        """The entity type.
+
+        :rtype: :class:`aiida.orm.Entity`
+        """
         return self._entity_type
 
     def query(self):
@@ -91,6 +114,8 @@ class Collection(typing.Generic[EntityType]):
         Get a single collection entry that matches the filter criteria
 
         :param filters: the filters identifying the object to get
+        :type filters: dict
+
         :return: the entry
         """
         res = self.find(filters=filters)
@@ -107,10 +132,14 @@ class Collection(typing.Generic[EntityType]):
         Find collection entries matching the filter criteria
 
         :param filters: the keyword value pair filters to match
+        :type filters: dict
+
         :param order_by: a list of (key, direction) pairs specifying the sort order
         :type order_by: list
+
         :param limit: the maximum number of results to return
         :type limit: int
+
         :return: a list of resulting matches
         :rtype: list
         """
@@ -129,6 +158,7 @@ class Collection(typing.Generic[EntityType]):
         Get all entities in this collection
 
         :return: A collection of users matching the criteria
+        :rtype: list
         """
         return [_[0] for _ in self.query().all()]
 
@@ -144,10 +174,13 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
     @classproperty
     def objects(cls, backend=None):  # pylint: disable=no-self-use, no-self-argument
         """
-        Get an collection for objects of this type.
+        Get a collection for objects of this type.
 
         :param backend: the optional backend to use (otherwise use default)
+        :type backend: :class:`aiida.orm.implementation.Backend`
+
         :return: an object that can be used to access entities of this type
+        :rtype: :class:`aiida.orm.Collection`
         """
         backend = backend or get_manager().get_backend()
         return cls.Collection.get_collection(cls, backend)
@@ -163,6 +196,7 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
         Construct an entity from a backend entity instance
 
         :param backend_entity: the backend entity
+
         :return: an AiiDA entity instance
         """
         from . import implementation
@@ -176,6 +210,7 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
     def __init__(self, backend_entity):
         """
         :param backend_entity: the backend model supporting this entity
+
         :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
         """
         self._backend_entity = backend_entity
@@ -184,6 +219,7 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
     def init_from_backend(self, backend_entity):
         """
         :param backend_entity: the backend model supporting this entity
+
         :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
         """
         self._backend_entity = backend_entity

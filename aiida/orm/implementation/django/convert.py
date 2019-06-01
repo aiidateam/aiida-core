@@ -107,14 +107,9 @@ def _(dbmodel, backend):
     djuser_instance = models.DbUser(
         id=dbmodel.id,
         email=dbmodel.email,
-        password=dbmodel.password,
         first_name=dbmodel.first_name,
         last_name=dbmodel.last_name,
-        institution=dbmodel.institution,
-        is_staff=dbmodel.is_staff,
-        is_active=dbmodel.is_active,
-        last_login=dbmodel.last_login,
-        date_joined=dbmodel.date_joined)
+        institution=dbmodel.institution)
     return users.DjangoUser.from_dbmodel(djuser_instance, backend)
 
 
@@ -152,7 +147,6 @@ def _(dbmodel, backend):
         description=dbmodel.description,
         transport_type=dbmodel.transport_type,
         scheduler_type=dbmodel.scheduler_type,
-        transport_params=dbmodel.transport_params,
         metadata=dbmodel._metadata)  # pylint: disable=protected-access
     return computers.DjangoComputer.from_dbmodel(djcomputer_instance, backend)
 
@@ -173,9 +167,7 @@ def _(dbmodel, backend):
         label=dbmodel.label,
         description=dbmodel.description,
         dbcomputer_id=dbmodel.dbcomputer_id,
-        user_id=dbmodel.user_id,
-        public=dbmodel.public,
-        nodeversion=dbmodel.nodeversion)
+        user_id=dbmodel.user_id)
 
     from . import nodes
     return nodes.DjangoNode.from_dbmodel(djnode_instance, backend)

@@ -40,7 +40,6 @@
         aiida/backends/djsite/queries.py|
         aiida/backends/profile.py|
         aiida/backends/general/abstractqueries.py|
-        aiida/backends/sqlalchemy/alembic_manage.py|
         aiida/backends/sqlalchemy/globalsettings.py|
         aiida/backends/sqlalchemy/__init__.py|
         aiida/backends/sqlalchemy/migrations/env.py|

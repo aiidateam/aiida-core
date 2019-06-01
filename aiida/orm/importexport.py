@@ -213,7 +213,6 @@ def get_all_fields_info():
     }
     all_fields_info[COMPUTER_ENTITY_NAME] = {
         "transport_type": {},
-        "transport_params": {},
         "hostname": {},
         "description": {},
         "scheduler_type": {},
@@ -238,13 +237,11 @@ def get_all_fields_info():
             "convert_type": "date"
         },
         "uuid": {},
-        "public": {},
         "mtime": {
             "convert_type": "date"
         },
         "node_type": {},
         "label": {},
-        "nodeversion": {},
         "user": {
             "requires": USER_ENTITY_NAME,
             "related_name": "dbnodes"
@@ -620,7 +617,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.backends.djsite.db.models import suppress_auto_now
 
     # This is the export version expected by this function
-    expected_export_version = StrictVersion('0.4')
+    expected_export_version = StrictVersion('0.5')
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1261,7 +1258,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.common import json
 
     # This is the export version expected by this function
-    expected_export_version = StrictVersion('0.4')
+    expected_export_version = StrictVersion('0.5')
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1498,10 +1495,6 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                                 if (isinstance(v['metadata'], six.string_types) or
                                         isinstance(v['metadata'], six.binary_type)):
                                     v['metadata'] = json.loads(v['metadata'])  # loads() can handle str and unicode/bytes
-
-                                if (isinstance(v['transport_params'], six.string_types) or
-                                        isinstance(v['transport_params'], six.binary_type)):
-                                    v['transport_params'] = json.loads(v['transport_params'])
 
                                 # Check if there is already a computer with the
                                 # same name in the database
@@ -2210,7 +2203,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     if not silent:
         print("STARTING EXPORT...")
 
-    EXPORT_VERSION = '0.4'
+    EXPORT_VERSION = '0.5'
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 

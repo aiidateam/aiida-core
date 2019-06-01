@@ -11,15 +11,18 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import os
+
 from collections import OrderedDict
+import os
+import tempfile
+
 from click.testing import CliRunner
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_computer import computer_disable, computer_enable, computer_setup
 from aiida.cmdline.commands.cmd_computer import computer_show, computer_list, computer_rename, computer_delete
 from aiida.cmdline.commands.cmd_computer import computer_test, computer_configure, computer_duplicate
-from aiida import orm
 
 
 def generate_setup_options_dict(replace_args={}, non_interactive=True):
@@ -301,10 +304,6 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
     def test_noninteractive_from_config(self):
         """Test setting up a computer from a config file"""
-        from aiida.orm import Computer
-        import tempfile
-        import os
-
         label = 'noninteractive_config'
 
         with tempfile.NamedTemporaryFile('w') as handle:
@@ -315,11 +314,12 @@ transport: local
 scheduler: direct
 """.format(l=label))
             handle.flush()
-            result = self.cli_runner.invoke(computer_setup,
-                                            ['--non-interactive', '--config', os.path.realpath(handle.name)])
+
+            options = ['--non-interactive', '--config', os.path.realpath(handle.name)]
+            result = self.cli_runner.invoke(computer_setup, options)
 
         self.assertClickResultNoException(result)
-        self.assertIsInstance(Computer.objects.get(name=label), Computer)
+        self.assertIsInstance(orm.Computer.objects.get(name=label), orm.Computer)
 
 
 class TestVerdiComputerConfigure(AiidaTestCase):
@@ -390,6 +390,28 @@ class TestVerdiComputerConfigure(AiidaTestCase):
 
         result = self.cli_runner.invoke(computer_configure, ['local', comp.label], input='\n', catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
+
+    def test_local_from_config(self):
+        """Test configuring a computer from a config file"""
+        label = 'test_local_from_config'
+        self.comp_builder.label = label
+        self.comp_builder.transport = 'local'
+        computer = self.comp_builder.new()
+        computer.store()
+
+        interval = 20
+
+        with tempfile.NamedTemporaryFile('w') as handle:
+            handle.write("""---
+safe_interval: {interval}
+""".format(interval=interval))
+            handle.flush()
+
+            options = ['local', computer.label, '--config', os.path.realpath(handle.name)]
+            result = self.cli_runner.invoke(computer_configure, options)
+
+        self.assertClickResultNoException(result)
+        self.assertEqual(computer.get_configuration()['safe_interval'], interval)
 
     def test_ssh_ni_empty(self):
         """

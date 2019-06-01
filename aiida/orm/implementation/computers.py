@@ -76,14 +76,6 @@ class BackendComputer(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def get_transport_params(self):
-        pass
-
-    @abc.abstractmethod
-    def set_transport_params(self, val):
-        pass
-
-    @abc.abstractmethod
     def get_name(self):
         pass
 

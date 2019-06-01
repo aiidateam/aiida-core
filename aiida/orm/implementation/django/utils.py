@@ -77,6 +77,10 @@ class ModelWrapper(object):
         """ If the user is stored then save the current value """
         if self.is_saved():
             try:
+                # Manually append the `mtime` to fields to update, because when using the `update_fields` keyword of the
+                # `save` method, the `auto_now` property of `mtime` column is not triggered
+                if self._is_model_field('mtime'):
+                    fields.add('mtime')
                 self._model.save(update_fields=fields)
             except django.db.IntegrityError as e:
                 # Convert to one of our exceptions

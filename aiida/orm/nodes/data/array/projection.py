@@ -17,6 +17,7 @@ from six.moves import range
 import numpy as np
 
 from aiida.common import exceptions
+from aiida.plugins import OrbitalFactory
 
 from ..orbital import OrbitalData
 from .array import ArrayData
@@ -246,14 +247,12 @@ class ProjectionData(OrbitalData, ArrayData):
         for i in range(len(list_of_orbitals)):
             this_orbital = list_of_orbitals[i]
             orbital_dict = this_orbital.get_orbital_dict()
-            OrbitalClass = self._get_orbital_class_from_orbital_dict(
-                           orbital_dict)
-            test_orbital = OrbitalClass()
             try:
-                test_orbital.set_orbital_dict(orbital_dict)
-            except exceptions.ValidationError:
-                raise ValueError("The orbital with dict {} "
-                                 "failed.".format(orbital_dict))
+                orbital_type = orbital_dict.pop('_orbital_type')
+            except KeyError:
+                raise ValidationError("No _orbital_type key found in dictionary: {}".format(orbital_dict))
+            OrbitalClass = OrbitalFactory(orbital_type)
+            test_orbital = OrbitalClass(**orbital_dict)
             list_of_orbital_dicts.append(test_orbital.get_orbital_dict())
         self.set_attribute('orbital_dicts', list_of_orbital_dicts)
 

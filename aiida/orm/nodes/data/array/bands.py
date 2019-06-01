@@ -1640,7 +1640,7 @@ matplotlib.use('Agg')
 from matplotlib import rc
 # Uncomment to change default font
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Times New Roman']})
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Times New Roman', 'DejaVu Serif']})
 # To use proper font for, e.g., Gamma if usetex is set to False
 rc('mathtext', fontset='cm')
 
@@ -1665,7 +1665,7 @@ from __future__ import print_function
 from matplotlib import rc
 # Uncomment to change default font
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Times New Roman']})
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Times New Roman', 'DejaVu Serif']})
 # To use proper font for, e.g., Gamma if usetex is set to False
 rc('mathtext', fontset='cm')
 

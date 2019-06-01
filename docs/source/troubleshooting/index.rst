@@ -41,19 +41,36 @@ Increase PostgreSQL work memory
 By default, the work memory of PostgreSQL is 4 MB.
 Individual operations (such as sorting) that require more memory than this will cause postgres to write temporary files,
 which can result in a lot of overhead from disk I/O (and high CPU usage from `postgresql`).
-This may be solved by increasing the PostgreSQL work memory::
+
+In order to check whether your PostgreSQL cluster is creating temporary files, 
+enable logging of those by setting::
+
+    log_temp_files = 0
+
+in your `postgresql.conf` configuration file.
+
+.. note::
+
+    On Ubuntu, this file is located at `/etc/postgresql/<version>/main/postgresql.conf`.
+
+If the logs show that temporary files are created, you may avoid this by increasing the PostgreSQL work memory::
 
     sudo su postgres -c psql
     postgres=# ALTER system SET work_mem='128MB';
-    select * from pg_reload_conf();
+    postgres=# select * from pg_reload_conf();
 
 The settings should take effect immediately.
 
-One issue causing the high memory requirements may be an unnecessarily large kombu message table.
-In order to prune your kombu message table (safe, when no jobs are running) do::
+One known issue that can cause high memory requirements unnecessarily is the kombu message table overflowing with outdated messages.
+Use the following to check the size of your ``kombu_message`` table and prune it:
+
+.. code:: sql
 
     sudo su postgres -c psql
-    DELETE FROM kombu_message WHERE timestamp < (NOW() - INTERVAL '1 DAYS');
+    postgres=# \c my_aiida_database
+    postgres=# SELECT pg_size_pretty( pg_total_relation_size('kombu_message') );
+     792 MB
+    postgres=# DELETE FROM kombu_message WHERE timestamp < (NOW() - INTERVAL '1 DAYS');
 
 
 Exclude repository from ``locate``

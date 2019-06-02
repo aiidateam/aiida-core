@@ -71,6 +71,7 @@ Use the following to check the size of your ``kombu_message`` table and prune it
     postgres=# SELECT pg_size_pretty( pg_total_relation_size('kombu_message') );
      792 MB
     postgres=# DELETE FROM kombu_message WHERE timestamp < (NOW() - INTERVAL '1 DAYS');
+    postgres=# VACUUM kombu_message;
 
 
 Exclude repository from ``locate``

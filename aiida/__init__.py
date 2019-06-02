@@ -114,7 +114,7 @@ def get_strict_version():
     Return a distutils StrictVersion instance with the current distribution version
 
     :returns: StrictVersion instance with the current version
-    :rtype: :class:`distutils.version.StrictVersion`
+    :rtype: :class:`!distutils.version.StrictVersion`
     """
     from distutils.version import StrictVersion
     return StrictVersion(__version__)

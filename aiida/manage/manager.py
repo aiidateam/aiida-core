@@ -298,10 +298,11 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         runner_loop = runner.loop
 
         # Listen for incoming launch requests
-        task_receiver = rmq.ProcessLauncher(loop=runner_loop,
-                                            persister=self.get_persister(),
-                                            load_context=plumpy.LoadSaveContext(runner=runner),
-                                            loader=persistence.get_object_loader())
+        task_receiver = rmq.ProcessLauncher(
+            loop=runner_loop,
+            persister=self.get_persister(),
+            load_context=plumpy.LoadSaveContext(runner=runner),
+            loader=persistence.get_object_loader())
 
         def callback(*args, **kwargs):
             return plumpy.create_task(functools.partial(task_receiver, *args, **kwargs), loop=runner_loop)

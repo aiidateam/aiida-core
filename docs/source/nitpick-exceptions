@@ -53,6 +53,7 @@ py:exc  ZeroDivisionError
 py:class  classmethod
 py:class  dict
 py:class  callable
+py:class  filter
 py:class  list
 py:class  object
 py:class  unittest.case.TestCase

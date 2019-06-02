@@ -77,11 +77,12 @@ class Computer(entities.Entity):
         """
         # pylint: disable=too-many-arguments
         backend = backend or get_manager().get_backend()
-        model = backend.computers.create(name=name,
-                                         hostname=hostname,
-                                         description=description,
-                                         transport_type=transport_type,
-                                         scheduler_type=scheduler_type)
+        model = backend.computers.create(
+            name=name,
+            hostname=hostname,
+            description=description,
+            transport_type=transport_type,
+            scheduler_type=scheduler_type)
         super(Computer, self).__init__(model)
         if workdir is not None:
             self.set_workdir(workdir)

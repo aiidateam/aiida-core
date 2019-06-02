@@ -150,10 +150,8 @@ class Group(entities.Entity):
         user = user or users.User.objects(backend).get_default()
         type_check(user, users.User)
 
-        model = backend.groups.create(label=label,
-                                      user=user.backend_entity,
-                                      description=description,
-                                      type_string=type_string)
+        model = backend.groups.create(
+            label=label, user=user.backend_entity, description=description, type_string=type_string)
         super(Group, self).__init__(model)
 
     def __repr__(self):

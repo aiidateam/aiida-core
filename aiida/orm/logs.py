@@ -63,12 +63,13 @@ class Log(entities.Entity):
                 if key in metadata:
                     metadata[key] = str(metadata[key])
 
-            return Log(time=timezone.make_aware(datetime.fromtimestamp(record.created)),
-                       loggername=record.name,
-                       levelname=record.levelname,
-                       dbnode_id=dbnode_id,
-                       message=record.getMessage(),
-                       metadata=metadata)
+            return Log(
+                time=timezone.make_aware(datetime.fromtimestamp(record.created)),
+                loggername=record.name,
+                levelname=record.levelname,
+                dbnode_id=dbnode_id,
+                message=record.getMessage(),
+                metadata=metadata)
 
         def get_logs_for(self, entity, order_by=None):
             """
@@ -142,12 +143,13 @@ class Log(entities.Entity):
             raise exceptions.ValidationError('The loggername and levelname cannot be empty')
 
         backend = backend or get_manager().get_backend()
-        model = backend.logs.create(time=time,
-                                    loggername=loggername,
-                                    levelname=levelname,
-                                    dbnode_id=dbnode_id,
-                                    message=message,
-                                    metadata=metadata)
+        model = backend.logs.create(
+            time=time,
+            loggername=loggername,
+            levelname=levelname,
+            dbnode_id=dbnode_id,
+            message=message,
+            metadata=metadata)
         super(Log, self).__init__(model)
         self.store()  # Logs are immutable and automatically stored
 

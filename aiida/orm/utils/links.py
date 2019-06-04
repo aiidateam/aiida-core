@@ -278,9 +278,14 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
         return matching_entry
 
     def nested(self, sort=True):
-        """Return the matched nodes in the original nested form by expanding the collapsed link labels.
+        """Construct (nested) dictionary of matched nodes that mirrors the original nesting of link namespaces.
+
+        Process input and output namespaces can be nested, however the link labels that represent them in the database
+        have a flat hierarchy, and so the link labels are flattened representations of the nested namespaces.
+        This function reconstructs the original node nesting based on the flattened links.
 
         :return: dictionary of nested namespaces
+        :raises KeyError: if there are duplicate link labels in a namespace
         """
         from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR
 
@@ -300,6 +305,9 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
                 current_namespace = current_namespace.setdefault(subspace, {})
 
             # Insert the node at the given port name
+            if port_name in current_namespace:
+                raise KeyError("duplicate label '{}' in namespace '{}'".format(port_name, '.'.join(port_namespaces)))
+
             current_namespace[port_name] = entry.node
 
         if sort:

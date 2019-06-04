@@ -299,7 +299,9 @@ class Process(plumpy.Process):
 
     @override
     def out(self, output_port, value=None):
-        """Register output port.
+        """Attach output to output port.
+
+        The name of the port will be used as the link label.
 
         :param output_port: name of output port
         :type output_port: str
@@ -314,7 +316,7 @@ class Process(plumpy.Process):
         return super(Process, self).out(output_port, value)
 
     def out_many(self, out_dict):
-        """Register multiple output ports.
+        """Attach outputs to multiple output ports.
 
         Keys of the dictionary will be used as output port names, values as outputs.
 

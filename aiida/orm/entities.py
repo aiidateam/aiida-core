@@ -210,7 +210,6 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
     def __init__(self, backend_entity):
         """
         :param backend_entity: the backend model supporting this entity
-
         :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
         """
         self._backend_entity = backend_entity
@@ -219,7 +218,6 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
     def init_from_backend(self, backend_entity):
         """
         :param backend_entity: the backend model supporting this entity
-
         :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
         """
         self._backend_entity = backend_entity

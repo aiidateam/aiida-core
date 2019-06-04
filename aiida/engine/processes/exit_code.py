@@ -51,7 +51,7 @@ class ExitCodesNamespace(AttributeDict):
         :type identifier: str
 
         :returns: an ExitCode named tuple
-        :rtype: (int, str)
+        :rtype: :class:`aiida.engine.ExitCode`
 
         :raises ValueError: if no exit code with the given label is defined for this process
         """

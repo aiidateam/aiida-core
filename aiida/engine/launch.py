@@ -50,8 +50,8 @@ def run_get_node(process, *args, **inputs):
     :param inputs: the inputs to be passed to the process
     :type inputs: dict
 
-    :return: tuple of the outputs of the process and the process node
-    :rtype: (dict, :class:`aiida.orm.ProcessNode`)
+    :return: tuple of the outputs of the process and the process node pk
+    :rtype: (dict, int)
     """
     if isinstance(process, Process):
         runner = process.runner
@@ -96,7 +96,7 @@ def submit(process, **inputs):
     :type inputs: dict
 
     :return: the calculation node of the process
-    :rtype: :class:`aiida.orm.CalculationNode`
+    :rtype: :class:`aiida.orm.ProcessNode`
     """
     assert not is_process_function(process), 'Cannot submit a process function'
 

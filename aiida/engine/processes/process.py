@@ -299,7 +299,7 @@ class Process(plumpy.Process):
 
     @override
     def out(self, output_port, value=None):
-        """Add output port.
+        """Register output port.
 
         :param output_port: name of output port
         :type output_port: str
@@ -314,7 +314,7 @@ class Process(plumpy.Process):
         return super(Process, self).out(output_port, value)
 
     def out_many(self, out_dict):
-        """ Add multiple output ports.
+        """Register multiple output ports.
 
         Keys of the dictionary will be used as output port names, values as outputs.
 
@@ -710,7 +710,7 @@ class Process(plumpy.Process):
         are marked as being non database storable
 
         :param port: port against which to map the port value, can be InputPort or PortNamespace
-        :type port: str
+        :type port: :class:`plumpy.ports.Port`
 
         :param port_value: value for the current port, can be a Mapping
 
@@ -750,7 +750,7 @@ class Process(plumpy.Process):
         Function that will recursively flatten the outputs dictionary.
 
         :param port: port against which to map the port value, can be OutputPort or PortNamespace
-        :type port: str
+        :type port: :class:`plumpy.ports.Port`
 
         :param port_value: value for the current port, can be a Mapping
         :type parent_name: str

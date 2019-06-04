@@ -51,8 +51,11 @@ def calcfunction(function):
     >>> r.get_incoming().get_node_by_label('result').get_incoming().all_nodes()
     [4, 5]
 
-    :param callable function: The function to decorate.
-    :return callable: The decorated function.
+    :param function: The function to decorate.
+    :type function: callable
+
+    :return: The decorated function.
+    :rtype: callable
     """
     from aiida.orm import CalcFunctionNode
     return process_function(node_class=CalcFunctionNode)(function)
@@ -79,9 +82,12 @@ def workfunction(function):
     >>> r.get_incoming().get_node_by_label('result').get_incoming().all_nodes()
     [4, 5]
 
-    :param callable function: The function to decorate.
-    :return callable: The decorated function.
-    """
+    :param function: The function to decorate.
+    :type function: callable
+
+    :return: The decorated function.
+    :rtype: callable
+        """
     from aiida.orm import WorkFunctionNode
     return process_function(node_class=WorkFunctionNode)(function)
 
@@ -118,8 +124,8 @@ def process_function(node_class):
 
             :param args: input arguments to construct the FunctionProcess
             :param kwargs: input keyword arguments to construct the FunctionProcess
-            :return: tuple of the outputs of the process and the process node
-            :rtype: (dict, :class:`aiida.orm.ProcessNode`)
+            :return: tuple of the outputs of the process and the process node pk
+            :rtype: (dict, int)
             """
             runner = get_manager().create_runner(with_persistence=False)
             inputs = process_class.create_inputs(*args, **kwargs)
@@ -159,8 +165,8 @@ def process_function(node_class):
 
             :param args: input arguments to construct the FunctionProcess
             :param kwargs: input keyword arguments to construct the FunctionProcess
-            :return: tuple of the outputs of the process and the process node
-            :rtype: (dict, :class:`aiida.orm.ProcessNode`)
+            :return: tuple of the outputs of the process and the process node pk
+            :rtype: (dict, int)
             """
             result, node = run_get_node(*args, **kwargs)
             return result, node.pk

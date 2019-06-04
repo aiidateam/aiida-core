@@ -132,7 +132,7 @@ def get_version():
 
 def _get_raw_file_header():
     """
-    Get the default header for source AiiDa source code files.
+    Get the default header for source AiiDA source code files.
     Note: is not preceded by comment character.
 
     :return: default AiiDA source file header
@@ -146,8 +146,11 @@ If you use AiiDA for publication purposes, please cite:
 
 def get_file_header(comment_char="# "):
     """
-    Get the default header for source AiiDa source code files.
-    Note: Prepend by comment character.
+    Get the default header for source AiiDA source code files.
+
+    .. note::
+
+        Prepend by comment character.
 
     :param comment_char: string put in front of each line
     :type comment_char: str

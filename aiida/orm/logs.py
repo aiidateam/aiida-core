@@ -127,7 +127,7 @@ class Log(entities.Entity):
         :type message: basestring
 
         :param metadata: metadata
-        :type metadata: :class:`!json.json`
+        :type metadata: dict
 
         :param backend: database backend
         :type backend: :class:`aiida.orm.implementation.Backend`
@@ -209,6 +209,6 @@ class Log(entities.Entity):
         Get the metadata corresponding to the entry
 
         :return: The entry metadata
-        :rtype: :class:`!json.json`
+        :rtype: dict
         """
         return self._backend_entity.metadata

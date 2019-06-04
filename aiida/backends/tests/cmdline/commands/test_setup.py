@@ -83,7 +83,7 @@ profile: testing
 first_name: Leopold
 last_name: Talirz
 institution: EPFL
-backend: {}
+db_backend: {}
 email: 123@234.de""".format(self.backend))
             handle.flush()
             result = self.cli_runner.invoke(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)])

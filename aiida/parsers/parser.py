@@ -119,9 +119,13 @@ class Parser(object):
         It's storing method will also be disabled, making it impossible to store, because storing it afterwards would
         not have the expected effect, as the outputs it produced will not be stored with it.
 
+        This method is useful to test parsing in unit tests where a `CalcJobNode` can be mocked without actually having
+        to run a `CalcJob`. It can also be useful to actually re-perform the parsing of a completed `CalcJob` with a
+        different parser.
+
         :param node: a `CalcJobNode` instance
         :param store_provenance: bool, if True will store the parsing as a `CalcFunctionNode` in the provenance
-        :return: a tuple of the parsed results and the `CalcFunctionNode`
+        :return: a tuple of the parsed results and the `CalcFunctionNode` representing the process of parsing
         """
         parser = cls(node=node)
 
@@ -129,12 +133,27 @@ class Parser(object):
         def parse_calcfunction(**kwargs):
             """A wrapper function that will turn calling the `Parser.parse` method into a `CalcFunctionNode`.
 
+            .. warning:: This implementation of a `calcfunction` uses the `Process.current` to circumvent the limitation
+                of not being able to return both output nodes as well as an exit code. However, since this calculation
+                function is supposed to emulate the parsing of a `CalcJob`, which *does* have that capability, I have
+                to use this method. This method should however not be used in process functions, in other words:
+
+                    Do not try this at home!
+
             :param kwargs: keyword arguments that are passed to `Parser.parse` after it has been constructed
             """
+            from aiida.engine import Process
+
             exit_code = parser.parse(**kwargs)
             outputs = parser.outputs
 
             if exit_code and exit_code.status:
+                # In the case that an exit code was returned, still attach all the registered outputs on the current
+                # process as well, which should represent this `CalcFunctionNode`. Otherwise the caller of the
+                # `parse_from_node` method will get an empty dictionary as a result, despite the `Parser.parse` method
+                # having registered outputs.
+                process = Process.current()
+                process.out_many(outputs)
                 return exit_code
 
             return dict(outputs)

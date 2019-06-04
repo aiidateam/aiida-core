@@ -40,8 +40,12 @@ class AuthInfo(entities.Entity):
         """Create an `AuthInfo` instance for the given computer and user.
 
         :param computer: a `Computer` instance
+        :type computer: :class:`aiida.orm.Computer`
+
         :param user: a `User` instance
-        :return: :class:`aiida.orm.authinfos.AuthInfo`
+        :type user: :class:`aiida.orm.User`
+
+        :rtype: :class:`aiida.orm.authinfos.AuthInfo`
         """
         backend = backend or get_manager().get_backend()
         model = backend.authinfos.create(computer=computer.backend_entity, user=user.backend_entity)
@@ -57,7 +61,8 @@ class AuthInfo(entities.Entity):
     def enabled(self):
         """Return whether this instance is enabled.
 
-        :return: boolean, True if enabled, False otherwise
+        :return: True if enabled, False otherwise
+        :rtype: bool
         """
         return self._backend_entity.enabled
 
@@ -73,7 +78,7 @@ class AuthInfo(entities.Entity):
     def computer(self):
         """Return the computer associated with this instance.
 
-        :return: :class:`aiida.orm.computers.Computer`
+        :rtype: :class:`aiida.orm.computers.Computer`
         """
         from . import computers  # pylint: disable=cyclic-import
         return computers.Computer.from_backend_entity(self._backend_entity.computer)
@@ -82,7 +87,7 @@ class AuthInfo(entities.Entity):
     def user(self):
         """Return the user associated with this instance.
 
-        :return: :class:`aiida.orm.users.User`
+        :rtype: :class:`aiida.orm.users.User`
         """
         return users.User.from_backend_entity(self._backend_entity.user)
 
@@ -90,6 +95,7 @@ class AuthInfo(entities.Entity):
         """Return the dictionary of authentication parameters
 
         :return: a dictionary with authentication parameters
+        :rtype: dict
         """
         return self._backend_entity.get_auth_params()
 
@@ -104,6 +110,7 @@ class AuthInfo(entities.Entity):
         """Return the dictionary of metadata
 
         :return: a dictionary with metadata
+        :rtype: dict
         """
         return self._backend_entity.get_metadata()
 
@@ -111,6 +118,7 @@ class AuthInfo(entities.Entity):
         """Set the dictionary of metadata
 
         :param metadata: a dictionary with metadata
+        :type metadata: dict
         """
         self._backend_entity.set_metadata(metadata)
 
@@ -130,7 +138,7 @@ class AuthInfo(entities.Entity):
     def get_transport(self):
         """Return a fully configured transport that can be used to connect to the computer set for this instance.
 
-        :return: :class:`aiida.transports.Transport`
+        :rtype: :class:`aiida.transports.Transport`
         """
         computer = self.computer
         transport_type = computer.get_transport_type()

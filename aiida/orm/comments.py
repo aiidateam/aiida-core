@@ -30,6 +30,7 @@ class Comment(entities.Entity):
             Remove a Comment from the collection with the given id
 
             :param comment_id: the id of the comment to delete
+            :type comment_id: int
             """
             self._backend.comments.delete(comment_id)
 
@@ -38,9 +39,16 @@ class Comment(entities.Entity):
         Create a Comment for a given node and user
 
         :param node: a Node instance
+        :type node: :class:`aiida.orm.Node`
+
         :param user: a User instance
+        :type user: :class:`aiida.orm.User`
+
         :param content: the comment content
+        :type content: str
+
         :return: a Comment object associated to the given node and user
+        :rtype: :class:`aiida.orm.Comment`
         """
         backend = backend or get_manager().get_backend()
         model = backend.comments.create(node=node.backend_entity, user=user.backend_entity, content=content)

@@ -40,7 +40,7 @@ class AiidaTestCase(unittest.TestCase):
     """
     _class_was_setup = False
     __backend_instance = None
-    backend = None  # type: aiida.orm.Backend
+    backend = None  # type: aiida.orm.implementation.Backend
 
     @classmethod
     def get_backend_class(cls):

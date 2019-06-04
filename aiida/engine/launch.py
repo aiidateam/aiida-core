@@ -25,8 +25,13 @@ def run(process, *args, **inputs):
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class or process function to run
+    :type process: :class:`aiida.engine.Process`
+
     :param inputs: the inputs to be passed to the process
+    :type inputs: dict
+
     :return: the outputs of the process
+    :rtype: dict
     """
     if isinstance(process, Process):
         runner = process.runner
@@ -40,8 +45,13 @@ def run_get_node(process, *args, **inputs):
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class or process function to run
+    :type process: :class:`aiida.engine.Process`
+
     :param inputs: the inputs to be passed to the process
-    :return: tuple of the outputs of the process and the process node
+    :type inputs: dict
+
+    :return: tuple of the outputs of the process and the process node pk
+    :rtype: (dict, int)
     """
     if isinstance(process, Process):
         runner = process.runner
@@ -55,8 +65,13 @@ def run_get_pk(process, *args, **inputs):
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class or process function to run
+    :type process: :class:`aiida.engine.Process`
+
     :param inputs: the inputs to be passed to the process
+    :type inputs: dict
+
     :return: tuple of the outputs of the process and process node pk
+    :rtype: (dict, int)
     """
     if isinstance(process, Process):
         runner = process.runner
@@ -75,8 +90,13 @@ def submit(process, **inputs):
     .. warning: submission of processes requires `store_provenance=True`
 
     :param process: the process class to submit
+    :type process: :class:`aiida.engine.Process`
+
     :param inputs: the inputs to be passed to the process
+    :type inputs: dict
+
     :return: the calculation node of the process
+    :rtype: :class:`aiida.orm.ProcessNode`
     """
     assert not is_process_function(process), 'Cannot submit a process function'
 

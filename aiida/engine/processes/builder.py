@@ -35,6 +35,7 @@ class ProcessBuilderNamespace(collections.MutableMapping):
         by calling str() on the Port, which should return the description of the Port.
 
         :param port_namespace: the inputs PortNamespace for which to construct the builder
+        :type port_namespace: str
         """
         # pylint: disable=super-init-not-called
         self._port_namespace = port_namespace
@@ -71,6 +72,11 @@ class ProcessBuilderNamespace(collections.MutableMapping):
         """
         Any attributes without a leading underscore being set correspond to inputs and should hence
         be validated with respect to the corresponding input port from the process spec
+
+        :param attr: attribute
+        :type attr: str
+
+        :param value: value
         """
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
@@ -117,7 +123,10 @@ class ProcessBuilderNamespace(collections.MutableMapping):
         principle the method functions just as `collections.MutableMapping.update`.
 
         :param args: a single mapping that should be mapped on the namespace
+        :type args: list
+
         :param kwds: keyword value pairs that should be mapped onto the ports
+        :type kwds: dict
         """
         if len(args) > 1:
             raise TypeError('update expected at most 1 arguments, got %d' % len(args))

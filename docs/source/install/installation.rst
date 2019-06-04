@@ -26,6 +26,11 @@ To create and activate a new virtual environment, run the following commands::
     virtualenv ~/.virtualenvs/aiidapy              # create "aiidapy" environment
     source ~/.virtualenvs/aiidapy/bin/activate     # activate "aiidapy" environment
 
+.. note:: We recommend setting up a **python 3** virtual environment.
+   If your system runs python 2 by default but has a ``python3`` executable, you can still set up a python 3 virtual environment using::
+
+       virtualenv --python python3 ~/.virtualenvs/aiidapy
+
 This will create a directory in your home directory named ``.virtualenvs``, and a directory ``aiidapy`` inside of it where all the packages will be installed.
 After activation, your prompt should have ``(aiidapy)`` in front of it, indicating that you are working inside the virtual environment.
 The activation script ensures that the python executable of the virtualenv is the first in ``PATH``, and that python programs have access only to packages installed inside the virtualenv.

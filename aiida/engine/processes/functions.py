@@ -119,7 +119,7 @@ def process_function(node_class):
             Run the FunctionProcess with the supplied inputs in a local runner.
 
             The function will have to create a new runner for the FunctionProcess instead of using the global runner,
-            because otherwise if this workfunction were to call another one from within its scope, that would use
+            because otherwise if this process function were to call another one from within its scope, that would use
             the same runner and it would be blocking the event loop from continuing.
 
             :param args: input arguments to construct the FunctionProcess
@@ -127,6 +127,7 @@ def process_function(node_class):
             :return: tuple of the outputs of the process and the process node pk
             :rtype: (dict, int)
             """
+            current_runner = get_manager().get_runner()
             runner = get_manager().create_runner(with_persistence=False)
             inputs = process_class.create_inputs(*args, **kwargs)
 
@@ -140,18 +141,22 @@ def process_function(node_class):
 
             process = process_class(inputs=inputs, runner=runner)
 
-            def kill_process(_num, _frame):
-                """Send the kill signal to the process in the current scope."""
-                LOGGER.critical('runner received interrupt, killing process %s', process.pid)
-                process.kill(msg='Process was killed because the runner received an interrupt')
+            # Only add handlers for interrupt signal to kill the current process if we are not in a daemon runner
+            # Without this check, running process functions in a daemon worker would be killed if the daemon is shutdown
+            if not current_runner.is_daemon_runner:
 
-            signal.signal(signal.SIGINT, kill_process)
-            signal.signal(signal.SIGTERM, kill_process)
+                def kill_process(_num, _frame):
+                    """Send the kill signal to the process in the current scope."""
+                    LOGGER.critical('runner received interrupt, killing process %s', process.pid)
+                    process.kill(msg='Process was killed because the runner received an interrupt')
 
-            result = process.execute()
+                signal.signal(signal.SIGINT, kill_process)
+                signal.signal(signal.SIGTERM, kill_process)
 
-            # Close the runner properly
-            runner.close()
+            try:
+                result = process.execute()
+            finally:
+                runner.close()
 
             store_provenance = inputs.get('metadata', {}).get('store_provenance', True)
             if not store_provenance:

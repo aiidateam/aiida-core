@@ -127,8 +127,8 @@ def process_function(node_class):
             :return: tuple of the outputs of the process and the process node pk
             :rtype: (dict, int)
             """
-            current_runner = get_manager().get_runner()
-            runner = get_manager().create_runner(with_persistence=False)
+            manager = get_manager()
+            runner = manager.create_runner(with_persistence=False)
             inputs = process_class.create_inputs(*args, **kwargs)
 
             # Remove all the known inputs from the kwargs
@@ -141,21 +141,31 @@ def process_function(node_class):
 
             process = process_class(inputs=inputs, runner=runner)
 
-            # Only add handlers for interrupt signal to kill the current process if we are not in a daemon runner
+            # Only add handlers for interrupt signal to kill the process if we are in a local and not a daemon runner.
             # Without this check, running process functions in a daemon worker would be killed if the daemon is shutdown
+            current_runner = manager.get_runner()
+            original_handler = None
+            kill_signal = signal.SIGINT
+
             if not current_runner.is_daemon_runner:
 
                 def kill_process(_num, _frame):
                     """Send the kill signal to the process in the current scope."""
+                    from tornado import gen
                     LOGGER.critical('runner received interrupt, killing process %s', process.pid)
-                    process.kill(msg='Process was killed because the runner received an interrupt')
+                    result = process.kill(msg='Process was killed because the runner received an interrupt')
+                    raise gen.Return(result)
 
-                signal.signal(signal.SIGINT, kill_process)
-                signal.signal(signal.SIGTERM, kill_process)
+                # Store the current handler on the signal such that it can be restored after process has terminated
+                original_handler = signal.getsignal(kill_signal)
+                signal.signal(kill_signal, kill_process)
 
             try:
                 result = process.execute()
             finally:
+                # If the `original_handler` is set, that means the `kill_process` was bound, which needs to be reset
+                if original_handler:
+                    signal.signal(signal.SIGINT, original_handler)
                 runner.close()
 
             store_provenance = inputs.get('metadata', {}).get('store_provenance', True)

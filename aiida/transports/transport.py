@@ -28,6 +28,19 @@ DEFAULT_TRANSPORT_INTERVAL = 30.
 __all__ = ('Transport',)
 
 
+def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argument
+    """Validate that the number passed to this parameter is a positive number.
+
+    :param ctx: the `click.Context`
+    :param param: the parameter
+    :param value: the value passed for the parameter
+    :raises `click.BadParameter`: if the value is not a positive number
+    """
+    if value is not None and value < 0:
+        from click import BadParameter
+        raise BadParameter('value needs to be a positive number')
+
+
 @six.add_metaclass(ABCMeta)
 class Transport(object):
     """
@@ -42,10 +55,11 @@ class Transport(object):
     _MAGIC_CHECK = re.compile('[*?[]')
     _valid_auth_options = []
     _common_auth_options = [('safe_interval', {
-        'type': int,
-        'prompt': 'Connection cooldown time (sec)',
-        'help': 'Minimum time between connections in sec',
-        'non_interactive_default': True
+        'type': float,
+        'prompt': 'Connection cooldown time (s)',
+        'help': 'Minimum time interval in seconds between consecutive connection openings',
+        'non_interactive_default': True,
+        'callback': validate_positive_number
     })]
 
     def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument

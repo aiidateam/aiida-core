@@ -116,6 +116,15 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
     def controller(self):
         return self._controller
 
+    @property
+    def is_daemon_runner(self):
+        """Return whether the runner is a daemon runner, which means it submits processes over RabbitMQ.
+
+        :return: True if the runner is a daemon runner
+        :rtype: bool
+        """
+        return self._rmq_submit
+
     def is_closed(self):
         return self._closed
 

@@ -48,7 +48,7 @@ def transition_attributes_extras(apps, _):
             return
 
         with click.progressbar(label='Updating attributes and extras', length=total_node_no, show_pos=True) as pr_bar:
-            fetcher = lazy_bulk_fetch(group_size, total_node_no, db_node_model.objects.all)
+            fetcher = lazy_bulk_fetch(group_size, total_node_no, db_node_model.objects.order_by('id').all)
             error = False
 
             for batch in fetcher:
@@ -85,7 +85,7 @@ def transition_settings(apps, _):
             return
 
         with click.progressbar(label='Updating settings', length=total_settings_no, show_pos=True) as pr_bar:
-            fetcher = lazy_bulk_fetch(group_size, total_settings_no, db_setting_model.objects.all)
+            fetcher = lazy_bulk_fetch(group_size, total_settings_no, db_setting_model.objects.order_by('id').all)
             error = False
 
             for batch in fetcher:
@@ -129,8 +129,7 @@ def attributes_to_dict(attr_list):
         try:
             tmp_d = select_from_key(a.key, d)
         except ValueError:
-            echo.echo_critical("Couldn't transfer attribute {} with key {} for dbnode {}".format(
-                a.id, a.key, a.dbnode_id))
+            echo.echo_error("Couldn't transfer attribute {} with key {} for dbnode {}".format(a.id, a.key, a.dbnode_id))
             error = True
             continue
         key = a.key.split('.')[-1]

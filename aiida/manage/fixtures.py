@@ -146,33 +146,47 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
             self.__backend = get_manager().get_backend()
         return self.__backend
 
-    def create_db_cluster(self):
+    def create_db_cluster(self, pgtest=None):
+        """
+        Create the database cluster using PGTest.
+
+        :param pgtest: a dictionary containing input to PGTest()
+        """
+        if pgtest is None:
+            pgtest = {}
         if not self.pg_cluster:
-            self.pg_cluster = PGTest()
+            self.pg_cluster = PGTest(**pgtest)
         self.db_params.update(self.pg_cluster.dsn)
 
-    def create_aiida_db(self):
-        """Create the necessary database on the temporary postgres instance"""
+    def create_aiida_db(self, pgtest=None):
+        """
+        Create the necessary database on the temporary postgres instance.
+
+        By utilizing pgtest it is possible to forward initialization arguments to PGTest().
+
+        :param pgtest: a dictionary containing input to PGTest()
+        """
         if configuration.PROFILE is not None:
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test db environment')
         if not self.db_params:
-            self.create_db_cluster()
+            self.create_db_cluster(pgtest)
         self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.db_params)
         self.db_params = self.postgres.dbinfo.copy()
         self.postgres.create_dbuser(self.db_user, self.db_pass)
         self.postgres.create_db(self.db_user, self.db_name)
         self.__is_running_on_test_db = True
 
-    def create_profile(self):
+    def create_profile(self, pgtest=None):
         """
         Set AiiDA to use the test config dir and create a default profile there
 
         Warning: the AiiDA dbenv must not be loaded when this is called!
+        :param pgtest: a dictionary containing input to PGTest()
         """
         if configuration.PROFILE is not None:
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test profile')
         if not self.__is_running_on_test_db:
-            self.create_aiida_db()
+            self.create_aiida_db(pgtest)
         from aiida.manage.configuration import settings, load_profile, Profile
         if not self.root_dir:
             self.root_dir = tempfile.mkdtemp()
@@ -423,13 +437,24 @@ _GLOBAL_FIXTURE_MANAGER = FixtureManager()
 
 
 @contextmanager
-def fixture_manager(backend=BACKEND_DJANGO):
+def fixture_manager(backend=BACKEND_DJANGO, pgtest=None):
     """
     Context manager for FixtureManager objects
 
     Example test runner (unittest)::
 
         with fixture_manager(backend) as fixture_mgr:
+            # ready for tests
+        # everything cleaned up
+
+    The variable pgtest can be used to accept a dictionary
+    containing inputs to PGTest(). Typically, and the most common use
+    would be if the user have several postgresql installations and want
+    to use a particular pg_ctl, then the user might do the following:
+
+    Example test runner(unittest)::
+
+        with fixture_manager(backend, pgtest={'pg_ctl': '/somepath/pg_ctl'}) as fixture_mgr:
             # ready for tests
         # everything cleaned up
 
@@ -440,11 +465,12 @@ def fixture_manager(backend=BACKEND_DJANGO):
                 yield fixture_mgr
 
     :param backend: database backend, either BACKEND_SQLA or BACKEND_DJANGO
+    :param pgtest: a dictionary containing the input passed to PGTest()
     """
     try:
         if not _GLOBAL_FIXTURE_MANAGER.has_profile_open():
             _GLOBAL_FIXTURE_MANAGER.backend = backend
-            _GLOBAL_FIXTURE_MANAGER.create_profile()
+            _GLOBAL_FIXTURE_MANAGER.create_profile(pgtest)
         yield _GLOBAL_FIXTURE_MANAGER
     finally:
         _GLOBAL_FIXTURE_MANAGER.destroy_all()

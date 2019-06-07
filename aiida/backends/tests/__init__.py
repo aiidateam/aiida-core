@@ -117,6 +117,7 @@ DB_TEST_LIST = {
         'orm.data.remote': ['aiida.backends.tests.orm.data.test_remote'],
         'orm.data.singlefile': ['aiida.backends.tests.orm.data.test_singlefile'],
         'orm.data.upf': ['aiida.backends.tests.orm.data.test_upf'],
+        'orm.data.to_aiida_type': ['aiida.backends.tests.orm.data.test_to_aiida_type'],
         'orm.entities': ['aiida.backends.tests.orm.test_entities'],
         'orm.groups': ['aiida.backends.tests.orm.test_groups'],
         'orm.implementation.backend': ['aiida.backends.tests.orm.implementation.test_backend'],

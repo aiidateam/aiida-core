@@ -101,4 +101,4 @@ class Dict(Data):
 
 @to_aiida_type.register(dict)
 def _(value):
-    return Dict(dictionary=value)
+    return Dict(dict=value)

@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import os
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.archive import Archive
+from aiida.common.archive import Archive, CorruptArchive
 from aiida.common.exceptions import InvalidOperation
 
 
@@ -35,17 +35,24 @@ def get_archive_file(archive):
 
 
 class TestCommonArchive(AiidaTestCase):
-    """Tests for the :class:`aiida.common.archive.Archive` class."""
+    """Tests for the :py:class:`~aiida.common.archive.Archive` class."""
 
     def test_context_required(self):
         """Verify that accessing a property of an Archive outside of a context manager raises."""
         with self.assertRaises(InvalidOperation):
             filepath = get_archive_file('export_v0.1.aiida')
             archive = Archive(filepath)
-            _ = archive.version_format
+            archive.version_format  # pylint: disable=pointless-statement
 
     def test_version_format(self):
         """Verify that `version_format` return the correct archive format version."""
         filepath = get_archive_file('export_v0.1.aiida')
         with Archive(filepath) as archive:
             self.assertEqual(archive.version_format, '0.1')
+
+    def test_empty_archive(self):
+        """Verify that attempting to unpack an empty archive raises a `CorruptArchive` exception."""
+        filepath = get_archive_file('empty.aiida')
+        with self.assertRaises(CorruptArchive):
+            with Archive(filepath) as archive:
+                archive.version_format  # pylint: disable=pointless-statement

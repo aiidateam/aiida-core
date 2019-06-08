@@ -291,3 +291,12 @@ class TestVerdiExport(AiidaTestCase):
             result = self.cli_runner.invoke(cmd_export.inspect, options)
             self.assertIsNone(result.exception, result.output)
             self.assertEqual(result.output.strip(), version_number)
+
+    def test_inspect_empty_archive(self):
+        """Test the functionality of `verdi export inspect` for an empty archive."""
+        filename_input = get_archive_file('empty.aiida')
+
+        options = [filename_input]
+        result = self.cli_runner.invoke(cmd_export.inspect, options)
+        self.assertIsNotNone(result.exception, result.output)
+        self.assertIn('corrupt archive', result.output)

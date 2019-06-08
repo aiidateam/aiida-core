@@ -86,7 +86,7 @@ class BackendLog(backends.BackendEntity):
         Get the metadata corresponding to the entry
 
         :return: The entry metadata
-        :rtype: :class:`!json.json`
+        :rtype: dict
         """
 
 

@@ -73,14 +73,12 @@ class TestVerdiUserCommand(AiidaTestCase):
     def test_user_update(self):
         """Reconfigure an existing user with `verdi user configure`."""
         email = user_1['email']
-        new_pass = '1234'
 
         cli_options = [
             '--email', user_1['email'],
             '--first-name', user_2['first_name'],
             '--last-name', user_2['last_name'],
             '--institution', user_2['institution'],
-            '--password', new_pass,
         ]
 
         result = self.cli_runner.invoke(cmd_user.user_configure, cli_options, catch_exceptions=False)
@@ -88,11 +86,7 @@ class TestVerdiUserCommand(AiidaTestCase):
         self.assertTrue('updated' in result.output)
         self.assertTrue('created' not in result.output)
 
-        user_model = orm.User.objects.get(email=email)
-
         # Check it's all been changed to user2's attributes except the email
         for key, value in user_2.items():
             if key != 'email':
                 setattr(cmd_user, key, user_1[key])
-
-        self.assertTrue(user_model.verify_password(new_pass))

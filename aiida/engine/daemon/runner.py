@@ -30,7 +30,9 @@ def start_daemon():
     configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
 
     try:
-        runner = get_manager().create_daemon_runner()
+        manager = get_manager()
+        runner = manager.create_daemon_runner()
+        manager.set_runner(runner)
     except Exception as exception:
         LOGGER.exception('daemon runner failed to start')
         raise

@@ -51,6 +51,11 @@ def calcfunction(function):
     >>> r.get_incoming().get_node_by_label('result').get_incoming().all_nodes()
     [4, 5]
 
+    :param function: The function to decorate.
+    :type function: callable
+
+    :return: The decorated function.
+    :rtype: callable
     """
     from aiida.orm import CalcFunctionNode
     return process_function(node_class=CalcFunctionNode)(function)
@@ -77,7 +82,12 @@ def workfunction(function):
     >>> r.get_incoming().get_node_by_label('result').get_incoming().all_nodes()
     [4, 5]
 
-    """
+    :param function: The function to decorate.
+    :type function: callable
+
+    :return: The decorated function.
+    :rtype: callable
+        """
     from aiida.orm import WorkFunctionNode
     return process_function(node_class=WorkFunctionNode)(function)
 
@@ -87,6 +97,7 @@ def process_function(node_class):
     The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
+    :type node_class: :class:`aiida.orm.ProcessNode`
     """
 
     @staticmethod
@@ -98,7 +109,8 @@ def process_function(node_class):
         """
         Turn the decorated function into a FunctionProcess.
 
-        :param function: the actual decorated function that the FunctionProcess represents
+        :param callable function: the actual decorated function that the FunctionProcess represents
+        :return callable: The decorated function.
         """
         process_class = FunctionProcess.build(function, node_class=node_class)
 
@@ -107,14 +119,16 @@ def process_function(node_class):
             Run the FunctionProcess with the supplied inputs in a local runner.
 
             The function will have to create a new runner for the FunctionProcess instead of using the global runner,
-            because otherwise if this workfunction were to call another one from within its scope, that would use
+            because otherwise if this process function were to call another one from within its scope, that would use
             the same runner and it would be blocking the event loop from continuing.
 
             :param args: input arguments to construct the FunctionProcess
             :param kwargs: input keyword arguments to construct the FunctionProcess
-            :return: tuple of the outputs of the process and the calculation node
+            :return: tuple of the outputs of the process and the process node pk
+            :rtype: (dict, int)
             """
-            runner = get_manager().create_runner(with_persistence=False)
+            manager = get_manager()
+            runner = manager.create_runner(with_persistence=False)
             inputs = process_class.create_inputs(*args, **kwargs)
 
             # Remove all the known inputs from the kwargs
@@ -127,18 +141,32 @@ def process_function(node_class):
 
             process = process_class(inputs=inputs, runner=runner)
 
-            def kill_process(_num, _frame):
-                """Send the kill signal to the process in the current scope."""
-                LOGGER.critical('runner received interrupt, killing process %s', process.pid)
-                process.kill(msg='Process was killed because the runner received an interrupt')
+            # Only add handlers for interrupt signal to kill the process if we are in a local and not a daemon runner.
+            # Without this check, running process functions in a daemon worker would be killed if the daemon is shutdown
+            current_runner = manager.get_runner()
+            original_handler = None
+            kill_signal = signal.SIGINT
 
-            signal.signal(signal.SIGINT, kill_process)
-            signal.signal(signal.SIGTERM, kill_process)
+            if not current_runner.is_daemon_runner:
 
-            result = process.execute()
+                def kill_process(_num, _frame):
+                    """Send the kill signal to the process in the current scope."""
+                    from tornado import gen
+                    LOGGER.critical('runner received interrupt, killing process %s', process.pid)
+                    result = process.kill(msg='Process was killed because the runner received an interrupt')
+                    raise gen.Return(result)
 
-            # Close the runner properly
-            runner.close()
+                # Store the current handler on the signal such that it can be restored after process has terminated
+                original_handler = signal.getsignal(kill_signal)
+                signal.signal(kill_signal, kill_process)
+
+            try:
+                result = process.execute()
+            finally:
+                # If the `original_handler` is set, that means the `kill_process` was bound, which needs to be reset
+                if original_handler:
+                    signal.signal(signal.SIGINT, original_handler)
+                runner.close()
 
             store_provenance = inputs.get('metadata', {}).get('store_provenance', True)
             if not store_provenance:
@@ -148,7 +176,13 @@ def process_function(node_class):
             return result, process.node
 
         def run_get_pk(*args, **kwargs):
-            """Recreate the `run_get_pk` utility launcher."""
+            """Recreate the `run_get_pk` utility launcher.
+
+            :param args: input arguments to construct the FunctionProcess
+            :param kwargs: input keyword arguments to construct the FunctionProcess
+            :return: tuple of the outputs of the process and the process node pk
+            :rtype: (dict, int)
+            """
             result, node = run_get_node(*args, **kwargs)
             return result, node.pk
 
@@ -190,9 +224,12 @@ class FunctionProcess(Process):
         these will also become inputs.
 
         :param func: The function to build a process from
+        :type func: callable
+
         :param node_class: Provide a custom node class to be used, has to be constructable with no arguments. It has to
             be a sub class of `ProcessNode` and the mixin :class:`~aiida.orm.utils.mixins.FunctionCalculationMixin`.
         :type node_class: :class:`aiida.orm.nodes.process.process.ProcessNode`
+
         :return: A Process class that represents the function
         :rtype: :class:`FunctionProcess`
         """
@@ -281,7 +318,10 @@ class FunctionProcess(Process):
 
     @classmethod
     def create_inputs(cls, *args, **kwargs):
-        """Create the input args for the FunctionProcess"""
+        """Create the input args for the FunctionProcess.
+
+        :rtype: dict
+        """
         cls.validate_inputs(*args, **kwargs)
 
         ins = {}
@@ -294,10 +334,13 @@ class FunctionProcess(Process):
     @classmethod
     def args_to_dict(cls, *args):
         """
-        Create an input dictionary (i.e. label: value) from supplied args.
+        Create an input dictionary (of form label -> value) from supplied args.
 
-        :param args: The values to use
-        :return: A label: value dictionary
+        :param args: The values to use for the dictionary
+        :type args: list
+
+        :return: A label -> value dictionary
+        :rtype: dict
         """
         return dict(list(zip(cls._func_args, args)))
 
@@ -318,6 +361,9 @@ class FunctionProcess(Process):
         For a standard Process or sub class of Process, this is the class itself. However, for legacy reasons,
         the Process class is a wrapper around another class. This function returns that original class, i.e. the
         class that really represents what was being executed.
+
+        :return: A Process class that represents the function
+        :rtype: :class:`FunctionProcess`
         """
         return self._func
 
@@ -339,7 +385,10 @@ class FunctionProcess(Process):
 
     @override
     def run(self):
-        """Run the process"""
+        """Run the process.
+
+        :rtype: :class:`aiida.engine.ExitCode`
+        """
         from aiida.orm import Data
         from .exit_code import ExitCode
 

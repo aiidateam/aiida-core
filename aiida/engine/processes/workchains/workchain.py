@@ -49,7 +49,23 @@ class WorkChain(Process):
     _CONTEXT = 'CONTEXT'
 
     def __init__(self, inputs=None, logger=None, runner=None, enable_persistence=True):
-        """Construct the instance only if it is a sub class of `WorkChain` otherwise raise `InvalidOperation`."""
+        """Construct a WorkChain instance.
+
+        Construct the instance only if it is a sub class of `WorkChain`, otherwise raise `InvalidOperation`.
+
+        :param inputs: workchain inputs
+        :type inputs: dict
+
+        :param logger: aiida logger
+        :type logger: :class:`logging.Logger`
+
+        :param runner: workchain runner
+        :type: :class:`aiida.engine.runners.Runner`
+
+        :param enable_persistence: whether to persist this workchain
+        :type enable_persistence: bool
+
+        """
         if self.__class__ == WorkChain:
             raise exceptions.InvalidOperation('cannot construct or launch a base `WorkChain` class.')
 
@@ -61,10 +77,22 @@ class WorkChain(Process):
 
     @property
     def ctx(self):
+        """Get context.
+
+        :rtype: :class:`aiida.common.extendeddicts.AttributeDict`
+        """
         return self._context
 
     @override
     def save_instance_state(self, out_state, save_context):
+        """Save instance stace.
+
+        :param out_state: state to save in
+
+        :param save_context:
+        :type save_context: :class:`!plumpy.persistence.LoadSaveContext`
+
+        """
         super(WorkChain, self).save_instance_state(out_state, save_context)
         # Save the context
         out_state[self._CONTEXT] = self.ctx
@@ -233,6 +261,7 @@ class WorkChain(Process):
 
         :param awaitable: an Awaitable instance
         :param pk: the pk of the awaitable's target
+        :type pk: int
         """
         try:
             node = load_node(pk)

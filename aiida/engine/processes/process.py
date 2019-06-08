@@ -81,13 +81,31 @@ class Process(plumpy.Process):
     @classmethod
     def get_or_create_db_record(cls):
         """
-        Create a database calculation node that represents what happened in
-        this process.
-        :return: A calculation
+        Create a process node that represents what happened in this process.
+
+        :return: A process node
+        :rtype: :class:`aiida.orm.ProcessNode`
         """
         return cls._node_class()
 
     def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
+        """ Process constructor.
+
+        :param inputs: process inputs
+        :type inputs: dict
+
+        :param logger: aiida logger
+        :type logger: :class:`logging.Logger`
+
+        :param runner: process runner
+        :type: :class:`aiida.engine.runners.Runner`
+
+        :param parent_pid: id of parent process
+        :type parent_pid: int
+
+        :param enable_persistence: whether to persist this process
+        :type enable_persistence: bool
+        """
         from aiida.manage import manager
 
         self._runner = runner if runner is not None else manager.get_manager().get_runner()
@@ -118,6 +136,7 @@ class Process(plumpy.Process):
         Additionally, the namespace can also be called with either the exit code integer status to retrieve it.
 
         :returns: ExitCodesNamespace of ExitCode named tuples
+        :rtype: :class:`aiida.engine.ExitCodesNamespace`
         """
         return cls.spec().exit_codes
 
@@ -126,6 +145,7 @@ class Process(plumpy.Process):
         """Return the metadata port namespace of the process specification of this process.
 
         :return: metadata dictionary
+        :rtype: dict
         """
         return cls.spec().inputs['metadata']
 
@@ -134,6 +154,7 @@ class Process(plumpy.Process):
         """Return the metadata options port namespace of the process specification of this process.
 
         :return: options dictionary
+        :rtype: dict
         """
         return cls.spec_metadata['options']  # pylint: disable=unsubscriptable-object
 
@@ -142,6 +163,7 @@ class Process(plumpy.Process):
         """Return the ProcessNode used by this process to represent itself in the database.
 
         :return: instance of sub class of ProcessNode
+        :rtype: :class:`aiida.orm.ProcessNode`
         """
         return self._node
 
@@ -158,6 +180,7 @@ class Process(plumpy.Process):
         """Return the metadata that were specified when this process instance was launched.
 
         :return: metadata dictionary
+        :rtype: dict
         """
         try:
             return self.inputs.metadata
@@ -169,6 +192,7 @@ class Process(plumpy.Process):
         """Return the options of the metadata that were specified when this process instance was launched.
 
         :return: options dictionary
+        :rtype: dict
         """
         try:
             return self.metadata.options
@@ -190,6 +214,10 @@ class Process(plumpy.Process):
 
     @override
     def save_instance_state(self, out_state, save_context):
+        """Save instance state.
+
+        See documentation of :meth:`!plumpy.processes.Process.save_instance_state`.
+        """
         super(Process, self).save_instance_state(out_state, save_context)
 
         if self.metadata.store_provenance:
@@ -198,10 +226,21 @@ class Process(plumpy.Process):
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
 
     def get_provenance_inputs_iterator(self):
+        """Get provenance input iterator.
+
+        :rtype: filter
+        """
         return filter(lambda kv: not kv[0].startswith('_'), self.inputs.items())
 
     @override
     def load_instance_state(self, saved_state, load_context):
+        """Load instance state.
+
+        :param saved_state: saved instance state
+
+        :param load_context:
+        :type load_context: :class:`!plumpy.persistence.LoadSaveContext`
+        """
         from aiida.manage import manager
 
         if 'runner' in load_context:
@@ -223,6 +262,11 @@ class Process(plumpy.Process):
     def kill(self, msg=None):
         """
         Kill the process and all the children calculations it called
+
+        :param msg: message
+        :type msg: str
+
+        :rtype: bool
         """
         self.node.logger.debug('Request to kill Process<{}>'.format(self.node.pk))
 
@@ -249,12 +293,21 @@ class Process(plumpy.Process):
 
             if killing:
                 # We are waiting for things to be killed, so return the 'gathered' future
-                result = plumpy.gather(result)
+                result = plumpy.gather(killing)
 
         return result
 
     @override
     def out(self, output_port, value=None):
+        """Attach output to output port.
+
+        The name of the port will be used as the link label.
+
+        :param output_port: name of output port
+        :type output_port: str
+
+        :param value: value to put inside output port
+        """
         if value is None:
             # In this case assume that output_port is the actual value and there is just one return value
             value = output_port
@@ -263,13 +316,18 @@ class Process(plumpy.Process):
         return super(Process, self).out(output_port, value)
 
     def out_many(self, out_dict):
-        """
-        Add all values given in ``out_dict`` to the outputs. The keys of the dictionary will be used as output names.
+        """Attach outputs to multiple output ports.
+
+        Keys of the dictionary will be used as output port names, values as outputs.
+
+        :param out_dict: output dictionary
+        :type out_dict: dict
         """
         for key, value in out_dict.items():
             self.out(key, value)
 
     def on_create(self):
+        """Called when a Process is created."""
         super(Process, self).on_create()
         # If parent PID hasn't been supplied try to get it from the stack
         if self._parent_pid is None and Process.current():
@@ -294,9 +352,7 @@ class Process(plumpy.Process):
 
     @override
     def on_terminated(self):
-        """
-        Called when a Process enters a terminal state.
-        """
+        """Called when a Process enters a terminal state."""
         super(Process, self).on_terminated()
         if self._enable_persistence:
             try:
@@ -315,7 +371,7 @@ class Process(plumpy.Process):
         Log the exception by calling the report method with formatted stack trace from exception info object
         and store the exception string as a node attribute
 
-        :param exc_info: the sys.exc_info() object
+        :param exc_info: the sys.exc_info() object (type, value, traceback)
         """
         super(Process, self).on_except(exc_info)
         self.node.set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)))
@@ -323,8 +379,13 @@ class Process(plumpy.Process):
 
     @override
     def on_finish(self, result, successful):
-        """
-        Set the finish status on the process node
+        """ Set the finish status on the process node.
+
+        :param result: result of the process
+        :type result: int or :class:`aiida.engine.ExitCode`
+
+        :param successful: whether execution was successful
+        :type successful: bool
         """
         super(Process, self).on_finish(result, successful)
 
@@ -347,6 +408,9 @@ class Process(plumpy.Process):
     def on_paused(self, msg=None):
         """
         The Process was paused so set the paused attribute on the process node
+
+        :param msg: message
+        :type msg: str
         """
         super(Process, self).on_paused(msg)
         self._save_checkpoint()
@@ -366,6 +430,8 @@ class Process(plumpy.Process):
         The process has emitted a value on the given output port.
 
         :param output_port: The output port name the value was emitted on
+        :type output_port: str
+
         :param value: The value emitted
         """
         super(Process, self).on_output_emitting(output_port, value)
@@ -379,15 +445,26 @@ class Process(plumpy.Process):
         The status of the Process is about to be changed, so we reflect this is in node's attribute proxy.
 
         :param status: the status message
+        :type status: str
         """
         super(Process, self).set_status(status)
         self.node.set_process_status(status)
 
     def submit(self, process, *args, **kwargs):
+        """Submit process for execution.
+
+        :param process: process
+        :type process: :class:`aiida.engine.Process`
+
+        """
         return self.runner.submit(process, *args, **kwargs)
 
     @property
     def runner(self):
+        """Get process runner.
+
+        :rtype: :class:`aiida.engine.runners.Runner`
+        """
         return self._runner
 
     @protected
@@ -396,7 +473,7 @@ class Process(plumpy.Process):
         Get the parent process node
 
         :return: the parent process node if there is one
-        :rtype: :class:`aiida.orm.nodes.process.process.ProcessNode`
+        :rtype: :class:`aiida.orm.ProcessNode`
         """
         # Can't get it if we don't know our parent
         if self._parent_pid is None:
@@ -436,8 +513,13 @@ class Process(plumpy.Process):
         The pk, class name and function name of the caller are prepended to the given message
 
         :param msg: message to log
+        :type msg: str
+
         :param args: args to pass to the log call
+        :type args: list
+
         :param kwargs: kwargs to pass to the log call
+        :type kwargs: dict
         """
         message = '[{}|{}|{}]: {}'.format(self.node.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
@@ -447,6 +529,7 @@ class Process(plumpy.Process):
         Create and setup the database record for this process
 
         :return: the uuid of the process
+        :rtype: :class:`!uuid.UUID`
         """
         self._node = self.get_or_create_db_record()
         self._setup_db_record()
@@ -481,7 +564,7 @@ class Process(plumpy.Process):
         Encode input arguments such that they may be saved in a Bundle
 
         :param inputs: A mapping of the inputs as passed to the process
-        :return: The encoded inputs
+        :return: The encoded (serialized) inputs
         """
         from aiida.orm.utils import serialize
         return serialize.serialize(inputs)
@@ -491,7 +574,7 @@ class Process(plumpy.Process):
         """
         Decode saved input arguments as they came from the saved instance state Bundle
 
-        :param encoded:
+        :param encoded: encoded (serialized) inputs
         :return: The decoded input args
         """
         from aiida.orm.utils import serialize
@@ -502,7 +585,10 @@ class Process(plumpy.Process):
         self.node.set_process_state(state.LABEL)
 
     def update_outputs(self):
-        """Attach any new outputs to the node since the last time this was called, if store provenance is True."""
+        """Attach new outputs to the node since the last call.
+
+        Does nothing, if self.metadata.store_provenance is False.
+        """
         if self.metadata.store_provenance is False:
             return
 
@@ -605,6 +691,7 @@ class Process(plumpy.Process):
         is not passed, as those are dealt with separately in `_setup_metadata`.
 
         :return: flat dictionary of parsed inputs
+        :rtype: dict
         """
         inputs = {key: value for key, value in self.inputs.items() if key != self.spec().metadata_key}
         return dict(self._flatten_inputs(self.spec().inputs, inputs))
@@ -625,9 +712,18 @@ class Process(plumpy.Process):
         are marked as being non database storable
 
         :param port: port against which to map the port value, can be InputPort or PortNamespace
+        :type port: :class:`plumpy.ports.Port`
+
         :param port_value: value for the current port, can be a Mapping
+
         :param parent_name: the parent key with which to prefix the keys
+        :type parent_name: str
+
         :param separator: character to use for the concatenation of keys
+        :type separator: str
+
+        :return: flat list of inputs
+        :rtype: list
         """
         if (port is None and isinstance(port_value, orm.Node)) or (isinstance(port, InputPort) and not port.non_db):
             return [(parent_name, port_value)]
@@ -656,9 +752,19 @@ class Process(plumpy.Process):
         Function that will recursively flatten the outputs dictionary.
 
         :param port: port against which to map the port value, can be OutputPort or PortNamespace
+        :type port: :class:`plumpy.ports.Port`
+
         :param port_value: value for the current port, can be a Mapping
+        :type parent_name: str
+
         :param parent_name: the parent key with which to prefix the keys
+        :type parent_name: str
+
         :param separator: character to use for the concatenation of keys
+        :type separator: str
+
+        :return: flat list of outputs
+        :rtype: list
         """
         if port is None and isinstance(port_value, orm.Node) or isinstance(port, OutputPort):
             return [(parent_name, port_value)]
@@ -687,6 +793,7 @@ class Process(plumpy.Process):
         Gather a dictionary of the inputs that were exposed for a given Process class under an optional namespace.
 
         :param process_class: Process class whose inputs to try and retrieve
+        :type process_class: :class:`aiida.engine.Process`
 
         :param namespace: PortNamespace in which to look for the inputs
         :type namespace: str
@@ -694,6 +801,9 @@ class Process(plumpy.Process):
         :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also be
             searched for inputs. Inputs in lower-lying namespaces take precedence.
         :type agglomerate: bool
+
+        :returns: exposed inputs
+        :rtype: dict
         """
         exposed_inputs = {}
 
@@ -727,12 +837,20 @@ class Process(plumpy.Process):
         Gather the outputs which were exposed from the ``process_class`` and emitted by the specific
         ``process_instance`` in a dictionary.
 
+        :param process_instance: Instance of Process class whose outputs to try and retrieve
+        :type process_instance: :class:`aiida.engine.Process`
+
+
         :param namespace: Namespace in which to search for exposed outputs.
         :type namespace: str
 
         :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also
             be searched for outputs. Outputs in lower-lying namespaces take precedence.
         :type agglomerate: bool
+
+        :returns: exposed outputs
+        :rtype: dict
+
         """
         namespace_separator = self.spec().namespace_separator
 
@@ -766,7 +884,18 @@ class Process(plumpy.Process):
 
     @staticmethod
     def _get_namespace_list(namespace=None, agglomerate=True):
-        """Get the list of namespaces in a given namespace"""
+        """Get the list of namespaces in a given namespace.
+
+        :param namespace: name space
+        :type namespace: str
+
+        :param agglomerate: If set to true, all parent namespaces of the given ``namespace`` will also
+            be searched.
+        :type agglomerate: bool
+
+        :returns: namespace list
+        :rtype: list
+        """
         if not agglomerate:
             return [namespace]
 
@@ -782,7 +911,10 @@ def get_query_string_from_process_type_string(process_type_string):  # pylint: d
     Take the process type string of a Node and create the queryable type string.
 
     :param process_type_string: the process type string
+    :type process_type_string: str
+
     :return: string that can be used to query for subclasses of the process type using 'LIKE <string>'
+    :rtype: str
     """
     if ":" in process_type_string:
         return process_type_string + "."

@@ -37,8 +37,6 @@ class DbNode(Base):
     description = Column(Text(), nullable=True, default='')
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
-    nodeversion = Column(Integer, default=1)
-    public = Column(Boolean, default=False)
     attributes = Column(JSONB)
     extras = Column(JSONB)
 

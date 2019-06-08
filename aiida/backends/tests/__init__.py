@@ -15,7 +15,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from six.moves import range
-from aiida.plugins.entry_point import ENTRYPOINT_MANAGER
 from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
 
 DB_TEST_LIST = {
@@ -114,9 +113,11 @@ DB_TEST_LIST = {
         'orm.computers': ['aiida.backends.tests.orm.test_computers'],
         'orm.data.dict': ['aiida.backends.tests.orm.data.test_dict'],
         'orm.data.kpoints': ['aiida.backends.tests.orm.data.test_kpoints'],
+        'orm.data.orbital': ['aiida.backends.tests.orm.data.test_orbital'],
         'orm.data.remote': ['aiida.backends.tests.orm.data.test_remote'],
         'orm.data.singlefile': ['aiida.backends.tests.orm.data.test_singlefile'],
         'orm.data.upf': ['aiida.backends.tests.orm.data.test_upf'],
+        'orm.data.to_aiida_type': ['aiida.backends.tests.orm.data.test_to_aiida_type'],
         'orm.entities': ['aiida.backends.tests.orm.test_entities'],
         'orm.groups': ['aiida.backends.tests.orm.test_groups'],
         'orm.implementation.backend': ['aiida.backends.tests.orm.implementation.test_backend'],

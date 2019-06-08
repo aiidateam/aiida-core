@@ -320,22 +320,6 @@ class Node(Entity):
         return self.backend_entity.mtime
 
     @property
-    def version(self):
-        """Return the node version.
-
-        :return: the version
-        """
-        return self.backend_entity.version
-
-    @property
-    def public(self):
-        """Return the node public attribute.
-
-        :return: the public attribute
-        """
-        return self.backend_entity.public
-
-    @property
     def attributes(self):
         """Return the attributes dictionary.
 
@@ -1062,7 +1046,7 @@ class Node(Entity):
 
         self._attrs_cache = {}
         self._incoming_cache = list()
-        self._backend_entity.set_extra(_HASH_EXTRA_KEY, self.get_hash(), increase_version=False)
+        self._backend_entity.set_extra(_HASH_EXTRA_KEY, self.get_hash())
 
         return self
 
@@ -1273,12 +1257,6 @@ class Node(Entity):
                 "help_text": "Universally Unique Identifier",
                 "is_foreign_key": False,
                 "type": "unicode"
-            },
-            "nodeversion": {
-                "display_name": "Node version",
-                "help_text": "Version of the node",
-                "is_foreign_key": False,
-                "type": "int"
             },
             "process_type": {
                 "display_name": "Process type",

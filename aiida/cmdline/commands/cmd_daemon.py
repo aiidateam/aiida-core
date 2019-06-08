@@ -22,7 +22,8 @@ from click_spinner import spinner
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.common import get_env_with_venv_bin
-from aiida.cmdline.utils.daemon import get_daemon_status, print_client_response_status
+from aiida.cmdline.utils.daemon import get_daemon_status, \
+    print_client_response_status, delete_stale_pid_file, _START_CIRCUS_COMMAND
 from aiida.manage.configuration import get_config
 
 
@@ -46,9 +47,9 @@ def start(foreground):
     echo.echo('Starting the daemon... ', nl=False)
 
     if foreground:
-        command = ['verdi', '-p', client.profile.name, 'daemon', 'start-circus', '--foreground']
+        command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, '--foreground']
     else:
-        command = ['verdi', '-p', client.profile.name, 'daemon', 'start-circus']
+        command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND]
 
     try:
         currenv = get_env_with_venv_bin()
@@ -159,6 +160,8 @@ def stop(no_wait, all_profiles):
             echo.echo('Daemon was not running')
             continue
 
+        delete_stale_pid_file(client)
+
         wait = not no_wait
 
         if wait:
@@ -169,7 +172,10 @@ def stop(no_wait, all_profiles):
         response = client.stop_daemon(wait)
 
         if wait:
-            print_client_response_status(response)
+            if response['status'] == client.DAEMON_ERROR_NOT_RUNNING:
+                click.echo('The daemon was not running.')
+            else:
+                print_client_response_status(response)
 
 
 @verdi_daemon.command()

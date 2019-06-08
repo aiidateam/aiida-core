@@ -216,9 +216,23 @@ class InteractiveOption(ConditionalOption):
                     return value
 
     def after_callback(self, ctx, param, value):
-        """if a callback was registered on init, call it and return it's value"""
+        """If a callback was registered on init, call it and return it's value"""
         if self._after_callback:
-            return self._after_callback(ctx, param, value)
+            try:
+                self._after_callback(ctx, param, value)
+            except click.BadParameter as exception:
+                # If the non-prompt callback raises, we want to only start the prompt loop if we were already in it.
+                # For example, if the option was explicitly specified on the command line, but the callback fails, we
+                # do not want to start prompting for it, but instead just let the exception bubble-up.
+                # However, in this case, the `--non-interactive` flag is not necessarily passed, so we cannot just rely
+                # on this value but in addition need to check that we did not already enter the prompt.
+                if noninteractive(ctx) or not hasattr(ctx, 'prompt_loop_info_printed'):
+                    raise exception
+
+                echo.echo_error(str(exception))
+                self.ctrl_help()
+                value = self.prompt_loop(ctx, param, value)
+
         return value
 
     def prompt_callback(self, ctx, param, value):

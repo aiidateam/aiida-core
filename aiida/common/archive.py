@@ -19,14 +19,17 @@ import tarfile
 import zipfile
 from functools import wraps
 
+from aiida.common import json
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
 from aiida.common.folders import SandboxFolder
-from aiida.common import json
+
+
+class CorruptArchive(Exception):
+    """Raised when an operation is applied to a corrupt export archive, e.g. missing files or invalid formats."""
 
 
 class Archive(object):  # pylint: disable=useless-object-inheritance
-    """
-    Utility class to operate on exported archive files or directories.
+    """Utility class to operate on exported archive files or directories.
 
     The main usage should be to construct the class with the filepath of the export archive as an argument.
     The contents will be lazily unpacked into a sand box folder which is constructed upon entering the instance
@@ -88,13 +91,12 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
         """Unpack the archive and store the contents in a sandbox."""
         if os.path.isdir(self.filepath):
             extract_tree(self.filepath, self.folder)
+        elif tarfile.is_tarfile(self.filepath):
+            extract_tar(self.filepath, self.folder, silent=True, nodes_export_subfolder='nodes')
+        elif zipfile.is_zipfile(self.filepath):
+            extract_zip(self.filepath, self.folder, silent=True, nodes_export_subfolder='nodes')
         else:
-            if tarfile.is_tarfile(self.filepath):
-                extract_tar(self.filepath, self.folder, silent=True, nodes_export_subfolder='nodes')
-            elif zipfile.is_zipfile(self.filepath):
-                extract_zip(self.filepath, self.folder, silent=True, nodes_export_subfolder='nodes')
-            else:
-                raise ValueError('unrecognized archive format')
+            raise CorruptArchive('unrecognized archive format')
 
         if not self.folder.get_content_list():
             raise ContentNotExistent('the provided archive {} is empty'.format(self.filepath))
@@ -103,8 +105,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
 
     @property
     def filepath(self):
-        """
-        Return the filepath of the archive
+        """Return the filepath of the archive
 
         :return: the archive filepath
         """
@@ -112,8 +113,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
 
     @property
     def folder(self):
-        """
-        Return the sandbox folder
+        """Return the sandbox folder
 
         :return: sandbox folder :class:`aiida.common.folders.SandboxFolder`
         """
@@ -122,8 +122,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
     @property
     @ensure_within_context
     def data(self):
-        """
-        Return the loaded content of the data file
+        """Return the loaded content of the data file
 
         :return: dictionary with contents of data file
         """
@@ -135,8 +134,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
     @property
     @ensure_within_context
     def meta_data(self):
-        """
-        Return the loaded content of the meta data file
+        """Return the loaded content of the meta data file
 
         :return: dictionary with contents of meta data file
         """
@@ -153,8 +151,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
 
     @ensure_within_context
     def get_info(self):
-        """
-        Return a dictionary with basic information about the archive.
+        """Return a dictionary with basic information about the archive.
 
         :return: a dictionary with basic details
         """
@@ -170,8 +167,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
 
     @ensure_within_context
     def get_data_statistics(self):
-        """
-        Return a dictionary with statistics about data content, i.e. how many entries of each entity type it contains.
+        """Return dictionary with statistics about data content, i.e. how many entries of each entity type it contains.
 
         :return: a dictionary with basic details
         """
@@ -196,8 +192,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
     @property
     @ensure_within_context
     def version_aiida(self):
-        """
-        Return the version of AiiDA the archive was created with.
+        """Return the version of AiiDA the archive was created with.
 
         :return: version number
         """
@@ -206,8 +201,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
     @property
     @ensure_within_context
     def version_format(self):
-        """
-        Return the version of the archive format.
+        """Return the version of the archive format.
 
         :return: version number
         """
@@ -216,8 +210,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
     @property
     @ensure_within_context
     def conversion_info(self):
-        """
-        Return information about migration events that were applied to this archive.
+        """Return information about migration events that were applied to this archive.
 
         :return: list of conversion notifications
         """
@@ -229,8 +222,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
     @ensure_within_context
     @ensure_unpacked
     def _read_json_file(self, filename):
-        """
-        Read the contents of a JSON file from the unpacked archive contents.
+        """Read the contents of a JSON file from the unpacked archive contents.
 
         :param filename: the filename relative to the sandbox folder
         :return: a dictionary with the loaded JSON content
@@ -247,33 +239,40 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes", silent=False):
     :param folder: a SandboxFolder, used to extract the file tree
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
     :param silent: suppress debug print
+    :raises `CorruptArchive`: if the archive misses files or files have incorrect formats
     """
     # pylint: disable=fixme
     if not silent:
-        print("READING DATA AND METADATA...")
+        print('READING DATA AND METADATA...')
 
     try:
-        with zipfile.ZipFile(infile, "r", allowZip64=True) as handle:
+        with zipfile.ZipFile(infile, 'r', allowZip64=True) as handle:
 
             if not handle.namelist():
-                raise ValueError("The zip file is empty.")
+                raise CorruptArchive('corrupt archive: no files detected')
 
-            handle.extract(path=folder.abspath, member='metadata.json')
-            handle.extract(path=folder.abspath, member='data.json')
+            try:
+                handle.extract(path=folder.abspath, member='metadata.json')
+            except KeyError:
+                raise CorruptArchive('corrupt archive: required file `metadata.json` is not included')
+
+            try:
+                handle.extract(path=folder.abspath, member='data.json')
+            except KeyError:
+                raise CorruptArchive('corrupt archive: required file `data.json` is not included')
 
             if not silent:
-                print("EXTRACTING NODE DATA...")
+                print('EXTRACTING NODE DATA...')
 
             for membername in handle.namelist():
-                # Check that we are only exporting nodes within
-                # the subfolder!
+                # Check that we are only exporting nodes within the subfolder!
                 # TODO: better check such that there are no .. in the
                 # path; use probably the folder limit checks
                 if not membername.startswith(nodes_export_subfolder + os.sep):
                     continue
                 handle.extract(path=folder.abspath, member=membername)
     except zipfile.BadZipfile:
-        raise ValueError("The input file format for import is not valid (not a zip file)")
+        raise ValueError('The input file format for import is not valid (not a zip file)')
 
 
 def extract_tar(infile, folder, nodes_export_subfolder="nodes", silent=False):
@@ -284,39 +283,46 @@ def extract_tar(infile, folder, nodes_export_subfolder="nodes", silent=False):
     :param folder: a SandboxFolder, used to extract the file tree
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
     :param silent: suppress debug print
+    :raises `CorruptArchive`: if the archive misses files or files have incorrect formats
     """
     # pylint: disable=fixme
     if not silent:
-        print("READING DATA AND METADATA...")
+        print('READING DATA AND METADATA...')
 
     try:
-        with tarfile.open(infile, "r:*", format=tarfile.PAX_FORMAT) as handle:
+        with tarfile.open(infile, 'r:*', format=tarfile.PAX_FORMAT) as handle:
 
-            handle.extract(path=folder.abspath, member=handle.getmember('metadata.json'))
-            handle.extract(path=folder.abspath, member=handle.getmember('data.json'))
+            try:
+                handle.extract(path=folder.abspath, member=handle.getmember('metadata.json'))
+            except KeyError:
+                raise CorruptArchive('corrupt archive: required file `metadata.json` is not included')
+
+            try:
+                handle.extract(path=folder.abspath, member=handle.getmember('data.json'))
+            except KeyError:
+                raise CorruptArchive('corrupt archive: required file `data.json` is not included')
 
             if not silent:
-                print("EXTRACTING NODE DATA...")
+                print('EXTRACTING NODE DATA...')
 
             for member in handle.getmembers():
                 if member.isdev():
                     # safety: skip if character device, block device or FIFO
-                    print("WARNING, device found inside the import file: {}".format(member.name), file=sys.stderr)
+                    print('WARNING, device found inside the import file: {}'.format(member.name), file=sys.stderr)
                     continue
                 if member.issym() or member.islnk():
                     # safety: in export, I set dereference=True therefore
                     # there should be no symbolic or hard links.
-                    print("WARNING, link found inside the import file: {}".format(member.name), file=sys.stderr)
+                    print('WARNING, link found inside the import file: {}'.format(member.name), file=sys.stderr)
                     continue
-                # Check that we are only exporting nodes within
-                # the subfolder!
+                # Check that we are only exporting nodes within the subfolder!
                 # TODO: better check such that there are no .. in the
                 # path; use probably the folder limit checks
                 if not member.name.startswith(nodes_export_subfolder + os.sep):
                     continue
                 handle.extract(path=folder.abspath, member=member)
     except tarfile.ReadError:
-        raise ValueError("The input file format for import is not valid (1)")
+        raise ValueError('The input file format for import is not valid (1)')
 
 
 def extract_tree(infile, folder):

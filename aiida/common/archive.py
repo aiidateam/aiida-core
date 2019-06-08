@@ -249,17 +249,17 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes", silent=False):
         with zipfile.ZipFile(infile, 'r', allowZip64=True) as handle:
 
             if not handle.namelist():
-                raise CorruptArchive('corrupt archive: no files detected')
+                raise CorruptArchive('no files detected')
 
             try:
                 handle.extract(path=folder.abspath, member='metadata.json')
             except KeyError:
-                raise CorruptArchive('corrupt archive: required file `metadata.json` is not included')
+                raise CorruptArchive('required file `metadata.json` is not included')
 
             try:
                 handle.extract(path=folder.abspath, member='data.json')
             except KeyError:
-                raise CorruptArchive('corrupt archive: required file `data.json` is not included')
+                raise CorruptArchive('required file `data.json` is not included')
 
             if not silent:
                 print('EXTRACTING NODE DATA...')
@@ -295,12 +295,12 @@ def extract_tar(infile, folder, nodes_export_subfolder="nodes", silent=False):
             try:
                 handle.extract(path=folder.abspath, member=handle.getmember('metadata.json'))
             except KeyError:
-                raise CorruptArchive('corrupt archive: required file `metadata.json` is not included')
+                raise CorruptArchive('required file `metadata.json` is not included')
 
             try:
                 handle.extract(path=folder.abspath, member=handle.getmember('data.json'))
             except KeyError:
-                raise CorruptArchive('corrupt archive: required file `data.json` is not included')
+                raise CorruptArchive('required file `data.json` is not included')
 
             if not silent:
                 print('EXTRACTING NODE DATA...')

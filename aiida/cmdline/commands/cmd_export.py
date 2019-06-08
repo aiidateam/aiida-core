@@ -58,7 +58,7 @@ def inspect(archive, version, data, meta_data):
                 data.extend(sorted([(k.capitalize(), v) for k, v in archive_object.get_data_statistics().items()]))
                 echo.echo(tabulate.tabulate(data))
         except CorruptArchive as exception:
-            echo.echo_critical(str(exception))
+            echo.echo_critical('corrupt archive: {}'.format(exception))
 
 
 @verdi_export.command('create')

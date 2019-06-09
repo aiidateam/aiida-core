@@ -161,6 +161,7 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
     :param fct: the function to call, which will be turned into a coroutine first if it is not already
     :param initial_interval: the time to wait after the first caught exception before calling the coroutine again
     :param max_attempts: the maximum number of times to call the coroutine before re-raising the exception
+    :param ignore_exceptions: list or tuple of exceptions to ignore, i.e. when caught do nothing and simply re-raise
     :raises: ``tornado.gen.Result`` if the ``coro`` call completes within ``max_attempts`` retries without raising
     """
     if logger is None:
@@ -181,14 +182,14 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
                 raise
 
             count = iteration + 1
-            core_name = coro.__name__
+            coro_name = coro.__name__
 
             if iteration == max_attempts - 1:
-                logger.exception('iteration %d of %s excepted', count, core_name)
-                logger.warning('maximum attempts %d of calling %s, exceeded', max_attempts, core_name)
+                logger.exception('iteration %d of %s excepted', count, coro_name)
+                logger.warning('maximum attempts %d of calling %s, exceeded', max_attempts, coro_name)
                 raise
             else:
-                logger.exception('iteration %d of %s excepted, retrying after %d seconds', count, core_name, interval)
+                logger.exception('iteration %d of %s excepted, retrying after %d seconds', count, coro_name, interval)
                 yield gen.sleep(interval)
                 interval *= 2
 

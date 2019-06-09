@@ -191,10 +191,12 @@ class InteractiveOption(ConditionalOption):
         successful = False
         try:
             value = self.type.convert(value, param, ctx)
+            value = self.after_callback(ctx, param, value)
             successful = True
         except click.BadParameter as err:
             echo.echo_error(str(err))
             self.ctrl_help()
+
         return successful, value
 
     def simple_prompt_loop(self, ctx, param, value):

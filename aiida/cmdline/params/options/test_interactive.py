@@ -37,6 +37,19 @@ class Only42IntParamType(IntParamType):
         return 'ONLY42INT'
 
 
+def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argument
+    """Validate that the number passed to this parameter is a positive number.
+
+    :param ctx: the `click.Context`
+    :param param: the parameter
+    :param value: the value passed for the parameter
+    :raises `click.BadParameter`: if the value is not a positive number
+    """
+    if not isinstance(value, (int, float)) or value < 0:
+        from click import BadParameter
+        raise BadParameter('{} is not a valid positive number'.format(value))
+
+
 class InteractiveOptionTest(unittest.TestCase):
     """Unit tests for InteractiveOption."""
 
@@ -50,10 +63,8 @@ class InteractiveOptionTest(unittest.TestCase):
         @click.command()
         @click.option('--opt', prompt='Opt', cls=InteractiveOption, **kwargs)
         @NON_INTERACTIVE()
-        def cmd(opt, non_interactive):
+        def cmd(opt, non_interactive):  # pylint: disable=unused-argument
             """test command for InteractiveOption"""
-            # pylint: disable=unused-argument
-
             click.echo(str(opt))
 
         return cmd
@@ -67,6 +78,25 @@ class InteractiveOptionTest(unittest.TestCase):
         # pylint: disable=no-self-use
 
         return "Opt: {}\n{}\n".format(cli_input, converted or cli_input)
+
+    def test_callback_prompt_twice(self):
+        """
+        scenario: using InteractiveOption with type=float and callback that tests for positive number
+        behaviour: should fail everytime either type validation or callback validation fails
+        """
+        cmd = self.simple_command(type=float, callback=validate_positive_number)
+        runner = CliRunner()
+        result = runner.invoke(cmd, [], input='string\n-1\n-1\n1\n')
+        expected_1 = 'is not a valid floating point value'
+        expected_2 = 'is not a valid positive number'
+        expected_3 = 'is not a valid positive number'
+        expected_4 = '1.0'
+        self.assertIsNone(result.exception)
+        lines = result.output.split('\n')
+        self.assertIn(expected_1, lines[2])
+        self.assertIn(expected_2, lines[5])
+        self.assertIn(expected_3, lines[8])
+        self.assertIn(expected_4, lines[11])
 
     def test_prompt_str(self):
         """

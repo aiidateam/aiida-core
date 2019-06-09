@@ -58,8 +58,16 @@ class Log(entities.Entity):
 
             metadata = dict(record.__dict__)
 
-            # Stringify the content of `exc_info` and `args` if they exist in the metadata to ensure serializability
-            for key in ['exc_info', 'args']:
+            # If an `exc_info` is present, the log message was an exception, so format the full traceback
+            try:
+                import traceback
+                exc_info = metadata.pop('exc_info')
+                message = ''.join(traceback.format_exception(*exc_info))
+            except (TypeError, KeyError):
+                message = record.getMessage()
+
+            # Stringify the content of `args` if they exist in the metadata to ensure serializability
+            for key in ['args']:
                 if key in metadata:
                     metadata[key] = str(metadata[key])
 
@@ -68,7 +76,7 @@ class Log(entities.Entity):
                 loggername=record.name,
                 levelname=record.levelname,
                 dbnode_id=dbnode_id,
-                message=record.getMessage(),
+                message=message,
                 metadata=metadata)
 
         def get_logs_for(self, entity, order_by=None):

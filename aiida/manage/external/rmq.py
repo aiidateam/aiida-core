@@ -16,8 +16,8 @@ import collections
 import logging
 
 from tornado import gen
-from kiwipy import communications
 import plumpy
+from kiwipy import communications, Future
 
 __all__ = ('RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher')
 
@@ -157,7 +157,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
 
             LOGGER.info('not continuing process<%d> which is already terminated with state %s', pid, node.process_state)
 
-            future = communicator.create_future()
+            future = Future()
 
             if node.is_finished:
                 future.set_result({entry.link_label: entry.node for entry in node.get_outgoing(node_class=Data)})

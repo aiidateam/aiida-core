@@ -22,10 +22,10 @@ import traceback
 import six
 from six.moves import filter, range
 from pika.exceptions import ConnectionClosed
-from kiwipy.communications import UnroutableError
 
 import plumpy
 from plumpy import ProcessState
+from kiwipy.communications import UnroutableError
 
 from aiida import orm
 from aiida.common import exceptions
@@ -268,7 +268,7 @@ class Process(plumpy.Process):
 
         :rtype: bool
         """
-        self.node.logger.debug('Request to kill Process<{}>'.format(self.node.pk))
+        self.node.logger.info('Request to kill Process<{}>'.format(self.node.pk))
 
         had_been_terminated = self.has_terminated()
 

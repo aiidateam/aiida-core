@@ -592,7 +592,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
                         option.name, computer)
                     option_value = option.opts[-1] if is_default else ''
                 else:
-                    option_value = '{}={}'.format(option.opts[-1], config[option.name])
+                    option_value = '{}={}'.format(option.opts[-1], option.type(config[option.name]))
                 option_items.append(option_value)
         opt_string = ' '.join(option_items)
         echo.echo(escape_for_bash(opt_string))

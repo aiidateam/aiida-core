@@ -22,6 +22,7 @@ Local transport
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import errno
 import os
 import shutil
@@ -46,22 +47,21 @@ class LocalTransport(Transport):
     with a ``prepend_text``. For example, the AiiDA daemon sets a ``PYTHONPATH``, so you might want to add
     ``unset PYTHONPATH`` if you plan on running calculations that use Python.
     """
+
     # There are no valid parameters for the local transport
     _valid_auth_options = []
 
-    # There is no real limit on how fast you can connect to localhost
-    # you should not be banned (as instead it is the case in SSH).
-    # So I set the (default) limit to zero.
-    _DEFAULT_SAFE_OPEN_INTERVAL = 2.
+    # There is no real limit on how fast you can safely connect to a localhost, unlike often the case with SSH transport
+    # where the remote computer will rate limit the number of connections.
+    _DEFAULT_SAFE_OPEN_INTERVAL = 0.0
 
     def __init__(self, **kwargs):
         super(LocalTransport, self).__init__()
-
-        # _internal_dir will emulate the concept of working directory
-        # The real current working directory is not to be changed
-        # self._internal_dir = None
+        # The `_internal_dir` will emulate the concept of working directory, as the real current working directory is
+        # not to be changed to prevent bug-prone situations
         self._is_open = False
         self._internal_dir = None
+
         # Just to avoid errors
         self._machine = kwargs.pop('machine', None)
         if self._machine and self._machine != 'localhost':
@@ -102,7 +102,6 @@ class LocalTransport(Transport):
         """
         Return a description as a string.
         """
-
         return "local [{}]".format("OPEN" if self._is_open else "CLOSED")
 
     @property

@@ -106,3 +106,15 @@ jobs:
                   repo: aiidateam/aiida_core
                   all_branches: true
                   tags: true
+        - stage: transifex_docs
+          if: "tag =~ ^v[0-9]+\\.[0-9]+\\.[0-9]+(a|b|rc)?[0-9]*$"
+          services: ignore
+          addons: skip
+          python: 3.6
+          before_install: skip
+          install: skip
+          before_script: skip
+          script: skip
+          env: ignore
+          after_success:
+            - .ci/transifex_upload.sh

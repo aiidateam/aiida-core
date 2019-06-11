@@ -12,6 +12,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import io
+
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import LinkType
@@ -85,3 +87,31 @@ class TestParser(AiidaTestCase):
         self.assertEqual(outputs_for_parsing['retrieved'].uuid, retrieved.uuid)
         self.assertIn('output', outputs_for_parsing)
         self.assertEqual(outputs_for_parsing['output'].uuid, output.uuid)
+
+    def test_parse_from_node(self):
+        """Test that the `parse_from_node` returns a tuple of the parsed output nodes and a calculation node.
+
+        The calculation node represents the parsing process
+        """
+        summed = 3
+        output_filename = 'aiida.out'
+
+        # Mock the `CalcJobNode` which should have the `retrieved` folder containing the sum in the outputfile file
+        # This is the value that should be parsed into the `sum` output node
+        node = orm.CalcJobNode(computer=self.computer, process_type=ArithmeticAddCalculation.build_process_type())
+        node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        node.set_option('max_wallclock_seconds', 1800)
+        node.set_option('output_filename', output_filename)
+        node.store()
+
+        retrieved = orm.FolderData()
+        retrieved.put_object_from_filelike(io.StringIO(u'{}'.format(summed)), output_filename)
+        retrieved.store()
+        retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
+
+        result, node = ArithmeticAddParser.parse_from_node(node)
+
+        self.assertIsInstance(result['sum'], orm.Int)
+        self.assertEqual(result['sum'].value, summed)
+        self.assertIsInstance(node, orm.CalcFunctionNode)
+        self.assertEqual(node.exit_status, 0)

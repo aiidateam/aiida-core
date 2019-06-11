@@ -44,6 +44,7 @@ class Log(entities.Entity):
 
             :param record: The record created by the logging module
             :type record: :class:`logging.record`
+
             :return: An object implementing the log entry interface
             :rtype: :class:`aiida.orm.logs.Log`
             """
@@ -57,8 +58,16 @@ class Log(entities.Entity):
 
             metadata = dict(record.__dict__)
 
-            # Stringify the content of `exc_info` and `args` if they exist in the metadata to ensure serializability
-            for key in ['exc_info', 'args']:
+            # If an `exc_info` is present, the log message was an exception, so format the full traceback
+            try:
+                import traceback
+                exc_info = metadata.pop('exc_info')
+                message = ''.join(traceback.format_exception(*exc_info))
+            except (TypeError, KeyError):
+                message = record.getMessage()
+
+            # Stringify the content of `args` if they exist in the metadata to ensure serializability
+            for key in ['args']:
                 if key in metadata:
                     metadata[key] = str(metadata[key])
 
@@ -67,7 +76,7 @@ class Log(entities.Entity):
                 loggername=record.name,
                 levelname=record.levelname,
                 dbnode_id=dbnode_id,
-                message=record.getMessage(),
+                message=message,
                 metadata=metadata)
 
         def get_logs_for(self, entity, order_by=None):
@@ -76,7 +85,10 @@ class Log(entities.Entity):
 
             :param entity: the entity to get logs for
             :type entity: :class:`aiida.orm.Entity`
-            :param order_by: the optional sort order
+
+            :param order_by: a list of (key, direction) pairs specifying the sort order
+            :type order_by: list
+
             :return: the list of log entries
             :rtype: list
             """
@@ -98,11 +110,38 @@ class Log(entities.Entity):
         def delete_many(self, filters):
             """
             Delete all the log entries matching the given filters
+
+            :param filters: filters
+            :type filters: dict
             """
             self._backend.logs.delete_many(filters)
 
     def __init__(self, time, loggername, levelname, dbnode_id, message='', metadata=None, backend=None):  # pylint: disable=too-many-arguments
-        """Construct a new log"""
+        """Construct a new log
+
+        :param time: time
+        :type time: :class:`!datetime.datetime`
+
+        :param loggername: name of logger
+        :type loggername: basestring
+
+        :param levelname: name of log level
+        :type levelname: basestring
+
+        :param dbnode_id: id of database node
+        :type dbnode_id: int
+
+        :param message: log message
+        :type message: basestring
+
+        :param metadata: metadata
+        :type metadata: dict
+
+        :param backend: database backend
+        :type backend: :class:`aiida.orm.implementation.Backend`
+
+
+        """
         from aiida.common import exceptions
 
         if metadata is not None and not isinstance(metadata, dict):
@@ -178,6 +217,6 @@ class Log(entities.Entity):
         Get the metadata corresponding to the entry
 
         :return: The entry metadata
-        :rtype: :class:`!json.json`
+        :rtype: dict
         """
         return self._backend_entity.metadata

@@ -36,28 +36,29 @@ def verdi_export():
 @click.option('-v', '--version', is_flag=True, help='Print the archive format version and exit.')
 @click.option('-d', '--data', is_flag=True, help='Print the data contents and exit.')
 @click.option('-m', '--meta-data', is_flag=True, help='Print the meta data contents and exit.')
-@decorators.with_dbenv()
 def inspect(archive, version, data, meta_data):
-    """
-    Inspect the contents of an exported archive without importing the content.
+    """Inspect the contents of an exported archive without importing the content.
 
-    By default a summary of the archive contents will be printed. The various options can be used to
-    change exactly what information is displayed.
+    By default a summary of the archive contents will be printed. The various options can be used to change exactly what
+    information is displayed.
     """
-    from aiida.common.archive import Archive
+    from aiida.common.archive import Archive, CorruptArchive
 
     with Archive(archive) as archive_object:
-        if version:
-            echo.echo(archive_object.version_format)
-        elif data:
-            echo.echo_dictionary(archive_object.data)
-        elif meta_data:
-            echo.echo_dictionary(archive_object.meta_data)
-        else:
-            info = archive_object.get_info()
-            data = sorted([(k.capitalize(), v) for k, v in info.items()])
-            data.extend(sorted([(k.capitalize(), v) for k, v in archive_object.get_data_statistics().items()]))
-            echo.echo(tabulate.tabulate(data))
+        try:
+            if version:
+                echo.echo(archive_object.version_format)
+            elif data:
+                echo.echo_dictionary(archive_object.data)
+            elif meta_data:
+                echo.echo_dictionary(archive_object.meta_data)
+            else:
+                info = archive_object.get_info()
+                data = sorted([(k.capitalize(), v) for k, v in info.items()])
+                data.extend(sorted([(k.capitalize(), v) for k, v in archive_object.get_data_statistics().items()]))
+                echo.echo(tabulate.tabulate(data))
+        except CorruptArchive as exception:
+            echo.echo_critical('corrupt archive: {}'.format(exception))
 
 
 @verdi_export.command('create')

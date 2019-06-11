@@ -29,7 +29,6 @@ from aiida.manage.manager import get_manager
 @options_setup.SETUP_USER_FIRST_NAME()
 @options_setup.SETUP_USER_LAST_NAME()
 @options_setup.SETUP_USER_INSTITUTION()
-@options_setup.SETUP_USER_PASSWORD()
 @options_setup.SETUP_DATABASE_ENGINE()
 @options_setup.SETUP_DATABASE_BACKEND()
 @options_setup.SETUP_DATABASE_HOSTNAME()
@@ -39,8 +38,8 @@ from aiida.manage.manager import get_manager
 @options_setup.SETUP_DATABASE_PASSWORD()
 @options_setup.SETUP_REPOSITORY_URI()
 @options.CONFIG_FILE()
-def setup(non_interactive, profile, email, first_name, last_name, institution, password, db_engine, db_backend, db_host,
-          db_port, db_name, db_username, db_password, repository):
+def setup(non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
+          db_name, db_username, db_password, repository):
     """Setup a new profile."""
     # pylint: disable=too-many-arguments,too-many-locals,unused-argument
     from aiida import orm
@@ -85,7 +84,7 @@ def setup(non_interactive, profile, email, first_name, last_name, institution, p
 
     # Create the user if it does not yet exist
     created, user = orm.User.objects.get_or_create(
-        email=email, first_name=first_name, last_name=last_name, institution=institution, password=password)
+        email=email, first_name=first_name, last_name=last_name, institution=institution)
     if created:
         user.store()
     profile.default_user = user.email
@@ -103,7 +102,6 @@ def setup(non_interactive, profile, email, first_name, last_name, institution, p
 @options_setup.SETUP_USER_FIRST_NAME()
 @options_setup.SETUP_USER_LAST_NAME()
 @options_setup.SETUP_USER_INSTITUTION()
-@options_setup.SETUP_USER_PASSWORD()
 @options_setup.QUICKSETUP_DATABASE_ENGINE()
 @options_setup.QUICKSETUP_DATABASE_BACKEND()
 @options_setup.QUICKSETUP_DATABASE_HOSTNAME()
@@ -117,9 +115,8 @@ def setup(non_interactive, profile, email, first_name, last_name, institution, p
 @options_setup.QUICKSETUP_REPOSITORY_URI()
 @options.CONFIG_FILE()
 @click.pass_context
-def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, institution, password, db_engine,
-               db_backend, db_host, db_port, db_name, db_username, db_password, su_db_name, su_db_username,
-               su_db_password, repository):
+def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host,
+               db_port, db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, repository):
     """Setup a new profile where the database is automatically created and configured."""
     # pylint: disable=too-many-arguments,too-many-locals
     from aiida.manage.external.postgres import Postgres, manual_setup_instructions
@@ -163,7 +160,6 @@ def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, inst
         'first_name': first_name,
         'last_name': last_name,
         'institution': institution,
-        'password': password,
         'db_engine': db_engine,
         'db_backend': db_backend,
         'db_name': db_name,

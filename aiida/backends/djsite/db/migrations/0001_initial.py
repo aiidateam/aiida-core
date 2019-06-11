@@ -15,7 +15,6 @@ from __future__ import absolute_import
 from django.db import models, migrations
 import django.db.models.deletion
 import django.utils.timezone
-from django.conf import settings
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
@@ -25,6 +24,7 @@ DOWN_REVISION = '1.0.0'
 
 
 class Migration(migrations.Migration):
+
     dependencies = [
         ('auth', '0001_initial'),
     ]
@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
                 ('auth_params', models.TextField(default=u'{}')),
                 ('metadata', models.TextField(default=u'{}')),
                 ('enabled', models.BooleanField(default=True)),
-                ('aiidauser', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
+                ('aiidauser', models.ForeignKey(to='db.DbUser')),
             ],
             options={
             },
@@ -291,7 +291,7 @@ class Migration(migrations.Migration):
                 ('module_class', models.TextField()),
                 ('script_path', models.TextField()),
                 ('script_md5', models.CharField(max_length=255)),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=django.db.models.deletion.PROTECT)),
+                ('user', models.ForeignKey(to='db.DbUser', on_delete=django.db.models.deletion.PROTECT)),
             ],
             options={
             },
@@ -326,7 +326,7 @@ class Migration(migrations.Migration):
                 ('calculations', models.ManyToManyField(related_name='workflow_step', to='db.DbNode')),
                 ('parent', models.ForeignKey(related_name='steps', to='db.DbWorkflow')),
                 ('sub_workflows', models.ManyToManyField(related_name='parent_workflow_step', to='db.DbWorkflow')),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=django.db.models.deletion.PROTECT)),
+                ('user', models.ForeignKey(to='db.DbUser', on_delete=django.db.models.deletion.PROTECT)),
             ],
             options={
             },
@@ -367,7 +367,7 @@ class Migration(migrations.Migration):
             model_name='dbnode',
             name='user',
             field=models.ForeignKey(related_name='dbnodes', on_delete=django.db.models.deletion.PROTECT,
-                                    to=settings.AUTH_USER_MODEL),
+                                    to='db.DbUser'),
             preserve_default=True,
         ),
         migrations.AddField(
@@ -396,7 +396,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbgroup',
             name='user',
-            field=models.ForeignKey(related_name='dbgroups', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(related_name='dbgroups', to='db.DbUser'),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -422,7 +422,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbcomment',
             name='user',
-            field=models.ForeignKey(to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(to='db.DbUser'),
             preserve_default=True,
         ),
         migrations.AddField(

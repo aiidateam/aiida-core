@@ -90,10 +90,9 @@ class DbComputer(Base):
 
     description = Column(Text, nullable=True)
 
-    transport_type = Column(String(255))
     scheduler_type = Column(String(255))
+    transport_type = Column(String(255))
 
-    transport_params = Column(String(255))
     _metadata = Column('metadata', String(255), default="{}")
 
 
@@ -102,16 +101,9 @@ class DbUser(Base):
 
     id = Column(Integer, primary_key=True)
     email = Column(String(254), unique=True, index=True)
-    password = Column(String(128))  # Clear text password ?
     first_name = Column(String(254), nullable=True)
     last_name = Column(String(254), nullable=True)
     institution = Column(String(254), nullable=True)
-
-    is_staff = Column(Boolean, default=False)
-    is_active = Column(Boolean, default=False)
-
-    last_login = Column(DateTime(timezone=True), default=timezone.now)
-    date_joined = Column(DateTime(timezone=True), default=timezone.now)
 
 
 table_groups_nodes = Table(
@@ -159,10 +151,6 @@ class DbNode(Base):
     dbcomputer = relationship('DbComputer', backref=backref('dbnodes', passive_deletes=True))
     user_id = Column(Integer, ForeignKey('db_dbuser.id', deferrable=True, initially="DEFERRED"), nullable=False)
     user = relationship('DbUser', backref='dbnodes')
-
-    public = Column(Boolean, default=False)
-
-    nodeversion = Column(Integer, default=1)
 
     attributes = relationship('DbAttribute', uselist=True, backref='dbnode')
     extras = relationship('DbExtra', uselist=True, backref='dbnode')

@@ -71,29 +71,6 @@ pwd_context = CryptContext(  # pylint: disable=invalid-name
     pbkdf2_sha256__default_rounds=8000,
 )
 
-
-def create_unusable_pass():
-    return UNUSABLE_PASSWORD_PREFIX + get_random_string(UNUSABLE_PASSWORD_SUFFIX_LENGTH)
-
-
-def is_password_usable(enc_pass):
-    """check whether the passed password string is a valid hashed password"""
-
-    if enc_pass is None or enc_pass.startswith(UNUSABLE_PASSWORD_PREFIX):
-        return False
-
-    if pwd_context.identify(enc_pass) is not None:
-        return True
-
-    # Backward compatibility for old Django hashing
-    if enc_pass.startswith(HASHING_PREFIX_DJANGO):
-        enc_pass = enc_pass.replace(HASHING_PREFIX_DJANGO, HASHING_PREFIX_PBKDF2_SHA256, 1)
-        if pwd_context.identify(enc_pass) is not None:
-            return True
-
-    return False
-
-
 ###################################################################
 # THE FOLLOWING WAS TAKEN FROM DJANGO BUT IT CAN BE EASILY REPLACED
 ###################################################################

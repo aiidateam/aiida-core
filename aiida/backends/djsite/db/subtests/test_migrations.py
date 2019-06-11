@@ -27,6 +27,7 @@ from aiida.manage.database.integrity.duplicate_uuid import deduplicate_uuids, ve
 
 
 class TestMigrations(AiidaTestCase):
+
     @property
     def app(self):
         return apps.get_containing_app_config(type(self).__module__).name.split('.')[-1]
@@ -46,12 +47,15 @@ class TestMigrations(AiidaTestCase):
         self.migrate_to = [(self.app, self.migrate_to)]
         executor = MigrationExecutor(connection)
         self.apps = executor.loader.project_state(self.migrate_from).apps
+        self.schema_editor = connection.schema_editor()
 
         # Reverse to the original migration
         executor.migrate(self.migrate_from)
 
-        self.default_user = self.backend.users.create('{}@aiida.net'.format(self.id())).store()
         self.DbNode = self.apps.get_model('db', 'DbNode')
+        self.DbUser = self.apps.get_model('db', 'DbUser')
+        self.default_user = self.DbUser(1, 'aiida@localhost')
+        self.default_user.save()
 
         try:
             self.setUpBeforeMigration()
@@ -61,11 +65,10 @@ class TestMigrations(AiidaTestCase):
             executor.migrate(self.migrate_to)
 
             self.apps = executor.loader.project_state(self.migrate_to).apps
-        except Exception as exception:
+        except Exception:
             # Bring back the DB to the correct state if this setup part fails
             import traceback
             traceback.print_stack()
-            print('EXCEPTION', exception)
             self._revert_database_schema()
             raise
 
@@ -450,9 +453,9 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         serialized_param_data = dumps_json(list(param_data))
         # Getting the serialized logs for the unknown entity logs (as the export migration fuction
         # provides them) - this should coincide to the above
-        serialized_unknown_exp_logs = update_024.get_serialized_unknown_entity_logs(DbLog)
+        serialized_unknown_exp_logs = update_024.get_serialized_unknown_entity_logs(self.schema_editor)
         # Getting their number
-        unknown_exp_logs_number = update_024.get_unknown_entity_log_number(DbLog)
+        unknown_exp_logs_number = update_024.get_unknown_entity_log_number(self.schema_editor)
         self.to_check['Dict'] = (serialized_param_data, serialized_unknown_exp_logs,
                                           unknown_exp_logs_number)
 
@@ -464,8 +467,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         serialized_leg_wf_logs = dumps_json(list(leg_wf))
         # Getting the serialized logs for the legacy workflow logs (as the export migration function
         # provides them) - this should coincide to the above
-        serialized_leg_wf_exp_logs = update_024.get_serialized_legacy_workflow_logs(DbLog)
-        eg_wf_exp_logs_number = update_024.get_legacy_workflow_log_number(DbLog)
+        serialized_leg_wf_exp_logs = update_024.get_serialized_legacy_workflow_logs(self.schema_editor)
+        eg_wf_exp_logs_number = update_024.get_legacy_workflow_log_number(self.schema_editor)
         self.to_check['WorkflowNode'] = (serialized_leg_wf_logs, serialized_leg_wf_exp_logs, eg_wf_exp_logs_number)
 
         # Getting the serialized logs that don't correspond to a DbNode record
@@ -475,8 +478,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         serialized_logs_no_node = dumps_json(list(logs_no_node))
         # Getting the serialized logs that don't correspond to a node (as the export migration function
         # provides them) - this should coincide to the above
-        serialized_logs_exp_no_node = update_024.get_serialized_logs_with_no_nodes(DbLog, DbNode)
-        logs_no_node_number = update_024.get_logs_with_no_nodes_number(DbLog, DbNode)
+        serialized_logs_exp_no_node = update_024.get_serialized_logs_with_no_nodes(self.schema_editor)
+        logs_no_node_number = update_024.get_logs_with_no_nodes_number(self.schema_editor)
         self.to_check['NoNode'] = (serialized_logs_no_node, serialized_logs_exp_no_node, logs_no_node_number)
 
     def tearDown(self):
@@ -740,13 +743,11 @@ class TestTextFieldToJSONFieldMigration(TestMigrations):
         self.node.save()
 
         self.computer_metadata = {'shebang': '#!/bin/bash', 'workdir': '/scratch/', 'append_text': '', 'prepend_text': '', 'mpirun_command': ['mpirun', '-np', '{tot_num_mpiprocs}'], 'default_mpiprocs_per_machine': 1}
-        self.computer_transport_params = {'append_text': 'sometext\ntest', 'max_machines': 1}
         self.computer_kwargs = {
             'name': 'localhost_testing',
             'hostname': 'localhost',
             'transport_type': 'local',
             'scheduler_type': 'direct',
-            'transport_params': json.dumps(self.computer_transport_params),
             'metadata': json.dumps(self.computer_metadata),
         }
         self.computer = self.DbComputer(**self.computer_kwargs)
@@ -790,7 +791,6 @@ class TestTextFieldToJSONFieldMigration(TestMigrations):
 
         # Make sure that the migrated data matches the original
         self.assertDictEqual(computer.metadata, self.computer_metadata)
-        self.assertDictEqual(computer.transport_params, self.computer_transport_params)
         self.assertDictEqual(auth_info.metadata, self.auth_info_metadata)
         self.assertDictEqual(auth_info.auth_params, self.auth_info_auth_params)
         self.assertDictEqual(log.metadata, self.log_metadata)

@@ -35,38 +35,28 @@ class UserTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    _default_projections = ['id', 'first_name', "last_name", 'institution', 'date_joined']
+    _default_projections = ['id', 'first_name', 'last_name', 'institution']
 
     ## user schema
     # All the values from column_order must present in additional info dict
     # Note: final schema will contain details for only the fields present in column order
     _schema_projections = {
-        "column_order":
-        ["id", "first_name", "last_name", "email", "institution", "date_joined", "last_login", "is_active"],
-        "additional_info": {
-            "id": {
-                "is_display": True
+        'column_order': ['id', 'first_name', 'last_name', 'email', 'institution'],
+        'additional_info': {
+            'id': {
+                'is_display': True
             },
-            "first_name": {
-                "is_display": True
+            'first_name': {
+                'is_display': True
             },
-            "last_name": {
-                "is_display": True
+            'last_name': {
+                'is_display': True
             },
-            "email": {
-                "is_display": True
+            'email': {
+                'is_display': True
             },
-            "institution": {
-                "is_display": True
-            },
-            "date_joined": {
-                "is_display": False
-            },
-            "last_login": {
-                "is_display": False
-            },
-            "is_active": {
-                "is_display": False
+            'institution': {
+                'is_display': True
             }
         }
     }

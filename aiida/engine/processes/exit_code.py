@@ -28,7 +28,10 @@ should be terminated and that the exit status and message of the namedtuple shou
 corresponding attributes of the node.
 
 :param status: positive integer exit status, where a non-zero value indicated the process failed, default is `0`
-:param message: string, optional message with more details about the failure mode
+:type status: int
+
+:param message: optional message with more details about the failure mode
+:type message: str
 """
 
 
@@ -45,7 +48,11 @@ class ExitCodesNamespace(AttributeDict):
 
         :param identifier: the identifier of the exit code. If the type is integer, it will be interpreted as
             the exit code status, otherwise it be interpreted as the exit code label
+        :type identifier: str
+
         :returns: an ExitCode named tuple
+        :rtype: :class:`aiida.engine.ExitCode`
+
         :raises ValueError: if no exit code with the given label is defined for this process
         """
         if isinstance(identifier, int):

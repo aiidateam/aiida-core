@@ -68,8 +68,6 @@ class BackendNode(backends.BackendEntity):
         :param value: the new value to set
         """
         self._dbmodel.process_type = value
-        if self.is_stored:
-            self._increment_version_number()
 
     @property
     def label(self):
@@ -86,8 +84,6 @@ class BackendNode(backends.BackendEntity):
         :param value: the new value to set
         """
         self._dbmodel.label = value
-        if self.is_stored:
-            self._increment_version_number()
 
     @property
     def description(self):
@@ -104,8 +100,6 @@ class BackendNode(backends.BackendEntity):
         :param value: the new value to set
         """
         self._dbmodel.description = value
-        if self.is_stored:
-            self._increment_version_number()
 
     @abc.abstractproperty
     def computer(self):
@@ -154,22 +148,6 @@ class BackendNode(backends.BackendEntity):
         :return: the mtime
         """
         return self._dbmodel.mtime
-
-    @property
-    def version(self):
-        """Return the node version.
-
-        :return: the version
-        """
-        return self._dbmodel.nodeversion
-
-    @property
-    def public(self):
-        """Return the node public attribute.
-
-        :return: the public attribute
-        """
-        return self._dbmodel.public
 
     @property
     def attributes(self):
@@ -295,12 +273,11 @@ class BackendNode(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def set_extra(self, key, value, increase_version=True):
+    def set_extra(self, key, value):
         """Set an extra to the given value.
 
         :param key: name of the extra
         :param value: value of the extra
-        :param increase_version: boolean, if True will increase the node version upon successfully setting the extra
         """
 
     @abc.abstractmethod
@@ -378,10 +355,6 @@ class BackendNode(backends.BackendEntity):
         :param links: optional links to add before storing
         :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
-
-    @abc.abstractmethod
-    def _increment_version_number(self):
-        """Increment the node version number of this node by one directly in the database."""
 
 
 @six.add_metaclass(abc.ABCMeta)

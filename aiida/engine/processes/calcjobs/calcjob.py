@@ -35,7 +35,12 @@ class CalcJob(Process):
     link_label_retrieved = 'retrieved'
 
     def __init__(self, *args, **kwargs):
-        """Construct the instance only if it is a sub class of `CalcJob` otherwise raise `InvalidOperation`."""
+        """Construct a CalcJob instance.
+
+        Construct the instance only if it is a sub class of `CalcJob`, otherwise raise `InvalidOperation`.
+
+        See documentation of :class:`aiida.engine.Process`.
+        """
         if self.__class__ == CalcJob:
             raise exceptions.InvalidOperation('cannot construct or launch a base `CalcJob` class.')
 
@@ -169,7 +174,7 @@ class CalcJob(Process):
         return plumpy.Wait(msg='Waiting to upload', data=(UPLOAD_COMMAND, calc_info, script_filename))
 
     def prepare_for_submission(self, folder):
-        """Docs."""
+        """Prepare files for submission of calculation."""
         raise NotImplementedError
 
     def parse(self, retrieved_temporary_folder=None):
@@ -203,9 +208,11 @@ class CalcJob(Process):
 
         :param folder: a SandboxFolder, empty in input, that will be filled with
           calculation input files and the scheduling script.
+        :type folder: :class:`aiida.common.folders.Folder`
 
         :return calcinfo: the CalcInfo object containing the information
             needed by the daemon to handle operations.
+        :rtype calcinfo: :class:`aiida.common.CalcInfo`
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         import os

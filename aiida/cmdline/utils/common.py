@@ -155,7 +155,7 @@ def get_node_info(node, include_summary=True):
         result += '\n' + format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])
 
     if nodes_called:
-        result += '\n' + format_nested_links(nodes_called.nested(), headers=['Called', 'PK', 'Type'])
+        result += '\n' + format_flat_links(nodes_called.all(), headers=['Called', 'PK', 'Type'])
 
     log_messages = orm.Log.objects.get_logs_for(node)
 
@@ -165,6 +165,23 @@ def get_node_info(node, include_summary=True):
         table.append(['There are {} log messages for this calculation'.format(len(log_messages))])
         table.append(["Run 'verdi process report {}' to see them".format(node.pk)])
         result += '\n\n{}'.format(tabulate(table, headers=table_headers))
+
+    return result
+
+
+def format_flat_links(links, headers):
+    """Given a flat list of LinkTriples, return a flat string representation.
+
+    :param links: a list of LinkTriples
+    :param headers: headers to use
+    :return: formatted string
+    """
+    table = []
+
+    for link_triple in links:
+        table.append([link_triple.link_label, link_triple.node.pk, link_triple.node.__class__.__name__])
+
+    result = '\n{}'.format(tabulate(table, headers=headers))
 
     return result
 

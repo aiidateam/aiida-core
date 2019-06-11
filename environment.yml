@@ -36,4 +36,5 @@ dependencies:
 - pika==1.0.0
 - circus==0.15.0
 - tornado<5.0
+- wrapt==1.11.1
 - simplejson==3.16.0

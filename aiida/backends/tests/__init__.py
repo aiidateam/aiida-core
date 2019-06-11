@@ -74,6 +74,7 @@ DB_TEST_LIST = {
         'common.extendeddicts': ['aiida.backends.tests.common.test_extendeddicts'],
         'common.folders': ['aiida.backends.tests.common.test_folders'],
         'common.hashing': ['aiida.backends.tests.common.test_hashing'],
+        'common.lang': ['aiida.backends.tests.common.test_lang'],
         'common.links': ['aiida.backends.tests.common.test_links'],
         'common.logging': ['aiida.backends.tests.common.test_logging'],
         'common.serialize': ['aiida.backends.tests.common.test_serialize'],

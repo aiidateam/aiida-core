@@ -17,7 +17,8 @@ import os
 import sys
 import tarfile
 import zipfile
-from functools import wraps
+
+from wrapt import decorator
 
 from aiida.common import json
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
@@ -60,31 +61,21 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
         if self.folder:
             self.folder.erase()
 
-    def ensure_within_context(function):  # pylint: disable=no-self-argument
+    @decorator
+    def ensure_within_context(wrapped, instance, args, kwargs):  # pylint: disable=no-self-argument
         """Decorator to ensure that the instance is called within a context manager."""
+        if instance and not instance.folder:
+            raise InvalidOperation('the Archive class should be used within a context')
 
-        @wraps(function)
-        def decorated(self, *args, **kwargs):
-            """The decorated function is guaranteed to be within the context."""
-            if not self.folder:
-                raise InvalidOperation('the Archive class should be used within a context')
+        return wrapped(*args, **kwargs)  # pylint: disable=not-callable
 
-            return function(self, *args, **kwargs)  # pylint: disable=not-callable
-
-        return decorated
-
-    def ensure_unpacked(function):  # pylint: disable=no-self-argument
+    @decorator
+    def ensure_unpacked(wrapped, instance, args, kwargs):  # pylint: disable=no-self-argument
         """Decorator to ensure that the archive is unpacked before entering the decorated function."""
+        if instance and not instance.unpacked:
+            instance.unpack()
 
-        @wraps(function)
-        def decorated_function(self, *args, **kwargs):
-            """The decorated function is guaranteed to have access to the unpacked archive."""
-            if not self.unpacked:
-                self.unpack()
-
-            return function(self, *args, **kwargs)  # pylint: disable=not-callable
-
-        return decorated_function
+        return wrapped(*args, **kwargs)  # pylint: disable=not-callable
 
     @ensure_within_context
     def unpack(self):

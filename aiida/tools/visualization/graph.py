@@ -645,7 +645,7 @@ class Graph(object):
                          {
                              'cls': target_cls,
                              'filters': target_filters,
-                             'descendant_of': 'origin',
+                             'with_ancestors': 'origin',
                              'tag': "target",
                              'project': "*"
                          }]

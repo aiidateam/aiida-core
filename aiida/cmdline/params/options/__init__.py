@@ -280,6 +280,11 @@ ORDER_BY = OverridableOption(
     type=click.Choice(['id', 'ctime']), default='ctime', show_default=True,
     help='Order the entries by this attribute.')
 
+ORDER_DIR = OverridableOption(
+    '-D', '--order-dir', 'order_dir',
+    type=click.Choice(['asc', 'desc']), default='asc', show_default=True,
+    help='List the entries in ascending or descending order')
+
 PAST_DAYS = OverridableOption(
     '-p', '--past-days', 'past_days',
     type=click.INT, metavar='PAST_DAYS',

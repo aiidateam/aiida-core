@@ -23,9 +23,9 @@ import six
 from six.moves import filter, range
 from pika.exceptions import ConnectionClosed
 
+from kiwipy.communications import UnroutableError
 import plumpy
 from plumpy import ProcessState
-from kiwipy.communications import UnroutableError
 
 from aiida import orm
 from aiida.common import exceptions
@@ -65,12 +65,18 @@ class Process(plumpy.Process):
 
     @classmethod
     def define(cls, spec):
+        # yapf: disable
         super(Process, cls).define(spec)
         spec.input_namespace(spec.metadata_key, required=False, non_db=True)
         spec.input_namespace('{}.{}'.format(spec.metadata_key, spec.options_key), required=False)
-        spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True)
-        spec.input('{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False)
-        spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types[0], required=False)
+        spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True,
+            help='If set to `False` provenance will not be stored in the database.')
+        spec.input('{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False,
+            help='Description to set on the process node.')
+        spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types[0], required=False,
+            help='Label to set on the process node.')
+        spec.input('{}.call_link_label'.format(spec.metadata_key), valid_type=six.string_types[0], default='CALL',
+            help='The label to use for the `CALL` link if the process is called by another process.')
         spec.exit_code(10, 'ERROR_INVALID_OUTPUT', message='the process returned an invalid output')
         spec.exit_code(11, 'ERROR_MISSING_OUTPUT', message='the process did not register a required output')
 
@@ -637,10 +643,10 @@ class Process(plumpy.Process):
                 raise exceptions.InvalidOperation('calling processes from a calculation type process is forbidden.')
 
             if isinstance(self.node, orm.CalculationNode):
-                self.node.add_incoming(parent_calc, LinkType.CALL_CALC, 'CALL_CALC')
+                self.node.add_incoming(parent_calc, LinkType.CALL_CALC, self.metadata.call_link_label)
 
             elif isinstance(self.node, orm.WorkflowNode):
-                self.node.add_incoming(parent_calc, LinkType.CALL_WORK, 'CALL_WORK')
+                self.node.add_incoming(parent_calc, LinkType.CALL_WORK, self.metadata.call_link_label)
 
         self._setup_metadata()
         self._setup_inputs()
@@ -648,7 +654,7 @@ class Process(plumpy.Process):
     def _setup_metadata(self):
         """Store the metadata on the ProcessNode."""
         for name, metadata in self.metadata.items():
-            if name in ['store_provenance', 'dry_run']:
+            if name in ['store_provenance', 'dry_run', 'call_link_label']:
                 continue
             elif name == 'label':
                 self.node.label = metadata
@@ -673,11 +679,7 @@ class Process(plumpy.Process):
                 self.node.computer = node.get_remote_computer()
 
             # Need this special case for tests that use ProcessNodes as classes
-            if isinstance(self.node, orm.ProcessNode) and not isinstance(self.node,
-                                                                         (orm.CalculationNode, orm.WorkflowNode)):
-                self.node.add_incoming(node, LinkType.INPUT_WORK, name)
-
-            elif isinstance(self.node, orm.CalculationNode):
+            if isinstance(self.node, orm.CalculationNode):
                 self.node.add_incoming(node, LinkType.INPUT_CALC, name)
 
             elif isinstance(self.node, orm.WorkflowNode):

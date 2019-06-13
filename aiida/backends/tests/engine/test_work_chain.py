@@ -25,7 +25,7 @@ from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.engine import ExitCode, Process, ToContext, WorkChain, if_, while_, return_, run, run_get_node, submit
-from aiida.engine import launch
+from aiida.engine import launch, calcfunction
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.manager import get_manager
 from aiida.orm import load_node, Bool, Float, Int, Str
@@ -536,6 +536,45 @@ class TestWorkchain(AiidaTestCase):
                 raise RuntimeError("Shouldn't get here")
 
         run_and_check_success(WcWithReturn)
+
+    def test_call_link_label(self):
+        """Test that the `call_link_label` metadata input is properly used and set."""
+
+        label_workchain = 'some_not_default_call_link_label'
+        label_calcfunction = 'call_link_label_for_calcfunction'
+
+        @calcfunction
+        def calculation_function():
+            return
+
+        class MainWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super(MainWorkChain, cls).define(spec)
+                spec.outline(cls.launch)
+
+            def launch(self):
+                # "Call" a calculation function simply by running it
+                inputs = {'metadata': {'call_link_label': label_calcfunction}}
+                result = calculation_function(**inputs)
+
+                # Call a sub work chain
+                inputs = {'metadata': {'call_link_label': label_workchain}}
+                return ToContext(subwc=self.submit(SubWorkChain, **inputs))
+
+        class SubWorkChain(WorkChain):
+            pass
+
+        process = run_and_check_success(MainWorkChain)
+
+        # Verify that the `CALL` link of the calculation function is there with the correct label
+        link_triple = process.node.get_outgoing(link_type=LinkType.CALL_CALC, link_label_filter=label_calcfunction).one()
+        self.assertIsInstance(link_triple.node, orm.CalcFunctionNode)
+
+        # Verify that the `CALL` link of the work chain is there with the correct label
+        link_triple = process.node.get_outgoing(link_type=LinkType.CALL_WORK, link_label_filter=label_workchain).one()
+        self.assertIsInstance(link_triple.node, orm.WorkChainNode)
 
     def test_tocontext_submit_workchain_no_daemon(self):
 

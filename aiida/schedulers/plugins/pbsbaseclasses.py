@@ -380,7 +380,8 @@ class PbsBaseClass(Scheduler):
             _LOGGER.warning("Warning in _parse_joblist_output, non-empty "
                             "(filtered) stderr='{}'".format(filtered_stderr))
             if retval != 0:
-                raise SchedulerError("Error during qstat parsing (_parse_joblist_output function)")
+                raise SchedulerError("Error during qstat parsing, retval={}\n"
+                                    "stdout={}\nstderr={}".format(retval, stdout, stderr))
 
         jobdata_raw = []  # will contain raw data parsed from qstat output
         # Get raw data and split in lines

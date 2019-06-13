@@ -47,6 +47,7 @@ def verdi_process():
 def process_list(all_entries, group, process_state, exit_status, failed, past_days, limit, project, raw, order_by,
                  order_dir):
     """Show a list of processes that are still running."""
+    # pylint: disable=too-many-locals
     from tabulate import tabulate
     from aiida.cmdline.utils.common import print_last_process_state_change, check_worker_load
 

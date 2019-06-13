@@ -173,7 +173,7 @@ class TestVerdiProcess(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertEqual(len(get_result_lines(result)), 6)
 
-        # Ordering shouldn't change the number of results
+        # Ordering shouldn't change the number of results,
         for flag in ['-O', '--order-by']:
             for flag_value in ['id', 'ctime']:
                 result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, flag_value])

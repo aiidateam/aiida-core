@@ -33,6 +33,8 @@ def verdi_process():
 @verdi_process.command('list')
 @options.PROJECT(
     type=click.Choice(CalculationQueryBuilder.valid_projections), default=CalculationQueryBuilder.default_projections)
+@options.ORDER_BY()
+@options.ORDER_DIRECTION()
 @options.GROUP(help='Only include entries that are a member of this group.')
 @options.ALL(help='Show all entries, regardless of their process state.')
 @options.PROCESS_STATE()
@@ -42,8 +44,10 @@ def verdi_process():
 @options.LIMIT()
 @options.RAW()
 @decorators.with_dbenv()
-def process_list(all_entries, group, process_state, exit_status, failed, past_days, limit, project, raw):
+def process_list(all_entries, group, process_state, exit_status, failed, past_days, limit, project, raw, order_by,
+                 order_dir):
     """Show a list of processes that are still running."""
+    # pylint: disable=too-many-locals
     from tabulate import tabulate
     from aiida.cmdline.utils.common import print_last_process_state_change, check_worker_load
 
@@ -54,7 +58,8 @@ def process_list(all_entries, group, process_state, exit_status, failed, past_da
 
     builder = CalculationQueryBuilder()
     filters = builder.get_filters(all_entries, process_state, exit_status, failed)
-    query_set = builder.get_query_set(relationships=relationships, filters=filters, past_days=past_days, limit=limit)
+    query_set = builder.get_query_set(
+        relationships=relationships, filters=filters, order_by={order_by: order_dir}, past_days=past_days, limit=limit)
     projected = builder.get_projected(query_set, projections=project)
 
     headers = projected.pop(0)

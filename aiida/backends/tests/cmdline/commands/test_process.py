@@ -166,6 +166,7 @@ class TestVerdiProcess(AiidaTestCase):
 
     def test_list(self):
         """Test the list command."""
+        # pylint: disable=too-many-branches
 
         # Default behavior should yield all active states (CREATED, RUNNING and WAITING) so six in total
         result = self.cli_runner.invoke(cmd_process.process_list, ['-r'])

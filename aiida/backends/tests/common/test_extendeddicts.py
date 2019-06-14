@@ -96,7 +96,7 @@ class TestAttributeDictAccess(unittest.TestCase):
         """Test copying."""
         dictionary_01 = extendeddicts.AttributeDict()
         dictionary_01.alpha = 'a'
-        dictionary_02 = dictionary_01.copy()
+        dictionary_02 = copy.copy(dictionary_01)
         dictionary_02.alpha = 'b'
         self.assertEqual(dictionary_01.alpha, 'a')
         self.assertEqual(dictionary_02.alpha, 'b')
@@ -106,7 +106,7 @@ class TestAttributeDictAccess(unittest.TestCase):
         dictionary_01 = extendeddicts.AttributeDict()
         dictionary_01.alpha = 'a'
         dictionary_01.beta = 'b'
-        dictionary_02 = dictionary_01.copy()
+        dictionary_02 = copy.copy(dictionary_01)
         del dictionary_01.alpha
         del dictionary_01['beta']
         with self.assertRaises(AttributeError):
@@ -123,7 +123,7 @@ class TestAttributeDictAccess(unittest.TestCase):
         dictionary_01 = extendeddicts.AttributeDict()
         dictionary_01.alpha = [1, 2, 3]
         dictionary_01.beta = 3
-        dictionary_02 = dictionary_01.copy()
+        dictionary_02 = copy.copy(dictionary_01)
         dictionary_02.alpha[0] = 4
         dictionary_02.beta = 5
         self.assertEqual(dictionary_01.alpha, [4, 2, 3])  # copy does a shallow copy
@@ -135,13 +135,7 @@ class TestAttributeDictAccess(unittest.TestCase):
         """Test shallow copying."""
         dictionary_01 = extendeddicts.AttributeDict()
         dictionary_01.alpha = {'a': 'b', 'c': 'd'}
-        # dictionary_02 = copy.deepcopy(dictionary_01)
-        dictionary_02 = dictionary_01.copy()
-        # doesn't work like this, would work as dictionary_02['x']['a']
-        # i think that it is because deepcopy on dict actually creates a
-        # copy only if the data is changed; but for a nested dict,
-        # dictionary_02.alpha returns a dict wrapped in our class and this looses all the
-        # information on what should be updated when changed.
+        dictionary_02 = copy.copy(dictionary_01)
         dictionary_02.alpha['a'] = 'ggg'
         self.assertEqual(dictionary_01.alpha['a'], 'ggg')  # copy does a shallow copy
         self.assertEqual(dictionary_02.alpha['a'], 'ggg')
@@ -155,20 +149,44 @@ class TestAttributeDictAccess(unittest.TestCase):
         self.assertEqual(dictionary_01.alpha, [1, 2, 3])
         self.assertEqual(dictionary_02.alpha, [4, 2, 3])
 
-    def test_shallowcopy3(self):
-        """Test shallow copying."""
-        dictionary_01 = extendeddicts.AttributeDict()
-        dictionary_01.alpha = {'a': 'b', 'c': 'd'}
-        dictionary_02 = copy.deepcopy(dictionary_01)
-        dictionary_02.alpha['a'] = 'ggg'
-        self.assertEqual(dictionary_01.alpha['a'], 'b')  # copy does a shallow copy
-        self.assertEqual(dictionary_02.alpha['a'], 'ggg')
-
 
 class TestAttributeDictNested(unittest.TestCase):
-    """
-    Test the functionality of nested AttributeDict classes.
-    """
+    """Test the functionality of nested AttributeDict classes."""
+
+    def test_shallow_copy(self):
+        """Test shallow copying using either the copy method of the dict class or the copy module."""
+        nested = {'x': 1, 'y': 2, 'sub': {'namespace': {'a': 1}, 'b': 'string'}}
+        dictionary = extendeddicts.AttributeDict(nested)
+        copied_by_method = dictionary.copy()
+        copied_by_module = copy.copy(dictionary)
+
+        dictionary.x = 400
+        dictionary.sub.namespace.b = 'other_string'
+
+        # The shallow copied dictionaries should be different objects
+        self.assertTrue(dictionary is not copied_by_method)
+        self.assertTrue(dictionary is not copied_by_module)
+
+        # However, nested dictionaries should be the same
+        self.assertTrue(dictionary.sub is copied_by_method['sub'])
+        self.assertTrue(dictionary.sub is copied_by_module['sub'])
+
+        # The top-level values should not have changed, because they have been deep copied
+        self.assertEqual(copied_by_method['x'], 1)
+        self.assertEqual(copied_by_module['x'], 1)
+
+        # The nested value should have also changed for the shallow copies
+        self.assertEqual(copied_by_method['sub']['namespace']['b'], 'other_string')
+        self.assertEqual(copied_by_module['sub']['namespace']['b'], 'other_string')
+
+    def test_recursive_attribute_dict(self):
+        """Test that all nested dictionaries are also recursively turned into AttributeDict instances."""
+        nested = {'x': 1, 'y': 2, 'sub': {'namespace': {'a': 1}, 'b': 'string'}}
+        dictionary = extendeddicts.AttributeDict(nested)
+        self.assertIsInstance(dictionary, extendeddicts.AttributeDict)
+        self.assertIsInstance(dictionary.sub, extendeddicts.AttributeDict)
+        self.assertIsInstance(dictionary.sub.namespace, extendeddicts.AttributeDict)
+        self.assertEqual(dictionary.sub.namespace.a, nested['sub']['namespace']['a'])
 
     def test_nested(self):
         """Test nested dictionary."""

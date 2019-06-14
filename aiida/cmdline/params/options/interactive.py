@@ -22,25 +22,6 @@ from aiida.cmdline.utils import echo
 from .conditional import ConditionalOption
 
 
-def noninteractive(ctx):
-    """check context for non_interactive flag"""
-    return ctx.params.get('non_interactive')
-
-
-def string_wrapper(msg, max_length=100):
-    """Wraps a string into multiple lines according to ``max_length``"""
-    words = msg.split(' ')
-    lines = ['']
-    for word in words:
-        if not lines[-1]:
-            lines[-1] = word
-        elif len(lines[-1]) + len(word) + 1 <= max_length:
-            lines[-1] += ' ' + word
-        else:
-            lines.append(word)
-    return lines
-
-
 class InteractiveOption(ConditionalOption):
     """
     Intercepts certain keyword arguments to circumvent :mod:`click`'s prompting
@@ -107,6 +88,16 @@ class InteractiveOption(ConditionalOption):
 
         # set prompting type
         self.prompt_loop = self.simple_prompt_loop
+
+    @staticmethod
+    def is_non_interactive(ctx):
+        """Return whether the command is being run non-interactively.
+
+        This is the case if the `non_interactive` parameter in the context is set to `True`.
+
+        :return: boolean, True if being run non-interactively, False otherwise
+        """
+        return ctx.params.get('non_interactive')
 
     def get_default(self, ctx):
         """disable :mod:`click` from circumventing prompting when a default value exists"""
@@ -191,7 +182,7 @@ class InteractiveOption(ConditionalOption):
         successful = False
         try:
             value = self.type.convert(value, param, ctx)
-            value = self.after_callback(ctx, param, value)
+            value = self.callback(ctx, param, value)
             successful = True
         except click.BadParameter as err:
             echo.echo_error(str(err))
@@ -228,7 +219,7 @@ class InteractiveOption(ConditionalOption):
                 # do not want to start prompting for it, but instead just let the exception bubble-up.
                 # However, in this case, the `--non-interactive` flag is not necessarily passed, so we cannot just rely
                 # on this value but in addition need to check that we did not already enter the prompt.
-                if noninteractive(ctx) or not hasattr(ctx, 'prompt_loop_info_printed'):
+                if self.is_non_interactive(ctx) or not hasattr(ctx, 'prompt_loop_info_printed'):
                     raise exception
 
                 echo.echo_error(str(exception))
@@ -251,7 +242,7 @@ class InteractiveOption(ConditionalOption):
             return self.after_callback(ctx, param, value)
 
         # The same if the user specified --non-interactive
-        if noninteractive(ctx):
+        if self.is_non_interactive(ctx):
 
             # Check if it is required
             default = self._get_default(ctx) or self.default

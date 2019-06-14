@@ -36,9 +36,9 @@ def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argum
     :param value: the value passed for the parameter
     :raises `click.BadParameter`: if the value is not a positive number
     """
-    if value is not None and value < 0:
+    if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
-        raise BadParameter('value needs to be a positive number')
+        raise BadParameter('{} is not a valid positive number'.format(value))
 
 
 @six.add_metaclass(ABCMeta)
@@ -58,7 +58,6 @@ class Transport(object):
         'type': float,
         'prompt': 'Connection cooldown time (s)',
         'help': 'Minimum time interval in seconds between consecutive connection openings',
-        'non_interactive_default': True,
         'callback': validate_positive_number
     })]
 

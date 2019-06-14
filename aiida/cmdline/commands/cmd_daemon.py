@@ -27,6 +27,17 @@ from aiida.cmdline.utils.daemon import get_daemon_status, \
 from aiida.manage.configuration import get_config
 
 
+def validate_positive_non_zero_integer(ctx, param, value):  # pylint: disable=unused-argument,invalid-name
+    """Validate that `value` is a positive integer."""
+    if not isinstance(value, int):
+        raise click.BadParameter('{} is not an integer'.format(value))
+
+    if value <= 0:
+        raise click.BadParameter('{} is not a positive non-zero integer'.format(value))
+
+    return value
+
+
 @verdi.group('daemon')
 def verdi_daemon():
     """Inspect and manage the daemon."""
@@ -34,12 +45,11 @@ def verdi_daemon():
 
 @verdi_daemon.command()
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
+@click.argument('number', default=1, type=int, callback=validate_positive_non_zero_integer)
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
-def start(foreground):
-    """
-    Start the daemon
-    """
+def start(foreground, number):
+    """Start the daemon with NUMBER workers [default=1]."""
     from aiida.engine.daemon.client import get_daemon_client
 
     client = get_daemon_client()
@@ -47,15 +57,16 @@ def start(foreground):
     echo.echo('Starting the daemon... ', nl=False)
 
     if foreground:
-        command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, '--foreground']
+        command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, '--foreground', str(number)]
     else:
-        command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND]
+        command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, str(number)]
 
     try:
         currenv = get_env_with_venv_bin()
-        subprocess.check_output(command, env=currenv)
+        subprocess.check_output(command, env=currenv, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as exception:
-        echo.echo_critical('{}'.format(exception))
+        click.secho('FAILED', fg='red', bold=True)
+        echo.echo_critical(exception.output)
 
     # We add a small timeout to give the pid-file a chance to be created
     with spinner():
@@ -68,9 +79,7 @@ def start(foreground):
 @verdi_daemon.command()
 @click.option('--all', 'all_profiles', is_flag=True, help='Show all daemons.')
 def status(all_profiles):
-    """
-    Print the status of the current daemon or all daemons
-    """
+    """Print the status of the current daemon or all daemons."""
     from aiida.engine.daemon.client import get_daemon_client
 
     config = get_config()
@@ -92,9 +101,7 @@ def status(all_profiles):
 @click.argument('number', default=1, type=int)
 @decorators.only_if_daemon_running()
 def incr(number):
-    """
-    Add NUMBER [default=1] workers to the running daemon
-    """
+    """Add NUMBER [default=1] workers to the running daemon."""
     from aiida.engine.daemon.client import get_daemon_client
 
     client = get_daemon_client()
@@ -106,9 +113,7 @@ def incr(number):
 @click.argument('number', default=1, type=int)
 @decorators.only_if_daemon_running()
 def decr(number):
-    """
-    Remove NUMBER [default=1] workers from the running daemon
-    """
+    """Remove NUMBER [default=1] workers from the running daemon."""
     from aiida.engine.daemon.client import get_daemon_client
 
     client = get_daemon_client()
@@ -118,9 +123,7 @@ def decr(number):
 
 @verdi_daemon.command()
 def logshow():
-    """
-    Show the log of the daemon, press CTRL+C to quit
-    """
+    """Show the log of the daemon, press CTRL+C to quit."""
     from aiida.engine.daemon.client import get_daemon_client
 
     client = get_daemon_client()
@@ -137,9 +140,7 @@ def logshow():
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
 @click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons.')
 def stop(no_wait, all_profiles):
-    """
-    Stop the daemon
-    """
+    """Stop the daemon."""
     from aiida.engine.daemon.client import get_daemon_client
 
     config = get_config()
@@ -185,11 +186,11 @@ def stop(no_wait, all_profiles):
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running()
 def restart(ctx, reset, no_wait):
-    """
-    Restart the daemon. By default will only reset the workers of the running daemon.
-    After the restart the same amount of workers will be running. If the --reset flag
-    is passed, however, the full circus daemon will be stopped and restarted with just
-    a single worker
+    """Restart the daemon.
+
+    By default will only reset the workers of the running daemon. After the restart the same amount of workers will be
+    running. If the `--reset` flag is passed, however, the full circus daemon will be stopped and restarted with just
+    a single worker.
     """
     from aiida.engine.daemon.client import get_daemon_client
 
@@ -215,12 +216,13 @@ def restart(ctx, reset, no_wait):
 
 @verdi_daemon.command(hidden=True)
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
+@click.argument('number', default=1, type=int, callback=validate_positive_non_zero_integer)
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
-def start_circus(foreground):
-    """
-    This will actually launch the circus daemon, either daemonized in the background
-    or in the foreground, printing all logs to stdout.
+def start_circus(foreground, number):
+    """This will actually launch the circus daemon, either daemonized in the background or in the foreground.
+
+    If run in the foreground all logs are redirected to stdout.
 
     .. note:: this should not be called directly from the commandline!
     """
@@ -231,6 +233,9 @@ def start_circus(foreground):
     from circus.util import check_future_exception_and_log, configure_logger
 
     from aiida.engine.daemon.client import get_daemon_client
+
+    if foreground and number > 1:
+        raise click.ClickException('can only run a single worker when running in the foreground')
 
     client = get_daemon_client()
 
@@ -250,8 +255,9 @@ def start_circus(foreground):
         'statsd': True,
         'pidfile': client.circus_pid_file,
         'watchers': [{
-            'name': client.daemon_name,
             'cmd': client.cmd_string,
+            'name': client.daemon_name,
+            'numprocesses': number,
             'virtualenv': client.virtualenv,
             'copy_env': True,
             'stdout_stream': {

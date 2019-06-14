@@ -149,10 +149,9 @@ class CalcJobNode(CalculationNode):
         except TypeError as exception:
             raise exceptions.ValidationError('invalid parser specified: {}'.format(exception))
 
-        computer = self.computer
-        scheduler = computer.get_scheduler()
         resources = self.get_option('resources')
-        def_cpus_machine = computer.get_default_mpiprocs_per_machine()
+        scheduler = self.computer.get_scheduler()  # pylint: disable=no-member
+        def_cpus_machine = self.computer.get_default_mpiprocs_per_machine()  # pylint: disable=no-member
 
         if def_cpus_machine is not None:
             resources['default_mpiprocs_per_machine'] = def_cpus_machine

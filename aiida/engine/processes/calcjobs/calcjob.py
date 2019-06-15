@@ -16,8 +16,8 @@ import six
 import plumpy
 
 from aiida import orm
-from aiida.common import exceptions
-from aiida.common.lang import override
+from aiida.common import exceptions, AttributeDict
+from aiida.common.lang import override, classproperty
 from aiida.common.links import LinkType
 
 from ..process import Process, ProcessState
@@ -53,6 +53,7 @@ class CalcJob(Process):
         spec.input('code', valid_type=orm.Code, help='The Code to use for this job.')
         spec.input('metadata.dry_run', valid_type=bool, default=False,
             help='When set to True will prepare the calculation job for submission but not actually launch it.')
+        spec.input_namespace('{}.{}'.format(spec.metadata_key, spec.options_key), required=False)
         spec.input('metadata.options.input_filename', valid_type=six.string_types, required=False,
             help='Filename to which the input for the code that is to be run will be written.')
         spec.input('metadata.options.output_filename', valid_type=six.string_types, required=False,
@@ -107,6 +108,27 @@ class CalcJob(Process):
         spec.output(cls.link_label_retrieved, valid_type=orm.FolderData, pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
                  'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
+
+    @classproperty
+    def spec_options(cls):  # pylint: disable=no-self-argument
+        """Return the metadata options port namespace of the process specification of this process.
+
+        :return: options dictionary
+        :rtype: dict
+        """
+        return cls.spec_metadata['options']  # pylint: disable=unsubscriptable-object
+
+    @property
+    def options(self):
+        """Return the options of the metadata that were specified when this process instance was launched.
+
+        :return: options dictionary
+        :rtype: dict
+        """
+        try:
+            return self.metadata.options
+        except AttributeError:
+            return AttributeDict()
 
     @classmethod
     def get_state_classes(cls):

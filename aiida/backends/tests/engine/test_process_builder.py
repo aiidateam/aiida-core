@@ -54,7 +54,7 @@ class TestProcessBuilder(AiidaTestCase):
             },
             'name_spaced': orm.Str('underscored').store(),
             'boolean': orm.Bool(True).store(),
-            'metadata': {'options': {}}
+            'metadata': {}
         }
 
     def tearDown(self):

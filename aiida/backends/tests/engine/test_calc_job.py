@@ -16,6 +16,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.engine import launch, CalcJob, Process
+from aiida.engine.processes.ports import PortNamespace
 from aiida.plugins import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
@@ -69,6 +70,11 @@ class TestCalcJob(AiidaTestCase):
 
         with self.assertRaises(AssertionError):
             launch.run(IncompleteDefineCalcJob)
+
+    def test_spec_options_property(self):
+        """`CalcJob.spec_options` should return the options port namespace of its spec."""
+        self.assertIsInstance(CalcJob.spec_options, PortNamespace)
+        self.assertEqual(CalcJob.spec_options, CalcJob.spec().inputs['metadata']['options'])
 
     def test_invalid_options_type(self):
         """Verify that passing an invalid type to `metadata.options` raises a `TypeError`."""

@@ -68,7 +68,6 @@ class Process(plumpy.Process):
         # yapf: disable
         super(Process, cls).define(spec)
         spec.input_namespace(spec.metadata_key, required=False, non_db=True)
-        spec.input_namespace('{}.{}'.format(spec.metadata_key, spec.options_key), required=False)
         spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True,
             help='If set to `False` provenance will not be stored in the database.')
         spec.input('{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False,
@@ -155,15 +154,6 @@ class Process(plumpy.Process):
         """
         return cls.spec().inputs['metadata']
 
-    @classproperty
-    def spec_options(cls):  # pylint: disable=no-self-argument
-        """Return the metadata options port namespace of the process specification of this process.
-
-        :return: options dictionary
-        :rtype: dict
-        """
-        return cls.spec_metadata['options']  # pylint: disable=unsubscriptable-object
-
     @property
     def node(self):
         """Return the ProcessNode used by this process to represent itself in the database.
@@ -190,18 +180,6 @@ class Process(plumpy.Process):
         """
         try:
             return self.inputs.metadata
-        except AttributeError:
-            return AttributeDict()
-
-    @property
-    def options(self):
-        """Return the options of the metadata that were specified when this process instance was launched.
-
-        :return: options dictionary
-        :rtype: dict
-        """
-        try:
-            return self.metadata.options
         except AttributeError:
             return AttributeDict()
 

@@ -65,6 +65,7 @@ class TestProcessNamespace(AiidaTestCase):
         self.assertTrue('some__name__space__a' in proc.node.get_incoming().all_link_labels())
         self.assertEquals(proc.node.get_incoming().get_node_by_label('some__name__space__a'), 5)
 
+
 class ProcessStackTest(Process):
 
     _node_class = orm.WorkflowNode
@@ -107,11 +108,6 @@ class TestProcess(AiidaTestCase):
         """ `Process.spec_metadata` should return the metadata port namespace of its spec."""
         self.assertIsInstance(Process.spec_metadata, PortNamespace)
         self.assertEqual(Process.spec_metadata, Process.spec().inputs['metadata'])
-
-    def test_spec_options_property(self):
-        """ `Process.spec_options` should return the options port namespace of its spec."""
-        self.assertIsInstance(Process.spec_options, PortNamespace)
-        self.assertEqual(Process.spec_options, Process.spec().inputs['metadata']['options'])
 
     def test_input_link_creation(self):
         dummy_inputs = ['a', 'b', 'c', 'd']
@@ -231,7 +227,7 @@ class TestProcess(AiidaTestCase):
         class TestProcess(Process):
 
             _node_class = orm.WorkflowNode
-            
+
             @classmethod
             def define(cls, spec):
                 super(TestProcess, cls).define(spec)

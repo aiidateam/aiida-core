@@ -128,8 +128,7 @@ class WorkChain(Process):
         :type awaitable: :class:`aiida.engine.processes.workchains.awaitable.Awaitable`
         """
         self._awaitables.append(awaitable)
-        status = 'Waiting for child processes: {}'.format(', '.join([str(_.pk) for _ in self._awaitables]))
-        self.node.set_process_status(status)
+        self._update_process_status()
 
     def remove_awaitable(self, awaitable):
         """Remove an awaitable.
@@ -139,9 +138,7 @@ class WorkChain(Process):
         :param awaitable: the awaitable to remove
         """
         self._awaitables.remove(awaitable)
-
-        if not self._awaitables:
-            self.node.set_process_status(None)
+        self._update_process_status()
 
     def to_context(self, **kwargs):
         """Add a dictionary of awaitables to the context.
@@ -153,6 +150,14 @@ class WorkChain(Process):
             awaitable = construct_awaitable(value)
             awaitable.key = key
             self.insert_awaitable(awaitable)
+
+    def _update_process_status(self):
+        """Set the process status with a message accounting the current sub processes that we are waiting for."""
+        if self._awaitables:
+            status = 'Waiting for child processes: {}'.format(', '.join([str(_.pk) for _ in self._awaitables]))
+            self.node.set_process_status(status)
+        else:
+            self.node.set_process_status(None)
 
     @override
     def run(self):

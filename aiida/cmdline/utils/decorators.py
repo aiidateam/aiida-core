@@ -24,9 +24,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from contextlib import contextmanager
-from functools import wraps
 
 from click_spinner import spinner
+from wrapt import decorator
 
 from . import echo
 
@@ -45,35 +45,29 @@ def load_backend_if_not_loaded():
 
 
 def with_dbenv():
-    """Function decorator that will load the database environment only when the function is called."""
+    """Function decorator that will load the database environment only when the function is called.
 
-    def decorator(function):
-        """
-        Function decorator that loads the dbenv if necessary before running the function
+    Example::
 
-        Example::
+        @with_dbenv()
+        def create_node():
+            from aiida.orm import Int  # note the local import
+            node = Int(1).store()
+    """
 
-            @with_dbenv()
-            def create_node():
-                from aiida.orm import Int  # note the local import
-                node = Int(5)
-        """
+    @decorator
+    def wrapper(wrapped, _, args, kwargs):
+        """The wrapped function that should be called after having loaded the backend."""
+        from aiida.common.exceptions import ConfigurationError, IntegrityError
 
-        @wraps(function)
-        def decorated_function(*args, **kwargs):
-            """Load dbenv if not yet loaded, then run the original function."""
-            from aiida.common.exceptions import ConfigurationError, IntegrityError
+        try:
+            load_backend_if_not_loaded()
+        except (IntegrityError, ConfigurationError) as exception:
+            echo.echo_critical(str(exception))
 
-            try:
-                load_backend_if_not_loaded()
-            except (IntegrityError, ConfigurationError) as exception:
-                echo.echo_critical(str(exception))
+        return wrapped(*args, **kwargs)
 
-            return function(*args, **kwargs)
-
-        return decorated_function
-
-    return decorator
+    return wrapper
 
 
 @contextmanager
@@ -117,8 +111,7 @@ def dbenv():
 
 
 def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
-    """
-    Function decorator for CLI command to print critical error and exit automatically when daemon is not running.
+    """Function decorator for CLI command to print critical error and exit automatically when daemon is not running.
 
     The error printing and exit behavior can be controlled with the decorator keyword arguments. The default message
     that is printed can be overridden as well as the echo function that is to be used. By default it uses the
@@ -128,7 +121,7 @@ def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
     Example::
 
         @only_if_daemon_running(echo_function=echo.echo_warning, message='beware that the daemon is not running')
-        def create_my_calculation():
+        def create_node():
             pass
 
     :param echo_function: echo function to issue the message, should be from `aiida.cmdline.utils.echo`
@@ -137,27 +130,23 @@ def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
     if message is None:
         message = DAEMON_NOT_RUNNING_DEFAULT_MESSAGE
 
-    def decorator(function):
-        """Function decorator that checks if daemon is running and echo's message if not."""
+    @decorator
+    def wrapper(wrapped, _, args, kwargs):
+        """If daemon pid file is not found / empty, echo message and call decorated function."""
+        from aiida.engine.daemon.client import get_daemon_client
 
-        @wraps(function)
-        def decorated_function(*args, **kwargs):
-            """If daemon pid file is not found / empty, echo message and call decorated function."""
-            from aiida.engine.daemon.client import get_daemon_client
+        daemon_client = get_daemon_client()
 
-            daemon_client = get_daemon_client()
+        if not daemon_client.get_daemon_pid():
+            echo_function(message)
 
-            if not daemon_client.get_daemon_pid():
-                echo_function(message)
+        return wrapped(*args, **kwargs)
 
-            return function(*args, **kwargs)
-
-        return decorated_function
-
-    return decorator
+    return wrapper
 
 
-def check_circus_zmq_version(function):
+@decorator
+def check_circus_zmq_version(wrapped, _, args, kwargs):
     """
     Function decorator to check for the right ZMQ version before trying to run circus.
 
@@ -168,34 +157,22 @@ def check_circus_zmq_version(function):
         def do_circus_stuff():
             pass
     """
+    import zmq
+    try:
+        zmq_version = [int(part) for part in zmq.__version__.split('.')[:2]]
+        if len(zmq_version) < 2:
+            raise ValueError()
+    except (AttributeError, ValueError):
+        echo.echo_critical('Unknown PyZQM version - aborting...')
 
-    @wraps(function)
-    def decorated_function(*args, **kwargs):
-        """
-        Verify the PyZQM is the correct version or exit without doing anything
-        """
-        import zmq
-        try:
-            zmq_version = [int(part) for part in zmq.__version__.split('.')[:2]]
-            if len(zmq_version) < 2:
-                raise ValueError()
-        except (AttributeError, ValueError):
-            echo.echo_critical('Unknown PyZQM version - aborting...')
+    if zmq_version[0] < 13 or (zmq_version[0] == 13 and zmq_version[1] < 1):
+        echo.echo_critical('AiiDA daemon needs PyZMQ >= 13.1.0 to run - aborting...')
 
-        if zmq_version[0] < 13 or (zmq_version[0] == 13 and zmq_version[1] < 1):
-            echo.echo_critical('AiiDA daemon needs PyZMQ >= 13.1.0 to run - aborting...')
-
-        return function(*args, **kwargs)
-
-    return decorated_function
+    return wrapped(*args, **kwargs)
 
 
 def deprecated_command(message):
-    """Function decorator that will mark a click command as deprecated when invoked."""
-
-    def decorator(function):
-        """
-        Function decorator that echoes a deprecation warning before doing anything else in a click commad.
+    """Function decorator that will mark a click command as deprecated when invoked.
 
         Example::
 
@@ -203,24 +180,22 @@ def deprecated_command(message):
             @deprecated_command('This command has been deprecated in AiiDA v1.0, please use 'foo' instead.)
             def mycommand():
                 pass
-        """
+    """
 
-        @wraps(function)
-        def decorated_function(*args, **kwargs):
-            """Echo a deprecation warning before doing anything else."""
-            from aiida.cmdline.utils import templates
-            from aiida.manage.configuration import get_config
-            from textwrap import wrap
+    @decorator
+    def wrapper(wrapped, _, args, kwargs):
+        """Echo a deprecation warning before doing anything else."""
+        from aiida.cmdline.utils import templates
+        from aiida.manage.configuration import get_config
+        from textwrap import wrap
 
-            profile = get_config().current_profile
+        profile = get_config().current_profile
 
-            if not profile.is_test_profile:
-                template = templates.env.get_template('deprecated.tpl')
-                width = 80
-                echo.echo(template.render(msg=wrap(message, width), width=width))
+        if not profile.is_test_profile:
+            template = templates.env.get_template('deprecated.tpl')
+            width = 80
+            echo.echo(template.render(msg=wrap(message, width), width=width))
 
-            return function(*args, **kwargs)
+        return wrapped(*args, **kwargs)
 
-        return decorated_function
-
-    return decorator
+    return wrapper

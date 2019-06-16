@@ -48,6 +48,7 @@
     "pika==1.0.0",
     "circus==0.15.0",
     "tornado<5.0",
+    "wrapt==1.11.1",
     "pyblake2==1.1.2; python_version<'3.6'",
     "singledispatch>=3.4.0.3; python_version<'3.5'",
     "enum34==1.1.6; python_version<'3.5'",

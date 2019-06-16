@@ -16,11 +16,11 @@ import io
 import os
 import copy
 from enum import Enum
-from functools import wraps
 from contextlib import contextmanager
 
 import yaml
 import six
+from wrapt import decorator
 
 from aiida.common import exceptions
 from aiida.common.utils import get_object_from_string
@@ -101,16 +101,12 @@ def configure(config_file=None):
     _CONFIG.update(_get_config(config_file=config_file))
 
 
-def _with_config(func):
+@decorator
+def _with_config(wrapped, _, args, kwargs):
     """Function decorator to load the caching configuration for the scope of the wrapped function."""
-
-    @wraps(func)
-    def inner(*args, **kwargs):
-        if not _CONFIG:
-            configure()
-        return func(*args, **kwargs)
-
-    return inner
+    if not _CONFIG:
+        configure()
+    return wrapped(*args, **kwargs)
 
 
 @_with_config

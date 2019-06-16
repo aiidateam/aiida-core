@@ -24,11 +24,11 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
-from aiida.engine import ExitCode, Process, ToContext, WorkChain, if_, while_, return_, run, run_get_node, submit
-from aiida.engine import launch, calcfunction
+from aiida.engine import ExitCode, Process, ToContext, WorkChain, if_, while_, return_, launch, calcfunction
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.manager import get_manager
 from aiida.orm import load_node, Bool, Float, Int, Str
+from six.moves import range
 
 
 def run_until_paused(proc):
@@ -79,7 +79,7 @@ def run_and_check_success(process_class, **kwargs):
     :returns: instance of process
     """
     process = process_class(inputs=kwargs)
-    run(process)
+    launch.run(process)
     assert process.node.is_finished_ok is True
 
     return process
@@ -196,7 +196,7 @@ class TestExitStatus(AiidaTestCase):
     """
 
     def test_failing_workchain_through_integer(self):
-        result, node = run_get_node(PotentialFailureWorkChain, success=Bool(False))
+        result, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False))
         self.assertEquals(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
         self.assertEquals(node.exit_message, None)
         self.assertEquals(node.is_finished, True)
@@ -205,7 +205,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
 
     def test_failing_workchain_through_exit_code(self):
-        result, node = run_get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
+        result, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
         self.assertEquals(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
         self.assertEquals(node.exit_message, PotentialFailureWorkChain.EXIT_MESSAGE)
         self.assertEquals(node.is_finished, True)
@@ -214,7 +214,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
 
     def test_successful_workchain_through_integer(self):
-        result, node = run_get_node(PotentialFailureWorkChain, success=Bool(True))
+        result, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True))
         self.assertEquals(node.exit_status, 0)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
@@ -224,7 +224,7 @@ class TestExitStatus(AiidaTestCase):
                           PotentialFailureWorkChain.OUTPUT_VALUE)
 
     def test_successful_workchain_through_exit_code(self):
-        result, node = run_get_node(PotentialFailureWorkChain, success=Bool(True), through_exit_code=Bool(True))
+        result, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_exit_code=Bool(True))
         self.assertEquals(node.exit_status, 0)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
@@ -234,7 +234,7 @@ class TestExitStatus(AiidaTestCase):
                           PotentialFailureWorkChain.OUTPUT_VALUE)
 
     def test_return_out_of_outline(self):
-        result, node = run_get_node(PotentialFailureWorkChain, success=Bool(True), through_return=Bool(True))
+        result, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_return=Bool(True))
         self.assertEquals(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
@@ -305,10 +305,10 @@ class TestWorkchain(AiidaTestCase):
             launch.run(WorkChain)
 
         with self.assertRaises(exceptions.InvalidOperation):
-            launch.run_get_node(WorkChain)
+            launch.run.get_node(WorkChain)
 
         with self.assertRaises(exceptions.InvalidOperation):
-            launch.run_get_pk(WorkChain)
+            launch.run.get_pk(WorkChain)
 
         with self.assertRaises(exceptions.InvalidOperation):
             launch.submit(WorkChain)
@@ -320,21 +320,21 @@ class TestWorkchain(AiidaTestCase):
         three = Int(3)
 
         # Try the if(..) part
-        run(Wf, value=A, n=three)
+        launch.run(Wf, value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.items():
             if step not in ['s3', 's4', 'isB']:
                 self.assertTrue(finished, "Step {} was not called by workflow".format(step))
 
         # Try the elif(..) part
-        finished_steps = run(Wf, value=B, n=three)
+        finished_steps = launch.run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 's4']:
                 self.assertTrue(finished, "Step {} was not called by workflow".format(step))
 
         # Try the else... part
-        finished_steps = run(Wf, value=C, n=three)
+        finished_steps = launch.run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 'isB', 's3']:
@@ -557,7 +557,7 @@ class TestWorkchain(AiidaTestCase):
             def launch(self):
                 # "Call" a calculation function simply by running it
                 inputs = {'metadata': {'call_link_label': label_calcfunction}}
-                result = calculation_function(**inputs)
+                calculation_function(**inputs)
 
                 # Call a sub work chain
                 inputs = {'metadata': {'call_link_label': label_workchain}}
@@ -633,6 +633,39 @@ class TestWorkchain(AiidaTestCase):
 
             def do_run(self):
                 self.out('value', node)
+
+        run_and_check_success(MainWorkChain)
+
+    def test_process_status_sub_processes(self):
+        """Test that process status is set on node when waiting for sub processes."""
+
+        class MainWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super(MainWorkChain, cls).define(spec)
+                spec.outline(cls.do_run)
+
+            def do_run(self):
+                pks = []
+                for i in range(2):
+                    node = self.submit(SubWorkChain)
+                    pks.append(node.pk)
+                    self.to_context(subwc=node)
+
+                assert 'Waiting' in self.node.process_status
+                assert str(pks[0]) in self.node.process_status
+                assert str(pks[1]) in self.node.process_status
+
+        class SubWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super(SubWorkChain, cls).define(spec)
+                spec.outline(cls.do_run)
+
+            def do_run(self):
+                return
 
         run_and_check_success(MainWorkChain)
 
@@ -734,7 +767,7 @@ class TestWorkchain(AiidaTestCase):
         persister = plumpy.test_utils.TestPersister()
         runner = get_manager().get_runner()
         workchain = Wf(runner=runner)
-        run(workchain)
+        launch.run(workchain)
 
     def test_namespace_nondb_mapping(self):
         """
@@ -885,7 +918,7 @@ class TestWorkChainAbort(AiidaTestCase):
             process.kill()
 
             with self.assertRaises(plumpy.ClosedError):
-                run(process)
+                launch.run(process)
 
         runner.schedule(process)
         runner.loop.run_sync(lambda: run_async())
@@ -950,7 +983,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
 
         with Capturing():
             with self.assertRaises(RuntimeError):
-                run(process)
+                launch.run(process)
 
         self.assertEquals(process.node.is_finished_ok, False)
         self.assertEquals(process.node.is_excepted, True)
@@ -1117,7 +1150,7 @@ class TestSerializeWorkChain(AiidaTestCase):
         builder = SerializeWorkChain.get_builder()
         builder.test = Int
         builder.reference = Str(ObjectLoader().identify_object(Int))
-        run(builder)
+        launch.run(builder)
 
 
 class GrandParentExposeWorkChain(WorkChain):
@@ -1217,7 +1250,7 @@ class TestWorkChainExpose(AiidaTestCase):
     """
 
     def test_expose(self):
-        res = run(
+        res = launch.run(
             ParentExposeWorkChain,
             a=Int(1),
             sub_1={
@@ -1248,7 +1281,7 @@ class TestWorkChainExpose(AiidaTestCase):
 
     @unittest.skip('Reenable when issue #2515 is solved: references to deleted ORM instances')
     def test_nested_expose(self):
-        res = run(
+        res = launch.run(
             GrandParentExposeWorkChain,
             sub=dict(
                 sub=dict(
@@ -1310,7 +1343,7 @@ class TestWorkChainExpose(AiidaTestCase):
             def step1(self):
                 pass
 
-        run(Child)
+        launch.run(Child)
 
 
 class TestWorkChainMisc(AiidaTestCase):
@@ -1340,13 +1373,12 @@ class TestWorkChainMisc(AiidaTestCase):
 
     def test_run_pointless_workchain(self):
         """Running the pointless workchain should not incur any exceptions"""
-        run(TestWorkChainMisc.PointlessWorkChain)
+        launch.run(TestWorkChainMisc.PointlessWorkChain)
 
     def test_global_submit_raises(self):
         """Using top-level submit should raise."""
         with self.assertRaises(exceptions.InvalidOperation):
-            run(TestWorkChainMisc.IllegalSubmitWorkChain)
-
+            launch.run(TestWorkChainMisc.IllegalSubmitWorkChain)
 
 
 class TestDefaultUniqueness(AiidaTestCase):
@@ -1389,7 +1421,7 @@ class TestDefaultUniqueness(AiidaTestCase):
         nodes.
         """
         inputs = {'child_one': {}, 'child_two': {}}
-        result, node = run.get_node(TestDefaultUniqueness.Parent, **inputs)
+        result, node = launch.run.get_node(TestDefaultUniqueness.Parent, **inputs)
 
         nodes = node.get_incoming().all_nodes()
         uuids = set([n.uuid for n in nodes])

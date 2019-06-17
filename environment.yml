@@ -31,7 +31,7 @@ dependencies:
 - psycopg2==2.8
 - paramiko==2.4.2
 - ipython>=4.0,<6.0
-- plumpy==0.14.0
+- plumpy==0.14.1
 - kiwipy[rmq]==0.5.1
 - pika==1.0.0
 - circus==0.15.0

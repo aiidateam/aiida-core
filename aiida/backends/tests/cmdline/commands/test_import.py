@@ -19,6 +19,7 @@ from click.exceptions import BadParameter
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_import
+from aiida.orm import Group
 
 
 def get_archive_file(archive):
@@ -77,6 +78,79 @@ class TestVerdiImport(AiidaTestCase):
 
         self.assertIsNone(result.exception, result.output)
         self.assertEqual(result.exit_code, 0, result.output)
+
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
+    def test_import_to_group(self):
+        """
+        Test import to existing Group and that Nodes are added correctly for multiple imports
+        of the same, as well as separate, archives.
+        """
+        archives = [
+            get_archive_file('calcjob/arithmetic.add.aiida'),
+            get_archive_file('export/migrate/export_v0.4.aiida')
+        ]
+
+        group_label = "import_madness"
+        group = Group(group_label).store()
+
+        self.assertTrue(group.is_empty, msg="The Group should be empty.")
+
+        # Invoke `verdi import`, making sure there are no exceptions
+        options = ['-G', group.label] + [archives[0]]
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        self.assertIsNone(result.exception, msg=result.output)
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+
+        self.assertFalse(group.is_empty, msg="The Group should no longer be empty.")
+
+        nodes_in_group = group.count()
+
+        # Invoke `verdi import` again, making sure Group count doesn't change
+        options = ['-G', group.label] + [archives[0]]
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        self.assertIsNone(result.exception, msg=result.output)
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+
+        self.assertEqual(
+            group.count(),
+            nodes_in_group,
+            msg="The Group count should not have changed from {}. Instead it is now {}".format(
+                nodes_in_group, group.count()))
+
+        # Invoke `verdi import` again with new archive, making sure Group count is upped
+        options = ['-G', group.label] + [archives[1]]
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        self.assertIsNone(result.exception, msg=result.output)
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+
+        self.assertGreater(
+            group.count(),
+            nodes_in_group,
+            msg="There should now be more than {} nodes in group {} , instead there are {}".format(
+                nodes_in_group, group_label, group.count()))
+
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
+    def test_import_make_new_group(self):
+        """Make sure imported entities are saved in new Group"""
+        # Initialization
+        group_label = "new_group_for_verdi_import"
+        archives = [get_archive_file('export/migrate/export_v0.4_simple.aiida')]
+
+        # Check Group does not already exist
+        group_search = Group.objects.find(filters={'label': group_label})
+        self.assertEqual(
+            len(group_search), 0, msg="A Group with label '{}' already exists, this shouldn't be.".format(group_label))
+
+        # Invoke `verdi import`, making sure there are no exceptions
+        options = ['-G', group_label] + archives
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        self.assertIsNone(result.exception, msg=result.output)
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+
+        # Make sure new Group was created
+        (group, new_group) = Group.objects.get_or_create(group_label)
+        self.assertFalse(new_group, msg="The Group should not have been created now, but instead when it was imported.")
+        self.assertFalse(group.is_empty, msg="The Group should not be empty.")
 
     @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_comment_mode(self):

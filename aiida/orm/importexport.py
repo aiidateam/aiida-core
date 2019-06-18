@@ -541,6 +541,7 @@ def import_data(in_path, group=None, silent=False, **kwargs):
     detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
     correct function.
     :param in_path: the path to a file or folder that can be imported in AiiDA
+    :param group: Group wherein all imported Nodes will be placed.
     :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
     The first letter acts on extras that are present in the original node and not present in the imported node.
     Can be either:
@@ -564,14 +565,14 @@ def import_data(in_path, group=None, silent=False, **kwargs):
     from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 
     if configuration.PROFILE.database_backend == BACKEND_SQLA:
-        return import_data_sqla(in_path, user_group=group, silent=silent, **kwargs)
+        return import_data_sqla(in_path, group=group, silent=silent, **kwargs)
     elif configuration.PROFILE.database_backend == BACKEND_DJANGO:
-        return import_data_dj(in_path, user_group=group, silent=silent, **kwargs)
+        return import_data_dj(in_path, group=group, silent=silent, **kwargs)
     else:
         raise Exception("Unknown backend: {}".format(configuration.PROFILE.database_backend))
 
 
-def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
+def import_data_dj(in_path, group=None, ignore_unknown_nodes=False,
                    extras_mode_existing='kcl', extras_mode_new='import',
                    comment_mode='newest', silent=False):
     """
@@ -580,6 +581,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
     correct function.
     :param in_path: the path to a file or folder that can be imported in AiiDA
+    :param group: Group wherein all imported Nodes will be placed.
     :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
     The first letter acts on extras that are present in the original node and not present in the imported node.
     Can be either:
@@ -624,6 +626,13 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
 
     # The returned dictionary with new and existing nodes and links
     ret_dict = {}
+
+    # Initial check(s)
+    if group:
+        if not isinstance(group, Group):
+            raise TypeError("group must be a Group entity")
+        elif not group.is_stored:
+            group.store()
 
     ################
     # EXTRACT DATA #
@@ -688,10 +697,10 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
         # store them in a reverse table
         # I break up the query due to SQLite limitations..
         relevant_db_nodes = {}
-        for group in grouper(999, linked_nodes):
+        for group_ in grouper(999, linked_nodes):
             relevant_db_nodes.update({n.uuid: n for n in
                                       models.DbNode.objects.filter(
-                                          uuid__in=group)})
+                                          uuid__in=group_)})
 
         db_nodes_uuid = set(relevant_db_nodes.keys())
         # ~ dbnode_model = get_class_string(models.DbNode)
@@ -1134,11 +1143,11 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
             import_groups = data['groups_uuid']
             for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
-                group = models.DbGroup.objects.get(uuid=groupuuid)
+                group_ = models.DbGroup.objects.get(uuid=groupuuid)
                 nodes_to_store = [dbnode_reverse_mappings[node_uuid]
                                   for node_uuid in groupnodes]
                 if nodes_to_store:
-                    group.dbnodes.add(*nodes_to_store)
+                    group_.dbnodes.add(*nodes_to_store)
 
             ######################################################
             # Put everything in a specific group
@@ -1157,14 +1166,10 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
 
             # So that we do not create empty groups
             if pks_for_group:
-                # If user specified a group, import all things in it
-                if user_group:
-                    group = user_group[0]
-                else:
-                    # Get an unique name for the import group, based on the
-                    # current (local) time
-                    basename = timezone.localtime(timezone.now()).strftime(
-                        "%Y%m%d-%H%M%S")
+                # If user specified a group, import all things into it
+                if not group:
+                    # Get an unique name for the import group, based on the current (local) time
+                    basename = timezone.localtime(timezone.now()).strftime("%Y%m%d-%H%M%S")
                     counter = 0
                     created = False
                     while not created:
@@ -1179,15 +1184,14 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                             counter += 1
 
                 # Add all the nodes to the new group
-                # TODO: decide if we want to return the group label
                 nodes = [entry[0] for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
                 group.add_nodes(nodes)
 
                 if not silent:
-                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))
+                    print("IMPORTED NODES ARE GROUPED IN THE GROUP LABELED '{}'".format(group.label))
             else:
                 if not silent:
-                    print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
+                    print("NO NODES TO IMPORT, SO NO GROUP CREATED, IF IT DID NOT ALREADY EXIST")
 
     if not silent:
         print("*** WARNING: MISSING EXISTING UUID CHECKS!!")
@@ -1213,7 +1217,7 @@ def validate_uuid(given_uuid):
     return str(parsed_uuid) == given_uuid
 
 
-def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
+def import_data_sqla(in_path, group=None, ignore_unknown_nodes=False,
         extras_mode_existing='kcl', extras_mode_new='import',
         comment_mode='newest', silent=False):
     """
@@ -1222,6 +1226,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
     detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
     correct function.
     :param in_path: the path to a file or folder that can be imported in AiiDA
+    :param group: Group wherein all imported Nodes will be placed.
     :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
     The first letter acts on extras that are present in the original node and not present in the imported node.
     Can be either:
@@ -1265,6 +1270,13 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
 
     # The returned dictionary with new and existing nodes and links
     ret_dict = {}
+
+    # Initial check(s)
+    if group:
+        if not isinstance(group, Group):
+            raise TypeError("group must be a Group entity")
+        elif not group.is_stored:
+            group.store()
 
     ################
     # EXTRACT DATA #
@@ -1857,14 +1869,14 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                 # # TODO: cache these to avoid too many queries
                 qb_group = QueryBuilder().append(
                     Group, filters={'uuid': {'==': groupuuid}})
-                group = qb_group.first()[0]
+                group_ = qb_group.first()[0]
                 nodes_ids_to_add = [dbnode_reverse_mappings[node_uuid]
                                     for node_uuid in groupnodes]
                 qb_nodes = QueryBuilder().append(
                     Node, filters={'id': {'in': nodes_ids_to_add}})
                 # Adding nodes to group avoiding the SQLA ORM to increase speed
                 nodes_to_add = [n[0].backend_entity for n in qb_nodes.all()]
-                group.backend_entity.add_nodes(nodes_to_add, skip_orm=True)
+                group_.backend_entity.add_nodes(nodes_to_add, skip_orm=True)
 
             ######################################################
             # Put everything in a specific group
@@ -1880,13 +1892,9 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
             # So that we do not create empty groups
             if pks_for_group:
                 # If user specified a group, import all things in it
-                if user_group:
-                    group = user_group[0]
-                else:
-                    # Get an unique name for the import group, based on the
-                    # current (local) time
-                    basename = timezone.localtime(timezone.now()).strftime(
-                        "%Y%m%d-%H%M%S")
+                if not group:
+                    # Get an unique name for the import group, based on the current (local) time
+                    basename = timezone.localtime(timezone.now()).strftime("%Y%m%d-%H%M%S")
                     counter = 0
                     created = False
                     while not created:
@@ -1895,24 +1903,25 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                         else:
                             group_label = "{}_{}".format(basename, counter)
 
-                        group = Group(label=group_label,
-                                      type_string=IMPORTGROUP_TYPE)
+                        group = Group(label=group_label, type_string=IMPORTGROUP_TYPE)
                         from aiida.backends.sqlalchemy.models.group import DbGroup
                         if session.query(DbGroup).filter(
-                                DbGroup.label == group.backend_entity._dbmodel.label).count() == 0:
-                            session.add(group.backend_entity._dbmodel)
+                                DbGroup.label == group.backend_entity._dbmodel.label).count() == 0:  # pylint: disable=protected-access
+                            session.add(group.backend_entity._dbmodel)  # pylint: disable=protected-access
                             created = True
                         else:
                             counter += 1
 
                 # Adding nodes to group avoiding the SQLA ORM to increase speed
-                nodes = [entry[0].backend_entity for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
+                nodes = [entry[0].backend_entity for entry in QueryBuilder().append(
+                    Node, filters={'id': {'in': pks_for_group}}).all()]
                 group.backend_entity.add_nodes(nodes, skip_orm=True)
+
                 if not silent:
-                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))
+                    print("IMPORTED NODES ARE GROUPED IN THE GROUP LABELED '{}'".format(group.label))
             else:
                 if not silent:
-                    print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
+                    print("NO DBNODES TO IMPORT, SO NO GROUP CREATED, IF IT DID ALREADY EXIST")
 
             if not silent:
                 print("COMMITTING EVERYTHING...")

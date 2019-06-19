@@ -18,8 +18,8 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.archives import get_archive_file, get_json_files, migrate_archive
 from aiida.backends.tests.utils.configuration import with_temp_dir
-from aiida.cmdline.utils.migration import migrate_recursively, verify_metadata_version
 from aiida.tools.importexport import import_data, EXPORT_VERSION as newest_version
+from aiida.tools.importexport.migration import migrate_recursively, verify_metadata_version
 
 
 class TestExportFileMigration(AiidaTestCase):
@@ -138,7 +138,7 @@ class TestExportFileMigration(AiidaTestCase):
 
     def test_wrong_versions(self):
         """Test correct errors are raised if export files have wrong version numbers"""
-        from aiida.cmdline.utils.migration import MIGRATE_FUNCTIONS
+        from aiida.tools.importexport.migration import MIGRATE_FUNCTIONS
 
         # Initialization
         wrong_versions = ['0.0', '0.1.0']

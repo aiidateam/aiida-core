@@ -167,7 +167,7 @@ def migrate(input_file, output_file, force, silent, archive_format):
     from aiida.common import json
     from aiida.common.folders import SandboxFolder
     from aiida.common.archive import extract_zip, extract_tar
-    from aiida.cmdline.utils import migration
+    from aiida.tools.importexport import migration
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')

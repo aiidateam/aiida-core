@@ -15,8 +15,8 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.archives import get_json_files
-from aiida.cmdline.utils.migration.utils import verify_metadata_version
-from aiida.cmdline.utils.migration.v02_to_v03 import migrate_v2_to_v3
+from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.tools.importexport.migration.v02_to_v03 import migrate_v2_to_v3
 
 
 class TestMigrateV02toV03(AiidaTestCase):

@@ -26,6 +26,9 @@ Prerequisites
         brew services start postgresql
         brew services start rabbitmq
 
+    You also need to install ``pip`` and ``virtualenv``. See for example this page (untested):
+    https://www.andreagrandi.it/2018/12/19/installing-python-and-virtualenv-on-osx/
+
     See :ref:`MacOS X (Homebrew) instructions<details_brew>` for details.
 
 .. toggle-header::
@@ -35,6 +38,9 @@ Prerequisites
 
         sudo port install git python postgresql96 postgresql96-server rabbitmq-server
         pg_ctl -D /usr/local/var/postgres start
+
+    You also need to install ``pip`` and ``virtualenv``. See for example this page (untested):
+    https://truongtx.me/2014/02/25/mac-os-install-python-pip-virtualenv-using-macports
 
     See :ref:`MacOS X (MacPorts) instructions<details_macports>` for details.
 
@@ -65,11 +71,11 @@ Prerequisites
 Installation
 ============
 
-Create and activate a Python 3 virtual environment:
+Create and activate a virtual environment:
 
 .. code-block:: bash
 
-    virtualenv --python python3 ~/.virtualenvs/aiidapy
+    virtualenv ~/.virtualenvs/aiidapy
     source ~/.virtualenvs/aiidapy/bin/activate
 
 Install the ``aiida-core`` python package:

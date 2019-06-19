@@ -8,7 +8,7 @@ AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operati
 
 * `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or
   `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ (The shell)
-* `python-2.7.x`_ or `python-3.x`_ (The programming language used by AiiDA)
+* `python`_ 2.7 or >= 3.6 (The programming language used by AiiDA)
 * `python-pip`_ (Python package manager)
 * `postgresql`_ (Database software, version 9.4 or higher)
 * `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)
@@ -21,8 +21,7 @@ Depending on your set up, there are a few optional dependencies:
 
 .. _graphviz: https://www.graphviz.org/download 
 .. _git: https://git-scm.com/downloads
-.. _python-2.7.x: https://www.python.org/downloads
-.. _python-3.x: https://www.python.org/downloads
+.. _python: https://www.python.org/downloads
 .. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
 .. _virtualenv: https://packages.ubuntu.com/xenial/virtualenv
 .. _postgresql: https://www.postgresql.org/downloads

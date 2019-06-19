@@ -151,7 +151,7 @@ The configuration of computers happens in two steps.
    
    Here is a list of what is asked, together with an explanation.
    
-   * **Computer name**: the (user-friendly) name of the new computer instance 
+   * **Computer label**: the (user-friendly) name of the new computer instance 
      which is about to be created in the DB (the name is used for instance when 
      you have to pick up a computer to launch a calculation on it). Names must 
      be unique. This command should be thought as a AiiDA-wise configuration of 
@@ -170,10 +170,10 @@ The configuration of computers happens in two steps.
      disable temporarily a computer if it is giving problems or it is down for
      maintenance, without the need to delete it from the DB.
 
-   * **Transport type**: The name of the transport to be used. A list of valid 
+   * **Transport plugin**: The type of the transport to be used. A list of valid 
      transport types can be obtained typing ``?``
 
-   * **Scheduler type**: The name of the plugin to be used to manage the
+   * **Scheduler plugin**: The name of the plugin to be used to manage the
      job scheduler on the computer. A list of valid 
      scheduler plugins can be obtained typing ``?``. See
      :doc:`here <../scheduler/index>` for a documentation of scheduler plugins
@@ -183,7 +183,7 @@ The configuration of computers happens in two steps.
      The default is ``#!/bin/bash``. You can change this in order, for example, to add options,
      as for example the -l option. Note that AiiDA only supports bash at this point!
 
-   * **AiiDA work directory**: The absolute path of the directory on the
+   * **Work directory on the computer**: The absolute path of the directory on the
      remote computer where AiiDA will run the calculations
      (often, it is the scratch of the computer). You can (should) use the
      ``{username}`` replacement, that will be replaced by your username on the
@@ -193,7 +193,7 @@ The configuration of computers happens in two steps.
 
        /scratch/{username}/aiida_work/
 
-   * **mpirun command**: The ``mpirun`` command needed on the cluster to run parallel MPI
+   * **Mpirun command**: The ``mpirun`` command needed on the cluster to run parallel MPI
      programs. You can (should) use the ``{tot_num_mpiprocs}`` replacement,
      that will be replaced by the total number of cpus, or the other
      scheduler-dependent fields (see the :doc:`scheduler docs <../scheduler/index>`
@@ -203,79 +203,74 @@ The configuration of computers happens in two steps.
         aprun -n {tot_num_mpiprocs}
         poe
 
-   * **Text to prepend to each command execution**: This is a multiline string,
-     whose content will be prepended inside the submission script before the
-     real execution of the job. It is your responsibility to write proper ``bash`` code!
-     This is intended for computer-dependent code, like for instance loading a
-     module that should always be loaded on that specific computer. *Remember*
-     *to end the input by pressing* ``<CTRL>+D``.
-     A practical example::
+  * **Default number of CPUs per machine**: The number of mpi processes per machine that
+    should be executed if it is not otherwise specified. No default value is specified by 0. 
+   
+  At the end, you will land on an vim editor page, with a summary of the configuration up to this point, 
+  and the possibility to add content that will be executed either
+  *before* the actual execution of the job (under the 'pre-execution script' lines) or *after* the 
+  script submission (under the 'Post execution script' lines). 
+  These additional lines needs to be proper ``bash`` code, that is intended for computer-dependent code 
+  (for instance a module that should always be loaded). For example::
 
         export NEWVAR=1
         source some/file
 
-     A not-to-do example::
+  Pre-execution commands should **not** be used to define resources that are handled by the scheduler plugin, 
+  like the number of nodes or execution time.
 
-       #PBS -l nodes=4:ppn=12
+  After finishing to edit the script, the computer is created and needs to be further configured 
+  before it is possible to use it.
 
-     (it's the plugin that will do this!)
 
-   * **Text to append to each command execution**: This is a multiline string,
-     whose content will be appended inside the submission script after the
-     real execution of the job. It is your responsibility to write proper ``bash`` code!
-     This is intended for computer-dependent code. *Remember*
-     *to end the input by pressing* ``<CTRL>+D``.
-   
-  At the end, you will get a confirmation command, and also the ID in the
-  database (``pk``, i.e. the principal key, and ``uuid``).
+
+      
 
 2. **Configuration of the computer**, using the::
 
-    verdi computer configure COMPUTERNAME
+    verdi computer configure 
     
-   command. This will allow to access more detailed configurations, that are
+   command,  further providing the transport type (``ssh`` or ``local``) and the computer label. 
+
+   The configuration allow to access more detailed configurations, that are
    often user-dependent and also depend on the specific transport (for instance,
    if the transport is ``SSH``, it will ask for username, port, ...).
 
-  
-   The command will try to provide automatically default answers, mainly reading
-   the existing ssh configuration in ``~/.ssh/config``, and in most cases one 
-   simply need to press enter a few times.
+   The command will try to provide automatically default answers, 
+   that can be selected by pressing enter.
 
-   .. note:: At the moment, the in-line help (i.e., just typing ``?`` to get
-     some help) is not yet supported in ``verdi configure``, but only in
-     ``verdi setup``.
 
-   For ``local`` transport, you *need to run the command*,
-   even if nothing will be asked to you.
+   For ``local`` transport, the only information required is the minimum 
+   time interval between conections to the computer.
+
    For ``ssh`` transport, the following will be asked:
    
-   * **username**: your username on the remote machine
-   * **port**: the port to connect to (the default SSH port is 22)
-   * **look_for_keys**: automatically look for the private key in ``~/.ssh``.
-     Default: True.
-   * **key_filename**: the absolute path to your private SSH key. You can leave
+   * **User name**: your username on the remote machine
+   * **port Nr**: the port to connect to (the default SSH port is 22)
+   * **Look_for_keys**: automatically look for the private key in ``~/.ssh``.
+     Default: False.
+   * **SSH key file**: the absolute path to your private SSH key. You can leave
      it empty to use the default SSH key, if you set ``look_for_keys`` to True.
-   * **timeout**: A timeout in seconds if there is no response (e.g., the
+   * **Connection timeout**: A timeout in seconds if there is no response (e.g., the
      machine is down. You can leave it empty to use the default value.
-   * **allow_agent**: If True, it will try to use an SSH agent.
-   * **proxy_command**: Leave empty if you do not need a proxy command (i.e., 
+   * **Allow_ssh agent**: If True, it will try to use an SSH agent.
+   * **SSH proxy_command**: Leave empty if you do not need a proxy command (i.e., 
      if you can directly connect to the machine). If you instead need to connect
      to an intermediate computer first, you need to provide here the
      command for the proxy: see documentation :ref:`here <ssh_proxycommand>` 
      for how to use this option, and in particular the notes
      :ref:`here <ssh_proxycommand_notes>` for the format of this field.
-   * **compress**: True to compress the traffic (recommended)
-   * **gss_auth**: yes when using Kerberos token to connect
-   * **gss_kex**: yes when using Kerberos token to connect, in some cases
+   * **Compress file transfer**: True to compress the traffic (recommended)
+   * **GSS auth**: yes when using Kerberos token to connect
+   * **GSS kex**: yes when using Kerberos token to connect, in some cases
      (depending on your ``.ssh/config`` file)
-   * **gss_deleg_creds**: yes when using Kerberos token to connect, in 
+   * **GSS deleg_creds**: yes when using Kerberos token to connect, in 
      some cases (depending on your ``.ssh/config`` file)
-   * **gss_host**: hostname when using Kerberos token to connect (default
+   * **GSS host**: hostname when using Kerberos token to connect (default
      to the remote computer hostname)
-   * **load_system_host_keys**: True to load the known hosts keys from the
+   * **Load system host keys**: True to load the known hosts keys from the
      default SSH location (recommended)
-   * **key_policy**: What is the policy in case the host is not known.
+   * **key policy**: What is the policy in case the host is not known.
      It is a string among the following:
      
      * ``RejectPolicy`` (default, recommended): reject the connection if the
@@ -284,6 +279,8 @@ The configuration of computers happens in two steps.
        host is not known.
      * ``AutoAddPolicy`` (*not* recommended): automatically add the host key
        at the first connection to the host.
+   * **Connection cooldown time (s)**: The minimum time interval between consecutive 
+     connection openings to the remote machine.
            
  After these two steps have been completed, your computer is ready to go!
 
@@ -320,7 +317,7 @@ The configuration of computers happens in two steps.
    
      verdi computer delete COMPUTERNAME
      
-   commands, whose meaning should be self-explanatory.
+   commands, to rename a computer or remove it from the database.
    
 .. note:: You can delete computers **only if** no entry in the database is using
   them (as for instance Calculations, or RemoteData objects). Otherwise, you

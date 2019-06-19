@@ -16,13 +16,13 @@ import os
 import tempfile
 import tarfile
 import traceback
-import unittest
 import zipfile
 
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_export
+from aiida.backends.tests.utils.archives import get_archive_file
 
 
 def delete_temporary_file(filepath):
@@ -39,21 +39,6 @@ def delete_temporary_file(filepath):
             raise
         else:
             pass
-
-
-def get_archive_file(archive):
-    """
-    Return the absolute path of the archive file used for testing purposes. The expected path for these files:
-
-        aiida.backends.tests.export_import_test_files.migrate
-
-    :param archive: the relative filename of the archive
-    :returns: absolute filepath of the archive test file
-    """
-    dirpath_current = os.path.dirname(os.path.abspath(__file__))
-    dirpath_archive = os.path.join(dirpath_current, os.pardir, os.pardir, 'fixtures', 'export', 'migrate')
-
-    return os.path.join(dirpath_archive, archive)
 
 
 class TestVerdiExport(AiidaTestCase):
@@ -88,6 +73,7 @@ class TestVerdiExport(AiidaTestCase):
 
     def setUp(self):
         self.cli_runner = CliRunner()
+        self.fixture_archive = 'export/migrate'
 
     def test_create_file_already_exists(self):
         """Test that using a file that already exists, which is the case when using NamedTemporaryFile, will raise."""
@@ -155,18 +141,18 @@ class TestVerdiExport(AiidaTestCase):
         finally:
             delete_temporary_file(filename)
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_migrate_versions_old(self):
         """Migrating archives with a version older than the current should work."""
         archives = [
-            'export_v0.1.aiida',
-            'export_v0.2.aiida',
-            'export_v0.3.aiida'
+            'export_v0.1_simple.aiida',
+            'export_v0.2_simple.aiida',
+            'export_v0.3_simple.aiida',
+            'export_v0.4_simple.aiida'
         ]
 
         for archive in archives:
 
-            filename_input = get_archive_file(archive)
+            filename_input = get_archive_file(archive, filepath=self.fixture_archive)
             filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
             try:
@@ -178,16 +164,15 @@ class TestVerdiExport(AiidaTestCase):
             finally:
                 delete_temporary_file(filename_output)
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_migrate_versions_recent(self):
         """Migrating an archive with the current version should exit with non-zero status."""
         archives = [
-            'export_v0.4.aiida',
+            'export_v0.5_simple.aiida',
         ]
 
         for archive in archives:
 
-            filename_input = get_archive_file(archive)
+            filename_input = get_archive_file(archive, filepath=self.fixture_archive)
             filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
             try:
@@ -200,12 +185,12 @@ class TestVerdiExport(AiidaTestCase):
     def test_migrate_force(self):
         """Test that passing the -f/--force option will overwrite the output file even if it exists."""
         archives = [
-            'export_v0.1.aiida',
+            'export_v0.1_simple.aiida',
         ]
 
         for archive in archives:
 
-            filename_input = get_archive_file(archive)
+            filename_input = get_archive_file(archive, filepath=self.fixture_archive)
 
             # Using the context manager will create the file and so the command should fail
             with tempfile.NamedTemporaryFile() as file_output:
@@ -226,12 +211,12 @@ class TestVerdiExport(AiidaTestCase):
     def test_migrate_silent(self):
         """Test that the captured output is an empty string when the -s/--silent option is passed."""
         archives = [
-            'export_v0.1.aiida',
+            'export_v0.1_simple.aiida',
         ]
 
         for archive in archives:
 
-            filename_input = get_archive_file(archive)
+            filename_input = get_archive_file(archive, filepath=self.fixture_archive)
             filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
             for option in ['-s', '--silent']:
@@ -248,12 +233,12 @@ class TestVerdiExport(AiidaTestCase):
     def test_migrate_tar_gz(self):
         """Test that -F/--archive-format option can be used to write a tar.gz instead."""
         archives = [
-            'export_v0.1.aiida',
+            'export_v0.1_simple.aiida',
         ]
 
         for archive in archives:
 
-            filename_input = get_archive_file(archive)
+            filename_input = get_archive_file(archive, filepath=self.fixture_archive)
             filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
             for option in ['-F', '--archive-format']:
@@ -266,19 +251,19 @@ class TestVerdiExport(AiidaTestCase):
                 finally:
                     delete_temporary_file(filename_output)
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_inspect(self):
         """Test the functionality of `verdi export inspect`."""
         archives = [
-            ('export_v0.1.aiida', '0.1'),
-            ('export_v0.2.aiida', '0.2'),
-            ('export_v0.3.aiida', '0.3'),
-            ('export_v0.4.aiida', '0.4')
+            ('export_v0.1_simple.aiida', '0.1'),
+            ('export_v0.2_simple.aiida', '0.2'),
+            ('export_v0.3_simple.aiida', '0.3'),
+            ('export_v0.4_simple.aiida', '0.4'),
+            ('export_v0.5_simple.aiida', '0.5')
         ]
 
         for archive, version_number in archives:
 
-            filename_input = get_archive_file(archive)
+            filename_input = get_archive_file(archive, filepath=self.fixture_archive)
 
             # Testing the options that will print the meta data and data respectively
             for option in ['-m', '-d']:
@@ -294,7 +279,7 @@ class TestVerdiExport(AiidaTestCase):
 
     def test_inspect_empty_archive(self):
         """Test the functionality of `verdi export inspect` for an empty archive."""
-        filename_input = get_archive_file('empty.aiida')
+        filename_input = get_archive_file('empty.aiida', filepath=self.fixture_archive)
 
         options = [filename_input]
         result = self.cli_runner.invoke(cmd_export.inspect, options)

@@ -75,8 +75,8 @@ Create and activate a virtual environment:
 
 .. code-block:: bash
 
-    virtualenv ~/.virtualenvs/aiidapy
-    source ~/.virtualenvs/aiidapy/bin/activate
+    virtualenv ~/.virtualenvs/aiida
+    source ~/.virtualenvs/aiida/bin/activate
 
 Install the ``aiida-core`` python package:
 

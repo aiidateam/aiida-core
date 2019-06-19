@@ -18,10 +18,10 @@ complete, see also inside `aiida.orm.nodes.data` for the list of all available p
 We also mention, when relevant, what is stored in the database (as attributes, so that
 it can be easily queried e.g. with the :ref:`QueryBuilder <UsingQueryBuilder>`) and what is
 stored in the file repository (providing access to the file contents, but not efficiently
-querable: this is useful for e.g. big data files that don't need to be queried for).
+queryable: this is useful for e.g. big data files that don't need to be queried for).
 
 For all data types, you can follow the link to the data class to read more about
-the methods provided, how to access them ...
+the methods provided, how to access them, and so on.
 
 If you need to work with some specific type of data, first check the list of data types/plugins
 below, and if you don't find what you need, give a look to
@@ -29,10 +29,11 @@ below, and if you don't find what you need, give a look to
 
 Base types
 ++++++++++
-In the :py:mod:`aiida.orm.nodes.data.base` module you find a number of useful classes
+In the :py:mod:`aiida.orm.nodes.data.base` module there are a number of useful classes
 that wrap base python datatypes (like :py:class:`~aiida.orm.nodes.data.int.Int`,
 :py:class:`~aiida.orm.nodes.data.float.Float`, :py:class:`~aiida.orm.nodes.data.str.Str`, ...).
-These are particularly useful when you need to provide a single parameter to e.g. a
+These are automatically loaded with the verdi shell, and also directly exposed from  :py:class:`aiida.orm`. 
+These classes are particularly useful when you need to provide a single parameter to e.g. a
 :py:class:`~aiida.engine.processes.functions.workfunction`.
 
 Each of these classes can most often be used transparently (e.g. you can sum two
@@ -41,6 +42,10 @@ value and not the whole AiiDA class, use the `.value` property.
 
 In the same module, there is also a :py:class:`~aiida.orm.nodes.data.list.List` class to
 store a list of base data types.
+
+The different datatypes can be accessed through the :py:func:`~aiida.plugins.factories.DataFactory` function
+(also exposed from :py:mod:`aiida.plugins`) by passing an entry point to it as an argument. A list of all the data entry points 
+can be found with the command ``verdi plugin list aiida.data``.
 
 Dict
 +++++++++++++

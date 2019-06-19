@@ -22,14 +22,14 @@ This will make understanding and using ``verdi`` a lot easier!
 * :ref:`export<verdi_export>`:  Create and manage export archives.
 * :ref:`graph<verdi_graph>`:  Create visual representations of part of the provenance graph.
 * :ref:`group<verdi_group>`:  Create, inspect and manage groups.
-* :ref:`import<verdi_import>`:  Import one or multiple exported AiiDA archives
+* :ref:`import<verdi_import>`:  Import one or multiple exported AiiDA archives.
 * :ref:`node<verdi_node>`:  Inspect, create and manage nodes.
 * :ref:`plugin<verdi_plugin>`:  Inspect installed plugins for various entry point categories.
 * :ref:`process<verdi_process>`:  Inspect and manage processes.
 * :ref:`profile<verdi_profile>`:  Inspect and manage the configured profiles.
 * :ref:`quicksetup<verdi_quicksetup>`:  Setup a new profile where the database is automatically created and configured.
-* :ref:`rehash<verdi_rehash>`:  Recompute the hash for nodes in the database
-* :ref:`restapi<verdi_restapi>`:  Run the AiiDA REST API server
+* :ref:`rehash<verdi_rehash>`:  Recompute the hash for nodes in the database.
+* :ref:`restapi<verdi_restapi>`:  Run the AiiDA REST API server.
 * :ref:`run<verdi_run>`:  Execute an AiiDA script.
 * :ref:`setup<verdi_setup>`:  Setup a new profile.
 * :ref:`shell<verdi_shell>`:  Start a python shell with preloaded AiiDA environment.
@@ -51,7 +51,6 @@ Scripting
 While many common functionalities are provided by either command-line tools 
 (via ``verdi``) or the web interface, for fine tuning (or automatization) 
 it is useful to directly access the python objects and call their methods.
-
 This is possible in two ways, either via an interactive shell, or writing and 
 running a script. Both methods are described below.
 
@@ -59,6 +58,7 @@ running a script. Both methods are described below.
     :maxdepth: 4
 
     scripting
+    daemon_service
 
 
 

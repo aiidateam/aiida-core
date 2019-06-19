@@ -100,7 +100,7 @@ After you have installed Homebrew, you can install the basic requirements as fol
 
     brew install git python postgresql
 
-To start the `postgres` database server, execute:
+To start the ``postgres`` database server, execute:
 
 .. code-block:: bash
 

@@ -114,8 +114,8 @@ It should print a snapshot of the queue status, without any errors.
      ssh YOURCLUSTERADDRESS 'echo $PATH'
 
 
-.. note:: If you need to ssh to a computer A first, from which you can then
-     connect to computer B you wanted to connect to, you can use the
+.. note:: If you need to ssh to a computer *A* first, from which you can then
+     connect to computer *B* you wanted to connect to, you can use the
      ``proxy_command`` feature of ssh, that we also support in
      AiiDA. For more information, see :ref:`ssh_proxycommand`.
 
@@ -145,9 +145,6 @@ The configuration of computers happens in two steps.
    .. tip:: You can press ``<CTRL>+C`` at any moment to abort the setup process.
      Nothing will be stored in the DB.
    
-   .. note:: For multiline inputs (like the prepend text and the append text, see below)
-     you have to press ``<CTRL>+D`` to complete the input, even if you do not want
-     any text.
    
    Here is a list of what is asked, together with an explanation.
    
@@ -216,8 +213,8 @@ The configuration of computers happens in two steps.
         export NEWVAR=1
         source some/file
 
-  Pre-execution commands should **not** be used to define resources that are handled by the scheduler plugin, 
-  like the number of nodes or execution time.
+  .. note:: Pre-execution commands should **not** be used to define resources that are handled by the scheduler plugin, 
+     like the number of nodes or execution time.
 
   After finishing to edit the script, the computer is created and needs to be further configured 
   before it is possible to use it.
@@ -233,8 +230,7 @@ The configuration of computers happens in two steps.
    command,  further providing the transport type (``ssh`` or ``local``) and the computer label. 
 
    The configuration allow to access more detailed configurations, that are
-   often user-dependent and also depend on the specific transport (for instance,
-   if the transport is ``SSH``, it will ask for username, port, ...).
+   often user-dependent and  depend on the specific transport.
 
    The command will try to provide automatically default answers, 
    that can be selected by pressing enter.
@@ -282,7 +278,7 @@ The configuration of computers happens in two steps.
    * **Connection cooldown time (s)**: The minimum time interval between consecutive 
      connection openings to the remote machine.
            
- After these two steps have been completed, your computer is ready to go!
+After setup and configuration have been completed, your computer is ready to go!
 
 .. note:: If the cluster you are using requires authentication through a Kerberos
     token (that you need to obtain before using ssh), you typically need to install

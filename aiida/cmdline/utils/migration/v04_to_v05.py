@@ -28,7 +28,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.cmdline.utils.migration.utils import verify_metadata_version, update_metadata
+from aiida.cmdline.utils.migration.utils import verify_metadata_version, update_metadata, remove_fields
 
 
 def migration_drop_node_columns_nodeversion_public(metadata, data):
@@ -38,16 +38,7 @@ def migration_drop_node_columns_nodeversion_public(metadata, data):
     entity = 'Node'
     fields = ['nodeversion', 'public']
 
-    # For data.json
-    if entity in data['export_data']:
-        for content in data['export_data'][entity].values():
-            for field in fields:
-                if field in content:
-                    content.pop(field)
-    # For metadata.json
-    for field in fields:
-        if field in metadata['all_fields_info'][entity]:
-            metadata['all_fields_info'][entity].pop(field)
+    remove_fields(metadata, data, [entity], fields)
 
 
 def migration_drop_computer_transport_params(metadata, data):
@@ -57,14 +48,7 @@ def migration_drop_computer_transport_params(metadata, data):
     entity = 'Computer'
     field = 'transport_params'
 
-    # For data.json
-    if entity in data['export_data']:
-        for content in data['export_data'][entity].values():
-            if field in content:
-                content.pop(field)
-    # For metadata.json
-    if field in metadata['all_fields_info'][entity]:
-        metadata['all_fields_info'][entity].pop(field)
+    remove_fields(metadata, data, [entity], [field])
 
 
 def migrate_v4_to_v5(metadata, data, *args):  # pylint: disable=unused-argument

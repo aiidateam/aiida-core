@@ -65,7 +65,6 @@ The software is available at http://www.aiida.net.
     working/calculations
     working/workflows
 
-
 .. toctree::
     :maxdepth: 1
     :caption: Working with AiiDA
@@ -77,11 +76,10 @@ The software is available at http://www.aiida.net.
 
 .. toctree::
     :maxdepth: 1
-    :caption: Development
+    :caption: For AiiDA developers
     :hidden:
 
     developer_guide/index
-
 
 .. toctree::
     :maxdepth: 1
@@ -97,6 +95,19 @@ The software is available at http://www.aiida.net.
     :hidden:
 
     apidoc/aiida
+
+.. toctree::
+   :maxdepth: 1
+   :caption: aiida-plugins [Section to be moved]
+   :hidden:
+
+
+   developer_guide/plugins/index
+   developer_guide/devel_tutorial/code_plugin_float_sum
+   developer_guide/devel_tutorial/plugin_tests
+   developer_guide/devel_tutorial/cmdline_plugin
+   developer_guide/devel_tutorial/parser_warnings_policy
+   developer_guide/aiida_sphinxext
 
 
 ***********

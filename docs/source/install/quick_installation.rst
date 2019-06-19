@@ -12,7 +12,7 @@ Prerequisites
     
     .. code-block:: bash
 
-        sudo apt-get install git python2.7-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client rabbitmq-server
+        sudo apt-get install git python2.7-dev python3-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client rabbitmq-server
 
     See :ref:`Ubuntu instructions<details_ubuntu>` for details.
 
@@ -53,7 +53,7 @@ Prerequisites
     
     .. code-block:: bash
 
-        sudo apt-get install git python2.7-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client
+        sudo apt-get install git python2.7-dev python3-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client
         sudo service postgresql start
         # install rabbitmq on windows
 
@@ -64,6 +64,13 @@ Prerequisites
 
 Installation
 ============
+
+Create and activate a Python 3 virtual environment:
+
+.. code-block:: bash
+
+    virtualenv --python python3 ~/.virtualenvs/aiidapy
+    source ~/.virtualenvs/aiidapy/bin/activate
 
 Install the ``aiida-core`` python package:
 

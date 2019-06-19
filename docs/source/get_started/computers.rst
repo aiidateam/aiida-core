@@ -207,7 +207,7 @@ The configuration of computers happens in two steps.
   and the possibility to add content that will be executed either
   *before* the actual execution of the job (under the 'pre-execution script' lines) or *after* the 
   script submission (under the 'Post execution script' lines). 
-  These additional lines needs to be proper ``bash`` code, that is intended for computer-dependent code 
+  These additional lines need to be proper ``bash`` code, that is intended for computer-dependent code
   (for instance a module that should always be loaded). For example::
 
         export NEWVAR=1
@@ -216,18 +216,14 @@ The configuration of computers happens in two steps.
   .. note:: Pre-execution commands should **not** be used to define resources that are handled by the scheduler plugin, 
      like the number of nodes or execution time.
 
-  After finishing to edit the script, the computer is created and needs to be further configured 
-  before it is possible to use it.
-
-
-
+  After finishing to edit the script, save and quit by typing ``<ESC>:wq<ENTER>``. The computer is created and needs
+  to be further configured before it is possible to use it.
       
-
 2. **Configuration of the computer**, using the::
 
-    verdi computer configure 
+    verdi computer configure TRANSPORTTYPE COMPUTERNAME
     
-   command,  further providing the transport type (``ssh`` or ``local``) and the computer label. 
+   command, with the appropriate transport type (``ssh`` or ``local``) and computer label.
 
    The configuration allows to access more detailed configurations, that are
    often user-dependent and  depend on the specific transport.
@@ -365,7 +361,7 @@ the two intervals, however this is unlikely to happen in practice.
 The transport open interval is currently hardcoded by the transport plugin;
 typically for SSH it's longer than for local transport.
 
-The job poll interval can be set programmatically on the corresponding `Computer`
+The job poll interval can be set programmatically on the corresponding ``Computer``
 object in verdi shell::
 
     load_computer('localhost').set_minimum_job_poll_interval(30.0)

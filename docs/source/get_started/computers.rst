@@ -35,7 +35,7 @@ If you plan to use the ``local`` transport, you can skip to the next section.
 
 If you plan to use the ``SSH`` transport, you have to configure a password-less
 login from your user to the cluster. To do so type first (only if you do not 
-already have some keys in your local ``~/.ssh directory`` - i.e. files like 
+already have some keys in your local ``~/.ssh`` directory - i.e. files like
 ``id_rsa.pub``)::
 
     ssh-keygen -t rsa
@@ -73,9 +73,9 @@ should show you a prompt without errors (possibly with a message saying
 
 .. note:: If the ``ssh`` command works, but the ``sftp`` command does not
   (e.g. it just prints ``Connection closed``), a possible reason can be
-  that there is a line in your ``~/.bashrc`` that either produces text output, 
+  that there is a line in your ``~/.bashrc`` (on the cluster) that either produces text output
   or an error. Remove/comment it until no output or error is produced: this
-  should make ``sftp`` working again.
+  should make ``sftp`` work again.
 
 Finally, try also::
 
@@ -92,7 +92,7 @@ It should print a snapshot of the queue status, without any errors.
   
      export PATH=$PATH:/opt/pbs/default/bin
 
-  Or, alternatively, find the path to the executables (like using ``which qsub``)
+  Or, alternatively, find the path to the executables (like using ``which qsub``).
 
 .. note:: If you need your remote .bashrc to be sourced before you execute the code
   (for instance to change the PATH), make sure the .bashrc file **does not** contain
@@ -150,7 +150,7 @@ The configuration of computers happens in two steps.
    
    * **Computer label**: the (user-friendly) name of the new computer instance 
      which is about to be created in the DB (the name is used for instance when 
-     you have to pick up a computer to launch a calculation on it). Names must 
+     you have to pick a computer to launch a calculation on it). Names must
      be unique. This command should be thought as a AiiDA-wise configuration of 
      computer, independent of the AiiDA user that will actually use it.
 
@@ -178,7 +178,7 @@ The configuration of computers happens in two steps.
 
    * **shebang line** This is the first line in the beginning of the submission script.
      The default is ``#!/bin/bash``. You can change this in order, for example, to add options,
-     as for example the -l option. Note that AiiDA only supports bash at this point!
+     such as the ``-l`` flag. Note that AiiDA only supports bash at this point!
 
    * **Work directory on the computer**: The absolute path of the directory on the
      remote computer where AiiDA will run the calculations
@@ -200,7 +200,7 @@ The configuration of computers happens in two steps.
         aprun -n {tot_num_mpiprocs}
         poe
 
-  * **Default number of CPUs per machine**: The number of mpi processes per machine that
+  * **Default number of CPUs per machine**: The number of MPI processes per machine that
     should be executed if it is not otherwise specified. No default value is specified by 0. 
    
   At the end, you will land on an vim editor page, with a summary of the configuration up to this point, 
@@ -229,7 +229,7 @@ The configuration of computers happens in two steps.
     
    command,  further providing the transport type (``ssh`` or ``local``) and the computer label. 
 
-   The configuration allow to access more detailed configurations, that are
+   The configuration allows to access more detailed configurations, that are
    often user-dependent and  depend on the specific transport.
 
    The command will try to provide automatically default answers, 
@@ -248,7 +248,7 @@ The configuration of computers happens in two steps.
    * **SSH key file**: the absolute path to your private SSH key. You can leave
      it empty to use the default SSH key, if you set ``look_for_keys`` to True.
    * **Connection timeout**: A timeout in seconds if there is no response (e.g., the
-     machine is down. You can leave it empty to use the default value.
+     machine is down. You can leave it empty to use the default value.)
    * **Allow_ssh agent**: If True, it will try to use an SSH agent.
    * **SSH proxy_command**: Leave empty if you do not need a proxy command (i.e., 
      if you can directly connect to the machine). If you instead need to connect
@@ -262,7 +262,7 @@ The configuration of computers happens in two steps.
      (depending on your ``.ssh/config`` file)
    * **GSS deleg_creds**: yes when using Kerberos token to connect, in 
      some cases (depending on your ``.ssh/config`` file)
-   * **GSS host**: hostname when using Kerberos token to connect (default
+   * **GSS host**: hostname when using Kerberos token to connect (defaults
      to the remote computer hostname)
    * **Load system host keys**: True to load the known hosts keys from the
      default SSH location (recommended)
@@ -315,7 +315,7 @@ After setup and configuration have been completed, your computer is ready to go!
      
    commands, to rename a computer or remove it from the database.
    
-.. note:: You can delete computers **only if** no entry in the database is using
+.. note:: You can delete computers **only if** no entry in the database is linked to
   them (as for instance Calculations, or RemoteData objects). Otherwise, you
   will get an error message. 
 
@@ -357,23 +357,23 @@ AiiDA currently has two settings:
  * the minimum job poll interval
 
 Neither of these can ever be violated.  AiiDA will not try to update the jobs list
-on a remove machine until the job poll interval has elapsed since the last update
+on a remote machine until the job poll interval has elapsed since the last update
 (the first update will be immediate) at which point it will request a transport.
 Because of this the maximum possible time before a job update could be the sum of
 the two intervals, however this is unlikely to happen in practice.
 
-The transport open interval is currently hardcoded by the transport plugin,
-typically SSH is longer than local transport.
+The transport open interval is currently hardcoded by the transport plugin;
+typically for SSH it's longer than for local transport.
 
 The job poll interval can be set programmatically on the corresponding `Computer`
 object in verdi shell::
 
-    Computer.get('localhost').set_minimum_job_poll_interval(30.0)
+    load_computer('localhost').set_minimum_job_poll_interval(30.0)
 
 
 would set the transport interval on a computer called 'localhost' to 30 seconds.
 
-.. note:: All of these intervals apply per *worker* meaning that a daemon with
+.. note:: All of these intervals apply *per worker*, meaning that a daemon with
    multiple workers will not necessarily, overall, respect these limits.
    For the time being there is no way around this and if these limits must be
    respected then do not run with more than one worker.

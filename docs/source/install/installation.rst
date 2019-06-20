@@ -22,7 +22,7 @@ Creating the virtual environment
 
 To create and activate a new virtual environment, run the following commands::
 
-    pip install --user --upgrade virtualenv        # install virtualenv tool
+    pip install --user --upgrade virtualenv      # install virtualenv tool
     virtualenv ~/.virtualenvs/aiida              # create "aiida" environment
     source ~/.virtualenvs/aiida/bin/activate     # activate "aiida" environment
 

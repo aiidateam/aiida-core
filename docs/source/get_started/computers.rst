@@ -203,7 +203,7 @@ The configuration of computers happens in two steps.
   * **Default number of CPUs per machine**: The number of MPI processes per machine that
     should be executed if it is not otherwise specified. Use ``0`` to specify no default value. 
    
-  At the end, you will land on an vim editor page, with a summary of the configuration up to this point, 
+  At the end, the command will open your default editor on a file containing a summary of the configuration up to this point, 
   and the possibility to add content that will be executed either
   *before* the actual execution of the job (under the 'pre-execution script' lines) or *after* the 
   script submission (under the 'Post execution script' lines). 

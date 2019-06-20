@@ -145,11 +145,10 @@ The configuration of computers happens in two steps.
    .. tip:: You can press ``<CTRL>+C`` at any moment to abort the setup process.
      Nothing will be stored in the DB.
    
-   
    Here is a list of what is asked, together with an explanation.
    
-   * **Computer label**: the (user-friendly) name of the new computer instance 
-     which is about to be created in the DB (the name is used for instance when 
+   * **Computer label**: the (user-friendly) label of the new computer instance 
+     which is about to be created in the DB (the label is used for instance when 
      you have to pick a computer to launch a calculation on it). Labels must
      be unique. This command should be thought as a AiiDA-wise configuration of 
      computer, independent of the AiiDA user that will actually use it.
@@ -160,7 +159,8 @@ The configuration of computers happens in two steps.
 
    * **Description**:  A human-readable description of this computer; this is 
      useful if you have a lot of computers and you want to add some text to
-     distinguish them (e.g.: "cluster of computers at EPFL, installed in 2012, 2 GB of RAM per CPU")
+     distinguish them (e.g.: "cluster of computers at EPFL, installed in 2012, 
+     2 GB of RAM per CPU")
 
    * **Enabled**: either True or False; if False, the computer is disabled
      and calculations associated with it will not be submitted. This allows to
@@ -200,25 +200,58 @@ The configuration of computers happens in two steps.
         aprun -n {tot_num_mpiprocs}
         poe
 
-  * **Default number of CPUs per machine**: The number of MPI processes per machine that
-    should be executed if it is not otherwise specified. Use ``0`` to specify no default value. 
+   * **Default number of CPUs per machine**: The number of MPI processes per machine that
+     should be executed if it is not otherwise specified. Use ``0`` to specify no default value. 
    
-  At the end, the command will open your default editor on a file containing a summary of the configuration up to this point, 
-  and the possibility to add ``bash`` commands that will be executed either
-  *before* the actual execution of the job (under 'pre-execution script') or *after* the 
-  script submission (under 'Post execution script'). 
-  These additional lines need may set up the environment on the computer, for example loading modules or exporting environment variables::```
-  (for instance a module that should always be loaded). For example::
+   At the end, the command will open your default editor on a file containing a summary
+   of the configuration up to this point, and the possibility to add ``bash``
+   commands that will be executed either *before* the actual execution of the job
+   (under 'pre-execution script') or *after* the script submission (under 'Post execution script').
+   These additional lines need may set up the environment on the computer,
+   for example loading modules or exporting environment variables, for example::
 
         export NEWVAR=1
         source some/file
 
-  .. note:: Pre-execution commands should **not** be used to define resources that are handled by the scheduler plugin, 
-     like the number of nodes or execution time.
+   .. note:: Don't specify settings here that are specific to a code, calculation or scheduler -- 
+      you can set further pre-execution commands at the ``Code`` and ``CalcJob`` level.
 
-  When you are done editing, save and quit (e.g. ``<ESC>:wq<ENTER>`` in ``vim``). The computer has now been created in the database but you still need to *configure* access to it using your credentials.
-  to be further configured before it is possible to use it.
-      
+   When you are done editing, save and quit (e.g. ``<ESC>:wq<ENTER>`` in ``vim``).
+   The computer has now been created in the database but you still need to *configure* access to it
+   using your credentials.
+
+   For the user convenience, it is also possible provide some (or all) the information
+   described above from a configuration file, using the command::
+
+        verdi computer setup --config computer.yml
+
+   where ``computer.yml`` is a configuration file in the
+   `YAML format <https://en.wikipedia.org/wiki/YAML#Syntax>`_.
+   This file contains the information in a series of key:value entries, like it is shown below:
+
+   .. code-block:: yaml
+
+      ---
+      label: "localhost"
+      hostname: "localhost"
+      transport: local
+      scheduler: "direct"
+      work_dir: "/home/max/.aiida_run"
+      mpirun_command: "mpirun -np {tot_num_mpiprocs}"
+      mpiprocs_per_machine: "2"
+      prepend_text: |
+        module load mymodule
+        export NEWVAR=1
+
+  .. tip:: The list of the keys that can be used is available from the options flags of the command: ::
+
+        verdi computer setup --help
+
+     but be aware of the syntax differences, namely the lack of initial ``--``,
+     and any ``-`` within the keyare  substituted by the underscore ``_``.
+
+
+  
 2. **Configuration of the computer**, using the::
 
     verdi computer configure TRANSPORTTYPE COMPUTERNAME
@@ -230,7 +263,6 @@ The configuration of computers happens in two steps.
 
    The command will try to provide automatically default answers, 
    that can be selected by pressing enter.
-
 
    For ``local`` transport, the only information required is the minimum 
    time interval between conections to the computer.

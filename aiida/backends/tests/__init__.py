@@ -105,7 +105,6 @@ DB_TEST_LIST = {
         'engine.utils': ['aiida.backends.tests.engine.test_utils'],
         'engine.work_chain': ['aiida.backends.tests.engine.test_work_chain'],
         'engine.workfunctions': ['aiida.backends.tests.engine.test_workfunctions'],
-        'export_and_import': ['aiida.backends.tests.test_export_and_import'],
         'export_migration.migration': ['aiida.backends.tests.tools.importexport.migration.test_migration'],
         'export_migration.v01_to_v02': ['aiida.backends.tests.tools.importexport.migration.test_v01_to_v02'],
         'export_migration.v02_to_v03': ['aiida.backends.tests.tools.importexport.migration.test_v02_to_v03'],
@@ -147,7 +146,20 @@ DB_TEST_LIST = {
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
         'query': ['aiida.backends.tests.test_query'],
         'restapi': ['aiida.backends.tests.test_restapi'],
-        'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals']
+        'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals'],
+        'tools.importexport.complex': ['aiida.backends.tests.tools.importexport.test_complex'],
+        'tools.importexport.prov_redesign': ['aiida.backends.tests.tools.importexport.test_prov_redesign'],
+        'tools.importexport.simple': ['aiida.backends.tests.tools.importexport.test_simple'],
+        'tools.importexport.specific_import': ['aiida.backends.tests.tools.importexport.test_specific_import'],
+        'tools.importexport.orm.calculations': ['aiida.backends.tests.tools.importexport.orm.test_calculations'],
+        'tools.importexport.orm.codes': ['aiida.backends.tests.tools.importexport.orm.test_codes'],
+        'tools.importexport.orm.comments': ['aiida.backends.tests.tools.importexport.orm.test_comments'],
+        'tools.importexport.orm.computers': ['aiida.backends.tests.tools.importexport.orm.test_computers'],
+        'tools.importexport.orm.extras': ['aiida.backends.tests.tools.importexport.orm.test_extras'],
+        'tools.importexport.orm.groups': ['aiida.backends.tests.tools.importexport.orm.test_groups'],
+        'tools.importexport.orm.links': ['aiida.backends.tests.tools.importexport.orm.test_links'],
+        'tools.importexport.orm.logs': ['aiida.backends.tests.tools.importexport.orm.test_logs'],
+        'tools.importexport.orm.users': ['aiida.backends.tests.tools.importexport.orm.test_users']
     }
 }
 

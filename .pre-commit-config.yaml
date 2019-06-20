@@ -87,7 +87,6 @@
         aiida/backends/tests/cmdline/commands/test_user.py|
         aiida/backends/tests/test_dataclasses.py|
         aiida/backends/tests/test_dbimporters.py|
-        aiida/backends/tests/test_export_and_import.py|
         aiida/backends/tests/test_generic.py|
         aiida/backends/tests/__init__.py|
         aiida/backends/tests/test_nodes.py|

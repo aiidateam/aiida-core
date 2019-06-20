@@ -21,7 +21,7 @@ values::
   # 2s delay to prevent read error on PID file
   ExecStartPost=/bin/sleep 2
   
-  ExecStop={{ venv_dir }}/bin/verdi -p %i daemon stopS
+  ExecStop={{ venv_dir }}/bin/verdi -p %i daemon stop
   ExecReload={{ venv_dir }}/bin/verdi -p %i daemon restart
   
   User={{ user }}

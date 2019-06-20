@@ -21,27 +21,28 @@ import copy
 import six
 from six.moves import range
 
-from dateutil.parser import parse
 from django.db import transaction
 from django.utils.encoding import python_2_unicode_compatible
 
 from aiida.backends.djsite.db.subtests.migrations.test_migrations_common import TestMigrations
-from aiida.common.timezone import isoformat_to_datetime
 
 # The following sample dictionary can be used for the conversion test of attributes and extras
 SAMPLE_DICT = {
     'bool': True,
+    '001': 2,
+    '17': 'string',
     'integer': 12,
     'float': 26.2,
     'string': "a string",
     'dict': {
-        "a": "b",
-        "sublist": [1, 2, 3],
-        "subdict": {
-            "c": "d"
+        '25': [True, False],
+        'a': 'b',
+        'sublist': [1, 2, 3],
+        'subdict': {
+            'c': 'd'
         }
     },
-    'list': [1, True, "ggg", {
+    'list': [1, True, 'ggg', {
         'h': 'j'
     }, [9, 8, 7]],
 }
@@ -186,18 +187,20 @@ class TestSettingsToJSONMigration(TestMigrations):
     settings_info = dict()
 
     def setUpBeforeMigration(self):
+        from aiida.common import timezone
+
         db_setting_model = self.apps.get_model('db', 'DbSetting')
 
         self.settings_info['2daemon|task_stop|updater2'] = dict(
             key='2daemon|task_stop|updater2',
             datatype='date',
-            dval='2018-07-27 15:12:24.382552+02',
+            dval=timezone.datetime_to_isoformat(timezone.now()),
             description='The last time the daemon finished to run '
             'the task \'updater\' (updater)')
         self.settings_info['2daemon|task_start|updater2'] = dict(
             key='2daemon|task_start|updater2',
             datatype='date',
-            dval='2018-07-27 15:12:45.264863+02',
+            dval=timezone.datetime_to_isoformat(timezone.now()),
             description='The last time the daemon started to run '
             'the task \'updater\' (updater)')
         self.settings_info['2db|backend2'] = dict(
@@ -231,7 +234,7 @@ class TestSettingsToJSONMigration(TestMigrations):
             if curr_setting_info['datatype'] == 'txt':
                 self.assertEqual(curr_setting.val, curr_setting_info['tval'])
             elif curr_setting_info['datatype'] == 'date':
-                self.assertEqual(isoformat_to_datetime(curr_setting.val), parse(curr_setting_info['dval']))
+                self.assertEqual(curr_setting.val, curr_setting_info['dval'])
 
     def tearDown(self):
         """

@@ -12,10 +12,18 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+import datetime
 import errno
 import io
 import os
+import re
+
 import numpy
+
+from aiida.common import json
+
+ISOFORMAT_DATETIME_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
 
 
 def ensure_repository_folder_created(uuid):
@@ -121,3 +129,25 @@ def load_numpy_array_from_repository(uuid, name):
     """
     filepath = get_numpy_array_absolute_path(uuid, name)
     return numpy.load(filepath)
+
+
+def recursive_datetime_to_isoformat(value):
+    """Convert all datetime objects in the given value to string representations in ISO format.
+
+    :param value: a mapping, sequence or single value optionally containing datetime objects
+    """
+    if isinstance(value, list):
+        return [recursive_datetime_to_isoformat(_) for _ in value]
+
+    if isinstance(value, dict):
+        return dict((key, recursive_datetime_to_isoformat(val)) for key, val in value.items())
+
+    if isinstance(value, datetime.datetime):
+        return value.isoformat()
+
+    return value
+
+
+def dumps_json(dictionary):
+    """Transforms all datetime object into isoformat and then returns the JSON."""
+    return json.dumps(recursive_datetime_to_isoformat(dictionary))

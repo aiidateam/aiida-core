@@ -23,7 +23,7 @@ DB_TEST_LIST = {
         'nodes': ['aiida.backends.djsite.db.subtests.test_nodes'],
         'migrations': [
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_many',
-            'aiida.backends.djsite.db.subtests.migrations.test_migrations_0034_attributes_extras_settings_json'
+            'aiida.backends.djsite.db.subtests.migrations.test_migrations_0037_attributes_extras_settings_json'
         ],
         'query': ['aiida.backends.djsite.db.subtests.test_query'],
     },

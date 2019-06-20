@@ -647,7 +647,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
         # pylint: disable=too-many-locals,too-many-statements
         import importlib
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
-        from aiida.backends.sqlalchemy.utils import dumps_json
+        from aiida.backends.general.migrations.utils import dumps_json
 
         log_migration = importlib.import_module(
             'aiida.backends.sqlalchemy.migrations.versions.041a79fc615f_dblog_cleaning')

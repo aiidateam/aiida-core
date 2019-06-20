@@ -145,13 +145,9 @@ class DbNode(m.Model):
 
         if self.attributes is None:
             self.attributes = dict()
-        else:
-            self.attributes = timezone.datetime_to_isoformat(self.attributes)
 
         if self.extras is None:
             self.extras = dict()
-        else:
-            self.extras = timezone.datetime_to_isoformat(self.extras)
 
     def set_attribute(self, key, value):
         DbNode._set_attr(self.attributes, key, value)
@@ -189,17 +185,16 @@ class DbNode(m.Model):
         self.save()
 
     def get_attributes(self):
-        return timezone.isoformat_to_datetime(self.attributes)
+        return self.attributes
 
     def get_extras(self):
-        return timezone.isoformat_to_datetime(self.extras)
+        return self.extras
 
     @ staticmethod
     def _set_attr(d, key, value):
         if '.' in key:
             raise ValueError("We don't know how to treat key with dot in it yet")
-        # This is important in order to properly handle datetime objects
-        d[key] = timezone.datetime_to_isoformat(value)
+        d[key] = value
 
     @ staticmethod
     def _del_attr(d, key):
@@ -289,7 +284,7 @@ class DbSetting(m.Model):
             setting = cls()
 
         setting.key = key
-        setting.val = timezone.datetime_to_isoformat(value)
+        setting.val = value
         setting.time = timezone.datetime.now(tz=UTC)
         if "description" in other_attribs.keys():
             setting.description = other_attribs["description"]
@@ -299,7 +294,7 @@ class DbSetting(m.Model):
         """
         This can be called on a given row and will get the corresponding value.
         """
-        return timezone.isoformat_to_datetime(self.val)
+        return self.val
 
     def get_description(self):
         """

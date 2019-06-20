@@ -22,7 +22,6 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting
 from aiida.common import NotExistent
-from aiida.common.timezone import isoformat_to_datetime, datetime_to_isoformat
 
 
 ALEMBIC_FILENAME = "alembic.ini"
@@ -139,23 +138,6 @@ def unload_dbenv():
 
 
 _aiida_autouser_cache = None
-
-
-def dumps_json(d):
-    """
-    Transforms all datetime object into isoformat and then returns the JSON
-    """
-    from aiida.common import json
-    return json.dumps(datetime_to_isoformat(d))
-
-
-def loads_json(s):
-    """
-    Loads the json and try to parse each basestring as a datetime object
-    """
-    from aiida.common import json
-    ret = json.loads(s)
-    return isoformat_to_datetime(ret)
 
 
 # XXX the code here isn't different from the one use in Django. We may be able

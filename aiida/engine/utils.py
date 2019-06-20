@@ -259,7 +259,7 @@ def set_process_state_change_timestamp(process):
 
     key = PROCESS_STATE_CHANGE_KEY.format(process_type)
     description = PROCESS_STATE_CHANGE_DESCRIPTION.format(process_type)
-    value = timezone.now()
+    value = timezone.datetime_to_isoformat(timezone.now())
 
     try:
         manager = get_settings_manager()
@@ -279,6 +279,7 @@ def get_process_state_change_timestamp(process_type=None):
     :return: a timestamp or None
     """
     from aiida.backends.utils import get_settings_manager
+    from aiida.common import timezone
     from aiida.common.exceptions import NotExistent
 
     manager = get_settings_manager()
@@ -297,9 +298,9 @@ def get_process_state_change_timestamp(process_type=None):
     for process_type_key in process_types:
         key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)
         try:
-            timestamps.append(manager.get(key).time)
+            timestamps.append(timezone.isoformat_to_datetime(manager.get(key).value))
         except NotExistent:
-            pass
+            continue
 
     if not timestamps:
         return None

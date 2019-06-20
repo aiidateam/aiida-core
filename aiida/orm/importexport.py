@@ -20,7 +20,6 @@ from six.moves import zip
 from six.moves.html_parser import HTMLParser
 from distutils.version import StrictVersion
 from aiida.common import exceptions
-from aiida.common.timezone import datetime_to_isoformat
 from aiida.common.utils import export_shard_uuid, get_class_string, grouper, get_new_uuid
 from aiida.orm import Computer, Group, GroupTypeString, Node, QueryBuilder, User, Log, Comment
 from aiida.orm.utils.repository import Repository
@@ -946,12 +945,7 @@ def import_data_dj(in_path, group=None, ignore_unknown_nodes=False,
                                              "for DbNode with UUID = {}".format(unique_id))
 
                         # Here I have to deserialize the attributes
-                        deserialized_attributes = deserialize_attributes(
-                            attributes, attributes_conversion)
-                        if deserialized_attributes:
-                            o.attributes = dict()
-                            for k, v in deserialized_attributes.items():
-                                o.attributes[k] = datetime_to_isoformat(v)
+                        o.attributes = deserialize_attributes(attributes, attributes_conversion)
 
                         # For DbNodes, we also have to store its extras
                         if extras_mode_new == 'import':
@@ -978,9 +972,7 @@ def import_data_dj(in_path, group=None, ignore_unknown_nodes=False,
                                 deserialized_extras = {key: value for key, value in deserialized_extras.items() if not
                                                        key == 'hidden'}
                             # till here
-                            o.extras = dict()
-                            for k, v in deserialized_extras.items():
-                                o.extras[k] = datetime_to_isoformat(v)
+                            o.extras = deserialized_extras
                         elif extras_mode_new == 'none':
                             if not silent:
                                 print("SKIPPING NEW NODE EXTRAS...")
@@ -3084,20 +3076,3 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False,
 
     if not silent:
         print("DONE.")
-
-# Following code: to serialize the date directly when dumping into JSON.
-# In our case, it is better to have a finer control on how to parse fields.
-
-# def default_jsondump(data):
-#    import datetime
-#
-#    if isinstance(data, datetime.datetime):
-#        return data.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
-#
-#    raise TypeError(repr(data) + " is not JSON serializable")
-# with open('testout.json', 'w') as f:
-#    json.dump({
-#            'entries': serialized_entries,
-#        },
-#        f,
-#        default=default_jsondump)

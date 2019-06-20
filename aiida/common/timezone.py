@@ -13,12 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from datetime import datetime
-import re
-import six
-
 import dateutil
-
-ISOFORMAT_DATETIME_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
 
 
 def get_current_timezone():
@@ -119,39 +114,16 @@ def delta(from_time, to_time=None):
 
 
 def datetime_to_isoformat(value):
-    """Convert all datetime objects in the given value to string representations in ISO format.
+    """Convert a datetime object to string representations in ISO format.
 
-    :param value: a mapping, sequence or single value optionally containing datetime objects
+    :param value: a datetime object
     """
-    if isinstance(value, list):
-        return [datetime_to_isoformat(_) for _ in value]
-
-    if isinstance(value, dict):
-        return dict((key, datetime_to_isoformat(val)) for key, val in value.items())
-
-    if isinstance(value, datetime):
-        return value.isoformat()
-
-    return value
+    return value.isoformat()
 
 
 def isoformat_to_datetime(value):
-    """Convert all string representations of a datetime in ISO format in the given value to datetime objects.
+    """Convert string representation of a datetime in ISO format to a datetime object.
 
-    :param value: a mapping, sequence or single value optionally containing datetime objects
+    :param value: a ISO format string representation of a datetime object
     """
-    if isinstance(value, list):
-        return [isoformat_to_datetime(_) for _ in value]
-
-    if isinstance(value, dict):
-        return dict((key, isoformat_to_datetime(val)) for key, val in value.items())
-
-    if isinstance(value, six.string_types):
-        if ISOFORMAT_DATETIME_REGEX.match(value):
-            try:
-                return dateutil.parser.parse(value)
-            except (ValueError, TypeError):
-                return value
-        return value
-
-    return value
+    return dateutil.parser.parse(value)

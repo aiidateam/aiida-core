@@ -928,11 +928,6 @@ class TestComplex(AiidaTestCase):
         trial_dict.update({str(k): np.random.random() for k in range(10, 20)})
         # give some booleans:
         trial_dict.update({str(k): bool(np.random.randint(1)) for k in range(20, 30)})
-        # give some datetime:
-        trial_dict.update({str(k): datetime(
-            year=2017,
-            month=np.random.randint(1, 12),
-            day=np.random.randint(1, 28)) for k in range(30, 40)})
         # give some text:
         trial_dict.update({str(k): ''.join(random.choice(chars) for _ in range(size)) for k in range(20, 30)})
 

@@ -303,7 +303,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
     def setUpBeforeMigration(self):  # pylint: disable=too-many-locals
         import json
         import importlib
-        from aiida.backends.sqlalchemy.utils import dumps_json
+        from aiida.backends.general.migrations.utils import dumps_json
 
         update_024 = importlib.import_module('aiida.backends.djsite.db.migrations.0024_dblog_update')
 

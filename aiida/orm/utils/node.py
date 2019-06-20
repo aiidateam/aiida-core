@@ -176,14 +176,26 @@ def clean_value(value):
 
         It mainly checks that we don't store NaN or Inf.
         """
+        # This is a whitelist of all the things we understand currently
+        if val is None or isinstance(val, (bool, six.string_types)):
+            return val
+
+        # This fixes #2773 - in python3, ``numpy.int64(-1)`` cannot be json-serialized
+        # Note that `numbers.Integral` also match booleans but they are already returned above
+        if isinstance(val, numbers.Integral):
+            return int(val)
+
         if isinstance(val, numbers.Real) and (math.isnan(val) or math.isinf(val)):
             # see https://www.postgresql.org/docs/current/static/datatype-json.html#JSON-TYPE-MAPPING-TABLE
             raise exceptions.ValidationError("nan and inf/-inf can not be serialized to the database")
-        # This fixes #2773 - in python3, ``numpy.int64(-1)`` cannot be json-serialized
-        if isinstance(val, numbers.Integral) and not isinstance(val, bool):
-            val = int(val)
 
-        return val
+        # This is for float-like types, like ``numpy.float128`` that are not json-serializable
+        # Note that `numbers.Real` also match booleans but they are already returned above
+        if isinstance(val, numbers.Real):
+            return float(val)
+
+        # Anything else we do not understand and we refuse
+        raise exceptions.ValidationError('type `{}` is not supported as it is not json-serializable'.format(type(val)))
 
     if isinstance(value, BaseType):
         return clean_builtin(value.value)
@@ -191,6 +203,7 @@ def clean_value(value):
     if isinstance(value, Mapping):
         # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.items()}
+
     if (isinstance(value, Iterable) and not isinstance(value, six.string_types)):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the

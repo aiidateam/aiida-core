@@ -98,8 +98,8 @@ def transition_settings(apps, _):
                         val = curr_dbsetting.tval
                     elif dt == "float":
                         val = curr_dbsetting.fval
-                        if math.isnan(val):
-                            val = 'NaN'
+                        if math.isnan(val) or math.isinf(val):
+                            val = str(val)
                     elif dt == "int":
                         val = curr_dbsetting.ival
                     elif dt == "bool":
@@ -134,7 +134,7 @@ def attributes_to_dict(attr_list):
             continue
         key = a.key.split('.')[-1]
 
-        if key.isdigit():
+        if isinstance(tmp_d, (list, tuple)):
             key = int(key)
 
         dt = a.datatype
@@ -149,8 +149,8 @@ def attributes_to_dict(attr_list):
                 val = a.tval
             elif dt == "float":
                 val = a.fval
-                if math.isnan(val):
-                    val = 'NaN'
+                if math.isnan(val) or math.isinf(val):
+                    val = str(val)
             elif dt == "int":
                 val = a.ival
             elif dt == "bool":
@@ -172,7 +172,7 @@ def select_from_key(key, d):
 
     tmp_d = d
     for p in path:
-        if p.isdigit():
+        if isinstance(tmp_d, (list, tuple)):
             tmp_d = tmp_d[int(p)]
         else:
             tmp_d = tmp_d[p]

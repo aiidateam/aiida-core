@@ -56,8 +56,8 @@ def reset_session(profile=None):
     :param profile: the profile whose configuration to use to connect to the database
     """
     from multiprocessing.util import register_after_fork
+    from aiida.common import json
     from aiida.manage.configuration import get_profile
-    from .utils import loads_json, dumps_json
 
     global ENGINE
     global SCOPED_SESSION_CLASS
@@ -74,6 +74,6 @@ def reset_session(profile=None):
         port=profile.database_port,
         name=profile.database_name)
 
-    ENGINE = create_engine(engine_url, json_serializer=dumps_json, json_deserializer=loads_json, encoding='utf-8')
+    ENGINE = create_engine(engine_url, json_serializer=json.dumps, json_deserializer=json.loads, encoding='utf-8')
     SCOPED_SESSION_CLASS = scoped_session(sessionmaker(bind=ENGINE, expire_on_commit=True))
     register_after_fork(ENGINE, recreate_after_fork)

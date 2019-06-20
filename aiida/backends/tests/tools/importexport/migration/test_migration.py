@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import os
+import unittest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -196,6 +197,7 @@ class TestExportFileMigration(AiidaTestCase):
                 msg="migrate_recursively should not return anything, "
                 "hence the 'return' should be None, but instead it is {}".format(new_version))
 
+    @unittest.skip("Reenable when issue #3056 has been solved (migrate exported files to 0.6)")
     @with_temp_dir
     def test_v02_to_newest(self, temp_dir):
         """Test migration of exported files from v0.2 to newest export version"""
@@ -250,6 +252,7 @@ class TestExportFileMigration(AiidaTestCase):
         builder.append(orm.RemoteData, with_incoming='parent')
         self.assertGreater(len(builder.all()), 0)
 
+    @unittest.skip("Reenable when issue #3056 has been solved (migrate exported files to 0.6)")
     @with_temp_dir
     def test_v03_to_newest(self, temp_dir):
         """Test migration of exported files from v0.3 to newest export version"""

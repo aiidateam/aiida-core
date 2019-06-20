@@ -8,15 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django query builder"""
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import uuid
-from datetime import datetime
-
 import six
+
 from aldjemy import core
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module, import-error
@@ -291,18 +289,6 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             elif value is None:
                 type_filter = jsonb_typeof(path_in_json) == 'null'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
-            elif isinstance(value, datetime):
-                # type filter here is filter whether this attributes stores
-                # a string and a filter whether this string
-                # is compatible with a datetime (using a regex)
-                #  - What about historical values (BC, or before 1000AD)??
-                #  - Different ways to represent the timezone
-
-                type_filter = jsonb_typeof(path_in_json) == 'string'
-                regex_filter = path_in_json.astext.op("SIMILAR TO")(
-                    "\d\d\d\d-[0-1]\d-[0-3]\dT[0-2]\d:[0-5]\d:\d\d\.\d+((\+|\-)\d\d:\d\d)?")  # pylint: disable=anomalous-backslash-in-string
-                type_filter = and_(type_filter, regex_filter)
-                casted_entity = path_in_json.cast(DateTime)
             else:
                 raise TypeError('Unknown type {}'.format(type(value)))
             return type_filter, casted_entity

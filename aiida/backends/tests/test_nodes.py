@@ -519,29 +519,6 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.get_attribute('list'), [1, 2, 3, 4])
         self.assertEquals(mylist, [1, 2, 3])
 
-    def test_datetime_attribute(self):
-        from aiida.common.timezone import (get_current_timezone, is_naive, make_aware, now)
-
-        a = orm.Data()
-
-        date = now()
-
-        a.set_attribute('some_date', date)
-        a.store()
-
-        retrieved = a.get_attribute('some_date')
-
-        if is_naive(date):
-            date_to_compare = make_aware(date, get_current_timezone())
-        else:
-            date_to_compare = date
-
-        # Do not compare microseconds (they are not stored in the case of MySQL)
-        date_to_compare = date_to_compare.replace(microsecond=0)
-        retrieved = retrieved.replace(microsecond=0)
-
-        self.assertEquals(date_to_compare, retrieved)
-
     def test_attributes_on_clone(self):
         import copy
 

@@ -204,9 +204,9 @@ The configuration of computers happens in two steps.
     should be executed if it is not otherwise specified. Use ``0`` to specify no default value. 
    
   At the end, the command will open your default editor on a file containing a summary of the configuration up to this point, 
-  and the possibility to add content that will be executed either
+  and the possibility to add ``bash`` commands that will be executed either
   *before* the actual execution of the job (under 'pre-execution script') or *after* the 
-  script submission (under the 'Post execution script' lines). 
+  script submission (under 'Post execution script'). 
   These additional lines need may set up the environment on the computer, for example loading modules or exporting environment variables::```
   (for instance a module that should always be loaded). For example::
 
@@ -216,7 +216,7 @@ The configuration of computers happens in two steps.
   .. note:: Pre-execution commands should **not** be used to define resources that are handled by the scheduler plugin, 
      like the number of nodes or execution time.
 
-  After finishing to edit the script, save and quit by typing ``<ESC>:wq<ENTER>``. The computer is created and needs
+  When you are done editing, save and quit (e.g. ``<ESC>:wq<ENTER>`` in ``vim``). The computer has now been created in the database but you still need to *configure* access to it using your credentials.
   to be further configured before it is possible to use it.
       
 2. **Configuration of the computer**, using the::

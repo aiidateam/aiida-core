@@ -66,6 +66,9 @@ class TestVerdiExport(AiidaTestCase):
         cls.cwd = tempfile.mkdtemp(__name__)
         os.chdir(cls.cwd)
 
+        # Utility helper
+        cls.fixture_archive = 'export/migrate'
+
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
         os.chdir(cls.old_cwd)
@@ -73,7 +76,6 @@ class TestVerdiExport(AiidaTestCase):
 
     def setUp(self):
         self.cli_runner = CliRunner()
-        self.fixture_archive = 'export/migrate'
 
     def test_create_file_already_exists(self):
         """Test that using a file that already exists, which is the case when using NamedTemporaryFile, will raise."""

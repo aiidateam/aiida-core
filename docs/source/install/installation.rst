@@ -22,26 +22,26 @@ Creating the virtual environment
 
 To create and activate a new virtual environment, run the following commands::
 
-    pip install --user --upgrade virtualenv        # install virtualenv tool
-    virtualenv ~/.virtualenvs/aiidapy              # create "aiidapy" environment
-    source ~/.virtualenvs/aiidapy/bin/activate     # activate "aiidapy" environment
+    pip install --user --upgrade virtualenv      # install virtualenv tool
+    virtualenv ~/.virtualenvs/aiida              # create "aiida" environment
+    source ~/.virtualenvs/aiida/bin/activate     # activate "aiida" environment
 
 .. note:: We recommend setting up a **python 3** virtual environment.
    If your system runs python 2 by default but has a ``python3`` executable, you can still set up a python 3 virtual environment using::
 
-       virtualenv --python python3 ~/.virtualenvs/aiidapy
+       virtualenv --python python3 ~/.virtualenvs/aiida
 
-This will create a directory in your home directory named ``.virtualenvs``, and a directory ``aiidapy`` inside of it where all the packages will be installed.
-After activation, your prompt should have ``(aiidapy)`` in front of it, indicating that you are working inside the virtual environment.
+This will create a directory in your home directory named ``.virtualenvs``, and a directory ``aiida`` inside of it where all the packages will be installed.
+After activation, your prompt should have ``(aiida)`` in front of it, indicating that you are working inside the virtual environment.
 The activation script ensures that the python executable of the virtualenv is the first in ``PATH``, and that python programs have access only to packages installed inside the virtualenv.
 
 To leave or deactivate the environment, simply run::
 
-    (aiidapy) $ deactivate
+    (aiida) $ deactivate
 
 .. note:: You may need to install ``pip`` and ``setuptools`` in your virtual environment in case the system or user version of these tools is old::
 
-    (aiidapy) $ pip install -U setuptools pip
+    (aiida) $ pip install -U setuptools pip
 
 
 .. _aiida_path_in_virtualenv:
@@ -53,19 +53,19 @@ When you run AiiDA in multiple virtual environments, it can be convenient to use
 To do this, you can use the :ref:`AIIDA_PATH mechanism <directory_location>` as follows:
 
 1. Create your virtual environment, as described above
-2. At the end of ``~/.virtualenvs/aiidapy/bin/activate``, add the following line, which will set the ``AIIDA_PATH`` environment variable::
+2. At the end of ``~/.virtualenvs/aiida/bin/activate``, add the following line, which will set the ``AIIDA_PATH`` environment variable::
 
-    export AIIDA_PATH='~/.virtualenvs/aiidapy'
+    export AIIDA_PATH='~/.virtualenvs/aiida'
 
 3. Deactivate and re-activate the virtual environment
 4. You can test that everything is set up correctly if you can reproduce the following::
 
-    (aiidapy)$ echo $AIIDA_PATH
-    >>> ~/.virtualenvs/aiidapy
+    (aiida)$ echo $AIIDA_PATH
+    >>> ~/.virtualenvs/aiida
 
-    (aiidapy)$ verdi profile list
-    >>> Info: configuration folder: /home/my_username/.virtualenvs/aiidapy/.aiida
-    >>> Critical: configuration file /home/my_username/.virtualenvs/aiidapy/.aiida/config.json does not exist
+    (aiida)$ verdi profile list
+    >>> Info: configuration folder: /home/my_username/.virtualenvs/aiida/.aiida
+    >>> Critical: configuration file /home/my_username/.virtualenvs/aiida/.aiida/config.json does not exist
 
    Note: if you get the 'Critical' message, it simply means that you have not yet run `verdi setup` to configure at least one AiiDA profile.
 5. Continue setting up AiiDA with ``verdi setup`` or ``verdi quicksetup``.
@@ -118,7 +118,7 @@ There are additional optional packages that you may want to install, which are g
 
 In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command::
 
-    (aiidapy) $ pip install -e aiida_core[atomic_tools,docs,advanced_plotting]
+    (aiida) $ pip install -e aiida_core[atomic_tools,docs,advanced_plotting]
 
 .. note:: If you are installing the optional ``ssh_kerberos`` and you are on Ubuntu you might encounter an error related to the ``gss`` package.
   To fix this you need to install the ``libffi-dev`` and ``libkrb5-dev`` packages::
@@ -294,7 +294,7 @@ Remember that in order to work with AiiDA through for example the ``verdi``
 command, you need to be in your virtual environment.
 If you open a new terminal for example, be sure to activate it first with::
 
-    source ~/.virtualenvs/aiidapy/bin/activate
+    source ~/.virtualenvs/aiida/bin/activate
 
 .. _start_daemon:
 

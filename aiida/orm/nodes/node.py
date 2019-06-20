@@ -119,12 +119,6 @@ class Node(Entity):
         user = user.backend_entity if user else User.objects(backend).get_default()
 
         if user is None:
-            from aiida.manage.configuration import get_config, get_profile
-            config = get_config()
-            profile = get_profile()
-            print('CONFIG', config.dictionary)
-            print('PROFILE', profile.dictionary)
-            print('USERS', [user.email for user in User.objects(backend).all()])
             raise ValueError('the user cannot be None')
 
         backend_entity = backend.nodes.create(
@@ -526,11 +520,7 @@ class Node(Entity):
 
         :param key: name of the extra
         :param value: value of the extra
-        :raise aiida.common.ModificationNotAllowed: if the node is not stored
         """
-        if not self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot set extras on unstored nodes')
-
         self.backend_entity.set_extra(key, clean_value(value))
 
     def set_extras(self, extras):
@@ -540,9 +530,6 @@ class Node(Entity):
 
         :param extras: the new extras to set
         """
-        if not self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot set extras on unstored nodes')
-
         self.backend_entity.set_extras(clean_value(extras))
 
     def reset_extras(self, extras):
@@ -552,12 +539,6 @@ class Node(Entity):
 
         :param extras: the new extras to set
         """
-        if not self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot set extras on unstored nodes')
-
-        if not isinstance(extras, dict):
-            raise TypeError('extras has to be a dictionary')
-
         self.backend_entity.reset_extras(clean_value(extras))
 
     def delete_extra(self, key):
@@ -568,9 +549,6 @@ class Node(Entity):
         :param key: name of the extra
         :raises AttributeError: if the extra does not exist
         """
-        if not self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot delete extras on unstored nodes')
-
         self.backend_entity.delete_extra(key)
 
     def delete_extras(self, keys):
@@ -579,16 +557,10 @@ class Node(Entity):
         :param keys: names of the extras to delete
         :raises AttributeError: if at least on of the extra does not exist
         """
-        if not self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot delete extras on unstored nodes')
-
         self.backend_entity.delete_extras(keys)
 
     def clear_extras(self):
         """Delete all extras."""
-        if not self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot clear the extras of unstored nodes')
-
         self.backend_entity.clear_extras()
 
     def extras_items(self):

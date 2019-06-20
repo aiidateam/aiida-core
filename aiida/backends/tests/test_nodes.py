@@ -811,39 +811,42 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.dictval, b.get_attribute('dict'))
         self.assertEquals(self.listval, b.get_attribute('list'))
 
-        # Reload directly
-        b = orm.Data.from_backend_entity(a.backend_entity)
-        self.assertIsNone(a.get_attribute('none'))
-        self.assertEquals(self.boolval, b.get_attribute('bool'))
-        self.assertEquals(self.intval, b.get_attribute('integer'))
-        self.assertEquals(self.floatval, b.get_attribute('float'))
-        self.assertEquals(self.stringval, b.get_attribute('string'))
-        self.assertEquals(self.dictval, b.get_attribute('dict'))
-        self.assertEquals(self.listval, b.get_attribute('list'))
-
-    def test_attr_and_extras(self):
+    def test_extra_with_reload(self):
         a = orm.Data()
-        a.set_attribute('bool', self.boolval)
-        a.set_attribute('integer', self.intval)
-        a.set_attribute('float', self.floatval)
-        a.set_attribute('string', self.stringval)
-        a.set_attribute('dict', self.dictval)
-        a.set_attribute('list', self.listval)
+        a.set_extra('none', None)
+        a.set_extra('bool', self.boolval)
+        a.set_extra('integer', self.intval)
+        a.set_extra('float', self.floatval)
+        a.set_extra('string', self.stringval)
+        a.set_extra('dict', self.dictval)
+        a.set_extra('list', self.listval)
 
-        with self.assertRaises(ModificationNotAllowed):
-            # I did not store, I cannot modify
-            a.set_extra('bool', 'blablabla')
+        # Check before storing
+        self.assertEquals(self.boolval, a.get_extra('bool'))
+        self.assertEquals(self.intval, a.get_extra('integer'))
+        self.assertEquals(self.floatval, a.get_extra('float'))
+        self.assertEquals(self.stringval, a.get_extra('string'))
+        self.assertEquals(self.dictval, a.get_extra('dict'))
+        self.assertEquals(self.listval, a.get_extra('list'))
 
         a.store()
 
-        a_string = 'some non-boolean value'
-        # I now set an extra with the same name of an attr
-        a.set_extra('bool', a_string)
-        # and I check that there is no name clash
-        self.assertEquals(self.boolval, a.get_attribute('bool'))
-        self.assertEquals(a_string, a.get_extra('bool'))
+        # Check after storing
+        self.assertEquals(self.boolval, a.get_extra('bool'))
+        self.assertEquals(self.intval, a.get_extra('integer'))
+        self.assertEquals(self.floatval, a.get_extra('float'))
+        self.assertEquals(self.stringval, a.get_extra('string'))
+        self.assertEquals(self.dictval, a.get_extra('dict'))
+        self.assertEquals(self.listval, a.get_extra('list'))
 
-        self.assertEquals(a.extras, {'bool': a_string, '_aiida_hash': AnyValue()})
+        b = orm.load_node(uuid=a.uuid)
+        self.assertIsNone(a.get_extra('none'))
+        self.assertEquals(self.boolval, b.get_extra('bool'))
+        self.assertEquals(self.intval, b.get_extra('integer'))
+        self.assertEquals(self.floatval, b.get_extra('float'))
+        self.assertEquals(self.stringval, b.get_extra('string'))
+        self.assertEquals(self.dictval, b.get_extra('dict'))
+        self.assertEquals(self.listval, b.get_extra('list'))
 
     def test_get_extras_with_default(self):
         a = orm.Data()

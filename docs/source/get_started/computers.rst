@@ -150,7 +150,7 @@ The configuration of computers happens in two steps.
    
    * **Computer label**: the (user-friendly) name of the new computer instance 
      which is about to be created in the DB (the name is used for instance when 
-     you have to pick a computer to launch a calculation on it). Names must
+     you have to pick a computer to launch a calculation on it). Labels must
      be unique. This command should be thought as a AiiDA-wise configuration of 
      computer, independent of the AiiDA user that will actually use it.
 
@@ -323,23 +323,12 @@ After setup and configuration have been completed, your computer is ready to go!
   the computer is under maintenance but you still want to use AiiDA with 
   other computers, or submit the calculations in the AiiDA database anyway.
   
-  When the computer comes back online, you can re-enable it; 
-  at this point pending calculations in the ``TOSUBMIT`` state will be
-  submitted, and calculations ``WITHSCHEDULER`` will be checked and possibly
-  retrieved.
-  
   The relevant commands are::
      
      verdi computer enable COMPUTERNAME
      verdi computer disable COMPUTERNAME
      
   Note that the above commands will disable the computer for all AiiDA users.
-  If instead, for some reason, you want to disable the computer only for a
-  given user, you can use the following command::
-  
-     verdi computer disable COMPUTERNAME --only-for-user USER_EMAIL
-  
-  (and the corresponding ``verdi computer enable`` command to re-enable it).
 
 
 On not bombarding the remote computer with requests

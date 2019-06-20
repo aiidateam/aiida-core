@@ -220,14 +220,14 @@ The configuration of computers happens in two steps.
    The computer has now been created in the database but you still need to *configure* access to it
    using your credentials.
 
-   For the user convenience, it is also possible provide some (or all) the information
-   described above from a configuration file, using the command::
+   In order to avoid having to retype the setup information the next time round, it is also possible provide some (or all) of the information
+   described above via a configuration file using::
 
         verdi computer setup --config computer.yml
 
    where ``computer.yml`` is a configuration file in the
    `YAML format <https://en.wikipedia.org/wiki/YAML#Syntax>`_.
-   This file contains the information in a series of key:value entries, like it is shown below:
+   This file contains the information in a series of key:value pairs:
 
    .. code-block:: yaml
 
@@ -247,8 +247,8 @@ The configuration of computers happens in two steps.
 
         verdi computer setup --help
 
-     but be aware of the syntax differences, namely the lack of initial ``--``,
-     and any ``-`` within the keyare  substituted by the underscore ``_``.
+     Note the syntax differences: remove the ``--`` prefix
+     and replace ``-`` within the keys by the underscore ``_``.
 
 
   

@@ -35,7 +35,7 @@ If you plan to use the ``local`` transport, you can skip to the next section.
 
 If you plan to use the ``SSH`` transport, you have to configure a password-less
 login from your user to the cluster. To do so type first (only if you do not 
-already have some keys in your local ``~/.ssh directory`` - i.e. files like 
+already have some keys in your local ``~/.ssh`` directory - i.e. files like
 ``id_rsa.pub``)::
 
     ssh-keygen -t rsa
@@ -73,9 +73,9 @@ should show you a prompt without errors (possibly with a message saying
 
 .. note:: If the ``ssh`` command works, but the ``sftp`` command does not
   (e.g. it just prints ``Connection closed``), a possible reason can be
-  that there is a line in your ``~/.bashrc`` that either produces text output, 
+  that there is a line in your ``~/.bashrc`` (on the cluster) that either produces text output
   or an error. Remove/comment it until no output or error is produced: this
-  should make ``sftp`` working again.
+  should make ``sftp`` work again.
 
 Finally, try also::
 
@@ -92,7 +92,7 @@ It should print a snapshot of the queue status, without any errors.
   
      export PATH=$PATH:/opt/pbs/default/bin
 
-  Or, alternatively, find the path to the executables (like using ``which qsub``)
+  Or, alternatively, find the path to the executables (like using ``which qsub``).
 
 .. note:: If you need your remote .bashrc to be sourced before you execute the code
   (for instance to change the PATH), make sure the .bashrc file **does not** contain
@@ -114,8 +114,8 @@ It should print a snapshot of the queue status, without any errors.
      ssh YOURCLUSTERADDRESS 'echo $PATH'
 
 
-.. note:: If you need to ssh to a computer A first, from which you can then
-     connect to computer B you wanted to connect to, you can use the
+.. note:: If you need to ssh to a computer *A* first, from which you can then
+     connect to computer *B* you wanted to connect to, you can use the
      ``proxy_command`` feature of ssh, that we also support in
      AiiDA. For more information, see :ref:`ssh_proxycommand`.
 
@@ -145,15 +145,11 @@ The configuration of computers happens in two steps.
    .. tip:: You can press ``<CTRL>+C`` at any moment to abort the setup process.
      Nothing will be stored in the DB.
    
-   .. note:: For multiline inputs (like the prepend text and the append text, see below)
-     you have to press ``<CTRL>+D`` to complete the input, even if you do not want
-     any text.
-   
    Here is a list of what is asked, together with an explanation.
    
-   * **Computer name**: the (user-friendly) name of the new computer instance 
-     which is about to be created in the DB (the name is used for instance when 
-     you have to pick up a computer to launch a calculation on it). Names must 
+   * **Computer label**: the (user-friendly) label of the new computer instance 
+     which is about to be created in the DB (the label is used for instance when 
+     you have to pick a computer to launch a calculation on it). Labels must
      be unique. This command should be thought as a AiiDA-wise configuration of 
      computer, independent of the AiiDA user that will actually use it.
 
@@ -163,17 +159,18 @@ The configuration of computers happens in two steps.
 
    * **Description**:  A human-readable description of this computer; this is 
      useful if you have a lot of computers and you want to add some text to
-     distinguish them (e.g.: "cluster of computers at EPFL, installed in 2012, 2 GB of RAM per CPU")
+     distinguish them (e.g.: "cluster of computers at EPFL, installed in 2012, 
+     2 GB of RAM per CPU")
 
    * **Enabled**: either True or False; if False, the computer is disabled
      and calculations associated with it will not be submitted. This allows to
      disable temporarily a computer if it is giving problems or it is down for
      maintenance, without the need to delete it from the DB.
 
-   * **Transport type**: The name of the transport to be used. A list of valid 
+   * **Transport plugin**: The type of the transport to be used. A list of valid 
      transport types can be obtained typing ``?``
 
-   * **Scheduler type**: The name of the plugin to be used to manage the
+   * **Scheduler plugin**: The name of the plugin to be used to manage the
      job scheduler on the computer. A list of valid 
      scheduler plugins can be obtained typing ``?``. See
      :doc:`here <../scheduler/index>` for a documentation of scheduler plugins
@@ -181,9 +178,9 @@ The configuration of computers happens in two steps.
 
    * **shebang line** This is the first line in the beginning of the submission script.
      The default is ``#!/bin/bash``. You can change this in order, for example, to add options,
-     as for example the -l option. Note that AiiDA only supports bash at this point!
+     such as the ``-l`` flag. Note that AiiDA only supports bash at this point!
 
-   * **AiiDA work directory**: The absolute path of the directory on the
+   * **Work directory on the computer**: The absolute path of the directory on the
      remote computer where AiiDA will run the calculations
      (often, it is the scratch of the computer). You can (should) use the
      ``{username}`` replacement, that will be replaced by your username on the
@@ -193,7 +190,7 @@ The configuration of computers happens in two steps.
 
        /scratch/{username}/aiida_work/
 
-   * **mpirun command**: The ``mpirun`` command needed on the cluster to run parallel MPI
+   * **Mpirun command**: The ``mpirun`` command needed on the cluster to run parallel MPI
      programs. You can (should) use the ``{tot_num_mpiprocs}`` replacement,
      that will be replaced by the total number of cpus, or the other
      scheduler-dependent fields (see the :doc:`scheduler docs <../scheduler/index>`
@@ -203,79 +200,101 @@ The configuration of computers happens in two steps.
         aprun -n {tot_num_mpiprocs}
         poe
 
-   * **Text to prepend to each command execution**: This is a multiline string,
-     whose content will be prepended inside the submission script before the
-     real execution of the job. It is your responsibility to write proper ``bash`` code!
-     This is intended for computer-dependent code, like for instance loading a
-     module that should always be loaded on that specific computer. *Remember*
-     *to end the input by pressing* ``<CTRL>+D``.
-     A practical example::
+   * **Default number of CPUs per machine**: The number of MPI processes per machine that
+     should be executed if it is not otherwise specified. Use ``0`` to specify no default value. 
+   
+   At the end, the command will open your default editor on a file containing a summary
+   of the configuration up to this point, and the possibility to add ``bash``
+   commands that will be executed either *before* the actual execution of the job
+   (under 'pre-execution script') or *after* the script submission (under 'Post execution script').
+   These additional lines need may set up the environment on the computer,
+   for example loading modules or exporting environment variables, for example::
 
         export NEWVAR=1
         source some/file
 
-     A not-to-do example::
+   .. note:: Don't specify settings here that are specific to a code, calculation or scheduler -- 
+      you can set further pre-execution commands at the ``Code`` and ``CalcJob`` level.
 
-       #PBS -l nodes=4:ppn=12
+   When you are done editing, save and quit (e.g. ``<ESC>:wq<ENTER>`` in ``vim``).
+   The computer has now been created in the database but you still need to *configure* access to it
+   using your credentials.
 
-     (it's the plugin that will do this!)
+   In order to avoid having to retype the setup information the next time round, it is also possible provide some (or all) of the information
+   described above via a configuration file using::
 
-   * **Text to append to each command execution**: This is a multiline string,
-     whose content will be appended inside the submission script after the
-     real execution of the job. It is your responsibility to write proper ``bash`` code!
-     This is intended for computer-dependent code. *Remember*
-     *to end the input by pressing* ``<CTRL>+D``.
-   
-  At the end, you will get a confirmation command, and also the ID in the
-  database (``pk``, i.e. the principal key, and ``uuid``).
+        verdi computer setup --config computer.yml
 
-2. **Configuration of the computer**, using the::
+   where ``computer.yml`` is a configuration file in the
+   `YAML format <https://en.wikipedia.org/wiki/YAML#Syntax>`_.
+   This file contains the information in a series of key:value pairs:
 
-    verdi computer configure COMPUTERNAME
-    
-   command. This will allow to access more detailed configurations, that are
-   often user-dependent and also depend on the specific transport (for instance,
-   if the transport is ``SSH``, it will ask for username, port, ...).
+   .. code-block:: yaml
+
+      ---
+      label: "localhost"
+      hostname: "localhost"
+      transport: local
+      scheduler: "direct"
+      work_dir: "/home/max/.aiida_run"
+      mpirun_command: "mpirun -np {tot_num_mpiprocs}"
+      mpiprocs_per_machine: "2"
+      prepend_text: |
+        module load mymodule
+        export NEWVAR=1
+
+  .. tip:: The list of the keys that can be used is available from the options flags of the command: ::
+
+        verdi computer setup --help
+
+     Note the syntax differences: remove the ``--`` prefix
+     and replace ``-`` within the keys by the underscore ``_``.
+
 
   
-   The command will try to provide automatically default answers, mainly reading
-   the existing ssh configuration in ``~/.ssh/config``, and in most cases one 
-   simply need to press enter a few times.
+2. **Configuration of the computer**, using the::
 
-   .. note:: At the moment, the in-line help (i.e., just typing ``?`` to get
-     some help) is not yet supported in ``verdi configure``, but only in
-     ``verdi setup``.
+    verdi computer configure TRANSPORTTYPE COMPUTERNAME
+    
+   command, with the appropriate transport type (``ssh`` or ``local``) and computer label.
 
-   For ``local`` transport, you *need to run the command*,
-   even if nothing will be asked to you.
+   The configuration allows to access more detailed configurations, that are
+   often user-dependent and  depend on the specific transport.
+
+   The command will try to provide automatically default answers, 
+   that can be selected by pressing enter.
+
+   For ``local`` transport, the only information required is the minimum 
+   time interval between conections to the computer.
+
    For ``ssh`` transport, the following will be asked:
    
-   * **username**: your username on the remote machine
-   * **port**: the port to connect to (the default SSH port is 22)
-   * **look_for_keys**: automatically look for the private key in ``~/.ssh``.
-     Default: True.
-   * **key_filename**: the absolute path to your private SSH key. You can leave
+   * **User name**: your username on the remote machine
+   * **port Nr**: the port to connect to (the default SSH port is 22)
+   * **Look_for_keys**: automatically look for the private key in ``~/.ssh``.
+     Default: False.
+   * **SSH key file**: the absolute path to your private SSH key. You can leave
      it empty to use the default SSH key, if you set ``look_for_keys`` to True.
-   * **timeout**: A timeout in seconds if there is no response (e.g., the
-     machine is down. You can leave it empty to use the default value.
-   * **allow_agent**: If True, it will try to use an SSH agent.
-   * **proxy_command**: Leave empty if you do not need a proxy command (i.e., 
+   * **Connection timeout**: A timeout in seconds if there is no response (e.g., the
+     machine is down. You can leave it empty to use the default value.)
+   * **Allow_ssh agent**: If True, it will try to use an SSH agent.
+   * **SSH proxy_command**: Leave empty if you do not need a proxy command (i.e., 
      if you can directly connect to the machine). If you instead need to connect
      to an intermediate computer first, you need to provide here the
      command for the proxy: see documentation :ref:`here <ssh_proxycommand>` 
      for how to use this option, and in particular the notes
      :ref:`here <ssh_proxycommand_notes>` for the format of this field.
-   * **compress**: True to compress the traffic (recommended)
-   * **gss_auth**: yes when using Kerberos token to connect
-   * **gss_kex**: yes when using Kerberos token to connect, in some cases
+   * **Compress file transfer**: True to compress the traffic (recommended)
+   * **GSS auth**: yes when using Kerberos token to connect
+   * **GSS kex**: yes when using Kerberos token to connect, in some cases
      (depending on your ``.ssh/config`` file)
-   * **gss_deleg_creds**: yes when using Kerberos token to connect, in 
+   * **GSS deleg_creds**: yes when using Kerberos token to connect, in 
      some cases (depending on your ``.ssh/config`` file)
-   * **gss_host**: hostname when using Kerberos token to connect (default
+   * **GSS host**: hostname when using Kerberos token to connect (defaults
      to the remote computer hostname)
-   * **load_system_host_keys**: True to load the known hosts keys from the
+   * **Load system host keys**: True to load the known hosts keys from the
      default SSH location (recommended)
-   * **key_policy**: What is the policy in case the host is not known.
+   * **key policy**: What is the policy in case the host is not known.
      It is a string among the following:
      
      * ``RejectPolicy`` (default, recommended): reject the connection if the
@@ -284,8 +303,10 @@ The configuration of computers happens in two steps.
        host is not known.
      * ``AutoAddPolicy`` (*not* recommended): automatically add the host key
        at the first connection to the host.
+   * **Connection cooldown time (s)**: The minimum time interval between consecutive 
+     connection openings to the remote machine.
            
- After these two steps have been completed, your computer is ready to go!
+After setup and configuration have been completed, your computer is ready to go!
 
 .. note:: If the cluster you are using requires authentication through a Kerberos
     token (that you need to obtain before using ssh), you typically need to install
@@ -320,9 +341,9 @@ The configuration of computers happens in two steps.
    
      verdi computer delete COMPUTERNAME
      
-   commands, whose meaning should be self-explanatory.
+   commands, to rename a computer or remove it from the database.
    
-.. note:: You can delete computers **only if** no entry in the database is using
+.. note:: You can delete computers **only if** no entry in the database is linked to
   them (as for instance Calculations, or RemoteData objects). Otherwise, you
   will get an error message. 
 
@@ -334,23 +355,12 @@ The configuration of computers happens in two steps.
   the computer is under maintenance but you still want to use AiiDA with 
   other computers, or submit the calculations in the AiiDA database anyway.
   
-  When the computer comes back online, you can re-enable it; 
-  at this point pending calculations in the ``TOSUBMIT`` state will be
-  submitted, and calculations ``WITHSCHEDULER`` will be checked and possibly
-  retrieved.
-  
   The relevant commands are::
      
      verdi computer enable COMPUTERNAME
      verdi computer disable COMPUTERNAME
      
   Note that the above commands will disable the computer for all AiiDA users.
-  If instead, for some reason, you want to disable the computer only for a
-  given user, you can use the following command::
-  
-     verdi computer disable COMPUTERNAME --only-for-user USER_EMAIL
-  
-  (and the corresponding ``verdi computer enable`` command to re-enable it).
 
 
 On not bombarding the remote computer with requests
@@ -364,23 +374,23 @@ AiiDA currently has two settings:
  * the minimum job poll interval
 
 Neither of these can ever be violated.  AiiDA will not try to update the jobs list
-on a remove machine until the job poll interval has elapsed since the last update
+on a remote machine until the job poll interval has elapsed since the last update
 (the first update will be immediate) at which point it will request a transport.
 Because of this the maximum possible time before a job update could be the sum of
 the two intervals, however this is unlikely to happen in practice.
 
-The transport open interval is currently hardcoded by the transport plugin,
-typically SSH is longer than local transport.
+The transport open interval is currently hardcoded by the transport plugin;
+typically for SSH it's longer than for local transport.
 
-The job poll interval can be set programmatically on the corresponding `Computer`
+The job poll interval can be set programmatically on the corresponding ``Computer``
 object in verdi shell::
 
-    Computer.get('localhost').set_minimum_job_poll_interval(30.0)
+    load_computer('localhost').set_minimum_job_poll_interval(30.0)
 
 
 would set the transport interval on a computer called 'localhost' to 30 seconds.
 
-.. note:: All of these intervals apply per *worker* meaning that a daemon with
+.. note:: All of these intervals apply *per worker*, meaning that a daemon with
    multiple workers will not necessarily, overall, respect these limits.
    For the time being there is no way around this and if these limits must be
    respected then do not run with more than one worker.

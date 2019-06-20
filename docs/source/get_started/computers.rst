@@ -205,7 +205,7 @@ The configuration of computers happens in two steps.
    
   At the end, the command will open your default editor on a file containing a summary of the configuration up to this point, 
   and the possibility to add content that will be executed either
-  *before* the actual execution of the job (under the 'pre-execution script' lines) or *after* the 
+  *before* the actual execution of the job (under 'pre-execution script') or *after* the 
   script submission (under the 'Post execution script' lines). 
   These additional lines need to be proper ``bash`` code, that is intended for computer-dependent code
   (for instance a module that should always be loaded). For example::

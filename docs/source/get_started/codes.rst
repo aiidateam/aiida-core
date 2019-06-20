@@ -73,7 +73,7 @@ You will be asked for:
   be used to generate new calculations to use with this code.
   This string has to be a valid string recognized by the ``CalculationFactory``
   function. To get the list of all available Calculation plugin strings,
-  use the ``verdi plugin list aiida.calculations`` command. 
+  use the ``verdi plugin list aiida.calculations`` command.
   
 * **Installed on target computer**: either True (for local codes) or False (for remote
   codes). For the meaning of the distinction, see above. Depending
@@ -81,7 +81,7 @@ You will be asked for:
 
   * REMOTE CODES:
   
-    * **Remote computer name**: The computer name as on which the code resides,
+    * **Remote computer name**: The computer name on which the code resides,
       as configured and stored in the AiiDA database
       
     * **Remote absolute path**: The (full) absolute path of the code executable
@@ -103,7 +103,7 @@ be executed *before* running the submission script (after the
 'pre execution script' lines) and *after* running the submission script 
 (after the 'Post execution script' separator).
 This is intended for code-dependent settings, for instance to load modules or set variables 
-that are needed for the code to be. For example::
+that are needed by the code. For example::
 
   module load intelmpi
 
@@ -125,14 +125,14 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
    verdi code relabel "ID" "new-label"
    
   (Without the quotation marks!) "ID" can either be the numeric ID (PK) of
-  the code (preferentially), or possibly its label (or label@computername), 
+  the code (preferentially), or possibly its label (or ``label@computername``), 
   if this string uniquely identifies a code.
 
   You can also list all available codes (and their relative IDs) with::
 
    verdi code list
    
-  The ``verdi code list`` accepts some flags to filter only codes on a 
+  which also accepts some flags to filter only codes on a
   given computer, only codes using a specific plugin, etc.; use the ``-h``
   command line option to see the documentation of all possible options.
 
@@ -145,6 +145,6 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
    verdi code delete "ID"
    
   (only if it wasn't used by any calculation, otherwise an exception
-  is raised) 
+  is raised).
    
 And now, you are ready to launch your calculations!

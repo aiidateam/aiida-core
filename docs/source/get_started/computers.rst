@@ -207,7 +207,7 @@ The configuration of computers happens in two steps.
   and the possibility to add content that will be executed either
   *before* the actual execution of the job (under 'pre-execution script') or *after* the 
   script submission (under the 'Post execution script' lines). 
-  These additional lines need to be proper ``bash`` code, that is intended for computer-dependent code
+  These additional lines need may set up the environment on the computer, for example loading modules or exporting environment variables::```
   (for instance a module that should always be loaded). For example::
 
         export NEWVAR=1

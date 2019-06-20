@@ -201,7 +201,7 @@ The configuration of computers happens in two steps.
         poe
 
   * **Default number of CPUs per machine**: The number of MPI processes per machine that
-    should be executed if it is not otherwise specified. No default value is specified by 0. 
+    should be executed if it is not otherwise specified. Use ``0`` to specify no default value. 
    
   At the end, you will land on an vim editor page, with a summary of the configuration up to this point, 
   and the possibility to add content that will be executed either

@@ -24,6 +24,15 @@ from aiida.orm import Group
 class TestVerdiImport(AiidaTestCase):
     """Tests for `verdi import`."""
 
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        super(TestVerdiImport, cls).setUpClass(*args, **kwargs)
+
+        # Helper variables
+        cls.url_path = "https://raw.githubusercontent.com/aiidateam/aiida_core/" \
+            "0599dabf0887bee172a04f308307e99e3c3f3ff2/aiida/backends/tests/fixtures/export/migrate/"
+        cls.archive_path = "export/migrate"
+
     def setUp(self):
         self.cli_runner = CliRunner()
 
@@ -52,8 +61,8 @@ class TestVerdiImport(AiidaTestCase):
         replaced with the version of the new format
         """
         archives = [
-            get_archive_file('calcjob/arithmetic.add.aiida'),
-            get_archive_file('export/migrate/export_v0.5_simple.aiida')
+            get_archive_file('arithmetic.add.aiida', filepath='calcjob'),
+            get_archive_file('export_v0.5_simple.aiida', filepath=self.archive_path)
         ]
 
         options = [] + archives
@@ -68,8 +77,8 @@ class TestVerdiImport(AiidaTestCase):
         of the same, as well as separate, archives.
         """
         archives = [
-            get_archive_file('calcjob/arithmetic.add.aiida'),
-            get_archive_file('export/migrate/export_v0.5_simple.aiida')
+            get_archive_file('arithmetic.add.aiida', filepath='calcjob'),
+            get_archive_file('export_v0.5_simple.aiida', filepath=self.archive_path)
         ]
 
         group_label = "import_madness"
@@ -115,7 +124,7 @@ class TestVerdiImport(AiidaTestCase):
         """Make sure imported entities are saved in new Group"""
         # Initialization
         group_label = "new_group_for_verdi_import"
-        archives = [get_archive_file('export/migrate/export_v0.5_simple.aiida')]
+        archives = [get_archive_file('export_v0.5_simple.aiida', filepath=self.archive_path)]
 
         # Check Group does not already exist
         group_search = Group.objects.find(filters={'label': group_label})
@@ -134,10 +143,8 @@ class TestVerdiImport(AiidaTestCase):
         self.assertFalse(group.is_empty, msg="The Group should not be empty.")
 
     def test_comment_mode(self):
-        """
-        Test comment mode flag works as intended
-        """
-        archives = [get_archive_file('export/migrate/export_v0.5_simple.aiida')]
+        """Test comment mode flag works as intended"""
+        archives = [get_archive_file('export_v0.5_simple.aiida', filepath=self.archive_path)]
 
         options = ['--comment-mode', 'newest'] + archives
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
@@ -155,13 +162,11 @@ class TestVerdiImport(AiidaTestCase):
         """ Test import of old local archives
         Expected behavior: Automatically migrate to newest version and import correctly.
         """
-        archives = [('export/migrate/export_v0.1_simple.aiida', '0.1'),
-                    ('export/migrate/export_v0.2_simple.aiida', '0.2'),
-                    ('export/migrate/export_v0.3_simple.aiida', '0.3'),
-                    ('export/migrate/export_v0.4_simple.aiida', '0.4')]
+        archives = [('export_v0.1_simple.aiida', '0.1'), ('export_v0.2_simple.aiida', '0.2'),
+                    ('export_v0.3_simple.aiida', '0.3'), ('export_v0.4_simple.aiida', '0.4')]
 
         for archive, version in archives:
-            options = [get_archive_file(archive)]
+            options = [get_archive_file(archive, filepath=self.archive_path)]
             result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
             self.assertIsNone(result.exception, msg=result.output)
@@ -172,17 +177,11 @@ class TestVerdiImport(AiidaTestCase):
     def test_import_old_url_archives(self):
         """ Test import of old URL archives
         Expected behavior: Automatically migrate to newest version and import correctly.
-        TODO: Update 'url' to point at correct commit and file.
-        Now it is pointing to yakutovicha's commit, but when PR #2478 has been merged in aiidateam:develop,
-        url should be updated to point to the, essentially same, commit, but in aiidateam.
-        Furthermore, the filename should be changed from '_no_UPF.aiida' to '_simple.aiida'.
         """
-        url = "https://raw.githubusercontent.com/yakutovicha/aiida_core/f5fff1846a62051b898f13db67f5eef18892d5f4/"
-        archive_path = "aiida/backends/tests/fixtures/export/migrate/"
         archive = 'export_v0.3_no_UPF.aiida'
         version = '0.3'
 
-        options = [url + archive_path + archive]
+        options = [self.url_path + archive]
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
         self.assertIsNone(result.exception, msg=result.output)
@@ -191,17 +190,14 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIn("Success: imported archive {}".format(options[0]), result.output, msg=result.exception)
 
     def test_import_url_and_local_archives(self):
-        """Test import of both a remote and local archive
-        TODO: Update 'url' to point at correct commit and file.
-        Now it is pointing to yakutovicha's commit, but when PR #2478 has been merged in aiidateam:develop,
-        url should be updated to point to the, essentially same, commit, but in aiidateam.
-        Furthermore, the filename should be change from '_no_UPF.aiida' to '_simple.aiida'.
-        """
-        url = "https://raw.githubusercontent.com/yakutovicha/aiida_core/f5fff1846a62051b898f13db67f5eef18892d5f4/"
-        url_archive = "aiida/backends/tests/fixtures/export/migrate/export_v0.4_no_UPF.aiida"
-        local_archive = "export/migrate/export_v0.5_simple.aiida"
+        """Test import of both a remote and local archive"""
+        url_archive = "export_v0.4_no_UPF.aiida"
+        local_archive = "export_v0.5_simple.aiida"
 
-        options = [get_archive_file(local_archive), url + url_archive, get_archive_file(local_archive)]
+        options = [
+            get_archive_file(local_archive, filepath=self.archive_path), self.url_path + url_archive,
+            get_archive_file(local_archive, filepath=self.archive_path)
+        ]
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
         self.assertIsNone(result.exception, result.output)
@@ -239,7 +235,7 @@ class TestVerdiImport(AiidaTestCase):
         `migration` = False, `non_interactive` = False (default), Expected: No query, no migrate
         `migration` = False, `non_interactive` = True, Expected: No query, no migrate
         """
-        archive = get_archive_file('export/migrate/export_v0.4_simple.aiida')
+        archive = get_archive_file('export_v0.4_simple.aiida', filepath=self.archive_path)
         confirm_message = "Do you want to try and migrate {} to the newest export file version?".format(archive)
         success_message = "Success: imported archive {}".format(archive)
 

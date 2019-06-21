@@ -14,7 +14,7 @@ Translator for upf data
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.restapi.translator.data import DataTranslator
+from aiida.restapi.translator.nodes.data import DataTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
 
 
@@ -30,8 +30,6 @@ class UpfDataTranslator(DataTranslator):
     _aiida_class = UpfData
     # The string name of the AiiDA class
     _aiida_type = "data.upf.UpfData"
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = _aiida_type + '.'
 
     _result_type = __label__
 

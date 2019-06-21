@@ -187,7 +187,7 @@ class Node(Resource):
     def __init__(self, **kwargs):
 
         # Set translator
-        from aiida.restapi.translator.node import NodeTranslator
+        from aiida.restapi.translator.nodes.node import NodeTranslator
         self.trans = NodeTranslator(**kwargs)
 
         from aiida.orm import Node as tNode
@@ -380,24 +380,10 @@ class Calculation(Node):
     def __init__(self, **kwargs):
         super(Calculation, self).__init__(**kwargs)
 
-        from aiida.restapi.translator.calculation import CalculationTranslator
+        from aiida.restapi.translator.nodes.calculation import CalculationTranslator
         self.trans = CalculationTranslator(**kwargs)
         from aiida.orm import CalcJobNode as CalculationTclass
         self.tclass = CalculationTclass
-
-        self.parse_pk_uuid = 'uuid'
-
-
-class Code(Node):
-    """ Resource for Code """
-
-    def __init__(self, **kwargs):
-        super(Code, self).__init__(**kwargs)
-
-        from aiida.restapi.translator.code import CodeTranslator
-        self.trans = CodeTranslator(**kwargs)
-        from aiida.orm import Code as CodeTclass
-        self.tclass = CodeTclass
 
         self.parse_pk_uuid = 'uuid'
 
@@ -408,10 +394,24 @@ class Data(Node):
     def __init__(self, **kwargs):
         super(Data, self).__init__(**kwargs)
 
-        from aiida.restapi.translator.data import DataTranslator
+        from aiida.restapi.translator.nodes.data import DataTranslator
         self.trans = DataTranslator(**kwargs)
         from aiida.orm import Data as DataTclass
         self.tclass = DataTclass
+
+        self.parse_pk_uuid = 'uuid'
+
+
+class Code(Data):
+    """ Resource for Code """
+
+    def __init__(self, **kwargs):
+        super(Code, self).__init__(**kwargs)
+
+        from aiida.restapi.translator.nodes.data.code import CodeTranslator
+        self.trans = CodeTranslator(**kwargs)
+        from aiida.orm import Code as CodeTclass
+        self.tclass = CodeTclass
 
         self.parse_pk_uuid = 'uuid'
 
@@ -423,7 +423,7 @@ class StructureData(Data):
 
         super(StructureData, self).__init__(**kwargs)
 
-        from aiida.restapi.translator.data.structure import \
+        from aiida.restapi.translator.nodes.data.structure import \
             StructureDataTranslator
         self.trans = StructureDataTranslator(**kwargs)
         from aiida.orm import StructureData as StructureDataTclass
@@ -438,7 +438,7 @@ class KpointsData(Data):
     def __init__(self, **kwargs):
         super(KpointsData, self).__init__(**kwargs)
 
-        from aiida.restapi.translator.data.kpoints import KpointsDataTranslator
+        from aiida.restapi.translator.nodes.data.kpoints import KpointsDataTranslator
         self.trans = KpointsDataTranslator(**kwargs)
         from aiida.orm import KpointsData as KpointsDataTclass
         self.tclass = KpointsDataTclass
@@ -452,7 +452,7 @@ class BandsData(Data):
     def __init__(self, **kwargs):
         super(BandsData, self).__init__(**kwargs)
 
-        from aiida.restapi.translator.data.bands import \
+        from aiida.restapi.translator.nodes.data.bands import \
             BandsDataTranslator
         self.trans = BandsDataTranslator(**kwargs)
         from aiida.orm import BandsData as BandsDataTclass
@@ -468,7 +468,7 @@ class CifData(Data):
 
         super(CifData, self).__init__(**kwargs)
 
-        from aiida.restapi.translator.data.cif import \
+        from aiida.restapi.translator.nodes.data.cif import \
             CifDataTranslator
         self.trans = CifDataTranslator(**kwargs)
         from aiida.orm import CifData as CifDataTclass
@@ -484,7 +484,7 @@ class UpfData(Data):
 
         super(UpfData, self).__init__(**kwargs)
 
-        from aiida.restapi.translator.data.upf import \
+        from aiida.restapi.translator.nodes.data.upf import \
             UpfDataTranslator
         self.trans = UpfDataTranslator(**kwargs)
         from aiida.orm import UpfData as UpfDataTclass

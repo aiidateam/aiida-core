@@ -28,12 +28,12 @@ class NodeTranslator(BaseTranslator):
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = "nodes"
+
     # The AiiDA class one-to-one associated to the present class
     _aiida_class = orm.Node
+
     # The string name of the AiiDA class
     _aiida_type = "node.Node"
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = _aiida_type + '.'
 
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = True
@@ -113,12 +113,15 @@ class NodeTranslator(BaseTranslator):
         # Inspect the subclasses of NodeTranslator, to avoid hard-coding
         # (should resemble the following tree)
         """
-                                          /- KpointsTranslator
-                                         /
-                         /- DataTranslator  -- SructureTranslator
-                        /                \
-                                          \- BandsTranslator
-        NodeTranslator  -- CodeTranslator
+                                              /- CodeTranslator
+                                             /
+                                            /- KpointsTranslator
+                                           /
+                           /- DataTranslator -- StructureTranslator
+                          /                \
+                         /                  \- BandsTranslator
+                        /
+        NodeTranslator
                         \
                          \- CalculationTranslator
         """
@@ -353,7 +356,7 @@ class NodeTranslator(BaseTranslator):
 
         :param parent: package/class.
             If package looks for the classes in submodules.
-            If class, first lookss for the package where it is contained
+            If class, first looks for the package where it is contained
         :param parent_class: class of which to look for subclasses
         :param recursive: True/False (go recursively into submodules)
         """
@@ -412,7 +415,6 @@ class NodeTranslator(BaseTranslator):
             # Look in submodules
             elif is_pkg and recursive:
                 results.update(self._get_subclasses(parent=app_module, parent_class=parent_class))
-
         return results
 
     def get_visualization_data(self, node, visformat=None):
@@ -428,7 +430,7 @@ class NodeTranslator(BaseTranslator):
         :returns: data selected and serialized for visualization
 
         If this method is called by Node resource it will look for the type
-        of object and invoke the correct method in the lowest-compatibel
+        of object and invoke the correct method in the lowest-compatible
         subclass
         """
 
@@ -456,14 +458,13 @@ class NodeTranslator(BaseTranslator):
         :returns: data in selected format to download
 
         If this method is called by Node resource it will look for the type
-        of object and invoke the correct method in the lowest-compatibel
+        of object and invoke the correct method in the lowest-compatible
         subclass
         """
 
         # Look for the translator associated to the class of which this node
         # is instance
         tclass = type(node)
-
         for subclass in self._subclasses.values():
             if subclass._aiida_type.split('.')[-1] == tclass.__name__:  # pylint: disable=protected-access
                 lowtrans = subclass
@@ -559,14 +560,13 @@ class NodeTranslator(BaseTranslator):
             """
 
             node_type = ntype.split(".")[0]
-
-            # default and data node shape
-            shape = "dot"
-
-            if node_type == "calculation":
+            if node_type == "process":
                 shape = "square"
-            elif node_type == "code":
+            elif ntype.split(".")[1] == "code":
                 shape = "triangle"
+            else:
+                # default and data node shape
+                shape = "dot"
 
             return shape
 

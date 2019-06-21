@@ -12,11 +12,13 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import warnings
 import six
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
+from aiida.common.warnings import AiidaDeprecationWarning
 
 from .calculation import CalculationNode
 
@@ -343,7 +345,13 @@ class CalcJobNode(CalculationNode):
             3. the filepath relative to the remote working directory of the calculation
 
         :param retrieve_singlefile_list: list or tuple of single file directives
+
+        .. deprecated:: 1.0.0
+            Will be removed in `v2.0.0`, use
+            :meth:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_retrieve_temporary_list` instead.
         """
+        warnings.warn('method is deprecated, use `set_retrieve_temporary_list` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+
         if not isinstance(retrieve_singlefile_list, (tuple, list)):
             raise TypeError('retrieve_singlefile_list has to be a list or tuple')
 
@@ -357,7 +365,12 @@ class CalcJobNode(CalculationNode):
         """Return the list of files to be retrieved on the cluster after the calculation has completed.
 
         :return: list of single file retrieval directives
+
+        .. deprecated:: 1.0.0
+            Will be removed in `v2.0.0`, use
+            :meth:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_retrieve_temporary_list` instead.
         """
+        warnings.warn('method is deprecated, use `get_retrieve_temporary_list` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
         return self.get_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, None)
 
     def set_job_id(self, job_id):

@@ -50,8 +50,9 @@ def run_get_node(process, *args, **inputs):
     :param inputs: the inputs to be passed to the process
     :type inputs: dict
 
-    :return: tuple of the outputs of the process and the process node pk
-    :rtype: (dict, int)
+    :return: tuple of the outputs of the process and the process node
+    :rtype: (dict, :class:`aiida.orm.ProcessNode`)
+
     """
     if isinstance(process, Process):
         runner = process.runner

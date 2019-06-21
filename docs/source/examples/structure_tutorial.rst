@@ -16,8 +16,8 @@ we tried to define a "standard" format for structures in AiiDA, that can be
 used across different codes.
 
 
-Tutorial
---------
+StructureData examples of usage
+-------------------------------
 
 Take a look at the following example::
 
@@ -214,7 +214,7 @@ import phase different kinds will be created::
   >>> asecell.cell = cell # defines a periodic cell
   >>> s = StructureData(ase=asecell)
   >>> for kind in s.kinds:
-  >>>     print kind.name, kind.mass
+  >>>     print(kind.name, kind.mass)
   Fe 55.0
   Fe1 56.0
   
@@ -230,7 +230,7 @@ symbol in order to get the species name::
   >>> asecell.cell = cell
   >>> s = StructureData(ase=asecell)
   >>> for kind in s.kinds:
-  >>>     print kind.name
+  >>>     print(kind.name)
   Fe1
   Fe2
   

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+""" Import/Export of AiiDA entities """
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
@@ -25,6 +26,9 @@ from aiida.orm.utils.repository import Repository
 
 IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE.value
 DUPL_SUFFIX = ' (Imported #{})'
+
+# Current export version
+EXPORT_VERSION = '0.5'
 
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
@@ -386,13 +390,13 @@ def merge_extras(old_extras, new_extras, mode):
     """
     :param old_extras: a dictionary containing the old extras of an already existing node
     :param new_extras: a dictionary containing the new extras of an imported node
-    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import. The first letter acts on
-                        extras that are present in the original node and not present in the imported node. Can be
-                        either k (keep it) or n (do not keep it). The second letter acts on the imported extras that
-                        are not present in the original node. Can be either c (create it) or n (do not create it). The
-                        third letter says what to do in case of a name collision. Can be l (leave the old value), u
-                        (update with a new value), d (delete the extra), a (ask what to do if the content is
-                        different).
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
+                        The first letter acts on extras that are present in the original node and not present
+                        in the imported node. Can be either k (keep it) or n (do not keep it).
+                        The second letter acts on the imported extras that are not present in the original node.
+                        Can be either c (create it) or n (do not create it). The third letter says what to do
+                        in case of a name collision. Can be l (leave the old value), u (update with a new value),
+                        d (delete the extra), a (ask what to do if the content is different).
     """
     from six import string_types
     if not isinstance(mode, string_types):
@@ -619,7 +623,7 @@ def import_data_dj(in_path, group=None, ignore_unknown_nodes=False,
     from aiida.backends.djsite.db.models import suppress_auto_now
 
     # This is the export version expected by this function
-    expected_export_version = StrictVersion('0.5')
+    expected_export_version = StrictVersion(EXPORT_VERSION)
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -943,7 +947,7 @@ def import_data_dj(in_path, group=None, ignore_unknown_nodes=False,
                     **{"{}__in".format(unique_identifier):
                            import_entry_ids.keys()}).values_list(unique_identifier, 'pk')
                 # note: convert uuids from type UUID to strings
-                just_saved = { str(k) : v for k,v in just_saved_queryset }
+                just_saved = {str(k) : v for k, v in just_saved_queryset}
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreign_ids_reverse_mappings
@@ -1005,10 +1009,10 @@ def import_data_dj(in_path, group=None, ignore_unknown_nodes=False,
                             deserialized_extras = deserialize_attributes(extras, extras_conversion)
                             # TODO: remove when aiida extras will be moved somewhere else
                             # from here
-                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                            deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
                                     key.startswith('_aiida_')}
                             if models.DbNode.objects.filter(uuid=unique_id)[0].node_type.endswith('code.Code.'):
-                                deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
                                         key == 'hidden'}
                             # till here
                             models.DbExtra.reset_values_for_node(
@@ -1045,10 +1049,10 @@ def import_data_dj(in_path, group=None, ignore_unknown_nodes=False,
                         deserialized_extras = deserialize_attributes(extras, extras_conversion)
                         # TODO: remove when aiida extras will be moved somewhere else
                         # from here
-                        deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                        deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
                                 key.startswith('_aiida_')}
                         if models.DbNode.objects.filter(uuid=unique_id)[0].node_type.endswith('code.Code.'):
-                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                            deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
                                     key == 'hidden'}
                         # till here
                         merged_extras = merge_extras(old_extras, deserialized_extras, extras_mode_existing)
@@ -1263,7 +1267,7 @@ def import_data_sqla(in_path, group=None, ignore_unknown_nodes=False,
     from aiida.common import json
 
     # This is the export version expected by this function
-    expected_export_version = StrictVersion('0.5')
+    expected_export_version = StrictVersion(EXPORT_VERSION)
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1372,7 +1376,8 @@ def import_data_sqla(in_path, group=None, ignore_unknown_nodes=False,
         # The entity import order. It is defined by the database model
         # relationships.
         # It is a list of strings, e.g.:
-        # ['aiida.backends.djsite.db.models.DbUser', 'aiida.backends.djsite.db.models.DbComputer', 'aiida.backends.djsite.db.models.DbNode', 'aiida.backends.djsite.db.models.DbGroup']
+        # ['aiida.backends.djsite.db.models.DbUser', 'aiida.backends.djsite.db.models.DbComputer',
+        # 'aiida.backends.djsite.db.models.DbNode', 'aiida.backends.djsite.db.models.DbGroup']
         entity_sig_order = [entity_names_to_signatures[m]
                             for m in (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME,
                                       NODE_ENTITY_NAME, GROUP_ENTITY_NAME,
@@ -1418,7 +1423,8 @@ def import_data_sqla(in_path, group=None, ignore_unknown_nodes=False,
         # to map one id (the pk) to a different one.
         # One of the things to remove for v0.4
         # {
-        # u'Node': {2362: u'82a897b5-fb3a-47d7-8b22-c5fe1b4f2c14', 2363: u'ef04aa5d-99e7-4bfd-95ef-fe412a6a3524', 2364: u'1dc59576-af21-4d71-81c2-bac1fc82a84a'},
+        # u'Node': {2362: u'82a897b5-fb3a-47d7-8b22-c5fe1b4f2c14',
+        #           2363: u'ef04aa5d-99e7-4bfd-95ef-fe412a6a3524', 2364: u'1dc59576-af21-4d71-81c2-bac1fc82a84a'},
         # u'User': {1: u'aiida@localhost'}
         # }
         import_unique_ids_mappings = {}
@@ -1506,7 +1512,7 @@ def import_data_sqla(in_path, group=None, ignore_unknown_nodes=False,
                                 # JSON objects.
                                 if (isinstance(v['metadata'], six.string_types) or
                                         isinstance(v['metadata'], six.binary_type)):
-                                    v['metadata'] = json.loads(v['metadata'])  # loads() can handle str and unicode/bytes
+                                    v['metadata'] = json.loads(v['metadata']) # loads() can handle str and unicode/bytes
 
                                 # Check if there is already a computer with the
                                 # same name in the database
@@ -1701,7 +1707,7 @@ def import_data_sqla(in_path, group=None, ignore_unknown_nodes=False,
                             deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
                                     key.startswith('_aiida_')}
                             if o.node_type.endswith('code.Code.'):
-                                deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
                                         key == 'hidden'}
                             # till here
                             o.extras = dict()
@@ -1740,7 +1746,7 @@ def import_data_sqla(in_path, group=None, ignore_unknown_nodes=False,
                         deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
                                 key.startswith('_aiida_')}
                         if db_node.node_type.endswith('code.Code.'):
-                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                            deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
                                     key == 'hidden'}
                         # till here
                         db_node.extras = merge_extras(old_extras, deserialized_extras, extras_mode_existing)
@@ -1790,7 +1796,7 @@ def import_data_sqla(in_path, group=None, ignore_unknown_nodes=False,
             # Needed for fast checks of existing links
             from aiida.backends.sqlalchemy.models.node import DbLink
             existing_links_raw = session.query(
-                DbLink.input_id, DbLink.output_id,DbLink.label).all()
+                DbLink.input_id, DbLink.output_id, DbLink.label).all()
             existing_links_labels = {(l[0], l[1]): l[2]
                                      for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0]
@@ -2212,8 +2218,6 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     if not silent:
         print("STARTING EXPORT...")
 
-    EXPORT_VERSION = '0.5'
-
     all_fields_info, unique_identifiers = get_all_fields_info()
 
     # The set that contains the nodes ids of the nodes that should be exported
@@ -2563,7 +2567,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
             links_qb = QueryBuilder()
             links_qb.append(Data,
                             project=['uuid'], tag='input',
-                            filters = {'id': {'in': all_nodes_pk}})
+                            filters={'id': {'in': all_nodes_pk}})
             links_qb.append(ProcessNode,
                             project=['uuid'], tag='output',
                             edge_filters={'type': {'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]}},

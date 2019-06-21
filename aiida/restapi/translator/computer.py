@@ -28,8 +28,6 @@ class ComputerTranslator(BaseTranslator):
     _aiida_class = orm.Computer
     # The string name of the AiiDA class
     _aiida_type = "Computer"
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = 'computer'
 
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = True

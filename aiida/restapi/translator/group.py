@@ -29,8 +29,6 @@ class GroupTranslator(BaseTranslator):
     _aiida_class = orm.Group
     # The string name of the AiiDA class
     _aiida_type = "groups.Group"
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = 'group'
 
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = True

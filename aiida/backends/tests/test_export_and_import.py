@@ -16,7 +16,6 @@ from __future__ import absolute_import
 from __future__ import with_statement
 
 import io
-import unittest
 import os
 import shutil
 import tempfile
@@ -665,6 +664,47 @@ class TestGroups(AiidaTestCase):
         builder.append(orm.Group, filters={'label': {'like': grouplabel + '%'}})
         self.assertEqual(builder.count(), 2)
 
+    @with_temp_dir
+    def test_import_to_group(self, temp_dir):
+        """Test `group` parameter
+        Make sure an unstored Group is stored by the import function, forwarding the Group object.
+        Make sure the Group is correctly handled and used for imported nodes.
+        """
+        from aiida.orm import load_group
+
+        # Create Nodes to export
+        data1 = orm.Data().store()
+        data2 = orm.Data().store()
+        node_uuids = [node.uuid for node in [data1, data2]]
+
+        # Export Nodes
+        filename = os.path.join(temp_dir, "export.aiida")
+        export([data1, data2], outfile=filename, silent=True)
+        self.reset_database()
+
+        # Create Group, do not store
+        group_label = "import_madness"
+        group = orm.Group(label=group_label)
+        group_uuid = group.uuid
+
+        # Try to import to this Group, providing only label - this should fail
+        with self.assertRaises(TypeError, msg="Labels should no longer be passable to `import_data`") as exc:
+            import_data(filename, group=group_label, silent=True)
+        exc = exc.exception
+        self.assertEqual(str(exc), "group must be a Group entity",
+            msg="The error message should be the same for both backends.")
+
+        # Import properly now, providing the Group object
+        import_data(filename, group=group, silent=True)
+
+        # Check Group for content
+        builder = orm.QueryBuilder().append(orm.Group, filters={'label': group_label}, project='uuid')
+        self.assertEqual(builder.count(), 1, msg="There should be exactly one Group with label {}. "
+                                                 "Instead {} was found.".format(group_label, builder.count()))
+        imported_group = load_group(builder.all()[0][0])
+        self.assertEqual(imported_group.uuid, group_uuid)
+        for node in imported_group.nodes:
+            self.assertIn(node.uuid, node_uuids)
 
 class TestCalculations(AiidaTestCase):
     """Test ex-/import cases related to Calculations"""
@@ -1266,17 +1306,16 @@ class TestComputer(AiidaTestCase):
                             comp1_metadata,
                             "Not the expected metadata were found")
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_of_django_sqla_export_file(self):
         """Check that sqla import manages to import the django export file correctly"""
-        from aiida.backends.tests.utils.fixtures import import_archive_fixture
+        from aiida.backends.tests.utils.archives import import_archive
 
         for archive in ['export/compare/django.aiida', 'export/compare/sqlalchemy.aiida']:
             # Clean the database
             self.reset_database()
 
             # Import the needed data
-            import_archive_fixture(archive)
+            import_archive(archive)
 
             # The expected metadata
             comp1_metadata = {

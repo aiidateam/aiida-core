@@ -134,9 +134,7 @@ class TestVerdiImport(AiidaTestCase):
         self.assertFalse(group.is_empty, msg="The Group should not be empty.")
 
     def test_comment_mode(self):
-        """
-        Test comment mode flag works as intended
-        """
+        """Test comment mode flag works as intended"""
         archives = [get_archive_file('export/migrate/export_v0.5_simple.aiida')]
 
         options = ['--comment-mode', 'newest'] + archives
@@ -172,12 +170,8 @@ class TestVerdiImport(AiidaTestCase):
     def test_import_old_url_archives(self):
         """ Test import of old URL archives
         Expected behavior: Automatically migrate to newest version and import correctly.
-        TODO: Update 'url' to point at correct commit and file.
-        Now it is pointing to yakutovicha's commit, but when PR #2478 has been merged in aiidateam:develop,
-        url should be updated to point to the, essentially same, commit, but in aiidateam.
-        Furthermore, the filename should be changed from '_no_UPF.aiida' to '_simple.aiida'.
         """
-        url = "https://raw.githubusercontent.com/yakutovicha/aiida_core/f5fff1846a62051b898f13db67f5eef18892d5f4/"
+        url = "https://raw.githubusercontent.com/aiidateam/aiida_core/0599dabf0887bee172a04f308307e99e3c3f3ff2/"
         archive_path = "aiida/backends/tests/fixtures/export/migrate/"
         archive = 'export_v0.3_no_UPF.aiida'
         version = '0.3'
@@ -191,13 +185,8 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIn("Success: imported archive {}".format(options[0]), result.output, msg=result.exception)
 
     def test_import_url_and_local_archives(self):
-        """Test import of both a remote and local archive
-        TODO: Update 'url' to point at correct commit and file.
-        Now it is pointing to yakutovicha's commit, but when PR #2478 has been merged in aiidateam:develop,
-        url should be updated to point to the, essentially same, commit, but in aiidateam.
-        Furthermore, the filename should be change from '_no_UPF.aiida' to '_simple.aiida'.
-        """
-        url = "https://raw.githubusercontent.com/yakutovicha/aiida_core/f5fff1846a62051b898f13db67f5eef18892d5f4/"
+        """Test import of both a remote and local archive"""
+        url = "https://raw.githubusercontent.com/aiidateam/aiida_core/0599dabf0887bee172a04f308307e99e3c3f3ff2/"
         url_archive = "aiida/backends/tests/fixtures/export/migrate/export_v0.4_no_UPF.aiida"
         local_archive = "export/migrate/export_v0.5_simple.aiida"
 

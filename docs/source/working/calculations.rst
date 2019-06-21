@@ -244,7 +244,7 @@ If instead, you need to transfer a specific file from a ``FolderData``, you can 
 Note that the filenames in the relative source and target path need not be the same.
 This depends fully on how the files are stored in the node's repository and what files need to be written to the working directory.
 
-.. _working_calcjobs_file_lists_remoote_copy:
+.. _working_calcjobs_file_lists_remote_copy:
 
 Remote copy list
 ~~~~~~~~~~~~~~~~

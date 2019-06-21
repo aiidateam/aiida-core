@@ -21,11 +21,10 @@ import unittest
 
 import six
 from six.moves import range
-from sqlalchemy.exc import StatementError
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed
+from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.manage.database.delete.nodes import delete_nodes
@@ -356,15 +355,6 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             a.set_attribute('integer', self.intval)
 
-        # Passing stored_check=False should disable the mutability check
-        a.delete_attribute('bool', stored_check=False)
-        a.set_attribute('integer', self.intval, stored_check=False)
-
-        self.assertEquals(a.get_attribute('integer'), self.intval)
-
-        with self.assertRaises(AttributeError):
-            a.get_attribute('bool')
-
     def test_attr_before_storing(self):
         a = orm.Data()
         a.set_attribute('k1', self.boolval)
@@ -485,39 +475,17 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.attributes, target_attrs)
 
     def test_store_object(self):
-        """Trying to store objects should fail"""
+        """Trying to set objects as attributes should fail, because they are not json-serializable."""
         a = orm.Data()
-        a.set_attribute('object', object(), clean=False)
 
-        # django raises TypeError
-        # sqlalchemy raises StatementError
-        with self.assertRaises((TypeError, StatementError)):
+        a.set_attribute('object', object())
+        with self.assertRaises(ValidationError):
             a.store()
 
         b = orm.Data()
-        b.set_attribute('object_list', [object(), object()], clean=False)
-        with self.assertRaises((TypeError, StatementError)):
-            # objects are not json-serializable
+        b.set_attribute('object_list', [object(), object()])
+        with self.assertRaises(ValidationError):
             b.store()
-
-    def test_append_to_empty_attr(self):
-        """Appending to an empty attribute"""
-        a = orm.Data()
-        a.append_to_attr('test', 0)
-        a.append_to_attr('test', 1)
-
-        self.assertEquals(a.get_attribute('test'), [0, 1])
-
-    def test_append_no_side_effects(self):
-        """Check that append_to_attr has no side effects"""
-        a = orm.Data()
-        mylist = [1, 2, 3]
-
-        a.set_attribute('list', mylist)
-        a.append_to_attr('list', 4)
-
-        self.assertEquals(a.get_attribute('list'), [1, 2, 3, 4])
-        self.assertEquals(mylist, [1, 2, 3])
 
     def test_attributes_on_clone(self):
         import copy
@@ -1018,16 +986,16 @@ class TestNodeBasic(AiidaTestCase):
         n = orm.Data()
         n.set_attribute('a', orm.Str("sometext2"))
         n.set_attribute('b', l2)
-        self.assertEqual(n.get_attribute('a'), "sometext2")
-        self.assertIsInstance(n.get_attribute('a'), six.string_types)
-        self.assertEqual(n.get_attribute('b'), ['f', True, {'gg': None}])
-        self.assertIsInstance(n.get_attribute('b'), (list, tuple))
+        self.assertEqual(n.get_attribute('a').value, 'sometext2')
+        self.assertIsInstance(n.get_attribute('a'), orm.Str)
+        self.assertEqual(n.get_attribute('b').get_list()    , ['f', True, {'gg': None}])
+        self.assertIsInstance(n.get_attribute('b'), orm.List)
 
         # Check also deep in a dictionary/list
         n = orm.Data()
         n.set_attribute('a', {'b': [orm.Str("sometext3")]})
-        self.assertEqual(n.get_attribute('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attribute('a')['b'][0], six.string_types)
+        self.assertEqual(n.get_attribute('a')['b'][0].value, "sometext3")
+        self.assertIsInstance(n.get_attribute('a')['b'][0], orm.Str)
         n.store()
         self.assertEqual(n.get_attribute('a')['b'][0], "sometext3")
         self.assertIsInstance(n.get_attribute('a')['b'][0], six.string_types)
@@ -1300,42 +1268,6 @@ class TestNodeBasic(AiidaTestCase):
             with self.assertRaises(NotExistent):
                 orm.load_node(spec, sub_classes=(orm.ArrayData,))
 
-    @unittest.skip('open issue JobCalculations cannot be stored')
-    def test_load_unknown_calculation_type(self):
-        """
-        Test that the loader will choose a common calculation ancestor for an unknown data type.
-        For the case where, e.g., the user doesn't have the necessary plugin.
-        """
-        from aiida.plugins import CalculationFactory
-
-        TemplateReplacerCalc = CalculationFactory('templatereplacer')
-        testcalc = TemplateReplacerCalc(computer=self.computer)
-        testcalc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        testcalc.store()
-
-        # compare if plugin exist
-        obj = orm.load_node(uuid=testcalc.uuid)
-        self.assertEqual(type(testcalc), type(obj))
-
-        # Create a custom calculation type that inherits from CalcJobNode but change the plugin type string
-        class TestCalculation(orm.CalcJobNode):
-            pass
-
-        TestCalculation._plugin_type_string = 'nodes.process.calculation.calcjob.notexisting.TemplatereplacerCalculation.'
-        TestCalculation._query_type_string = 'nodes.process.calculation.calcjob.notexisting.TemplatereplacerCalculation'
-
-        jobcalc = orm.CalcJobNode(computer=self.computer)
-        jobcalc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        jobcalc.store()
-
-        testcalc = TestCalculation(computer=self.computer)
-        testcalc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        testcalc.store()
-
-        # Changed node should return CalcJobNode type as its plugin does not exist
-        obj = orm.load_node(uuid=testcalc.uuid)
-        self.assertEqual(type(jobcalc), type(obj))
-
     def test_load_unknown_data_type(self):
         """
         Test that the loader will choose a common data ancestor for an unknown data type.
@@ -1369,10 +1301,7 @@ class TestNodeBasic(AiidaTestCase):
 class TestSubNodesAndLinks(AiidaTestCase):
 
     def test_cachelink(self):
-        """
-        Test the proper functionality of the links cache, with different
-        scenarios.
-        """
+        """Test the proper functionality of the links cache, with different scenarios."""
         n1 = orm.Data()
         n2 = orm.Data()
         n3 = orm.Data().store()
@@ -1502,43 +1431,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # are calculations that use as label 'input_cell')
         calc2a.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
         calc2b.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
-
-    @unittest.skip('activate this test once #2238 is addressed')
-    def test_links_label_autogenerator(self):
-        """Test the auto generation of link labels when labels are no longer required to be explicitly specified.
-        """
-        n1 = orm.WorkflowNode().store()
-        n2 = orm.WorkflowNode().store()
-        n3 = orm.WorkflowNode().store()
-        n4 = orm.WorkflowNode().store()
-        n5 = orm.WorkflowNode().store()
-        n6 = orm.WorkflowNode().store()
-        n7 = orm.WorkflowNode().store()
-        n8 = orm.WorkflowNode().store()
-        n9 = orm.WorkflowNode().store()
-        data = orm.Data().store()
-
-        data.add_incoming(n1, link_type=LinkType.RETURN)
-        # Label should be automatically generated
-        data.add_incoming(n2, link_type=LinkType.RETURN)
-        data.add_incoming(n3, link_type=LinkType.RETURN)
-        data.add_incoming(n4, link_type=LinkType.RETURN)
-        data.add_incoming(n5, link_type=LinkType.RETURN)
-        data.add_incoming(n6, link_type=LinkType.RETURN)
-        data.add_incoming(n7, link_type=LinkType.RETURN)
-        data.add_incoming(n8, link_type=LinkType.RETURN)
-        data.add_incoming(n9, link_type=LinkType.RETURN)
-
-        all_labels = [_.link_label for _ in data.get_incoming()]
-        self.assertEquals(len(set(all_labels)), len(all_labels), "There are duplicate links, that are not expected")
-
-    @unittest.skip('activate this test once #2238 is addressed')
-    def test_link_label_autogenerator(self):
-        """
-        When the uniqueness constraints on links are reimplemented on the database level, auto generation of
-        labels that relies directly on those database level constraints should be reinstated and tested for here.
-        """
-        raise NotImplementedError
 
     def test_link_with_unstored(self):
         """

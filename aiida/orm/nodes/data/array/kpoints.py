@@ -245,7 +245,7 @@ class KpointsData(ArrayData):
         from aiida.common.exceptions import ModificationNotAllowed
         # validate
         try:
-            the_mesh = tuple(int(i) for i in mesh)
+            the_mesh = [int(i) for i in mesh]
             if len(the_mesh) != 3:
                 raise ValueError
         except (IndexError, ValueError, TypeError):
@@ -253,7 +253,7 @@ class KpointsData(ArrayData):
         if offset is None:
             offset = [0., 0., 0.]
         try:
-            the_offset = tuple(float(i) for i in offset)
+            the_offset = [float(i) for i in offset]
             if len(the_offset) != 3:
                 raise ValueError
         except (IndexError, ValueError, TypeError):

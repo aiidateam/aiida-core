@@ -19,8 +19,8 @@ from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
 import sqlalchemy.exc
 
-from aiida.common import exceptions
 from aiida.backends.sqlalchemy import get_scoped_session
+from aiida.common import exceptions
 
 __all__ = ['django_filter']
 
@@ -110,28 +110,6 @@ def disable_expire_on_commit(session):
         yield session
     finally:
         session.expire_on_commit = current_value
-
-
-def iter_dict(attrs):
-    if isinstance(attrs, dict):
-        for key in sorted(attrs.keys()):
-            it = iter_dict(attrs[key])
-            for k, v in it:
-                new_key = key
-                if k:
-                    new_key += "." + str(k)
-                yield new_key, v
-    elif isinstance(attrs, list):
-        for i, val in enumerate(attrs):
-            it = iter_dict(val)
-            for k, v in it:
-                new_key = str(i)
-                if k:
-                    new_key += "." + str(k)
-                yield new_key, v
-    else:
-        yield "", attrs
-
 
 def _create_op_func(op):
     def f(attr, val):

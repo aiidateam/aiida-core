@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import inspect
 import io
 
-from aiida.common.exceptions import ModificationNotAllowed
+from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.lang import classproperty
 
@@ -66,16 +66,14 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
     @property
     def function_name(self):
-        """
-        Return the function name of the wrapped function
+        """Return the function name of the wrapped function.
 
         :returns: the function name or None
         """
         return self.get_attribute(self.FUNCTION_NAME_KEY, None)
 
     def _set_function_name(self, function_name):
-        """
-        Set the function name of the wrapped function
+        """Set the function name of the wrapped function.
 
         :param function_name: the function name
         """
@@ -83,16 +81,14 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
     @property
     def function_namespace(self):
-        """
-        Return the function namespace of the wrapped function
+        """Return the function namespace of the wrapped function.
 
         :returns: the function namespace or None
         """
         return self.get_attribute(self.FUNCTION_NAMESPACE_KEY, None)
 
     def _set_function_namespace(self, function_namespace):
-        """
-        Set the function namespace of the wrapped function
+        """Set the function namespace of the wrapped function.
 
         :param function_namespace: the function namespace
         """
@@ -100,24 +96,21 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
     @property
     def function_starting_line_number(self):
-        """
-        Return the starting line number of the wrapped function in its source file
+        """Return the starting line number of the wrapped function in its source file.
 
         :returns: the starting line number or None
         """
         return self.get_attribute(self.FUNCTION_STARTING_LINE_KEY, None)
 
     def _set_function_starting_line_number(self, function_starting_line_number):
-        """
-        Set the starting line number of the wrapped function in its source file
+        """Set the starting line number of the wrapped function in its source file.
 
         :param function_starting_line_number: the starting line number
         """
         self.set_attribute(self.FUNCTION_STARTING_LINE_KEY, function_starting_line_number)
 
     def get_function_source_code(self):
-        """
-        Return the absolute path to the source file in the repository
+        """Return the absolute path to the source file in the repository.
 
         :returns: the absolute path of the source file in the repository, or None if it does not exist
         """
@@ -135,8 +128,7 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
         return (cls.SEALED_KEY,)
 
     def validate_incoming(self, source, link_type, link_label):
-        """
-        Validate adding a link of the given type from a given node to ourself.
+        """Validate adding a link of the given type from a given node to ourself.
 
         Adding an incoming link to a sealed node is forbidden.
 
@@ -146,13 +138,12 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
         :raise aiida.common.ModificationNotAllowed: if the target node (self) is sealed
         """
         if self.is_sealed:
-            raise ModificationNotAllowed('Cannot add a link to a sealed node')
+            raise exceptions.ModificationNotAllowed('Cannot add a link to a sealed node')
 
         super(Sealable, self).validate_incoming(source, link_type=link_type, link_label=link_label)
 
     def validate_outgoing(self, target, link_type, link_label):
-        """
-        Validate adding a link of the given type from ourself to a given node.
+        """Validate adding a link of the given type from ourself to a given node.
 
         Adding an outgoing link from a sealed node is forbidden.
 
@@ -162,56 +153,50 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
         :raise aiida.common.ModificationNotAllowed: if the source node (self) is sealed
         """
         if self.is_sealed:
-            raise ModificationNotAllowed('Cannot add a link from a sealed node')
+            raise exceptions.ModificationNotAllowed('Cannot add a link from a sealed node')
 
         super(Sealable, self).validate_outgoing(target, link_type=link_type, link_label=link_label)
 
     @property
     def is_sealed(self):
-        """
-        Returns whether the node is sealed, i.e. whether the sealed attribute has been set to True
-        """
+        """Returns whether the node is sealed, i.e. whether the sealed attribute has been set to True."""
         return self.get_attribute(self.SEALED_KEY, False)
 
     def seal(self):
-        """
-        Seal the node by setting the sealed attribute to True
-        """
+        """Seal the node by setting the sealed attribute to True."""
         if not self.is_sealed:
             self.set_attribute(self.SEALED_KEY, True)
 
     @override
-    def set_attribute(self, key, value, **kwargs):
-        """
-        Set a new attribute
+    def set_attribute(self, key, value):
+        """Set an attribute to the given value.
 
-        :param key: attribute name
-        :param value: attribute value
-        :raise aiida.common.ModificationNotAllowed: if the node is already sealed or if the node is already stored
-            and the attribute is not updatable
+        :param key: name of the attribute
+        :param value: value of the attribute
+        :raise aiida.common.exceptions.ModificationNotAllowed: if the node is already sealed or if the node
+            is already stored and the attribute is not updatable.
         """
         if self.is_sealed:
-            raise ModificationNotAllowed('Cannot change the attributes of a sealed node')
+            raise exceptions.ModificationNotAllowed('attributes of a sealed node are immutable')
 
         if self.is_stored and key not in self._updatable_attributes:
-            raise ModificationNotAllowed('Cannot change the immutable attributes of a stored node')
+            raise exceptions.ModificationNotAllowed('`{}` is not an updatable attribute'.format(key))
 
-        super(Sealable, self).set_attribute(key, value, stored_check=False, **kwargs)
+        self.backend_entity.set_attribute(key, value)
 
     @override
     def delete_attribute(self, key):
-        """
-        Delete an attribute
+        """Delete an attribute.
 
-        :param key: attribute name
-        :raise AttributeError: if key does not exist
-        :raise aiida.common.ModificationNotAllowed: if the node is already sealed or if the node is already stored
-            and the attribute is not updatable
+        :param key: name of the attribute
+        :raises AttributeError: if the attribute does not exist
+        :raise aiida.common.exceptions.ModificationNotAllowed: if the node is already sealed or if the node
+            is already stored and the attribute is not updatable.
         """
         if self.is_sealed:
-            raise ModificationNotAllowed('Cannot change the attributes of a sealed node')
+            raise exceptions.ModificationNotAllowed('attributes of a sealed node are immutable')
 
         if self.is_stored and key not in self._updatable_attributes:
-            raise ModificationNotAllowed('Cannot change the immutable attributes of a stored node')
+            raise exceptions.ModificationNotAllowed('`{}` is not an updatable attribute'.format(key))
 
-        super(Sealable, self).delete_attribute(key, stored_check=False)
+        self.backend_entity.delete_attribute(key)

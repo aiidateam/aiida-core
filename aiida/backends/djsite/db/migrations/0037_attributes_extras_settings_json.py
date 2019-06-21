@@ -204,12 +204,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbnode',
             name='attributes',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=None, null=True),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, null=True),
         ),
         migrations.AddField(
             model_name='dbnode',
             name='extras',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=None, null=True),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, null=True),
         ),
         # Migrate the data from the DbAttribute table to the JSONB field
         migrations.RunPython(transition_attributes_extras, reverse_code=migrations.RunPython.noop),

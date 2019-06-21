@@ -7,23 +7,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,missing-docstring,too-many-lines
 """Tests for the QueryBuilder."""
-
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest
 import warnings
 
 from six.moves import range, zip
 
 from aiida import orm
-from aiida.manage import configuration
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-
-# pylint: disable=invalid-name,missing-docstring,too-many-lines
+from aiida.manage import configuration
 
 
 class TestQueryBuilder(AiidaTestCase):
@@ -705,37 +702,6 @@ class TestAttributes(AiidaTestCase):
                                    }}, project='uuid')
             res = [str(_) for _, in qb.all()]
             self.assertEqual(set(res), set((n_arr.uuid,)))
-
-
-class QueryBuilderDateTimeAttribute(AiidaTestCase):
-
-    @unittest.skipIf(configuration.PROFILE.database_backend == u'sqlalchemy',
-                     "SQLA doesn't have full datetime support in attributes")
-    @unittest.skipIf(configuration.PROFILE.database_backend == u'django',
-                     "Django JSONB doesn't have full datetime support in attributes")
-    def test_date(self):
-        from aiida.common import timezone
-        from datetime import timedelta
-        n = orm.Data()
-        now = timezone.now()
-        n.set_attribute('now', now)
-        n.store()
-
-        qb = orm.QueryBuilder().append(
-            orm.Node,
-            filters={
-                'attributes.now': {
-                    "and": [
-                        {
-                            ">": now - timedelta(seconds=1)
-                        },
-                        {
-                            "<": now + timedelta(seconds=1)
-                        },
-                    ]
-                }
-            })
-        self.assertEqual(qb.count(), 1)
 
 
 class QueryBuilderLimitOffsetsTest(AiidaTestCase):

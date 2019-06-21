@@ -385,16 +385,16 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         :returns: an aiida-compatible instance
         """
         if isinstance(res, Choice):
-            returnval = res.value
+            result = res.value
         elif isinstance(res, uuid.UUID):
-            returnval = six.text_type(res)
+            result = six.text_type(res)
         else:
             try:
-                returnval = self._backend.get_backend_entity(res)
+                result = self._backend.get_backend_entity(res)
             except TypeError:
-                returnval = res
+                result = res
 
-        return returnval
+        return result
 
     def yield_per(self, query, batch_size):
         """

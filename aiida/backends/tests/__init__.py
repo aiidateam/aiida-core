@@ -20,12 +20,10 @@ from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
 DB_TEST_LIST = {
     BACKEND_DJANGO: {
         'generic': ['aiida.backends.djsite.db.subtests.test_generic'],
-        'nodes': ['aiida.backends.djsite.db.subtests.test_nodes'],
         'migrations': [
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_many',
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0037_attributes_extras_settings_json'
         ],
-        'query': ['aiida.backends.djsite.db.subtests.test_query'],
     },
     BACKEND_SQLA: {
         'generic': ['aiida.backends.sqlalchemy.tests.test_generic'],

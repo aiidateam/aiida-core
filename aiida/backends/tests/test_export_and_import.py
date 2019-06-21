@@ -2896,7 +2896,7 @@ class TestExtras(AiidaTestCase):
         data = orm.Data()
         data.label = 'my_test_data_node'
         data.store()
-        data.set_extras({'b': 2, 'c': 3})
+        data.set_extra_many({'b': 2, 'c': 3})
         cls.tmp_folder = tempfile.mkdtemp()
         cls.export_file = os.path.join(cls.tmp_folder, 'export.aiida')
         export([data], outfile=cls.export_file, silent=True)

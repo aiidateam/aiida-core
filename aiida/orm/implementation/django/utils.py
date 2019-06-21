@@ -7,12 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import django.db
+
+from django.db import transaction, IntegrityError
 from django.db.models.fields import FieldDoesNotExist
+
 from aiida.common import exceptions
 
 
@@ -54,14 +55,12 @@ class ModelWrapper(object):
 
     def save(self):
         """ Save the model (possibly updating values if changed) """
-        from django.db import transaction
-
         # transactions are needed here for Postgresql:
         # https://docs.djangoproject.com/en/1.7/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
         with transaction.atomic():
             try:
                 self._model.save()
-            except django.db.IntegrityError as e:
+            except IntegrityError as e:
                 # Convert to one of our exceptions
                 raise exceptions.IntegrityError(str(e))
 
@@ -78,19 +77,19 @@ class ModelWrapper(object):
         if self.is_saved():
             try:
                 # Manually append the `mtime` to fields to update, because when using the `update_fields` keyword of the
-                # `save` method, the `auto_now` property of `mtime` column is not triggered
-                if self._is_model_field('mtime'):
+                # `save` method, the `auto_now` property of `mtime` column is not triggered. If `update_fields` is None
+                # everything is updated, so we do not have to add anything
+                if fields is not None and self._is_model_field('mtime'):
                     fields.add('mtime')
                 self._model.save(update_fields=fields)
-            except django.db.IntegrityError as e:
+            except IntegrityError as e:
                 # Convert to one of our exceptions
                 raise exceptions.IntegrityError(str(e))
 
     def _ensure_model_uptodate(self, fields=None):
         if self.is_saved():
-            # For now we have no choice but to reload the entire model.
-            # Django 1.8 has support for refreshing an individual attribute, see:
-            # https://docs.djangoproject.com/en/1.8/ref/models/instances/#refreshing-objects-from-database
-            new_model = self._model.__class__.objects.get(pk=self._model.pk)
-            # Have to save this way so we don't hit the __setattr__ above
-            object.__setattr__(self, '_model', new_model)
+            self._model.refresh_from_db(fields=fields)
+
+    @staticmethod
+    def _in_transaction():
+        return not transaction.get_autocommit()

@@ -1169,9 +1169,7 @@ class QueryBuilder(object):
         if items_to_project is None:
             items_to_project = self._projections.get(tag, [])
 
-        # Return here if there is nothing to project,
-        # reduces number of key in return dictionary
-
+        # Return here if there is nothing to project, reduces number of key in return dictionary
         if self._debug:
             print(tag, items_to_project)
         if not items_to_project:
@@ -1186,14 +1184,7 @@ class QueryBuilder(object):
                 property_names = list()
                 if projectable_entity_name == '**':
                     # Need to expand
-                    property_names.extend(self._impl.modify_expansions(
-                        alias, self._impl.get_column_names(alias)))
-
-                    # ~ for s in ('attributes', 'extras'):
-                    # ~ try:
-                    # ~ entity_names.remove(s)
-                    # ~ except ValueError:
-                    # ~ pass
+                    property_names.extend(self._impl.modify_expansions(alias, self._impl.get_column_names(alias)))
                 else:
                     property_names.extend(self._impl.modify_expansions(alias, [projectable_entity_name]))
 
@@ -2185,7 +2176,6 @@ class QueryBuilder(object):
                 item[i] = self.get_aiida_entity_res(item_entry)
 
             yield item
-        return
 
     def iterdict(self, batch_size=100):
         """

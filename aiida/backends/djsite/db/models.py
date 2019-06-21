@@ -132,77 +132,13 @@ class DbNode(m.Model):
     dbcomputer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT, related_name='dbnodes')
 
     # JSON Attributes
-    attributes = JSONField(default=None, null=True)
+    attributes = JSONField(default=dict, null=True)
     # JSON Extras
-    extras = JSONField(default=None, null=True)
+    extras = JSONField(default=dict, null=True)
 
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
-
-    def __init__(self, *args, **kwargs):
-        super(DbNode, self).__init__(*args, **kwargs)
-
-        if self.attributes is None:
-            self.attributes = dict()
-
-        if self.extras is None:
-            self.extras = dict()
-
-    def set_attribute(self, key, value):
-        DbNode._set_attr(self.attributes, key, value)
-        self.save()
-
-    def reset_attributes(self, attributes):
-        self.attributes = dict()
-        self.set_attributes(attributes)
-
-    def set_attributes(self, attributes):
-        for key, value in attributes.items():
-            DbNode._set_attr(self.attributes, key, value)
-        self.save()
-
-    def set_extra(self, key, value):
-        DbNode._set_attr(self.extras, key, value)
-        self.save()
-
-    def set_extras(self, extras):
-        for key, value in extras.items():
-            DbNode._set_attr(self.extras, key, value)
-        self.save()
-
-    def reset_extras(self, new_extras):
-        self.extras.clear()
-        self.extras.update(new_extras)
-        self.save()
-
-    def del_attribute(self, key):
-        DbNode._del_attr(self.attributes, key)
-        self.save()
-
-    def del_extra(self, key):
-        DbNode._del_attr(self.extras, key)
-        self.save()
-
-    def get_attributes(self):
-        return self.attributes
-
-    def get_extras(self):
-        return self.extras
-
-    @ staticmethod
-    def _set_attr(d, key, value):
-        if '.' in key:
-            raise ValueError("We don't know how to treat key with dot in it yet")
-        d[key] = value
-
-    @ staticmethod
-    def _del_attr(d, key):
-        if '.' in key:
-            raise ValueError("We don't know how to treat key with dot in it yet")
-        if key not in d:
-            raise AttributeError("Key {} does not exists".format(key))
-        del d[key]
 
     def get_simple_name(self, invalid_result=None):
         """

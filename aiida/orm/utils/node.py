@@ -23,8 +23,12 @@ import six
 from aiida.common import exceptions
 from aiida.common.utils import strip_prefix
 
+# This separator character is reserved to indicate nested fields in node attribute and extras dictionaries and
+# therefore is not allowed in individual attribute or extra keys.
+FIELD_SEPARATOR = '.'
+
 __all__ = ('load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string', 'AbstractNodeMeta',
-           'clean_value')
+           'validate_attribute_extra_key', 'clean_value')
 
 
 def load_node_class(type_string):
@@ -149,6 +153,19 @@ def get_query_type_from_type_string(type_string):
     type_string = type_path + '.'
 
     return type_string
+
+
+def validate_attribute_extra_key(key):
+    """Validate the key for a node attribute or extra.
+
+    :raise aiida.common.ValidationError: if the key is not a string or contains reserved separator character
+    """
+    if not key or not isinstance(key, six.string_types):
+        raise exceptions.ValidationError('key for attributes or extras should be a string')
+
+    if FIELD_SEPARATOR in key:
+        raise exceptions.ValidationError(
+            'key for attributes or extras cannot contain the character `{}`'.format(FIELD_SEPARATOR))
 
 
 def clean_value(value):

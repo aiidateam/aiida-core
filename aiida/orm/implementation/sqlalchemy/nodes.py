@@ -21,11 +21,11 @@ from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import node as models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
+from aiida.orm.utils.node import clean_value
 
 from .. import BackendNode, BackendNodeCollection
 from . import entities
 from . import utils as sqla_utils
-from .. import utils as gen_utils
 from .computers import SqlaComputer
 from .users import SqlaUser
 
@@ -149,26 +149,59 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         type_check(user, SqlaUser)
         self._dbmodel.user = user.dbmodel
 
+    @property
+    def attributes(self):
+        """Return the complete attributes dictionary.
+
+        .. warning:: While the node is unstored, this will return references of the attributes on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            attributes will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
+            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
+            getters `get_attribute` and `get_attribute_many` instead.
+
+        :return: the attributes as a dictionary
+        """
+        return self._dbmodel.attributes
+
     def get_attribute(self, key):
-        """Return an attribute.
+        """Return the value of an attribute.
+
+        .. warning:: While the node is unstored, this will return a reference of the attribute on the database model,
+            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            attribute will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods.
 
         :param key: name of the attribute
         :return: the value of the attribute
-        :raises AttributeError: if the attribute does not exist
+        :raises AttributeError: if the attribute does not exist and no default is specified
         """
         try:
-            return gen_utils.get_attr(self._dbmodel.attributes, key)
-        except (KeyError, IndexError):
-            raise AttributeError('Attribute `{}` does not exist'.format(key))
+            return self._dbmodel.attributes[key]
+        except KeyError as exception:
+            raise AttributeError('attribute `{}` does not exist'.format(exception))
 
-    def get_attributes(self, keys):
-        """Return a set of attributes.
+    def get_attribute_many(self, keys):
+        """Return the values of multiple attributes.
 
-        :param keys: names of the attributes
-        :return: the values of the attributes
+        .. warning:: While the node is unstored, this will return references of the attributes on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            attributes will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
+            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
+            getters `get_attribute` and `get_attribute_many` instead.
+
+        :param keys: a list of attribute names
+        :return: a list of attribute values
         :raises AttributeError: if at least one attribute does not exist
         """
-        raise NotImplementedError
+        try:
+            return [self.get_attribute(key) for key in keys]
+        except KeyError as exception:
+            raise AttributeError('attribute `{}` does not exist'.format(exception))
 
     def set_attribute(self, key, value):
         """Set an attribute to the given value.
@@ -176,40 +209,42 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :param key: name of the attribute
         :param value: value of the attribute
         """
-        try:
-            self.dbmodel.set_attribute(key, value)
-        except Exception:  # pylint: disable=bare-except
-            session = get_scoped_session()
-            session.rollback()
-            raise
+        if self.is_stored:
+            value = clean_value(value)
 
-    def set_attributes(self, attributes):
-        """Set attributes.
+        self._dbmodel.attributes[key] = value
+        self._flag_field('attributes')
+        self._flush_if_stored()
+
+    def set_attribute_many(self, attributes):
+        """Set multiple attributes.
 
         .. note:: This will override any existing attributes that are present in the new dictionary.
 
-        :param attributes: the new attributes to set
+        :param attributes: a dictionary with the attributes to set
         """
-        try:
-            self.dbmodel.set_attributes(attributes)
-        except Exception:  # pylint: disable=bare-except
-            session = get_scoped_session()
-            session.rollback()
-            raise
+        if self.is_stored:
+            attributes = {key: clean_value(value) for key, value in attributes.items()}
+
+        for key, value in attributes.items():
+            self.dbmodel.attributes[key] = value
+
+        self._flag_field('attributes')
+        self._flush_if_stored()
 
     def reset_attributes(self, attributes):
         """Reset the attributes.
 
-        .. note:: This will completely reset any existing attributes and replace them with the new dictionary.
+        .. note:: This will completely clear any existing attributes and replace them with the new dictionary.
 
-        :param attributes: the new attributes to set
+        :param attributes: a dictionary with the attributes to set
         """
-        try:
-            self.dbmodel.reset_attributes(attributes)
-        except Exception:  # pylint: disable=bare-except
-            session = get_scoped_session()
-            session.rollback()
-            raise
+        if self.is_stored:
+            attributes = clean_value(attributes)
+
+        self.dbmodel.attributes = attributes
+        self._flag_field('attributes')
+        self._flush_if_stored()
 
     def delete_attribute(self, key):
         """Delete an attribute.
@@ -218,29 +253,36 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :raises AttributeError: if the attribute does not exist
         """
         try:
-            self._dbmodel.del_attribute(key)
-        except Exception:  # pylint: disable=bare-except
-            session = get_scoped_session()
-            session.rollback()
-            raise
+            self._dbmodel.attributes.pop(key)
+        except KeyError as exception:
+            raise AttributeError('attribute `{}` does not exist'.format(exception))
+        else:
+            self._flag_field('attributes')
+            self._flush_if_stored()
 
-    def delete_attributes(self, keys):
+    def delete_attribute_many(self, keys):
         """Delete multiple attributes.
 
-        .. note:: The implementation should guarantee that all the keys that are to be deleted actually exist or the
-            entire operation should be canceled without any change and an ``AttributeError`` should be raised.
-
         :param keys: names of the attributes to delete
-        :raises AttributeError: if at least on of the attribute does not exist
+        :raises AttributeError: if at least one of the attribute does not exist
         """
-        raise NotImplementedError
+        non_existing_keys = [key for key in keys if key not in self._dbmodel.attributes]
+
+        if non_existing_keys:
+            raise AttributeError('attributes `{}` do not exist'.format(', '.join(non_existing_keys)))
+
+        for key in keys:
+            self.dbmodel.attributes.pop(key)
+
+        self._flag_field('attributes')
+        self._flush_if_stored()
 
     def clear_attributes(self):
         """Delete all attributes."""
-        raise NotImplementedError
+        self._dbmodel.attributes = {}
 
     def attributes_items(self):
-        """Return an iterator over the attribute items.
+        """Return an iterator over the attributes.
 
         :return: an iterator with attribute key value pairs
         """
@@ -255,26 +297,59 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         for key in self._dbmodel.attributes.keys():
             yield key
 
+    @property
+    def extras(self):
+        """Return the complete extras dictionary.
+
+        .. warning:: While the node is unstored, this will return references of the extras on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
+            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
+            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
+            `get_extra_many` instead.
+
+        :return: the extras as a dictionary
+        """
+        return self._dbmodel.extras
+
     def get_extra(self, key):
-        """Return an extra.
+        """Return the value of an extra.
+
+        .. warning:: While the node is unstored, this will return a reference of the extra on the database model,
+            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned extra
+            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            methods.
 
         :param key: name of the extra
         :return: the value of the extra
-        :raises AttributeError: if the extra does not exist
+        :raises AttributeError: if the extra does not exist and no default is specified
         """
         try:
-            return gen_utils.get_attr(self._dbmodel.extras, key)
-        except (KeyError, IndexError):
-            raise AttributeError('Extra `{}` does not exist'.format(key))
+            return self._dbmodel.extras[key]
+        except KeyError as exception:
+            raise AttributeError('extra `{}` does not exist'.format(exception))
 
-    def get_extras(self, keys):
-        """Return a set of extras.
+    def get_extra_many(self, keys):
+        """Return the values of multiple extras.
 
-        :param keys: names of the extras
-        :return: the values of the extras
+        .. warning:: While the node is unstored, this will return references of the extras on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
+            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
+            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
+            `get_extra_many` instead.
+
+        :param keys: a list of extra names
+        :return: a list of extra values
         :raises AttributeError: if at least one extra does not exist
         """
-        raise NotImplementedError
+        try:
+            return [self.get_extra(key) for key in keys]
+        except KeyError as exception:
+            raise AttributeError('extra `{}` does not exist'.format(exception))
 
     def set_extra(self, key, value):
         """Set an extra to the given value.
@@ -282,40 +357,39 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :param key: name of the extra
         :param value: value of the extra
         """
-        try:
-            self._dbmodel.set_extra(key, value)
-        except Exception:  # pylint: disable=bare-except
-            session = get_scoped_session()
-            session.rollback()
-            raise
+        if self.is_stored:
+            value = clean_value(value)
 
-    def set_extras(self, extras):
-        """Set extras.
+        self._dbmodel.extras[key] = value
+        self._flag_field('extras')
+        self._flush_if_stored()
+
+    def set_extra_many(self, extras):
+        """Set multiple extras.
 
         .. note:: This will override any existing extras that are present in the new dictionary.
 
-        :param extras: the new extras to set
+        :param extras: a dictionary with the extras to set
         """
-        try:
-            self.dbmodel.set_extras(extras)
-        except Exception:  # pylint: disable=bare-except
-            session = get_scoped_session()
-            session.rollback()
-            raise
+        if self.is_stored:
+            extras = {key: clean_value(value) for key, value in extras.items()}
+
+        for key, value in extras.items():
+            self.dbmodel.extras[key] = value
+
+        self._flag_field('extras')
+        self._flush_if_stored()
 
     def reset_extras(self, extras):
         """Reset the extras.
 
-        .. note:: This will completely reset any existing extras and replace them with the new dictionary.
+        .. note:: This will completely clear any existing extras and replace them with the new dictionary.
 
-        :param extras: the new extras to set
+        :param extras: a dictionary with the extras to set
         """
-        try:
-            self._dbmodel.reset_extras(extras)
-        except Exception:  # pylint: disable=bare-except
-            session = get_scoped_session()
-            session.rollback()
-            raise
+        self.dbmodel.extras = extras
+        self._flag_field('extras')
+        self._flush_if_stored()
 
     def delete_extra(self, key):
         """Delete an extra.
@@ -324,29 +398,36 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :raises AttributeError: if the extra does not exist
         """
         try:
-            self._dbmodel.del_extra(key)
-        except Exception:  # pylint: disable=bare-except
-            session = get_scoped_session()
-            session.rollback()
-            raise
+            self._dbmodel.extras.pop(key)
+        except KeyError as exception:
+            raise AttributeError('extra `{}` does not exist'.format(exception))
+        else:
+            self._flag_field('extras')
+            self._flush_if_stored()
 
-    def delete_extras(self, keys):
+    def delete_extra_many(self, keys):
         """Delete multiple extras.
 
-        .. note:: The implementation should guarantee that all the keys that are to be deleted actually exist or the
-            entire operation should be canceled without any change and an ``AttributeError`` should be raised.
-
         :param keys: names of the extras to delete
-        :raises AttributeError: if at least on of the extra does not exist
+        :raises AttributeError: if at least one of the extra does not exist
         """
-        raise NotImplementedError
+        non_existing_keys = [key for key in keys if key not in self._dbmodel.extras]
+
+        if non_existing_keys:
+            raise AttributeError('extras `{}` do not exist'.format(', '.join(non_existing_keys)))
+
+        for key in keys:
+            self.dbmodel.extras.pop(key)
+
+        self._flag_field('extras')
+        self._flush_if_stored()
 
     def clear_extras(self):
         """Delete all extras."""
-        raise NotImplementedError
+        self._dbmodel.extras = {}
 
     def extras_items(self):
-        """Return an iterator over the extra items.
+        """Return an iterator over the extras.
 
         :return: an iterator with extra key value pairs
         """
@@ -354,12 +435,20 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
             yield key, value
 
     def extras_keys(self):
-        """Return an iterator over the extras keys.
+        """Return an iterator over the extra keys.
 
-        :return: an iterator with extras keys
+        :return: an iterator with extra keys
         """
         for key in self._dbmodel.extras.keys():
             yield key
+
+    def _flag_field(self, field):
+        from aiida.backends.sqlalchemy.utils import flag_modified
+        flag_modified(self._dbmodel, field)
+
+    def _flush_if_stored(self):
+        if self._dbmodel.is_saved():
+            self._dbmodel.save()
 
     def add_incoming(self, source, link_type, link_label):
         """Add a link of the given type from a given node to ourself.
@@ -401,18 +490,23 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         except SQLAlchemyError as exception:
             raise exceptions.UniquenessError('failed to create the link: {}'.format(exception))
 
-    def store(self, attributes=None, links=None, with_transaction=True):
+    def clean_values(self):
+        self._dbmodel.attributes = clean_value(self._dbmodel.attributes)
+        self._dbmodel.extras = clean_value(self._dbmodel.extras)
+
+    def store(self, links=None, with_transaction=True, clean=True):
         """Store the node in the database.
 
-        :param attributes: optional attributes to set before storing, will override any existing attributes
         :param links: optional links to add before storing
+        :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
+        :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
         session = get_scoped_session()
 
-        session.add(self._dbmodel)
+        if clean:
+            self.clean_values()
 
-        if attributes:
-            self._dbmodel.attributes = attributes
+        session.add(self._dbmodel)
 
         if links:
             for link_triple in links:
@@ -432,6 +526,18 @@ class SqlaNodeCollection(BackendNodeCollection):
     """The collection of Node entries."""
 
     ENTITY_CLASS = SqlaNode
+
+    def get(self, pk):
+        """Return a Node entry from the collection with the given id
+
+        :param pk: id of the node
+        """
+        session = get_scoped_session()
+
+        try:
+            return self.ENTITY_CLASS.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
+        except NoResultFound:
+            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk))
 
     def delete(self, pk):
         """Remove a Node entry from the collection with the given id

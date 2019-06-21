@@ -17,7 +17,6 @@ import copy
 import importlib
 import six
 
-from aiida.backends.utils import validate_attribute_key
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
 from aiida.common.hashing import make_hash, _HASH_EXTRA_KEY
@@ -26,7 +25,7 @@ from aiida.common.links import LinkType
 from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.repository import Repository
-from aiida.orm.utils.node import AbstractNodeMeta, clean_value
+from aiida.orm.utils.node import AbstractNodeMeta, validate_attribute_extra_key
 
 from ..comments import Comment
 from ..computers import Computer
@@ -101,7 +100,6 @@ class Node(Entity):
 
     # These are to be initialized in the `initialization` method
     _incoming_cache = None
-    _attrs_cache = None
     _repository = None
 
     @classmethod
@@ -149,7 +147,6 @@ class Node(Entity):
         This needs to be called explicitly in each specific subclass implementation of the init.
         """
         super(Node, self).initialize()
-        self._attrs_cache = {}
 
         # A cache of incoming links represented as a list of LinkTriples instances
         self._incoming_cache = list()
@@ -315,296 +312,304 @@ class Node(Entity):
 
     @property
     def attributes(self):
-        """Return the attributes dictionary.
+        """Return the complete attributes dictionary.
 
-        .. note:: This will fetch all the attributes from the database which can be a heavy operation. If you only need
-            the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the getters
-            `get_attribute` and `get_attributes` instead.
+        .. warning:: While the node is unstored, this will return references of the attributes on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            attributes will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
+            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
+            getters `get_attribute` and `get_attribute_many` instead.
 
         :return: the attributes as a dictionary
         """
-        if self.is_stored:
-            return self.backend_entity.attributes
+        attributes = self.backend_entity.attributes
 
-        return self._attrs_cache
+        if self.is_stored:
+            attributes = copy.deepcopy(attributes)
+
+        return attributes
 
     def get_attribute(self, key, default=_NO_DEFAULT):
-        """Return an attribute.
+        """Return the value of an attribute.
+
+        .. warning:: While the node is unstored, this will return a reference of the attribute on the database model,
+            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            attribute will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods.
 
         :param key: name of the attribute
-        :param default: return this value instead of raising if the extra does not exist
+        :param default: return this value instead of raising if the attribute does not exist
         :return: the value of the attribute
-        :raises AttributeError: if the attribute does not exist
+        :raises AttributeError: if the attribute does not exist and no default is specified
         """
         try:
-            if self.is_stored:
-                attribute = self.backend_entity.get_attribute(key=key)
-            else:
-                attribute = self._attrs_cache[key]
-        except (AttributeError, KeyError):
+            attribute = self.backend_entity.get_attribute(key)
+        except AttributeError:
             if default is _NO_DEFAULT:
-                raise AttributeError('attribute {} does not exist'.format(key))
+                raise
             attribute = default
+
+        if self.is_stored:
+            attribute = copy.deepcopy(attribute)
 
         return attribute
 
-    def get_attributes(self, keys):
-        """Return a set of attributes.
+    def get_attribute_many(self, keys):
+        """Return the values of multiple attributes.
 
-        :param keys: names of the attributes
-        :return: the values of the attributes
+        .. warning:: While the node is unstored, this will return references of the attributes on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            attributes will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
+            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
+            getters `get_attribute` and `get_attribute_many` instead.
+
+        :param keys: a list of attribute names
+        :return: a list of attribute values
         :raises AttributeError: if at least one attribute does not exist
         """
-        return self.backend_entity.get_attributes(keys)
+        attributes = self.backend_entity.get_attribute_many(keys)
 
-    def set_attribute(self, key, value, clean=True, stored_check=True):
+        if self.is_stored:
+            attributes = copy.deepcopy(attributes)
+
+        return attributes
+
+    def set_attribute(self, key, value):
         """Set an attribute to the given value.
-
-        Setting attributes on a stored node is forbidden unless `stored_check` is set to False.
 
         :param key: name of the attribute
         :param value: value of the attribute
-        :param clean: boolean, when True will clean the value before passing it to the backend
-        :param stored_check: boolean, if True skips the check whether the node is stored
-        :raise aiida.common.ModificationNotAllowed: if the node is stored and `stored_check=False`
+        :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
+        :raise aiida.common.ModificationNotAllowed: if the node is stored
         """
-        if stored_check and self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot set an attribute on a stored node')
-
-        validate_attribute_key(key)
-
-        if clean:
-            value = clean_value(value)
-
         if self.is_stored:
-            self.backend_entity.set_attribute(key, value)
-        else:
-            self._attrs_cache[key] = value
+            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
 
-    def set_attributes(self, attributes):
-        """Set attributes.
+        validate_attribute_extra_key(key)
+        self.backend_entity.set_attribute(key, value)
+
+    def set_attribute_many(self, attributes):
+        """Set multiple attributes.
 
         .. note:: This will override any existing attributes that are present in the new dictionary.
 
-        :param attributes: the new attributes to set
+        :param attributes: a dictionary with the attributes to set
+        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
+        :raise aiida.common.ModificationNotAllowed: if the node is stored
         """
         if self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot set attributes of a stored node')
+            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
 
-        for key, value in attributes.items():
-            self._attrs_cache[key] = clean_value(value)
+        for key in attributes:
+            validate_attribute_extra_key(key)
+
+        self.backend_entity.set_attribute_many(attributes)
 
     def reset_attributes(self, attributes):
         """Reset the attributes.
 
-        .. note:: This will completely reset any existing attributes and replace them with the new dictionary.
+        .. note:: This will completely clear any existing attributes and replace them with the new dictionary.
 
-        :param attributes: the new attributes to set
+        :param attributes: a dictionary with the attributes to set
+        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
+        :raise aiida.common.ModificationNotAllowed: if the node is stored
         """
         if self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot reset the attributes of a stored node')
+            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
 
-        self.clear_attributes()
-        self.set_attributes(attributes)
+        for key in attributes:
+            validate_attribute_extra_key(key)
 
-    def delete_attribute(self, key, stored_check=True):
+        self.backend_entity.reset_attributes(attributes)
+
+    def delete_attribute(self, key):
         """Delete an attribute.
 
-        Deleting attributes on a stored node is forbidden unless `stored_check` is set to False.
-
         :param key: name of the attribute
-        :param stored_check: boolean, if True skips the check whether the node is stored
         :raises AttributeError: if the attribute does not exist
-        :raise aiida.common.ModificationNotAllowed: if the node is stored and `stored_check=False`
+        :raise aiida.common.ModificationNotAllowed: if the node is stored
         """
-        if stored_check and self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot delete an attribute on a stored node')
-
         if self.is_stored:
-            self.backend_entity.delete_attribute(key)
-        else:
-            try:
-                del self._attrs_cache[key]
-            except KeyError:
-                raise AttributeError('attribute {} does not exist'.format(key))
+            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
 
-    def delete_attributes(self, keys):
+        self.backend_entity.delete_attribute(key)
+
+    def delete_attribute_many(self, keys):
         """Delete multiple attributes.
 
         :param keys: names of the attributes to delete
-        :raises AttributeError: if at least on of the attribute does not exist
+        :raises AttributeError: if at least one of the attribute does not exist
+        :raise aiida.common.ModificationNotAllowed: if the node is stored
         """
         if self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot delete attributes of a stored node')
+            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
 
-        attributes_backup = copy.deepcopy(self._attrs_cache)
-
-        for key in keys:
-            try:
-                self._attrs_cache.pop(key)
-            except KeyError:
-                self._attrs_cache = attributes_backup
-                raise AttributeError('attribute {} does not exist'.format(key))
+        self.backend_entity.delete_attribute_many(keys)
 
     def clear_attributes(self):
         """Delete all attributes."""
         if self.is_stored:
-            raise exceptions.ModificationNotAllowed('cannot clear the attributes of a stored node')
+            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
 
-        self._attrs_cache = {}
+        self.backend_entity.clear_attributes()
 
     def attributes_items(self):
-        """Return an iterator over the attribute items.
+        """Return an iterator over the attributes.
 
         :return: an iterator with attribute key value pairs
         """
-        if self.is_stored:
-            for key, value in self.backend_entity.attributes_items():
-                yield key, value
-        else:
-            for key, value in self._attrs_cache.items():
-                yield key, value
+        return self.backend_entity.attributes_items()
 
     def attributes_keys(self):
         """Return an iterator over the attribute keys.
 
         :return: an iterator with attribute keys
         """
-        if self.is_stored:
-            for key in self.backend_entity.attributes_keys():
-                yield key
-        else:
-            for key in self._attrs_cache.keys():
-                yield key
+        return self.backend_entity.attributes_keys()
 
     @property
     def extras(self):
-        """Return the extras dictionary.
+        """Return the complete extras dictionary.
 
-        .. note:: This will fetch all the extras from the database which can be a heavy operation. If you only need
-            the keys or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra`
-            and `get_extras` instead.
+        .. warning:: While the node is unstored, this will return references of the extras on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
+            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
+            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
+            `get_extra_many` instead.
 
         :return: the extras as a dictionary
         """
-        return self.backend_entity.extras
+        extras = self.backend_entity.extras
+
+        if self.is_stored:
+            extras = copy.deepcopy(extras)
+
+        return extras
 
     def get_extra(self, key, default=_NO_DEFAULT):
-        """Return an extra.
+        """Return the value of an extra.
+
+        .. warning:: While the node is unstored, this will return a reference of the extra on the database model,
+            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned extra
+            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            methods.
 
         :param key: name of the extra
-        :param default: return this value instead of raising if the extra does not exist
+        :param default: return this value instead of raising if the attribute does not exist
         :return: the value of the extra
-        :raises AttributeError: if the extra does not exist
+        :raises AttributeError: if the extra does not exist and no default is specified
         """
         try:
-            return self.backend_entity.get_extra(key)
+            extra = self.backend_entity.get_extra(key)
         except AttributeError:
-            if default is not _NO_DEFAULT:
-                return default
-            raise
+            if default is _NO_DEFAULT:
+                raise
+            extra = default
 
-    def get_extras(self, keys):
-        """Return a set of extras.
+        if self.is_stored:
+            extra = copy.deepcopy(extra)
 
-        :param keys: names of the extras
-        :return: the values of the extras
+        return extra
+
+    def get_extra_many(self, keys):
+        """Return the values of multiple extras.
+
+        .. warning:: While the node is unstored, this will return references of the extras on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
+            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
+            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
+            `get_extra_many` instead.
+
+        :param keys: a list of extra names
+        :return: a list of extra values
         :raises AttributeError: if at least one extra does not exist
         """
-        return self.backend_entity.get_extras(keys)
+        extras = self.backend_entity.get_extra_many(keys)
+
+        if self.is_stored:
+            extras = copy.deepcopy(extras)
+
+        return extras
 
     def set_extra(self, key, value):
         """Set an extra to the given value.
 
-        Setting extras on unstored nodes is forbidden.
-
         :param key: name of the extra
         :param value: value of the extra
+        :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
         """
-        self.backend_entity.set_extra(key, clean_value(value))
+        validate_attribute_extra_key(key)
+        self.backend_entity.set_extra(key, value)
 
-    def set_extras(self, extras):
-        """Set extras.
+    def set_extra_many(self, extras):
+        """Set multiple extras.
 
         .. note:: This will override any existing extras that are present in the new dictionary.
 
-        :param extras: the new extras to set
+        :param extras: a dictionary with the extras to set
+        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
         """
-        self.backend_entity.set_extras(clean_value(extras))
+        for key in extras:
+            validate_attribute_extra_key(key)
+
+        self.backend_entity.set_extra_many(extras)
 
     def reset_extras(self, extras):
         """Reset the extras.
 
-        .. note:: This will completely reset any existing extras and replace them with the new dictionary.
+        .. note:: This will completely clear any existing extras and replace them with the new dictionary.
 
-        :param extras: the new extras to set
+        :param extras: a dictionary with the extras to set
+        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
         """
-        self.backend_entity.reset_extras(clean_value(extras))
+        for key in extras:
+            validate_attribute_extra_key(key)
+
+        self.backend_entity.reset_extras(extras)
 
     def delete_extra(self, key):
         """Delete an extra.
-
-        Deleting extras on unstored nodes is forbidden.
 
         :param key: name of the extra
         :raises AttributeError: if the extra does not exist
         """
         self.backend_entity.delete_extra(key)
 
-    def delete_extras(self, keys):
+    def delete_extra_many(self, keys):
         """Delete multiple extras.
 
         :param keys: names of the extras to delete
-        :raises AttributeError: if at least on of the extra does not exist
+        :raises AttributeError: if at least one of the extra does not exist
         """
-        self.backend_entity.delete_extras(keys)
+        self.backend_entity.delete_extra_many(keys)
 
     def clear_extras(self):
         """Delete all extras."""
         self.backend_entity.clear_extras()
 
     def extras_items(self):
-        """Return an iterator over the extra items.
+        """Return an iterator over the extras.
 
         :return: an iterator with extra key value pairs
         """
-        for key, value in self.backend_entity.extras():
-            yield key, value
+        return self.backend_entity.extras_items()
 
     def extras_keys(self):
-        """Return an iterator over the attribute keys.
+        """Return an iterator over the extra keys.
 
-        :return: an iterator with attribute keys
+        :return: an iterator with extra keys
         """
-        for key in self.backend_entity.extras():
-            yield key
-
-    def append_to_attr(self, key, value, clean=True):
-        """
-        Append value to an attribute of the Node (in the DbAttribute table).
-
-        :param key: key name of "list-type" attribute
-            If attribute doesn't exist, it is created.
-        :param value: the value to append to the list
-        :param clean: whether to clean the value
-            WARNING: when set to False, storing will throw errors
-            for any data types not recognized by the db backend
-        :raise aiida.common.ValidationError: if the key is not valid, e.g. it contains the separator symbol
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('can only call `append_to_attr` on unstored nodes')
-
-        validate_attribute_key(key)
-
-        self._attrs_cache.setdefault(key, list())
-
-        try:
-            if clean:
-                self._attrs_cache[key].append(clean_value(value))
-            else:
-                self._attrs_cache[key].append(value)
-        except AttributeError:
-            raise AttributeError('can only call `append_to_attr` for attributes that are lists')
+        return self.backend_entity.extras_keys()
 
     def list_objects(self, key=None):
         """Return a list of the objects contained in this repository, optionally in the given sub directory.
@@ -941,7 +946,7 @@ class Node(Entity):
 
         for link_triple in self._incoming_cache:
             if not link_triple.node.is_stored:
-                link_triple.node.store(with_transaction=False, use_cache=use_cache)
+                link_triple.node.store(with_transaction=with_transaction, use_cache=use_cache)
 
         return self.store(with_transaction, use_cache=use_cache)
 
@@ -973,13 +978,17 @@ class Node(Entity):
             if use_cache is None:
                 use_cache = get_use_cache(type(self))
 
+            # Clean the values on the backend node *before* computing the hash in `_get_same_node`. This will allow
+            # us to set `clean=False` if we are storing normally, since the values will already have been cleaned
+            self._backend_entity.clean_values()
+
             # Retrieve the cached node.
             same_node = self._get_same_node() if use_cache else None
 
             if same_node is not None:
                 self._store_from_cache(same_node, with_transaction=with_transaction)
             else:
-                self._store(with_transaction=with_transaction)
+                self._store(with_transaction=with_transaction, clean=True)
 
             # Set up autogrouping used by verdi run
             from aiida.orm.autogroup import current_autogroup, Autogroup, VERDIAUTOGROUP_TYPE
@@ -997,10 +1006,11 @@ class Node(Entity):
 
         return self
 
-    def _store(self, with_transaction=True):
+    def _store(self, with_transaction=True, clean=True):
         """Store the node in the database while saving its attributes and repository directory.
 
-        :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
+        :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
+        :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
         # First store the repository folder such that if this fails, there won't be an incomplete node in the database.
         # On the flipside, in the case that storing the node does fail, the repository will now have an orphaned node
@@ -1008,15 +1018,13 @@ class Node(Entity):
         self._repository.store()
 
         try:
-            attributes = self._attrs_cache
             links = self._incoming_cache
-            self._backend_entity.store(attributes, links, with_transaction=with_transaction)
+            self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
         except Exception:
             # I put back the files in the sandbox folder since the transaction did not succeed
             self._repository.restore()
             raise
 
-        self._attrs_cache = {}
         self._incoming_cache = list()
         self._backend_entity.set_extra(_HASH_EXTRA_KEY, self.get_hash())
 
@@ -1050,7 +1058,7 @@ class Node(Entity):
 
         self.put_object_from_tree(cache_node._repository._get_base_folder().abspath)  # pylint: disable=protected-access
 
-        self._store(with_transaction=with_transaction)
+        self._store(with_transaction=with_transaction, clean=False)
         self._add_outputs_from_cache(cache_node)
         self.set_extra('_aiida_cached_from', cache_node.uuid)
 

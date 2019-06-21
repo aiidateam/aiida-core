@@ -30,10 +30,7 @@
         aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
         aiida/backends/djsite/db/migrations/__init__.py|
         aiida/backends/djsite/db/models.py|
-        aiida/backends/djsite/db/subtests/test_migrations.py|
         aiida/backends/djsite/db/subtests/test_generic.py|
-        aiida/backends/djsite/db/subtests/test_nodes.py|
-        aiida/backends/djsite/db/subtests/test_query.py|
         aiida/backends/djsite/__init__.py|
         aiida/backends/djsite/manage.py|
         aiida/backends/djsite/queries.py|

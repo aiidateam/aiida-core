@@ -16,7 +16,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 
-from aiida.restapi.translator.node import NodeTranslator
+from aiida.restapi.translator.nodes.node import NodeTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
 from aiida.orm.utils.repository import FileType
 
@@ -33,8 +33,6 @@ class CalculationTranslator(NodeTranslator):
     _aiida_class = CalculationNode
     # The string name of the AiiDA class
     _aiida_type = "process.calculation.calculation.CalculationNode"
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = "process.calculation."
 
     _result_type = __label__
 

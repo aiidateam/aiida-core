@@ -162,10 +162,8 @@ class TestVerdiImport(AiidaTestCase):
         """ Test import of old local archives
         Expected behavior: Automatically migrate to newest version and import correctly.
         """
-        archives = [('export_v0.1_simple.aiida', '0.1'),
-                    ('export_v0.2_simple.aiida', '0.2'),
-                    ('export_v0.3_simple.aiida', '0.3'),
-                    ('export_v0.4_simple.aiida', '0.4')]
+        archives = [('export_v0.1_simple.aiida', '0.1'), ('export_v0.2_simple.aiida', '0.2'),
+                    ('export_v0.3_simple.aiida', '0.3'), ('export_v0.4_simple.aiida', '0.4')]
 
         for archive, version in archives:
             options = [get_archive_file(archive, filepath=self.archive_path)]
@@ -196,9 +194,10 @@ class TestVerdiImport(AiidaTestCase):
         url_archive = "export_v0.4_no_UPF.aiida"
         local_archive = "export_v0.5_simple.aiida"
 
-        options = [get_archive_file(local_archive, filepath=self.archive_path),
-                   self.url_path + url_archive,
-                   get_archive_file(local_archive, filepath=self.archive_path)]
+        options = [
+            get_archive_file(local_archive, filepath=self.archive_path), self.url_path + url_archive,
+            get_archive_file(local_archive, filepath=self.archive_path)
+        ]
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
         self.assertIsNone(result.exception, result.output)

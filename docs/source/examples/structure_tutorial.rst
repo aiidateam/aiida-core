@@ -208,11 +208,11 @@ import phase different kinds will be created::
 
   >>> import ase
   >>> StructureData = DataFactory("structure")
-  >>> asecell = ase.Atoms('Fe2')
-  >>> asecell[0].mass = 55.
-  >>> asecell[1].mass = 56.
-  >>> asecell.cell = cell # defines a periodic cell
-  >>> s = StructureData(ase=asecell)
+  >>> ase_structure = ase.Atoms('Fe2')
+  >>> ase_structure[0].mass = 55.
+  >>> ase_structure[1].mass = 56.
+  >>> ase_structure.cell = cell # defines a periodic cell
+  >>> s = StructureData(ase=ase_structure)
   >>> for kind in s.kinds:
   >>>     print(kind.name, kind.mass)
   Fe 55.0
@@ -224,11 +224,11 @@ symbol in order to get the species name::
 
   >>> import ase
   >>> StructureData = DataFactory("structure")
-  >>> asecell = ase.Atoms('Fe2')
-  >>> asecell[0].tag = 1
-  >>> asecell[1].tag = 2
-  >>> asecell.cell = cell
-  >>> s = StructureData(ase=asecell)
+  >>> ase_structure = ase.Atoms('Fe2')
+  >>> ase_structure[0].tag = 1
+  >>> ase_structure[1].tag = 2
+  >>> ase_structure.cell = cell
+  >>> s = StructureData(ase=ase_structure)
   >>> for kind in s.kinds:
   >>>     print(kind.name)
   Fe1

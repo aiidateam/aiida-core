@@ -51,7 +51,6 @@ Scripting
 While many common functionalities are provided by either command-line tools 
 (via ``verdi``) or the web interface, for fine tuning (or automatization) 
 it is useful to directly access the python objects and call their methods.
-
 This is possible in two ways, either via an interactive shell, or writing and 
 running a script. Both methods are described below.
 
@@ -59,6 +58,7 @@ running a script. Both methods are described below.
     :maxdepth: 4
 
     scripting
+    daemon_service
 
 
 

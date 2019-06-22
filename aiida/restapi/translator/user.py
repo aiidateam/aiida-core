@@ -27,8 +27,6 @@ class UserTranslator(BaseTranslator):
     _aiida_class = orm.User
     # The string name of the AiiDA class
     _aiida_type = "User"
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = 'user'
 
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = False

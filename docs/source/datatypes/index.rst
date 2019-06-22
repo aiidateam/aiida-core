@@ -13,15 +13,15 @@ Most common datatypes
 ---------------------
 
 Here follows a short summary of common datatypes already provided with AiiDA. This list is not
-complete, see also inside `aiida.orm.nodes.data` for the list of all available plugins.
+complete, see also inside :py:mod:`aiida.orm.nodes.data` for the list of all available plugins.
 
 We also mention, when relevant, what is stored in the database (as attributes, so that
 it can be easily queried e.g. with the :ref:`QueryBuilder <UsingQueryBuilder>`) and what is
 stored in the file repository (providing access to the file contents, but not efficiently
-querable: this is useful for e.g. big data files that don't need to be queried for).
+queryable: this is useful for e.g. big data files that don't need to be queried for).
 
 For all data types, you can follow the link to the data class to read more about
-the methods provided, how to access them ...
+the methods provided, how to access them, and so on.
 
 If you need to work with some specific type of data, first check the list of data types/plugins
 below, and if you don't find what you need, give a look to
@@ -29,24 +29,29 @@ below, and if you don't find what you need, give a look to
 
 Base types
 ++++++++++
-In the :py:mod:`aiida.orm.nodes.data.base` module you find a number of useful classes
+In the :py:mod:`aiida.orm.nodes.data.base` module there are a number of useful classes
 that wrap base python datatypes (like :py:class:`~aiida.orm.nodes.data.int.Int`,
 :py:class:`~aiida.orm.nodes.data.float.Float`, :py:class:`~aiida.orm.nodes.data.str.Str`, ...).
-These are particularly useful when you need to provide a single parameter to e.g. a
+These are automatically loaded with the verdi shell, and also directly exposed from :py:mod:`aiida.orm`.
+These classes are particularly useful when you need to provide a single parameter to e.g. a
 :py:class:`~aiida.engine.processes.functions.workfunction`.
 
 Each of these classes can most often be used transparently (e.g. you can sum two
 :py:class:`~aiida.orm.nodes.data.int.Int` objects, etc.). If you need to access the bare
-value and not the whole AiiDA class, use the `.value` property.
+value and not the whole AiiDA class, use the ``.value`` property.
 
 In the same module, there is also a :py:class:`~aiida.orm.nodes.data.list.List` class to
 store a list of base data types.
+
+The different datatypes can be accessed through the :py:func:`~aiida.plugins.factories.DataFactory` function
+(also exposed from :py:mod:`aiida.plugins`) by passing an entry point to it as an argument. A list of all the data entry points 
+can be obtain running the command ``verdi plugin list aiida.data``.
 
 Dict
 +++++++++++++
 
 * **Class**: :py:class:`~aiida.orm.nodes.data.dict.Dict`
-* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``parameter``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``dict``
 * **Aim**: store a dictionary of python base types in the database.
   It can store any dictionary where elements can be a base python type (strings, floats,
   integers, booleans, None type, datetime objects) and lists or dictionaries of them, at
@@ -113,8 +118,8 @@ KpointsData
   explicit list of k-points (optionally with a weight associated to each one). Can also
   associate labels to (some of the) points, which is very useful for later plottings
   band structures (and store them in ``BandsData`` objects).
-* **What is stored in the database**: like ``ArrayData``
-* **What is stored in the file repository**: the array data in numpy format
+* **What is stored in the database**: like ``ArrayData``, the shape of the arrays and the name of the arrays
+* **What is stored in the file repository**:  like ``ArrayData``, the array data in numpy format
 * **Additional functionality**:
 
   * :ref:`Automatically compute k-points path given a crystal structure<AutomaticKpoints>`
@@ -125,8 +130,8 @@ BandsData
 * **Class**: :py:class:`~aiida.orm.nodes.data.array.bands.BandsData`
 * **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``array.bands``
 * **Aim**: store electronic structure bands (of phonon bands)
-* **What is stored in the database**: like ``ArrayData``
-* **What is stored in the file repository**: the array data in numpy format
+* **What is stored in the database**: like ``ArrayData``, the shape of the arrays and the name of the arrays
+* **What is stored in the file repository**:  like ``ArrayData``, the array data in numpy format
 * **Additional functionality**:
 
   * :ref:`Export to a number of formats (xmgrace, gnuplot, png, pdf, ...)<ExportDataNodes>`
@@ -137,8 +142,8 @@ XyData
 * **Class**: :py:class:`~aiida.orm.nodes.data.array.xy.XyData`
 * **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``array.xy``
 * **Aim**: store data for a 2D (xy) plot
-* **What is stored in the database**: like ``ArrayData``
-* **What is stored in the file repository**: the array data in numpy format
+* **What is stored in the database**: like ``ArrayData``, the shape of the arrays and the name of the arrays
+* **What is stored in the file repository**:  like ``ArrayData``, the array data in numpy format
 
 FolderData
 ++++++++++

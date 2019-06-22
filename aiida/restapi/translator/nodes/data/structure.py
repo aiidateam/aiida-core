@@ -15,7 +15,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 
-from aiida.restapi.translator.data import DataTranslator
+from aiida.restapi.translator.nodes.data import DataTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
 from aiida.common.exceptions import LicensingException
 
@@ -32,8 +32,6 @@ class StructureDataTranslator(DataTranslator):
     _aiida_class = StructureData
     # The string name of the AiiDA class
     _aiida_type = "data.structure.StructureData"
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = _aiida_type + '.'
 
     _result_type = __label__
 

@@ -136,9 +136,6 @@ class CalcJobNode(CalculationNode):
         if self.computer is None:
             raise exceptions.ValidationError('no computer was specified')
 
-        if self.get_state() and self.get_state() not in CalcJobState:
-            raise exceptions.ValidationError('invalid calculation state `{}`'.format(self.get_state()))
-
         try:
             parser_class = self.get_parser_class()
         except exceptions.EntryPointError as exception:
@@ -225,20 +222,26 @@ class CalcJobNode(CalculationNode):
             self.set_option(name, value)
 
     def get_state(self):
-        """Return the state of the calculation job.
+        """Return the calculation job active sub state.
 
-        :return: the calculation job state
+        The calculation job state serves to give more granular state information to `CalcJobs`, in addition to the
+        generic process state, while the calculation job is active. The state can take values from the enumeration
+        defined in `aiida.common.datastructures.CalcJobState` and can be used to query for calculation jobs in specific
+        active states.
+
+        :return: instance of `aiida.common.datastructures.CalcJobState` or `None` if invalid value, or not set
         """
         state = self.get_attribute(self.CALC_JOB_STATE_KEY, None)
 
-        if state:
-            return CalcJobState(state)
+        try:
+            state = CalcJobState(state)
+        except ValueError:
+            state = None
 
-        return None
+        return state
 
     def set_state(self, state):
-        """
-        Set the state of the calculation job.
+        """Set the calculation active job state.
 
         :param state: a string with the state from ``aiida.common.datastructures.CalcJobState``.
         :raise: ValueError if state is invalid

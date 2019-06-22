@@ -87,8 +87,7 @@ class TestProcessFunction(AiidaTestCase):
             return data_a
 
         @workfunction
-        def function_default_from_docs():
-            """Description taken from the docs."""
+        def function_default_label():
             return
 
         @workfunction
@@ -112,7 +111,7 @@ class TestProcessFunction(AiidaTestCase):
         self.function_args_and_kwargs = function_args_and_kwargs
         self.function_args_and_default = function_args_and_default
         self.function_defaults = function_defaults
-        self.function_default_from_docs = function_default_from_docs
+        self.function_default_label = function_default_label
         self.function_exit_code = function_exit_code
         self.function_excepts = function_excepts
         self.function_out_unstored = function_out_unstored
@@ -306,15 +305,15 @@ class TestProcessFunction(AiidaTestCase):
         self.assertEqual(node.label, CUSTOM_LABEL)
         self.assertEqual(node.description, CUSTOM_DESCRIPTION)
 
-    def test_function_default_label_description(self):
-        """Verify unless specified label and description are taken from function name and docstring respectively."""
+    def test_function_default_label(self):
+        """Verify unless specified label is taken from function name."""
         metadata = {'label': CUSTOM_LABEL, 'description': CUSTOM_DESCRIPTION}
 
-        _, node = self.function_default_from_docs.run_get_node()
-        self.assertEqual(node.label, 'function_default_from_docs')
-        self.assertEqual(node.description, 'Description taken from the docs.')
+        _, node = self.function_default_label.run_get_node()
+        self.assertEqual(node.label, 'function_default_label')
+        self.assertEqual(node.description, '')
 
-        _, node = self.function_default_from_docs.run_get_node(metadata=metadata)
+        _, node = self.function_default_label.run_get_node(metadata=metadata)
         self.assertEqual(node.label, CUSTOM_LABEL)
         self.assertEqual(node.description, CUSTOM_DESCRIPTION)
 

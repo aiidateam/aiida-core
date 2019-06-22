@@ -76,8 +76,10 @@ class Process(plumpy.Process):
             help='Label to set on the process node.')
         spec.input('{}.call_link_label'.format(spec.metadata_key), valid_type=six.string_types[0], default='CALL',
             help='The label to use for the `CALL` link if the process is called by another process.')
-        spec.exit_code(10, 'ERROR_INVALID_OUTPUT', message='the process returned an invalid output')
-        spec.exit_code(11, 'ERROR_MISSING_OUTPUT', message='the process did not register a required output')
+        spec.exit_code(1, 'ERROR_UNSPECIFIED', message='The process has failed with an unspecified error.')
+        spec.exit_code(2, 'ERROR_LEGACY_FAILURE', message='The process failed with legacy failure mode.')
+        spec.exit_code(10, 'ERROR_INVALID_OUTPUT', message='The process returned an invalid output.')
+        spec.exit_code(11, 'ERROR_MISSING_OUTPUT', message='The process did not register a required output.')
 
     @classmethod
     def get_builder(cls):

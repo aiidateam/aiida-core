@@ -15,12 +15,27 @@ from __future__ import absolute_import
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import LinkType
+from aiida.common import LinkType, CalcJobState
 from aiida.orm import CalcJobNode, FolderData
 
 
 class TestCalcJobNode(AiidaTestCase):
     """Tests for the `CalcJobNode` node sub class."""
+
+    def test_get_set_state(self):
+        """Test the `get_state` and `set_state` method."""
+        node = CalcJobNode(computer=self.computer,)
+        self.assertEqual(node.get_state(), None)
+
+        with self.assertRaises(ValueError):
+            node.set_state('INVALID')
+
+        node.set_state(CalcJobState.UPLOADING)
+        self.assertEqual(node.get_state(), CalcJobState.UPLOADING)
+
+        # Setting an illegal calculation job state, the `get_state` should not fail but return `None`
+        node.set_attribute(node.CALC_JOB_STATE_KEY, 'INVALID')
+        self.assertEqual(node.get_state(), None)
 
     def test_get_scheduler_stdout(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""

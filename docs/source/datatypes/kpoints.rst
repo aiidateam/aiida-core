@@ -22,18 +22,18 @@ The difference between the two methods is the following:
 
 Depending on how the underlying code works, one method might be preferred on the other.
 
-The docstring of the methods describes the expected parameters. The general interface requires always a StructureData
+The docstring of the methods describes the expected parameters. The general interface requires always a ``StructureData``
 as the first parameter ``structure``, as well as a string for the method to use (by default this is
 `seekpath <https://github.com/giovannipizzi/seekpath/>`_, but also the ``legacy`` method implemented in earlier versions
 of AiiDA is available; see description below).
 
-Additional parameters are passed as ``kwargs`` to the underlying implementation, that ofen accepts a different number
+Additional parameters are passed as ``kwargs`` to the underlying implementation, that often accepts a different number
 of parameters.
 
 Seekpath implementation
 +++++++++++++++++++++++
 When specifying ``method='seekpath'``, the `seekpath <https://github.com/giovannipizzi/seekpath/>`_ library is used
-to generate the path. Note that this requires that ``seekpath`` is installed (this is not available by default, in
+to generate the path. Note that this requires  ``seekpath`` to be installed (this is not available by default, in
 order to reduce the dependencies of AiiDA core, but can be easily installed using ``pip install seekpath``).
 
 For a full description of the accepted parameters, we refer to the docstring of the underlying methods
@@ -89,10 +89,10 @@ Deprecated methods
 Originally, the ``legacy`` implementation was implemented directly into the
 :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData` class.
 
-In order to implement more than one method, and
+In order to implement more than one method, 
 to simplify the :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData` class,
-and to decouple the underlying logic from AiiDA, we have deprecated those methods, factored out the logic into
-the :py:class:`~aiida.tools.data.array.kpoints.legacy` module. The methods are currently still available
+and to decouple the underlying logic from AiiDA, we have deprecated those methods and factored out the logic into
+the :py:class:`~aiida.tools.data.array.kpoints.legacy` module. The methods are currently still available,
 but will be removed in future versions of AiiDA; plese use directly the wrappers
 :py:func:`aiida.tools.data.array.kpoints.get_kpoints_path`
 and :py:func:`aiida.tools.data.array.kpoints.get_explicit_kpoints_path` instead, passing as option ``method='legacy'``.

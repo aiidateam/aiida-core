@@ -22,7 +22,8 @@ DB_TEST_LIST = {
         'generic': ['aiida.backends.djsite.db.subtests.test_generic'],
         'migrations': [
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_many',
-            'aiida.backends.djsite.db.subtests.migrations.test_migrations_0037_attributes_extras_settings_json'
+            'aiida.backends.djsite.db.subtests.migrations.test_migrations_0037_attributes_extras_settings_json',
+            'aiida.backends.djsite.db.subtests.migrations.test_migrations_0038_data_migration_legacy_job_calculations',
         ],
     },
     BACKEND_SQLA: {

@@ -23,7 +23,7 @@ class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0037_attributes_extras_settings_json'
+LATEST_MIGRATION = '0038_data_migration_legacy_job_calculations'
 
 
 def _update_schema_version(version, apps, schema_editor):

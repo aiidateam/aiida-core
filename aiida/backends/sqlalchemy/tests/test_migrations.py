@@ -14,10 +14,11 @@ from __future__ import division
 from __future__ import print_function
 
 from contextlib import contextmanager
-
 import os
+
 from alembic import command
 from alembic.config import Config
+import six
 from six.moves import zip
 
 from aiida.backends import sqlalchemy as sa
@@ -1274,5 +1275,70 @@ class TestParameterDataToDictMigration(TestMigrationsSQLA):
 
                 node = session.query(DbNode).filter(DbNode.id == self.node_id).one()
                 self.assertEqual(node.type, 'data.dict.Dict.')
+            finally:
+                session.close()
+
+
+class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
+    """Test the migration that performs a data migration of legacy `JobCalcState`."""
+
+    migrate_from = '07fac78e6209'
+    migrate_to = '26d561acd560'
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+        from aiida.backends.general.migrations.calc_state import STATE_MAPPING
+
+        self.state_mapping = STATE_MAPPING
+        self.nodes = {}
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                session.add(user)
+                session.commit()
+
+                for state in self.state_mapping:
+                    node = DbNode(
+                        node_type='process.calculation.calcjob.CalcJobNode.',
+                        user_id=user.id,
+                        attributes={'state': state}
+                    )
+                    session.add(node)
+                    session.commit()
+
+                    self.nodes[state] = node.id
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_data_migrated(self):
+        """Verify that the `process_state`, `process_status` and `exit_status` are set correctly."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+                for state, pk in self.nodes.items():
+                    node = session.query(DbNode).filter(DbNode.id == pk).one()
+                    attrs = node.attributes
+                    self.assertEqual(attrs.get('process_state', None), self.state_mapping[state].process_state)
+                    self.assertEqual(attrs.get('process_status', None), self.state_mapping[state].process_status)
+                    self.assertEqual(attrs.get('exit_status', None), self.state_mapping[state].exit_status)
+                    self.assertEqual(attrs.get('process_label'), 'Legacy JobCalculation')
+                    self.assertIsNone(attrs.get('state', None))  # The old state should have been removed
+
+                    exit_status = attrs.get('exit_status', None)
+                    if exit_status is not None:
+                        self.assertIsInstance(exit_status, six.integer_types)
             finally:
                 session.close()

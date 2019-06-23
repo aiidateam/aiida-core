@@ -211,6 +211,7 @@ py:class  sqlalchemy.ext.declarative.api.Model
 py:class  sqlalchemy.sql.functions.FunctionElement
 py:class  sqlalchemy.orm.query.Query
 py:class  sqlalchemy.orm.util.AliasedClass
+py:class  sqlalchemy.orm.session.Session
 py:exc    sqlalchemy.orm.exc.MultipleResultsFound
 
 py:class  sphinx.ext.autodoc.ClassDocumenter

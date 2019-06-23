@@ -21,6 +21,7 @@ from aiida.orm import load_node
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.plugins import BaseFactory
 from aiida.common import LinkType
+from aiida.orm.utils.links import LinkPair
 
 
 def default_link_styles(link_type):
@@ -383,13 +384,15 @@ class Graph(object):
                 include_sublabels=self._include_sublabels)
             self._nodes.add(node.pk)
 
-    def add_edge(self, in_node, out_node, style=None, overwrite=False):
+    def add_edge(self, in_node, out_node, link_pair=None, style=None, overwrite=False):
         """add single node to the graph
 
         :param in_node: node or node pk/uuid
         :type in_node: int or aiida.orm.nodes.node.Node
         :param out_node: node or node pk/uuid
         :type out_node: int or str or aiida.orm.nodes.node.Node
+        :param link_pair: defining the relationship between the nodes
+        :type link_pair: None or aiida.orm.utils.links.LinkPair
         :param style: graphviz style parameters (Default value = None)
         :type style: dict or None
         :param overwrite: whether to overrite existing edge (Default value = False)
@@ -403,11 +406,11 @@ class Graph(object):
         if out_node.pk not in self._nodes:
             raise AssertionError("the out_node must have already been added to the graph")
 
-        if (in_node.pk, out_node.pk) in self.edges and not overwrite:
+        if (in_node.pk, out_node.pk, link_pair) in self.edges and not overwrite:
             return
 
         style = {} if style is None else style
-        self._edges.add((in_node.pk, out_node.pk))
+        self._edges.add((in_node.pk, out_node.pk, link_pair))
         _add_graphviz_edge(self._graph, in_node, out_node, style)
 
     def add_incoming(self, node, link_types=(), annotate_links=False, return_pks=True):
@@ -436,6 +439,7 @@ class Graph(object):
         nodes = []
         for link_triple in node.get_incoming(link_type=link_types).link_triples:
             self.add_node(link_triple.node)
+            link_pair = LinkPair(link_triple.link_type, link_triple.link_label)
             style = self._link_styles(link_triple.link_type)
             if annotate_links == "label":
                 style['label'] = link_triple.link_label
@@ -443,7 +447,7 @@ class Graph(object):
                 style['label'] = link_triple.link_type.name
             elif annotate_links == "both":
                 style['label'] = "{}\n{}".format(link_triple.link_type.name, link_triple.link_label)
-            self.add_edge(link_triple.node, node, style=style)
+            self.add_edge(link_triple.node, node, link_pair, style=style)
             nodes.append(link_triple.node.pk if return_pks else link_triple.node)
 
         return nodes
@@ -474,6 +478,7 @@ class Graph(object):
         nodes = []
         for link_triple in node.get_outgoing(link_type=link_types).link_triples:
             self.add_node(link_triple.node)
+            link_pair = LinkPair(link_triple.link_type, link_triple.link_label)
             style = self._link_styles(link_triple.link_type)
             if annotate_links == "label":
                 style['label'] = link_triple.link_label
@@ -481,7 +486,7 @@ class Graph(object):
                 style['label'] = link_triple.link_type.name
             elif annotate_links == "both":
                 style['label'] = "{}\n{}".format(link_triple.link_type.name, link_triple.link_label)
-            self.add_edge(node, link_triple.node, style=style)
+            self.add_edge(node, link_triple.node, link_pair, style=style)
             nodes.append(link_triple.node.pk if return_pks else link_triple.node)
 
         return nodes

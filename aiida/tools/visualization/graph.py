@@ -99,6 +99,8 @@ def default_data_sublabels(node):
     :rtype: str
 
     """
+    # pylint: disable=too-many-branches
+
     class_node_type = node.class_node_type
     if class_node_type == "data.int.Int.":
         sublabel = "value: {}".format(node.get_attribute("value", ""))

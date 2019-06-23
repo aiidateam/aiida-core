@@ -103,6 +103,10 @@ def default_data_sublabels(node):
         sublabel = "value: {}".format(node.get_attribute("value", ""))
     elif class_node_type == "data.float.Float.":
         sublabel = "value: {}".format(node.get_attribute("value", ""))
+    elif class_node_type == "data.str.Str.":
+        sublabel = "{}".format(node.get_attribute("value", ""))
+    elif class_node_type == "data.bool.Bool.":
+        sublabel = "{}".format(node.get_attribute("value", ""))
     elif class_node_type == "data.code.Code.":
         sublabel = "{}@{}".format(os.path.basename(node.get_execname()), node.get_computer_name())
     elif class_node_type == "data.singlefile.SinglefileData.":
@@ -120,6 +124,8 @@ def default_data_sublabels(node):
         if sg_numbers:
             sublabel_lines.append(", ".join(sg_numbers))
         sublabel = "; ".join(sublabel_lines)
+    elif class_node_type == "data.upf.UpfData.":
+        sublabel = "{}".format(node.get_attribute("element", ""))
     else:
         sublabel = node.get_description()
 

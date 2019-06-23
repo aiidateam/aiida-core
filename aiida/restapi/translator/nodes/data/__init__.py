@@ -14,8 +14,7 @@ Translator for data node
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.restapi.translator.node import NodeTranslator
-import aiida
+from aiida.restapi.translator.nodes.node import NodeTranslator
 
 
 class DataTranslator(NodeTranslator):
@@ -26,11 +25,10 @@ class DataTranslator(NodeTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "data"
     # The AiiDA class one-to-one associated to the present class
-    _aiida_class = aiida.orm.Data
+    from aiida.orm import Data
+    _aiida_class = Data
     # The string name of the AiiDA class
     _aiida_type = "data.Data"
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = _aiida_type + '.'
 
     _result_type = __label__
 

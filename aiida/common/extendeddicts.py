@@ -12,6 +12,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from collections import Mapping
+
 from . import exceptions
 
 __all__ = ('AttributeDict', 'FixedFieldsAttributeDict', 'DefaultFieldsAttributeDict')
@@ -28,16 +30,26 @@ class AttributeDict(dict):
     used.
     """
 
+    def __init__(self, dictionary=None):
+        """Recursively turn the `dict` and all its nested dictionaries into `AttributeDict` instance."""
+        super(AttributeDict, self).__init__()
+        if dictionary is None:
+            dictionary = {}
+
+        for key, value in dictionary.items():
+            if isinstance(value, Mapping):
+                self[key] = AttributeDict(value)
+            else:
+                self[key] = value
+
     def __repr__(self):
-        """
-        Representation of the object.
-        """
+        """Representation of the object."""
         return "%s(%s)" % (self.__class__.__name__, dict.__repr__(self))
 
     def __getattr__(self, attr):
-        """
-        Read a key as an attribute. Raise AttributeError on missing key.
-        Called only for attributes that do not exist.
+        """Read a key as an attribute.
+
+        :raises AttributeError: if the attribute does not correspond to an existing key.
         """
         try:
             return self[attr]
@@ -46,9 +58,7 @@ class AttributeDict(dict):
             raise AttributeError(errmsg)
 
     def __setattr__(self, attr, value):
-        """
-        Set a key as an attribute.
-        """
+        """Set a key as an attribute."""
         try:
             self[attr] = value
         except KeyError:
@@ -56,8 +66,9 @@ class AttributeDict(dict):
                                  "'{}'".format(attr, self.__class__.__name__))
 
     def __delattr__(self, attr):
-        """
-        Delete a key as an attribute. Raise AttributeError on missing key.
+        """Delete a key as an attribute.
+
+        :raises AttributeError: if the attribute does not correspond to an existing key.
         """
         try:
             del self[attr]
@@ -65,16 +76,8 @@ class AttributeDict(dict):
             errmsg = "'{}' object has no attribute '{}'".format(self.__class__.__name__, attr)
             raise AttributeError(errmsg)
 
-    def copy(self):
-        """
-        Shallow copy.
-        """
-        return self.__class__(self)
-
     def __deepcopy__(self, memo=None):
-        """
-        Support deepcopy.
-        """
+        """Deep copy."""
         from copy import deepcopy
 
         if memo is None:
@@ -83,15 +86,11 @@ class AttributeDict(dict):
         return self.__class__(retval)
 
     def __getstate__(self):
-        """
-        Needed for pickling this class.
-        """
+        """Needed for pickling this class."""
         return self.__dict__.copy()
 
     def __setstate__(self, dictionary):
-        """
-        Needed for pickling this class.
-        """
+        """Needed for pickling this class."""
         self.__dict__.update(dictionary)
 
     def __dir__(self):

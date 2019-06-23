@@ -1,3 +1,50 @@
+## v1.0.0b4
+
+### Major bug fixes
+- Fixed bug where process tasks were not persisted upon RabbitMQ reboot [[#2958]](https://github.com/aiidateam/aiida_core/pull/2958)
+- Fix the interrupt signal handling of process functions that was causing `verdi daemon stop` to timeout [[#2966]](https://github.com/aiidateam/aiida_core/pull/2966)
+
+### Minor bug fixes
+- Fix the automatic serializer for `Dict` nodes [[#2973]](https://github.com/aiidateam/aiida_core/pull/2973)
+- Fix the validation of `safe_interval` for `verdi computer configure` [[#2967]](https://github.com/aiidateam/aiida_core/pull/2967)
+- Include only input links when creating a restart `ProcessBuilder` [[#2882]](https://github.com/aiidateam/aiida_core/pull/2882)
+- Make the extensible commandline entry points visible in `verdi plugin` [[#2889]](https://github.com/aiidateam/aiida_core/pull/2889)
+- Automatical serialization of `numpy.int` types in nodes [[#2899]](https://github.com/aiidateam/aiida_core/pull/2899)
+- Remove warning about `matplotlib` fonts in `BandsData.show_mpl` [[#2902]](https://github.com/aiidateam/aiida_core/pull/2902)
+- Fix false negatives in Postgres connection test for `verdi status` [[#2924]](https://github.com/aiidateam/aiida_core/pull/2924)
+- Fix bug in storing source code of process functions containing unicode [[#2932]](https://github.com/aiidateam/aiida_core/pull/2932)
+- Ensure that the `mtime` auto-update is properly triggered for the Django backend [[#2935]](https://github.com/aiidateam/aiida_core/pull/2935)
+- Acknowledge a process task if it cannot be loaded by daemon runner to avoid it ping-ponging forever [[#2946]](https://github.com/aiidateam/aiida_core/pull/2946)
+- Ensure output nodes get attached to the calculation function even when returning an exit status in `Parser.parse_from_node` [[#2960]](https://github.com/aiidateam/aiida_core/pull/2960)
+- Fix bug in `verdi process show` where not all called processes were shown [[#2962]](https://github.com/aiidateam/aiida_core/pull/2962)
+- Gracefully exit `verdi export inspect` when archive is corrupt [[#2982]](https://github.com/aiidateam/aiida_core/pull/2982)
+- Ensure that the stack trace is included in transport task exceptions [[#2986]](https://github.com/aiidateam/aiida_core/pull/2986)
+- Fixed a bug in printing scheduler outputs containing non ASCII characters [[#3063]](https://github.com/aiidateam/aiida_core/pull/3063)
+
+### Improvements
+- The `exclude` and `include` rules in `expose_inputs` and `expose_outputs` now support nested ports [[#3038]](https://github.com/aiidateam/aiida_core/pull/3038)
+- Added the possibility to set the call link label through the process metadata input [[#3003]](https://github.com/aiidateam/aiida_core/pull/3003)
+- Added options to order the results of `verdi process list` [[#3004]](https://github.com/aiidateam/aiida_core/pull/3004)
+- The `AttributeDict` is now constructed recursively for nested dictionaries [[#3005]](https://github.com/aiidateam/aiida_core/pull/3005)
+- The command `verdi computer configure` now can take inputs from a yaml file through the `--config` option [[#2951]](https://github.com/aiidateam/aiida_core/pull/2951)
+- Add the possibility to configure the `pgtest` stack through the test fixture manager [[#2941]](https://github.com/aiidateam/aiida_core/pull/2941)
+- The efficiency of the migration of log records for the Django backend has been improved [[#2949]](https://github.com/aiidateam/aiida_core/pull/2949)
+- Improve decorators using the `wrapt` library such that now function signatures are properly maintained [[#2991]](https://github.com/aiidateam/aiida_core/pull/2991)
+- Improve the `SchedulerError` message in `PbsBaseClass._parse_joblist_output` to contain more information [[#2995]](https://github.com/aiidateam/aiida_core/pull/2995)
+- Set the `process_status` for `WorkChains` when waiting for sub processes [[#3000]](https://github.com/aiidateam/aiida_core/pull/3000)
+- Number of workers can now be specified directly in `verdi daemon start` [[#3001]](https://github.com/aiidateam/aiida_core/pull/3001)
+
+
+### Changes
+- The docstring of a process function is no longer used as the default for the process node description [[#3071]](https://github.com/aiidateam/aiida_core/pull/3071)
+- The `retrieve_singlefile_list` has been deprecated and is replaced by `retrieve_temporary_list` [[#3041]](https://github.com/aiidateam/aiida_core/pull/3041)
+- The `metadata.options` port has been moved from the base class `Process` to `CalcJob` [[#3008]](https://github.com/aiidateam/aiida_core/pull/3008)
+- The export archive version number has been updated to `v0.5` [[#2947]](https://github.com/aiidateam/aiida_core/pull/2947)
+- Drop the unused `nodeversion` and `public` columns from the node table [[#2937]](https://github.com/aiidateam/aiida_core/pull/2937)
+- Drop various unused columns from the user table [[#2944]](https://github.com/aiidateam/aiida_core/pull/2944)
+- Drop the unused `transport_params` column from the computer table [[#2946]](https://github.com/aiidateam/aiida_core/pull/2946)
+
+
 ## v1.0.0b3
 
 ### Improvements

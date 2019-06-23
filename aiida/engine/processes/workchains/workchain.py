@@ -40,9 +40,8 @@ class WorkChainSpec(ProcessSpec, plumpy.WorkChainSpec):
 
 @auto_persist('_awaitables')
 class WorkChain(Process):
-    """
-    A WorkChain, the base class for AiiDA workflows.
-    """
+    """The `WorkChain` class is the principle component to implement workflows in AiiDA."""
+
     _node_class = WorkChainNode
     _spec_class = WorkChainSpec
     _STEPPER_STATE = 'stepper_state'
@@ -53,16 +52,16 @@ class WorkChain(Process):
 
         Construct the instance only if it is a sub class of `WorkChain`, otherwise raise `InvalidOperation`.
 
-        :param inputs: workchain inputs
+        :param inputs: work chain inputs
         :type inputs: dict
 
         :param logger: aiida logger
         :type logger: :class:`logging.Logger`
 
-        :param runner: workchain runner
+        :param runner: work chain runner
         :type: :class:`aiida.engine.runners.Runner`
 
-        :param enable_persistence: whether to persist this workchain
+        :param enable_persistence: whether to persist this work chain
         :type enable_persistence: bool
 
         """
@@ -123,35 +122,42 @@ class WorkChain(Process):
         self.node.set_stepper_state_info(str(self._stepper))
 
     def insert_awaitable(self, awaitable):
-        """
-        Insert a awaitable that will cause the workchain to wait until the wait
-        on is finished before continuing to the next step.
+        """Insert an awaitable that should be terminated before before continuing to the next step.
 
-        :param awaitable: The thing to await
+        :param awaitable: the thing to await
         :type awaitable: :class:`aiida.engine.processes.workchains.awaitable.Awaitable`
         """
         self._awaitables.append(awaitable)
+        self._update_process_status()
 
     def remove_awaitable(self, awaitable):
-        """
-        Remove a awaitable.
+        """Remove an awaitable.
 
-        Precondition: must be a awaitable that was previously inserted
+        Precondition: must be an awaitable that was previously inserted.
 
-        :param awaitable: The awaitable to remove
+        :param awaitable: the awaitable to remove
         """
         self._awaitables.remove(awaitable)
+        self._update_process_status()
 
     def to_context(self, **kwargs):
-        """
-        This is a convenience method that provides syntactic sugar, for
-        a user to add multiple intersteps that will assign a certain value
-        to the corresponding key in the context of the workchain
+        """Add a dictionary of awaitables to the context.
+
+        This is a convenience method that provides syntactic sugar, for a user to add multiple intersteps that will
+        assign a certain value to the corresponding key in the context of the work chain.
         """
         for key, value in kwargs.items():
             awaitable = construct_awaitable(value)
             awaitable.key = key
             self.insert_awaitable(awaitable)
+
+    def _update_process_status(self):
+        """Set the process status with a message accounting the current sub processes that we are waiting for."""
+        if self._awaitables:
+            status = 'Waiting for child processes: {}'.format(', '.join([str(_.pk) for _ in self._awaitables]))
+            self.node.set_process_status(status)
+        else:
+            self.node.set_process_status(None)
 
     @override
     def run(self):
@@ -159,8 +165,7 @@ class WorkChain(Process):
         return self._do_step()
 
     def _do_step(self):
-        """
-        Execute the next step in the outline and return the result.
+        """Execute the next step in the outline and return the result.
 
         If the stepper returns a non-finished status and the return value is of type ToContext, the contents of the
         ToContext container will be turned into awaitables if necessary. If any awaitables were created, the process
@@ -198,8 +203,7 @@ class WorkChain(Process):
         return Continue(self._do_step)
 
     def _store_nodes(self, data):
-        """
-        Recurse through a data structure and store any unstored nodes that are found along the way
+        """Recurse through a data structure and store any unstored nodes that are found along the way
 
         :param data: a data structure potentially containing unstored nodes
         """
@@ -214,8 +218,7 @@ class WorkChain(Process):
 
     @override
     def on_exiting(self):
-        """
-        Ensure that any unstored nodes in the context are stored, before the state is exited
+        """Ensure that any unstored nodes in the context are stored, before the state is exited
 
         After the state is exited the next state will be entered and if persistence is enabled, a checkpoint will
         be saved. If the context contains unstored nodes, the serialization necessary for checkpointing will fail.
@@ -235,8 +238,7 @@ class WorkChain(Process):
             self.call_soon(self.resume)
 
     def action_awaitables(self):
-        """
-        Handle the awaitables that are currently registered with the workchain
+        """Handle the awaitables that are currently registered with the work chain
 
         Depending on the class type of the awaitable's target a different callback
         function will be bound with the awaitable and the runner will be asked to
@@ -246,18 +248,14 @@ class WorkChain(Process):
             if awaitable.target == AwaitableTarget.PROCESS:
                 callback = functools.partial(self._run_task, self.on_process_finished, awaitable)
                 self.runner.call_on_calculation_finish(awaitable.pk, callback)
-            elif awaitable.target == AwaitableTarget.WORKFLOW:
-                callback = functools.partial(self._run_task, self.on_legacy_workflow_finished, awaitable)
-                self.runner.call_on_legacy_workflow_finish(awaitable.pk, callback)
             else:
                 assert "invalid awaitable target '{}'".format(awaitable.target)
 
     def on_process_finished(self, awaitable, pk):
-        """
-        Callback function called by the runner when the process instance identified by pk
-        is completed. The awaitable will be effectuated on the context of the workchain and
-        removed from the internal list. If all awaitables have been dealt with, the workchain
-        process is resumed
+        """Callback function called by the runner when the process instance identified by pk is completed.
+
+        The awaitable will be effectuated on the context of the work chain and removed from the internal list. If all
+        awaitables have been dealt with, the work chain process is resumed.
 
         :param awaitable: an Awaitable instance
         :param pk: the pk of the awaitable's target

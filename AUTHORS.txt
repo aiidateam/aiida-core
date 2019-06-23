@@ -7,7 +7,6 @@ The current members of the AiiDA team are, in alphabetical order:
 * Oscar Arbelaez
 * Marco Borelli
 * Sebastiaan P. Huber
-* Conrad Johnston
 * Leonid Kahle
 * Boris Kozinsky
 * Snehal Kumbhar
@@ -22,6 +21,7 @@ The current members of the AiiDA team are, in alphabetical order:
 
 Former members of the AiiDA team
 ################################
+* Conrad Johnston (2018-2019)
 * Martin Uhrin (2015-2019)
 * Rico Häuselmann (2016-2018)
 * Nicolas Mounet (2015-2018)
@@ -58,7 +58,7 @@ corrections and improvements to the documentation and useful suggestions:
 
 Ivano E. Castelli, Ian Lee, Gianluca Prandini, Jianxing Huang, Antimo Marrazzo, Nicola Varini, Mario Zic,
 Vladimir Dikan, Michael Atambo, Ole Schütt, Y.-W. Fang, Philipp Rüßmann, Bonan Zhu, Andreas Stamminger, Keija Cui,
-Daniel Hollas, Jianxing Huang, Espen Flage-Larsen, Chris Sewell
+Daniel Hollas, Espen Flage-Larsen, Chris Sewell, Jason Yu, Daniele Tomerini
 
 ---
 

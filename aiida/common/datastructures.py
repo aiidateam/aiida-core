@@ -64,6 +64,9 @@ class CalcInfo(DefaultFieldsAttributeDict):
         ('linkname_from calc to singlefile', 'subclass of singlefile', 'filename')
         Each tuple represents a file that will be retrieved from cluster and saved in SinglefileData nodes
 
+        .. deprecated:: 1.0.0
+            Will be removed in `v2.0.0`, use `retrieve_temporary_list` instead.
+
     * local_copy_list: a list of tuples with format ('node_uuid', 'filename', relativedestpath')
     * remote_copy_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
     * remote_symlink_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
@@ -87,7 +90,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'rerunnable',
         'retrieve_list',
         'retrieve_temporary_list',
-        'retrieve_singlefile_list',
+        'retrieve_singlefile_list',  # Deprecated as of 1.0.0, use instead `retrieve_temporary_list`
         'local_copy_list',
         'remote_copy_list',
         'remote_symlink_list',

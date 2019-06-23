@@ -43,11 +43,12 @@
     "psycopg2-binary==2.8",
     "paramiko==2.4.2",
     "ipython>=4.0,<6.0",
-    "plumpy==0.14.0",
+    "plumpy==0.14.1",
     "kiwipy[rmq]==0.5.1",
     "pika==1.0.0",
     "circus==0.15.0",
     "tornado<5.0",
+    "wrapt==1.11.1",
     "pyblake2==1.1.2; python_version<'3.6'",
     "singledispatch>=3.4.0.3; python_version<'3.5'",
     "enum34==1.1.6; python_version<'3.5'",
@@ -105,7 +106,8 @@
       "codecov==2.0.15",
       "futures; python_version=='2.7'",
       "pytest==4.3.0",
-      "pytest-cov==2.6.1"
+      "pytest-cov==2.6.1",
+      "aiida-export-migration-tests==0.5.2"
     ],
     "dev_precommit": [
       "astroid==2.1.0; python_version>='3.0'",

@@ -368,16 +368,17 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         comp = self.comp_builder.new()
         comp.store()
 
-        result = self.cli_runner.invoke(computer_configure, ['local', comp.label, '--non-interactive'],
-                                        catch_exceptions=False)
+        options = ['local', comp.label, '--non-interactive', '--safe-interval', '0']
+        result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
 
         self.comp_builder.label = 'test_local_ni_empty_mismatch'
         self.comp_builder.transport = 'ssh'
         comp_mismatch = self.comp_builder.new()
         comp_mismatch.store()
-        result = self.cli_runner.invoke(computer_configure, ['local', comp_mismatch.label, '--non-interactive'],
-                                        catch_exceptions=False)
+
+        options = ['local', comp_mismatch.label, '--non-interactive']
+        result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertIsNotNone(result.exception)
         self.assertIn('ssh', result.output)
         self.assertIn('local', result.output)
@@ -427,16 +428,17 @@ safe_interval: {interval}
         comp = self.comp_builder.new()
         comp.store()
 
-        result = self.cli_runner.invoke(computer_configure, ['ssh', comp.label, '--non-interactive'],
-                                        catch_exceptions=False)
+        options = ['ssh', comp.label, '--non-interactive', '--safe-interval',  '1']
+        result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
 
         self.comp_builder.label = 'test_ssh_ni_empty_mismatch'
         self.comp_builder.transport = 'local'
         comp_mismatch = self.comp_builder.new()
         comp_mismatch.store()
-        result = self.cli_runner.invoke(computer_configure, ['ssh', comp_mismatch.label, '--non-interactive'],
-                                        catch_exceptions=False)
+
+        options = ['ssh', comp_mismatch.label, '--non-interactive']
+        result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertIsNotNone(result.exception)
         self.assertIn('local', result.output)
         self.assertIn('ssh', result.output)
@@ -449,9 +451,8 @@ safe_interval: {interval}
         comp.store()
 
         username = 'TEST'
-        result = self.cli_runner.invoke(computer_configure,
-                                        ['ssh', comp.label, '--non-interactive', '--username={}'.format(username)],
-                                        catch_exceptions=False)
+        options = ['ssh', comp.label, '--non-interactive', '--username={}'.format(username), '--safe-interval', '1']
+        result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
         self.assertEqual(orm.AuthInfo.objects.get(
             dbcomputer_id=comp.id, aiidauser_id=self.user.id).get_auth_params()['username'],

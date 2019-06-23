@@ -166,11 +166,36 @@ class TestVerdiProcess(AiidaTestCase):
 
     def test_list(self):
         """Test the list command."""
+        # pylint: disable=too-many-branches
 
         # Default behavior should yield all active states (CREATED, RUNNING and WAITING) so six in total
         result = self.cli_runner.invoke(cmd_process.process_list, ['-r'])
         self.assertIsNone(result.exception, result.output)
         self.assertEqual(len(get_result_lines(result)), 6)
+
+        # Ordering shouldn't change the number of results,
+        for flag in ['-O', '--order-by']:
+            for flag_value in ['id', 'ctime']:
+                result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, flag_value])
+                self.assertIsNone(result.exception, result.output)
+                self.assertEqual(len(get_result_lines(result)), 6)
+
+        # but the orders should be inverse
+        for flag in ['-D', '--order-direction']:
+
+            flag_value = 'asc'
+            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
+            self.assertIsNone(result.exception, result.output)
+            result_num_asc = [l.split()[0] for l in get_result_lines(result)]
+            self.assertEqual(len(result_num_asc), 6)
+
+            flag_value = 'desc'
+            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
+            self.assertIsNone(result.exception, result.output)
+            result_num_desc = [l.split()[0] for l in get_result_lines(result)]
+            self.assertEqual(len(result_num_desc), 6)
+
+            self.assertEqual(result_num_asc, list(reversed(result_num_desc)))
 
         # Adding the all option should return all entries regardless of process state
         for flag in ['-a', '--all']:

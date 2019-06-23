@@ -273,13 +273,9 @@ class FunctionProcess(Process):
 
             # Set defaults for label and description based on function name and docstring, if not explicitly defined
             port_label = spec.inputs['metadata']['label']
-            port_description = spec.inputs['metadata']['description']
 
             if not port_label.has_default():
                 port_label.default = func.__name__
-
-            if not port_description.has_default() and func.__doc__:
-                port_description.default = func.__doc__
 
             # If the function support kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = keywords is not None

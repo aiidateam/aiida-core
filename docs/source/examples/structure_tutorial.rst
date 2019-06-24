@@ -16,7 +16,7 @@ we tried to define a "standard" format for structures in AiiDA, that can be
 used across different codes.
 
 
-StructureData examples of usage
+How to use ``StructureData``
 -------------------------------
 
 Take a look at the following example::
@@ -80,12 +80,12 @@ The following line instead::
 would create a site with 90% probability of being occupied by Calcium, and
 10% of being a vacancy.
 
-Utility property ``s.is_alloy`` and ``s.has_vacancies`` can be used to
+Utility properties ``s.is_alloy`` and ``s.has_vacancies`` can be used to
 verify, respectively, if more than one element if given in the symbols list,
 and if the sum of all weights is smaller than one.
 
 .. note:: if you pass more than one symbol, the property ``s.is_alloy`` will
-  always return ``True``, even if only one symbol has occupancy 1. and
+  always be ``True``, even if only one symbol has occupancy 1 and
   all others have occupancy zero::
     
     >>> s = StructureData(cell=[[4,0,0],[0,4,0],[0,0,4]])

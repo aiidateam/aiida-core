@@ -253,14 +253,14 @@ def get_calcjob_report(calcjob):
     if scheduler_out is None:
         report.append('*** Scheduler output: N/A')
     elif scheduler_out:
-        report.append('*** Scheduler output:\n{}'.format(scheduler_out))
+        report.append(u'*** Scheduler output:\n{}'.format(scheduler_out))
     else:
         report.append('*** (empty scheduler output file)')
 
     if scheduler_err is None:
         report.append('*** Scheduler errors: N/A')
     elif scheduler_err:
-        report.append('*** Scheduler errors:\n{}'.format(scheduler_err))
+        report.append(u'*** Scheduler errors:\n{}'.format(scheduler_err))
     else:
         report.append('*** (empty scheduler errors file)')
 

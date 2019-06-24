@@ -87,11 +87,11 @@ def load_config(create=False):
     from .config import Config
     from .migrations import check_and_migrate_config
     from .settings import AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME
-    from aiida.manage.external.postgres import DEFAULT_DBINFO
 
     if IN_RT_DOC_MODE:
         # The following is a dummy config.json configuration that it is used for the
         # proper compilation of the documentation on readthedocs.
+        from aiida.manage.external.postgres import DEFAULT_DBINFO
         return ({
             'default_profile': 'default',
             'profiles': {

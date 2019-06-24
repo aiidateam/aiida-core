@@ -790,29 +790,29 @@ class Process(plumpy.Process):
         exposed_inputs = {}
 
         namespace_list = self._get_namespace_list(namespace=namespace, agglomerate=agglomerate)
-        for nspace in namespace_list:
+        for sub_namespace in namespace_list:
 
-            # The nspace None indicates the base level nspace
-            if nspace is None:
+            # The sub_namespace None indicates the base level sub_namespace
+            if sub_namespace is None:
                 inputs = self.inputs
-                port_nspace = self.spec().inputs
+                port_namespace = self.spec().inputs
             else:
                 inputs = self.inputs
-                for part in nspace.split('.'):
+                for part in sub_namespace.split('.'):
                     inputs = inputs[part]
                 try:
-                    port_nspace = self.spec().inputs.get_port(nspace)
+                    port_namespace = self.spec().inputs.get_port(sub_namespace)
                 except KeyError:
-                    raise ValueError('this process does not contain the "{}" input nspace'.format(nspace))
+                    raise ValueError('this process does not contain the "{}" input namespace'.format(sub_namespace))
 
-            # Get the list of ports that were exposed for the given Process class in the current nspace
-            exposed_inputs_list = self.spec()._exposed_inputs[nspace][process_class]  # pylint: disable=protected-access
+            # Get the list of ports that were exposed for the given Process class in the current sub_namespace
+            exposed_inputs_list = self.spec()._exposed_inputs[sub_namespace][process_class]  # pylint: disable=protected-access
 
-            for name in port_nspace.ports.keys():
+            for name in port_namespace.ports.keys():
                 if name in inputs and name in exposed_inputs_list:
                     exposed_inputs[name] = inputs[name]
 
-        return exposed_inputs
+        return AttributeDict(exposed_inputs)
 
     def exposed_outputs(self, process_instance, process_class, namespace=None, agglomerate=True):
         """
@@ -847,22 +847,23 @@ class Process(plumpy.Process):
             top_namespace = port_name.split(namespace_separator)[0]
             top_namespace_map[top_namespace].append(port_name)
 
-        for nspace in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):
+        for port_namespace in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):
             # only the top-level key is stored in _exposed_outputs
             for top_name in top_namespace_map:
-                if top_name in self.spec()._exposed_outputs[nspace][process_class]:  # pylint: disable=protected-access
-                    output_key_map[top_name] = nspace
+                if top_name in self.spec()._exposed_outputs[port_namespace][process_class]:  # pylint: disable=protected-access
+                    output_key_map[top_name] = port_namespace
 
         result = {}
 
-        for top_name, nspace in output_key_map.items():
+        for top_name, port_namespace in output_key_map.items():
             # collect all outputs belonging to the given top_name
             for port_name in top_namespace_map[top_name]:
-                if nspace is None:
+                if port_namespace is None:
                     result[port_name] = process_outputs_dict[port_name]
                 else:
-                    result[nspace + namespace_separator + port_name] = process_outputs_dict[port_name]
-        return result
+                    result[port_namespace + namespace_separator + port_name] = process_outputs_dict[port_name]
+
+        return AttributeDict(result)
 
     @staticmethod
     def _get_namespace_list(namespace=None, agglomerate=True):

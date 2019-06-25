@@ -11,10 +11,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+from six import PY2
 
-from collections import MutableSequence
+if PY2:
+    from collections import MutableSequence  # pylint: disable=no-name-in-module
+else:
+    from collections.abc import MutableSequence  # pylint: disable=no-name-in-module, import-error
 
-from .data import Data
+from .data import Data  # pylint: disable=wrong-import-position
 
 __all__ = ('List',)
 

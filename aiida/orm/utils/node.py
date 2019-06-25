@@ -13,15 +13,19 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from abc import ABCMeta
-from collections import Iterable, Mapping
 import logging
 import math
 import numbers
 
 import six
 
-from aiida.common import exceptions
-from aiida.common.utils import strip_prefix
+if six.PY2:
+    from collections import Iterable, Mapping  # pylint: disable=no-name-in-module
+else:
+    from collections.abc import Iterable, Mapping  # pylint: disable=no-name-in-module, import-error
+
+from aiida.common import exceptions  # pylint: disable=wrong-import-position
+from aiida.common.utils import strip_prefix  # pylint: disable=wrong-import-position
 
 __all__ = ('load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string', 'AbstractNodeMeta',
            'clean_value')

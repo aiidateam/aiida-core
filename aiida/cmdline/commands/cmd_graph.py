@@ -88,4 +88,4 @@ def generate(root_node, link_types, ancestor_depth, descendant_depth, process_ou
     output_file_name = graph.graphviz.render(
         filename='{}.{}'.format(root_node.pk, engine), format=output_format, view=view, cleanup=True)
 
-    echo.echo_success("Output file to {}".format(output_file_name))
+    echo.echo_success("Output file: {}".format(output_file_name))

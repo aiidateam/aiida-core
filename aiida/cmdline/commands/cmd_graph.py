@@ -86,6 +86,6 @@ def generate(root_node, link_types, ancestor_depth, descendant_depth, process_ou
         include_process_inputs=process_in,
         print_func=print_func)
     output_file_name = graph.graphviz.render(
-        filename='{}.dot'.format(root_node.pk), format=output_format, view=view, cleanup=True)
+        filename='{}.{}'.format(root_node.pk, engine), format=output_format, view=view, cleanup=True)
 
     echo.echo_success("Output file to {}".format(output_file_name))

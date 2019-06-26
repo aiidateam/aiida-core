@@ -51,7 +51,7 @@ def verdi_graph():
 @click.option(
     '-e',
     '--engine',
-    help="the graphviz engine, e.g. dot, circo "
+    help="The graphviz engine, e.g. 'dot', 'circo', ... "
     "(see http://www.graphviz.org/doc/info/output.html)",
     default='dot')
 @click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')

@@ -180,7 +180,7 @@ def default_process_styles(node):
     node_style = process_map.get(class_node_type, default)
 
     # style process node, based on success/failure of process
-    if node.is_failed:
+    if node.is_failed or node.is_excepted:
         node_style['penwidth'] = "3.0"
         node_style['color'] = '#FF0000'  # red
     elif node.is_finished_ok:

@@ -34,7 +34,7 @@ def verdi_graph():
     "--link-types",
     help="The link types to include: logic = only 'input_work' and 'return'; data = only 'input_calc' and 'create'",
     default="all",
-    type=click.Choice(['all', 'logic', 'data']))
+    type=click.Choice(['all', 'data', 'logic']))
 @click.option(
     '-a',
     '--ancestor-depth',

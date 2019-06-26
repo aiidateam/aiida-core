@@ -43,7 +43,7 @@ def verdi_graph():
 @click.option(
     '-d',
     '--descendant-depth',
-    help='The maximum depth when recursing through the descendants, if not set it will recurse to the end.',
+    help='The maximum depth when recursing through the descendants. If not set it will recurse to the end.',
     type=click.IntRange(min=0))
 @click.option('-o', '--process-out', is_flag=True, help='Show outgoing links for all processes.')
 @click.option('-i', '--process-in', is_flag=True, help='Show incoming links for all processes.')

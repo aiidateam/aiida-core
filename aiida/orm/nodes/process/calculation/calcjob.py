@@ -373,7 +373,6 @@ class CalcJobNode(CalculationNode):
             Will be removed in `v2.0.0`, use
             :meth:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_retrieve_temporary_list` instead.
         """
-        warnings.warn('method is deprecated, use `get_retrieve_temporary_list` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
         return self.get_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, None)
 
     def set_job_id(self, job_id):

@@ -11,13 +11,13 @@ With the :py:class:`~aiida.orm.nodes.data.structure.StructureData` class we did 
 try to have a full set of features to manipulate crystal structures.
 Indeed, other libraries such as `ASE <https://wiki.fysik.dtu.dk/ase/>`_ exist,
 and we simply provide easy
-ways to convert between the ASE and the AiiDA formats. On the other hand, 
+ways to convert between the ASE and the AiiDA formats. On the other hand,
 we tried to define a "standard" format for structures in AiiDA, that can be
 used across different codes.
 
 
-Tutorial
---------
+How to use ``StructureData``
+-------------------------------
 
 Take a look at the following example::
 
@@ -30,9 +30,9 @@ Take a look at the following example::
   s.append_atom(position=(0.,0.,0.), symbols='Fe')
   s.append_atom(position=(alat/2.,alat/2.,alat/2.), symbols='O')
 
-With the commands above, we have created a crystal structure ``s`` with 
+With the commands above, we have created a crystal structure ``s`` with
 a cubic unit cell and lattice parameter of 4 angstrom, and two atoms in the
-cell: one iron (Fe) atom in the origin, and one oxygen (O) at the center of 
+cell: one iron (Fe) atom in the origin, and one oxygen (O) at the center of
 the cube (this cell has been just chosen as an example and most probably does
 not exist).
 
@@ -45,17 +45,17 @@ from ASE in order to specify the coordinates, e.g., in terms of the crystal
 lattice vectors, see the guide on the conversion to/from ASE below.
 
 When using the :py:meth:`~aiida.orm.nodes.data.structure.StructureData.append_atom`
-method, further parameters can be passed. In particular, one can specify 
+method, further parameters can be passed. In particular, one can specify
 the mass of the atom, particularly important if you want e.g. to run a
 phonon calculation. If no mass is specified, the mass provided by
 `NIST <http://www.nist.gov/pml/data/index.cfm>`_ (retrieved in October 2014)
 is going to be used. The list of
 masses is stored in the module :py:mod:`aiida.common.constants`, in the
-``elements`` dictionary. 
+``elements`` dictionary.
 
 Moreover, in the :py:class:`~aiida.orm.nodes.data.structure.StructureData` class
 of AiiDA we also support the storage of crystal structures with alloys,
-vacancies or partial occupancies. 
+vacancies or partial occupancies.
 In this case, the argument of the parameter ``symbols``
 should be a list of symbols, if you want to consider an alloy;
 moreover, you must pass a ``weights`` list, with the same length as ``symbols``,
@@ -80,17 +80,17 @@ The following line instead::
 would create a site with 90% probability of being occupied by Calcium, and
 10% of being a vacancy.
 
-Utility methods ``s.is_alloy`` and ``s.has_vacancies`` can be used to
+Utility properties ``s.is_alloy`` and ``s.has_vacancies`` can be used to
 verify, respectively, if more than one element if given in the symbols list,
 and if the sum of all weights is smaller than one.
 
-.. note:: if you pass more than one symbol, the method ``s.is_alloy`` will 
-  always return ``True``, even if only one symbol has occupancy 1. and 
+.. note:: if you pass more than one symbol, the property ``s.is_alloy`` will
+  always be ``True``, even if only one symbol has occupancy 1 and
   all others have occupancy zero::
     
     >>> s = StructureData(cell=[[4,0,0],[0,4,0],[0,0,4]])
     >>> s.append_atom(position=(0.,0.,0.), symbols=['Fe', 'O'], weights=[1.,0.])
-    >>> s.is_alloy()
+    >>> s.is_alloy
     True
  
    
@@ -99,7 +99,7 @@ Internals: Kinds and Sites
 Internally, the :py:meth:`~aiida.orm.nodes.data.structure.StructureData.append_atom`
 method works by manipulating the kinds and sites of the current structure.
 Kinds are instances of the :py:class:`~aiida.orm.nodes.data.structure.Kind` class and
-represent a chemical species, with given properties (composing element or 
+represent a chemical species, with given properties (composing element or
 elements, occupancies, mass, ...) and identified
 by a label (normally, simply the element chemical symbol).
 
@@ -112,8 +112,8 @@ spatial coordinates.
 The :py:meth:`~aiida.orm.nodes.data.structure.StructureData.append_atom` works in
 the following way:
 
-* It creates a new :py:class:`~aiida.orm.nodes.data.structure.Kind` 
-  class with the properties passed as parameters 
+* It creates a new :py:class:`~aiida.orm.nodes.data.structure.Kind`
+  class with the properties passed as parameters
   (i.e., all parameters except ``position``).
 
 * It tries to identify if an identical Kind already exists in the list
@@ -180,11 +180,11 @@ the following way:
 Conversion to/from ASE
 ----------------------
 
-If you have an AiiDA structure, you can get an ``ase.Atom`` object by
+If you have an AiiDA structure ``s``, you can get an ``ase.Atom`` object by
 just calling the :py:class:`~aiida.orm.nodes.data.structure.StructureData.get_ase`
 method::
     
-    ase_atoms = aiida_structure.get_ase()
+    ase_atoms = s.get_ase()
 
 .. note:: As we support alloys and vacancies in AiiDA, while ``ase.Atom`` does not,
   it is not possible to export to ASE a structure with vacancies or alloys.
@@ -194,26 +194,27 @@ from it, just pass it when initializing the class::
 
       StructureData = DataFactory('structure')
       # or:
-      # from aiida.orm.nodes.data.structure import StructureData
+      # from aiida.orm import StructureData
       aiida_structure = StructureData(ase = ase_atoms)
       
 Creating multiple species
 +++++++++++++++++++++++++
 
 We implemented the possibility of specifying different Kinds (species) in the
-ase.atoms and then importing them. 
+``ase.atoms`` and then importing them. 
 
 In particular, if you specify atoms with different mass in ASE, during the
 import phase different kinds will be created::
 
   >>> import ase
   >>> StructureData = DataFactory("structure")
-  >>> asecell = ase.Atoms('Fe2')
-  >>> asecell[0].mass = 55.
-  >>> asecell[1].mass = 56.
-  >>> s = StructureData(ase=asecell)
+  >>> ase_structure = ase.Atoms('Fe2')
+  >>> ase_structure[0].mass = 55.
+  >>> ase_structure[1].mass = 56.
+  >>> ase_structure.cell = cell # defines a periodic cell
+  >>> s = StructureData(ase=ase_structure)
   >>> for kind in s.kinds:
-  >>>     print kind.name, kind.mass
+  >>>     print(kind.name, kind.mass)
   Fe 55.0
   Fe1 56.0
   
@@ -223,12 +224,13 @@ symbol in order to get the species name::
 
   >>> import ase
   >>> StructureData = DataFactory("structure")
-  >>> asecell = ase.Atoms('Fe2')
-  >>> asecell[0].tag = 1
-  >>> asecell[1].tag = 2
-  >>> s = StructureData(ase=asecell)
+  >>> ase_structure = ase.Atoms('Fe2')
+  >>> ase_structure[0].tag = 1
+  >>> ase_structure[1].tag = 2
+  >>> ase_structure.cell = cell
+  >>> s = StructureData(ase=ase_structure)
   >>> for kind in s.kinds:
-  >>>     print kind.name
+  >>>     print(kind.name)
   Fe1
   Fe2
   

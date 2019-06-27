@@ -16,10 +16,9 @@ from aiida import orm
 from aiida.orm.utils import serialize
 from aiida.backends.testbase import AiidaTestCase
 
-# pylint: disable=missing-docstring
-
 
 class TestSerialize(AiidaTestCase):
+    """Tests for the YAML serializer and deserializer."""
 
     def test_serialize_round_trip(self):
         """
@@ -101,3 +100,26 @@ class TestSerialize(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             serialize.serialize(computer)
+
+    def test_mixed_attribute_normal_dict(self):
+        """Regression test for #3092.
+
+        The yaml mapping constructor in `aiida.orm.utils.serialize` was not properly "deeply" reconstructing nested
+        mappings, causing a mix of attribute dictionaries and normal dictionaries to lose information in a round-trip.
+
+        If a nested `AttributeDict` contained a normal dictionary, the content of the latter would be lost during the
+        deserialization, despite the information being present in the serialized yaml dump.
+        """
+        from aiida.common.extendeddicts import AttributeDict
+
+        # Construct a nested `AttributeDict`, which should make all nested dictionaries `AttributeDicts` recursively
+        dictionary = {'nested': AttributeDict({'dict': 'string', 'value': 1})}
+        attribute_dict = AttributeDict(dictionary)
+
+        # Now add a normal dictionary in the attribute dictionary
+        attribute_dict['nested']['normal'] = {'a': 2}
+
+        serialized = serialize.serialize(attribute_dict)
+        deserialized = serialize.deserialize(serialized)
+
+        self.assertEqual(attribute_dict, deserialized)

@@ -1265,9 +1265,9 @@ class StructureData(Data):
         Default is False (no spin added).
 
         .. note:: The spins are set according to the following rule:
-            
+
             * if the kind name ends with 1 -> spin=+1
-            
+
             * if the kind name ends with 2 -> spin=-1
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
@@ -1282,9 +1282,9 @@ class StructureData(Data):
         Default is False (no spin added).
 
         .. note:: The spins are set according to the following rule:
-            
+
             * if the kind name ends with 1 -> spin=+1
-            
+
             * if the kind name ends with 2 -> spin=-1
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
@@ -1330,7 +1330,7 @@ class StructureData(Data):
             raise ValueError("A kind with the same name ({}) already exists.".format(kind.name))
 
         # If here, no exceptions have been raised, so I add the site.
-        self.append_to_attr('kinds', new_kind.get_raw())
+        self.attributes.setdefault('kinds', []).append(new_kind.get_raw())
         # Note, this is a dict (with integer keys) so it allows for empty
         # spots!
         if not hasattr(self, '_internal_kind_tags'):
@@ -1357,7 +1357,7 @@ class StructureData(Data):
                              "{}".format(site.kind_name, [k.name for k in self.kinds]))
 
         # If here, no exceptions have been raised, so I add the site.
-        self.append_to_attr('sites', new_site.get_raw())
+        self.attributes.setdefault('sites', []).append(new_site.get_raw())
 
     def append_atom(self, **kwargs):
         """
@@ -1826,9 +1826,9 @@ class StructureData(Data):
         Default is False (no spin added).
 
         .. note:: The spins are set according to the following rule:
-            
+
             * if the kind name ends with 1 -> spin=+1
-            
+
             * if the kind name ends with 2 -> spin=-1
 
         :return: a pymatgen Structure object corresponding to this

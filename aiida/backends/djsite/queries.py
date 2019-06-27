@@ -11,8 +11,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from contextlib import contextmanager
-
 from six.moves import zip
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
@@ -47,23 +45,24 @@ class DjangoQueryManager(AbstractQueryManager):
             an integer with the number of nodes created that day.
         """
         import sqlalchemy as sa
-        from aiida.orm.implementation.django import dummy_model
+        import aiida.backends.djsite.db.models as djmodels
+        from aiida.orm.implementation.django.querybuilder import DjangoQueryBuilder
 
         # Get the session (uses internally aldjemy - so, sqlalchemy) also for the Djsite backend
-        s = dummy_model.get_aldjemy_session()
+        s = DjangoQueryBuilder.get_session()
 
         retdict = {}
 
-        total_query = s.query(dummy_model.DbNode)
-        types_query = s.query(dummy_model.DbNode.node_type.label('typestring'),
-                              sa.func.count(dummy_model.DbNode.id))
-        stat_query = s.query(sa.func.date_trunc('day', dummy_model.DbNode.ctime).label('cday'),
-                             sa.func.count(dummy_model.DbNode.id))
+        total_query = s.query(djmodels.DbNode.sa)
+        types_query = s.query(djmodels.DbNode.sa.node_type.label('typestring'),
+                              sa.func.count(djmodels.DbNode.sa.id))
+        stat_query = s.query(sa.func.date_trunc('day', djmodels.DbNode.sa.ctime).label('cday'),
+                             sa.func.count(djmodels.DbNode.sa.id))
 
         if user_pk is not None:
-            total_query = total_query.filter(dummy_model.DbNode.user_id == user_pk)
-            types_query = types_query.filter(dummy_model.DbNode.user_id == user_pk)
-            stat_query = stat_query.filter(dummy_model.DbNode.user_id == user_pk)
+            total_query = total_query.filter(djmodels.DbNode.sa.user_id == user_pk)
+            types_query = types_query.filter(djmodels.DbNode.sa.user_id == user_pk)
+            stat_query = stat_query.filter(djmodels.DbNode.sa.user_id == user_pk)
 
         # Total number of nodes
         retdict["total"] = total_query.count()
@@ -115,7 +114,6 @@ class DjangoQueryManager(AbstractQueryManager):
         """
         Returns bands and closest parent structure
         """
-        from collections import defaultdict
         from django.db.models import Q
         from aiida.backends.djsite.db import models
         from aiida.common.utils import grouper
@@ -156,25 +154,10 @@ class DjangoQueryManager(AbstractQueryManager):
             struc_pks = [structure_dict[pk] for pk in pks]
 
             # query for the attributes needed for the structure formula
-            attr_query = Q(key__startswith='kinds') | Q(key__startswith='sites')
-            attrs = models.DbAttribute.objects.filter(attr_query,
-                                                      dbnode__in=struc_pks).values_list(
-                'dbnode__pk', 'key', 'datatype', 'tval', 'fval',
-                'ival', 'bval', 'dval')
-
-            results = defaultdict(dict)
-            for attr in attrs:
-                results[attr[0]][attr[1]] = {"datatype": attr[2],
-                                             "tval": attr[3],
-                                             "fval": attr[4],
-                                             "ival": attr[5],
-                                             "bval": attr[6],
-                                             "dval": attr[7]}
-            # organize all of it in a dictionary
+            res_attr = models.DbNode.objects.filter(id__in=struc_pks).values_list('id', 'attributes')
             deser_data = {}
-            for k in results:
-                deser_data[k] = models.deserialize_attributes(results[k],
-                                                              sep=models.DbAttribute._sep)
+            for rattr in res_attr:
+                deser_data[rattr[0]] = rattr[1]
 
             # prepare the printout
             for ((bid, blabel, bdate), struc_pk) in zip(this_chunk, struc_pks):

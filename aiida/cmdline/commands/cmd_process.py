@@ -94,6 +94,30 @@ def process_show(processes):
         echo.echo(get_node_info(process))
 
 
+@verdi_process.command('call-root')
+@arguments.PROCESSES()
+@decorators.with_dbenv()
+def process_call_root(processes):
+    """Show the root process of the call stack for the given processes."""
+    for process in processes:
+
+        caller = process.caller
+
+        if caller is None:
+            echo.echo('No callers found for Process<{}>'.format(process.pk))
+            continue
+
+        while True:
+            next_caller = caller.caller
+
+            if next_caller is None:
+                break
+
+            caller = next_caller
+
+        echo.echo('{}'.format(caller.pk))
+
+
 @verdi_process.command('report')
 @arguments.PROCESSES()
 @click.option('-i', '--indent-size', type=int, default=2, help='Set the number of spaces to indent each level by.')

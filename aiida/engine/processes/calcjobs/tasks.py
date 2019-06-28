@@ -73,11 +73,10 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
     def do_upload():
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
-
-            logger.info('uploading calculation<{}>'.format(node.pk))
             raise Return(execmanager.upload_calculation(node, transport, calc_info, script_filename))
 
     try:
+        logger.info('uploading calculation<{}>'.format(node.pk))
         result = yield exponential_backoff_retry(
             do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.CancelledError)
     except plumpy.CancelledError:
@@ -124,11 +123,10 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
     def do_submit():
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
-
-            logger.info('submitting CalcJob<{}>'.format(node.pk))
             raise Return(execmanager.submit_calculation(node, transport, calc_info, script_filename))
 
     try:
+        logger.info('submitting CalcJob<{}>'.format(node.pk))
         result = yield exponential_backoff_retry(
             do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
     except plumpy.Interruption:
@@ -188,6 +186,7 @@ def task_update_job(node, job_manager, cancellable):
         raise Return(job_done)
 
     try:
+        logger.info('updating CalcJob<{}>'.format(node.pk))
         job_done = yield exponential_backoff_retry(
             do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
     except plumpy.Interruption:
@@ -233,11 +232,10 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     def do_retrieve():
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
-
-            logger.info('retrieving CalcJob<{}>'.format(node.pk))
             raise Return(execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder))
 
     try:
+        logger.info('retrieving CalcJob<{}>'.format(node.pk))
         result = yield exponential_backoff_retry(
             do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
     except plumpy.Interruption:
@@ -281,10 +279,10 @@ def task_kill_job(node, transport_queue, cancellable):
     def do_kill():
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
-            logger.info('killing CalcJob<{}>'.format(node.pk))
             raise Return(execmanager.kill_calculation(node, transport))
 
     try:
+        logger.info('killing CalcJob<{}>'.format(node.pk))
         result = yield exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
     except plumpy.Interruption:
         raise

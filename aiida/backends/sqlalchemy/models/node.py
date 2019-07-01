@@ -7,14 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from sqlalchemy import ForeignKey, select
+
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import Column
-from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
+from sqlalchemy.types import Integer, String, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
 # Or maybe rely on sqlalchemy-utils UUID type
@@ -23,7 +23,6 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.utils import get_new_uuid
-from aiida.backends.sqlalchemy.utils import flag_modified
 
 
 class DbNode(Base):
@@ -123,7 +122,7 @@ class DbNode(Base):
         :param invalid_result: The value to be returned if the node type is
             not recognized.
         """
-        thistype = self.type
+        thistype = self.node_type
         # Fix for base class
         if thistype == "":
             thistype = "node.Node."
@@ -132,65 +131,6 @@ class DbNode(Base):
         else:
             thistype = thistype[:-1]  # Strip final dot
             return thistype.rpartition('.')[2]
-
-    def set_attr(self, key, value):
-        DbNode._set_attr(self.attributes, key, value)
-        flag_modified(self, "attributes")
-        self.save()
-
-    def reset_attributes(self, attributes):
-        self.attributes = dict()
-        self.set_attributes(attributes)
-
-    def set_attributes(self, attributes):
-        for key, value in attributes.items():
-            DbNode._set_attr(self.attributes, key, value)
-        flag_modified(self, "attributes")
-        self.save()
-
-    def set_extra(self, key, value):
-        DbNode._set_attr(self.extras, key, value)
-        flag_modified(self, "extras")
-        self.save()
-
-    def set_extras(self, extras):
-        for key, value in extras.items():
-            DbNode._set_attr(self.extras, key, value)
-        flag_modified(self, "extras")
-        self.save()
-
-    def reset_extras(self, new_extras):
-        self.extras.clear()
-        self.extras.update(new_extras)
-        flag_modified(self, "extras")
-        self.save()
-
-    def del_attr(self, key):
-        DbNode._del_attr(self.attributes, key)
-        flag_modified(self, "attributes")
-        self.save()
-
-    def del_extra(self, key):
-        DbNode._del_attr(self.extras, key)
-        flag_modified(self, "extras")
-        self.save()
-
-    @staticmethod
-    def _set_attr(d, key, value):
-        if '.' in key:
-            raise ValueError("We don't know how to treat key with dot in it yet")
-
-        d[key] = value
-
-    @staticmethod
-    def _del_attr(d, key):
-        if '.' in key:
-            raise ValueError("We don't know how to treat key with dot in it yet")
-
-        if key not in d:
-            raise AttributeError("Key {} does not exists".format(key))
-
-        del d[key]
 
     @property
     def pk(self):

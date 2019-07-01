@@ -30,17 +30,12 @@
         aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
         aiida/backends/djsite/db/migrations/__init__.py|
         aiida/backends/djsite/db/models.py|
-        aiida/backends/djsite/db/subtests/test_migrations.py|
         aiida/backends/djsite/db/subtests/test_generic.py|
-        aiida/backends/djsite/db/subtests/test_nodes.py|
-        aiida/backends/djsite/db/subtests/test_query.py|
-        aiida/backends/djsite/globalsettings.py|
         aiida/backends/djsite/__init__.py|
         aiida/backends/djsite/manage.py|
         aiida/backends/djsite/queries.py|
         aiida/backends/profile.py|
         aiida/backends/general/abstractqueries.py|
-        aiida/backends/sqlalchemy/globalsettings.py|
         aiida/backends/sqlalchemy/__init__.py|
         aiida/backends/sqlalchemy/migrations/env.py|
         aiida/backends/sqlalchemy/migrations/versions/0aebbeab274d_base_data_plugin_type_string.py|
@@ -120,8 +115,6 @@
         aiida/manage/backup/backup_base.py|
         aiida/orm/autogroup.py|
         aiida/orm/querybuilder.py|
-        aiida/orm/implementation/django/utils.py|
-        aiida/orm/implementation/sqlalchemy/utils.py|
         aiida/orm/importexport.py|
         aiida/orm/nodes/data/array/bands.py|
         aiida/orm/nodes/data/array/projection.py|

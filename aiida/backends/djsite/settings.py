@@ -7,15 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Django settings for the AiiDA project.
-"""
+# pylint: disable=import-error, no-name-in-module
+""" Django settings for the AiiDA project. """
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from __future__ import absolute_import
 
 import sys
+
 import os
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID
 
 from aiida.common import exceptions
 from aiida.common.timezone import get_current_timezone
@@ -113,4 +115,10 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'aiida.backends.djsite.db',
+    'aldjemy',
 ]
+
+ALDJEMY_DATA_TYPES = {
+    'UUIDField': lambda field: UUID(),
+    'JSONField': lambda field: JSONB(),
+}

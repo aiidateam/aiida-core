@@ -211,6 +211,7 @@ py:class  sqlalchemy.ext.declarative.api.Model
 py:class  sqlalchemy.sql.functions.FunctionElement
 py:class  sqlalchemy.orm.query.Query
 py:class  sqlalchemy.orm.util.AliasedClass
+py:class  sqlalchemy.orm.session.Session
 py:exc    sqlalchemy.orm.exc.MultipleResultsFound
 
 py:class  sphinx.ext.autodoc.ClassDocumenter
@@ -258,3 +259,14 @@ py:class Collection
 
 # psychopg2
 py:class psycopg2.extensions.cursor
+
+# Aldjemy exceptions
+py:class aldjemy.orm.DbNode
+py:class aldjemy.orm.DbLink
+py:class aldjemy.orm.DbComputer
+py:class aldjemy.orm.DbUser
+py:class aldjemy.orm.DbGroup
+py:class aldjemy.orm.DbAuthInfo
+py:class aldjemy.orm.DbComment
+py:class aldjemy.orm.DbLog
+py:class aldjemy.orm.DbSetting

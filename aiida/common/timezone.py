@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from datetime import datetime
+import dateutil
 
 
 def get_current_timezone():
@@ -55,11 +56,9 @@ def is_aware(value):
 
 
 def make_aware(value, timezone=None, is_dst=None):
-    """
-    Make the given datetime object timezone aware
+    """Make the given datetime object timezone aware.
 
-    :param value: The datetime to make aware
-    :type value: :class:`!datetime.datetime`
+    :param value: datetime object to make aware
     :param timezone:
     :param is_dst:
     :return:
@@ -76,19 +75,19 @@ def make_aware(value, timezone=None, is_dst=None):
 
 
 def localtime(value, timezone=None):
-    """
-    Converts an aware datetime.datetime to local time.
-    Local time is defined by the current time zone, unless another time zone
-    is specified.
+    """Converts an aware datetime.datetime to local time.
+
+    Local time is defined by the current time zone, unless another time zone is specified.
     """
     if timezone is None:
         timezone = get_current_timezone()
-    # If `value` is naive, astimezone() will raise a ValueError,
-    # so we don't need to perform a redundant check.
+
+    # If `value` is naive, astimezone() will raise a ValueError, so we don't need to perform a redundant check.
     value = value.astimezone(timezone)
     if hasattr(timezone, 'normalize'):
         # This method is available for pytz time zones.
         value = timezone.normalize(value)
+
     return value
 
 
@@ -112,3 +111,19 @@ def delta(from_time, to_time=None):
         to_time_aware = to_time
 
     return to_time_aware - from_time_aware
+
+
+def datetime_to_isoformat(value):
+    """Convert a datetime object to string representations in ISO format.
+
+    :param value: a datetime object
+    """
+    return value.isoformat()
+
+
+def isoformat_to_datetime(value):
+    """Convert string representation of a datetime in ISO format to a datetime object.
+
+    :param value: a ISO format string representation of a datetime object
+    """
+    return dateutil.parser.parse(value)

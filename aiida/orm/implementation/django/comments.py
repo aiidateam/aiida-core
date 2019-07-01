@@ -12,11 +12,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-# pylint: disable=import-error,no-name-in-module,fixme
 from datetime import datetime
+
 from aiida.backends.djsite.db import models
-from aiida.common import exceptions
-from aiida.common import lang
+from aiida.common import exceptions, lang
 
 from ..comments import BackendComment, BackendCommentCollection
 from .utils import ModelWrapper
@@ -100,14 +99,12 @@ class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment
 
     def set_content(self, value):
         self._dbmodel.content = value
-        # self._dbmodel.save()
 
 
 class DjangoCommentCollection(BackendCommentCollection):
     """Django implementation for the CommentCollection."""
 
-    def from_dbmodel(self, dbmodel):
-        return DjangoComment.from_dbmodel(dbmodel, self.backend)
+    ENTITY_CLASS = DjangoComment
 
     def create(self, node, user, content=None, **kwargs):
         """

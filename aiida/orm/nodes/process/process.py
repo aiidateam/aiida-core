@@ -446,11 +446,12 @@ class ProcessNode(Sealable, Node):
 
         :returns: process node that called this process node instance or None
         """
-        caller = self.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK))
-        if caller:
-            return caller.first().node
-
-        return None
+        try:
+            caller = self.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).one().node
+        except ValueError:
+            return None
+        else:
+            return caller
 
     def validate_incoming(self, source, link_type, link_label):
         """Validate adding a link of the given type from a given node to ourself.
@@ -466,7 +467,6 @@ class ProcessNode(Sealable, Node):
         :raise ValueError: if the proposed link is invalid
         """
         super(ProcessNode, self).validate_incoming(source, link_type, link_label)
-        # if self.is_stored and link_type in [LinkType.INPUT_CALC, LinkType.INPUT_WORK]:
         if self.is_stored:
             raise ValueError('attempted to add an input link after the process node was already stored.')
 

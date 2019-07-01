@@ -583,14 +583,15 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      kill    Kill running processes.
-      list    Show a list of processes that are still running.
-      pause   Pause running processes.
-      play    Play paused processes.
-      report  Show the log report for one or multiple processes.
-      show    Show a summary for one or multiple processes.
-      status  Print the status of the process.
-      watch   Watch the state transitions for a process.
+      call-root  Show the root process of the call stack for the given...
+      kill       Kill running processes.
+      list       Show a list of processes that are still running.
+      pause      Pause running processes.
+      play       Play paused processes.
+      report     Show the log report for one or multiple processes.
+      show       Show a summary for one or multiple processes.
+      status     Print the status of the process.
+      watch      Watch the state transitions for a process.
 
 
 .. _verdi_profile:

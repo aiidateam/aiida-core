@@ -26,6 +26,7 @@ else:
 
 from aiida.common import exceptions  # pylint: disable=wrong-import-position
 from aiida.common.utils import strip_prefix  # pylint: disable=wrong-import-position
+from aiida.common.constants import AIIDA_FLOAT_PRECISION  # pylint: disable=wrong-import-position
 
 # This separator character is reserved to indicate nested fields in node attribute and extras dictionaries and
 # therefore is not allowed in individual attribute or extra keys.
@@ -213,7 +214,20 @@ def clean_value(value):
         # This is for float-like types, like ``numpy.float128`` that are not json-serializable
         # Note that `numbers.Real` also match booleans but they are already returned above
         if isinstance(val, numbers.Real):
-            return float(val)
+            string_representation = "{{:.{}g}}".format(AIIDA_FLOAT_PRECISION).format(val)
+            new_val = float(string_representation)
+            if 'e' in string_representation and new_val.is_integer():
+                # This is indeed often quite unexpected, because it is going to change the type of the data
+                # from float to int. But anyway clean_value is changing some types, and we are also bound to what
+                # our current backends do.
+                # Currently, in both Django and SQLA (with JSONB attributes), if we store 1.e1, ..., 1.e14, 1.e15,
+                # they will be stored as floats; instead 1.e16, 1.e17, ... will all be stored as integer anyway,
+                # even if we don't run this clean_value step.
+                # So, for consistency, it's better if we do the conversion ourselves here, and we do it for a bit
+                # smaller numbers than python+[SQL+JSONB] would do (the AiiDA float precision is here 14), so the
+                # results are consistent, and the hashing will work also after a round trip as expected.
+                return int(new_val)
+            return new_val
 
         # Anything else we do not understand and we refuse
         raise exceptions.ValidationError('type `{}` is not supported as it is not json-serializable'.format(type(val)))

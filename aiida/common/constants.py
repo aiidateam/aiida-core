@@ -12,6 +12,24 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 
+# This is the precision with which AiiDA internally will store float numbers
+# In particular, before storing a number (in attributes/extras),
+# when going via clean_value, AiiDA will first serialize to a string with
+# this precision, and then bring it back to float. This is important to
+# ensure consistency between the precision of different backends, and also
+# for hashing - the hashing MUST use the same precision, so that a hash computed
+# after clean_value but before storing to the database will be the same as the
+# hash recomputed (e.g. via `verdi rehash`) after storing and reloading the node
+# from the database.
+# See also discussion on GitHub issue #2631
+#
+# IMPORTANT! Changing this value requires to rehash the whole database!
+# So if you plan to change this, think carefully, and you might need to add
+# a migration.
+AIIDA_FLOAT_PRECISION = 14
+
+## PHYSICAL CONSTANTS BELOW HERE
+
 bohr_to_ang = 0.52917720859  # pylint: disable=invalid-name
 ang_to_m = 1.e-10  # pylint: disable=invalid-name
 bohr_si = bohr_to_ang * ang_to_m  # pylint: disable=invalid-name

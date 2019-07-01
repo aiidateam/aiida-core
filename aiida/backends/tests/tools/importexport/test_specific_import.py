@@ -15,6 +15,8 @@ from __future__ import with_statement
 
 import tempfile
 
+import numpy as np
+
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.tools.importexport import import_data, export
@@ -140,7 +142,8 @@ class TestSpecificImport(AiidaTestCase):
             builder = orm.QueryBuilder().append(orm.StructureData)
             for [structure] in builder.iterall():
                 self.assertEqual(structure.label, test_label)
-                self.assertEqual(structure.cell, test_cell)
+                # Check that they are almost the same, within numerical precision
+                self.assertTrue(np.abs(np.array(structure.cell) - np.array(test_cell)).max() < 1.e-12)
 
             builder = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
             for [kinds] in builder.iterall():

@@ -23,8 +23,6 @@ import numbers
 import random
 import time
 import uuid
-import struct
-import sys
 from datetime import datetime
 from operator import itemgetter
 from itertools import chain
@@ -42,7 +40,7 @@ except ImportError:  # Python2
     import collections as abc
     from collections import OrderedDict
 
-import numpy as np
+from aiida.common.constants import AIIDA_FLOAT_PRECISION
 
 from .folders import Folder
 
@@ -230,18 +228,30 @@ def _(mapping, **kwargs):
 
 @_make_hash.register(numbers.Real)
 def _(val, **kwargs):
-    return [_single_digest('float', struct.pack("<d", truncate_float64(val)))]
+    """
+    Before hashing a float, convert to a string (via rounding) and with a fixed number of digits after the comma.
+    Note that the `_singe_digest` requires a bytes object so we need to encode the utf-8 string first
+    """
+    return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
 
 
 @_make_hash.register(numbers.Complex)
 def _(val, **kwargs):
-    return [_single_digest('complex', struct.pack("<dd", truncate_float64(val.real), truncate_float64(val.imag)))]
+    """
+    In case of a complex number, use the same encoding of two floats and join them with a special symbol (a ! here).
+    """
+    return [
+        _single_digest(
+            'complex', u"{}!{}".format(
+                float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION),
+                float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)).encode('utf-8'))
+    ]
 
 
 @_make_hash.register(numbers.Integral)
 def _(val, **kwargs):
     """get the hash of the little-endian signed long long representation of the integer"""
-    return [_single_digest('int', struct.pack("<q", val))]
+    return [_single_digest('int', u"{}".format(val).encode('utf-8'))]
 
 
 @_make_hash.register(bool)
@@ -269,7 +279,7 @@ def _(val, **kwargs):
             val = val.replace(tzinfo=pytz.utc)
         timestamp = val.timestamp()
 
-    return [_single_digest('datetime', struct.pack("<d", timestamp))]
+    return [_single_digest('datetime', float_to_text(timestamp, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
 
 
 @_make_hash.register(uuid.UUID)
@@ -305,42 +315,13 @@ def _(folder, **kwargs):
     return [_single_digest('folder')] + [d for d in folder_digests(folder)]
 
 
-@_make_hash.register(np.ndarray)
-def _(arr, **kwargs):
-    """Hashing for Numpy arrays"""
-
-    def little_endian_array(array):
-        if sys.byteorder == 'little':
-            return array
-        return array.byteswap()
-
-    if arr.dtype == np.float64:
-        return [_single_digest('arr.float', little_endian_array(truncate_array64(arr)).tobytes())]
-
-    if arr.dtype == np.complex128:
-        return [
-            _single_digest('arr.complex'),
-            little_endian_array(truncate_array64(arr.real)).tobytes() + little_endian_array(truncate_array64(
-                arr.imag)).tobytes()
-        ]
-
-    return [_single_digest('arr.*', little_endian_array(arr).tobytes())]
-
-
-def truncate_float64(value, num_bits=4):
+def float_to_text(value, sig):
     """
-    reduce the number of bits making it into the hash to avoid rehashing due to
-    possible truncation in float->str->float roundtrips
+    Convert float to text string for computing hash.
+    Preseve up to N significant number given by sig.
+
+    :param value: the float value to convert
+    :param sig: choose how many digits after the comma should be output
     """
-    mask = ~(2**num_bits - 1)
-    int_repr = np.float64(value).view(np.int64)  # pylint: disable=no-member,too-many-function-args,assignment-from-no-return
-    masked_int = int_repr & mask
-    truncated_value = masked_int.view(np.float64)
-    return truncated_value
-
-
-def truncate_array64(value, num_bits=4):
-    mask = ~(2**num_bits - 1)
-    int_array = np.array(value, dtype=np.float64).view(np.int64)
-    masked_array = int_array & mask
-    return masked_array.view(np.float64)
+    fmt = u'{{:.{}g}}'.format(sig)
+    return fmt.format(value)

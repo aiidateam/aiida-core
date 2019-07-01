@@ -141,7 +141,7 @@ class TestComplex(AiidaTestCase):
                 item['calc']['*'].uuid,
                 item['calc']['*'].attributes,
                 item['array']['*'].attributes,
-                [item['array']['*'].get_array(name) for name in item['array']['*'].get_arraynames()],
+                [item['array']['*'].get_array(name).tolist() for name in item['array']['*'].get_arraynames()],
                 item['array']['*'].uuid,
                 item['group']['*'].uuid,
                 item['group']['*'].label,

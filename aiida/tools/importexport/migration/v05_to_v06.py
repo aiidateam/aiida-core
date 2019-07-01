@@ -29,7 +29,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from six.moves import zip
-from aiida.cmdline.utils.migration.utils import verify_metadata_version, update_metadata
+from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
 
 
 def migrate_deserialized_datetime(data, conversion):

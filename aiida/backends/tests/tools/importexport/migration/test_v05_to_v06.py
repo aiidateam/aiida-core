@@ -15,8 +15,8 @@ from __future__ import absolute_import
 from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.archives import get_json_files
-from aiida.cmdline.utils.migration.utils import verify_metadata_version
-from aiida.cmdline.utils.migration.v05_to_v06 import migrate_v5_to_v6
+from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.tools.importexport.migration.v05_to_v06 import migrate_v5_to_v6
 
 
 class TestMigrateV05toV06(AiidaTestCase):

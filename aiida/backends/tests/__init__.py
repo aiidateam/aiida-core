@@ -91,6 +91,7 @@ DB_TEST_LIST = {
         'engine.daemon': ['aiida.backends.tests.engine.test_daemon'],
         'engine.futures': ['aiida.backends.tests.engine.test_futures'],
         'engine.launch': ['aiida.backends.tests.engine.test_launch'],
+        'engine.manager': ['aiida.backends.tests.engine.test_manager'],
         'engine.persistence': ['aiida.backends.tests.engine.test_persistence'],
         'engine.ports': ['aiida.backends.tests.engine.test_ports'],
         'engine.process': ['aiida.backends.tests.engine.test_process'],

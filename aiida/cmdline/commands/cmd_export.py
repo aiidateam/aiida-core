@@ -106,7 +106,7 @@ def create(output_file, codes, computers, groups, nodes, archive_format, force, 
     Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
     sharing purposes.
     """
-    from aiida.orm.importexport import export, export_zip
+    from aiida.tools.importexport import export, export_zip
 
     entities = []
 

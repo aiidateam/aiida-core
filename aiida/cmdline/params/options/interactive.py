@@ -48,7 +48,10 @@ class InteractiveOption(ConditionalOption):
         def foo(label):
             click.echo('Labeling with label: {}'.format(label))
     """
+
     PROMPT_COLOR = 'yellow'
+    CHARACTER_PROMPT_HELP = '?'
+    CHARACTER_IGNORE_DEFAULT = '!'
 
     def __init__(self, param_decls=None, switch=None, prompt_fn=None, contextual_default=None, **kwargs):
         """
@@ -180,6 +183,11 @@ class InteractiveOption(ConditionalOption):
         :return: Tuple of ( success (bool), converted value )
         """
         successful = False
+
+        if value is self.CHARACTER_IGNORE_DEFAULT:
+            # The ignore default character signifies that the user wants to "not" set the value, so we return `None`
+            return True, None
+
         try:
             value = self.type.convert(value, param, ctx)
             value = self.callback(ctx, param, value)
@@ -191,10 +199,12 @@ class InteractiveOption(ConditionalOption):
         return successful, value
 
     def simple_prompt_loop(self, ctx, param, value):
-        """prompt until successful conversion. dispatch control sequences"""
+        """Prompt until successful conversion. dispatch control sequences."""
         if not hasattr(ctx, 'prompt_loop_info_printed'):
-            echo.echo_info('enter "?" for help')
+            echo.echo_info('enter "{}" for help'.format(self.CHARACTER_PROMPT_HELP))
+            echo.echo_info('enter "{}" to ignore the default and set no value'.format(self.CHARACTER_IGNORE_DEFAULT))
             ctx.prompt_loop_info_printed = True
+
         while 1:
             # prompt
             value = self.prompt_func(ctx)
@@ -209,7 +219,7 @@ class InteractiveOption(ConditionalOption):
                     return value
 
     def after_callback(self, ctx, param, value):
-        """If a callback was registered on init, call it and return it's value"""
+        """If a callback was registered on init, call it and return it's value."""
         if self._after_callback:
             try:
                 self._after_callback(ctx, param, value)

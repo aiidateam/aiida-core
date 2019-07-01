@@ -28,6 +28,7 @@ from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.tests.test_utils import new_database
 from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.utils import Capturing
 
 
 class TestMigrationsSQLA(AiidaTestCase):
@@ -70,9 +71,11 @@ class TestMigrationsSQLA(AiidaTestCase):
             "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
 
         try:
-            self.migrate_db_down(self.migrate_from)
+            with Capturing():
+                self.migrate_db_down(self.migrate_from)
             self.setUpBeforeMigration()
-            self.migrate_db_up(self.migrate_to)
+            with Capturing():
+                self.migrate_db_up(self.migrate_to)
         except Exception:
             # Bring back the DB to the correct state if this setup part fails
             self._reset_database_and_schema()
@@ -123,7 +126,8 @@ class TestMigrationsSQLA(AiidaTestCase):
         of tests.
         """
         self.reset_database()
-        self.migrate_db_up("head")
+        with Capturing():
+            self.migrate_db_up("head")
 
     @property
     def current_rev(self):
@@ -230,9 +234,11 @@ class TestBackwardMigrationsSQLA(TestMigrationsSQLA):
             "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
 
         try:
-            self.migrate_db_down(self.migrate_from)
+            with Capturing():
+                self.migrate_db_down(self.migrate_from)
             self.setUpBeforeMigration()
-            self.migrate_db_down(self.migrate_to)
+            with Capturing():
+                self.migrate_db_down(self.migrate_to)
         except Exception:
             # Bring back the DB to the correct state if this setup part fails
             self._reset_database_and_schema()
@@ -1340,5 +1346,61 @@ class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
                     exit_status = attrs.get('exit_status', None)
                     if exit_status is not None:
                         self.assertIsInstance(exit_status, six.integer_types)
+            finally:
+                session.close()
+
+
+class TestResetHash(TestMigrationsSQLA):
+    """Test the migration that resets the node hash."""
+
+    migrate_from = '26d561acd560'
+    migrate_to = 'e797afa09270'
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+        from aiida.backends.general.migrations.calc_state import STATE_MAPPING
+
+        self.state_mapping = STATE_MAPPING
+        self.nodes = {}
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                session.add(user)
+                session.commit()
+
+                node = DbNode(
+                    node_type='process.calculation.calcjob.CalcJobNode.',
+                    user_id=user.id,
+                    extras={'something': 123, '_aiida_hash': 'abcd'}
+                )
+                session.add(node)
+                session.commit()
+
+                self.node_id = node.id
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_data_migrated(self):
+        """Verify that only the _aiida_hash extra has been removed."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+                node = session.query(DbNode).filter(DbNode.id == self.node_id).one()
+                extras = node.extras
+                self.assertEqual(extras.get('something'), 123)  # Other extras should be untouched
+                self.assertNotIn('_aiida_hash', extras)  # The hash extra should have been removed
             finally:
                 session.close()

@@ -115,7 +115,6 @@
         aiida/manage/backup/backup_base.py|
         aiida/orm/autogroup.py|
         aiida/orm/querybuilder.py|
-        aiida/orm/importexport.py|
         aiida/orm/nodes/data/array/bands.py|
         aiida/orm/nodes/data/array/projection.py|
         aiida/orm/nodes/data/array/xy.py|

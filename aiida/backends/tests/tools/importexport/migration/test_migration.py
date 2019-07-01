@@ -19,8 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.archives import get_archive_file, get_json_files, migrate_archive
 from aiida.backends.tests.utils.configuration import with_temp_dir
 from aiida.cmdline.utils.migration import migrate_recursively, verify_metadata_version
-from aiida.orm.importexport import import_data
-from aiida.orm.importexport import EXPORT_VERSION as newest_version
+from aiida.tools.importexport import import_data, EXPORT_VERSION as newest_version
 
 
 class TestExportFileMigration(AiidaTestCase):

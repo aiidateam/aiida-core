@@ -25,7 +25,7 @@ from six.moves import range, zip
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import get_new_uuid
-from aiida.orm.importexport import import_data, export
+from aiida.tools.importexport import import_data, export
 from aiida.backends.tests.utils.configuration import with_temp_dir
 
 
@@ -296,7 +296,7 @@ class TestSimple(AiidaTestCase):
         """Test control of licenses."""
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
-        from aiida.orm.importexport import export_tree
+        from aiida.tools.importexport.dbexport import export_tree
 
         from aiida.plugins import DataFactory
 
@@ -1175,7 +1175,7 @@ class TestComputer(AiidaTestCase):
         This test checks that if there is a name collision, the imported
         computers are renamed accordingly.
         """
-        from aiida.orm.importexport import DUPL_SUFFIX
+        from aiida.tools.importexport.config import DUPL_SUFFIX
 
         # Set the computer name
         comp1_name = "localhost_1"

@@ -157,7 +157,7 @@ funded by the `Swiss National Science Foundation`_, as well as by the
    :height: 100px
    :target: `MARVEL National Centre for Competency in Research`_
 
-.. image:: images/MAX.png
+.. image:: images/MaX.png
    :height: 80px
    :target: `MaX European Centre of Excellence`_
 

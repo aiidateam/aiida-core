@@ -33,7 +33,7 @@ import os
 import numpy as np
 
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.migration.utils import verify_metadata_version, update_metadata, remove_fields
+from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata, remove_fields
 
 
 def migration_base_data_plugin_type_string(data):

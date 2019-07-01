@@ -52,7 +52,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
     `'extras_mode_new'`: `import_data`'s `'extras_mode_new'` keyword, determining import rules for Extras.
     `'comment_mode'`: `import_data`'s `'comment_mode'` keyword, determining import rules for Comments.
     """
-    from aiida.orm.importexport import import_data
+    from aiida.tools.importexport import import_data
 
     # Checks
     expected_keys = ['extras_mode_existing', 'extras_mode_new', 'comment_mode']
@@ -191,7 +191,7 @@ def cmd_import(ctx, archives, webpages, group, extras_mode_existing, extras_mode
     from six.moves import urllib
 
     from aiida.common.folders import SandboxFolder
-    from aiida.orm.importexport import get_valid_import_links
+    from aiida.tools.importexport.utils import get_valid_import_links
 
     archives_url = []
     archives_file = []

@@ -44,14 +44,24 @@ This will make understanding and using ``verdi`` a lot easier!
     ../verdi/verdi_user_guide.rst
 
 
+==========
+Python API
+==========
+
+.. toctree::
+    :maxdepth: 4
+
+    python_api
+
+
 =========
 Scripting
 =========
 
-While many common functionalities are provided by either command-line tools 
-(via ``verdi``) or the web interface, for fine tuning (or automatization) 
+While many common functionalities are provided by either command-line tools
+(via ``verdi``) or the web interface, for fine tuning (or automatization)
 it is useful to directly access the python objects and call their methods.
-This is possible in two ways, either via an interactive shell, or writing and 
+This is possible in two ways, either via an interactive shell, or writing and
 running a script. Both methods are described below.
 
 .. toctree::

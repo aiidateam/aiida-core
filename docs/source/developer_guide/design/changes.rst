@@ -57,9 +57,9 @@ For quite a few versions, the old and new way of defining and running processes 
 In ``aiida-core`` version ``1.0.0`` we fully deprecate the old way and all calculations now use the process/node duality.
 As a result the ``JobCalculation`` class has disappeared.
 Now, instead, a ``CalcJobNode`` is created in the provenance graph to represent the execution of a calculation through a scheduler.
-Moreover, to implement the plugin for a calculation job, one now subclasses the ``Process`` subclass ``CalcJob``, whose interface is the same as that of the ``WorkChain``. 
+Moreover, to implement the plugin for a calculation job, one now subclasses the ``Process`` subclass ``CalcJob``, whose interface is the same as that of the ``WorkChain``.
 
-Inputs, outputs and potentially exit codes are simply implemented in the ``define`` class method, just as you would for the ``WorkChain``. 
+Inputs, outputs and potentially exit codes are simply implemented in the ``define`` class method, just as you would for the ``WorkChain``.
 Unlike the ``WorkChain``, however, the ``CalcJob`` does not have an outline, but instead just has a single method that should be implemented, namely ``prepare_for_submission``.
 This method takes a single argument ``folder`` which will point to a temporary folder to which the required input files for the calculation can be written.
 From a plugin developer standpoint, the rest works exactly as before, and the ``prepare_for_submission`` method should return a ``CalcInfo`` object, containing information for the engine on what files to copy over and to retrieve.
@@ -95,5 +95,4 @@ In particular we will strive to:
  - if we are forced to change it anyway, deprecate a signifcant amount of time in advance
  - for backwards incompatible changes, increase the major version
 
-For better clarity, we are curating a list of classes and functions (exposed at the second level) that are intended to be public and for which the above policy will be enforced.
-The list is currently maintained on `GitHub <https://github.com/aiidateam/aiida_core/wiki/AiiDA-public-modules,-classes-and-functions>`_.
+For better clarity, we are :ref:`curating a list of classes and functions<python_api_public_list>` (exposed at the second level) that are intended to be public and for which the above policy will be enforced

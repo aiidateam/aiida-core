@@ -22,7 +22,7 @@ from .v03_to_v04 import migrate_v3_to_v4
 from .v04_to_v05 import migrate_v4_to_v5
 from .v05_to_v06 import migrate_v5_to_v6
 
-__all__ = ('migrate_recursively', 'verify_metadata_version', 'update_metadata')
+__all__ = ('migrate_recursively', 'verify_metadata_version')
 
 MIGRATE_FUNCTIONS = {
     '0.1': migrate_v1_to_v2,
@@ -42,7 +42,7 @@ def migrate_recursively(metadata, data, folder):
     :param data: the content of an export archive data.json file
     :param folder: SandboxFolder in which the archive has been unpacked (workdir)
     """
-    from aiida.orm.importexport import EXPORT_VERSION as newest_version
+    from aiida.tools.importexport import EXPORT_VERSION as newest_version
 
     old_version = verify_metadata_version(metadata)
 

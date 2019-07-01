@@ -1,4 +1,4 @@
-# Usage: conda env create -f environment.yml python=3.6
+# Usage: conda env create -n myenvname -f environment.yml python=3.6
 ---
 name: aiida
 channels:

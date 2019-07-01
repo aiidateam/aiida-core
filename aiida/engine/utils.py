@@ -20,7 +20,7 @@ from six.moves import range
 import tornado.ioloop
 from tornado import concurrent, gen
 
-__all__ = ('RefObjectStore', 'interruptable_task', 'InterruptableFuture')
+__all__ = ('interruptable_task', 'InterruptableFuture')
 
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
@@ -242,7 +242,7 @@ def set_process_state_change_timestamp(process):
 
     :param process: the Process instance that changed its state
     """
-    from aiida.backends.utils import set_global_setting
+    from aiida.backends.utils import get_settings_manager
     from aiida.common import timezone
     from aiida.common.exceptions import UniquenessError
     from aiida.orm import ProcessNode, CalculationNode, WorkflowNode
@@ -259,10 +259,11 @@ def set_process_state_change_timestamp(process):
 
     key = PROCESS_STATE_CHANGE_KEY.format(process_type)
     description = PROCESS_STATE_CHANGE_DESCRIPTION.format(process_type)
-    value = timezone.now()
+    value = timezone.datetime_to_isoformat(timezone.now())
 
     try:
-        set_global_setting(key, value, description)
+        manager = get_settings_manager()
+        manager.set(key, value, description)
     except UniquenessError as exception:
         process.logger.debug('could not update the {} setting because of a UniquenessError: {}'.format(key, exception))
 
@@ -277,8 +278,11 @@ def get_process_state_change_timestamp(process_type=None):
         known process types will be returned.
     :return: a timestamp or None
     """
-    from aiida.backends.utils import get_global_setting
+    from aiida.backends.utils import get_settings_manager
+    from aiida.common import timezone
+    from aiida.common.exceptions import NotExistent
 
+    manager = get_settings_manager()
     valid_process_types = ['calculation', 'work']
 
     if process_type is not None and process_type not in valid_process_types:
@@ -294,89 +298,11 @@ def get_process_state_change_timestamp(process_type=None):
     for process_type_key in process_types:
         key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)
         try:
-            timestamps.append(get_global_setting(key))
-        except KeyError:
-            pass
+            timestamps.append(timezone.isoformat_to_datetime(manager.get(key).value))
+        except NotExistent:
+            continue
 
     if not timestamps:
         return None
 
     return max(timestamps)
-
-
-class RefObjectStore(object):  # pylint: disable=useless-object-inheritance
-    """
-    An object store that has a reference count based on a context manager.
-    Basic usage::
-
-        store = RefObjectStore()
-        with store.get('Martin', lambda: 'martin.uhrin@epfl.ch') as email:
-            with store.get('Martin') as email2:
-                email is email2  # True
-
-    The use case for this store is when you have an object can be used by
-    multiple parts of the code simultaneously (nested or async code) and
-    where there should be one instance that exists for the lifetime of these
-    contexts.  Once noone is using the object, it should be removed from the
-    store (and therefore eventually garbage collected).
-    """
-
-    class Reference(object):  # pylint: disable=useless-object-inheritance
-        """A reference to store the context reference count and the object itself."""
-
-        def __init__(self, obj):
-            self._count = 0
-            self._obj = obj
-
-        @property
-        def count(self):
-            """
-            Get the reference count for the object
-
-            :return: The reference count
-            :rtype: int
-            """
-            return self._count
-
-        @contextlib.contextmanager
-        def get(self):
-            """
-            Get the object itself, which will up the reference count for the duration of the context.
-
-            :return: The object
-            """
-            self._count += 1
-            try:
-                yield self._obj
-            finally:
-                self._count -= 1
-
-    def __init__(self):
-        self._objects = {}
-
-    @contextlib.contextmanager
-    def get(self, identifier, constructor=None):
-        """
-        Get or create an object.  The internal reference count will be upped for
-        the duration of the context.  If the reference count drops to 0 the object
-        will be automatically removed from the list.
-
-        :param identifier: The key identifying the object
-        :param constructor: An optional constructor that is called with no arguments
-            if the object doesn't already exist in the store
-        :return: The object corresponding to the identifier
-        """
-        try:
-            ref = self._objects[identifier]
-        except KeyError:
-            if constructor is None:
-                raise ValueError("Object not found and no constructor given")
-            ref = self.Reference(constructor())
-            self._objects[identifier] = ref
-
-        try:
-            with ref.get() as obj:
-                yield obj
-        finally:
-            if ref.count == 0:
-                self._objects.pop(identifier)

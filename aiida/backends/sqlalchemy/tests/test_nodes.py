@@ -62,8 +62,6 @@ class TestNodeBasicSQLA(AiidaTestCase):
         Test for load_node() function.
         """
         from aiida.orm import load_node
-        from aiida.common.exceptions import NotExistent
-        import aiida.backends.sqlalchemy
         from aiida.backends.sqlalchemy import get_scoped_session
 
         a = Data()

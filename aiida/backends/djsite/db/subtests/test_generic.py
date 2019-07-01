@@ -133,37 +133,3 @@ class TestGroupsDjango(AiidaTestCase):
 
         self.assertEquals(g.pk, gcopy.pk)
         self.assertEquals(g.uuid, gcopy.uuid)
-
-
-class TestDbExtrasDjango(AiidaTestCase):
-    """Test DbAttributes."""
-
-    def test_replacement_1(self):
-        from aiida.backends.djsite.db.models import DbExtra
-
-        n1 = Data().store()
-        n2 = Data().store()
-
-        DbExtra.set_value_for_node(n1.backend_entity.dbmodel, "pippo", [1, 2, 'a'])
-        DbExtra.set_value_for_node(n1.backend_entity.dbmodel, "pippobis", [5, 6, 'c'])
-        DbExtra.set_value_for_node(n2.backend_entity.dbmodel, "pippo2", [3, 4, 'b'])
-
-        self.assertEquals(n1.extras, {'pippo': [1, 2, 'a'],
-                                            'pippobis': [5, 6, 'c'],
-                                            '_aiida_hash': n1.get_hash()
-                                            })
-        self.assertEquals(n2.extras, {'pippo2': [3, 4, 'b'],
-                                            '_aiida_hash': n2.get_hash()
-                                            })
-
-        new_attrs = {"newval1": "v", "newval2": [1, {"c": "d", "e": 2}]}
-
-        DbExtra.reset_values_for_node(n1.backend_entity.dbmodel, attributes=new_attrs)
-        self.assertEquals(n1.extras, new_attrs)
-        self.assertEquals(n2.extras, {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
-
-        DbExtra.del_value_for_node(n1.backend_entity.dbmodel, key='newval2')
-        del new_attrs['newval2']
-        self.assertEquals(n1.extras, new_attrs)
-        # Also check that other nodes were not damaged
-        self.assertEquals(n2.extras, {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})

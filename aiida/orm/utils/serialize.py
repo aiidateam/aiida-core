@@ -21,10 +21,11 @@ from __future__ import absolute_import
 from functools import partial
 import yaml
 
-import plumpy
+from plumpy import Bundle
 from plumpy.utils import AttributesFrozendict
 
-from aiida import common, orm
+from aiida import orm
+from aiida.common import AttributeDict
 
 _NODE_TAG = '!aiida_node'
 _GROUP_TAG = '!aiida_group'
@@ -35,8 +36,7 @@ _PLUMPY_BUNDLE = '!plumpy:bundle'
 
 
 def represent_node(dumper, node):
-    """
-    Represent a node in YAML
+    """Represent a node in yaml.
 
     :param dumper: the dumper to use
     :param node: the node to represent
@@ -49,8 +49,7 @@ def represent_node(dumper, node):
 
 
 def node_constructor(loader, node):
-    """
-    Load an aiida node from the yaml representation
+    """Load a node from the yaml representation.
 
     :param loader: the yaml loader
     :param node: the yaml representation
@@ -62,8 +61,7 @@ def node_constructor(loader, node):
 
 
 def represent_group(dumper, group):
-    """
-    Represent a group in YAML
+    """Represent a group in yaml.
 
     :param dumper: the dumper to use
     :param group: the group to represent
@@ -76,8 +74,7 @@ def represent_group(dumper, group):
 
 
 def group_constructor(loader, group):
-    """
-    Load an aiida group from the yaml representation
+    """Load a group from the yaml representation.
 
     :param loader: the yaml loader
     :param group: the yaml representation
@@ -89,8 +86,7 @@ def group_constructor(loader, group):
 
 
 def represent_computer(dumper, computer):
-    """
-    Represent a group in YAML
+    """Represent a computer in yaml.
 
     :param dumper: the dumper to use
     :param computer: the computer to represent
@@ -103,8 +99,7 @@ def represent_computer(dumper, computer):
 
 
 def computer_constructor(loader, computer):
-    """
-    Load an aiida computer from the yaml representation
+    """Load a computer from the yaml representation.
 
     :param loader: the yaml loader
     :param computer: the yaml representation
@@ -115,10 +110,63 @@ def computer_constructor(loader, computer):
     return orm.Computer.get(uuid=yaml_node)
 
 
-class AiiDADumper(yaml.Dumper):
+def represent_mapping(tag, dumper, mapping):
+    """Represent a mapping in yaml.
+
+    :param tag: the yaml tag to use
+    :param dumper: the dumper to use
+    :type dumper: :class:`yaml.dumper.Dumper`
+    :param mapping: the mapping to represent
+    :return: the representation
     """
-    Custom AiiDA YAML dumper.  Needed so that we don't have to encode each type in the AiiDA graph
-    hierarchy separately using a custom representer.
+    return dumper.represent_mapping(tag, mapping)
+
+
+def mapping_constructor(mapping_type, loader, mapping):
+    """Construct a mapping from the representation.
+
+    :param mapping_type: the class of the mapping to construct, must accept a dictionary as a sole constructor argument
+        to be compatible.
+    :param loader: the yaml loader
+    :type loader: :class:`yaml.loader.Loader`
+    :param mapping: the mapping representation
+    :return: the reconstructed mapping
+    """
+    yaml_node = loader.construct_mapping(mapping, deep=True)
+    return mapping_type(yaml_node)
+
+
+def represent_bundle(dumper, bundle):
+    """Represent an `plumpy.Bundle` in yaml
+
+    :param tag: the yaml  tag to use
+    :param dumper: the dumper to use
+    :type dumper: :class:`yaml.dumper.Dumper`
+    :param bundle: the bundle to represent
+    :return: the representation
+    """
+    as_dict = dict(bundle)
+    return dumper.represent_mapping(_PLUMPY_BUNDLE, as_dict)
+
+
+def bundle_constructor(loader, bundle):
+    """Construct an `plumpy.Bundle` from the representation
+
+    :param loader: the yaml loader
+    :type loader: :class:`yaml.loader.Loader`
+    :param bundle: the bundle representation
+    :return: the mapping type
+    """
+    yaml_node = loader.construct_mapping(bundle)
+    bundle = Bundle.__new__(Bundle)
+    bundle.update(yaml_node)
+    return bundle
+
+
+class AiiDADumper(yaml.Dumper):
+    """Custom AiiDA yaml dumper.
+
+    Needed so that we don't have to encode each type in the AiiDA graph hierarchy separately using a custom representer.
     """
 
     def represent_data(self, data):
@@ -133,95 +181,27 @@ class AiiDADumper(yaml.Dumper):
 
 
 class AiiDALoader(yaml.Loader):
-    """AiiDA specific YAML loader"""
+    """AiiDA specific yaml loader"""
 
 
-def represent_mapping(tag, dumper, mapping):
-    """
-    Represent an AttributeDict in YAML
-
-    :param tag: the yaml  tag to use
-    :param dumper: the dumper to use
-    :type dumper: :class:`yaml.dumper.Dumper`
-    :param mapping: the attribute dict to represent
-    :return: the representation
-    """
-    return dumper.represent_mapping(tag, mapping)
-
-
-def mapping_constructor(mapping_type, loader, mapping):
-    """
-    Construct an AttributeDict from the representation
-
-    :param mapping_type: the class of the mapping to construct, must accept a dictionary as a
-        sole constructor argument to be compatible
-    :param loader: the yaml loader
-    :type loader: :class:`yaml.loader.Loader`
-    :param mapping: the attribute dict representation
-    :return: the mapping type
-    """
-    yaml_node = loader.construct_mapping(mapping)
-    return mapping_type(yaml_node)
-
-
-# All the mapping types:
-
-yaml.add_representer(
-    common.extendeddicts.AttributeDict, partial(represent_mapping, _ATTRIBUTE_DICT_TAG), Dumper=AiiDADumper)
-yaml.add_constructor(
-    _ATTRIBUTE_DICT_TAG, partial(mapping_constructor, common.extendeddicts.AttributeDict), Loader=AiiDALoader)
-
+yaml.add_representer(Bundle, represent_bundle, Dumper=AiiDADumper)
+yaml.add_representer(AttributeDict, partial(represent_mapping, _ATTRIBUTE_DICT_TAG), Dumper=AiiDADumper)
+yaml.add_constructor(_ATTRIBUTE_DICT_TAG, partial(mapping_constructor, AttributeDict), Loader=AiiDALoader)
 yaml.add_representer(
     AttributesFrozendict, partial(represent_mapping, _PLUMPY_ATTRIBUTES_FROZENDICT_TAG), Dumper=AiiDADumper)
 yaml.add_constructor(
     _PLUMPY_ATTRIBUTES_FROZENDICT_TAG, partial(mapping_constructor, AttributesFrozendict), Loader=AiiDALoader)
-
-
-def represent_bundle(dumper, bundle):
-    """
-    Represent an AttributeDict in YAML
-
-    :param tag: the yaml  tag to use
-    :param dumper: the dumper to use
-    :type dumper: :class:`yaml.dumper.Dumper`
-    :param bundle: the attribute dict to represent
-    :return: the representation
-    """
-    as_dict = dict(bundle)
-    return dumper.represent_mapping(_PLUMPY_BUNDLE, as_dict)
-
-
-def bundle_constructor(loader, mapping):
-    """
-    Construct an AttributeDict from the representation
-
-    :param mapping: the class of the mapping to construct, must accept a dictionary as a sole constructor argument to
-        be compatible
-    :param loader: the yaml loader
-    :type loader: :class:`yaml.loader.Loader`
-    :param mapping: the attribute dict representation
-    :return: the mapping type
-    """
-    yaml_node = loader.construct_mapping(mapping)
-    bundle = plumpy.Bundle.__new__(plumpy.Bundle)
-    bundle.update(yaml_node)
-    return bundle
-
-
-yaml.add_representer(plumpy.Bundle, represent_bundle, Dumper=AiiDADumper)
 yaml.add_constructor(_PLUMPY_BUNDLE, bundle_constructor, Loader=AiiDALoader)
-
 yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_COMPUTER_TAG, computer_constructor, Loader=AiiDALoader)
 
 
 def serialize(data, encoding=None):
-    """
-    Serialize the given data structure into a string
+    """Serialize the given data structure into a yaml dump.
 
     The function supports standard data containers such as maps and lists as well as AiiDA nodes which will be
-    serialized into strings, before the whole data structure is dumped into a string using YAML.
+    serialized into strings, before the whole data structure is dumped into a string using yaml.
 
     :param data: the general data to serialize
     :param encoding: optional encoding for the serialized string
@@ -236,10 +216,9 @@ def serialize(data, encoding=None):
 
 
 def deserialize(serialized):
-    """
-    Deserialize a string that represents a serialized data structure
+    """Deserialize a yaml dump that represents a serialized data structure.
 
-    :param serialized: the string representation of serialized data
+    :param serialized: a yaml serialized string representation
     :return: the deserialized data structure
     """
     return yaml.load(serialized, Loader=AiiDALoader)

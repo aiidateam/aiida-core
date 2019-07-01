@@ -30,7 +30,7 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 from alembic import op
 
-from aiida.backends.sqlalchemy.utils import dumps_json
+from aiida.backends.general.migrations.utils import dumps_json
 from aiida.manage import configuration
 
 # revision identifiers, used by Alembic.

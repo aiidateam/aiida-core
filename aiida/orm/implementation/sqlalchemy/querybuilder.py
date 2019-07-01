@@ -11,7 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from datetime import datetime
+
 import uuid
 import six
 
@@ -25,6 +25,7 @@ from sqlalchemy.ext.compiler import compiles
 
 import aiida.backends.sqlalchemy
 from aiida.common.exceptions import InputValidationError
+from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
 
 
@@ -74,6 +75,15 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     """
 
     # pylint: disable=redefined-outer-name, too-many-public-methods
+
+    def __init__(self, backend):
+        BackendQueryBuilder.__init__(self, backend)
+
+        self.outer_to_inner_schema['db_dbcomputer'] = {'metadata': '_metadata'}
+        self.outer_to_inner_schema['db_dblog'] = {'metadata': '_metadata'}
+
+        self.inner_to_outer_schema['db_dbcomputer'] = {'_metadata': 'metadata'}
+        self.inner_to_outer_schema['db_dblog'] = {'_metadata': 'metadata'}
 
     @property
     def Node(self):
@@ -125,17 +135,16 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
     def modify_expansions(self, alias, expansions):
         """
-        For sqlalchemy, there are no additional expansions for now, so
-        I am returning an empty list
+        In SQLA, the metadata should be changed to _metadata to be in-line with the database schema
         """
         # pylint: disable=protected-access
-        if issubclass(alias._sa_class_manager.class_, self.Computer) or \
-            issubclass(alias._sa_class_manager.class_, self.Log):
-            try:
-                expansions.remove('metadata')
-                expansions.append('_metadata')
-            except KeyError:
-                pass
+        # The following check is added to avoided unnecessary calls to get_inner_property for QB edge queries
+        # The update of expansions makes sense only when AliasedClass is provided
+        if hasattr(alias, '_sa_class_manager'):
+            if '_metadata' in expansions:
+                raise NotExistent("_metadata doesn't exist for {}. Please try metadata.".format(alias))
+
+            return self.get_corresponding_properties(alias.__tablename__, expansions, self.outer_to_inner_schema)
 
         return expansions
 
@@ -295,18 +304,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             elif value is None:
                 type_filter = jsonb_typeof(path_in_json) == 'null'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
-            elif isinstance(value, datetime):
-                # type filter here is filter whether this attributes stores
-                # a string and a filter whether this string
-                # is compatible with a datetime (using a regex)
-                #  - What about historical values (BC, or before 1000AD)??
-                #  - Different ways to represent the timezone
-
-                type_filter = jsonb_typeof(path_in_json) == 'string'
-                regex_filter = path_in_json.astext.op("SIMILAR TO")(
-                    "\d\d\d\d-[0-1]\d-[0-3]\dT[0-2]\d:[0-5]\d:\d\d\.\d+((\+|\-)\d\d:\d\d)?")  # pylint: disable=anomalous-backslash-in-string
-                type_filter = and_(type_filter, regex_filter)
-                casted_entity = path_in_json.cast(DateTime)
             else:
                 raise TypeError('Unknown type {}'.format(type(value)))
             return type_filter, casted_entity
@@ -394,7 +391,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def get_aiida_res(self, key, res):
         """
         Some instance returned by ORM (django or SA) need to be converted
-        to Aiida instances (eg nodes). Choice (sqlalchemy_utils)
+        to AiiDA instances (eg nodes). Choice (sqlalchemy_utils)
         will return their value
 
         :param key: The key
@@ -479,9 +476,13 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             self.get_session().rollback()
             raise
 
-    def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
+    def iterdict(self, query, batch_size, tag_to_projected_properties_dict, tag_to_alias_map):
 
-        nr_items = sum(len(v) for v in tag_to_projected_entity_dict.values())
+        def get_table_name(aliased_class):
+            """ Returns the table name given an Aliased class"""
+            return aliased_class.__tablename__
+
+        nr_items = sum(len(v) for v in tag_to_projected_properties_dict.values())
 
         if not nr_items:
             raise ValueError("Got an empty dictionary")
@@ -493,31 +494,43 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 for this_result in results:
                     yield {
                         tag: {
-                            attrkey: self.get_aiida_res(attrkey, this_result[index_in_sql_result])
+                            self.get_corresponding_property(
+                                get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema):
+                            self.get_aiida_res(attrkey, this_result[index_in_sql_result])
                             for attrkey, index_in_sql_result in projected_entities_dict.items()
-                        } for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
+                        } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
                     }
             elif nr_items == 1:
                 # I this case, sql returns a  list, where each listitem is the result
                 # for one row. Here I am converting it to a list of lists (of length 1)
-                if [v for entityd in tag_to_projected_entity_dict.values() for v in entityd.keys()] == ['*']:
+                if [v for entityd in tag_to_projected_properties_dict.values() for v in entityd.keys()] == ['*']:
                     for this_result in results:
                         yield {
                             tag: {
-                                attrkey: self.get_aiida_res(attrkey, this_result)
+                                self.get_corresponding_property(
+                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema):
+                                self.get_aiida_res(attrkey, this_result)
                                 for attrkey, position in projected_entities_dict.items()
-                            } for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
+                            } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
                         }
                 else:
                     for this_result, in results:
                         yield {
                             tag: {
-                                attrkey: self.get_aiida_res(attrkey, this_result)
+                                self.get_corresponding_property(
+                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema):
+                                self.get_aiida_res(attrkey, this_result)
                                 for attrkey, position in projected_entities_dict.items()
-                            } for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
+                            } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
                         }
             else:
                 raise ValueError("Got an empty dictionary")
         except Exception:
             self.get_session().rollback()
             raise
+
+    def get_column_names(self, alias):
+        """
+        Given the backend specific alias, return the column names that correspond to the aliased table.
+        """
+        return [str(c).replace(alias.__table__.name + '.', '') for c in alias.__table__.columns]

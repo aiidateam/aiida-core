@@ -373,7 +373,6 @@ class CalcJobNode(CalculationNode):
             Will be removed in `v2.0.0`, use
             :meth:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_retrieve_temporary_list` instead.
         """
-        warnings.warn('method is deprecated, use `get_retrieve_temporary_list` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
         return self.get_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, None)
 
     def set_job_id(self, job_id):
@@ -404,7 +403,7 @@ class CalcJobNode(CalculationNode):
             raise ValueError('scheduler state should be an instance of JobState, got: {}'.format(state))
 
         self.set_attribute(self.SCHEDULER_STATE_KEY, state.value)
-        self.set_attribute(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.now())
+        self.set_attribute(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.datetime_to_isoformat(timezone.now()))
 
     def get_scheduler_state(self):
         """Return the status of the calculation according to the cluster scheduler.
@@ -425,7 +424,13 @@ class CalcJobNode(CalculationNode):
 
         :return: a datetime object or None
         """
-        return self.get_attribute(self.SCHEDULER_LAST_CHECK_TIME_KEY, None)
+        from aiida.common import timezone
+        value = self.get_attribute(self.SCHEDULER_LAST_CHECK_TIME_KEY, None)
+
+        if value is not None:
+            value = timezone.isoformat_to_datetime(value)
+
+        return value
 
     def set_last_job_info(self, last_job_info):
         """Set the last job info.

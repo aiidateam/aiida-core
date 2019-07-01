@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
                 ('auth_params', models.TextField(default=u'{}')),
                 ('metadata', models.TextField(default=u'{}')),
                 ('enabled', models.BooleanField(default=True)),
-                ('aiidauser', models.ForeignKey(to='db.DbUser')),
+                ('aiidauser', models.ForeignKey(to='db.DbUser', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -243,8 +243,8 @@ class Migration(migrations.Migration):
                 ('entry_edge_id', models.IntegerField(null=True, editable=False)),
                 ('direct_edge_id', models.IntegerField(null=True, editable=False)),
                 ('exit_edge_id', models.IntegerField(null=True, editable=False)),
-                ('child', models.ForeignKey(related_name='parent_paths', editable=False, to='db.DbNode')),
-                ('parent', models.ForeignKey(related_name='child_paths', editable=False, to='db.DbNode')),
+                ('child', models.ForeignKey(related_name='parent_paths', editable=False, to='db.DbNode', on_delete=models.CASCADE)),
+                ('parent', models.ForeignKey(related_name='child_paths', editable=False, to='db.DbNode', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -306,8 +306,8 @@ class Migration(migrations.Migration):
                 ('data_type', models.CharField(default=u'PARAMETER', max_length=255)),
                 ('value_type', models.CharField(default=u'NONE', max_length=255)),
                 ('json_value', models.TextField(blank=True)),
-                ('aiida_obj', models.ForeignKey(blank=True, to='db.DbNode', null=True)),
-                ('parent', models.ForeignKey(related_name='data', to='db.DbWorkflow')),
+                ('aiida_obj', models.ForeignKey(blank=True, to='db.DbNode', null=True, on_delete=models.CASCADE)),
+                ('parent', models.ForeignKey(related_name='data', to='db.DbWorkflow', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -324,7 +324,7 @@ class Migration(migrations.Migration):
                        (u'INITIALIZED', u'INITIALIZED'), (u'RUNNING', u'RUNNING'), (u'SLEEP', u'SLEEP')],
                       default=u'CREATED', max_length=255) ),
                 ('calculations', models.ManyToManyField(related_name='workflow_step', to='db.DbNode')),
-                ('parent', models.ForeignKey(related_name='steps', to='db.DbWorkflow')),
+                ('parent', models.ForeignKey(related_name='steps', to='db.DbWorkflow', on_delete=models.CASCADE)),
                 ('sub_workflows', models.ManyToManyField(related_name='parent_workflow_step', to='db.DbWorkflow')),
                 ('user', models.ForeignKey(to='db.DbUser', on_delete=django.db.models.deletion.PROTECT)),
             ],
@@ -380,7 +380,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dblink',
             name='output',
-            field=models.ForeignKey(related_name='input_links', to='db.DbNode'),
+            field=models.ForeignKey(related_name='input_links', to='db.DbNode', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -396,7 +396,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbgroup',
             name='user',
-            field=models.ForeignKey(related_name='dbgroups', to='db.DbUser'),
+            field=models.ForeignKey(related_name='dbgroups', to='db.DbUser', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -406,7 +406,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbextra',
             name='dbnode',
-            field=models.ForeignKey(related_name='dbextras', to='db.DbNode'),
+            field=models.ForeignKey(related_name='dbextras', to='db.DbNode', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -416,19 +416,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbcomment',
             name='dbnode',
-            field=models.ForeignKey(related_name='dbcomments', to='db.DbNode'),
+            field=models.ForeignKey(related_name='dbcomments', to='db.DbNode', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='dbcomment',
             name='user',
-            field=models.ForeignKey(to='db.DbUser'),
+            field=models.ForeignKey(to='db.DbUser', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='dbcalcstate',
             name='dbnode',
-            field=models.ForeignKey(related_name='dbstates', to='db.DbNode'),
+            field=models.ForeignKey(related_name='dbstates', to='db.DbNode', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -438,7 +438,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbauthinfo',
             name='dbcomputer',
-            field=models.ForeignKey(to='db.DbComputer'),
+            field=models.ForeignKey(to='db.DbComputer', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -448,7 +448,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbattribute',
             name='dbnode',
-            field=models.ForeignKey(related_name='dbattributes', to='db.DbNode'),
+            field=models.ForeignKey(related_name='dbattributes', to='db.DbNode', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(

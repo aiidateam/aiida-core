@@ -294,7 +294,8 @@ class CalcJob(Process):
                 raise PluginInternalError(
                     "[presubmission of calc {}] retrieve_singlefile_list subclass problem: {} is "
                     "not subclass of SinglefileData".format(self.node.pk, file_sub_class.__name__))
-        self.node.set_retrieve_singlefile_list(retrieve_singlefile_list)
+        if retrieve_singlefile_list:
+            self.node.set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # Handle the retrieve_temporary_list
         retrieve_temporary_list = (calcinfo.retrieve_temporary_list

@@ -12,9 +12,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from collections import Mapping
+from six import PY2
 
-from . import exceptions
+if PY2:
+    from collections import Mapping  # pylint: disable=no-name-in-module
+else:
+    from collections.abc import Mapping  # pylint: disable=no-name-in-module, import-error
+
+from . import exceptions  # pylint: disable=wrong-import-position
 
 __all__ = ('AttributeDict', 'FixedFieldsAttributeDict', 'DefaultFieldsAttributeDict')
 

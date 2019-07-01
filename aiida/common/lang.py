@@ -13,13 +13,15 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import functools
-import inspect
+from inspect import stack, currentframe  # pylint: disable=ungrouped-imports
 import keyword
 import six
 
 # Python 3 has a nice built-in solution, but while we support python 2 we need this ugly switch
 # Note that there is a difference between the PY2 and PY3 implementations as the latter allows unicode characters
+# We also need to discriminate between the getargspec versus getfullargspec
 if six.PY2:
+    from inspect import getargspec as get_arg_spec
 
     def isidentifier(identifier):
         """Return whether the given string is a valid python identifier.
@@ -49,6 +51,7 @@ if six.PY2:
         return True
 
 else:
+    from inspect import getfullargspec as get_arg_spec  # pylint: disable=no-name-in-module
 
     def isidentifier(identifier):
         """Return whether the given string is a valid python identifier.
@@ -84,18 +87,18 @@ def protected_decorator(check=False):
         if isinstance(func, property):
             raise RuntimeError("Protected must go after @property decorator")
 
-        args = inspect.getargspec(func)[0]  # pylint: disable=deprecated-method
+        args = get_arg_spec(func)[0]  # pylint: disable=deprecated-method
         if not args:
             raise RuntimeError("Can only use the protected decorator on member functions")
 
         # We can only perform checks if the interpreter is capable of giving
         # us the stack i.e. currentframe() produces a valid object
-        if check and inspect.currentframe() is not None:
+        if check and currentframe() is not None:
 
             @functools.wraps(func)
             def wrapped_fn(self, *args, **kwargs):  # pylint: disable=missing-docstring
                 try:
-                    calling_class = inspect.stack()[1][0].f_locals['self']
+                    calling_class = stack()[1][0].f_locals['self']
                     assert self is calling_class
                 except (KeyError, AssertionError):
                     raise RuntimeError("Cannot access protected function {} from outside"
@@ -117,7 +120,7 @@ def override_decorator(check=False):
         if isinstance(func, property):
             raise RuntimeError("Override must go after @property decorator")
 
-        args = inspect.getargspec(func)[0]  # pylint: disable=deprecated-method
+        args = get_arg_spec(func)[0]  # pylint: disable=deprecated-method
         if not args:
             raise RuntimeError("Can only use the override decorator on member functions")
 

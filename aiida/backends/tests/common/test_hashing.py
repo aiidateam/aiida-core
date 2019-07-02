@@ -16,36 +16,33 @@ from __future__ import print_function
 from __future__ import absolute_import
 import itertools
 import collections
-import uuid
-import math
 from datetime import datetime
+import uuid
 
 import numpy as np
 import pytz
+from six.moves import range
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from aiida.common.hashing import make_hash, truncate_float64
+from aiida.common.hashing import make_hash, float_to_text
 from aiida.common.folders import SandboxFolder
+from aiida.backends.testbase import AiidaTestCase
+from aiida.orm import Dict
 
 
-class TruncationTest(unittest.TestCase):
+class FloatToTextTest(unittest.TestCase):
     """
-    Tests for the truncate_* methods
+    Tests for the float_to_text methods
     """
-
-    def test_nan(self):
-        self.assertTrue(math.isnan(truncate_float64(np.nan)))
-
-    def test_inf(self):
-        self.assertTrue(math.isinf(truncate_float64(np.inf)))
-        self.assertTrue(math.isinf(truncate_float64(-np.inf)))
 
     def test_subnormal(self):
-        self.assertTrue(np.isclose(truncate_float64(1.0e-308), 1.0e-308, atol=1.0e-309))
+        self.assertEqual(float_to_text(3.555, sig=2), "3.6")
+        self.assertEqual(float_to_text(3.555, sig=3), "3.56")
+        self.assertEqual(float_to_text(3.141592653589793238462643383279502884197, sig=14), "3.1415926535898")
 
 
 class MakeHashTest(unittest.TestCase):
@@ -58,9 +55,9 @@ class MakeHashTest(unittest.TestCase):
     def test_builtin_types(self):
         test_data = {
             'something in ASCII': '06e87857590c91280d25e02f05637cd2381002bd1425dff3e36ca860bbb26a29',
-            42: '9498ab55b7c66c66b2d19f9dd8b668acf8e2facf44da0fb466f6986999bb8a56',
-            3.141: 'd00f2e88a088626f5db3eadb6d9d40c74b4b4d3f9f07c1ca2f76b247fe39530b',
-            complex(1, 2): '31800fbabb47c8fbf60c848571ee25e7dcbdfc5dfb60c1e8421c1c363a80ea6a',
+            42: '9468692328de958d7a8039e8a2eb05cd6888b7911bbc3794d0dfebd8df3482cd',
+            3.141: 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be',
+            complex(1, 2): '287c6bb18d4fb00fd5f3a6fb6931a85cd8ae4b1f43be4707a76964fbc322872e',
             True: '31ad5fa163a0c478d966c7f7568f3248f0c58d294372b2e8f7cb0560d8c8b12f',
             None: '1729486cc7e56a6383542b1ec73125ccb26093651a5da05e04657ac416a74b8f',
         }
@@ -78,8 +75,8 @@ class MakeHashTest(unittest.TestCase):
             'c404bf9a62cba3518de5c2bae8c67010aff6e4051cce565fa247a7f1d71f1fc7')
 
     def test_collection_with_ordered_sets(self):
-        self.assertEqual(make_hash((1, 2, 3)), '2827844e2fb5c034967dbc69e5b8039c39705272b9969f18f5e4c4e2345ca77d')
-        self.assertEqual(make_hash([1, 2, 3]), '2827844e2fb5c034967dbc69e5b8039c39705272b9969f18f5e4c4e2345ca77d')
+        self.assertEqual(make_hash((1, 2, 3)), 'b6b13d50e3bee7e58371af2b303f629edf32d1be2f7717c9d14193b4b8b23e04')
+        self.assertEqual(make_hash([1, 2, 3]), 'b6b13d50e3bee7e58371af2b303f629edf32d1be2f7717c9d14193b4b8b23e04')
 
         for perm in itertools.permutations([1, 2, 3]):
             with self.subTest(orig=[1, 2, 3], perm=perm):
@@ -90,7 +87,7 @@ class MakeHashTest(unittest.TestCase):
         self.assertNotEqual(make_hash({1, 2}), make_hash({1: 2}))
 
     def test_collection_with_unordered_sets(self):
-        self.assertEqual(make_hash({1, 2, 3}), '4783567a68ed025ac3dc59346ded2328d56c975e31453e3823bdda480e64b139')
+        self.assertEqual(make_hash({1, 2, 3}), 'a11cff8e62b57e1aefb7de908bd50096816b66796eb7e11ad78edeaf2629f89c')
         self.assertEqual(make_hash({1, 2, 3}), make_hash({2, 1, 3}))
 
     def test_collection_with_dicts(self):
@@ -135,7 +132,7 @@ class MakeHashTest(unittest.TestCase):
 
         self.assertEqual(
             make_hash(obj_a, odict_as_unordered=True),
-            'f05e75e0713d895b4858de62ee72e75fe3acb74d2e9754f149f87615eb6e826f')
+            'e27bf6081c23afcb3db0ee3a24a64c73171c062c7f227fecc7f17189996add44')
         self.assertEqual(make_hash(obj_a, odict_as_unordered=True), make_hash(obj_b, odict_as_unordered=True))
 
     def test_bytes(self):
@@ -150,32 +147,22 @@ class MakeHashTest(unittest.TestCase):
     def test_datetime(self):
         # test for timezone-naive datetime:
         self.assertEqual(
-            make_hash(datetime(2018, 8, 18, 8, 18)), 'c5ba00262f54deb718601b44dea01765ce009fd08f31967f2e65b7050b036426')
+            make_hash(datetime(2018, 8, 18, 8, 18)), '714138f1114daa5fdc74c3483260742952b71b568d634c6093bb838afad76646')
         self.assertEqual(
-            make_hash(datetime.utcfromtimestamp(0)), 'a4de78590a7a290f0446f15c68639f5be3a4dde9140606cf6edcdcfc6bb8b5b0')
+            make_hash(datetime.utcfromtimestamp(0)), 'b4d97d9d486937775bcc25a5cba073f048348c3cd93d4460174a4f72a6feb285')
 
         # test with timezone-aware datetime:
         self.assertEqual(
             make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=pytz.timezone('US/Eastern'))),
-            '2e7cb55d2a3982bd7a509aac0cb74c7dd485a9350d55eeb944bec3e1971d8dc0')
+            '194478834b3b8bd0518cf6ca6fefacc13bea15f9c0b8f5d585a0adf2ebbd562f')
         self.assertEqual(
             make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=pytz.timezone('Europe/Amsterdam'))),
-            'd28a58c7af872bab9f07d2610e313bbd14de8530e62245ebc52821708883188f')
+            'be7c7c7faaff07d796db4cbef4d3d07ed29fdfd4a38c9aded00a4c2da2b89b9c')
 
     def test_numpy_types(self):
         self.assertEqual(
-            make_hash(np.float64(3.141)), 'd00f2e88a088626f5db3eadb6d9d40c74b4b4d3f9f07c1ca2f76b247fe39530b')  # pylint: disable=no-member
-        self.assertEqual(make_hash(np.int64(42)), '9498ab55b7c66c66b2d19f9dd8b668acf8e2facf44da0fb466f6986999bb8a56')  # pylint: disable=no-member
-
-    def test_numpy_arrays(self):
-        self.assertEqual(
-            make_hash(np.array([1, 2, 3])), '8735e6439da0bd6949e97c7da08774fef2407dccef5e87bf569303e683c838ae')
-        self.assertEqual(
-            make_hash(np.array([np.float64(3.141)])),
-            'e03f2b6485f7a6ba0a2767c69724a1f5a9f73b8c36f5413d660f85631b4b562d')  # pylint: disable=no-member
-        self.assertEqual(
-            make_hash(np.array([np.complex128(1 + 2j)])),
-            'c8dab6e4d3f3904c90f2bb7a7f5ea84e36b6f0b8ad311e681dcd1863a7fdbb77')  # pylint: disable=no-member
+            make_hash(np.float64(3.141)), 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be')  # pylint: disable=no-member
+        self.assertEqual(make_hash(np.int64(42)), '9468692328de958d7a8039e8a2eb05cd6888b7911bbc3794d0dfebd8df3482cd')  # pylint: disable=no-member
 
     def test_unhashable_type(self):
 
@@ -197,7 +184,7 @@ class MakeHashTest(unittest.TestCase):
             self.assertEqual(folder_hash, '47d9cdb2247e75eca492035f60f09fdd0daf87bbba40bb658d2d7e84f21f26c5')
 
             nested_obj = ['1.0.0a2', {u'array|a': [1001]}, folder, None]
-            self.assertEqual(make_hash(nested_obj), '3a29176b16f7a4dfb78d9ef06f882cf228a2796b762f98dda80e7dda688af201')
+            self.assertEqual(make_hash(nested_obj), 'd3e7ff24708bc60b75a01571454ac0a664fa94ff2145848b584fb9ecc7e4fcbe')
 
             with folder.open('file3.npy', 'wb') as fhandle:
                 np.save(fhandle, np.arange(10))
@@ -214,3 +201,49 @@ class MakeHashTest(unittest.TestCase):
 
             self.assertNotEqual(make_hash(folder), folder_hash)
             self.assertEqual(make_hash(folder, ignored_folder_content=['file3.npy', 'some_subdir']), folder_hash)
+
+
+class CheckDBRoundTrip(AiidaTestCase):
+    """
+    Check that the hash does not change after a roundtrip via the DB. Note that this class must inherit from
+    AiiDATestCase since it's working with the DB.
+    """
+
+    def test_attribute_storing(self):
+        """
+        I test that when storing different types of data as attributes (using a dict), the hash is the
+        same before and after storing.
+        """
+        test_data = [
+            'something in ASCII',
+            42,
+            3.14134253423433432343,
+            7.53234432423942204222,
+            7.27592016903727508353,
+            -3.832844830976837684,
+            -0.0046930852371537838,
+            3.535434503274892738e-30,
+            True,
+            False,
+            None,
+            np.array([1., 2., 3.2]),  # This will be converted to a list internally by clean_value
+            ['a', True, 4.322],
+            {
+                'a': 33,
+                'b': 6.433453
+            }
+        ]
+        # This will run across the edge where floats become integer (see discussion in the clean_value function),
+        # they should so something like:
+        # 9.5e+13, 9.6e+13, 9.7e+13, 9.8e+13, 9.9e+13, 100000000000000, 101000000000000, 102000000000000,
+        # 103000000000000, 104000000000000
+        for i in range(10):
+            test_data.append(9.5e13 + 1.e12 * i)
+
+        for val in test_data:
+            node = Dict(dict={'data': val})
+            node.store()
+            first_hash = node.get_extra('_aiida_hash')
+            recomputed_hash = node.get_hash()
+
+            self.assertEqual(first_hash, recomputed_hash)

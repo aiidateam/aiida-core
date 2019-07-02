@@ -18,6 +18,7 @@ from django.db.migrations.executor import MigrationExecutor
 from django.db import connection
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.utils import Capturing
 
 
 class TestMigrations(AiidaTestCase):
@@ -54,7 +55,8 @@ class TestMigrations(AiidaTestCase):
         # Reset session for the migration
         sa.get_scoped_session().close()
         # Reverse to the original migration
-        executor.migrate(self.migrate_from)
+        with Capturing():
+            executor.migrate(self.migrate_from)
         # Reset session after the migration
         sa.get_scoped_session().close()
 
@@ -72,7 +74,8 @@ class TestMigrations(AiidaTestCase):
 
             # Reset session for the migration
             sa.get_scoped_session().close()
-            executor.migrate(self.migrate_to)
+            with Capturing():
+                executor.migrate(self.migrate_to)
             # Reset session after the migration
             sa.get_scoped_session().close()
 
@@ -103,7 +106,8 @@ class TestMigrations(AiidaTestCase):
         # Reset session for the migration
         sa.get_scoped_session().close()
         executor = MigrationExecutor(connection)
-        executor.migrate(self.migrate_to)
+        with Capturing():
+            executor.migrate(self.migrate_to)
         # Reset session after the migration
         sa.get_scoped_session().close()
 

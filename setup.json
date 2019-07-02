@@ -41,7 +41,7 @@
     "ete3==3.1.1",
     "uritools==2.2.0",
     "psycopg2-binary==2.8",
-    "paramiko==2.4.2",
+    "paramiko==2.6.0",
     "ipython>=4.0,<6.0",
     "plumpy==0.14.1",
     "kiwipy[rmq]==0.5.1",
@@ -58,7 +58,7 @@
   "extras_require": {
     "ssh_kerberos": [
       "pyasn1==0.4.2",
-      "python-gssapi==0.6.4"
+      "gssapi==1.4.1"
     ],
     "rest": [
       "Flask==1.0.2",

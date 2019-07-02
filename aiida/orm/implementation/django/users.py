@@ -23,53 +23,6 @@ from . import utils
 __all__ = ('DjangoUser', 'DjangoUserCollection')
 
 
-class DjangoUserCollection(BackendUserCollection):
-    """The Django collection of users"""
-
-    def create(self, email, first_name='', last_name='', institution=''):
-        """
-        Create a user with the provided email address
-
-        :return: A new user object
-        :rtype: :class:`aiida.orm.implementation.django.users.DjangoUser`
-        """
-        return DjangoUser(self.backend, email, first_name, last_name, institution)
-
-    def find(self, email=None, id=None):  # pylint: disable=redefined-builtin, invalid-name
-        """
-        Find users in this collection
-
-        :param email: optional email address filter
-        :param id: optional id filter
-        :return: a list of the found users
-        :rtype: list
-        """
-        # Constructing the default query
-        import operator
-        from django.db.models import Q  # pylint: disable=import-error, no-name-in-module
-        query_list = []
-
-        # If an id is specified then we add it to the query
-        if id is not None:
-            query_list.append(Q(pk=id))
-
-        # If an email is specified then we add it to the query
-        if email is not None:
-            query_list.append(Q(email=email))
-
-        if not query_list:
-            dbusers = DbUser.objects.all()
-        else:
-            dbusers = DbUser.objects.filter(functools.reduce(operator.and_, query_list))
-        found_users = []
-        for dbuser in dbusers:
-            found_users.append(self.from_dbmodel(dbuser))
-        return found_users
-
-    def from_dbmodel(self, dbmodel):
-        return DjangoUser.from_dbmodel(dbmodel, self.backend)
-
-
 class DjangoUser(entities.DjangoModelEntity[models.DbUser], BackendUser):
     """The Django user class"""
 
@@ -112,3 +65,49 @@ class DjangoUser(entities.DjangoModelEntity[models.DbUser], BackendUser):
     @institution.setter
     def institution(self, institution):
         self._dbmodel.institution = institution
+
+
+class DjangoUserCollection(BackendUserCollection):
+    """The Django collection of users"""
+
+    ENTITY_CLASS = DjangoUser
+
+    def create(self, email, first_name='', last_name='', institution=''):
+        """
+        Create a user with the provided email address
+
+        :return: A new user object
+        :rtype: :class:`aiida.orm.implementation.django.users.DjangoUser`
+        """
+        return DjangoUser(self.backend, email, first_name, last_name, institution)
+
+    def find(self, email=None, id=None):  # pylint: disable=redefined-builtin, invalid-name
+        """
+        Find users in this collection
+
+        :param email: optional email address filter
+        :param id: optional id filter
+        :return: a list of the found users
+        :rtype: list
+        """
+        # Constructing the default query
+        import operator
+        from django.db.models import Q  # pylint: disable=import-error, no-name-in-module
+        query_list = []
+
+        # If an id is specified then we add it to the query
+        if id is not None:
+            query_list.append(Q(pk=id))
+
+        # If an email is specified then we add it to the query
+        if email is not None:
+            query_list.append(Q(email=email))
+
+        if not query_list:
+            dbusers = DbUser.objects.all()
+        else:
+            dbusers = DbUser.objects.filter(functools.reduce(operator.and_, query_list))
+        found_users = []
+        for dbuser in dbusers:
+            found_users.append(self.from_dbmodel(dbuser))
+        return found_users

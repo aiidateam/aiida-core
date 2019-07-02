@@ -9,8 +9,8 @@
 ###########################################################################
 """Drop the `transport_params` from the `Computer` database model.
 
-Revision ID: 61fc0913fae9
-Revises: ce56d84bcc35
+Revision ID: 07fac78e6209
+Revises: de2eaf6978b4
 Create Date: 2019-02-16 15:32:42.745450
 
 """

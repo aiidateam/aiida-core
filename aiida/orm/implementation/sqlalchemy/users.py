@@ -19,49 +19,6 @@ from . import utils
 __all__ = ('SqlaUserCollection', 'SqlaUser')
 
 
-class SqlaUserCollection(BackendUserCollection):
-    """Collection of SQLA Users"""
-
-    def create(self, email, first_name='', last_name='', institution=''):
-        """
-        Create a user with the provided email address
-
-        :return: A new user object
-        :rtype: :class:`aiida.orm.User`
-        """
-        return SqlaUser(self.backend, email, first_name, last_name, institution)
-
-    def find(self, email=None, id=None):  # pylint: disable=redefined-builtin, invalid-name
-        """
-        Find a user in matching the given criteria
-
-        :param email: the email address
-        :param id: the id
-        :return: the matching user
-        :rtype: :class:`aiida.orm.implementation.sqlalchemy.users.SqlaUser`
-        """
-
-        # Constructing the default query
-        dbuser_query = DbUser.query
-
-        # If an id is specified then we add it to the query
-        if id is not None:
-            dbuser_query = dbuser_query.filter_by(id=id)
-
-        # If an email is specified then we add it to the query
-        if email is not None:
-            dbuser_query = dbuser_query.filter_by(email=email)
-
-        dbusers = dbuser_query.all()
-        found_users = []
-        for dbuser in dbusers:
-            found_users.append(self.from_dbmodel(dbuser))
-        return found_users
-
-    def from_dbmodel(self, dbmodel):
-        return SqlaUser.from_dbmodel(dbmodel, self.backend)
-
-
 class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
     """SQLA user"""
 
@@ -104,3 +61,45 @@ class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
     @institution.setter
     def institution(self, institution):
         self._dbmodel.institution = institution
+
+
+class SqlaUserCollection(BackendUserCollection):
+    """Collection of SQLA Users"""
+
+    ENTITY_CLASS = SqlaUser
+
+    def create(self, email, first_name='', last_name='', institution=''):
+        """
+        Create a user with the provided email address
+
+        :return: A new user object
+        :rtype: :class:`aiida.orm.User`
+        """
+        return SqlaUser(self.backend, email, first_name, last_name, institution)
+
+    def find(self, email=None, id=None):  # pylint: disable=redefined-builtin, invalid-name
+        """
+        Find a user in matching the given criteria
+
+        :param email: the email address
+        :param id: the id
+        :return: the matching user
+        :rtype: :class:`aiida.orm.implementation.sqlalchemy.users.SqlaUser`
+        """
+
+        # Constructing the default query
+        dbuser_query = DbUser.query
+
+        # If an id is specified then we add it to the query
+        if id is not None:
+            dbuser_query = dbuser_query.filter_by(id=id)
+
+        # If an email is specified then we add it to the query
+        if email is not None:
+            dbuser_query = dbuser_query.filter_by(email=email)
+
+        dbusers = dbuser_query.all()
+        found_users = []
+        for dbuser in dbusers:
+            found_users.append(self.from_dbmodel(dbuser))
+        return found_users

@@ -71,20 +71,14 @@ class AiidaTestImplementation(object):
         """
 
     def insert_data(self):
+        pass
+
+    def create_user(self):
         """
-        This method inserts default data into the database.
+        This method creates and stores the default user. It has the same effect
+        as the verdi setup.
         """
         from aiida.manage.configuration import get_config
-
-        self.computer = orm.Computer(
-            name='localhost',
-            hostname='localhost',
-            transport_type='local',
-            scheduler_type='pbspro',
-            workdir='/tmp/aiida',
-            backend=self.backend
-        ).store()
-
         self.user_email = get_config().current_profile.default_user
 
         # Since the default user is needed for many operations in AiiDA, it is not deleted by clean_db.
@@ -93,6 +87,19 @@ class AiidaTestImplementation(object):
             self.user = orm.User.objects.get(email=self.user_email)
         except exceptions.NotExistent:
             self.user = orm.User(email=self.user_email).store()
+
+    def create_computer(self):
+        """
+        This method creates and stores a computer.
+        """
+        self.computer = orm.Computer(
+            name='localhost',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='pbspro',
+            workdir='/tmp/aiida',
+            backend=self.backend
+        ).store()
 
     def get_computer(self):
         """

@@ -102,8 +102,7 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
 class SqlaCommentCollection(BackendCommentCollection):
     """SqlAlchemy implementation for the CommentCollection."""
 
-    def from_dbmodel(self, dbmodel):
-        return SqlaComment.from_dbmodel(dbmodel, self.backend)
+    ENTITY_CLASS = SqlaComment
 
     def create(self, node, user, content=None, **kwargs):
         """

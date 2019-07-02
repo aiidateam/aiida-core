@@ -279,18 +279,27 @@ class CifData(SinglefileData):
         A wrapper method that simulates the behavior of the old
         function ase.io.cif.read_cif by using the new generic ase.io.read
         function.
+
+        Somewhere from 3.12 to 3.17 the tag concept was bundled with each Atom object. When
+        reading a CIF file, this is incremented and signifies the atomic species, even though
+        the CIF file do not have specific tags embedded. On reading CIF files we thus force the
+        ASE tag to zero for all Atom elements.
+
         """
         from ase.io import read
 
-        # the read function returns a list as a cif file might contain multiple
-        # structures
+        # The read function returns a list as a cif file might contain multiple
+        # structures.
         struct_list = read(fileobj, index=':', format='cif', **kwargs)
 
         if index is None:
             # If index is explicitely set to None, the list is returned as such.
+            for atoms_entry in struct_list:
+                atoms_entry.set_tags(0)
             return struct_list
-        # otherwise return the desired structure specified by index.
-        # If no index is specified, the last structure is assumed by default
+        # Otherwise return the desired structure specified by index, if no index is specified,
+        # the last structure is assumed by default.
+        struct_list[index].set_tags(0)
         return struct_list[index]
 
     @classmethod

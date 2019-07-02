@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-public-methods
 """Tests for the Node ORM class."""
 from __future__ import division
 from __future__ import print_function
@@ -16,17 +17,15 @@ import os
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, LinkType
-from aiida.orm import Data, Node, User, CalculationNode, WorkflowNode
+from aiida.orm import Data, Node, User, CalculationNode, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
 
 
-class TestNodeLinks(AiidaTestCase):
-    """Test for linking from and to Node."""
+class TestNode(AiidaTestCase):
+    """Tests for generic node functionality."""
 
     def setUp(self):
-        super(TestNodeLinks, self).setUp()
-        self.node_source = CalculationNode()
-        self.node_target = Data()
+        super(TestNode, self).setUp()
         self.user = User.objects.get_default()
 
     def test_repository_garbage_collection(self):
@@ -47,6 +46,332 @@ class TestNodeLinks(AiidaTestCase):
 
         with self.assertRaises(exceptions.ModificationNotAllowed):
             node.user = self.user
+
+
+class TestNodeAttributesExtras(AiidaTestCase):
+    """Test for node attributes and extras."""
+
+    def setUp(self):
+        super(TestNodeAttributesExtras, self).setUp()
+        self.node = Data()
+
+    def test_attributes(self):
+        """Test the `Node.attributes` property."""
+        original_attribute = {'nested': {'a': 1}}
+
+        self.node.set_attribute('key', original_attribute)
+        node_attributes = self.node.attributes
+        self.assertEqual(node_attributes['key'], original_attribute)
+        node_attributes['key']['nested']['a'] = 2
+
+        self.assertEqual(original_attribute['nested']['a'], 2)
+
+        # Now store the node and verify that `attributes` then returns a deep copy
+        self.node.store()
+        node_attributes = self.node.attributes
+
+        # We change the returned node attributes but the original attribute should remain unchanged
+        node_attributes['key']['nested']['a'] = 3
+        self.assertEqual(original_attribute['nested']['a'], 2)
+
+    def test_get_attribute(self):
+        """Test the `Node.get_attribute` method."""
+        original_attribute = {'nested': {'a': 1}}
+
+        self.node.set_attribute('key', original_attribute)
+        node_attribute = self.node.get_attribute('key')
+        self.assertEqual(node_attribute, original_attribute)
+        node_attribute['nested']['a'] = 2
+
+        self.assertEqual(original_attribute['nested']['a'], 2)
+
+        default = 'default'
+        self.assertEqual(self.node.get_attribute('not_existing', default=default), default)
+        with self.assertRaises(AttributeError):
+            self.node.get_attribute('not_existing')
+
+        # Now store the node and verify that `get_attribute` then returns a deep copy
+        self.node.store()
+        node_attribute = self.node.get_attribute('key')
+
+        # We change the returned node attributes but the original attribute should remain unchanged
+        node_attribute['nested']['a'] = 3
+        self.assertEqual(original_attribute['nested']['a'], 2)
+
+        default = 'default'
+        self.assertEqual(self.node.get_attribute('not_existing', default=default), default)
+        with self.assertRaises(AttributeError):
+            self.node.get_attribute('not_existing')
+
+    def test_get_attribute_many(self):
+        """Test the `Node.get_attribute_many` method."""
+        original_attribute = {'nested': {'a': 1}}
+
+        self.node.set_attribute('key', original_attribute)
+        node_attribute = self.node.get_attribute_many(['key'])[0]
+        self.assertEqual(node_attribute, original_attribute)
+        node_attribute['nested']['a'] = 2
+
+        self.assertEqual(original_attribute['nested']['a'], 2)
+
+        # Now store the node and verify that `get_attribute` then returns a deep copy
+        self.node.store()
+        node_attribute = self.node.get_attribute_many(['key'])[0]
+
+        # We change the returned node attributes but the original attribute should remain unchanged
+        node_attribute['nested']['a'] = 3
+        self.assertEqual(original_attribute['nested']['a'], 2)
+
+    def test_set_attribute(self):
+        """Test the `Node.set_attribute` method."""
+        with self.assertRaises(exceptions.ValidationError):
+            self.node.set_attribute('illegal.key', 'value')
+
+        self.node.set_attribute('valid_key', 'value')
+        self.node.store()
+
+        with self.assertRaises(exceptions.ModificationNotAllowed):
+            self.node.set_attribute('valid_key', 'value')
+
+    def test_set_attribute_many(self):
+        """Test the `Node.set_attribute` method."""
+        with self.assertRaises(exceptions.ValidationError):
+            self.node.set_attribute_many({'illegal.key': 'value', 'valid_key': 'value'})
+
+        self.node.set_attribute_many({'valid_key': 'value'})
+        self.node.store()
+
+        with self.assertRaises(exceptions.ModificationNotAllowed):
+            self.node.set_attribute_many({'valid_key': 'value'})
+
+    def test_reset_attribute(self):
+        """Test the `Node.reset_attribute` method."""
+        attributes_before = {'attribute_one': 'value', 'attribute_two': 'value'}
+        attributes_after = {'attribute_three': 'value', 'attribute_four': 'value'}
+        attributes_illegal = {'attribute.illegal': 'value', 'attribute_four': 'value'}
+
+        self.node.set_attribute_many(attributes_before)
+        self.assertEqual(self.node.attributes, attributes_before)
+        self.node.reset_attributes(attributes_after)
+        self.assertEqual(self.node.attributes, attributes_after)
+
+        with self.assertRaises(exceptions.ValidationError):
+            self.node.reset_attributes(attributes_illegal)
+
+        self.node.store()
+
+        with self.assertRaises(exceptions.ModificationNotAllowed):
+            self.node.reset_attributes(attributes_after)
+
+    def test_delete_attribute(self):
+        """Test the `Node.delete_attribute` method."""
+        self.node.set_attribute('valid_key', 'value')
+        self.assertEqual(self.node.get_attribute('valid_key'), 'value')
+        self.node.delete_attribute('valid_key')
+
+        with self.assertRaises(AttributeError):
+            self.node.delete_attribute('valid_key')
+
+        # Repeat with stored node
+        self.node.set_attribute('valid_key', 'value')
+        self.node.store()
+
+        with self.assertRaises(exceptions.ModificationNotAllowed):
+            self.node.delete_attribute('valid_key')
+
+    def test_delete_attribute_many(self):
+        """Test the `Node.delete_attribute_many` method."""
+
+    def test_clear_attributes(self):
+        """Test the `Node.clear_attributes` method."""
+        attributes = {'attribute_one': 'value', 'attribute_two': 'value'}
+        self.node.set_attribute_many(attributes)
+        self.assertEqual(self.node.attributes, attributes)
+
+        self.node.clear_attributes()
+        self.assertEqual(self.node.attributes, {})
+
+        # Repeat for stored node
+        self.node.store()
+
+        with self.assertRaises(exceptions.ModificationNotAllowed):
+            self.node.clear_attributes()
+
+    def test_attributes_items(self):
+        """Test the `Node.attributes_items` generator."""
+        attributes = {'attribute_one': 'value', 'attribute_two': 'value'}
+        self.node.set_attribute_many(attributes)
+        self.assertEqual(dict(self.node.attributes_items()), attributes)
+
+    def test_attributes_keys(self):
+        """Test the `Node.attributes_keys` generator."""
+        attributes = {'attribute_one': 'value', 'attribute_two': 'value'}
+        self.node.set_attribute_many(attributes)
+        self.assertEqual(set(self.node.attributes_keys()), set(attributes))
+
+    def test_extras(self):
+        """Test the `Node.extras` property."""
+        original_extra = {'nested': {'a': 1}}
+
+        self.node.set_extra('key', original_extra)
+        node_extras = self.node.extras
+        self.assertEqual(node_extras['key'], original_extra)
+        node_extras['key']['nested']['a'] = 2
+
+        self.assertEqual(original_extra['nested']['a'], 2)
+
+        # Now store the node and verify that `extras` then returns a deep copy
+        self.node.store()
+        node_extras = self.node.extras
+
+        # We change the returned node extras but the original extra should remain unchanged
+        node_extras['key']['nested']['a'] = 3
+        self.assertEqual(original_extra['nested']['a'], 2)
+
+    def test_get_extra(self):
+        """Test the `Node.get_extra` method."""
+        original_extra = {'nested': {'a': 1}}
+
+        self.node.set_extra('key', original_extra)
+        node_extra = self.node.get_extra('key')
+        self.assertEqual(node_extra, original_extra)
+        node_extra['nested']['a'] = 2
+
+        self.assertEqual(original_extra['nested']['a'], 2)
+
+        default = 'default'
+        self.assertEqual(self.node.get_extra('not_existing', default=default), default)
+        with self.assertRaises(AttributeError):
+            self.node.get_extra('not_existing')
+
+        # Now store the node and verify that `get_extra` then returns a deep copy
+        self.node.store()
+        node_extra = self.node.get_extra('key')
+
+        # We change the returned node extras but the original extra should remain unchanged
+        node_extra['nested']['a'] = 3
+        self.assertEqual(original_extra['nested']['a'], 2)
+
+        default = 'default'
+        self.assertEqual(self.node.get_extra('not_existing', default=default), default)
+        with self.assertRaises(AttributeError):
+            self.node.get_extra('not_existing')
+
+    def test_get_extra_many(self):
+        """Test the `Node.get_extra_many` method."""
+        original_extra = {'nested': {'a': 1}}
+
+        self.node.set_extra('key', original_extra)
+        node_extra = self.node.get_extra_many(['key'])[0]
+        self.assertEqual(node_extra, original_extra)
+        node_extra['nested']['a'] = 2
+
+        self.assertEqual(original_extra['nested']['a'], 2)
+
+        # Now store the node and verify that `get_extra` then returns a deep copy
+        self.node.store()
+        node_extra = self.node.get_extra_many(['key'])[0]
+
+        # We change the returned node extras but the original extra should remain unchanged
+        node_extra['nested']['a'] = 3
+        self.assertEqual(original_extra['nested']['a'], 2)
+
+    def test_set_extra(self):
+        """Test the `Node.set_extra` method."""
+        with self.assertRaises(exceptions.ValidationError):
+            self.node.set_extra('illegal.key', 'value')
+
+        self.node.set_extra('valid_key', 'value')
+        self.node.store()
+
+        self.node.set_extra('valid_key', 'changed')
+        self.assertEqual(load_node(self.node.pk).get_extra('valid_key'), 'changed')
+
+    def test_set_extra_many(self):
+        """Test the `Node.set_extra` method."""
+        with self.assertRaises(exceptions.ValidationError):
+            self.node.set_extra_many({'illegal.key': 'value', 'valid_key': 'value'})
+
+        self.node.set_extra_many({'valid_key': 'value'})
+        self.node.store()
+
+        self.node.set_extra_many({'valid_key': 'changed'})
+        self.assertEqual(load_node(self.node.pk).get_extra('valid_key'), 'changed')
+
+    def test_reset_extra(self):
+        """Test the `Node.reset_extra` method."""
+        extras_before = {'extra_one': 'value', 'extra_two': 'value'}
+        extras_after = {'extra_three': 'value', 'extra_four': 'value'}
+        extras_illegal = {'extra.illegal': 'value', 'extra_four': 'value'}
+
+        self.node.set_extra_many(extras_before)
+        self.assertEqual(self.node.extras, extras_before)
+        self.node.reset_extras(extras_after)
+        self.assertEqual(self.node.extras, extras_after)
+
+        with self.assertRaises(exceptions.ValidationError):
+            self.node.reset_extras(extras_illegal)
+
+        self.node.store()
+
+        self.node.reset_extras(extras_after)
+        self.assertEqual(load_node(self.node.pk).extras, extras_after)
+
+    def test_delete_extra(self):
+        """Test the `Node.delete_extra` method."""
+        self.node.set_extra('valid_key', 'value')
+        self.assertEqual(self.node.get_extra('valid_key'), 'value')
+        self.node.delete_extra('valid_key')
+
+        with self.assertRaises(AttributeError):
+            self.node.delete_extra('valid_key')
+
+        # Repeat with stored node
+        self.node.set_extra('valid_key', 'value')
+        self.node.store()
+
+        self.node.delete_extra('valid_key')
+        with self.assertRaises(AttributeError):
+            load_node(self.node.pk).get_extra('valid_key')
+
+    def test_delete_extra_many(self):
+        """Test the `Node.delete_extra_many` method."""
+
+    def test_clear_extras(self):
+        """Test the `Node.clear_extras` method."""
+        extras = {'extra_one': 'value', 'extra_two': 'value'}
+        self.node.set_extra_many(extras)
+        self.assertEqual(self.node.extras, extras)
+
+        self.node.clear_extras()
+        self.assertEqual(self.node.extras, {})
+
+        # Repeat for stored node
+        self.node.store()
+
+        self.node.clear_extras()
+        self.assertEqual(load_node(self.node.pk).extras, {})
+
+    def test_extras_items(self):
+        """Test the `Node.extras_items` generator."""
+        extras = {'extra_one': 'value', 'extra_two': 'value'}
+        self.node.set_extra_many(extras)
+        self.assertEqual(dict(self.node.extras_items()), extras)
+
+    def test_extras_keys(self):
+        """Test the `Node.extras_keys` generator."""
+        extras = {'extra_one': 'value', 'extra_two': 'value'}
+        self.node.set_extra_many(extras)
+        self.assertEqual(set(self.node.extras_keys()), set(extras))
+
+
+class TestNodeLinks(AiidaTestCase):
+    """Test for linking from and to Node."""
+
+    def setUp(self):
+        super(TestNodeLinks, self).setUp()
+        self.node_source = CalculationNode()
+        self.node_target = Data()
 
     def test_get_stored_link_triples(self):
         """Validate the `get_stored_link_triples` method."""

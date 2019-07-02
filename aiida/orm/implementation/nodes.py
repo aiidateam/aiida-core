@@ -149,33 +149,50 @@ class BackendNode(backends.BackendEntity):
         """
         return self._dbmodel.mtime
 
-    @property
+    @abc.abstractproperty
     def attributes(self):
-        """Return the attributes dictionary.
+        """Return the complete attributes dictionary.
 
-        .. note:: This will fetch all the attributes from the database which can be a heavy operation. If you only need
-            the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the getters
-            `get_attribute` and `get_attributes` instead.
+        .. warning:: While the node is unstored, this will return references of the attributes on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            attributes will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
+            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
+            getters `get_attribute` and `get_attribute_many` instead.
 
         :return: the attributes as a dictionary
         """
-        return dict(self.attributes_items())
 
     @abc.abstractmethod
     def get_attribute(self, key):
-        """Return an attribute.
+        """Return the value of an attribute.
+
+        .. warning:: While the node is unstored, this will return a reference of the attribute on the database model,
+            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            attribute will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods.
 
         :param key: name of the attribute
         :return: the value of the attribute
-        :raises AttributeError: if the attribute does not exist
+        :raises AttributeError: if the attribute does not exist and no default is specified
         """
 
     @abc.abstractmethod
-    def get_attributes(self, keys):
-        """Return a set of attributes.
+    def get_attribute_many(self, keys):
+        """Return the values of multiple attributes.
 
-        :param keys: names of the attributes
-        :return: the values of the attributes
+        .. warning:: While the node is unstored, this will return references of the attributes on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            attributes will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
+            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
+            getters `get_attribute` and `get_attribute_many` instead.
+
+        :param keys: a list of attribute names
+        :return: a list of attribute values
         :raises AttributeError: if at least one attribute does not exist
         """
 
@@ -188,21 +205,21 @@ class BackendNode(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def set_attributes(self, attributes):
-        """Set attributes.
+    def set_attribute_many(self, attributes):
+        """Set multiple attributes.
 
         .. note:: This will override any existing attributes that are present in the new dictionary.
 
-        :param attributes: the new attributes to set
+        :param attributes: a dictionary with the attributes to set
         """
 
     @abc.abstractmethod
     def reset_attributes(self, attributes):
         """Reset the attributes.
 
-        .. note:: This will completely reset any existing attributes and replace them with the new dictionary.
+        .. note:: This will completely clear any existing attributes and replace them with the new dictionary.
 
-        :param attributes: the new attributes to set
+        :param attributes: a dictionary with the attributes to set
         """
 
     @abc.abstractmethod
@@ -214,14 +231,11 @@ class BackendNode(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def delete_attributes(self, keys):
+    def delete_attribute_many(self, keys):
         """Delete multiple attributes.
 
-        .. note:: The implementation should guarantee that all the keys that are to be deleted actually exist or the
-            entire operation should be canceled without any change and an ``AttributeError`` should be raised.
-
         :param keys: names of the attributes to delete
-        :raises AttributeError: if at least on of the attribute does not exist
+        :raises AttributeError: if at least one of the attribute does not exist
         """
 
     @abc.abstractmethod
@@ -230,7 +244,7 @@ class BackendNode(backends.BackendEntity):
 
     @abc.abstractmethod
     def attributes_items(self):
-        """Return an iterator over the attribute items.
+        """Return an iterator over the attributes.
 
         :return: an iterator with attribute key value pairs
         """
@@ -242,33 +256,50 @@ class BackendNode(backends.BackendEntity):
         :return: an iterator with attribute keys
         """
 
-    @property
+    @abc.abstractproperty
     def extras(self):
-        """Return the extras dictionary.
+        """Return the complete extras dictionary.
 
-        .. note:: This will fetch all the extras from the database which can be a heavy operation. If you only need
-            the keys or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra`
-            and `get_extras` instead.
+        .. warning:: While the node is unstored, this will return references of the extras on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
+            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
+            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
+            `get_extra_many` instead.
 
         :return: the extras as a dictionary
         """
-        return dict(self.extras_items())
 
     @abc.abstractmethod
     def get_extra(self, key):
-        """Return an extra.
+        """Return the value of an extra.
+
+        .. warning:: While the node is unstored, this will return a reference of the extra on the database model,
+            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned extra
+            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            methods.
 
         :param key: name of the extra
         :return: the value of the extra
-        :raises AttributeError: if the extra does not exist
+        :raises AttributeError: if the extra does not exist and no default is specified
         """
 
     @abc.abstractmethod
-    def get_extras(self, keys):
-        """Return a set of extras.
+    def get_extra_many(self, keys):
+        """Return the values of multiple extras.
 
-        :param keys: names of the extras
-        :return: the values of the extras
+        .. warning:: While the node is unstored, this will return references of the extras on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
+            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
+            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
+            `get_extra_many` instead.
+
+        :param keys: a list of extra names
+        :return: a list of extra values
         :raises AttributeError: if at least one extra does not exist
         """
 
@@ -281,21 +312,21 @@ class BackendNode(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def set_extras(self, extras):
-        """Set extras.
+    def set_extra_many(self, extras):
+        """Set multiple extras.
 
         .. note:: This will override any existing extras that are present in the new dictionary.
 
-        :param extras: the new extras to set
+        :param extras: a dictionary with the extras to set
         """
 
     @abc.abstractmethod
     def reset_extras(self, extras):
         """Reset the extras.
 
-        .. note:: This will completely reset any existing extras and replace them with the new dictionary.
+        .. note:: This will completely clear any existing extras and replace them with the new dictionary.
 
-        :param extras: the new extras to set
+        :param extras: a dictionary with the extras to set
         """
 
     @abc.abstractmethod
@@ -307,14 +338,11 @@ class BackendNode(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def delete_extras(self, keys):
+    def delete_extra_many(self, keys):
         """Delete multiple extras.
 
-        .. note:: The implementation should guarantee that all the keys that are to be deleted actually exist or the
-            entire operation should be canceled without any change and an ``AttributeError`` should be raised.
-
         :param keys: names of the extras to delete
-        :raises AttributeError: if at least on of the extra does not exist
+        :raises AttributeError: if at least one of the extra does not exist
         """
 
     @abc.abstractmethod
@@ -323,16 +351,16 @@ class BackendNode(backends.BackendEntity):
 
     @abc.abstractmethod
     def extras_items(self):
-        """Return an iterator over the extra items.
+        """Return an iterator over the extras.
 
         :return: an iterator with extra key value pairs
         """
 
     @abc.abstractmethod
     def extras_keys(self):
-        """Return an iterator over the attribute keys.
+        """Return an iterator over the extra keys.
 
-        :return: an iterator with attribute keys
+        :return: an iterator with extra keys
         """
 
     @abc.abstractmethod
@@ -348,12 +376,12 @@ class BackendNode(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def store(self, attributes=None, links=None, with_transaction=True):
+    def store(self, links=None, with_transaction=True, clean=True):
         """Store the node in the database.
 
-        :param attributes: optional attributes to set before storing, will override any existing attributes
         :param links: optional links to add before storing
-        :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
+        :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
+        :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
 
 
@@ -364,6 +392,13 @@ class BackendNodeCollection(backends.BackendCollection[BackendNode]):
     # pylint: disable=too-few-public-methods
 
     ENTITY_CLASS = BackendNode
+
+    @abc.abstractmethod
+    def get(self, pk):
+        """Return a Node entry from the collection with the given id
+
+        :param pk: id of the node
+        """
 
     @abc.abstractmethod
     def delete(self, pk):

@@ -24,6 +24,7 @@ import click
 # pylint: disable=no-name-in-module,import-error
 from django.db import migrations, models
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
+from aiida.backends.general.migrations.utils import dumps_json
 from aiida.common.utils import get_new_uuid
 from aiida.manage import configuration
 
@@ -74,7 +75,6 @@ def get_logs_with_no_nodes_number(schema_editor):
 
 def get_serialized_legacy_workflow_logs(schema_editor):
     """ Get the serialized log records that correspond to legacy workflows """
-    from aiida.backends.sqlalchemy.utils import dumps_json
     with schema_editor.connection.cursor() as cursor:
         cursor.execute(("""
             SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,
@@ -91,7 +91,6 @@ def get_serialized_legacy_workflow_logs(schema_editor):
 
 def get_serialized_unknown_entity_logs(schema_editor):
     """ Get the serialized log records that correspond to unknown entities """
-    from aiida.backends.sqlalchemy.utils import dumps_json
     with schema_editor.connection.cursor() as cursor:
         cursor.execute(("""
             SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,
@@ -109,7 +108,6 @@ def get_serialized_unknown_entity_logs(schema_editor):
 
 def get_serialized_logs_with_no_nodes(schema_editor):
     """ Get the serialized log records that don't correspond to a node """
-    from aiida.backends.sqlalchemy.utils import dumps_json
     with schema_editor.connection.cursor() as cursor:
         cursor.execute(("""
             SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,

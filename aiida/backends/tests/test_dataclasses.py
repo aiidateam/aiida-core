@@ -1748,9 +1748,9 @@ _chemical_formula_sum                   'Ba2 Ti'
         xyz_string1 = """
 3
 
-Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
-Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
-Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
+Li      0.00000000       0.00000000       0.00000000       6.94100000        3
+Si      4.39194796       0.00000000      10.10068356      28.08550000       14
+Si      4.39194796       0.00000000       3.79747116      28.08550000       14
 """
         xyz_string2 = """
 2
@@ -1784,16 +1784,16 @@ Ag 0 0 2.0335
         xyz_string4 = """
 1
 
-Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
-Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
-Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
+Li      0.00000000       0.00000000       0.00000000       6.94100000        3
+Si      4.39194796       0.00000000      10.10068356      28.08550000       14
+Si      4.39194796       0.00000000       3.79747116      28.08550000       14
 """
         xyz_string5 = """
 10
 
-Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
-Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
-Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
+Li      0.00000000       0.00000000       0.00000000       6.94100000        3
+Si      4.39194796       0.00000000      10.10068356      28.08550000       14
+Si      4.39194796       0.00000000       3.79747116      28.08550000       14
 """
         xyz_string6 = """
 2
@@ -2024,7 +2024,7 @@ class TestStructureDataFromAse(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_2(self):
         """
-        Tests roundtrip ASE -> StructureData -> ASE, with tags, and 
+        Tests roundtrip ASE -> StructureData -> ASE, with tags, and
         changing the atomic masses
         """
         import ase
@@ -3168,7 +3168,7 @@ class TestKpointsData(AiidaTestCase):
         input_mesh = [4, 4, 4]
         k.set_kpoints_mesh(input_mesh)
         mesh, offset = k.get_kpoints_mesh()
-        self.assertEqual(mesh, list(input_mesh))
+        self.assertEqual(mesh, input_mesh)
         self.assertEqual(offset, [0., 0., 0.])  # must be a tuple of three 0 by default
 
         # a too long list should fail
@@ -3179,13 +3179,13 @@ class TestKpointsData(AiidaTestCase):
         input_offset = [0.5, 0.5, 0.5]
         k.set_kpoints_mesh(input_mesh, input_offset)
         mesh, offset = k.get_kpoints_mesh()
-        self.assertEqual(mesh, list(input_mesh))
-        self.assertEqual(offset, list(input_offset))
+        self.assertEqual(mesh, input_mesh)
+        self.assertEqual(offset, input_offset)
 
         # verify the same but after storing
         k.store()
-        self.assertEqual(mesh, list(input_mesh))
-        self.assertEqual(offset, list(input_offset))
+        self.assertEqual(mesh, input_mesh)
+        self.assertEqual(offset, input_offset)
 
         # cannot modify it after storage
         with self.assertRaises(ModificationNotAllowed):

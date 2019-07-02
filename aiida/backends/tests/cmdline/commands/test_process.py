@@ -245,51 +245,6 @@ class TestVerdiProcess(AiidaTestCase):
             self.assertEqual(len(get_result_lines(result)), 1)
             self.assertEqual(get_result_lines(result)[0], str(self.calcs[0].pk))
 
-    def test_list_worker_slot_warning(self):
-        """
-        Test that the if the number of used worker process slots exceeds a threshold,
-        that the warning message is displayed to the user when running `verdi process list`
-        """
-        from aiida.engine import ProcessState
-
-        # Get the number of allowed processes per worker:
-        from aiida.manage.external.rmq import _RMQ_TASK_PREFETCH_COUNT
-        limit = int(_RMQ_TASK_PREFETCH_COUNT * 0.9)
-
-        # Create additional active nodes such that we have 90% of the active slot limit
-        # (including the 6 active nodes created in the class setup fixture)
-        for _ in six.moves.range(limit - 6):
-            calc = WorkFunctionNode()
-            calc.set_process_state(ProcessState.RUNNING)
-            calc.store()
-
-        # Override the call to the circus client to retrieve the number of workers
-        # As we don't have a running circus client, this will normally fail, so here we simulate the
-        # response by redefining the function to get the final value we want.
-        import aiida.cmdline.utils.common
-        real_get_num_workers = aiida.cmdline.utils.common.get_num_workers
-        aiida.cmdline.utils.common.get_num_workers = lambda: 1
-
-        # Default cmd should not throw the warning as we are below the limit
-        result = self.cli_runner.invoke(cmd_process.process_list)
-        self.assertIsNone(result.exception, result.output)
-        warning_phrase = "of the available daemon worker slots have been used!"
-        self.assertTrue(all([warning_phrase not in line for line in get_result_lines(result)]))
-
-        # Add one more running node to put us over the limit
-        calc = WorkFunctionNode()
-        calc.set_process_state(ProcessState.RUNNING)
-        calc.store()
-
-        # Now the warning should fire
-        result = self.cli_runner.invoke(cmd_process.process_list)
-        self.assertIsNone(result.exception, result.output)
-        warning_phrase = "% of the available daemon worker slots have been used!"
-        self.assertTrue(any([warning_phrase in line for line in get_result_lines(result)]))
-
-        # Reset the redifined function
-        aiida.cmdline.utils.common.get_num_workers = real_get_num_workers
-
     def test_process_show(self):
         """Test verdi process show"""
         # We must choose a Node we can store
@@ -440,7 +395,7 @@ class TestVerdiProcessListWarning(AiidaTestCase):
 
         # Default cmd should not throw the warning as we are below the limit
         result = self.cli_runner.invoke(cmd_process.process_list)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
         warning_phrase = "of the available daemon worker slots have been used!"
         self.assertTrue(all([warning_phrase not in line for line in get_result_lines(result)]))
 
@@ -451,9 +406,60 @@ class TestVerdiProcessListWarning(AiidaTestCase):
 
         # Now the warning should fire
         result = self.cli_runner.invoke(cmd_process.process_list)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
         warning_phrase = "% of the available daemon worker slots have been used!"
         self.assertTrue(any([warning_phrase in line for line in get_result_lines(result)]))
+
+
+class TestVerdiProcessCallRoot(AiidaTestCase):
+    """Tests for `verdi process call-root`."""
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        super(TestVerdiProcessCallRoot, cls).setUpClass(*args, **kwargs)
+        cls.node_root = WorkflowNode()
+        cls.node_middle = WorkflowNode()
+        cls.node_terminal = WorkflowNode()
+
+        cls.node_root.store()
+
+        cls.node_middle.add_incoming(cls.node_root, link_type=LinkType.CALL_WORK, link_label='call_middle')
+        cls.node_middle.store()
+
+        cls.node_terminal.add_incoming(cls.node_middle, link_type=LinkType.CALL_WORK, link_label='call_terminal')
+        cls.node_terminal.store()
+
+    def setUp(self):
+        super(TestVerdiProcessCallRoot, self).setUp()
+        self.cli_runner = CliRunner()
+
+    def test_no_caller(self):
+        """Test `verdi process call-root` when passing single process without caller."""
+        options = [str(self.node_root.pk)]
+        result = self.cli_runner.invoke(cmd_process.process_call_root, options)
+        self.assertClickResultNoException(result)
+        self.assertTrue(len(get_result_lines(result)) == 1)
+        self.assertIn('No callers found', get_result_lines(result)[0])
+
+    def test_single_caller(self):
+        """Test `verdi process call-root` when passing single process with call root."""
+        # Both the middle and terminal node should have the `root` node as call root.
+        for node in [self.node_middle, self.node_terminal]:
+            options = [str(node.pk)]
+            result = self.cli_runner.invoke(cmd_process.process_call_root, options)
+            self.assertClickResultNoException(result)
+            self.assertTrue(len(get_result_lines(result)) == 1)
+            self.assertIn(str(self.node_root.pk), get_result_lines(result)[0])
+
+    def test_multiple_processes(self):
+        """Test `verdi process call-root` when passing multiple processes."""
+        options = [str(self.node_root.pk), str(self.node_middle.pk), str(self.node_terminal.pk)]
+        result = self.cli_runner.invoke(cmd_process.process_call_root, options)
+        self.assertClickResultNoException(result)
+        self.assertTrue(len(get_result_lines(result)) == 3)
+        self.assertIn('No callers found', get_result_lines(result)[0])
+        self.assertIn(str(self.node_root.pk), get_result_lines(result)[1])
+        self.assertIn(str(self.node_root.pk), get_result_lines(result)[2])
 
 
 @gen.coroutine

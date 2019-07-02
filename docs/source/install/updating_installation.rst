@@ -106,6 +106,8 @@ The reorganisation of nodes and linktypes is mostly invisible to the user, but e
 -  Remove ``Group.query`` and ``Group.group_query`` methods have been removed `[#2329] <https://github.com/aiidateam/aiida_core/pull/2329>`__
 -  Renamed ``type`` column of ``Group`` database model to ``type_string`` `[#2329] <https://github.com/aiidateam/aiida_core/pull/2329>`__
 -  Renamed ``name`` column of ``Group`` database model to ``label`` `[#2329] <https://github.com/aiidateam/aiida_core/pull/2329>`__
+- Class method ``Group.get_or_create`` has been removed, use the collection method ``Group.objects.get_or_create`` instead
+- Class method ``Group.get_from_string`` has been removed, use the class method ``Group.get`` instead
 
 
 ``Node``
@@ -130,6 +132,7 @@ The reorganisation of nodes and linktypes is mostly invisible to the user, but e
 -  ``Kind.has_vacancies()`` has been changed to a property ``Kind.has_vacancies`` `[#2374] <https://github.com/aiidateam/aiida_core/pull/2374>`__
 -  ``StructureData.is_alloy()`` has been changed to a property ``StructureData.is_alloy`` `[#2374] <https://github.com/aiidateam/aiida_core/pull/2374>`__
 -  ``StructureData.has_vacancies()`` has been changed to a property ``StructureData.has_vacancies`` `[#2374] <https://github.com/aiidateam/aiida_core/pull/2374>`__
+-  ``CifData._get_aiida_structure()`` has been renamed to ``CifData.get_structure()``. `[#2422] <https://github.com/aiidateam/aiida_core/pull/2422>`__
 -  ``CifData`` default library used in ``get_structure`` to convert to ``StructureData`` has been changed from ``ase`` to ``pymatgen`` `[#1257] <https://github.com/aiidateam/aiida_core/pull/1257>`__
 -  ``SinglefileData`` the methods ``get_file_content``, ``add_path`` and ``remove_path`` have been removed in favor of ``put_object_from_file`` and ``get_content`` `[#2506] <https://github.com/aiidateam/aiida_core/pull/2506>`__
 -  ``ArrayData.iterarrays()`` has been renamed to ``ArrayData.get_iterarrays()``. `[#2422] <https://github.com/aiidateam/aiida_core/pull/2422>`__
@@ -141,7 +144,14 @@ The reorganisation of nodes and linktypes is mostly invisible to the user, but e
 -  ``RemoteData.is_empty()`` has been changed to a property ``RemoteData.is_empty``. `[#2422] <https://github.com/aiidateam/aiida_core/pull/2422>`__
 -  The arguments ``stepids`` and ``cells`` of the ``TrajectoryData.set_trajectory()`` method are made optional which has implications on the ordering of the arguments passed to this method. `[#2422] <https://github.com/aiidateam/aiida_core/pull/2422>`__
 -  The list of atomic symbols for ``TrajectoryData`` is no longer stored as array data but is now accessible through the ``TrajectoryData.symbols`` attribute. `[#2422] <https://github.com/aiidateam/aiida_core/pull/2422>`__
-
+-  Removed deprecated methods ``BandsData._prepare_dat_1`` and ``BandsData._prepare_dat_2`` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
+-  Removed deprecated method `KpoinstData.bravais_lattice` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
+-  Removed deprecated method `KpoinstData._set_bravais_lattice` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
+-  Removed deprecated method `KpoinstData._get_or_create_bravais_lattice` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
+-  Removed deprecated method `KpoinstData.set_kpoints_path` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
+-  Removed deprecated method `KpoinstData._find_bravais_info` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
+-  Removed deprecated method `KpoinstData.find_bravais_lattice` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
+-  Removed deprecated method `KpoinstData.get_special_kpoints` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
 
 ``Process``
 -----------
@@ -202,6 +212,9 @@ To make this possible, the interface of various verdi commands has been changed 
 Also the output of most commands has been homogenised (e.g. to print errors or warnings always in the same style).
 Moreover, some of the commands have been renamed to be consistent with the new names of the classes in AiiDA.
 
+-  Removed ``verdi data plugins`` in favor of ``verdi plugin list`` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
+-  Removed ``verdi code rename`` in favor of ``verdi code relabel`` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
+-  Removed ``verdi code update`` in favor of ``verdi code duplicate`` `[#3114] <https://github.com/aiidateam/aiida_core/pull/3114>`__
 -  Removed ``verdi work`` in favor of ``verdi process`` `[#2574] <https://github.com/aiidateam/aiida_core/pull/2574>`__
 -  Removed ``verdi calculation`` in favor of ``verdi process`` and ``verdi calcjob`` `[#2574] <https://github.com/aiidateam/aiida_core/pull/2574>`__
 -  Removed ``verdi workflows`` `[#2379] <https://github.com/aiidateam/aiida_core/pull/2379>`__
@@ -209,11 +222,13 @@ Moreover, some of the commands have been renamed to be consistent with the new n
 -  ``verdi code show`` no longer shows number of calculations by default to improve performance, with ``--verbose`` flag to restore old behavior `[#1428] <https://github.com/aiidateam/aiida_core/pull/1428>`__
 - The tab-completion activation for ``verdi`` has changed, simply replace the ``eval "$(verdi completioncommand)"`` line in your activation script with ``eval "$(_VERDI_COMPLETE-source verdi)"``
 
+
 Daemon
 ------
 
 -  Each profile now has its own daemon that can be run completely independently in parallel, so ``verdi daemon configureuser`` has been removed `[#1217] <https://github.com/aiidateam/aiida_core/pull/1217>`__
 -  Replaced ``Celery`` with ``Circus`` as the daemonizer of the daemon `[#1213] <https://github.com/aiidateam/aiida_core/pull/1213>`__
+
 
 Schedulers
 ----------
@@ -222,10 +237,12 @@ Schedulers
 -  Abstract method ``aiida.scheduler.Scheduler._get_detailed_jobinfo_command()`` raises ``aiida.common.exceptions.FeatureNotAvailable`` (was ``NotImplemented``).
 -  Moved the ``SchedulerFactory`` to ``aiida.plugins.factories`` `[#2498] <https://github.com/aiidateam/aiida_core/pull/2498>`__
 
+
 Transports
 ----------
 
 -  Moved the ``TransportFactory`` to ``aiida.plugins.factories`` `[#2498] <https://github.com/aiidateam/aiida_core/pull/2498>`__
+
 
 Export import
 -------------

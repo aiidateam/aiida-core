@@ -156,6 +156,7 @@ I.e. to solve ambiguity examples mentioned above, one would pass ``10!`` and ``d
 
 Commands
 ========
+Below is a list with all available subcommands.
 
 .. _verdi_calcjob:
 

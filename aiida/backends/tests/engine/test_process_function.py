@@ -131,6 +131,12 @@ class TestProcessFunction(AiidaTestCase):
         self.assertEqual(node.is_finished_ok, True)
         self.assertEqual(node.is_failed, False)
 
+    def test_process_type(self):
+        """Test that the process type correctly contains the module and name of original decorated function."""
+        _, node = self.function_defaults.run_get_node()
+        process_type = '{}.{}'.format(self.function_defaults.__module__, self.function_defaults.__name__)
+        self.assertEqual(node.process_type, process_type)
+
     def test_exit_status(self):
         """A FINISHED process function has to have an exit status of 0"""
         _, node = self.function_args_with_default.run_get_node()

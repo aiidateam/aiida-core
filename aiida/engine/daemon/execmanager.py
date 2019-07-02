@@ -25,7 +25,6 @@ from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import FolderData
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.plugins import DataFactory
@@ -252,9 +251,6 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     :param transport: an already opened transport to use for the retrieval.
     :param retrieved_temporary_folder: the absolute path to a directory in which to store the files
         listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
-
-    .. deprecated:: 1.0.0
-        `retrieve_singlefile_list` will be removed in `v2.0.0`, use `retrieve_temporary_list` instead.
     """
     logger_extra = get_dblogger_extra(calculation)
 
@@ -284,8 +280,6 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
 
         # Second, retrieve the singlefiles, if any files were specified in the 'retrieve_temporary_list' key
         if retrieve_singlefile_list:
-            warnings.warn('`retrieve_singlefile_list` has been deprecated, use `retrieve_temporary_list` instead',
-                AiidaDeprecationWarning)  # pylint: disable=no-member
             with SandboxFolder() as folder:
                 _retrieve_singlefiles(calculation, transport, folder, retrieve_singlefile_list, logger_extra)
 

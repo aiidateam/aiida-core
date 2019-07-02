@@ -65,7 +65,7 @@ def load_dbenv(profile=None):
     :type profile: str
 
     .. deprecated:: 1.0.0
-        Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
+        Will be removed in `v2.0.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
     warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
     current_profile = get_profile()
@@ -88,7 +88,7 @@ def try_load_dbenv(profile=None):
 
 
     .. deprecated:: 1.0.0
-        Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
+        Will be removed in `v2.0.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
     warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
     if not is_dbenv_loaded():
@@ -103,7 +103,7 @@ def is_dbenv_loaded():
     :rtype: bool
 
     .. deprecated:: 1.0.0
-        Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
+        Will be removed in `v2.0.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
     warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
     return get_profile() is not None

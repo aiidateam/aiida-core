@@ -350,8 +350,10 @@ class CalcJobNode(CalculationNode):
         :param retrieve_singlefile_list: list or tuple of single file directives
 
         .. deprecated:: 1.0.0
-            Will be removed in `v2.0.0`, use
-            :meth:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_retrieve_temporary_list` instead.
+
+            Will be removed in `v2.0.0`.
+            Use :meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_retrieve_temporary_list` instead.
+
         """
         warnings.warn('method is deprecated, use `set_retrieve_temporary_list` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
 

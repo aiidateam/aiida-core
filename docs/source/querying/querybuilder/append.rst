@@ -19,7 +19,7 @@ Let's suppose you want to query for calculation nodes in your database::
     or the ``Process`` class (e.g. ``CalcJob``, ``PwCalculation``),
     which will automatically apply the correct filters for the type of calculation.
 
-If you are interested in instances of different classes, you can also pass a tuple, list or set of classes. 
+If you are interested in instances of different classes, you can also pass a tuple, list or set of classes.
 However, they have to be of the same ORM-type (e.g. all have to be subclasses of Node)::
 
     from aiida.orm.querybuilder import QueryBuilder
@@ -132,7 +132,7 @@ This will be the next example::
     )
     res = qb.all()
 
-In order to negate a filter, that is to apply the not operator, precede the filter 
+In order to negate a filter, that is to apply the not operator, precede the filter
 keyword with an exclamation mark.
 So, to ask for all calculations that are not in 'FINISHED' or 'RETRIEVING'::
 
@@ -254,44 +254,44 @@ to a previous entity by using one of the keywords in the above table
 and as a value the tag of the vertice that it has a relationship with.
 There are several relationships that entities in Aiida can have:
 
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| **Entity from**  | **Entity to** | **Relationship**   | **Deprecated Relationship** | **Explanation**                                 |
-+==================+===============+====================+=============================+=================================================+
-| Node             | Node          | *with_outgoing*    | *input_of*                  | One node as input of another node               |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Node          | *with_incoming*    | *output_of*                 | One node as output of another node              |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Node          | *with_descendants* | *ancestor_of*               | One node as the ancestor of another node (Path) |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Node          | *with_ancestors*   | *descendant_of*             | One node as descendant of another node (Path)   |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Group         | *with_node*        | *group_of*                  | The group of a node                             |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Group            | Node          | *with_group*       | *member_of*                 | The node is a member of a group                 |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Computer      | *with_node*        | *computer_of*               | The computer of a node                          |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Computer         | Node          | *with_computer*    | *has_computer*              | The node of a computer                          |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | User          | *with_node*        | *creator_of*                | The creator of a node is a user                 |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| User             | Node          | *with_user*        | *created_by*                | The node was created by a user                  |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| User             | Group         | *with_user*        | *belongs_to*                | The node was created by a user                  |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Group            | User          | *with_group*       | *owner_of*                  | The node was created by a user                  |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Log           | *with_node*        |                             | The log of a node                               |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Log              | Node          | *with_log*         |                             | The node has a log                              |
-| Node             | Comment       | *with_node*        |                             | The comment of a node                           |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Comment          | Node          | *with_comment*     |                             | The node has a comment                          |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| User             | Comment       | *with_user*        |                             | The comment was created by a user               |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Comment          | User          | *with_comment*     |                             | The creator of a comment is a user              |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
++------------------+---------------+--------------------+-------------------------------------------------+
+| **Entity from**  | **Entity to** | **Relationship**   | **Explanation**                                 |
++==================+===============+====================+=================================================+
+| Node             | Node          | *with_outgoing*    | One node as input of another node               |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Node          | *with_incoming*    | One node as output of another node              |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Node          | *with_descendants* | One node as the ancestor of another node (Path) |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Node          | *with_ancestors*   | One node as descendant of another node (Path)   |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Group         | *with_node*        | The group of a node                             |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Group            | Node          | *with_group*       | The node is a member of a group                 |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Computer      | *with_node*        | The computer of a node                          |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Computer         | Node          | *with_computer*    | The node of a computer                          |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | User          | *with_node*        | The creator of a node is a user                 |
++------------------+---------------+--------------------+-------------------------------------------------+
+| User             | Node          | *with_user*        | The node was created by a user                  |
++------------------+---------------+--------------------+-------------------------------------------------+
+| User             | Group         | *with_user*        | The node was created by a user                  |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Group            | User          | *with_group*       | The node was created by a user                  |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Log           | *with_node*        | The log of a node                               |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Log              | Node          | *with_log*         | The node has a log                              |
+| Node             | Comment       | *with_node*        | The comment of a node                           |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Comment          | Node          | *with_comment*     | The node has a comment                          |
++------------------+---------------+--------------------+-------------------------------------------------+
+| User             | Comment       | *with_user*        | The comment was created by a user               |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Comment          | User          | *with_comment*     | The creator of a comment is a user              |
++------------------+---------------+--------------------+-------------------------------------------------+
 
 
 Some more examples::

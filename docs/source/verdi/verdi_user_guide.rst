@@ -227,11 +227,9 @@ Below is a list with all available subcommands.
       hide       Hide one or more codes from the `verdi code list` command.
       list       List the codes in the database.
       relabel    Relabel a code.
-      rename     Rename a code.
       reveal     Reveal one or more hidden codes to the `verdi code list`...
       setup      Setup a new Code.
       show       Display detailed information for the given CODE.
-      update     Update an existing code.
 
 
 .. _verdi_comment:
@@ -362,7 +360,6 @@ Below is a list with all available subcommands.
       bands       Manipulate BandsData objects.
       cif         Manipulation of CIF data objects.
       dict        View and manipulate Dict objects.
-      plugins     Print a list of registered data plugins or details of a...
       remote      Managing RemoteData objects.
       structure   Manipulation of StructureData objects.
       trajectory  View and manipulate TrajectoryData instances.

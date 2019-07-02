@@ -243,10 +243,6 @@ class BandsData(KpointsData):
         except AttributeError:
             pass
         try:
-            self.bravais_lattice = kpointsdata.bravais_lattice
-        except AttributeError:
-            pass
-        try:
             the_kpoints = kpointsdata.get_kpoints()
         except AttributeError:
             the_kpoints = None
@@ -637,19 +633,6 @@ class BandsData(KpointsData):
 
         return batch_data.encode('utf-8'), extra_files
 
-    def _prepare_dat_1(self, *args, **kwargs):
-        """
-        Output data in .dat format, using multiple columns for all y values
-        associated to the same x.
-
-        .. deprecated:: 0.8.1
-            Use 'dat_multicolumn' format instead
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn("dat_1 format is deprecated, use dat_multicolumn instead", DeprecationWarning)
-        return self._prepare_dat_multicolumn(*args, **kwargs)
-
     def _prepare_dat_multicolumn(self, main_file_name="", comments=True):
         """
         Write an N x M matrix. First column is the distance between kpoints,
@@ -673,18 +656,6 @@ class BandsData(KpointsData):
             return_text.append("\t".join(line))
 
         return ("\n".join(return_text) + '\n').encode('utf-8'), {}
-
-    def _prepare_dat_2(self, *args, **kwargs):
-        """
-        Output data in .dat format, using blocks.
-
-        .. deprecated:: 0.8.1
-            Use 'dat_block' format instead
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn("dat_2 format is deprecated, use dat_blocks instead", DeprecationWarning)
-        return self._prepare_dat_blocks(*args, **kwargs)
 
     def _prepare_dat_blocks(self, main_file_name="", comments=True):
         """
@@ -739,7 +710,7 @@ class BandsData(KpointsData):
             defined below)
         :param title: the title
         :param legend: the legend (applied only to the first of the set)
-        :param legend2: the legend for second-type spins 
+        :param legend2: the legend for second-type spins
             (applied only to the first of the set)
         :param y_max_lim: the maximum on the y axis (if None, put the
             maximum of the bands)
@@ -1105,7 +1076,7 @@ class BandsData(KpointsData):
         Call a show() command for the band structure using matplotlib.
         This uses internally the 'mpl_singlefile' format, with empty
         main_file_name.
-        
+
         Other kwargs are passed to self._exportcontent.
         """
         # In Python 2, exec is a statement which was extended to also take a tuple, while Python 3's exec
@@ -1130,7 +1101,7 @@ class BandsData(KpointsData):
         """
         Prepare an xmgrace agr file.
 
-        :param comments: if True, print comments 
+        :param comments: if True, print comments
             (if it makes sense for the given format)
         :param plot_info: a dictionary
         :param setnumber_offset: an offset to be applied to all set numbers

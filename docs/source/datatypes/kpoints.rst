@@ -82,32 +82,3 @@ If you use this implementation, please cite the correct reference from the follo
     Simple geometric generation of special points in brillouin-zone integrations. Two-dimensional bravais lattices
     Int. J. Quant. Chem., XXX, 391-411 (1986)
     DOI: 10.1002/qua.560300306
-
-
-Deprecated methods
-------------------
-Originally, the ``legacy`` implementation was implemented directly into the
-:py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData` class.
-
-In order to implement more than one method, 
-to simplify the :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData` class,
-and to decouple the underlying logic from AiiDA, we have deprecated those methods and factored out the logic into
-the :py:class:`~aiida.tools.data.array.kpoints.legacy` module. The methods are currently still available,
-but will be removed in future versions of AiiDA; plese use directly the wrappers
-:py:func:`aiida.tools.data.array.kpoints.get_kpoints_path`
-and :py:func:`aiida.tools.data.array.kpoints.get_explicit_kpoints_path` instead, passing as option ``method='legacy'``.
-
-The list of deprecated methods include:
-
--  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData.bravais_lattice`
-
--  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData._get_or_create_bravais_lattice`
-
--  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData.set_kpoints_path`
-
--  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData._find_bravais_info`
-
--  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData.find_bravais_lattice`
-
--  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData.get_special_points`
-

@@ -1640,33 +1640,21 @@ class QueryBuilder(object):
                 'with_user': self._join_created_by,
                 'with_group': self._join_group_members,
                 'direction': None,
-                'ancestor_of': self._deprecate(self._join_ancestors_recursive, 'ancestor_of', 'with_descendants'),
-                'descendant_of': self._deprecate(self._join_descendants_recursive, 'descendant_of', 'with_ancestors'),
-                'input_of': self._deprecate(self._join_inputs, 'input_of', 'with_outgoing'),
-                'output_of': self._deprecate(self._join_outputs, 'output_of', 'with_incoming'),
-                'has_computer': self._deprecate(self._join_to_computer_used, 'has_computer', 'with_computer'),
-                'created_by': self._deprecate(self._join_created_by, 'created_by', 'with_user'),
-                'member_of': self._deprecate(self._join_group_members, 'member_of', 'with_group')
             },
             'computer': {
                 'with_node': self._join_computer,
                 'direction': None,
-                'computer_of': self._deprecate(self._join_computer, 'computer_of', 'with_node')
             },
             'user': {
                 'with_comment': self._join_comment_user,
                 'with_node': self._join_creator_of,
                 'with_group': self._join_group_user,
                 'direction': None,
-                'creator_of': self._deprecate(self._join_creator_of, 'creator_of', 'with_node'),
-                'owner_of': self._deprecate(self._join_group_user, 'owner_of', 'with_group')
             },
             'group': {
                 'with_node': self._join_groups,
                 'with_user': self._join_user_group,
                 'direction': None,
-                'group_of': self._deprecate(self._join_groups, 'group_of', 'with_node'),
-                'belongs_to': self._deprecate(self._join_user_group, 'belongs_to', 'with_user')
             },
             'comment': {
                 'with_user': self._join_user_comment,
@@ -2316,31 +2304,3 @@ class QueryBuilder(object):
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, with_descendants=join_to, autotag=True, **kwargs)
         return self
-
-    def _deprecate(self, function, deprecated_name, preferred_name, version='1.0.0a5'):
-        """
-        Wrapper to return a decorated functon which will print a deprecation warning when it is called.
-
-        Specifically for when an  old relationship type is used.
-        Note that it is the way of calling the function which is deprecated, not the function itself
-
-        :param function: a deprecated function to call
-        :param deprecated_name: the name which is deprecated
-        :param preferred_name: the new name which is preferred
-        :param version: aiida version for which this takes effect.
-        """
-
-        def wrapper(*args, **kwargs):
-            """
-            Decorator to print a deprecation warning
-            """
-            import warnings
-            from aiida.common.warnings import AiidaDeprecationWarning
-            warnings.warn(
-                "The relationship name '{}' is deprecated from version {} onwards. Use '{}' instead.".format(
-                    deprecated_name, version, preferred_name),
-                AiidaDeprecationWarning,
-                stacklevel=2)
-            return function(*args, **kwargs)
-
-        return wrapper

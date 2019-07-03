@@ -80,7 +80,8 @@ def parse_option(option_name, option_value):
 
     if option.valid_values is not None:
         if value not in option.valid_values:
-            raise ValueError('{} is not among the list of accepted values for option {}'.format(value, option.name))
+            raise ValueError('{} is not among the list of accepted values for option {}.\nThe valid values are: '
+                             '{}'.format(value, option.name, ', '.join(option.valid_values)))
 
     return option, value
 

@@ -683,7 +683,7 @@ class Graph(object):
                                include_target_outputs=False,
                                origin_style=(),
                                annotate_links=False):
-        """add nodes and edges from multiple origin node to target nodes
+        """Add nodes and edges from all nodes of an origin class to all node of a target node class.
 
         :param origin_cls: origin node class
         :param target_cls: target node class

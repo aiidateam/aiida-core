@@ -850,82 +850,85 @@ class TestWorkchain(AiidaTestCase):
         return proc.finished_steps
 
 
-# class TestWorkChainAbort(AiidaTestCase):
-#     """
-#     Test the functionality to abort a workchain
-#     """
-#
-#     def setUp(self):
-#         super(TestWorkChainAbort, self).setUp()
-#         self.assertIsNone(Process.current())
-#
-#     def tearDown(self):
-#         super(TestWorkChainAbort, self).tearDown()
-#         self.assertIsNone(Process.current())
-#
-#     class AbortableWorkChain(WorkChain):
-#
-#         @classmethod
-#         def define(cls, spec):
-#             super(TestWorkChainAbort.AbortableWorkChain, cls).define(spec)
-#             spec.outline(cls.begin, cls.check)
-#
-#         def begin(self):
-#             self.pause()
-#
-#         def check(self):
-#             raise RuntimeError('should have been aborted by now')
-#
-#     def test_simple_run(self):
-#         """
-#         Run the workchain which should hit the exception and therefore end
-#         up in the EXCEPTED state
-#         """
-#         runner = get_manager().get_runner()
-#         process = TestWorkChainAbort.AbortableWorkChain()
-#
-#         @gen.coroutine
-#         def run_async():
-#             yield run_until_paused(process)
-#
-#             process.play()
-#
-#             with Capturing():
-#                 with self.assertRaises(RuntimeError):
-#                     yield process.future()
-#
-#         runner.schedule(process)
-#         runner.loop.run_sync(lambda: run_async())
-#
-#         self.assertEquals(process.node.is_finished_ok, False)
-#         self.assertEquals(process.node.is_excepted, True)
-#         self.assertEquals(process.node.is_killed, False)
-#
-#     def test_simple_kill_through_process(self):
-#         """
-#         Run the workchain for one step and then kill it by calling kill
-#         on the workchain itself. This should have the workchain end up
-#         in the KILLED state.
-#         """
-#         runner = get_manager().get_runner()
-#         process = TestWorkChainAbort.AbortableWorkChain()
-#
-#         @gen.coroutine
-#         def run_async():
-#             yield run_until_paused(process)
-#
-#             self.assertTrue(process.paused)
-#             process.kill()
-#
-#             with self.assertRaises(plumpy.ClosedError):
-#                 launch.run(process)
-#
-#         runner.schedule(process)
-#         runner.loop.run_sync(lambda: run_async())
-#
-#         self.assertEquals(process.node.is_finished_ok, False)
-#         self.assertEquals(process.node.is_excepted, False)
-#         self.assertEquals(process.node.is_killed, True)
+
+class AbortableWorkChain(WorkChain):
+
+    @classmethod
+    def define(cls, spec):
+        super(AbortableWorkChain, cls).define(spec)
+        spec.outline(cls.begin, cls.check)
+
+    def begin(self):
+        self.pause()
+
+    def check(self):
+        raise RuntimeError('should have been aborted by now')
+
+
+class TestWorkChainAbort(AiidaTestCase):
+    """
+    Test the functionality to abort a workchain
+    """
+
+    def setUp(self):
+        super(TestWorkChainAbort, self).setUp()
+        self.assertIsNone(Process.current())
+
+    def tearDown(self):
+        super(TestWorkChainAbort, self).tearDown()
+        self.assertIsNone(Process.current())
+
+
+    def test_simple_run(self):
+        """
+        Run the workchain which should hit the exception and therefore end
+        up in the EXCEPTED state
+        """
+        runner = get_manager().get_runner()
+        process = AbortableWorkChain()
+
+        @gen.coroutine
+        def run_async():
+            yield run_until_paused(process)
+
+            process.play()
+
+            with Capturing():
+                with self.assertRaises(RuntimeError):
+                    yield process.future()
+
+        runner.schedule(process)
+        runner.loop.run_sync(lambda: run_async())
+
+        self.assertEquals(process.node.is_finished_ok, False)
+        self.assertEquals(process.node.is_excepted, True)
+        self.assertEquals(process.node.is_killed, False)
+
+    def test_simple_kill_through_process(self):
+        """
+        Run the workchain for one step and then kill it by calling kill
+        on the workchain itself. This should have the workchain end up
+        in the KILLED state.
+        """
+        runner = get_manager().get_runner()
+        process = TestWorkChainAbort.AbortableWorkChain()
+
+        @gen.coroutine
+        def run_async():
+            yield run_until_paused(process)
+
+            self.assertTrue(process.paused)
+            process.kill()
+
+            with self.assertRaises(plumpy.ClosedError):
+                launch.run(process)
+
+        runner.schedule(process)
+        runner.loop.run_sync(lambda: run_async())
+
+        self.assertEquals(process.node.is_finished_ok, False)
+        self.assertEquals(process.node.is_excepted, False)
+        self.assertEquals(process.node.is_killed, True)
 
 
 # class TestWorkChainAbortChildren(AiidaTestCase):

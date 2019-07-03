@@ -26,29 +26,48 @@ from plumpy.ports import OutputPort
 
 
 def setup_aiida_workchain(app):
+    app.add_directive_to_domain('py', 'aiida-process', AiidaProcessDirective)
+    app.add_autodocumenter(AiidaProcessDocumenter)
+
     app.add_directive_to_domain('py', 'aiida-workchain', AiidaWorkchainDirective)
-    app.add_autodocumenter(WorkChainDocumenter)
+    #app.add_autodocumenter(AiidaWorkChainDocumenter)
+
+def _issubclass(cls, AiidaClass):
+    try:
+        from aiida.manage.configuration import load_profile
+        load_profile()
+        from aiida.engine import AiidaClass
+        return issubclass(cls, AiidaClass)
+    except Exception:
+        return False
 
 
-class WorkChainDocumenter(ClassDocumenter):
+
+class AiidaProcessDocumenter(ClassDocumenter):
+    directivetype = 'aiida-process'
+    objtype = 'process'
+    priority = 10
+
+    @classmethod
+    def can_document_member(cls, member, membername, isattr, parent):
+        from aiida.engine import Process
+        return _issubclass(member, Process)
+
+
+class AiidaWorkChainDocumenter(ClassDocumenter):
     directivetype = 'aiida-workchain'
     objtype = 'workchain'
     priority = 20
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
-        try:
-            from aiida.manage.configuration import load_profile
-            load_profile()
-            from aiida.engine import WorkChain
-            return issubclass(member, WorkChain)
-        except Exception:
-            return False
+        from aiida.engine import WorkChain
+        return _issubclass(member, WorkChain)
 
 
-class AiidaWorkchainDirective(Directive):
+class AiidaProcessDirective(Directive):
     """
-    Directive to auto-document AiiDA workchains.
+    Directive to auto-document AiiDA processes.
     """
     required_arguments = 1
     optional_arguments = 0
@@ -56,57 +75,60 @@ class AiidaWorkchainDirective(Directive):
 
     HIDE_UNSTORED_INPUTS_FLAG = 'hide-nondb-inputs'
     option_spec = {'module': directives.unchanged, HIDE_UNSTORED_INPUTS_FLAG: directives.flag}
+    signature="Process"
+    annotation="process"
 
     has_content = True
 
     def run(self):
-        from aiida.manage.configuration import load_profile
-        load_profile()
-        self.load_workchain()
+        self.initialize()
         return self.build_node_tree()
 
-    def load_workchain(self):
-        """Loads the workchain and sets up additional attributes."""
+    def initialize(self):
+        """Set internal attributes of the class.
+
+        Includes importing the process class.
+        """
         # pylint: disable=attribute-defined-outside-init
         from aiida.manage.configuration import load_profile
         load_profile()
 
         self.class_name = self.arguments[0].split('(')[0]
         self.module_name = self.options['module']
-        self.workchain_name = self.module_name + '.' + self.class_name
+        self.process_name = self.module_name + '.' + self.class_name
         #import pdb; pdb.set_trace()
-        self.workchain = get_object_from_string(self.workchain_name)
-        self.workchain_spec = self.workchain.spec()
+        self.process = get_object_from_string(self.process_name)
+        self.process_spec = self.process.spec()
 
     def build_node_tree(self):
         """Returns the docutils node tree."""
-        workchain_node = addnodes.desc(
+        process_node = addnodes.desc(
             desctype='class', domain='py', noindex=False, objtype='class'
         )
-        workchain_node += self.build_signature()
-        workchain_node += self.build_content()
-        return [workchain_node]
+        process_node += self.build_signature()
+        process_node += self.build_content()
+        return [process_node]
 
     def build_signature(self):
-        """Returns the signature of the workchain."""
-        signature = addnodes.desc_signature(first=False, fullname="Workchain")
-        signature += addnodes.desc_annotation(text='workchain')
+        """Returns the signature of the process."""
+        signature = addnodes.desc_signature(first=False, fullname=self.signature)
+        signature += addnodes.desc_annotation(text=self.annotation)
         signature += addnodes.desc_addname(text=self.module_name + '.')
         signature += addnodes.desc_name(text=self.class_name)
         return signature
 
     def build_content(self):
         """
-        Returns the main content (docstring, inputs, outputs) of the workchain documentation.
+        Returns the main content (docstring, inputs, outputs) of the documentation.
         """
         content = addnodes.desc_content()
-        content += nodes.paragraph(text=self.workchain.__doc__)
+        content += nodes.paragraph(text=self.process.__doc__)
 
         content += self.build_doctree(
-            title='Inputs:', port_namespace=self.workchain_spec.inputs,
+            title='Inputs:', port_namespace=self.process_spec.inputs,
         )
         content += self.build_doctree(
-            title='Outputs:', port_namespace=self.workchain_spec.outputs
+            title='Outputs:', port_namespace=self.process_spec.outputs
         )
 
         return content
@@ -182,6 +204,11 @@ class AiidaWorkchainDirective(Directive):
                 return '(' + ', '.join(v.__name__ for v in valid_type) + ')'
             except (AttributeError, TypeError):
                 return str(valid_type)
+
+
+class AiidaWorkchainDirective(AiidaProcessDirective):
+    signature = "WorkChain"
+    annotation = "workchain"
 
 
 def _is_non_db(port):

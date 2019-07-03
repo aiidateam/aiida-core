@@ -613,14 +613,14 @@ class Graph(object):
                 last_nodes.append(new_node)
                 traversed_pks.append(new_node.pk)
 
-    def add_origin_to_target(self,
-                             origin,
-                             target_cls,
-                             target_filters=None,
-                             include_target_inputs=False,
-                             include_target_outputs=False,
-                             origin_style=(),
-                             annotate_links=False):
+    def add_origin_to_targets(self,
+                              origin,
+                              target_cls,
+                              target_filters=None,
+                              include_target_inputs=False,
+                              include_target_outputs=False,
+                              origin_style=(),
+                              annotate_links=False):
         """Add nodes and edges from an origin node to all nodes of a target node class.
 
         :param origin: node or node pk/uuid
@@ -714,7 +714,7 @@ class Graph(object):
             }]})
 
         for (node,) in query.iterall():
-            self.add_origin_to_target(
+            self.add_origin_to_targets(
                 node,
                 target_cls,
                 target_filters=target_filters,

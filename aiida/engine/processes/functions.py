@@ -295,6 +295,8 @@ class FunctionProcess(Process):
 
         return type(
             func.__name__, (FunctionProcess,), {
+                '__module__': func.__module__,
+                '__name__': func.__name__,
                 '_func': staticmethod(func),
                 Process.define.__name__: classmethod(_define),
                 '_func_args': args,

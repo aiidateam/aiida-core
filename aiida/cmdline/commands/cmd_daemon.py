@@ -91,6 +91,7 @@ def status(all_profiles):
 
     for profile in profiles:
         client = get_daemon_client(profile.name)
+        delete_stale_pid_file(client)
         click.secho('Profile: ', fg='red', bold=True, nl=False)
         click.secho('{}'.format(profile.name), bold=True)
         result = get_daemon_status(client)

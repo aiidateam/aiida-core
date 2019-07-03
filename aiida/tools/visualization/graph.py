@@ -190,13 +190,24 @@ def default_process_styles(node):
     return node_style
 
 
+def get_node_id_label(node, id_type):
+    """return an identifier str for the node """
+    if id_type == "pk":
+        return node.pk
+    elif id_type == "pk":
+        return node.uuid.split("-")[0]
+    else:
+        raise ValueError("id_type not recognised")
+
+
 def _add_graphviz_node(graph,
                        node,
                        data_style_func,
                        process_style_func,
                        data_sublabel_func,
                        style_override=None,
-                       include_sublabels=True):
+                       include_sublabels=True,
+                       id_type="pk"):
     """create a node in the graph
 
     The first line of the node text is always '<node.name> (<node.pk>)'.
@@ -213,6 +224,8 @@ def _add_graphviz_node(graph,
     :type style_override: None or dict
     :param include_sublabels: whether to include the sublabels for nodes (Default value = True)
     :type include_sublabels: bool
+    :param id_type: the type of identifier to use for node labels ('pk' or 'uuid')
+    :type id_type: str
 
     nodes are styled based on the node type
 
@@ -228,7 +241,7 @@ def _add_graphviz_node(graph,
     if isinstance(node, Data):
 
         node_style = data_style_func(node)
-        label = ["{} ({})".format(node.__class__.__name__, node.pk)]
+        label = ["{} ({})".format(node.__class__.__name__, get_node_id_label(node, id_type))]
         if include_sublabels:
             sublabel = data_sublabel_func(node)
             if sublabel:
@@ -240,7 +253,8 @@ def _add_graphviz_node(graph,
         node_style = process_style_func(node)
 
         label = [
-            "{} ({})".format(node.__class__.__name__ if node.process_label is None else node.process_label, node.pk)
+            "{} ({})".format(node.__class__.__name__ if node.process_label is None else node.process_label,
+                             get_node_id_label(node, id_type))
         ]
 
         if include_sublabels and node.process_state is not None:
@@ -292,7 +306,8 @@ class Graph(object):
                  link_styles=None,
                  data_styles=None,
                  process_styles=None,
-                 data_sublabels=None):
+                 data_sublabels=None,
+                 node_id_label="pk"):
         """a class to create graphviz graphs of the AiiDA node provenance
 
         Nodes and edges, are cached, so that they are only created once
@@ -317,6 +332,8 @@ class Graph(object):
             process_styles(node) -> dict (Default value = None)
         :param data_sublabels: callable mapping data node to a sublabel (e.g. specifying some attribute values)
             data_sublabels(node) -> str (Default value = None)
+        :param node_id_label: the type of identifier to use for node labels ('pk' or 'uuid')
+        :type node_id_label: str
 
         """
         # pylint: disable=too-many-arguments
@@ -330,6 +347,7 @@ class Graph(object):
         self._data_styles = data_styles or default_data_styles
         self._process_styles = process_styles or default_process_styles
         self._data_sublabels = data_sublabels or default_data_sublabels
+        self._node_id_type = node_id_label
 
     @property
     def graphviz(self):
@@ -381,7 +399,8 @@ class Graph(object):
                 self._process_styles,
                 self._data_sublabels,
                 style_override=style,
-                include_sublabels=self._include_sublabels)
+                include_sublabels=self._include_sublabels,
+                id_type=self._node_id_type)
             self._nodes.add(node.pk)
 
     def add_edge(self, in_node, out_node, link_pair=None, style=None, overwrite=False):

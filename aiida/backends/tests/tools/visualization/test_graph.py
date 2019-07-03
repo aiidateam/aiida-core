@@ -30,7 +30,8 @@ class TestVisGraph(AiidaTestCase):
         self.reset_database()
 
     def create_provenance(self):
-
+        """create an example provenance graph
+        """
         pd0 = orm.Dict()
         pd0.label = "pd0"
         pd0.store()
@@ -100,7 +101,8 @@ class TestVisGraph(AiidaTestCase):
 
     def test_graph_init(self):
         """ test initialisation of Graph"""
-        graph = graph_mod.Graph()
+        # pylint: disable=no-self-use
+        graph_mod.Graph()
 
     def test_graph_add_node(self):
         """ test adding a node to the graph """
@@ -237,5 +239,5 @@ class TestVisGraph(AiidaTestCase):
         }}""".format(**{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison
-        self.assertEqual([l.strip() for l in graph.graphviz.source.splitlines()],
-                         [l.strip() for l in expected.splitlines()])
+        self.assertEqual(sorted([l.strip() for l in graph.graphviz.source.splitlines()]),
+                         sorted([l.strip() for l in expected.splitlines()]))

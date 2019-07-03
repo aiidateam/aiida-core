@@ -25,7 +25,6 @@ from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import FolderData
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.plugins import DataFactory
@@ -230,6 +229,7 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     :param transport: an already opened transport to use to submit the calculation.
     :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
     :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
+    :return: the job id as returned by the scheduler `submit_from_script` call
     """
     scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
@@ -237,6 +237,7 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     workdir = calculation.get_remote_workdir()
     job_id = scheduler.submit_from_script(workdir, script_filename)
     calculation.set_job_id(job_id)
+    return job_id
 
 
 def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
@@ -250,9 +251,6 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     :param transport: an already opened transport to use for the retrieval.
     :param retrieved_temporary_folder: the absolute path to a directory in which to store the files
         listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
-
-    .. deprecated:: 1.0.0
-        `retrieve_singlefile_list` will be removed in `v2.0.0`, use `retrieve_temporary_list` instead.
     """
     logger_extra = get_dblogger_extra(calculation)
 
@@ -282,8 +280,6 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
 
         # Second, retrieve the singlefiles, if any files were specified in the 'retrieve_temporary_list' key
         if retrieve_singlefile_list:
-            warnings.warn('`retrieve_singlefile_list` has been deprecated, use `retrieve_temporary_list` instead',
-                AiidaDeprecationWarning)  # pylint: disable=no-member
             with SandboxFolder() as folder:
                 _retrieve_singlefiles(calculation, transport, folder, retrieve_singlefile_list, logger_extra)
 

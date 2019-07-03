@@ -7,15 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tools to operate on `CifData` nodes."""
 # pylint: disable=invalid-name
+"""Tools to operate on `CifData` nodes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from six.moves import range
 
-from aiida.orm import CifData
 from aiida.engine import calcfunction
+from aiida.orm import CifData
+from aiida.orm.utils.node import clean_value
 
 
 class InvalidOccupationsError(Exception):
@@ -89,7 +91,9 @@ def _get_aiida_structure_ase_inline(cif, **kwargs):
     parameters = kwargs.get('parameters', {})
 
     if isinstance(parameters, Dict):
-        parameters = parameters.get_dict()
+        # Note, if `parameters` is unstored, it might contain stored `Node` instances which might slow down the parsing
+        # enormously, because each time their value is used, a database call is made to refresh the value
+        parameters = clean_value(parameters.get_dict())
 
     parameters.pop('occupancy_tolerance', None)
     parameters.pop('site_tolerance', None)
@@ -115,7 +119,9 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     parameters = kwargs.get('parameters', {})
 
     if isinstance(parameters, Dict):
-        parameters = parameters.get_dict()
+        # Note, if `parameters` is unstored, it might contain stored `Node` instances which might slow down the parsing
+        # enormously, because each time their value is used, a database call is made to refresh the value
+        parameters = clean_value(parameters.get_dict())
 
     constructor_kwargs = {}
 

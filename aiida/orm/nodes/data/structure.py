@@ -1265,9 +1265,9 @@ class StructureData(Data):
         Default is False (no spin added).
 
         .. note:: The spins are set according to the following rule:
-            
+
             * if the kind name ends with 1 -> spin=+1
-            
+
             * if the kind name ends with 2 -> spin=-1
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
@@ -1282,9 +1282,9 @@ class StructureData(Data):
         Default is False (no spin added).
 
         .. note:: The spins are set according to the following rule:
-            
+
             * if the kind name ends with 1 -> spin=+1
-            
+
             * if the kind name ends with 2 -> spin=-1
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
@@ -1330,7 +1330,7 @@ class StructureData(Data):
             raise ValueError("A kind with the same name ({}) already exists.".format(kind.name))
 
         # If here, no exceptions have been raised, so I add the site.
-        self.append_to_attr('kinds', new_kind.get_raw())
+        self.attributes.setdefault('kinds', []).append(new_kind.get_raw())
         # Note, this is a dict (with integer keys) so it allows for empty
         # spots!
         if not hasattr(self, '_internal_kind_tags'):
@@ -1357,7 +1357,7 @@ class StructureData(Data):
                              "{}".format(site.kind_name, [k.name for k in self.kinds]))
 
         # If here, no exceptions have been raised, so I add the site.
-        self.append_to_attr('sites', new_site.get_raw())
+        self.attributes.setdefault('sites', []).append(new_site.get_raw())
 
     def append_atom(self, **kwargs):
         """
@@ -1731,20 +1731,6 @@ class StructureData(Data):
         """
         return calc_cell_volume(self.cell)
 
-    def _get_cif(self, converter='ase', store=False, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.nodes.data.cif.CifData`.
-
-        :param converter: specify the converter. Default 'ase'.
-        :param store: If True, intermediate calculation gets stored in the
-            AiiDA database for record. Default False.
-        :return: :py:class:`aiida.orm.nodes.data.cif.CifData` node.
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('This method has been deprecated and will be renamed to get_cif() in AiiDA v1.0', DeprecationWarning)
-        return self.get_cif(converter=converter, store=store, **kwargs)
-
     def get_cif(self, converter='ase', store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.nodes.data.cif.CifData`.
@@ -1826,9 +1812,9 @@ class StructureData(Data):
         Default is False (no spin added).
 
         .. note:: The spins are set according to the following rule:
-            
+
             * if the kind name ends with 1 -> spin=+1
-            
+
             * if the kind name ends with 2 -> spin=-1
 
         :return: a pymatgen Structure object corresponding to this

@@ -166,8 +166,7 @@ class AbstractQueryManager(object):
         if args.group_pk is not None:
             group_filters.update({"id": {"in": args.group_pk}})
         if group_filters:
-            qb.append(orm.Group, tag="group", filters=group_filters,
-                      group_of="bdata")
+            qb.append(orm.Group, tag="group", filters=group_filters, with_node="bdata")
 
         qb.append(orm.StructureData, tag="sdata", with_descendants="bdata",
                   # We don't care about the creator of StructureData

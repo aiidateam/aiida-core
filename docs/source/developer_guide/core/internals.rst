@@ -17,7 +17,7 @@ of stored nodes is a core concept of AiiDA, this behavior is nonetheless enforce
 
 Node methods
 ******************
-- :py:meth:`~aiida.orm.utils.node.clean_value` takes a value and returns an object which can be serialized for storage in the database. Such an object must be able to be subsequently deserialized without changing value. If a simple datatype is passed (integer, float, etc.), a check is performed to see if it has a value of ``nan`` or ``inf``, as these cannot be stored. Otherwise, if a list, tuple, dictionary, etc., is  passed, this check is performed for each value it contains. This is done recursively, automatically handling the case of nested objects. It is important to note that iterable type objects are converted to lists during this process, and mappings, such as dictionaries, are converted to normal dictionaries. This cleaning process is used by default when setting node attributes via :py:meth:`~aiida.orm.nodes.Node.set_attribute` and :py:meth:`~aiida.orm.nodes.Node.append_to_attr`, although it can be disabled by setting ``clean=False``. Values are also cleaned when setting extras on a stored node using :py:meth:`~aiida.orm.nodes.Node.set_extras` or :py:meth:`~aiida.orm.nodes.Node.reset_extras`, but this cannot be disabled. 
+- :py:meth:`~aiida.orm.utils.node.clean_value` takes a value and returns an object which can be serialized for storage in the database. Such an object must be able to be subsequently deserialized without changing value. If a simple datatype is passed (integer, float, etc.), a check is performed to see if it has a value of ``nan`` or ``inf``, as these cannot be stored. Otherwise, if a list, tuple, dictionary, etc., is  passed, this check is performed for each value it contains. This is done recursively, automatically handling the case of nested objects. It is important to note that iterable type objects are converted to lists during this process, and mappings, such as dictionaries, are converted to normal dictionaries. This cleaning process is used by default when setting node attributes via :py:meth:`~aiida.orm.nodes.Node.set_attribute`, although it can be disabled by setting ``clean=False``. Values are also cleaned when setting extras on a stored node using :py:meth:`~aiida.orm.nodes.Node.set_extra_many` or :py:meth:`~aiida.orm.nodes.Node.reset_extras`, but this cannot be disabled.
 
 
 Node methods & properties
@@ -158,7 +158,7 @@ Each :py:meth:`~aiida.orm.nodes.Node` object can have attributes which are prope
 
 - :py:meth:`~aiida.orm.nodes.Node.set_attribute` adds a new attribute to the node. The key of the attribute is the property name (e.g. ``energy``, ``lattice_vectors`` etc) and the value of the attribute is the value of that property.
 
-- :py:meth:`~aiida.orm.nodes.Node.delete_attribute` & :py:meth:`~aiida.orm.nodes.Node.delete_attributes` delete a specific or all attributes.
+- :py:meth:`~aiida.orm.nodes.Node.delete_attribute` & :py:meth:`~aiida.orm.nodes.Node.delete_attribute_many` delete one or multiple specific attributes.
 
 - :py:meth:`~aiida.orm.nodes.Node.get_attribute` returns a specific attribute.
 
@@ -167,9 +167,9 @@ Extras related methods
 ======================
 ``Extras`` are additional information that are added to the calculations. In contrast to ``files`` and ``attributes``, ``extras`` are information added by the user (user specific).
 
-- :py:meth:`~aiida.orm.nodes.Node.set_extra` adds an ``extra`` to the database. To add a more ``extras`` at once, :py:meth:`~aiida.orm.nodes.Node.set_extras` can be used.
+- :py:meth:`~aiida.orm.nodes.Node.set_extra` adds an ``extra`` to the database. To add more ``extras`` at once, :py:meth:`~aiida.orm.nodes.Node.set_extra_many` can be used.
 
-- :py:meth:`~aiida.orm.nodes.Node.get_extra` and :py:meth:`~aiida.orm.nodes.Node.get_extras` return a specific ``extra`` or all the available ``extras`` respectively.
+- :py:meth:`~aiida.orm.nodes.Node.get_extra` and :py:meth:`~aiida.orm.nodes.Node.get_extra_many` return one or multiple specific ``extras``, respectively.
 
 - :py:meth:`~aiida.orm.nodes.Node.delete_extra` deletes an ``extra``.
 
@@ -260,7 +260,7 @@ Data
 
 Navigating inputs and outputs
 *****************************
-- :py:meth:`~aiida.orm.nodes.data.Data.creator` returns 
+- :py:meth:`~aiida.orm.nodes.data.Data.creator` returns
   either the CalculationNode that created it or ``None`` if this Data node
   created by a calculation.
 
@@ -269,7 +269,7 @@ ProcessNode
 +++++++++++
 Navigating inputs and outputs
 *****************************
-- :py:meth:`~aiida.orm.nodes.process.ProcessNode.caller` returns 
+- :py:meth:`~aiida.orm.nodes.process.ProcessNode.caller` returns
   either the caller WorkflowNode or ``None`` if this ProcessNode was not called
   by a process
 
@@ -278,8 +278,8 @@ CalculationNode
 
 Navigating inputs and outputs
 *****************************
-- :py:meth:`~aiida.orm.nodes.process.calculation.CalculationNode.inputs` returns 
-  a :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used 
+- :py:meth:`~aiida.orm.nodes.process.calculation.CalculationNode.inputs` returns
+  a :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used
   to access the node's incoming INPUT_CALC links.
 
   The ``NodeLinksManager`` can be used to quickly go from a node to a neighboring node.
@@ -336,11 +336,11 @@ Navigating inputs and outputs
     u'remote_folder']
 
   The ``.inputs`` manager for ``WorkflowNode`` and the ``.outputs`` manager
-  both for ``CalculationNode`` and ``WorkflowNode`` work in the same way 
+  both for ``CalculationNode`` and ``WorkflowNode`` work in the same way
   (see below).
 
-- :py:meth:`~aiida.orm.nodes.process.calculation.CalculationNode.outputs` 
-  returns a :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object 
+- :py:meth:`~aiida.orm.nodes.process.calculation.CalculationNode.outputs`
+  returns a :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object
   that can be used to access the node's outgoing CREATE links.
 
 .. _calculation updatable attributes:
@@ -358,12 +358,12 @@ WorkflowNode
 
 Navigating inputs and outputs
 *****************************
-- :py:meth:`~aiida.orm.nodes.process.workflow.WorkflowNode.inputs` returns a 
-  :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used to 
+- :py:meth:`~aiida.orm.nodes.process.workflow.WorkflowNode.inputs` returns a
+  :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used to
   access the node's incoming INPUT_WORK links.
 
-- :py:meth:`~aiida.orm.nodes.process.workflow.WorkflowNode.outputs` returns a 
-  :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used 
+- :py:meth:`~aiida.orm.nodes.process.workflow.WorkflowNode.outputs` returns a
+  :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used
   to access the node's outgoing RETURN links.
 
 
@@ -402,9 +402,9 @@ In case a method is renamed or removed, this is the procedure to follow:
      # If we call this DeprecationWarning, pycharm will properly strike out the function
      from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
      warnings.warn("<Deprecation warning here - MAKE IT SPECIFIC TO THIS DEPRECATION, as it will be shown only once per different message>", DeprecationWarning)
-        
+
      # <REST OF THE FUNCTION HERE>
- 
+
    (of course replace the parts between ``< >`` symbols with the
    correct strings).
 
@@ -414,7 +414,7 @@ In case a method is renamed or removed, this is the procedure to follow:
    - Our ``AiidaDeprecationWarning`` does not inherit from ``DeprecationWarning``, so it will not be "hidden" by python
    - User can disable our warnings (and only those) by using AiiDA
      properties with::
-       
+
        verdi config warnings.showdeprecations False
 
 Changing the config.json structure

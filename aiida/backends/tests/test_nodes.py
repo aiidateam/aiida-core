@@ -21,11 +21,10 @@ import unittest
 
 import six
 from six.moves import range
-from sqlalchemy.exc import StatementError
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed
+from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.manage.database.delete.nodes import delete_nodes
@@ -135,25 +134,11 @@ class TestNodeHashing(AiidaTestCase):
         return node
 
     def test_folder_file_different(self):
-        f1 = self.create_folderdata_with_empty_file()
-        f2 = self.create_folderdata_with_empty_folder()
+        f1 = self.create_folderdata_with_empty_file().store()
+        f2 = self.create_folderdata_with_empty_folder().store()
 
         assert (f1.list_object_names('path') == f2.list_object_names('path'))
         assert f1.get_hash() != f2.get_hash()
-
-    def test_folder_same(self):
-        f1 = self.create_folderdata_with_empty_folder()
-        f2 = self.create_folderdata_with_empty_folder()
-        f1.store()
-        f2.store(use_cache=True)
-        assert f1.uuid == f2.get_extra('_aiida_cached_from')
-
-    def test_file_same(self):
-        f1 = self.create_folderdata_with_empty_file()
-        f2 = self.create_folderdata_with_empty_file()
-        f1.store()
-        f2.store(use_cache=True)
-        assert f1.uuid == f2.get_extra('_aiida_cached_from')
 
     def test_simple_unequal_nodes(self):
         attributes = [
@@ -189,12 +174,47 @@ class TestNodeHashing(AiidaTestCase):
         """
         Tests that updatable attributes are ignored.
         """
-        node = orm.ProcessNode()
+        node = orm.CalculationNode().store()
         hash1 = node.get_hash()
         node.set_process_state('finished')
         hash2 = node.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)
+
+
+class TestNodeHashing(AiidaTestCase):
+    """
+    Test that the source is taken from the expected node.
+
+    Important: these tests must run on an empty database.
+    """
+    @staticmethod
+    def create_folderdata_with_empty_file():
+        node = orm.FolderData()
+        with tempfile.NamedTemporaryFile() as handle:
+            node.put_object_from_filelike(handle, 'path/name')
+        return node
+
+    @staticmethod
+    def create_folderdata_with_empty_folder():
+        dirpath = tempfile.mkdtemp()
+        node = orm.FolderData()
+        node.put_object_from_tree(dirpath, 'path/name')
+        return node
+
+    def test_folder_same(self):
+        f1 = self.create_folderdata_with_empty_folder()
+        f2 = self.create_folderdata_with_empty_folder()
+        f1.store()
+        f2.store(use_cache=True)
+        assert f1.uuid == f2.get_extra('_aiida_cached_from')
+
+    def test_file_same(self):
+        f1 = self.create_folderdata_with_empty_file()
+        f2 = self.create_folderdata_with_empty_file()
+        f1.store()
+        f2.store(use_cache=True)
+        assert f1.uuid == f2.get_extra('_aiida_cached_from')
 
 
 class TestTransitiveNoLoops(AiidaTestCase):
@@ -356,15 +376,6 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             a.set_attribute('integer', self.intval)
 
-        # Passing stored_check=False should disable the mutability check
-        a.delete_attribute('bool', stored_check=False)
-        a.set_attribute('integer', self.intval, stored_check=False)
-
-        self.assertEquals(a.get_attribute('integer'), self.intval)
-
-        with self.assertRaises(AttributeError):
-            a.get_attribute('bool')
-
     def test_attr_before_storing(self):
         a = orm.Data()
         a.set_attribute('k1', self.boolval)
@@ -485,62 +496,17 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.attributes, target_attrs)
 
     def test_store_object(self):
-        """Trying to store objects should fail"""
+        """Trying to set objects as attributes should fail, because they are not json-serializable."""
         a = orm.Data()
-        a.set_attribute('object', object(), clean=False)
 
-        # django raises ValueError
-        # sqlalchemy raises StatementError
-        with self.assertRaises((ValueError, StatementError)):
+        a.set_attribute('object', object())
+        with self.assertRaises(ValidationError):
             a.store()
 
         b = orm.Data()
-        b.set_attribute('object_list', [object(), object()], clean=False)
-        with self.assertRaises((ValueError, StatementError)):
-            # objects are not json-serializable
+        b.set_attribute('object_list', [object(), object()])
+        with self.assertRaises(ValidationError):
             b.store()
-
-    def test_append_to_empty_attr(self):
-        """Appending to an empty attribute"""
-        a = orm.Data()
-        a.append_to_attr('test', 0)
-        a.append_to_attr('test', 1)
-
-        self.assertEquals(a.get_attribute('test'), [0, 1])
-
-    def test_append_no_side_effects(self):
-        """Check that append_to_attr has no side effects"""
-        a = orm.Data()
-        mylist = [1, 2, 3]
-
-        a.set_attribute('list', mylist)
-        a.append_to_attr('list', 4)
-
-        self.assertEquals(a.get_attribute('list'), [1, 2, 3, 4])
-        self.assertEquals(mylist, [1, 2, 3])
-
-    def test_datetime_attribute(self):
-        from aiida.common.timezone import (get_current_timezone, is_naive, make_aware, now)
-
-        a = orm.Data()
-
-        date = now()
-
-        a.set_attribute('some_date', date)
-        a.store()
-
-        retrieved = a.get_attribute('some_date')
-
-        if is_naive(date):
-            date_to_compare = make_aware(date, get_current_timezone())
-        else:
-            date_to_compare = date
-
-        # Do not compare microseconds (they are not stored in the case of MySQL)
-        date_to_compare = date_to_compare.replace(microsecond=0)
-        retrieved = retrieved.replace(microsecond=0)
-
-        self.assertEquals(date_to_compare, retrieved)
 
     def test_attributes_on_clone(self):
         import copy
@@ -834,39 +800,42 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.dictval, b.get_attribute('dict'))
         self.assertEquals(self.listval, b.get_attribute('list'))
 
-        # Reload directly
-        b = orm.Data.from_backend_entity(a.backend_entity)
-        self.assertIsNone(a.get_attribute('none'))
-        self.assertEquals(self.boolval, b.get_attribute('bool'))
-        self.assertEquals(self.intval, b.get_attribute('integer'))
-        self.assertEquals(self.floatval, b.get_attribute('float'))
-        self.assertEquals(self.stringval, b.get_attribute('string'))
-        self.assertEquals(self.dictval, b.get_attribute('dict'))
-        self.assertEquals(self.listval, b.get_attribute('list'))
-
-    def test_attr_and_extras(self):
+    def test_extra_with_reload(self):
         a = orm.Data()
-        a.set_attribute('bool', self.boolval)
-        a.set_attribute('integer', self.intval)
-        a.set_attribute('float', self.floatval)
-        a.set_attribute('string', self.stringval)
-        a.set_attribute('dict', self.dictval)
-        a.set_attribute('list', self.listval)
+        a.set_extra('none', None)
+        a.set_extra('bool', self.boolval)
+        a.set_extra('integer', self.intval)
+        a.set_extra('float', self.floatval)
+        a.set_extra('string', self.stringval)
+        a.set_extra('dict', self.dictval)
+        a.set_extra('list', self.listval)
 
-        with self.assertRaises(ModificationNotAllowed):
-            # I did not store, I cannot modify
-            a.set_extra('bool', 'blablabla')
+        # Check before storing
+        self.assertEquals(self.boolval, a.get_extra('bool'))
+        self.assertEquals(self.intval, a.get_extra('integer'))
+        self.assertEquals(self.floatval, a.get_extra('float'))
+        self.assertEquals(self.stringval, a.get_extra('string'))
+        self.assertEquals(self.dictval, a.get_extra('dict'))
+        self.assertEquals(self.listval, a.get_extra('list'))
 
         a.store()
 
-        a_string = 'some non-boolean value'
-        # I now set an extra with the same name of an attr
-        a.set_extra('bool', a_string)
-        # and I check that there is no name clash
-        self.assertEquals(self.boolval, a.get_attribute('bool'))
-        self.assertEquals(a_string, a.get_extra('bool'))
+        # Check after storing
+        self.assertEquals(self.boolval, a.get_extra('bool'))
+        self.assertEquals(self.intval, a.get_extra('integer'))
+        self.assertEquals(self.floatval, a.get_extra('float'))
+        self.assertEquals(self.stringval, a.get_extra('string'))
+        self.assertEquals(self.dictval, a.get_extra('dict'))
+        self.assertEquals(self.listval, a.get_extra('list'))
 
-        self.assertEquals(a.extras, {'bool': a_string, '_aiida_hash': AnyValue()})
+        b = orm.load_node(uuid=a.uuid)
+        self.assertIsNone(a.get_extra('none'))
+        self.assertEquals(self.boolval, b.get_extra('bool'))
+        self.assertEquals(self.intval, b.get_extra('integer'))
+        self.assertEquals(self.floatval, b.get_extra('float'))
+        self.assertEquals(self.stringval, b.get_extra('string'))
+        self.assertEquals(self.dictval, b.get_extra('dict'))
+        self.assertEquals(self.listval, b.get_extra('list'))
 
     def test_get_extras_with_default(self):
         a = orm.Data()
@@ -891,28 +860,6 @@ class TestNodeBasic(AiidaTestCase):
         n1.set_extra('samename', 1)
         # No problem, they are two different nodes
         n2.set_extra('samename', 1)
-
-    def test_settings_methods(self):
-        from aiida.backends.utils import (get_global_setting_description, get_global_setting, set_global_setting,
-                                          del_global_setting)
-
-        set_global_setting(key="aaa", value={'b': 'c'}, description="pippo")
-
-        self.assertEqual(get_global_setting('aaa'), {'b': 'c'})
-        self.assertEqual(get_global_setting_description('aaa'), "pippo")
-        self.assertEqual(get_global_setting('aaa.b'), 'c')
-
-        # The following is disabled because it is not supported in SQLAlchemy
-        # Only top level elements can have descriptions
-        # self.assertEqual(get_global_setting_description('aaa.b'), "")
-
-        del_global_setting('aaa')
-
-        with self.assertRaises(KeyError):
-            get_global_setting('aaa.b')
-
-        with self.assertRaises(KeyError):
-            get_global_setting('aaa')
 
     def test_attr_listing(self):
         """
@@ -1060,16 +1007,16 @@ class TestNodeBasic(AiidaTestCase):
         n = orm.Data()
         n.set_attribute('a', orm.Str("sometext2"))
         n.set_attribute('b', l2)
-        self.assertEqual(n.get_attribute('a'), "sometext2")
-        self.assertIsInstance(n.get_attribute('a'), six.string_types)
-        self.assertEqual(n.get_attribute('b'), ['f', True, {'gg': None}])
-        self.assertIsInstance(n.get_attribute('b'), (list, tuple))
+        self.assertEqual(n.get_attribute('a').value, 'sometext2')
+        self.assertIsInstance(n.get_attribute('a'), orm.Str)
+        self.assertEqual(n.get_attribute('b').get_list()    , ['f', True, {'gg': None}])
+        self.assertIsInstance(n.get_attribute('b'), orm.List)
 
         # Check also deep in a dictionary/list
         n = orm.Data()
         n.set_attribute('a', {'b': [orm.Str("sometext3")]})
-        self.assertEqual(n.get_attribute('a')['b'][0], "sometext3")
-        self.assertIsInstance(n.get_attribute('a')['b'][0], six.string_types)
+        self.assertEqual(n.get_attribute('a')['b'][0].value, "sometext3")
+        self.assertIsInstance(n.get_attribute('a')['b'][0], orm.Str)
         n.store()
         self.assertEqual(n.get_attribute('a')['b'][0], "sometext3")
         self.assertIsInstance(n.get_attribute('a')['b'][0], six.string_types)
@@ -1342,42 +1289,6 @@ class TestNodeBasic(AiidaTestCase):
             with self.assertRaises(NotExistent):
                 orm.load_node(spec, sub_classes=(orm.ArrayData,))
 
-    @unittest.skip('open issue JobCalculations cannot be stored')
-    def test_load_unknown_calculation_type(self):
-        """
-        Test that the loader will choose a common calculation ancestor for an unknown data type.
-        For the case where, e.g., the user doesn't have the necessary plugin.
-        """
-        from aiida.plugins import CalculationFactory
-
-        TemplateReplacerCalc = CalculationFactory('templatereplacer')
-        testcalc = TemplateReplacerCalc(computer=self.computer)
-        testcalc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        testcalc.store()
-
-        # compare if plugin exist
-        obj = orm.load_node(uuid=testcalc.uuid)
-        self.assertEqual(type(testcalc), type(obj))
-
-        # Create a custom calculation type that inherits from CalcJobNode but change the plugin type string
-        class TestCalculation(orm.CalcJobNode):
-            pass
-
-        TestCalculation._plugin_type_string = 'nodes.process.calculation.calcjob.notexisting.TemplatereplacerCalculation.'
-        TestCalculation._query_type_string = 'nodes.process.calculation.calcjob.notexisting.TemplatereplacerCalculation'
-
-        jobcalc = orm.CalcJobNode(computer=self.computer)
-        jobcalc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        jobcalc.store()
-
-        testcalc = TestCalculation(computer=self.computer)
-        testcalc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        testcalc.store()
-
-        # Changed node should return CalcJobNode type as its plugin does not exist
-        obj = orm.load_node(uuid=testcalc.uuid)
-        self.assertEqual(type(jobcalc), type(obj))
-
     def test_load_unknown_data_type(self):
         """
         Test that the loader will choose a common data ancestor for an unknown data type.
@@ -1411,10 +1322,7 @@ class TestNodeBasic(AiidaTestCase):
 class TestSubNodesAndLinks(AiidaTestCase):
 
     def test_cachelink(self):
-        """
-        Test the proper functionality of the links cache, with different
-        scenarios.
-        """
+        """Test the proper functionality of the links cache, with different scenarios."""
         n1 = orm.Data()
         n2 = orm.Data()
         n3 = orm.Data().store()
@@ -1544,43 +1452,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # are calculations that use as label 'input_cell')
         calc2a.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
         calc2b.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
-
-    @unittest.skip('activate this test once #2238 is addressed')
-    def test_links_label_autogenerator(self):
-        """Test the auto generation of link labels when labels are no longer required to be explicitly specified.
-        """
-        n1 = orm.WorkflowNode().store()
-        n2 = orm.WorkflowNode().store()
-        n3 = orm.WorkflowNode().store()
-        n4 = orm.WorkflowNode().store()
-        n5 = orm.WorkflowNode().store()
-        n6 = orm.WorkflowNode().store()
-        n7 = orm.WorkflowNode().store()
-        n8 = orm.WorkflowNode().store()
-        n9 = orm.WorkflowNode().store()
-        data = orm.Data().store()
-
-        data.add_incoming(n1, link_type=LinkType.RETURN)
-        # Label should be automatically generated
-        data.add_incoming(n2, link_type=LinkType.RETURN)
-        data.add_incoming(n3, link_type=LinkType.RETURN)
-        data.add_incoming(n4, link_type=LinkType.RETURN)
-        data.add_incoming(n5, link_type=LinkType.RETURN)
-        data.add_incoming(n6, link_type=LinkType.RETURN)
-        data.add_incoming(n7, link_type=LinkType.RETURN)
-        data.add_incoming(n8, link_type=LinkType.RETURN)
-        data.add_incoming(n9, link_type=LinkType.RETURN)
-
-        all_labels = [_.link_label for _ in data.get_incoming()]
-        self.assertEquals(len(set(all_labels)), len(all_labels), "There are duplicate links, that are not expected")
-
-    @unittest.skip('activate this test once #2238 is addressed')
-    def test_link_label_autogenerator(self):
-        """
-        When the uniqueness constraints on links are reimplemented on the database level, auto generation of
-        labels that relies directly on those database level constraints should be reinstated and tested for here.
-        """
-        raise NotImplementedError
 
     def test_link_with_unstored(self):
         """

@@ -15,8 +15,8 @@ from __future__ import absolute_import
 
 import enum
 
-from aiida.cmdline.utils.migration.utils import verify_metadata_version, update_metadata
 from aiida.common.exceptions import DanglingLinkError
+from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
 
 
 def migrate_v2_to_v3(metadata, data, *args):

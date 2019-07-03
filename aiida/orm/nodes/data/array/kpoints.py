@@ -16,14 +16,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 
-import six
 from six.moves import range, zip
 import numpy
 
-from aiida.common.warnings import AiidaDeprecationWarning
 from .array import ArrayData
-
-DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/datatypes/kpoints.html#deprecated-methods'
 
 _DEFAULT_EPSILON_LENGTH = 1e-5
 _DEFAULT_EPSILON_ANGLE = 1e-5
@@ -245,7 +241,7 @@ class KpointsData(ArrayData):
         from aiida.common.exceptions import ModificationNotAllowed
         # validate
         try:
-            the_mesh = tuple(int(i) for i in mesh)
+            the_mesh = [int(i) for i in mesh]
             if len(the_mesh) != 3:
                 raise ValueError
         except (IndexError, ValueError, TypeError):
@@ -253,7 +249,7 @@ class KpointsData(ArrayData):
         if offset is None:
             offset = [0., 0., 0.]
         try:
-            the_offset = tuple(float(i) for i in offset)
+            the_offset = [float(i) for i in offset]
             if len(the_offset) != 3:
                 raise ValueError
         except (IndexError, ValueError, TypeError):
@@ -499,270 +495,3 @@ class KpointsData(ArrayData):
             return kpoints, weights
 
         return kpoints
-
-
-# All functions below are deprecated and have been moved to aiida.tools.data.array.kpoints.legacy
-
-    @property
-    def bravais_lattice(self):
-        """
-        The dictionary containing informations about the cell symmetry
-
-        .. deprecated:: 0.11
-        """
-        import warnings
-        warnings.warn(  # pylint: disable=no-member
-            'the bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
-            AiidaDeprecationWarning)
-        return self.get_attribute('bravais_lattice')
-
-    @bravais_lattice.setter
-    def bravais_lattice(self, value):
-        """
-        Set the bravais lattice dictionary
-
-        .. deprecated:: 0.11
-        """
-        import warnings
-        warnings.warn(  # pylint: disable=no-member
-            'the bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
-            AiidaDeprecationWarning)
-        self._set_bravais_lattice(value)
-
-    def _set_bravais_lattice(self, value):
-        """
-        Validating function to set the bravais_lattice dictionary
-
-        .. deprecated:: 0.11
-        """
-        import warnings
-        warnings.warn(  # pylint: disable=no-member
-            'the _set_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
-            AiidaDeprecationWarning)
-
-        import copy
-        if not isinstance(value, dict):
-            raise ValueError("bravais_lattice is not a dict")
-        if not all([i in value for i in ["short_name", "extended_name", "index", "permutation"]]):
-            raise ValueError()
-
-        bravais_lattice = copy.copy(value)
-        bravais_lattice['permutation'] = [int(i) for i in value['permutation']]
-
-        try:
-            if not isinstance(bravais_lattice['variation'], six.string_types):
-                raise ValueError()
-        except KeyError:
-            pass
-        try:
-            if not isinstance(bravais_lattice['extra'], dict):
-                raise ValueError()
-            if not all([isinstance(i, float) for i in bravais_lattice['extra'].values()]):
-                raise ValueError()
-        except KeyError:
-            pass
-
-        self.set_attribute('bravais_lattice', bravais_lattice)
-
-    def _get_or_create_bravais_lattice(self,
-                                       epsilon_length=_DEFAULT_EPSILON_LENGTH,
-                                       epsilon_angle=_DEFAULT_EPSILON_ANGLE):
-        """
-        Try to get the bravais_lattice info if stored already, otherwise analyze
-        the cell with the default settings and save this in the attribute.
-
-        .. deprecated:: 0.11
-           Use the methods inside the :ref:`aiida.tools.data.array.kpoints<AutomaticKpoints>` module instead.
-
-        :param epsilon_length: threshold on lengths comparison, used
-             to get the bravais lattice info
-        :param epsilon_angle: threshold on angles comparison, used
-             to get the bravais lattice info
-
-        :return bravais_lattice: the dictionary containing the symmetry info
-        """
-        import warnings
-        warnings.warn(  # pylint: disable=no-member
-            'the _get_or_create_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
-            AiidaDeprecationWarning)
-
-        try:
-            bravais_lattice = self.bravais_lattice
-        except AttributeError:
-            bravais_lattice = self._find_bravais_info(epsilon_length=epsilon_length, epsilon_angle=epsilon_angle)
-            self.bravais_lattice = bravais_lattice
-        return bravais_lattice
-
-    def set_kpoints_path(self,
-                         value=None,
-                         kpoint_distance=None,
-                         cartesian=False,
-                         epsilon_length=_DEFAULT_EPSILON_LENGTH,
-                         epsilon_angle=_DEFAULT_EPSILON_ANGLE):
-        """
-        Set a path of kpoints in the Brillouin zone.
-
-        .. deprecated:: 0.11
-           Use the methods inside the :ref:`aiida.tools.data.array.kpoints<AutomaticKpoints>` module instead.
-
-        :param value: description of the path, in various possible formats.
-
-            None: automatically sets all irreducible high symmetry paths.
-            Requires that a cell was set
-
-            or
-
-            [('G','M'), (...), ...]
-            [('G','M',30), (...), ...]
-            [('G',(0,0,0),'M',(1,1,1)), (...), ...]
-            [('G',(0,0,0),'M',(1,1,1),30), (...), ...]
-
-        :param bool cartesian: if set to true, reads the coordinates eventually
-            passed in value as cartesian coordinates. Default: False.
-        :param float kpoint_distance: parameter controlling the distance between
-            kpoints. Distance is given in crystal coordinates, i.e. the distance
-            is computed in the space of b1,b2,b3. The distance set will be the
-            closest possible to this value, compatible with the requirement of
-            putting equispaced points between two special points (since extrema
-            are included).
-        :param float epsilon_length: threshold on lengths comparison, used
-            to get the bravais lattice info. It has to be used if the
-            user wants to be sure the right symmetries are recognized.
-        :param float epsilon_angle: threshold on angles comparison, used
-            to get the bravais lattice info. It has to be used if the
-            user wants to be sure the right symmetries are recognized.
-
-        """
-        import warnings
-        warnings.warn(  # pylint: disable=no-member
-            'the set_kpoints_path method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
-            AiidaDeprecationWarning)
-
-        from aiida.tools.data.array.kpoints.legacy import get_explicit_kpoints_path
-
-        try:
-            cell = self.cell
-        except AttributeError:
-            cell = None
-
-        try:
-            pbc = self.pbc
-        except AttributeError:
-            pbc = None
-
-        point_coords, path, bravais_info, explicit_kpoints, labels = get_explicit_kpoints_path(  # pylint: disable=unused-variable
-            value=value,
-            cell=cell,
-            pbc=pbc,
-            kpoint_distance=kpoint_distance,
-            cartesian=cartesian,
-            epsilon_length=epsilon_length,
-            epsilon_angle=epsilon_angle)
-
-        self.set_kpoints(explicit_kpoints)
-        self.labels = labels
-
-    def _find_bravais_info(self, epsilon_length=_DEFAULT_EPSILON_LENGTH, epsilon_angle=_DEFAULT_EPSILON_ANGLE):
-        """
-        Finds the Bravais lattice of the cell passed in input to the Kpoint class
-        :note: We assume that the cell given by the cell property is the
-        primitive unit cell.
-
-        .. deprecated:: 0.11
-           Use the methods inside the :ref:`aiida.tools.data.array.kpoints<AutomaticKpoints>` module instead.
-
-        :return: a dictionary, with keys short_name, extended_name, index
-                (index of the Bravais lattice), and sometimes variation (name of
-                the variation of the Bravais lattice) and extra (a dictionary
-                with extra parameters used by the get_special_points method)
-        """
-        import warnings
-        warnings.warn(  # pylint: disable=no-member
-            'the _find_bravais_info method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
-            AiidaDeprecationWarning)
-
-        from aiida.tools.data.array.kpoints.legacy import find_bravais_info
-        return find_bravais_info(
-            cell=self.cell, pbc=self.pbc, epsilon_length=epsilon_length, epsilon_angle=epsilon_angle)
-
-    def find_bravais_lattice(self, epsilon_length=_DEFAULT_EPSILON_LENGTH, epsilon_angle=_DEFAULT_EPSILON_ANGLE):
-        """
-        Analyze the symmetry of the cell. Allows to relax or tighten the
-        thresholds used to compare angles and lengths of the cell. Save the
-        information of the cell used for later use (like getting special
-        points). It has to be used if the user wants to be sure the right
-        symmetries are recognized. Otherwise, this function is automatically
-        called with the default values.
-
-        If the right symmetry is not found, be sure also you are providing cells
-        with enough digits.
-
-        If node is already stored, just returns the symmetry found before
-        storing (if any).
-
-        .. deprecated:: 0.11
-           Use the methods inside the :ref:`aiida.tools.data.array.kpoints<AutomaticKpoints>` module instead.
-
-        :return (str) lattice_name: the name of the bravais lattice and its
-             eventual variation
-        """
-        import warnings
-        warnings.warn(  # pylint: disable=no-member
-            'the find_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
-            AiidaDeprecationWarning)
-
-        if not self.is_stored:
-            bravais_lattice = self._find_bravais_info(epsilon_length=epsilon_length, epsilon_angle=epsilon_angle)
-            self.bravais_lattice = bravais_lattice
-        else:
-            bravais_info = self.bravais_lattice
-
-        try:
-            variation = ", variation: {}".format(bravais_info['variation'])
-        except KeyError:
-            variation = ""
-
-        return bravais_info['extended_name'] + variation
-
-    def get_special_points(self,
-                           cartesian=False,
-                           epsilon_length=_DEFAULT_EPSILON_LENGTH,
-                           epsilon_angle=_DEFAULT_EPSILON_ANGLE):
-        """
-        Get the special point and path of a given structure.
-
-        References:
-
-        - In 2D, coordinates are based on the paper:
-          R. Ramirez and M. C. Bohm,  Int. J. Quant. Chem., XXX, pp. 391-411 (1986)
-
-        - In 3D, coordinates are based on the paper:
-          W. Setyawan, S. Curtarolo, Comp. Mat. Sci. 49, 299 (2010)
-
-        .. deprecated:: 0.11
-           Use the methods inside the :ref:`aiida.tools.data.array.kpoints<AutomaticKpoints>` module instead.
-
-        :param cartesian: If true, returns points in cartesian coordinates.
-            Crystal coordinates otherwise. Default=False
-        :param epsilon_length: threshold on lengths comparison, used to get the bravais lattice info
-        :param epsilon_angle: threshold on angles comparison, used to get the bravais lattice info
-        :returns point_coords: a dictionary of point_name:point_coords key,values.
-        :returns path: the suggested path which goes through all high symmetry lines.
-            A list of lists for all path segments. e.g. [('G','X'),('X','M'),...]
-            It's not necessarily a continuous line.
-        :note: We assume that the cell given by the cell property is the primitive unit cell
-        """
-        import warnings
-        warnings.warn(  # pylint: disable=no-member
-            'the get_special_points method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
-            AiidaDeprecationWarning)
-
-        from aiida.tools.data.array.kpoints.legacy import get_kpoints_path
-        point_coords, path, bravais_info = get_kpoints_path(  # pylint: disable=unused-variable
-            cell=self.cell,
-            pbc=self.pbc,
-            cartesian=cartesian,
-            epsilon_length=epsilon_length,
-            epsilon_angle=epsilon_angle)
-
-        return point_coords, path

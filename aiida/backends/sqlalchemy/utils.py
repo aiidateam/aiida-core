@@ -10,25 +10,88 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-from aiida.common import json
 
-json_dumps = json.dumps
-json_loads = json.loads
-
-import datetime
-import re
-
-import six
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
 from alembic.script import ScriptDirectory
-from dateutil import parser
+
+from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends import sqlalchemy as sa
+from aiida.backends.sqlalchemy import get_scoped_session
+from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting
+from aiida.common import NotExistent
+
 
 ALEMBIC_FILENAME = "alembic.ini"
 ALEMBIC_REL_PATH = "migrations"
+
+
+class SqlaSettingsManager(SettingsManager):
+    """Class to get, set and delete settings from the `DbSettings` table."""
+
+    table_name = 'db_dbsetting'
+
+    def validate_table_existence(self):
+        """Verify that the `DbSetting` table actually exists.
+
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
+        """
+        from sqlalchemy.engine import reflection
+        inspector = reflection.Inspector.from_engine(get_scoped_session().bind)
+        if self.table_name not in inspector.get_table_names():
+            raise NotExistent('the settings table does not exist')
+
+    def get(self, key):
+        """Return the setting with the given key.
+
+        :param key: the key identifying the setting
+        :return: Setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        self.validate_table_existence()
+
+        try:
+            setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
+        except NoResultFound:
+            raise NotExistent('setting `{}` does not exist'.format(key))
+
+        return Setting(key, setting.getvalue(), setting.description, setting.time)
+
+    def set(self, key, value, description=None):
+        """Return the settings with the given key.
+
+        :param key: the key identifying the setting
+        :param value: the value for the setting
+        :param description: optional setting description
+        """
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        self.validate_table_existence()
+        validate_attribute_key(key)
+
+        other_attribs = dict()
+        if description is not None:
+            other_attribs['description'] = description
+
+        DbSetting.set_value(key, value, other_attribs=other_attribs)
+
+    def delete(self, key):
+        """Delete the setting with the given key.
+
+        :param key: the key identifying the setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        self.validate_table_existence()
+
+        try:
+            setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
+            setting.delete()
+        except NoResultFound:
+            raise NotExistent('setting `{}` does not exist'.format(key))
+
 
 
 def flag_modified(instance, key):
@@ -75,54 +138,6 @@ def unload_dbenv():
 
 
 _aiida_autouser_cache = None
-
-
-def dumps_json(d):
-    """
-    Transforms all datetime object into isoformat and then returns the JSON
-    """
-
-    def f(v):
-        if isinstance(v, list):
-            return [f(_) for _ in v]
-        elif isinstance(v, dict):
-            return dict((key, f(val)) for key, val in v.items())
-        elif isinstance(v, datetime.datetime):
-            return v.isoformat()
-        return v
-
-    return json_dumps(f(d))
-
-
-date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
-
-
-def loads_json(s):
-    """
-    Loads the json and try to parse each basestring as a datetime object
-    """
-
-    ret = json_loads(s)
-
-    def f(d):
-        if isinstance(d, list):
-            for i, val in enumerate(d):
-                d[i] = f(val)
-            return d
-        elif isinstance(d, dict):
-            for k, v in d.items():
-                d[k] = f(v)
-            return d
-        elif isinstance(d, six.string_types):
-            if date_reg.match(d):
-                try:
-                    return parser.parse(d)
-                except (ValueError, TypeError):
-                    return d
-            return d
-        return d
-
-    return f(ret)
 
 
 # XXX the code here isn't different from the one use in Django. We may be able
@@ -361,6 +376,8 @@ def check_schema_version(profile_name):
 
     if code_schema_version != db_schema_version:
         raise ConfigurationError('Database schema version {} is outdated compared to the code schema version {}\n'
+                                 'Before you upgrade, make sure all calculations and workflows have finished running.\n'
+                                 'If this is not the case, revert the code to the previous version and finish them first.\n'
                                  'To migrate the database to the current version, run the following commands:'
                                  '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(
                                     db_schema_version, code_schema_version, profile_name, profile_name))

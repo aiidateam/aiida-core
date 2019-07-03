@@ -329,7 +329,7 @@ class QueryBuilder(object):
 
         # A dictionary tag:alias of ormclass
         # redundant but makes life easier
-        self._tag_to_alias_map = {}
+        self.tag_to_alias_map = {}
 
         # A dictionary tag: filter specification for this alias
         self._filters = {}
@@ -528,7 +528,7 @@ class QueryBuilder(object):
                 return classifiers['ormclass_type_string'].rstrip('.').split('.')[-1] or "node"
 
         basetag = get_tag_from_type(classifiers)
-        tags_used = self._tag_to_alias_map.keys()
+        tags_used = self.tag_to_alias_map.keys()
         for i in range(1, 100):
             tag = '{}_{}'.format(basetag, i)
             if tag not in tags_used:
@@ -645,7 +645,7 @@ class QueryBuilder(object):
                                            "since this is used as a delimiter for links"
                                            "".format(self._EDGE_TAG_DELIM))
             tag = tag
-            if tag in self._tag_to_alias_map.keys():
+            if tag in self.tag_to_alias_map.keys():
                 raise InputValidationError("This tag ({}) is already in use".format(tag))
         else:
             tag = self._get_unique_tag(classifiers)
@@ -683,14 +683,14 @@ class QueryBuilder(object):
 
         # ALIASING ##############################
         try:
-            self._tag_to_alias_map[tag] = aliased(ormclass)
+            self.tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as e:
             if self._debug:
                 print("DEBUG: Exception caught in append, cleaning up")
                 print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
-            self._tag_to_alias_map.pop(tag, None)
+            self.tag_to_alias_map.pop(tag, None)
             raise
 
         # FILTERS ######################################
@@ -720,7 +720,7 @@ class QueryBuilder(object):
                 print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
-            self._tag_to_alias_map.pop(tag)
+            self.tag_to_alias_map.pop(tag)
             self._filters.pop(tag)
             raise
 
@@ -735,7 +735,7 @@ class QueryBuilder(object):
                 print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
-            self._tag_to_alias_map.pop(tag, None)
+            self.tag_to_alias_map.pop(tag, None)
             self._filters.pop(tag)
             self._projections.pop(tag)
             raise e
@@ -793,7 +793,7 @@ class QueryBuilder(object):
                 print("  ", e)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
-            self._tag_to_alias_map.pop(tag, None)
+            self.tag_to_alias_map.pop(tag, None)
             self._filters.pop(tag)
             self._projections.pop(tag)
             # There's not more to clean up here!
@@ -808,14 +808,14 @@ class QueryBuilder(object):
                     edge_destination_tag = self._get_tag_from_specification(joining_value)
                     edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
                 else:
-                    if edge_tag in self._tag_to_alias_map.keys():
+                    if edge_tag in self.tag_to_alias_map.keys():
                         raise InputValidationError("The tag {} is already in use".format(edge_tag))
                 if self._debug:
                     print("I have chosen", edge_tag)
 
                 # My edge is None for now, since this is created on the FLY,
                 # the _tag_to_alias_map will be updated later (in _build)
-                self._tag_to_alias_map[edge_tag] = None
+                self.tag_to_alias_map[edge_tag] = None
 
                 # Filters on links:
                 # Beware, I alway add this entry now, but filtering here might be
@@ -836,11 +836,11 @@ class QueryBuilder(object):
                     print(traceback.format_exc())
                 if l_class_added_to_map:
                     self._cls_to_tag_map.pop(cls)
-                self._tag_to_alias_map.pop(tag, None)
+                self.tag_to_alias_map.pop(tag, None)
                 self._filters.pop(tag)
                 self._projections.pop(tag)
                 if edge_tag is not None:
-                    self._tag_to_alias_map.pop(edge_tag, None)
+                    self.tag_to_alias_map.pop(edge_tag, None)
                     self._filters.pop(edge_tag, None)
                     self._projections.pop(edge_tag, None)
                 # There's not more to clean up here!
@@ -1161,40 +1161,36 @@ class QueryBuilder(object):
                 raise InputValidationError("\nInvalid function specification {}".format(func))
             self._query = self._query.add_columns(entity_to_project)
 
+    def get_table_columns(self, table_alias):
+        raise NotImplementedError
+
     def _build_projections(self, tag, items_to_project=None):
 
         if items_to_project is None:
             items_to_project = self._projections.get(tag, [])
 
-        # Return here if there is nothing to project,
-        # reduces number of key in return dictionary
-
+        # Return here if there is nothing to project, reduces number of key in return dictionary
         if self._debug:
             print(tag, items_to_project)
         if not items_to_project:
             return
 
-        alias = self._tag_to_alias_map[tag]
+        alias = self.tag_to_alias_map[tag]
 
-        self.tag_to_projected_entity_dict[tag] = {}
+        self.tag_to_projected_property_dict[tag] = {}
 
         for projectable_spec in items_to_project:
             for projectable_entity_name, extraspec in projectable_spec.items():
+                property_names = list()
                 if projectable_entity_name == '**':
                     # Need to expand
-                    entity_names = self._impl.modify_expansions(
-                        alias, [str(c).replace(alias.__table__.name + '.', '') for c in alias.__table__.columns])
-                    # ~ for s in ('attributes', 'extras'):
-                    # ~ try:
-                    # ~ entity_names.remove(s)
-                    # ~ except ValueError:
-                    # ~ pass
+                    property_names.extend(self._impl.modify_expansions(alias, self._impl.get_column_names(alias)))
                 else:
-                    entity_names = [projectable_entity_name]
-                for entity_name in entity_names:
-                    self._add_to_projections(alias, entity_name, **extraspec)
+                    property_names.extend(self._impl.modify_expansions(alias, [projectable_entity_name]))
 
-                    self.tag_to_projected_entity_dict[tag][entity_name] = self.nr_of_projections
+                for property_name in property_names:
+                    self._add_to_projections(alias, property_name, **extraspec)
+                    self.tag_to_projected_property_dict[tag][property_name] = self.nr_of_projections
                     self.nr_of_projections += 1
 
     def _get_tag_from_specification(self, specification):
@@ -1205,11 +1201,11 @@ class QueryBuilder(object):
             If it is a class, I check if it's in the _cls_to_tag_map!
         """
         if isinstance(specification, six.string_types):
-            if specification in self._tag_to_alias_map.keys():
+            if specification in self.tag_to_alias_map.keys():
                 tag = specification
             else:
                 raise InputValidationError("tag {} is not among my known tags\n"
-                                           "My tags are: {}".format(specification, self._tag_to_alias_map.keys()))
+                                           "My tags are: {}".format(specification, self.tag_to_alias_map.keys()))
         else:
             if specification in self._cls_to_tag_map.keys():
                 tag = self._cls_to_tag_map[specification]
@@ -1217,7 +1213,7 @@ class QueryBuilder(object):
                 raise InputValidationError("You specified as a class for which I have to find a tag\n"
                                            "The classes that I can do this for are:{}\n"
                                            "The tags I have are: {}".format(specification, self._cls_to_tag_map.keys(),
-                                                                            self._tag_to_alias_map.keys()))
+                                                                            self.tag_to_alias_map.keys()))
         return tag
 
     def set_debug(self, debug):
@@ -1644,33 +1640,21 @@ class QueryBuilder(object):
                 'with_user': self._join_created_by,
                 'with_group': self._join_group_members,
                 'direction': None,
-                'ancestor_of': self._deprecate(self._join_ancestors_recursive, 'ancestor_of', 'with_descendants'),
-                'descendant_of': self._deprecate(self._join_descendants_recursive, 'descendant_of', 'with_ancestors'),
-                'input_of': self._deprecate(self._join_inputs, 'input_of', 'with_outgoing'),
-                'output_of': self._deprecate(self._join_outputs, 'output_of', 'with_incoming'),
-                'has_computer': self._deprecate(self._join_to_computer_used, 'has_computer', 'with_computer'),
-                'created_by': self._deprecate(self._join_created_by, 'created_by', 'with_user'),
-                'member_of': self._deprecate(self._join_group_members, 'member_of', 'with_group')
             },
             'computer': {
                 'with_node': self._join_computer,
                 'direction': None,
-                'computer_of': self._deprecate(self._join_computer, 'computer_of', 'with_node')
             },
             'user': {
                 'with_comment': self._join_comment_user,
                 'with_node': self._join_creator_of,
                 'with_group': self._join_group_user,
                 'direction': None,
-                'creator_of': self._deprecate(self._join_creator_of, 'creator_of', 'with_node'),
-                'owner_of': self._deprecate(self._join_group_user, 'owner_of', 'with_group')
             },
             'group': {
                 'with_node': self._join_groups,
                 'with_user': self._join_user_group,
                 'direction': None,
-                'group_of': self._deprecate(self._join_groups, 'group_of', 'with_node'),
-                'belongs_to': self._deprecate(self._join_user_group, 'belongs_to', 'with_user')
             },
             'comment': {
                 'with_user': self._join_user_comment,
@@ -1718,12 +1702,12 @@ class QueryBuilder(object):
                 returnval = (self._aliased_path[joining_value], func)
             elif isinstance(joining_value, str):
                 try:
-                    returnval = self._tag_to_alias_map[self._get_tag_from_specification(joining_value)], func
+                    returnval = self.tag_to_alias_map[self._get_tag_from_specification(joining_value)], func
                 except KeyError:
                     raise InputValidationError('Key {} is unknown to the types I know about:\n'
                                                '{}'.format(
                                                    self._get_tag_from_specification(joining_value),
-                                                   self._tag_to_alias_map.keys()))
+                                                   self.tag_to_alias_map.keys()))
         return returnval
 
     def _get_json_compatible(self, inp):
@@ -1814,12 +1798,12 @@ class QueryBuilder(object):
         # Starting the query by receiving a session
         # Every subclass needs to have _get_session and give me the
         # right session
-        firstalias = self._tag_to_alias_map[self._path[0]['tag']]
+        firstalias = self.tag_to_alias_map[self._path[0]['tag']]
         self._query = self._impl.get_session().query(firstalias)
 
         # JOINS ################################
         for index, verticespec in enumerate(self._path[1:], start=1):
-            alias = self._tag_to_alias_map[verticespec['tag']]
+            alias = self.tag_to_alias_map[verticespec['tag']]
             # looping through the queryhelp
             # ~ if index:
             # There is nothing to join if that is the first table
@@ -1842,17 +1826,17 @@ class QueryBuilder(object):
             else:
                 aliased_edge = connection_func(toconnectwith, alias, isouterjoin=isouterjoin)
             if aliased_edge is not None:
-                self._tag_to_alias_map[edge_tag] = aliased_edge
+                self.tag_to_alias_map[edge_tag] = aliased_edge
 
         ######################### FILTERS ##############################
 
         for tag, filter_specs in self._filters.items():
             try:
-                alias = self._tag_to_alias_map[tag]
+                alias = self.tag_to_alias_map[tag]
             except KeyError:
                 # TODO Check KeyError before?
                 raise InputValidationError('You looked for tag {} among the alias list\n'
-                                           'The tags I know are:\n{}'.format(tag, self._tag_to_alias_map.keys()))
+                                           'The tags I know are:\n{}'.format(tag, self.tag_to_alias_map.keys()))
             self._query = self._query.filter(self._build_filters(alias, filter_specs))
 
         ######################### PROJECTIONS ##########################
@@ -1862,8 +1846,8 @@ class QueryBuilder(object):
 
         # Will be later set to this list:
         entities = []
-        # Mapping between enitites and the tag used/ given by user:
-        self.tag_to_projected_entity_dict = {}
+        # Mapping between entities and the tag used/ given by user:
+        self.tag_to_projected_property_dict = {}
 
         self.nr_of_projections = 0
         if self._debug:
@@ -1897,7 +1881,7 @@ class QueryBuilder(object):
         # ORDER ################################
         for order_spec in self._order_by:
             for tag, entities in order_spec.items():
-                alias = self._tag_to_alias_map[tag]
+                alias = self.tag_to_alias_map[tag]
                 for entitydict in entities:
                     for entitytag, entityspec in entitydict.items():
                         self._build_order(alias, entitytag, entityspec)
@@ -1927,7 +1911,7 @@ class QueryBuilder(object):
 
         # Make a list that helps the projection postprocessing
         self._attrkeys_as_in_sql_result = {
-            index_in_sql_result: attrkey for tag, projected_entities_dict in self.tag_to_projected_entity_dict.items()
+            index_in_sql_result: attrkey for tag, projected_entities_dict in self.tag_to_projected_property_dict.items()
             for attrkey, index_in_sql_result in projected_entities_dict.items()
         }
 
@@ -1965,7 +1949,7 @@ class QueryBuilder(object):
                 tag = node['tag']
                 requested_cols = [key for item in self._projections[tag] for key in item.keys()]
                 if '*' in requested_cols:
-                    input_alias_list.append(aliased(self._tag_to_alias_map[tag]))
+                    input_alias_list.append(aliased(self.tag_to_alias_map[tag]))
 
             counterquery = self._imp._get_session().query(orm_calc_class)
             if type_spec:
@@ -1997,7 +1981,7 @@ class QueryBuilder(object):
         :returns: the alias given for that vertice
         """
         tag = self._get_tag_from_specification(tag)
-        return self._tag_to_alias_map[tag]
+        return self.tag_to_alias_map[tag]
 
     def get_used_tags(self, vertices=True, edges=True):
         """
@@ -2180,7 +2164,6 @@ class QueryBuilder(object):
                 item[i] = self.get_aiida_entity_res(item_entry)
 
             yield item
-        return
 
     def iterdict(self, batch_size=100):
         """
@@ -2198,7 +2181,7 @@ class QueryBuilder(object):
         """
         query = self.get_query()
 
-        for item in self._impl.iterdict(query, batch_size, self.tag_to_projected_entity_dict):
+        for item in self._impl.iterdict(query, batch_size, self.tag_to_projected_property_dict, self.tag_to_alias_map):
             for key, value in item.items():
                 item[key] = self.get_aiida_entity_res(value)
 
@@ -2321,31 +2304,3 @@ class QueryBuilder(object):
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, with_descendants=join_to, autotag=True, **kwargs)
         return self
-
-    def _deprecate(self, function, deprecated_name, preferred_name, version='1.0.0a5'):
-        """
-        Wrapper to return a decorated functon which will print a deprecation warning when it is called.
-
-        Specifically for when an  old relationship type is used.
-        Note that it is the way of calling the function which is deprecated, not the function itself
-
-        :param function: a deprecated function to call
-        :param deprecated_name: the name which is deprecated
-        :param preferred_name: the new name which is preferred
-        :param version: aiida version for which this takes effect.
-        """
-
-        def wrapper(*args, **kwargs):
-            """
-            Decorator to print a deprecation warning
-            """
-            import warnings
-            from aiida.common.warnings import AiidaDeprecationWarning
-            warnings.warn(
-                "The relationship name '{}' is deprecated from version {} onwards. Use '{}' instead.".format(
-                    deprecated_name, version, preferred_name),
-                AiidaDeprecationWarning,
-                stacklevel=2)
-            return function(*args, **kwargs)
-
-        return wrapper

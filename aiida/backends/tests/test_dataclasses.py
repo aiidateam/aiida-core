@@ -1748,9 +1748,9 @@ _chemical_formula_sum                   'Ba2 Ti'
         xyz_string1 = """
 3
 
-Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
-Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
-Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
+Li      0.00000000       0.00000000       0.00000000       6.94100000        3
+Si      4.39194796       0.00000000      10.10068356      28.08550000       14
+Si      4.39194796       0.00000000       3.79747116      28.08550000       14
 """
         xyz_string2 = """
 2
@@ -1784,16 +1784,16 @@ Ag 0 0 2.0335
         xyz_string4 = """
 1
 
-Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
-Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
-Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
+Li      0.00000000       0.00000000       0.00000000       6.94100000        3
+Si      4.39194796       0.00000000      10.10068356      28.08550000       14
+Si      4.39194796       0.00000000       3.79747116      28.08550000       14
 """
         xyz_string5 = """
 10
 
-Li      0.00000000       0.00000000       0.00000000       6.94100000        3 
-Si      4.39194796       0.00000000      10.10068356      28.08550000       14 
-Si      4.39194796       0.00000000       3.79747116      28.08550000       14 
+Li      0.00000000       0.00000000       0.00000000       6.94100000        3
+Si      4.39194796       0.00000000      10.10068356      28.08550000       14
+Si      4.39194796       0.00000000       3.79747116      28.08550000       14
 """
         xyz_string6 = """
 2
@@ -2024,7 +2024,7 @@ class TestStructureDataFromAse(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_conversion_of_types_2(self):
         """
-        Tests roundtrip ASE -> StructureData -> ASE, with tags, and 
+        Tests roundtrip ASE -> StructureData -> ASE, with tags, and
         changing the atomic masses
         """
         import ase
@@ -3111,52 +3111,6 @@ class TestKpointsData(AiidaTestCase):
     Tests the KpointsData objects.
     """
 
-    def test_set_kpoints_path_legacy(self):
-        """
-        Regression test for the deprecated KpointsData.set_kpoints_path method.
-        For certain formats of a direct kpoint list, it is not necessary to have defined a cell.
-        """
-        import numpy
-        from aiida.orm.nodes.data.array.kpoints import KpointsData
-
-        # Create a node with two arrays
-        kpoints_01 = KpointsData()
-        kpoints_02 = KpointsData()
-        kpoints_03 = KpointsData()
-        kpoints_04 = KpointsData()
-
-        # The various allowed formats
-        format_01 = [('G', 'M')]
-        format_02 = [('G', 'M', 30)]
-        format_03 = [('G', (0, 0, 0), 'M', (1, 1, 1))]
-        format_04 = [('G', (0, 0, 0), 'M', (1, 1, 1), 30)]
-
-        # Without a cell defined, the first two should fail, the last two should work
-        with self.assertRaises(ValueError):
-            kpoints_01.set_kpoints_path(format_01)
-
-        with self.assertRaises(ValueError):
-            kpoints_02.set_kpoints_path(format_02)
-
-        kpoints_03.set_kpoints_path(format_03)
-        kpoints_04.set_kpoints_path(format_04)
-
-        # Define a cell and settings it enable the usage of formats 1 and 2
-        alat = 4.
-        cell = numpy.array([
-            [alat, 0., 0.],
-            [0., alat, 0.],
-            [0., 0., alat],
-        ])
-
-        kpoints_01.set_cell(cell)
-        kpoints_02.set_cell(cell)
-
-        kpoints_01.set_kpoints_path(format_01)
-        kpoints_02.set_kpoints_path(format_02)
-        kpoints_03.set_kpoints_path(format_03)
-        kpoints_04.set_kpoints_path(format_04)
-
     def test_mesh(self):
         """
         Check the methods to set and retrieve a mesh.
@@ -3168,7 +3122,7 @@ class TestKpointsData(AiidaTestCase):
         input_mesh = [4, 4, 4]
         k.set_kpoints_mesh(input_mesh)
         mesh, offset = k.get_kpoints_mesh()
-        self.assertEqual(mesh, list(input_mesh))
+        self.assertEqual(mesh, input_mesh)
         self.assertEqual(offset, [0., 0., 0.])  # must be a tuple of three 0 by default
 
         # a too long list should fail
@@ -3179,13 +3133,13 @@ class TestKpointsData(AiidaTestCase):
         input_offset = [0.5, 0.5, 0.5]
         k.set_kpoints_mesh(input_mesh, input_offset)
         mesh, offset = k.get_kpoints_mesh()
-        self.assertEqual(mesh, list(input_mesh))
-        self.assertEqual(offset, list(input_offset))
+        self.assertEqual(mesh, input_mesh)
+        self.assertEqual(offset, input_offset)
 
         # verify the same but after storing
         k.store()
-        self.assertEqual(mesh, list(input_mesh))
-        self.assertEqual(offset, list(input_offset))
+        self.assertEqual(mesh, input_mesh)
+        self.assertEqual(offset, input_offset)
 
         # cannot modify it after storage
         with self.assertRaises(ModificationNotAllowed):
@@ -3279,63 +3233,6 @@ class TestKpointsData(AiidaTestCase):
         klist = k.get_kpoints(cartesian=True)
         self.assertTrue(numpy.allclose(klist, input_klist, atol=1e-16))
 
-    def test_path(self):
-        """
-        Test the methods to generate automatically a list of kpoints
-        """
-        import numpy
-
-        k = KpointsData()
-
-        # shouldn't get anything wiothout having set the cell
-        with self.assertRaises(ValueError):
-            k.set_kpoints_path()
-
-        # define a cell
-        alat = 4.
-        cell = numpy.array([
-            [alat, 0., 0.],
-            [0., alat, 0.],
-            [0., 0., alat],
-        ])
-
-        k.set_cell(cell)
-        k.set_kpoints_path()
-        # something should be retrieved
-        klist = k.get_kpoints()
-
-        # test the various formats for specifying the path
-        k.set_kpoints_path([
-            ('G', 'M'),
-        ])
-        k.set_kpoints_path([
-            ('G', 'M', 30),
-        ])
-        k.set_kpoints_path([
-            ('G', (0., 0., 0.), 'M', (1., 1., 1.)),
-        ])
-        k.set_kpoints_path([
-            ('G', (0., 0., 0.), 'M', (1., 1., 1.), 30),
-        ])
-
-        # at least 2 points per segment
-        with self.assertRaises(ValueError):
-            k.set_kpoints_path([
-                ('G', 'M', 1),
-            ])
-        with self.assertRaises(ValueError):
-            k.set_kpoints_path([
-                ('G', (0., 0., 0.), 'M', (1., 1., 1.), 1),
-            ])
-
-        # try to set points with a spacing
-        k.set_kpoints_path(kpoint_distance=0.1)
-
-        # try to modify after storage
-        k.store()
-        with self.assertRaises(ModificationNotAllowed):
-            k.set_kpoints_path()
-
     def test_path_wrapper_legacy(self):
         """
         This is a clone of the test_path test but instead it goes through the new wrapper
@@ -3392,38 +3289,6 @@ class TestKpointsData(AiidaTestCase):
 
         # try to set points with a spacing
         get_explicit_kpoints_path(structure, method='legacy', kpoint_distance=0.1)
-
-    def test_tetra_x(self):
-        """
-        testing tetragonal cells with axis along X
-        """
-        import numpy
-        from aiida.plugins import DataFactory
-        alat = 1.5
-        cell_x = [[alat, 0, 0], [0, 1, 0], [0, 0, 1]]
-        K = DataFactory('array.kpoints')
-        k = K()
-        k.set_cell(cell_x)
-        points = k.get_special_points(cartesian=True)
-
-        self.assertAlmostEqual(points[0]['Z'][0], numpy.pi / alat)
-        self.assertAlmostEqual(points[0]['Z'][1], 0.)
-
-    def test_tetra_z(self):
-        """
-        testing tetragonal cells with axis along X
-        """
-        import numpy
-        from aiida.plugins import DataFactory
-        alat = 1.5
-        cell_x = [[1, 0, 0], [0, 1, 0], [0, 0, alat]]
-        K = DataFactory('array.kpoints')
-        k = K()
-        k.set_cell(cell_x)
-        points = k.get_special_points(cartesian=True)
-
-        self.assertAlmostEqual(points[0]['Z'][2], numpy.pi / alat)
-        self.assertAlmostEqual(points[0]['Z'][0], 0.)
 
     def test_tetra_z_wrapper_legacy(self):
         """
@@ -3757,7 +3622,7 @@ class TestBandsData(AiidaTestCase):
 
         k = KpointsData()
         k.set_cell(cell)
-        k.set_kpoints_path()
+        k.set_kpoints([[0.,0.,0.],[0.1,0.1,0.1]])
 
         b = BandsData()
         b.set_kpointsdata(k)
@@ -3800,7 +3665,7 @@ class TestBandsData(AiidaTestCase):
 
         k = KpointsData()
         k.set_cell(cell)
-        k.set_kpoints_path()
+        k.set_kpoints([[0.,0.,0.],[0.1,0.1,0.1]])
 
         b = BandsData()
         b.set_kpointsdata(k)

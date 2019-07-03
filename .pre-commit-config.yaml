@@ -25,22 +25,16 @@
         aiida/backends/djsite/db/migrations/0012_drop_dblock.py|
         aiida/backends/djsite/db/migrations/0013_django_1_8.py|
         aiida/backends/djsite/db/migrations/0014_add_node_uuid_unique_constraint.py|
-        aiida/backends/djsite/db/migrations/0015_invalidating_node_hash.py|
         aiida/backends/djsite/db/migrations/0016_code_sub_class_of_data.py|
         aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
         aiida/backends/djsite/db/migrations/__init__.py|
         aiida/backends/djsite/db/models.py|
-        aiida/backends/djsite/db/subtests/test_migrations.py|
         aiida/backends/djsite/db/subtests/test_generic.py|
-        aiida/backends/djsite/db/subtests/test_nodes.py|
-        aiida/backends/djsite/db/subtests/test_query.py|
-        aiida/backends/djsite/globalsettings.py|
         aiida/backends/djsite/__init__.py|
         aiida/backends/djsite/manage.py|
         aiida/backends/djsite/queries.py|
         aiida/backends/profile.py|
         aiida/backends/general/abstractqueries.py|
-        aiida/backends/sqlalchemy/globalsettings.py|
         aiida/backends/sqlalchemy/__init__.py|
         aiida/backends/sqlalchemy/migrations/env.py|
         aiida/backends/sqlalchemy/migrations/versions/0aebbeab274d_base_data_plugin_type_string.py|
@@ -54,7 +48,6 @@
         aiida/backends/sqlalchemy/migrations/versions/e15ef2630a1b_initial_schema.py|
         aiida/backends/sqlalchemy/migrations/versions/f9a69de76a9a_delete_kombu_tables.py|
         aiida/backends/sqlalchemy/migrations/versions/62fe0d36de90_add_node_uuid_unique_constraint.py|
-        aiida/backends/sqlalchemy/migrations/versions/5d4d844852b6_invalidating_node_hash.py|
         aiida/backends/sqlalchemy/migrations/versions/a603da2cc809_code_sub_class_of_data.py|
         aiida/backends/sqlalchemy/migrations/versions/162b99bca4a2_drop_dbcalcstate.py|
         aiida/backends/sqlalchemy/models/authinfo.py|
@@ -92,7 +85,6 @@
         aiida/backends/tests/cmdline/commands/test_user.py|
         aiida/backends/tests/test_dataclasses.py|
         aiida/backends/tests/test_dbimporters.py|
-        aiida/backends/tests/test_export_and_import.py|
         aiida/backends/tests/test_generic.py|
         aiida/backends/tests/__init__.py|
         aiida/backends/tests/test_nodes.py|
@@ -120,9 +112,6 @@
         aiida/manage/backup/backup_base.py|
         aiida/orm/autogroup.py|
         aiida/orm/querybuilder.py|
-        aiida/orm/implementation/django/utils.py|
-        aiida/orm/implementation/sqlalchemy/utils.py|
-        aiida/orm/importexport.py|
         aiida/orm/nodes/data/array/bands.py|
         aiida/orm/nodes/data/array/projection.py|
         aiida/orm/nodes/data/array/xy.py|

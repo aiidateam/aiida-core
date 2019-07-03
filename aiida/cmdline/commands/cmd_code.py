@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from functools import partial
 import click
 import tabulate
@@ -19,7 +20,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
+from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import InputValidationError
 
@@ -210,15 +211,6 @@ def reveal(codes):
 
 @verdi_code.command()
 @arguments.CODE()
-@with_dbenv()
-@deprecated_command("Updating codes breaks data provenance. Use 'duplicate' instead.")
-# pylint: disable=unused-argument
-def update(code):
-    """Update an existing code."""
-
-
-@verdi_code.command()
-@arguments.CODE()
 @arguments.LABEL()
 @with_dbenv()
 def relabel(code, label):
@@ -231,17 +223,6 @@ def relabel(code, label):
         echo.echo_critical('invalid code name: {}'.format(exception))
     else:
         echo.echo_success('Code<{}> relabeled from {} to {}'.format(code.pk, old_label, code.full_label))
-
-
-@verdi_code.command()
-@arguments.CODE()
-@arguments.LABEL()
-@with_dbenv()
-@click.pass_context
-@deprecated_command("This command may be removed in a future release. Use 'relabel' instead.")
-def rename(ctx, code, label):
-    """Rename a code."""
-    ctx.invoke(relabel, code=code, label=label)
 
 
 @verdi_code.command('list')

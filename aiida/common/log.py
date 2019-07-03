@@ -12,11 +12,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import collections
 import logging
 import types
+import six
 
-from aiida.manage.configuration import get_config_option
+if six.PY2:
+    import collections
+else:
+    import collections.abc as collections  # pylint: disable=no-name-in-module, import-error
+
+from aiida.manage.configuration import get_config_option  # pylint: disable=wrong-import-position
 
 __all__ = ('AIIDA_LOGGER',)
 

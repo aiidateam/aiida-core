@@ -18,7 +18,9 @@ from __future__ import absolute_import
 
 import warnings
 
-warnings.warn('this module is deprecated', DeprecationWarning)  # pylint: disable=no-member
+from aiida.common.warnings import AiidaDeprecationWarning
+
+warnings.warn('this module is deprecated', AiidaDeprecationWarning)  # pylint: disable=no-member
 
 # Possible choices for backend
 BACKEND_DJANGO = 'django'

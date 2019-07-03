@@ -12,18 +12,23 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import collections
 import functools
-import inspect
 import logging
 import signal
+import inspect
 
 from six.moves import zip  # pylint: disable=unused-import
+from six import PY2
 
-from aiida.common.lang import override
-from aiida.manage.manager import get_manager
+if PY2:
+    import collections
+else:
+    import collections.abc as collections  # pylint: disable=ungrouped-imports, no-name-in-module, import-error
 
-from .process import Process
+from aiida.common.lang import override  # pylint: disable=wrong-import-position
+from aiida.manage.manager import get_manager  # pylint: disable=wrong-import-position
+
+from .process import Process  # pylint: disable=wrong-import-position
 
 __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
@@ -240,7 +245,10 @@ class FunctionProcess(Process):
         if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
-        args, varargs, keywords, defaults = inspect.getargspec(func)  # pylint: disable=deprecated-method
+        if PY2:
+            args, varargs, keywords, defaults = inspect.getargspec(func)  # pylint: disable=deprecated-method
+        else:
+            args, varargs, keywords, defaults, _, _, _ = inspect.getfullargspec(func)  # pylint: disable=no-member
         nargs = len(args)
         ndefaults = len(defaults) if defaults else 0
         first_default_pos = nargs - ndefaults
@@ -287,6 +295,8 @@ class FunctionProcess(Process):
 
         return type(
             func.__name__, (FunctionProcess,), {
+                '__module__': func.__module__,
+                '__name__': func.__name__,
                 '_func': staticmethod(func),
                 Process.define.__name__: classmethod(_define),
                 '_func_args': args,

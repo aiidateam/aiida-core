@@ -373,7 +373,7 @@ class Graph(object):
         node = self._load_node(node)
         style = {} if style_override is None else style_override
         style.update(self._global_node_style)
-        if node.pk not in self.nodes or overwrite:
+        if node.pk not in self._nodes or overwrite:
             _add_graphviz_node(
                 self._graph,
                 node,
@@ -406,7 +406,7 @@ class Graph(object):
         if out_node.pk not in self._nodes:
             raise AssertionError("out_node pk={} must have already been added to the graph".format(out_node.pk))
 
-        if (in_node.pk, out_node.pk, link_pair) in self.edges and not overwrite:
+        if (in_node.pk, out_node.pk, link_pair) in self._edges and not overwrite:
             return
 
         style = {} if style is None else style
@@ -437,6 +437,8 @@ class Graph(object):
                 link_types = [link_types]
             link_types = tuple(
                 [getattr(LinkType, l.upper()) if isinstance(l, six.string_types) else l for l in link_types])
+
+        self.add_node(node)
 
         nodes = []
         for link_triple in node.get_incoming(link_type=link_types).link_triples:
@@ -476,6 +478,8 @@ class Graph(object):
                 link_types = [link_types]
             link_types = tuple(
                 [getattr(LinkType, l.upper()) if isinstance(l, six.string_types) else l for l in link_types])
+
+        self.add_node(node)
 
         nodes = []
         for link_triple in node.get_outgoing(link_type=link_types).link_triples:

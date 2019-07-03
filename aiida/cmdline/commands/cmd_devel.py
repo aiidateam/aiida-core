@@ -45,6 +45,7 @@ def get_valid_test_paths():
         'aiida.schedulers',
         'aiida.transports',
         'aiida.tools.dbimporters.plugins',
+        'aiida.tools.visualization'
     ]
 
     valid_test_paths = {}

@@ -238,6 +238,5 @@ class TestVisGraph(AiidaTestCase):
 
         # self.maxDiff = None
         # dedent before comparison
-        self.assertEqual(
-            "\n".join([l.strip() for l in graph.graphviz.source.splitlines()]),
-            "\n".join([l.strip() for l in expected.splitlines()]))
+        self.assertEqual("\n".join([l.strip() for l in graph.graphviz.source.splitlines()]),
+                         "\n".join([l.strip() for l in expected.splitlines()]))

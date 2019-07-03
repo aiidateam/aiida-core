@@ -12,21 +12,24 @@ If you want to know if which jobs are currently on the scheduler (e.g.
 to dynamically decide on which computer to submit, or to delay submission, etc.)
 you can use a modification of the following script::
 
+    from __future__ import print_function
+
+
     def get_scheduler_jobs(only_current_user=True):
         """
         Return a list of all current jobs in the scheduler.
 
-        .. note:: an SSH connection is open and closed at every 
+        .. note:: an SSH connection is open and closed at every
             launch of this function.
 
         :param only_current_user: if True, filters by these
-            considering only those of the current user (if this 
+            considering only those of the current user (if this
             feature is supported by the scheduler plugin). Otherwise,
-            if False show all jobs. 
+            if False show all jobs.
         """
         from aiida import orm
 
-        computer = Computer.get('deneb')
+        computer = Computer.get(name='deneb')
         transport = computer.get_transport()
         scheduler = computer.get_scheduler()
         scheduler.set_transport(transport)
@@ -48,20 +51,22 @@ you can use a modification of the following script::
         all_jobs = get_scheduler_jobs(only_current_user=False)
         user_jobs = get_scheduler_jobs(only_current_user=True)
 
-        print "Current user has {} jobs out of {} in the scheduler".format(
+        print("Current user has {} jobs out of {} in the scheduler".format(
             len(user_jobs), len(all_jobs)
-        )
+        ))
 
-        print "Detailed (user's) job view:"
-        for job_id, job_info in user_jobs.iteritems():
-            print "Job ID: {}".format(job_id)
-            for k, v in job_info.iteritems():
-                if k == "raw_data": 
+        print ("Detailed (user's) job view:")
+        for job_id, job_info in user_jobs.items():
+            print ("Job ID: {}".format(job_id))
+            for k, v in job_info.items():
+                if k == "raw_data":
                     continue
-                print "  {}: {}".format(k, v)
-            print ""
+                print("  {}: {}".format(k, v))
+            print("")
 
-The last part shows how to use the function. 
+Use ``verdi run`` to execute it::
+
+  verdi run file_with_script.py
 
 .. note:: Every time you call the function, an ssh connection 
   is executed! So be careful and run this function 

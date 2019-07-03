@@ -181,6 +181,6 @@ class TestGroupNoOrmSQLA(AiidaTestCase):
         # correct addition.
         batch_sizes = (1, 3, 10, 1000)
         for batch_size in batch_sizes:
-            group = Group(name='test_batches_' + str(batch_size)).store()
+            group = Group(label='test_batches_' + str(batch_size)).store()
             group.backend_entity.add_nodes(nodes, skip_orm=True, batch_size=batch_size)
             self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))

@@ -288,7 +288,7 @@ def update_environment_yml():
     environment_filename = 'environment.yml'
     file_path = os.path.join(ROOT_DIR, environment_filename)
     with open(file_path, 'w') as env_file:
-        env_file.write('# Usage: conda env create -f environment.yml python=3.6\n')
+        env_file.write('# Usage: conda env create -n myenvname -f environment.yml python=3.6\n')
         yaml.safe_dump(
             environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True)
 

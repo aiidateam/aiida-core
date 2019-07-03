@@ -85,7 +85,7 @@ def import_archive(archive, filepath=None, external_module=None):
     :param filepath: str of directories of where to find archive (starting "/"s are irrelevant)
     :param external_module: string with name of external module, where archive can be found
     """
-    from aiida.orm.importexport import import_data
+    from aiida.tools.importexport import import_data
 
     dirpath_archive = get_archive_file(archive, filepath=filepath, external_module=external_module)
 
@@ -132,7 +132,7 @@ def migrate_archive(input_file, output_file, silent=True):
     :param input_file: filename with full path for archive to be migrated
     :param output_file: filename with full path for archive to be created after migration
     """
-    from aiida.cmdline.utils.migration import migrate_recursively
+    from aiida.tools.importexport.migration import migrate_recursively
 
     # Unpack archive, migrate, and re-pack archive
     with SandboxFolder(sandbox_in_repo=False) as folder:

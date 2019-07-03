@@ -35,10 +35,6 @@ class GroupTypeString(Enum):
     USER = 'user'
 
 
-# pylint: disable=invalid-name
-system_type = type
-
-
 class Group(entities.Entity):
     """An AiiDA ORM implementation of group of nodes."""
 
@@ -57,18 +53,6 @@ class Group(entities.Entity):
               in any case already stored) and created is a boolean saying
             :rtype: (:class:`aiida.orm.Group`, bool)
             """
-            if 'name' in kwargs:
-                import warnings
-                # pylint: disable=redefined-builtin
-                from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-                label = kwargs.pop('name')
-                warnings.warn('name is deprecated, use label instead', DeprecationWarning)  # pylint: disable=no-member
-            if 'type' in kwargs:
-                import warnings
-                # pylint: disable=redefined-builtin
-                from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-                kwargs['type_string'] = kwargs.pop('type')
-                warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
             if not label:
                 raise ValueError('Group label must be provided')
 
@@ -99,15 +83,7 @@ class Group(entities.Entity):
             """
             self._backend.groups.delete(id)
 
-    # pylint: disable=too-many-arguments, redefined-builtin
-    def __init__(self,
-                 label=None,
-                 user=None,
-                 description='',
-                 type_string=GroupTypeString.USER.value,
-                 backend=None,
-                 name=None,
-                 type=None):
+    def __init__(self, label=None, user=None, description='', type_string=GroupTypeString.USER.value, backend=None):
         """
         Create a new group. Either pass a dbgroup parameter, to reload
         a group from the DB (and then, no further parameters are allowed),
@@ -126,25 +102,13 @@ class Group(entities.Entity):
             an empty string, indicating an user-defined group.
         :type type_string: str
         """
-        if name:
-            import warnings
-            # pylint: disable=redefined-builtin
-            from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-            label = name
-            warnings.warn('name is deprecated, use label instead', DeprecationWarning)  # pylint: disable=no-member
-        if type:
-            import warnings
-            # pylint: disable=redefined-builtin
-            from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-            type_string = type
-            warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
         if not label:
             raise ValueError('Group label must be provided')
 
         # Check that chosen type_string is allowed
         if not isinstance(type_string, six.string_types):
             raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
-                                             "{}".format(str, system_type(type_string)))
+                                             "{}".format(str, type(type_string)))
 
         backend = backend or get_manager().get_backend()
         user = user or users.User.objects(backend).get_default()
@@ -170,18 +134,6 @@ class Group(entities.Entity):
         """
         return self._backend_entity.label
 
-    @property
-    def name(self):
-        """
-        :return: the label of the group as a string
-        :rtype: str
-        """
-        import warnings
-        # pylint: disable=redefined-builtin
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-        warnings.warn('name is deprecated, use label instead', DeprecationWarning)  # pylint: disable=no-member
-        return self._backend_entity.label
-
     @label.setter
     def label(self, label):
         """
@@ -195,23 +147,6 @@ class Group(entities.Entity):
         :raises aiida.common.UniquenessError: if another group of same type and label already exists
         """
         self._backend_entity.label = label
-
-    @name.setter
-    def name(self, name):
-        """
-        Attempt to change the label of the group instance. If the group is already stored
-        and the another group of the same type already exists with the desired label, a
-        UniquenessError will be raised
-
-        :param label: the new group label
-        :type label: str
-        :raises aiida.common.UniquenessError: if another group of same type and label already exists
-        """
-        import warnings
-        # pylint: disable=redefined-builtin
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-        warnings.warn('name is deprecated, use label instead', DeprecationWarning)  # pylint: disable=no-member
-        self._backend_entity.label = name
 
     @property
     def description(self):
@@ -229,18 +164,6 @@ class Group(entities.Entity):
 
         """
         self._backend_entity.description = description
-
-    @property
-    def type(self):
-        """
-        :return: the string defining the type of the group
-        :rtype: str
-        """
-        import warnings
-        # pylint: disable=redefined-builtin
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-        warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
-        return self._backend_entity.type_string
 
     @property
     def type_string(self):
@@ -367,19 +290,6 @@ class Group(entities.Entity):
         """
         from aiida.orm import QueryBuilder
 
-        if 'name' in kwargs:
-            import warnings
-            # pylint: disable=redefined-builtin
-            from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-            kwargs['label'] = kwargs.pop('name')
-            warnings.warn('name is deprecated, use label instead', DeprecationWarning)  # pylint: disable=no-member
-        if 'type' in kwargs:
-            import warnings
-            # pylint: disable=redefined-builtin
-            from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-            kwargs['type_string'] = kwargs.pop('type')
-            warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
-
         filters = {}
         if 'type_string' in kwargs:
             if not isinstance(kwargs['type_string'], six.string_types):
@@ -397,58 +307,6 @@ class Group(entities.Entity):
         if not results:
             raise exceptions.NotExistent("No group found matching criteria '{}'".format(kwargs))
         return results[0][0]
-
-    @classmethod
-    def get_or_create(cls, backend=None, **kwargs):
-        """
-        Try to retrieve a group from the DB with the given arguments;
-        create (and store) a new group if such a group was not present yet.
-
-        :return: (group, created) where group is the group (new or existing,
-          in any case already stored) and created is a boolean saying
-        :rtype: (:class:`aiida.orm.Group`, bool)
-        """
-        import warnings
-        # pylint: disable=redefined-builtin
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-        warnings.warn('this method has been deprecated use Group.objects.get_or_create() instead', DeprecationWarning)  # pylint: disable=no-member
-
-        return cls.objects(backend).get_or_create(**kwargs)
-
-    @classmethod
-    def get_from_string(cls, string):
-        """
-        Get a group from a string.
-
-        Searches only user-defined groups by default.
-        Add ':type_str' after the group label string to filter also by the type of the group
-        (e.g. 'type_str' could be 'data.upf', 'import', etc.)
-
-        :param string: group label
-        :type string: str
-
-        :raise ValueError: if the group type does not exist.
-        :raise aiida.common.NotExistent: if the group is not found.
-        """
-        import warnings
-        # pylint: disable=redefined-builtin
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
-        warnings.warn('get_from_string() is deprecated, use get() instead', DeprecationWarning)  # pylint: disable=no-member
-        label, sep, typestr = string.rpartition(':')
-        if not sep:
-            label = typestr
-            typestr = GroupTypeString.USER.value
-
-        try:
-            group = cls.get(label=label, type_string=typestr)
-            return group
-        except exceptions.NotExistent:
-            if typestr:
-                msg = ("No group of type '{}' with label '{}' found.".format(typestr, label))
-            else:
-                msg = ("No user-defined group with label '{}' found.".format(label))
-
-            raise exceptions.NotExistent(msg)
 
     def is_user_defined(self):
         """

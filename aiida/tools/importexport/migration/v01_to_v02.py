@@ -13,7 +13,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.cmdline.utils.migration.utils import verify_metadata_version, update_metadata
+from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
 
 
 def migrate_v1_to_v2(metadata, data, *args):

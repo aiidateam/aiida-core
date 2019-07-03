@@ -1,4 +1,4 @@
-# Usage: conda env create -f environment.yml python=3.6
+# Usage: conda env create -n myenvname -f environment.yml python=3.6
 ---
 name: aiida
 channels:
@@ -29,7 +29,7 @@ dependencies:
 - ete3==3.1.1
 - uritools==2.2.0
 - psycopg2==2.8
-- paramiko==2.4.2
+- paramiko==2.6.0
 - ipython>=4.0,<6.0
 - plumpy==0.14.1
 - kiwipy[rmq]==0.5.1

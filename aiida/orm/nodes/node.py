@@ -1071,6 +1071,17 @@ class Node(Entity):
 
     def get_hash(self, ignore_errors=True, **kwargs):
         """Return the hash for this node based on its attributes."""
+        if not self.is_stored:
+            raise exceptions.InvalidOperation("You can get the hash only after having stored the node")
+
+        return self._get_hash(ignore_errors=ignore_errors, **kwargs)
+
+    def _get_hash(self, ignore_errors=True, **kwargs):
+        """
+        Return the hash for this node based on its attributes.
+
+        This will always work, even before storing.
+        """
         try:
             return make_hash(self._get_objects_to_hash(), **kwargs)
         except Exception:  # pylint: disable=broad-except
@@ -1123,9 +1134,12 @@ class Node(Entity):
         If no matches are found, `None` is returned.
 
         :return: a stored `Node` instance with the same hash as this code or None
+
+        Note: this should be only called on stored nodes, or internally from .store() since it first calls
+        clean_value() on the attributes to normalise them.
         """
         try:
-            return next(self._iter_all_same_nodes())
+            return next(self._iter_all_same_nodes(allow_before_store=True))
         except StopIteration:
             return None
 
@@ -1133,12 +1147,22 @@ class Node(Entity):
         """Return a list of stored nodes which match the type and hash of the current node.
 
         All returned nodes are valid caches, meaning their `_aiida_hash` extra matches `self.get_hash()`.
+
+        Note: this can be called only after storing a Node (since at store time attributes will be cleaned with
+        `clean_value` and the hash should become idempotent to the action of serialization/deserialization)
         """
         return list(self._iter_all_same_nodes())
 
-    def _iter_all_same_nodes(self):
-        """Returns an iterator of all same nodes."""
-        node_hash = self.get_hash()
+    def _iter_all_same_nodes(self, allow_before_store=False):
+        """
+        Returns an iterator of all same nodes.
+
+        Note: this should be only called on stored nodes, or internally from .store() since it first calls
+        clean_value() on the attributes to normalise them.
+        """
+        if not allow_before_store and not self.is_stored:
+            raise exceptions.InvalidOperation("You can get the hash only after having stored the node")
+        node_hash = self._get_hash()
 
         if not node_hash or not self._cachable:
             return iter(())

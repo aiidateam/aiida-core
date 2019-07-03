@@ -207,10 +207,9 @@ def get_node_id_label(node, id_type):
     """return an identifier str for the node """
     if id_type == "pk":
         return node.pk
-    elif id_type == "uuid":
+    if id_type == "uuid":
         return node.uuid.split("-")[0]
-    else:
-        raise ValueError("node_id_type not recognised: {}".format(id_type))
+    raise ValueError("node_id_type not recognised: {}".format(id_type))
 
 
 def _add_graphviz_node(graph,

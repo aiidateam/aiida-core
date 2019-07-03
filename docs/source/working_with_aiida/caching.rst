@@ -8,8 +8,7 @@ Enabling caching
 ----------------
 
 There are numerous reasons why you may need to re-run calculations you’ve already done before.
-Since AiiDA stores the full provenance of each calculation, it can *detect* whether a calculation has been run before
-and reuse its outputs without wasting computational resources.
+Since AiiDA stores the full provenance of each calculation, it can *detect* whether a calculation has been run before and reuse its outputs without wasting computational resources.
 
 This feature is not (yet) enabled by default. In order to enable hashing:
 
@@ -30,7 +29,7 @@ From this point onwards, when you submit a new calculation, AiiDA will compute h
   :align: center
   :height: 350px
 
-  When resusing a cached calculation, AiiDA will link up to the input nodes as usual, and make a copy of both the calculation node **C** and its outputs **D3**.
+  When reusing a cached calculation, AiiDA will link up to the input nodes as usual, and make a copy of both the calculation node **C** and its outputs **D3**.
 
 In order to ensure that the provenance graph with and without caching is the same,
 AiiDA creates a *copy* of the orginial calculation node, linked to the original inputs, as well as a to a copy of the original outputs, as shown in :numref:`fig_caching`.
@@ -43,19 +42,21 @@ AiiDA creates a *copy* of the orginial calculation node, linked to the original 
 How are nodes hashed?
 ---------------------
 
-By default, the hash of a node is computed from:
+By default (see also :ref:`devel_controlling_caching`), the hash of a Data node is computed from:
 
-* all attributes of the node, except the ``_updatable_attributes``
+* all attributes of the node, except the ``_updatable_attributes`` and ``_hash_ignored_attributes``
 * the ``__version__`` of the package which defined the node class
 * the content of the repository folder of the node
 * the UUID of the computer, if the node is associated with one
 
+The hash of a :class:`~aiida.orm.ProcessNode` will, on top of this, include the hashes of any of its input ``Data`` nodes.
+
 Once a node is stored in the database, its hash is stored in the ``_aiida_hash`` extra, and this extra is used to find matching nodes.
 If a node of the same class with the same hash already exists in the database, this is considered a cache match. 
 
-Use the :meth:`.get_hash() <aiida.orm.nodes.Node.get_hash>` method to check the hash of any node.
+Use the :meth:`~aiida.orm.nodes.Node.get_hash` method to check the hash of any node.
 
-In order to figure out why a calculation is *not* being reused, the :meth:`._get_objects_to_hash() <aiida.orm.nodes.Node._get_objects_to_hash>` may come in useful:
+In order to figure out why a calculation is *not* being reused, the :meth:`._get_objects_to_hash() <aiida.orm.nodes.Node._get_objects_to_hash>` may be useful:
 
 .. ipython::
     :verbatim:
@@ -68,9 +69,7 @@ In order to figure out why a calculation is *not* being reused, the :meth:`._get
     In [7]: calc._get_objects_to_hash()
     Out[7]:
     ['1.0.0b4',
-     {'_sealed': True,
-      '_finished': True,
-      'resources': {'num_machines': 2, 'default_mpiprocs_per_machine': 28},
+     {'resources': {'num_machines': 2, 'default_mpiprocs_per_machine': 28},
       'parser_name': 'cp2k',
       'linkname_retrieved': 'retrieved'},
      <aiida.common.folders.Folder at 0x1171b9a20>,
@@ -87,7 +86,7 @@ Configuration
 Class level
 ...........
 
-Besides a on/off switch per profile, the ``.aiida/cache_config.yml`` provides control over caching at the level of specific calculation or data classes:
+Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides control over caching at the level of specific calculation or data classes:
 
 .. code:: yaml
 
@@ -142,13 +141,21 @@ Even when caching is turned off for a given node type, you can manually enable c
     In [8]: print('n2 is cached from:', n2.get_extra('_aiida_cached_from'))
     n2 is cached from: 956109e1-4382-4240-a711-2a4f3b522122
 
-When running a ``CalcJob`` through the ``Process`` interface, you can achive the same effect by passing ``_use_cache=True`` to the ``run`` or ``submit`` method.
+When running a :class:`~aiida.engine.processes.CalcJob` through the :meth:`~aiida.engine.run` or :meth:`~aiida.engine.submit` functions, you can achieve the same effect using the :class:`~aiida.manage.caching.enable_caching` context manager:
+
+.. code:: python
+
+    from aiida.manage.caching import enable_caching
+    from aiida.engine import run
+    from aiida.orm import CalcJobNode
+    with enable_caching(node_class=CalcJobNode):
+       run(...)
 
 If you suspect a node is being reused in error (e.g. during development),
 it is also possible to manually *prevent* a specific node from being reused:
 
 1. Check that the node in question has a ``_aiida_cached_from`` extra. 
-   If that's not the case, it anyhow is not reused.
+   If that is not the case, it is not reused anyhow.
 2. Clear the hashes of all nodes that are considered identical to your node:
 
     .. code:: python
@@ -164,7 +171,7 @@ it is also possible to manually *prevent* a specific node from being reused:
 Limitations
 -----------
 
-1. The current implementation of caching for data nodes clones not only the graph representation of the reused node but also the underlying data in the database and file repository. 
+1. The current implementation of caching for data nodes clones not only the *graph representation* of the reused node; it also clones the underlying data in the database and file repository. 
    This could be improved in order to reduce data duplication.
 
 2. The caching mechanism for calculations *should* trigger only when the inputs and the calculation to be performed are exactly the same.  
@@ -174,8 +181,8 @@ Limitations
    In order to reuse a cached node, we need to know not only its contents but also how the new node should be linked to its parents and children.
 
    * **Data nodes:** Making a copy of a data node should not change its links, so AiiDA just needs to link the new node to the direct ancestors of the old node.
-   * **Calculations nodes:** The node can have inputs and creates new data nodes as outputs. Again, the new node needs to replicate these links. In order to make it look as if the calculation had produced its own outputs, the output nodes are copied and linked as well.
-   * **Workflows nodes:** Workflows differ from calculations in that they can *return* an input node or an output node created by a calculation. 
+   * **Calculation nodes:** Calculation nodes can have inputs and create new data nodes as outputs. Again, the new node needs to replicate these links. In order to make it look as if the cloned calculation had produced its own outputs, the output nodes are copied and linked as well.
+   * **Workflow nodes:** Workflows differ from calculations in that they can *return* an input node or an output node created by a calculation. 
      This is not compatible with the cloning model chosen for calculations (leave input nodes untouched, clone output nodes). For this reason, workflows are not cached.
      
-  Overall, this limitation is acceptable since the runtime of AiiDA workchains is usually dominated by expensive calculations, which are covered by the caching mechanism.
+  Overall, this limitation is acceptable, since the runtime of AiiDA WorkChains is usually dominated by expensive calculations, which are covered by the caching mechanism.

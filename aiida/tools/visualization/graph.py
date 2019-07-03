@@ -70,9 +70,9 @@ def default_data_styles(node):
 
     """
     class_node_type = node.class_node_type
-    if hasattr(node, "get_style_default"):
+    try:
         default = node.get_style_default()
-    else:
+    except AttributeError:
         default = {
             "shape": "ellipse",
             "style": "filled",
@@ -326,22 +326,10 @@ class Graph(object):
         self._global_node_style = global_node_style or {}
         self._global_edge_style = global_edge_style or {}
         self._include_sublabels = include_sublabels
-        if link_styles is not None:
-            self._link_styles = link_styles
-        else:
-            self._link_styles = default_link_styles
-        if data_styles is not None:
-            self._data_styles = data_styles
-        else:
-            self._data_styles = default_data_styles
-        if process_styles is not None:
-            self._process_styles = process_styles
-        else:
-            self._process_styles = default_process_styles
-        if data_sublabels is not None:
-            self._data_sublabels = data_sublabels
-        else:
-            self._data_sublabels = default_data_sublabels
+        self._link_styles = link_styles or default_link_styles
+        self._data_styles = data_styles or default_data_styles
+        self._process_styles = process_styles or default_process_styles
+        self._data_sublabels = data_sublabels or default_data_sublabels
 
     @property
     def graphviz(self):
@@ -413,10 +401,10 @@ class Graph(object):
         """
         in_node = self._load_node(in_node)
         if in_node.pk not in self._nodes:
-            raise AssertionError("the in_node must have already been added to the graph")
+            raise AssertionError("in_node pk={} must have already been added to the graph".format(in_node.pk))
         out_node = self._load_node(out_node)
         if out_node.pk not in self._nodes:
-            raise AssertionError("the out_node must have already been added to the graph")
+            raise AssertionError("out_node pk={} must have already been added to the graph".format(out_node.pk))
 
         if (in_node.pk, out_node.pk, link_pair) in self.edges and not overwrite:
             return
@@ -427,21 +415,21 @@ class Graph(object):
 
         _add_graphviz_edge(self._graph, in_node, out_node, style)
 
-    def add_incoming(self, node, link_types=(), annotate_links=False, return_pks=True):
+    def add_incoming(self, node, link_types=(), annotate_links=None, return_pks=True):
         """add nodes and edges for incoming links to a node
 
         :param node: node or node pk/uuid
         :type node: aiida.orm.nodes.node.Node or int
         :param link_types: filter by link types (Default value = ())
         :type link_types: str or tuple[str] or aiida.common.links.LinkType or tuple[aiida.common.links.LinkType]
-        :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = False)
+        :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = None)
         :type annotate_links: bool or str
         :param return_pks: whether to return a list of nodes, or list of node pks (Default value = True)
         :type return_pks: bool
         :returns: list of nodes or node pks
 
         """
-        if annotate_links not in [False, "label", "type", "both"]:
+        if annotate_links not in [None, False, "label", "type", "both"]:
             raise AssertionError('annotate_links must be one of False, "label", "type" or "both"')
 
         if link_types:
@@ -466,21 +454,21 @@ class Graph(object):
 
         return nodes
 
-    def add_outgoing(self, node, link_types=(), annotate_links=False, return_pks=True):
+    def add_outgoing(self, node, link_types=(), annotate_links=None, return_pks=True):
         """add nodes and edges for outgoing links to a node
 
         :param node: node or node pk
         :type node: aiida.orm.nodes.node.Node or int
         :param link_types: filter by link types (Default value = ())
         :type link_types: str or tuple[str] or aiida.common.links.LinkType or tuple[aiida.common.links.LinkType]
-        :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = False)
+        :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = None)
         :type annotate_links: bool or str
         :param return_pks: whether to return a list of nodes, or list of node pks (Default value = True)
         :type return_pks: bool
         :returns: list of nodes or node pks
 
         """
-        if annotate_links not in [False, "label", "type", "both"]:
+        if annotate_links not in [None, False, "label", "type", "both"]:
             raise AssertionError('annotate_links must be one of False, "label", "type" or "both"')
 
         if link_types:

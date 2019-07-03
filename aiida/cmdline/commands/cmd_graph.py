@@ -30,7 +30,9 @@ def verdi_graph():
 @click.option(
     "-l",
     "--link-types",
-    help="The link types to include: 'data' includes only 'input_calc' and 'create' links (data provenance only),  'logic' includes only 'input_work' and 'return' links (logical provenance only).",
+    help=("The link types to include: "
+          "'data' includes only 'input_calc' and 'create' links (data provenance only), "
+          "'logic' includes only 'input_work' and 'return' links (logical provenance only)."),
     default="all",
     type=click.Choice(['all', 'data', 'logic']))
 @click.option(

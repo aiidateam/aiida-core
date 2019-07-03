@@ -56,4 +56,4 @@ def rehash(nodes, entry_point):
         for node, in iter_hash:
             node.rehash()
 
-    echo.echo_success('{} nodes re-hashed'.format(num_nodes))
+    echo.echo_success('{} nodes re-hashed.'.format(num_nodes))

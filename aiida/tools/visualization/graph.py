@@ -17,23 +17,27 @@ from __future__ import absolute_import
 import os
 import six
 from graphviz import Digraph
-from aiida.orm import load_node, Data
+from aiida.orm import load_node, Data, ProcessNode
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.plugins import BaseFactory
 from aiida.common import LinkType
 from aiida.orm.utils.links import LinkPair
 
 
-def default_link_styles(link_type):
-    """map link_type to a graphviz edge style
+def default_link_styles(link_pair, add_label, add_type):
+    # type: (LinkPair, bool, bool) -> dict
+    """map link_pair to a graphviz edge style
 
-    :param link_type: a LinkType attribute
-    :type link_type: One of the members from
-        :class:`aiida.common.links.LinkType`
+    :param link_type: a LinkPair attribute
+    :type link_type: aiida.orm.utils.links.LinkPair
+    :param add_label: include link label
+    :type add_label: bool
+    :param add_type: include link type
+    :type add_type: bool
     :rtype: dict
 
     """
-    return {
+    style = {
         LinkType.INPUT_CALC: {
             "style": "solid",
             "color": "#000000"  # black
@@ -58,7 +62,16 @@ def default_link_styles(link_type):
             "style": "dashed",
             "color": "#006400"  # green
         }
-    }[link_type]
+    }[link_pair.link_type]
+
+    if add_label and not add_type:
+        style['label'] = link_pair.link_label
+    elif add_type and not add_label:
+        style['label'] = link_pair.link_type.name
+    elif add_label and add_type:
+        style['label'] = "{}\n{}".format(link_pair.link_type.name, link_pair.link_label)
+
+    return style
 
 
 def default_data_styles(node):
@@ -90,7 +103,7 @@ def default_data_styles(node):
     return mapping.get(class_node_type, default)
 
 
-def default_data_sublabels(node):
+def default_node_sublabels(node):
     """function mapping data nodes to a sublabel
     (e.g. specifying some attribute values)
 
@@ -194,10 +207,10 @@ def get_node_id_label(node, id_type):
     """return an identifier str for the node """
     if id_type == "pk":
         return node.pk
-    elif id_type == "pk":
+    elif id_type == "uuid":
         return node.uuid.split("-")[0]
     else:
-        raise ValueError("id_type not recognised")
+        raise ValueError("node_id_type not recognised: {}".format(id_type))
 
 
 def _add_graphviz_node(graph,
@@ -242,13 +255,8 @@ def _add_graphviz_node(graph,
 
         node_style = data_style_func(node)
         label = ["{} ({})".format(node.__class__.__name__, get_node_id_label(node, id_type))]
-        if include_sublabels:
-            sublabel = data_sublabel_func(node)
-            if sublabel:
-                label.append(sublabel)
-        node_style["label"] = "\n".join(label)
 
-    elif isinstance(node, BaseFactory("aiida.node", "process")):
+    elif isinstance(node, ProcessNode):
 
         node_style = process_style_func(node)
 
@@ -262,7 +270,12 @@ def _add_graphviz_node(graph,
         if include_sublabels and node.exit_status is not None:
             label.append("Exit Code: {}".format(node.exit_status))
 
-        node_style["label"] = "\n".join(label)
+    if include_sublabels:
+        sublabel = data_sublabel_func(node)
+        if sublabel:
+            label.append(sublabel)
+
+    node_style["label"] = "\n".join(label)
 
     if style_override is not None:
         node_style.update(style_override)
@@ -306,7 +319,7 @@ class Graph(object):
                  link_styles=None,
                  data_styles=None,
                  process_styles=None,
-                 data_sublabels=None,
+                 sublabel_fn=None,
                  node_id_label="pk"):
         """a class to create graphviz graphs of the AiiDA node provenance
 
@@ -330,8 +343,8 @@ class Graph(object):
             data_styles(node) -> dict (Default value = None)
         :param process_styles: callable mapping process node to a graphviz style dict;
             process_styles(node) -> dict (Default value = None)
-        :param data_sublabels: callable mapping data node to a sublabel (e.g. specifying some attribute values)
-            data_sublabels(node) -> str (Default value = None)
+        :param sublabel_fn: callable mapping data node to a sublabel (e.g. specifying some attribute values)
+            sublabel_fn(node) -> str (Default value = None)
         :param node_id_label: the type of identifier to use for node labels ('pk' or 'uuid')
         :type node_id_label: str
 
@@ -346,7 +359,7 @@ class Graph(object):
         self._link_styles = link_styles or default_link_styles
         self._data_styles = data_styles or default_data_styles
         self._process_styles = process_styles or default_process_styles
-        self._data_sublabels = data_sublabels or default_data_sublabels
+        self._node_sublabels = sublabel_fn or default_node_sublabels
         self._node_id_type = node_id_label
 
     @property
@@ -397,7 +410,7 @@ class Graph(object):
                 node,
                 self._data_styles,
                 self._process_styles,
-                self._data_sublabels,
+                self._node_sublabels,
                 style_override=style,
                 include_sublabels=self._include_sublabels,
                 id_type=self._node_id_type)
@@ -434,6 +447,17 @@ class Graph(object):
 
         _add_graphviz_edge(self._graph, in_node, out_node, style)
 
+    @staticmethod
+    def _convert_link_types(link_types):
+        """ convert link types, which may be strings, to a member of LinkType
+        """
+        if link_types is None:
+            return None
+        if isinstance(link_types, six.string_types):
+            link_types = [link_types]
+        link_types = tuple([getattr(LinkType, l.upper()) if isinstance(l, six.string_types) else l for l in link_types])
+        return link_types
+
     def add_incoming(self, node, link_types=(), annotate_links=None, return_pks=True):
         """add nodes and edges for incoming links to a node
 
@@ -451,25 +475,14 @@ class Graph(object):
         if annotate_links not in [None, False, "label", "type", "both"]:
             raise AssertionError('annotate_links must be one of False, "label", "type" or "both"')
 
-        if link_types:
-            if isinstance(link_types, six.string_types):
-                link_types = [link_types]
-            link_types = tuple(
-                [getattr(LinkType, l.upper()) if isinstance(l, six.string_types) else l for l in link_types])
-
         self.add_node(node)
 
         nodes = []
-        for link_triple in node.get_incoming(link_type=link_types).link_triples:
+        for link_triple in node.get_incoming(link_type=self._convert_link_types(link_types)).link_triples:
             self.add_node(link_triple.node)
             link_pair = LinkPair(link_triple.link_type, link_triple.link_label)
-            style = self._link_styles(link_triple.link_type)
-            if annotate_links == "label":
-                style['label'] = link_triple.link_label
-            elif annotate_links == "type":
-                style['label'] = link_triple.link_type.name
-            elif annotate_links == "both":
-                style['label'] = "{}\n{}".format(link_triple.link_type.name, link_triple.link_label)
+            style = self._link_styles(
+                link_pair, add_label=annotate_links in ["label", "both"], add_type=annotate_links in ["type", "both"])
             self.add_edge(link_triple.node, node, link_pair, style=style)
             nodes.append(link_triple.node.pk if return_pks else link_triple.node)
 
@@ -492,25 +505,14 @@ class Graph(object):
         if annotate_links not in [None, False, "label", "type", "both"]:
             raise AssertionError('annotate_links must be one of False, "label", "type" or "both"')
 
-        if link_types:
-            if isinstance(link_types, six.string_types):
-                link_types = [link_types]
-            link_types = tuple(
-                [getattr(LinkType, l.upper()) if isinstance(l, six.string_types) else l for l in link_types])
-
         self.add_node(node)
 
         nodes = []
-        for link_triple in node.get_outgoing(link_type=link_types).link_triples:
+        for link_triple in node.get_outgoing(link_type=self._convert_link_types(link_types)).link_triples:
             self.add_node(link_triple.node)
             link_pair = LinkPair(link_triple.link_type, link_triple.link_label)
-            style = self._link_styles(link_triple.link_type)
-            if annotate_links == "label":
-                style['label'] = link_triple.link_label
-            elif annotate_links == "type":
-                style['label'] = link_triple.link_type.name
-            elif annotate_links == "both":
-                style['label'] = "{}\n{}".format(link_triple.link_type.name, link_triple.link_label)
+            style = self._link_styles(
+                link_pair, add_label=annotate_links in ["label", "both"], add_type=annotate_links in ["type", "both"])
             self.add_edge(node, link_triple.node, link_pair, style=style)
             nodes.append(link_triple.node.pk if return_pks else link_triple.node)
 

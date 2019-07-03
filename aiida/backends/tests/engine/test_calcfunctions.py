@@ -19,6 +19,9 @@ from aiida.engine import calcfunction, Process
 from aiida.manage.caching import enable_caching
 from aiida.orm import Int, CalcFunctionNode
 
+# Global required for one of the caching tests to keep track of the number of times the calculation function is executed
+EXECUTION_COUNTER = 0
+
 
 class TestCalcFunction(AiidaTestCase):
     """Tests for calcfunctions.
@@ -73,13 +76,27 @@ class TestCalcFunction(AiidaTestCase):
 
     def test_calcfunction_caching(self):
         """Verify that a calcfunction can be cached."""
-        _, original = self.test_calcfunction.run_get_node(Int(5))
+
+        @calcfunction
+        def test_calcfunction(data):
+            global EXECUTION_COUNTER  # pylint: disable=global-statement
+            EXECUTION_COUNTER += 1
+            return Int(data.value + 1)
+
+        self.assertEqual(EXECUTION_COUNTER, 0)
+        _, original = test_calcfunction.run_get_node(Int(5))
+        self.assertEqual(EXECUTION_COUNTER, 1)
 
         # Caching a CalcFunctionNode should be possible
         with enable_caching(CalcFunctionNode):
-            _, cached = self.test_calcfunction.run_get_node(Int(5))
+            input_node = Int(5)
+            result, cached = test_calcfunction.run_get_node(input_node)
+
+            self.assertEqual(EXECUTION_COUNTER, 1)  # Calculation function body should not have been executed
+            self.assertTrue(result.is_stored)
             self.assertTrue(cached.is_created_from_cache)
             self.assertIn(cached.get_cache_source(), original.uuid)
+            self.assertEqual(cached.get_incoming().one().node.uuid, input_node.uuid)
 
     def test_calcfunction_caching_change_code(self):
         """Verify that changing the source codde of a calcfunction invalidates any existing cached nodes."""

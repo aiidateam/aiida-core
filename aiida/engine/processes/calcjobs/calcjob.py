@@ -148,7 +148,11 @@ class CalcJob(Process):
 
     @override
     def run(self):
-        """Run the calculation, we put it in the TOSUBMIT state and then wait for it to be completed."""
+        """Run the calculation job.
+
+        This means invoking the `presubmit` and storing the temporary folder in the node's repository. Then we move the
+        process in the `Wait` state, waiting for the `UPLOAD` transport task to be started.
+        """
         from aiida.orm import Code, load_node
         from aiida.common.folders import SandboxFolder, SubmitTestFolder
         from aiida.common.exceptions import InputValidationError

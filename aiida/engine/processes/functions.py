@@ -398,6 +398,13 @@ class FunctionProcess(Process):
         from aiida.orm import Data
         from .exit_code import ExitCode
 
+        # The following conditional is required for the caching to properly work. Even if the source node has a process
+        # state of `Finished` the cached process will still enter the running state. The process state will have then
+        # been overridden by the engine to `Running` so we cannot check that, but if the `exit_status` is anything other
+        # than `None`, it should mean this node was taken from the cache, so the process should not be rerun.
+        if self.node.exit_status is not None:
+            return self.node.exit_status
+
         # Split the inputs into positional and keyword arguments
         args = [None] * len(self._func_args)
         kwargs = {}

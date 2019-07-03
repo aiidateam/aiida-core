@@ -377,12 +377,13 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 super(IllegalWorkChain, cls).define(spec)
                 spec.outline(cls.illegal)
+                spec.outputs.dynamic = True
 
             def illegal(self):
                 self.out('not_allowed', orm.Int(2))
 
         with self.assertRaises(ValueError):
-            launch.run(IllegalWorkChain)
+            result = launch.run(IllegalWorkChain)
 
     def test_same_input_node(self):
 

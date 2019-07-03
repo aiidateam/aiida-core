@@ -145,9 +145,9 @@ def default_process_styles(node):
     """
     class_node_type = node.class_node_type
 
-    if hasattr(node, "get_style_default"):
+    try:
         default = node.get_style_default()
-    else:
+    except AttributeError:
         default = {"shape": "rectangle", "pencolor": "black"}
 
     process_map = {

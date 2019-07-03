@@ -621,7 +621,7 @@ class Graph(object):
                              include_target_outputs=False,
                              origin_style=(),
                              annotate_links=False):
-        """add nodes and edges from an origin node to target nodes
+        """Add nodes and edges from an origin node to all nodes of a target node class.
 
         :param origin: node or node pk/uuid
         :type origin: aiida.orm.nodes.node.Node or int

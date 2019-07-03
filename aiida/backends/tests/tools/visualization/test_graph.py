@@ -24,9 +24,12 @@ class TestVisGraph(AiidaTestCase):
     """Tests for verdi graph"""
 
     def setUp(self):
+        self.curr_maxdiff = self.maxDiff
+        self.maxDiff = None
         self.reset_database()
 
     def tearDown(self):
+        self.maxDiff = self.curr_maxdiff
         self.reset_database()
 
     def create_provenance(self):
@@ -236,7 +239,6 @@ class TestVisGraph(AiidaTestCase):
                 N{calcf1} -> N{pd3} [color="#006400" style=solid]
         }}""".format(**{k: v.pk for k, v in nodes.items()})
 
-        # self.maxDiff = None
         # dedent before comparison
         self.assertEqual("\n".join([l.strip() for l in graph.graphviz.source.splitlines()]),
                          "\n".join([l.strip() for l in expected.splitlines()]))

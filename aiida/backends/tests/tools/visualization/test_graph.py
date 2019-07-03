@@ -239,5 +239,6 @@ class TestVisGraph(AiidaTestCase):
         }}""".format(**{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison
-        self.assertEqual(sorted([l.strip() for l in graph.graphviz.source.splitlines()]),
-                         sorted([l.strip() for l in expected.splitlines()]))
+        self.assertEqual(
+            sorted([l.strip() for l in graph.graphviz.source.splitlines()]),
+            sorted([l.strip() for l in expected.splitlines()]))

@@ -52,13 +52,9 @@ def rehash(nodes, entry_point):
 
     count = 0
 
-    for i, (node,) in enumerate(to_hash):
-
-        if i % 100 == 0:
-            echo.echo('.', nl=False)
-
-        node.rehash()
-        count += 1
+    with click.progressbar(to_hash, label="Rehashing Nodes:") as iter_hash:
+        for i, (node,) in enumerate(iter_hash):
+            node.rehash()
 
     echo.echo('')
     echo.echo_success('{} nodes re-hashed'.format(count))

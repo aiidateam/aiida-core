@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import os
 import six
 from graphviz import Digraph
-from aiida.orm import load_node
+from aiida.orm import load_node, Data
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.plugins import BaseFactory
 from aiida.common import LinkType
@@ -180,7 +180,7 @@ def default_process_styles(node):
     node_style = process_map.get(class_node_type, default)
 
     # style process node, based on success/failure of process
-    if node.is_failed or node.is_excepted:
+    if node.is_failed or node.is_excepted or node.is_killed:
         node_style['penwidth'] = "3.0"
         node_style['color'] = '#FF0000'  # red
     elif node.is_finished_ok:
@@ -198,6 +198,10 @@ def _add_graphviz_node(graph,
                        style_override=None,
                        include_sublabels=True):
     """create a node in the graph
+
+    The first line of the node text is always '<node.name> (<node.pk>)'.
+    Then, if ``include_sublabels=True``, subsequent lines are added,
+    which are node type dependant.
 
     :param graph: the graphviz.Digraph to add the node to
     :param node: the node to add
@@ -218,14 +222,10 @@ def _add_graphviz_node(graph,
     For subclasses of ProcessNode, we choose styles to distinguish between
     types, and also color the nodes for successful/failed processes
 
-    The first line of the node text is always '<node.name> (<node.pk>)'.
-    Then, if ``include_sublabels=True``, subsequent lines are added,
-    which are node type dependant.
-
     """
     # pylint: disable=too-many-arguments
     node_style = {}
-    if isinstance(node, BaseFactory("aiida.node", "data")):
+    if isinstance(node, Data):
 
         node_style = data_style_func(node)
         label = ["{} ({})".format(node.__class__.__name__, node.pk)]
@@ -323,12 +323,8 @@ class Graph(object):
         self._graph = Digraph(engine=engine, graph_attr=graph_attr)
         self._nodes = set()
         self._edges = set()
-        self._global_node_style = {}
-        if global_node_style:
-            self._global_node_style = global_node_style
-        self._global_edge_style = {}
-        if global_edge_style:
-            self._global_edge_style = global_edge_style
+        self._global_node_style = global_node_style or {}
+        self._global_edge_style = global_edge_style or {}
         self._include_sublabels = include_sublabels
         if link_styles is not None:
             self._link_styles = link_styles

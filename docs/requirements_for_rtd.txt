@@ -36,7 +36,7 @@ itsdangerous==1.1.0
 kiwipy[rmq]==0.5.1
 marshmallow-sqlalchemy==0.16.0
 mock==2.0.0
-numpy==1.16.1
+numpy==1.16.4
 paramiko==2.6.0
 passlib==1.7.1
 pg8000<1.13.0

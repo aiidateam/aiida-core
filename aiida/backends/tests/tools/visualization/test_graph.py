@@ -12,8 +12,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from textwrap import dedent, indent
-
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
@@ -239,6 +237,7 @@ class TestVisGraph(AiidaTestCase):
         }}""".format(**{k: v.pk for k, v in nodes.items()})
 
         # self.maxDiff = None
+        # dedent before comparison
         self.assertEqual(
             "\n".join([l.strip() for l in graph.graphviz.source.splitlines()]),
             "\n".join([l.strip() for l in expected.splitlines()]))

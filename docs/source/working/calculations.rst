@@ -1,5 +1,10 @@
 .. _working_calculations:
 
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+    ./calcjob_options
+
 ************
 Calculations
 ************
@@ -343,106 +348,6 @@ The full list of available options are as follows:
     * :ref:`append_text<working_calcjobs_options_append_text>`
 
 More detailed information about their usage, follows below.
-
-.. _working_calcjobs_options_parser_name:
-
-``parser_name``
-~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_input_filename:
-
-``input_filename``
-~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_output_filename:
-
-``output_filename``
-~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_scheduler_stdout:
-
-``scheduler_stdout``
-~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_scheduler_stderr:
-
-``scheduler_stderr``
-~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_resources:
-
-``resources``
-~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_max_wallclock_seconds:
-
-``max_wallclock_seconds``
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_custom_scheduler_commands:
-
-``custom_scheduler_commands``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_queue_name:
-
-``queue_name``
-~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_account:
-
-``account``
-~~~~~~~~~~~
-
-.. _working_calcjobs_options_qos:
-
-``qos``
-~~~~~~~
-
-.. _working_calcjobs_options_computer:
-
-``computer``
-~~~~~~~~~~~~
-
-.. _working_calcjobs_options_withmpi:
-
-``withmpi``
-~~~~~~~~~~~
-
-.. _working_calcjobs_options_mpirun_extra_params:
-
-``mpirun_extra_params``
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_import_sys_environment:
-
-``import_sys_environment``
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_environment_variables:
-
-``environment_variables``
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_priority:
-
-``priority``
-~~~~~~~~~~~~
-
-.. _working_calcjobs_options_max_memory_kb:
-
-``max_memory_kb``
-~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_prepend_text:
-
-``prepend_text``
-~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_append_text:
-
-``append_text``
-~~~~~~~~~~~~~~~
 
 
 .. _working_calcjobs_launch:

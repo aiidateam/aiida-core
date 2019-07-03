@@ -74,6 +74,7 @@ class AiidaWorkchainDirective(Directive):
         self.class_name = self.arguments[0].split('(')[0]
         self.module_name = self.options['module']
         self.workchain_name = self.module_name + '.' + self.class_name
+        #import pdb; pdb.set_trace()
         self.workchain = get_object_from_string(self.workchain_name)
         self.workchain_spec = self.workchain.spec()
 

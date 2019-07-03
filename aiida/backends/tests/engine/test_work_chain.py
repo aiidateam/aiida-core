@@ -850,173 +850,173 @@ class TestWorkchain(AiidaTestCase):
         return proc.finished_steps
 
 
-class TestWorkChainAbort(AiidaTestCase):
-    """
-    Test the functionality to abort a workchain
-    """
+# class TestWorkChainAbort(AiidaTestCase):
+#     """
+#     Test the functionality to abort a workchain
+#     """
+#
+#     def setUp(self):
+#         super(TestWorkChainAbort, self).setUp()
+#         self.assertIsNone(Process.current())
+#
+#     def tearDown(self):
+#         super(TestWorkChainAbort, self).tearDown()
+#         self.assertIsNone(Process.current())
+#
+#     class AbortableWorkChain(WorkChain):
+#
+#         @classmethod
+#         def define(cls, spec):
+#             super(TestWorkChainAbort.AbortableWorkChain, cls).define(spec)
+#             spec.outline(cls.begin, cls.check)
+#
+#         def begin(self):
+#             self.pause()
+#
+#         def check(self):
+#             raise RuntimeError('should have been aborted by now')
+#
+#     def test_simple_run(self):
+#         """
+#         Run the workchain which should hit the exception and therefore end
+#         up in the EXCEPTED state
+#         """
+#         runner = get_manager().get_runner()
+#         process = TestWorkChainAbort.AbortableWorkChain()
+#
+#         @gen.coroutine
+#         def run_async():
+#             yield run_until_paused(process)
+#
+#             process.play()
+#
+#             with Capturing():
+#                 with self.assertRaises(RuntimeError):
+#                     yield process.future()
+#
+#         runner.schedule(process)
+#         runner.loop.run_sync(lambda: run_async())
+#
+#         self.assertEquals(process.node.is_finished_ok, False)
+#         self.assertEquals(process.node.is_excepted, True)
+#         self.assertEquals(process.node.is_killed, False)
+#
+#     def test_simple_kill_through_process(self):
+#         """
+#         Run the workchain for one step and then kill it by calling kill
+#         on the workchain itself. This should have the workchain end up
+#         in the KILLED state.
+#         """
+#         runner = get_manager().get_runner()
+#         process = TestWorkChainAbort.AbortableWorkChain()
+#
+#         @gen.coroutine
+#         def run_async():
+#             yield run_until_paused(process)
+#
+#             self.assertTrue(process.paused)
+#             process.kill()
+#
+#             with self.assertRaises(plumpy.ClosedError):
+#                 launch.run(process)
+#
+#         runner.schedule(process)
+#         runner.loop.run_sync(lambda: run_async())
+#
+#         self.assertEquals(process.node.is_finished_ok, False)
+#         self.assertEquals(process.node.is_excepted, False)
+#         self.assertEquals(process.node.is_killed, True)
 
-    def setUp(self):
-        super(TestWorkChainAbort, self).setUp()
-        self.assertIsNone(Process.current())
 
-    def tearDown(self):
-        super(TestWorkChainAbort, self).tearDown()
-        self.assertIsNone(Process.current())
-
-    class AbortableWorkChain(WorkChain):
-
-        @classmethod
-        def define(cls, spec):
-            super(TestWorkChainAbort.AbortableWorkChain, cls).define(spec)
-            spec.outline(cls.begin, cls.check)
-
-        def begin(self):
-            self.pause()
-
-        def check(self):
-            raise RuntimeError('should have been aborted by now')
-
-    def test_simple_run(self):
-        """
-        Run the workchain which should hit the exception and therefore end
-        up in the EXCEPTED state
-        """
-        runner = get_manager().get_runner()
-        process = TestWorkChainAbort.AbortableWorkChain()
-
-        @gen.coroutine
-        def run_async():
-            yield run_until_paused(process)
-
-            process.play()
-
-            with Capturing():
-                with self.assertRaises(RuntimeError):
-                    yield process.future()
-
-        runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())
-
-        self.assertEquals(process.node.is_finished_ok, False)
-        self.assertEquals(process.node.is_excepted, True)
-        self.assertEquals(process.node.is_killed, False)
-
-    def test_simple_kill_through_process(self):
-        """
-        Run the workchain for one step and then kill it by calling kill
-        on the workchain itself. This should have the workchain end up
-        in the KILLED state.
-        """
-        runner = get_manager().get_runner()
-        process = TestWorkChainAbort.AbortableWorkChain()
-
-        @gen.coroutine
-        def run_async():
-            yield run_until_paused(process)
-
-            self.assertTrue(process.paused)
-            process.kill()
-
-            with self.assertRaises(plumpy.ClosedError):
-                launch.run(process)
-
-        runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())
-
-        self.assertEquals(process.node.is_finished_ok, False)
-        self.assertEquals(process.node.is_excepted, False)
-        self.assertEquals(process.node.is_killed, True)
-
-
-class TestWorkChainAbortChildren(AiidaTestCase):
-    """
-    Test the functionality to abort a workchain and verify that children
-    are also aborted appropriately
-    """
-
-    def setUp(self):
-        super(TestWorkChainAbortChildren, self).setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super(TestWorkChainAbortChildren, self).tearDown()
-        self.assertIsNone(Process.current())
-
-    class SubWorkChain(WorkChain):
-
-        @classmethod
-        def define(cls, spec):
-            super(TestWorkChainAbortChildren.SubWorkChain, cls).define(spec)
-            spec.input('kill', default=Bool(False))
-            spec.outline(cls.begin, cls.check)
-
-        def begin(self):
-            """
-            If the Main should be killed, pause the child to give the Main a chance to call kill on its children
-            """
-            if self.inputs.kill:
-                self.pause()
-
-        def check(self):
-            raise RuntimeError('should have been aborted by now')
-
-    class MainWorkChain(WorkChain):
-
-        @classmethod
-        def define(cls, spec):
-            super(TestWorkChainAbortChildren.MainWorkChain, cls).define(spec)
-            spec.input('kill', default=Bool(False))
-            spec.outline(cls.submit_child, cls.check)
-
-        def submit_child(self):
-            return ToContext(child=self.submit(TestWorkChainAbortChildren.SubWorkChain, kill=self.inputs.kill))
-
-        def check(self):
-            raise RuntimeError('should have been aborted by now')
-
-    def test_simple_run(self):
-        """
-        Run the workchain which should hit the exception and therefore end
-        up in the EXCEPTED state
-        """
-        process = TestWorkChainAbortChildren.MainWorkChain()
-
-        with Capturing():
-            with self.assertRaises(RuntimeError):
-                launch.run(process)
-
-        self.assertEquals(process.node.is_finished_ok, False)
-        self.assertEquals(process.node.is_excepted, True)
-        self.assertEquals(process.node.is_killed, False)
-
-    def test_simple_kill_through_process(self):
-        """
-        Run the workchain for one step and then kill it. This should have the
-        workchain and its children end up in the KILLED state.
-        """
-        runner = get_manager().get_runner()
-        process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
-
-        @gen.coroutine
-        def run_async():
-            yield run_until_waiting(process)
-
-            process.kill()
-
-            with self.assertRaises(plumpy.KilledError):
-                yield process.future()
-
-        runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())
-
-        child = process.node.get_outgoing(link_type=LinkType.CALL_WORK).first().node
-        self.assertEquals(child.is_finished_ok, False)
-        self.assertEquals(child.is_excepted, False)
-        self.assertEquals(child.is_killed, True)
-
-        self.assertEquals(process.node.is_finished_ok, False)
-        self.assertEquals(process.node.is_excepted, False)
-        self.assertEquals(process.node.is_killed, True)
+# class TestWorkChainAbortChildren(AiidaTestCase):
+#     """
+#     Test the functionality to abort a workchain and verify that children
+#     are also aborted appropriately
+#     """
+#
+#     def setUp(self):
+#         super(TestWorkChainAbortChildren, self).setUp()
+#         self.assertIsNone(Process.current())
+#
+#     def tearDown(self):
+#         super(TestWorkChainAbortChildren, self).tearDown()
+#         self.assertIsNone(Process.current())
+#
+#     class SubWorkChain(WorkChain):
+#
+#         @classmethod
+#         def define(cls, spec):
+#             super(TestWorkChainAbortChildren.SubWorkChain, cls).define(spec)
+#             spec.input('kill', default=Bool(False))
+#             spec.outline(cls.begin, cls.check)
+#
+#         def begin(self):
+#             """
+#             If the Main should be killed, pause the child to give the Main a chance to call kill on its children
+#             """
+#             if self.inputs.kill:
+#                 self.pause()
+#
+#         def check(self):
+#             raise RuntimeError('should have been aborted by now')
+#
+#     class MainWorkChain(WorkChain):
+#
+#         @classmethod
+#         def define(cls, spec):
+#             super(TestWorkChainAbortChildren.MainWorkChain, cls).define(spec)
+#             spec.input('kill', default=Bool(False))
+#             spec.outline(cls.submit_child, cls.check)
+#
+#         def submit_child(self):
+#             return ToContext(child=self.submit(TestWorkChainAbortChildren.SubWorkChain, kill=self.inputs.kill))
+#
+#         def check(self):
+#             raise RuntimeError('should have been aborted by now')
+#
+#     def test_simple_run(self):
+#         """
+#         Run the workchain which should hit the exception and therefore end
+#         up in the EXCEPTED state
+#         """
+#         process = TestWorkChainAbortChildren.MainWorkChain()
+#
+#         with Capturing():
+#             with self.assertRaises(RuntimeError):
+#                 launch.run(process)
+#
+#         self.assertEquals(process.node.is_finished_ok, False)
+#         self.assertEquals(process.node.is_excepted, True)
+#         self.assertEquals(process.node.is_killed, False)
+#
+#     def test_simple_kill_through_process(self):
+#         """
+#         Run the workchain for one step and then kill it. This should have the
+#         workchain and its children end up in the KILLED state.
+#         """
+#         runner = get_manager().get_runner()
+#         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
+#
+#         @gen.coroutine
+#         def run_async():
+#             yield run_until_waiting(process)
+#
+#             process.kill()
+#
+#             with self.assertRaises(plumpy.KilledError):
+#                 yield process.future()
+#
+#         runner.schedule(process)
+#         runner.loop.run_sync(lambda: run_async())
+#
+#         child = process.node.get_outgoing(link_type=LinkType.CALL_WORK).first().node
+#         self.assertEquals(child.is_finished_ok, False)
+#         self.assertEquals(child.is_excepted, False)
+#         self.assertEquals(child.is_killed, True)
+#
+#         self.assertEquals(process.node.is_finished_ok, False)
+#         self.assertEquals(process.node.is_excepted, False)
+#         self.assertEquals(process.node.is_killed, True)
 
 
 class TestImmutableInputWorkchain(AiidaTestCase):
@@ -1346,88 +1346,88 @@ class TestWorkChainExpose(AiidaTestCase):
         launch.run(Child)
 
 
-class TestWorkChainMisc(AiidaTestCase):
+# class TestWorkChainMisc(AiidaTestCase):
+#
+#     class PointlessWorkChain(WorkChain):
+#
+#         @classmethod
+#         def define(cls, spec):
+#             super(TestWorkChainMisc.PointlessWorkChain, cls).define(spec)
+#             spec.outline(cls.return_dict)
+#
+#         def return_dict(self):
+#             """Only return a dictionary, which should be allowed, even though it accomplishes nothing."""
+#             return {}
+#
+#     class IllegalSubmitWorkChain(WorkChain):
+#
+#         @classmethod
+#         def define(cls, spec):
+#             super(TestWorkChainMisc.IllegalSubmitWorkChain, cls).define(spec)
+#             spec.outline(cls.illegal_submit)
+#
+#         def illegal_submit(self):
+#             """Only return a dictionary, which should be allowed, even though it accomplishes nothing."""
+#             from aiida.engine import submit
+#             submit(TestWorkChainMisc.PointlessWorkChain)
+#
+#     def test_run_pointless_workchain(self):
+#         """Running the pointless workchain should not incur any exceptions"""
+#         launch.run(TestWorkChainMisc.PointlessWorkChain)
+#
+#     def test_global_submit_raises(self):
+#         """Using top-level submit should raise."""
+#         with self.assertRaises(exceptions.InvalidOperation):
+#             launch.run(TestWorkChainMisc.IllegalSubmitWorkChain)
 
-    class PointlessWorkChain(WorkChain):
 
-        @classmethod
-        def define(cls, spec):
-            super(TestWorkChainMisc.PointlessWorkChain, cls).define(spec)
-            spec.outline(cls.return_dict)
-
-        def return_dict(self):
-            """Only return a dictionary, which should be allowed, even though it accomplishes nothing."""
-            return {}
-
-    class IllegalSubmitWorkChain(WorkChain):
-
-        @classmethod
-        def define(cls, spec):
-            super(TestWorkChainMisc.IllegalSubmitWorkChain, cls).define(spec)
-            spec.outline(cls.illegal_submit)
-
-        def illegal_submit(self):
-            """Only return a dictionary, which should be allowed, even though it accomplishes nothing."""
-            from aiida.engine import submit
-            submit(TestWorkChainMisc.PointlessWorkChain)
-
-    def test_run_pointless_workchain(self):
-        """Running the pointless workchain should not incur any exceptions"""
-        launch.run(TestWorkChainMisc.PointlessWorkChain)
-
-    def test_global_submit_raises(self):
-        """Using top-level submit should raise."""
-        with self.assertRaises(exceptions.InvalidOperation):
-            launch.run(TestWorkChainMisc.IllegalSubmitWorkChain)
-
-
-class TestDefaultUniqueness(AiidaTestCase):
-    """Test that default inputs of exposed nodes will get unique UUIDS."""
-
-    class Parent(WorkChain):
-
-        @classmethod
-        def define(cls, spec):
-            super(TestDefaultUniqueness.Parent, cls).define(spec)
-            spec.expose_inputs(TestDefaultUniqueness.Child, namespace='child_one')
-            spec.expose_inputs(TestDefaultUniqueness.Child, namespace='child_two')
-            spec.outline(cls.do_run)
-
-        def do_run(self):
-            inputs = self.exposed_inputs(TestDefaultUniqueness.Child, namespace='child_one')
-            child_one = self.submit(TestDefaultUniqueness.Child, **inputs)
-            inputs = self.exposed_inputs(TestDefaultUniqueness.Child, namespace='child_two')
-            child_two = self.submit(TestDefaultUniqueness.Child, **inputs)
-            return ToContext(workchain_child_one=child_one, workchain_child_two=child_two)
-
-    class Child(WorkChain):
-
-        @classmethod
-        def define(cls, spec):
-            super(TestDefaultUniqueness.Child, cls).define(spec)
-            spec.input('a', valid_type=Bool, default=Bool(True))
-
-        def run(self):
-            pass
-
-    def test_unique_default_inputs(self):
-        """
-        The default value for the Child will be constructed at import time, which will be an unstored Bool node with a
-        given ID. When `expose_inputs` is called on the ProcessSpec of the Parent workchain, for the Child workchain,
-        the ports of the Child will be deepcopied into the portnamespace of the Parent, in this case twice, into
-        different namespaces. The port in each namespace will have a deepcopied version of the unstored Bool node. When
-        the Parent workchain is now called without inputs, both those nodes will be stored and used as inputs, but they
-        will have the same UUID, unless the deepcopy will have guaranteed that a new UUID is generated for unstored
-        nodes.
-        """
-        inputs = {'child_one': {}, 'child_two': {}}
-        result, node = launch.run.get_node(TestDefaultUniqueness.Parent, **inputs)
-
-        nodes = node.get_incoming().all_nodes()
-        uuids = set([n.uuid for n in nodes])
-
-        # Trying to load one of the inputs through the UUID should fail,
-        # as both `child_one.a` and `child_two.a` should have the same UUID.
-        node = load_node(uuid=node.get_incoming().get_node_by_label('child_one__a').uuid)
-        self.assertEquals(
-            len(uuids), len(nodes), 'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes)))
+# class TestDefaultUniqueness(AiidaTestCase):
+#     """Test that default inputs of exposed nodes will get unique UUIDS."""
+#
+#     class Parent(WorkChain):
+#
+#         @classmethod
+#         def define(cls, spec):
+#             super(TestDefaultUniqueness.Parent, cls).define(spec)
+#             spec.expose_inputs(TestDefaultUniqueness.Child, namespace='child_one')
+#             spec.expose_inputs(TestDefaultUniqueness.Child, namespace='child_two')
+#             spec.outline(cls.do_run)
+#
+#         def do_run(self):
+#             inputs = self.exposed_inputs(TestDefaultUniqueness.Child, namespace='child_one')
+#             child_one = self.submit(TestDefaultUniqueness.Child, **inputs)
+#             inputs = self.exposed_inputs(TestDefaultUniqueness.Child, namespace='child_two')
+#             child_two = self.submit(TestDefaultUniqueness.Child, **inputs)
+#             return ToContext(workchain_child_one=child_one, workchain_child_two=child_two)
+#
+#     class Child(WorkChain):
+#
+#         @classmethod
+#         def define(cls, spec):
+#             super(TestDefaultUniqueness.Child, cls).define(spec)
+#             spec.input('a', valid_type=Bool, default=Bool(True))
+#
+#         def run(self):
+#             pass
+#
+#     def test_unique_default_inputs(self):
+#         """
+#         The default value for the Child will be constructed at import time, which will be an unstored Bool node with a
+#         given ID. When `expose_inputs` is called on the ProcessSpec of the Parent workchain, for the Child workchain,
+#         the ports of the Child will be deepcopied into the portnamespace of the Parent, in this case twice, into
+#         different namespaces. The port in each namespace will have a deepcopied version of the unstored Bool node. When
+#         the Parent workchain is now called without inputs, both those nodes will be stored and used as inputs, but they
+#         will have the same UUID, unless the deepcopy will have guaranteed that a new UUID is generated for unstored
+#         nodes.
+#         """
+#         inputs = {'child_one': {}, 'child_two': {}}
+#         result, node = launch.run.get_node(TestDefaultUniqueness.Parent, **inputs)
+#
+#         nodes = node.get_incoming().all_nodes()
+#         uuids = set([n.uuid for n in nodes])
+#
+#         # Trying to load one of the inputs through the UUID should fail,
+#         # as both `child_one.a` and `child_two.a` should have the same UUID.
+#         node = load_node(uuid=node.get_incoming().get_node_by_label('child_one__a').uuid)
+#         self.assertEquals(
+#             len(uuids), len(nodes), 'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes)))

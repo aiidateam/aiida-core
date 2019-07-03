@@ -42,19 +42,18 @@ def rehash(nodes, entry_point):
 
     if nodes:
         to_hash = [(node,) for node in nodes if isinstance(node, entry_point)]
+        num_nodes = len(to_hash)
     else:
         builder = QueryBuilder()
         builder.append(entry_point, tag='node')
         to_hash = builder.all()
+        num_nodes = builder.count()
 
     if not to_hash:
         echo.echo_critical('no matching nodes found')
 
-    count = 0
-
     with click.progressbar(to_hash, label="Rehashing Nodes:") as iter_hash:
-        for i, (node,) in enumerate(iter_hash):
+        for node, in iter_hash:
             node.rehash()
 
-    echo.echo('')
-    echo.echo_success('{} nodes re-hashed'.format(count))
+    echo.echo_success('{} nodes re-hashed'.format(num_nodes))

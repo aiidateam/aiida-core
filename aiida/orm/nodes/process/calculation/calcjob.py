@@ -18,6 +18,7 @@ import six
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
+from aiida.common.links import LinkType
 from aiida.common.warnings import AiidaDeprecationWarning
 
 from .calculation import CalculationNode
@@ -103,6 +104,32 @@ class CalcJobNode(CalculationNode):
             'max_wallclock_seconds',
             'max_memory_kb',
         )
+
+    def _get_objects_to_hash(self):
+        """Return a list of objects which should be included in the hash.
+
+        This method is purposefully overridden from the base `Node` class, because we do not want to include the
+        repository folder in the hash. The reason is that the hash of this node is computed in the `store` method, at
+        which point the input files that will be stored in the repository have not yet been generated. Including these
+        anyway in the computation of the hash would mean that the hash of the node would change as soon as the process
+        has started and the input files have been written to the repository.
+        """
+        from importlib import import_module
+        objects = [
+            import_module(self.__module__.split('.', 1)[0]).__version__,
+            {
+                key: val
+                for key, val in self.attributes_items()
+                if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
+            },
+            self.computer.uuid if self.computer is not None else None,
+            {
+                entry.link_label: entry.node.get_hash()
+                for entry in self.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
+                if entry.link_label not in self._hash_ignored_inputs
+            }
+        ]
+        return objects
 
     def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):  # pylint: disable=arguments-differ
         return super(CalcJobNode, self).get_hash(

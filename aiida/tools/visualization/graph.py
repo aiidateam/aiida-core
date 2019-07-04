@@ -173,13 +173,10 @@ def pstate_node_styles(node):
     if isinstance(node, ProcessNode):
         # style process node, based on success/failure of process
         if node.is_failed or node.is_excepted or node.is_killed:
-            node_style['penwidth'] = "3.0"
             node_style['fillcolor'] = '#de707fff'  # red
         elif node.is_finished_ok:
-            node_style['penwidth'] = "3.0"
             node_style['fillcolor'] = '#8cd499ff'  # green
         else:  # specifically look for waiting state?
-            node_style['penwidth'] = "3.0"
             node_style['fillcolor'] = '#e38851ff'  # orange
 
     return node_style

@@ -270,10 +270,10 @@ class TestVisGraph(AiidaTestCase):
                 N{pd0} [label="Dict ({pd0})" pencolor=black shape=rectangle]
                 N{calc1} [label="CalcJobNode ({calc1})
                     State: finished
-                    Exit Code: 0" fillcolor="#8cd499ff" pencolor=black penwidth=3.0 shape=ellipse style=filled]
+                    Exit Code: 0" fillcolor="#8cd499ff" pencolor=black shape=ellipse style=filled]
                 N{pd0} -> N{calc1} [color="#000000" style=solid]
                 N{wc1} [label="WorkChainNode ({wc1})
-                    State: running" fillcolor="#e38851ff" pencolor=black penwidth=3.0 shape=polygon sides=6 style=filled]
+                    State: running" fillcolor="#e38851ff" pencolor=black shape=polygon sides=6 style=filled]
                 N{pd0} -> N{wc1} [color="#000000" style=dashed]
                 N{rd1} [label="RemoteData ({rd1})
                     @localhost" pencolor=black shape=rectangle]
@@ -284,7 +284,7 @@ class TestVisGraph(AiidaTestCase):
                 N{wc1} -> N{pd3} [color="#000000" style=dashed]
                 N{calcf1} [label="CalcFunctionNode ({calcf1})
                     State: finished
-                    Exit Code: 200" fillcolor="#de707fff" pencolor=black penwidth=3.0 shape=ellipse style=filled]
+                    Exit Code: 200" fillcolor="#de707fff" pencolor=black shape=ellipse style=filled]
                 N{wc1} -> N{calcf1} [color="#000000" style=dotted]
                 N{wc1} -> N{calc1} [color="#000000" style=dotted]
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]

@@ -60,7 +60,6 @@
         aiida/backends/sqlalchemy/models/node.py|
         aiida/backends/sqlalchemy/models/settings.py|
         aiida/backends/sqlalchemy/models/user.py|
-        aiida/backends/sqlalchemy/models/utils.py|
         aiida/backends/sqlalchemy/queries.py|
         aiida/backends/sqlalchemy/tests/test_generic.py|
         aiida/backends/sqlalchemy/tests/__init__.py|
@@ -128,7 +127,6 @@
         aiida/plugins/entry.py|
         aiida/plugins/info.py|
         aiida/plugins/registry.py|
-        aiida/plugins/utils.py|
         aiida/schedulers/datastructures.py|
         aiida/schedulers/plugins/direct.py|
         aiida/schedulers/plugins/lsf.py|

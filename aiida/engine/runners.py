@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cyclic-import,global-statement
+# pylint: disable=global-statement
 """Runners that can run and submit processes."""
 from __future__ import division
 from __future__ import print_function
@@ -22,9 +22,10 @@ import plumpy
 
 from aiida.common import exceptions
 from aiida.orm import load_node
+from aiida.plugins.utils import PluginVersionProvider
+
 from .processes import futures
 from .processes.calcjobs import manager
-from .utils import instantiate_process
 from . import transports
 from . import utils
 
@@ -36,7 +37,7 @@ ResultAndNode = collections.namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPk = collections.namedtuple('ResultAndPk', ['result', 'pk'])
 
 
-class Runner(object):  # pylint: disable=useless-object-inheritance
+class Runner(object):  # pylint: disable=useless-object-inheritance,too-many-public-methods
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
     _persister = None
@@ -66,6 +67,7 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         self._transport = transports.TransportQueue(self._loop)
         self._job_manager = manager.JobManager(self._transport)
         self._persister = persister
+        self._plugin_version_provider = PluginVersionProvider()
 
         if communicator is not None:
             self._communicator = communicator
@@ -109,6 +111,10 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         return self._communicator
 
     @property
+    def plugin_version_provider(self):
+        return self._plugin_version_provider
+
+    @property
     def job_manager(self):
         return self._job_manager
 
@@ -147,6 +153,10 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         self.stop()
         self._closed = True
 
+    def instantiate_process(self, process, *args, **inputs):
+        from .utils import instantiate_process
+        return instantiate_process(self, process, *args, **inputs)
+
     def submit(self, process, *args, **inputs):
         """
         Submit the process with the supplied inputs to this runner immediately returning control to
@@ -159,7 +169,7 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
-        process = instantiate_process(self, process, *args, **inputs)
+        process = self.instantiate_process(process, *args, **inputs)
 
         if not process.metadata.store_provenance:
             raise exceptions.InvalidOperation('cannot submit a process with `store_provenance=False`')
@@ -187,7 +197,7 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
-        process = instantiate_process(self, process, *args, **inputs)
+        process = self.instantiate_process(process, *args, **inputs)
         self.loop.add_callback(process.step_until_terminated)
         return process.node
 
@@ -207,7 +217,7 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
             return result, node
 
         with utils.loop_scope(self.loop):
-            process = instantiate_process(self, process, *args, **inputs)
+            process = self.instantiate_process(process, *args, **inputs)
 
             def kill_process(_num, _frame):
                 """Send the kill signal to the process in the current scope."""

@@ -633,6 +633,9 @@ class Process(plumpy.Process):
 
     def _setup_metadata(self):
         """Store the metadata on the ProcessNode."""
+        version_info = self.runner.plugin_version_provider.get_version_info(self)
+        self.node.set_attribute_many(version_info)
+
         for name, metadata in self.metadata.items():
             if name in ['store_provenance', 'dry_run', 'call_link_label']:
                 continue

@@ -7,102 +7,71 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-utilities for:
-
-* managing the registry cache folder
-* downloading json files
-* pickling to the registry cache folder
-"""
+"""Utilities dealing with plugins and entry points."""
 from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-import io
+
+from importlib import import_module
+
+from aiida.common import AIIDA_LOGGER
+
+__all__ = ('PluginVersionProvider',)
+
+KEY_VERSION_ROOT = 'version'
+KEY_VERSION_CORE = 'core'  # The version of `aiida-core`
+KEY_VERSION_PLUGIN = 'plugin'  # The version of the plugin top level module, e.g. `aiida-quantumespresso`
 
 
-def registry_cache_folder_name():
-    """
-    return the name of the subfolder of aiida_dir where registry caches are stored.
-    """
-    return 'plugin_registry_cache'
+class PluginVersionProvider(object):
+    """Utility class that determines version information about a given plugin resource."""
 
+    # pylint: disable=useless-object-inheritance
 
-def registry_cache_folder_path():
-    """
-    return the fully resolved path to the cache folder
-    """
-    from os import path as osp
-    from aiida.manage.configuration import get_config
-    config = get_config()
-    cache_dir = registry_cache_folder_name()
-    return osp.join(config.dirpath, cache_dir)
+    def __init__(self):
+        self._cache = {}
+        self._logger = AIIDA_LOGGER.getChild('plugin_version_provider')
 
+    @property
+    def logger(self):
+        return self._logger
 
-def registry_cache_folder_exists():
-    """
-    return True if the cache folder exists, False if not
-    """
-    from os import path as osp
-    cache_dir = registry_cache_folder_path()
-    return osp.isdir(cache_dir)
+    def get_version_info(self, plugin):
+        """Get the version information for a given plugin.
 
+        .. note::
 
-def safe_create_registry_cache_folder():
-    """
-    creates the registry cache folder if it does not exist
-    """
-    from os import mkdir
-    if not registry_cache_folder_exists():
-        cache_dir = registry_cache_folder_path()
-        mkdir(cache_dir)
+            This container will keep a cache, so if this function was already called for the given ``plugin`` before
+            for this instance, the result computer at last invocation will be returned.
 
+        :param plugin: a class or function
+        :return: dictionary with the `version.core` and optionally `version.plugin` if it could be determined.
+        """
+        from aiida import __version__ as version_core
 
-def pickle_to_registry_cache_folder(obj, fname):
-    """
-    pickles a python object to the registry cache folder
-    """
-    from six.moves.cPickle import dump as pdump
-    from os import path as osp
-    safe_create_registry_cache_folder()
-    cache_dir = registry_cache_folder_path()
-    fpath = osp.join(cache_dir, fname)
-    with io.open(fpath, 'w', encoding='utf8') as cache_file:
-        pdump(obj, cache_file)
+        # If the `plugin` already exists in the cache, simply return it. On purpose we do not verify whether the version
+        # information is completed. If it failed the first time, we don't retry. If the failure was temporarily, whoever
+        # holds a reference to this instance can simply reconstruct it to start with a clean slate.
+        if plugin in self._cache:
+            return self._cache[plugin]
 
+        self._cache[plugin] = {
+            KEY_VERSION_ROOT: {
+                KEY_VERSION_CORE: version_core,
+            }
+        }
 
-def unpickle_from_registry_cache_folder(fname):
-    """
-    looks for fname in the registry cache folder and tries to unpickle from it
-    """
-    from six.moves.cPickle import load as pload
-    from os import path as osp
-    cache_dir = registry_cache_folder_path()
-    fpath = osp.join(cache_dir, fname)
-    with io.open(fpath, 'r', encoding='utf8') as cache:
-        return pload(cache)
+        try:
+            parent_module_name = plugin.__module__.split('.')[0]
+            parent_module = import_module(parent_module_name)
+        except (AttributeError, IndexError, ImportError):
+            self.logger.debug('could not determine the top level module for plugin: {}'.format(plugin))
+            return self._cache[plugin]
 
+        try:
+            version_plugin = parent_module.__version__
+        except AttributeError:
+            self.logger.debug('parent module does not define `__version__` attribute for plugin: {}'.format(plugin))
+            return self._cache[plugin]
 
-def load_json_from_url(url, errorhandler=None):
-    """
-    downloads a json file and returns the corresponding python dict
-    """
-    import requests
-    reply = requests.get(url)
-    res = None
-    try:
-        res = reply.json()
-    except Exception as e:
-        if errorhandler:
-            res = errorhandler(e)
-        else:
-            raise e
-    return res
+        self._cache[plugin][KEY_VERSION_ROOT][KEY_VERSION_PLUGIN] = version_plugin
 
-
-def value_error_msg(e):
-    msg = 'The AiiDA plugin registry seems to be temporarily unavailable.'
-    msg += ' Please try again later. If the problem persists,'
-    msg += ' look at github.com/aiidateam/aiida-registry and file an issue'
-    msg += ' if there is none yet.'
-    return msg
+        return self._cache[plugin]

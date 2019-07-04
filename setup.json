@@ -27,7 +27,7 @@
     "six==1.12.0",
     "psutil==5.5.1",
     "mock==2.0.0",
-    "numpy==1.16.1",
+    "numpy==1.16.4",
     "SQLAlchemy==1.3.3",
     "SQLAlchemy-Utils==0.33.11",
     "alembic==1.0.7",

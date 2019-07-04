@@ -16,6 +16,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.common import AttributeDict
+from aiida.engine import ProcessState
 from aiida.orm.utils.links import LinkPair
 from aiida.tools.visualization import graph as graph_mod
 
@@ -41,6 +42,7 @@ class TestVisGraph(AiidaTestCase):
         pd1.store()
 
         wc1 = orm.WorkChainNode()
+        wc1.set_process_state(ProcessState.RUNNING)
         wc1.add_incoming(pd0, link_type=LinkType.INPUT_WORK, link_label='input1')
         wc1.add_incoming(pd1, link_type=LinkType.INPUT_WORK, link_label='input2')
         wc1.store()
@@ -49,6 +51,8 @@ class TestVisGraph(AiidaTestCase):
         calc1.computer = self.computer
         calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc1.label = "calc1"
+        calc1.set_process_state(ProcessState.FINISHED)
+        calc1.set_exit_status(0)
         calc1.add_incoming(pd0, link_type=LinkType.INPUT_CALC, link_label='input1')
         calc1.add_incoming(pd1, link_type=LinkType.INPUT_CALC, link_label='input2')
         calc1.add_incoming(wc1, link_type=LinkType.CALL_CALC, link_label='call1')
@@ -66,8 +70,9 @@ class TestVisGraph(AiidaTestCase):
         pd2.store()
 
         calcf1 = orm.CalcFunctionNode()
-
         calcf1.label = "calcf1"
+        calcf1.set_process_state(ProcessState.FINISHED)
+        calcf1.set_exit_status(200)
         calcf1.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='input1')
         calcf1.add_incoming(pd2, link_type=LinkType.INPUT_CALC, link_label='input2')
         calcf1.add_incoming(wc1, link_type=LinkType.CALL_CALC, link_label='call2')
@@ -215,27 +220,76 @@ class TestVisGraph(AiidaTestCase):
 
         # print()
         # print(graph.graphviz.source)
+        # graph.graphviz.render("test_graphviz", cleanup=True)
 
         expected = """\
         digraph {{
-                N{pd0} [label="Dict ({pd0})" fillcolor="#FFFFF0" pencolor=black shape=ellipse style=filled]
-                N{calc1} [label="CalcJobNode ({calc1})" fillcolor="#87CEFA" pencolor=black shape=rectangle style=filled]
+                N{pd0} [label="Dict ({pd0})" fillcolor="#8cd499ff" shape=ellipse style=filled]
+                N{calc1} [label="CalcJobNode ({calc1})
+                    State: finished
+                    Exit Code: 0" fillcolor="#de707fff" shape=rectangle style=filled]
                 N{pd0} -> N{calc1} [color="#000000" style=solid]
-                N{wc1} [label="WorkChainNode ({wc1})" fillcolor="#FFA500" pencolor=black shape=octagon style=filled]
-                N{pd0} -> N{wc1} [color="#0000FF" style=dashed]
+                N{wc1} [label="WorkChainNode ({wc1})
+                    State: running" fillcolor="#e38851ff" shape=rectangle style=filled]
+                N{pd0} -> N{wc1} [color="#000000" style=dashed]
                 N{rd1} [label="RemoteData ({rd1})
-        @localhost" fillcolor="#FFFFF0" pencolor=black shape=ellipse style=filled]
-                N{calc1} -> N{rd1} [color="#006400" style=solid]
-                N{fd1} [label="FolderData ({fd1})" fillcolor="#FFFFF0" pencolor=black shape=ellipse style=filled]
-                N{wc1} -> N{fd1} [color="#006400" style=dashed]
-                N{pd3} [label="Dict ({pd3})" fillcolor="#FFFFF0" pencolor=black shape=ellipse style=filled]
-                N{wc1} -> N{pd3} [color="#006400" style=dashed]
-                N{calcf1} [label="CalcFunctionNode ({calcf1})" fillcolor="#87CEFA" pencolor=black shape=parallelogram style=filled]
+                    @localhost" fillcolor="#8cd499ff" shape=ellipse style=filled]
+                N{calc1} -> N{rd1} [color="#000000" style=solid]
+                N{fd1} [label="FolderData ({fd1})" fillcolor="#8cd499ff" shape=ellipse style=filled]
+                N{wc1} -> N{fd1} [color="#000000" style=dashed]
+                N{pd3} [label="Dict ({pd3})" fillcolor="#8cd499ff" shape=ellipse style=filled]
+                N{wc1} -> N{pd3} [color="#000000" style=dashed]
+                N{calcf1} [label="CalcFunctionNode ({calcf1})
+                    State: finished
+                    Exit Code: 200" fillcolor="#de707f77" shape=rectangle style=filled]
                 N{wc1} -> N{calcf1} [color="#000000" style=dotted]
                 N{wc1} -> N{calc1} [color="#000000" style=dotted]
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
-                N{calcf1} -> N{fd1} [color="#006400" style=solid]
-                N{calcf1} -> N{pd3} [color="#006400" style=solid]
+                N{calcf1} -> N{fd1} [color="#000000" style=solid]
+                N{calcf1} -> N{pd3} [color="#000000" style=solid]
+        }}""".format(**{k: v.pk for k, v in nodes.items()})
+
+        # dedent before comparison
+        self.assertEqual(
+            sorted([l.strip() for l in graph.graphviz.source.splitlines()]),
+            sorted([l.strip() for l in expected.splitlines()]))
+
+    def test_graph_graphviz_source_pstate(self):
+        """ test the output of graphviz source, with the `pstate_node_styles` function """
+        nodes = self.create_provenance()
+
+        graph = graph_mod.Graph(node_style_fn=graph_mod.pstate_node_styles)
+        graph.recurse_descendants(nodes.pd0)
+
+        # print()
+        # print(graph.graphviz.source)
+        # graph.graphviz.render("test_graphviz_pstate", cleanup=True)
+
+        expected = """\
+        digraph {{
+                N{pd0} [label="Dict ({pd0})" pencolor=black shape=rectangle]
+                N{calc1} [label="CalcJobNode ({calc1})
+                    State: finished
+                    Exit Code: 0" fillcolor="#8cd499ff" pencolor=black penwidth=3.0 shape=ellipse style=filled]
+                N{pd0} -> N{calc1} [color="#000000" style=solid]
+                N{wc1} [label="WorkChainNode ({wc1})
+                    State: running" fillcolor="#e38851ff" pencolor=black penwidth=3.0 shape=polygon sides=6 style=filled]
+                N{pd0} -> N{wc1} [color="#000000" style=dashed]
+                N{rd1} [label="RemoteData ({rd1})
+                    @localhost" pencolor=black shape=rectangle]
+                N{calc1} -> N{rd1} [color="#000000" style=solid]
+                N{fd1} [label="FolderData ({fd1})" pencolor=black shape=rectangle]
+                N{wc1} -> N{fd1} [color="#000000" style=dashed]
+                N{pd3} [label="Dict ({pd3})" pencolor=black shape=rectangle]
+                N{wc1} -> N{pd3} [color="#000000" style=dashed]
+                N{calcf1} [label="CalcFunctionNode ({calcf1})
+                    State: finished
+                    Exit Code: 200" fillcolor="#de707fff" pencolor=black penwidth=3.0 shape=ellipse style=filled]
+                N{wc1} -> N{calcf1} [color="#000000" style=dotted]
+                N{wc1} -> N{calc1} [color="#000000" style=dotted]
+                N{rd1} -> N{calcf1} [color="#000000" style=solid]
+                N{calcf1} -> N{fd1} [color="#000000" style=solid]
+                N{calcf1} -> N{pd3} [color="#000000" style=solid]
         }}""".format(**{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison

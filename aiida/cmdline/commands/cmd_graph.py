@@ -63,7 +63,7 @@ def generate(root_node, link_types, ancestor_depth, descendant_depth, process_ou
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
     """
     # pylint: disable=too-many-arguments
-    from aiida.tools.visualization.graph import Graph
+    from aiida.tools.visualization import Graph
     print_func = echo.echo_info if verbose else None
     link_types = {"all": (), "logic": ("input_work", "return"), "data": ("input_calc", "create")}[link_types]
 

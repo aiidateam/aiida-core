@@ -51,6 +51,7 @@ before_install:
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install --upgrade pip wheel setuptools coveralls
+    - pip install "numpy==1.16.4"  # see https://github.com/materialsproject/pymatgen/issues/1520
     # Install AiiDA with some optional dependencies
     - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
 

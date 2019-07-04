@@ -88,6 +88,7 @@ def run_api(flask_app, flask_api, **kwargs):
 
     # Check if the app has to be hooked-up or just returned
     if hookup:
+        print(" * REST API running on http://{}:{}{}".format(hostname, port, confs.PREFIX))
         api.app.run(debug=debug, host=hostname, port=int(port), threaded=True)
 
     else:

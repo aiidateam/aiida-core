@@ -330,7 +330,7 @@ class Group(entities.Entity):
         return {
             "description": {
                 "display_name": "Description",
-                "help_text": "short description of the Computer",
+                "help_text": "Short description of the group",
                 "is_foreign_key": False,
                 "type": "str"
             },
@@ -348,7 +348,7 @@ class Group(entities.Entity):
             },
             "type_string": {
                 "display_name": "Type_string",
-                "help_text": "Code type",
+                "help_text": "Type of the group",
                 "is_foreign_key": False,
                 "type": "str"
             },

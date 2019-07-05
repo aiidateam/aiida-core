@@ -101,23 +101,23 @@ def default_node_styles(node):
             "fillcolor": "#4ca4b9aa",  # blue
         },
         "process.calculation.calcjob.CalcJobNode.": {
-            "style": "filled",
             "shape": "rectangle",
+            "style": "filled",
             "fillcolor": "#de707fff"  # red
         },
         "process.calculation.calcfunction.CalcFunctionNode.": {
-            "style": "filled",
             "shape": "rectangle",
+            "style": "filled",
             "fillcolor": "#de707f77"  # red
         },
         "process.workflow.workchain.WorkChainNode.": {
-            "style": "filled",
             "shape": "rectangle",
+            "style": "filled",
             "fillcolor": "#e38851ff"  # orange
         },
         "process.workflow.workfunction.WorkFunctionNode.": {
-            "style": "rectangle",
             "shape": "rectangle",
+            "style": "filled",
             "fillcolor": "#e38851ff"  # orange
         }
     }
@@ -141,28 +141,28 @@ def pstate_node_styles(node):
 
     process_map = {
         "process.calculation.calcjob.CalcJobNode.": {
-            "style": "filled",
             "shape": "ellipse",
+            "style": "filled",
             "pencolor": "black",
             "fillcolor": "#ffffffff"
         },
         "process.calculation.calcfunction.CalcFunctionNode.": {
-            "style": "filled",
             "shape": "ellipse",
+            "style": "filled",
             "pencolor": "black",
             "fillcolor": "#ffffffff"
         },
         "process.workflow.workchain.WorkChainNode.": {
-            "style": "filled",
             "shape": "polygon",
             "sides": "6",
+            "style": "filled",
             "pencolor": "black",
             "fillcolor": "#ffffffff"
         },
         "process.workflow.workfunction.WorkFunctionNode.": {
-            "style": "ellipse",
             "shape": "polygon",
             "sides": "6",
+            "style": "filled",
             "pencolor": "black",
             "fillcolor": "#ffffffff"
         }

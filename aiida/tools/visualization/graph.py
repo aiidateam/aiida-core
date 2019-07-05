@@ -91,7 +91,8 @@ def default_node_styles(node):
         default = {
             "shape": "ellipse",
             "style": "filled",
-            "fillcolor": "#8cd499ff",  # green
+            "fillcolor": "#8cd499ff",  # green,
+            "penwidth": 0
         }
 
     node_type_map = {
@@ -99,26 +100,31 @@ def default_node_styles(node):
             "shape": "ellipse",
             "style": "filled",
             "fillcolor": "#4ca4b9aa",  # blue
+            "penwidth": 0
         },
         "process.calculation.calcjob.CalcJobNode.": {
             "shape": "rectangle",
             "style": "filled",
-            "fillcolor": "#de707fff"  # red
+            "fillcolor": "#de707fff",  # red
+            "penwidth": 0
         },
         "process.calculation.calcfunction.CalcFunctionNode.": {
             "shape": "rectangle",
             "style": "filled",
-            "fillcolor": "#de707f77"  # red
+            "fillcolor": "#de707f77",  # red
+            "penwidth": 0
         },
         "process.workflow.workchain.WorkChainNode.": {
             "shape": "rectangle",
             "style": "filled",
-            "fillcolor": "#e38851ff"  # orange
+            "fillcolor": "#e38851ff",  # orange
+            "penwidth": 0
         },
         "process.workflow.workfunction.WorkFunctionNode.": {
             "shape": "rectangle",
             "style": "filled",
-            "fillcolor": "#e38851ff"  # orange
+            "fillcolor": "#e38851ff",  # orange
+            "penwidth": 0
         }
     }
 
@@ -143,27 +149,31 @@ def pstate_node_styles(node):
         "process.calculation.calcjob.CalcJobNode.": {
             "shape": "ellipse",
             "style": "filled",
-            "pencolor": "black",
+            # "pencolor": "black",
+            "penwidth": 0,
             "fillcolor": "#ffffffff"
         },
         "process.calculation.calcfunction.CalcFunctionNode.": {
             "shape": "ellipse",
             "style": "filled",
-            "pencolor": "black",
+            # "pencolor": "black",
+            "penwidth": 0,
             "fillcolor": "#ffffffff"
         },
         "process.workflow.workchain.WorkChainNode.": {
             "shape": "polygon",
             "sides": "6",
             "style": "filled",
-            "pencolor": "black",
+            # "pencolor": "black",
+            "penwidth": 0,
             "fillcolor": "#ffffffff"
         },
         "process.workflow.workfunction.WorkFunctionNode.": {
             "shape": "polygon",
             "sides": "6",
             "style": "filled",
-            "pencolor": "black",
+            # "pencolor": "black",
+            "penwidth": 0,
             "fillcolor": "#ffffffff"
         }
     }

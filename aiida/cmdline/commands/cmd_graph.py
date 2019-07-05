@@ -62,8 +62,8 @@ def verdi_graph():
 @click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
 @click.option('-s', '--show', is_flag=True, help="Open the rendered result with the default application.")
 @decorators.with_dbenv()
-def generate(root_node, link_types, id_label, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
-             output_format, show):
+def generate(root_node, link_types, id_label, ancestor_depth, descendant_depth, process_out, process_in, engine,
+             verbose, output_format, show):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
     """

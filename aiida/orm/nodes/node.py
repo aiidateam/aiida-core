@@ -1095,8 +1095,7 @@ class Node(Entity):
             {
                 key: val
                 for key, val in self.attributes_items()
-                if (key not in self._hash_ignored_attributes and
-                    key not in getattr(self, '_updatable_attributes', tuple()))
+                if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
             },
             self._repository._get_base_folder(),  # pylint: disable=protected-access
             self.computer.uuid if self.computer is not None else None

@@ -818,7 +818,6 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
             finally:
                 session.close()
 
-
     def test_dblog_calculation_node(self):
         """
         Verify that after the migration there is only two log records left and verify that they corresponds to
@@ -883,7 +882,6 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
 
             finally:
                 session.close()
-
 
 class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
     """
@@ -992,7 +990,6 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
             finally:
                 session.close()
 
-
 class TestDbLogUUIDAddition(TestMigrationsSQLA):
     """
     Test that the UUID column is correctly added to the DbLog table and that the uniqueness
@@ -1055,7 +1052,6 @@ class TestDbLogUUIDAddition(TestMigrationsSQLA):
             finally:
                 session.close()
 
-
 class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
     """Test the migration of Data nodes after the data module was moved within the node moduel."""
 
@@ -1110,7 +1106,6 @@ class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
                 self.assertEqual(node_calc.type, 'node.process.calculation.calcjob.CalcJobNode.')
             finally:
                 session.close()
-
 
 class TestTrajectoryDataMigration(TestMigrationsSQLA):
     """Test the migration of the symbols from numpy array to attribute for TrajectoryData nodes."""
@@ -1181,7 +1176,6 @@ class TestTrajectoryDataMigration(TestMigrationsSQLA):
             finally:
                 session.close()
 
-
 class TestNodePrefixRemovalMigration(TestMigrationsSQLA):
     """Test the migration of Data nodes after the data module was moved within the node moduel."""
 
@@ -1236,7 +1230,6 @@ class TestNodePrefixRemovalMigration(TestMigrationsSQLA):
             finally:
                 session.close()
 
-
 class TestParameterDataToDictMigration(TestMigrationsSQLA):
     """Test the data migration after `ParameterData` was renamed to `Dict`."""
 
@@ -1283,7 +1276,6 @@ class TestParameterDataToDictMigration(TestMigrationsSQLA):
                 self.assertEqual(node.type, 'data.dict.Dict.')
             finally:
                 session.close()
-
 
 class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
     """Test the migration that performs a data migration of legacy `JobCalcState`."""
@@ -1349,7 +1341,6 @@ class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
             finally:
                 session.close()
 
-
 class TestResetHash(TestMigrationsSQLA):
     """Test the migration that resets the node hash."""
 
@@ -1402,5 +1393,106 @@ class TestResetHash(TestMigrationsSQLA):
                 extras = node.extras
                 self.assertEqual(extras.get('something'), 123)  # Other extras should be untouched
                 self.assertNotIn('_aiida_hash', extras)  # The hash extra should have been removed
+            finally:
+                session.close()
+
+
+class TestLegacyProcessAttributeMigration(TestMigrationsSQLA):
+    """Test the migration that performs a data migration of legacy process attributes."""
+
+    migrate_from = 'e797afa09270'
+    migrate_to = 'e734dd5e50d7'
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                session.add(user)
+                session.commit()
+
+                node_process = DbNode(
+                    node_type='process.calculation.calcjob.CalcJobNode.',
+                    user_id=user.id,
+                    attributes={
+                        '_sealed': True,
+                        '_finished': True,
+                        '_failed': False,
+                        '_aborted': False,
+                        '_do_abort': False,
+                    })
+
+                # This is an "active" modern process, due to its `process_state` and should *not* receive the
+                # `sealed` attribute
+                node_process_active = DbNode(
+                    node_type='process.calculation.calcjob.CalcJobNode.',
+                    user_id=user.id,
+                    attributes={
+                        'process_state': 'created',
+                        '_finished': True,
+                        '_failed': False,
+                        '_aborted': False,
+                        '_do_abort': False,
+                    })
+
+                # Note that `Data` nodes should not have these attributes in real databases but the migration explicitly
+                # excludes data nodes, which is what this test is verifying, by checking they are not deleted
+                node_data = DbNode(
+                    node_type='data.dict.Dict.',
+                    user_id=user.id,
+                    attributes={
+                        '_sealed': True,
+                        '_finished': True,
+                        '_failed': False,
+                        '_aborted': False,
+                        '_do_abort': False,
+                    })
+
+                session.add(node_process)
+                session.add(node_process_active)
+                session.add(node_data)
+                session.commit()
+
+                self.node_process_id = node_process.id
+                self.node_process_active_id = node_process_active.id
+                self.node_data_id = node_data.id
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_data_migrated(self):
+        """Verify that the attributes for process node have been deleted and `_sealed` has been changed to `sealed`."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+                deleted_keys = ['_sealed', '_finished', '_failed', '_aborted', '_do_abort']
+
+                node_process = session.query(DbNode).filter(DbNode.id == self.node_process_id).one()
+                self.assertEqual(node_process.attributes['sealed'], True)
+                for key in deleted_keys:
+                    self.assertNotIn(key, node_process.attributes)
+
+                node_process_active = session.query(DbNode).filter(DbNode.id == self.node_process_active_id).one()
+                self.assertNotIn('sealed', node_process_active.attributes)
+                for key in deleted_keys:
+                    self.assertNotIn(key, node_process_active.attributes)
+
+                node_data = session.query(DbNode).filter(DbNode.id == self.node_data_id).one()
+                self.assertEqual(node_data.attributes.get('sealed', None), None)
+                for key in deleted_keys:
+                    self.assertIn(key, node_data.attributes)
+
             finally:
                 session.close()

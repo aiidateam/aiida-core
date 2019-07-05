@@ -194,3 +194,19 @@ class TestVerdiGraph(AiidaTestCase):
                     self.assertTrue(os.path.isfile(filename))
                 finally:
                     delete_temporary_file(filename)
+
+    def test_node_id_label_format(self):
+        """
+        Test that the node id label format can be specified
+        """
+        root_node = str(self.node.pk)
+        filename = root_node + '.dot.pdf'
+
+        for id_label_type in ['uuid', 'pk']:
+            options = ["--id-label", id_label_type, root_node]
+            try:
+                result = self.cli_runner.invoke(cmd_graph.generate, options)
+                self.assertIsNone(result.exception, result.output)
+                self.assertTrue(os.path.isfile(filename))
+            finally:
+                delete_temporary_file(filename)

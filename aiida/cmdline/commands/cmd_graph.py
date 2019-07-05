@@ -36,6 +36,11 @@ def verdi_graph():
     default="all",
     type=click.Choice(['all', 'data', 'logic']))
 @click.option(
+    "--id-label",
+    help="the type of identifier to use for node labels",
+    default="uuid",
+    type=click.Choice(['pk', 'uuid']))
+@click.option(
     '-a',
     '--ancestor-depth',
     help='The maximum depth when recursing upwards, if not set it will recurse to the end.',
@@ -57,7 +62,7 @@ def verdi_graph():
 @click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
 @click.option('-s', '--show', is_flag=True, help="Open the rendered result with the default application.")
 @decorators.with_dbenv()
-def generate(root_node, link_types, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
+def generate(root_node, link_types, id_label, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
              output_format, show):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
@@ -68,7 +73,7 @@ def generate(root_node, link_types, ancestor_depth, descendant_depth, process_ou
     link_types = {"all": (), "logic": ("input_work", "return"), "data": ("input_calc", "create")}[link_types]
 
     echo.echo_info("Initiating graphviz engine: {}".format(engine))
-    graph = Graph(engine=engine)
+    graph = Graph(engine=engine, node_id_label=id_label)
     echo.echo_info("Recursing ancestors, max depth={}".format(ancestor_depth))
     graph.recurse_ancestors(
         root_node,

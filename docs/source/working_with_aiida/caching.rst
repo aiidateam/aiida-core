@@ -9,8 +9,9 @@ Enabling caching
 
 There are numerous reasons why you may need to re-run calculations you’ve already done before.
 Since AiiDA stores the full provenance of each calculation, it can *detect* whether a calculation has been run before and reuse its outputs without wasting computational resources.
+This is what we mean by **caching** in AiiDA.
 
-This feature is not (yet) enabled by default. In order to enable hashing:
+This feature is not enabled by default. In order to enable caching:
 
  1. Place the following ``cache_config.yml`` file in your ``.aiida`` configuration folder
     in order to enable caching for your AiiDA profile (here called ``aiida2``):
@@ -20,16 +21,17 @@ This feature is not (yet) enabled by default. In order to enable hashing:
         aiida2:
           default: True
 
- 2. Run ``verdi -p aiida2 rehash`` in order to compute hashes of all nodes in your existing database
+ 2. Run ``verdi -p aiida2 rehash`` in order to compute hashes of all nodes in your existing database.
 
-From this point onwards, when you submit a new calculation, AiiDA will compute hashes of the type of calculation and its inputs (see :ref:`caching_matches`). If the hash of the calculation is found to be already present in the database, AiiDA will reuse its results without repeating the actual calculation.
+From this point onwards, when you launch a new calculation, AiiDA will compute its hash (depending both on the type of calculation and its inputs, see :ref:`caching_matches`). 
+If another calculation with the same hash is found to be already present in the database, AiiDA will reuse its results without repeating the actual calculation.
 
 .. _fig_caching:
 .. figure:: include/images/caching.png
   :align: center
   :height: 350px
 
-  When reusing a cached calculation, AiiDA will link up to the input nodes as usual, and make a copy of both the calculation node **C** and its outputs **D3**.
+  When reusing a cached calculation, AiiDA links up to the input nodes as usual, and copies both the calculation node **C** and its outputs **D3**.
 
 In order to ensure that the provenance graph with and without caching is the same,
 AiiDA creates a *copy* of the orginial calculation node, linked to the original inputs, as well as a to a copy of the original outputs, as shown in :numref:`fig_caching`.
@@ -138,7 +140,7 @@ Even when caching is turned off for a given node type, you can manually enable c
     In [7]: print('UUID of n1:', n1.uuid)
     UUID of n1: 956109e1-4382-4240-a711-2a4f3b522122
 
-    In [8]: print('n2 is cached from:', n2.get_extra('_aiida_cached_from'))
+    In [8]: print('n2 is cached from:', n2.get_cache_source())
     n2 is cached from: 956109e1-4382-4240-a711-2a4f3b522122
 
 When running a :class:`~aiida.engine.processes.CalcJob` through the :meth:`~aiida.engine.run` or :meth:`~aiida.engine.submit` functions, you can achieve the same effect using the :class:`~aiida.manage.caching.enable_caching` context manager:
@@ -154,9 +156,9 @@ When running a :class:`~aiida.engine.processes.CalcJob` through the :meth:`~aiid
 If you suspect a node is being reused in error (e.g. during development),
 it is also possible to manually *prevent* a specific node from being reused:
 
-1. Check that the node in question has a ``_aiida_cached_from`` extra. 
-   If that is not the case, it is not reused anyhow.
-2. Clear the hashes of all nodes that are considered identical to your node:
+1. For one of the cloned nodes, check that :meth:`~aiida.orm.nodes.Node.get_cache_source` returns a UUID.
+   If it returns `None`, the node was not cloned.
+2. Clear the hashes of all nodes that are considered identical to this node:
 
     .. code:: python
 
@@ -170,6 +172,10 @@ it is also possible to manually *prevent* a specific node from being reused:
 
 Limitations
 -----------
+
+1. The current implementation does **not** deduplicate data.
+   The current implementation of caching for data nodes clones not only the *graph representation* of the reused node; it also clones the underlying data in the database and file repository. 
+   This could be improved in order to reduce data duplication.
 
 1. The current implementation of caching for data nodes clones not only the *graph representation* of the reused node; it also clones the underlying data in the database and file repository. 
    This could be improved in order to reduce data duplication.

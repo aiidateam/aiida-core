@@ -477,7 +477,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: True if this process node is valid to be used for caching, False otherwise
         """
-        return super(ProcessNode, self).is_valid_cache and self.is_finished_ok
+        return super(ProcessNode, self).is_valid_cache and self.is_finished
 
     def _get_objects_to_hash(self):
         """

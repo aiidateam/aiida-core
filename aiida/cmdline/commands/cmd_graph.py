@@ -28,18 +28,18 @@ def verdi_graph():
 @verdi_graph.command('generate')
 @arguments.NODE('root_node')
 @click.option(
-    "-l",
-    "--link-types",
+    '-l',
+    '--link-types',
     help=("The link types to include: "
           "'data' includes only 'input_calc' and 'create' links (data provenance only), "
           "'logic' includes only 'input_work' and 'return' links (logical provenance only)."),
     default="all",
     type=click.Choice(['all', 'data', 'logic']))
 @click.option(
-    "--id-label",
-    help="the type of identifier to use for node labels",
+    '--identifier',
+    help="the type of identifier to use within the node text",
     default="uuid",
-    type=click.Choice(['pk', 'uuid']))
+    type=click.Choice(['pk', 'uuid', 'label']))
 @click.option(
     '-a',
     '--ancestor-depth',
@@ -62,7 +62,7 @@ def verdi_graph():
 @click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
 @click.option('-s', '--show', is_flag=True, help="Open the rendered result with the default application.")
 @decorators.with_dbenv()
-def generate(root_node, link_types, id_label, ancestor_depth, descendant_depth, process_out, process_in, engine,
+def generate(root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine,
              verbose, output_format, show):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
@@ -73,7 +73,7 @@ def generate(root_node, link_types, id_label, ancestor_depth, descendant_depth, 
     link_types = {"all": (), "logic": ("input_work", "return"), "data": ("input_calc", "create")}[link_types]
 
     echo.echo_info("Initiating graphviz engine: {}".format(engine))
-    graph = Graph(engine=engine, node_id_label=id_label)
+    graph = Graph(engine=engine, node_id_type=identifier)
     echo.echo_info("Recursing ancestors, max depth={}".format(ancestor_depth))
     graph.recurse_ancestors(
         root_node,

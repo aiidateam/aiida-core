@@ -149,14 +149,12 @@ def pstate_node_styles(node):
         "process.calculation.calcjob.CalcJobNode.": {
             "shape": "ellipse",
             "style": "filled",
-            # "pencolor": "black",
             "penwidth": 0,
             "fillcolor": "#ffffffff"
         },
         "process.calculation.calcfunction.CalcFunctionNode.": {
             "shape": "ellipse",
             "style": "filled",
-            # "pencolor": "black",
             "penwidth": 0,
             "fillcolor": "#ffffffff"
         },
@@ -164,7 +162,6 @@ def pstate_node_styles(node):
             "shape": "polygon",
             "sides": "6",
             "style": "filled",
-            # "pencolor": "black",
             "penwidth": 0,
             "fillcolor": "#ffffffff"
         },
@@ -172,7 +169,6 @@ def pstate_node_styles(node):
             "shape": "polygon",
             "sides": "6",
             "style": "filled",
-            # "pencolor": "black",
             "penwidth": 0,
             "fillcolor": "#ffffffff"
         }
@@ -186,7 +182,8 @@ def pstate_node_styles(node):
             node_style['fillcolor'] = '#de707fff'  # red
         elif node.is_finished_ok:
             node_style['fillcolor'] = '#8cd499ff'  # green
-        else:  # specifically look for waiting state?
+        else:
+            # Note: this conditional will hit the states CREATED, WAITING and RUNNING
             node_style['fillcolor'] = '#e38851ff'  # orange
 
     return node_style
@@ -250,6 +247,8 @@ def get_node_id_label(node, id_type):
         return node.pk
     if id_type == "uuid":
         return node.uuid.split("-")[0]
+    if id_type == "label":
+        return node.label
     raise ValueError("node_id_type not recognised: {}".format(id_type))
 
 
@@ -352,7 +351,7 @@ class Graph(object):
                  link_style_fn=None,
                  node_style_fn=None,
                  node_sublabel_fn=None,
-                 node_id_label="pk"):
+                 node_id_type="pk"):
         """a class to create graphviz graphs of the AiiDA node provenance
 
         Nodes and edges, are cached, so that they are only created once
@@ -375,8 +374,8 @@ class Graph(object):
             node_sublabel_fn(node) -> dict (Default value = None)
         :param node_sublabel_fn: callable mapping data node to a sublabel (e.g. specifying some attribute values)
             node_sublabel_fn(node) -> str (Default value = None)
-        :param node_id_label: the type of identifier to use for node labels ('pk' or 'uuid')
-        :type node_id_label: str
+        :param node_id_type: the type of identifier to within the node text ('pk', 'uuid' or 'label')
+        :type node_id_type: str
 
         """
         # pylint: disable=too-many-arguments
@@ -389,7 +388,7 @@ class Graph(object):
         self._link_styles = link_style_fn or default_link_styles
         self._node_styles = node_style_fn or default_node_styles
         self._node_sublabels = node_sublabel_fn or default_node_sublabels
-        self._node_id_type = node_id_label
+        self._node_id_type = node_id_type
 
     @property
     def graphviz(self):

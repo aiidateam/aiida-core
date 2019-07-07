@@ -122,7 +122,7 @@ class CalcJobNode(CalculationNode):
                 for key, val in self.attributes_items()
                 if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
             },
-            self.computer.uuid if self.computer is not None else None,
+            self.computer.uuid if self.computer is not None else None,  # pylint: disable=no-member
             {
                 entry.link_label: entry.node.get_hash()
                 for entry in self.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))

@@ -120,27 +120,27 @@ What if we want calculations that have finished **or** were created in the last
 If we had written *and* instead of *or*, we would have created the exact same
 query as in the first query, because *and* is the default behavior if
 you attach several filters.
-What if you want calculation in state 'FINISHED' or 'RETRIEVING'?
+What if you want calculation in state 'FINISHED' or 'EXCEPTED'?
 This will be the next example::
 
     qb = QueryBuilder()
     qb.append(
         CalcJobNode,
         filters={
-            'attributes.process_state':{'in':['finished', 'retrieving']}
+            'attributes.process_state':{'in':['finished', 'excepted']}
         },
     )
     res = qb.all()
 
 In order to negate a filter, that is to apply the not operator, precede the filter
 keyword with an exclamation mark.
-So, to ask for all calculations that are not in 'FINISHED' or 'RETRIEVING'::
+So, to ask for all calculations that are not in 'FINISHED' or 'EXCEPTED'::
 
     qb = QueryBuilder()
     qb.append(
         CalcJobNode,
         filters={
-            'attributes.process_state':{'!in':['finished', 'retrieving']}
+            'attributes.process_state':{'!in':['finished', 'excepted']}
         },
     )
     res = qb.all()

@@ -161,7 +161,8 @@ DB_TEST_LIST = {
         'tools.importexport.orm.groups': ['aiida.backends.tests.tools.importexport.orm.test_groups'],
         'tools.importexport.orm.links': ['aiida.backends.tests.tools.importexport.orm.test_links'],
         'tools.importexport.orm.logs': ['aiida.backends.tests.tools.importexport.orm.test_logs'],
-        'tools.importexport.orm.users': ['aiida.backends.tests.tools.importexport.orm.test_users']
+        'tools.importexport.orm.users': ['aiida.backends.tests.tools.importexport.orm.test_users'],
+        'tools.visualization.graph': ['aiida.backends.tests.tools.visualization.test_graph']
     }
 }
 

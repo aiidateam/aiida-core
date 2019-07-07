@@ -435,14 +435,13 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Create visual representations of part of the provenance graph. Requires
-      that `graphviz<https://graphviz.org/download>` be installed.
+      Create visual representations of part of the provenance graph.
 
     Options:
       --help  Show this message and exit.
 
     Commands:
-      generate  Generate a graph for a given ROOT_NODE.
+      generate  Generate a graph from a ROOT_NODE (specified by pk or uuid).
 
 
 .. _verdi_group:

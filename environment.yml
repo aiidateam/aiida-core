@@ -38,3 +38,4 @@ dependencies:
 - tornado<5.0
 - wrapt==1.11.1
 - simplejson==3.16.0
+- python-graphviz==0.10.1

@@ -16,9 +16,9 @@ plugin-specific operations.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 
-import warnings
 from six.moves import zip
 
 from aiida.common import AIIDA_LOGGER, exceptions
@@ -253,17 +253,22 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
         listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
     """
     logger_extra = get_dblogger_extra(calculation)
-
-    execlogger.debug("Retrieving calc {}".format(calculation.pk), extra=logger_extra)
     workdir = calculation.get_remote_workdir()
 
-    execlogger.debug(
-        "[retrieval of calc {}] chdir {}".format(calculation.pk, workdir),
-        extra=logger_extra)
+    execlogger.debug("Retrieving calc {}".format(calculation.pk), extra=logger_extra)
+    execlogger.debug("[retrieval of calc {}] chdir {}".format(calculation.pk, workdir), extra=logger_extra)
 
-    # Create the FolderData node to attach everything to
+    # If the calculation already has a `retrieved` folder, simply return. The retrieval was apparently already completed
+    # before, which can happen if the daemon is restarted and it shuts down after retrieving but before getting the
+    # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the retrieval.
+    link_label = calculation.link_label_retrieved
+    if calculation.get_outgoing(FolderData, link_label_filter=link_label).first():
+        execlogger.warning('CalcJobNode<{}> already has a `{}` output folder: skipping retrieval'.format(
+            calculation.pk, link_label))
+        return
+
+    # Create the FolderData node into which to store the files that are to be retrieved
     retrieved_files = FolderData()
-    retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
     with transport:
         transport.chdir(workdir)
@@ -299,6 +304,11 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
             "Storing retrieved_files={}".format(calculation.pk, retrieved_files.pk),
             extra=logger_extra)
         retrieved_files.store()
+
+    # Make sure that attaching the `retrieved` folder with a link is the last thing we do. This gives the biggest chance
+    # of making this method idempotent. That is to say, if a runner get's interrupted during this action, it will simply
+    # retry the retrieval, unless we got here and managed to link it up, in which case we move to the next task.
+    retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
 
 def kill_calculation(calculation, transport):

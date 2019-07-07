@@ -125,10 +125,10 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         self.assertClickSuccess(result)
         self.assertTrue(profile_name_non_default in result.output)
 
-        # Specifying `-p/--profile` should override the configured default
+        # Specifying `-p/--profile` should not override the argument default (which should be the default profile)
         result = self.cli_runner.invoke(cmd_verdi.verdi, ['-p', profile_name_non_default, 'profile', 'show'])
         self.assertClickSuccess(result)
-        self.assertTrue(profile_name_non_default in result.output)
+        self.assertTrue(profile_name_non_default not in result.output)
 
     @with_temporary_config_instance
     def test_delete_partial(self):

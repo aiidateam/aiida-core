@@ -77,6 +77,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         """
         from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
         from aiida.common import ConfigurationError, InvalidOperation
+        from aiida.common.log import configure_logging
         from aiida.manage import configuration
 
         profile = self.get_profile()
@@ -110,6 +111,10 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         elif backend_type == BACKEND_SQLA:
             from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
             self._backend = SqlaBackend()
+
+        # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
+        # are taken into account and the `DbLogHandler` is configured.
+        configure_logging(with_orm=True)
 
         return self._backend
 

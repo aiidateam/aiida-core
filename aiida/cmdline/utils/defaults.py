@@ -17,33 +17,23 @@ from aiida.common import exceptions
 from aiida.manage.configuration import get_config
 
 
-def get_default_profile(ctx, param, value):  # pylint: disable=unused-argument
-    """Try to get the default profile.
+def get_default_profile():  # pylint: disable=unused-argument
+    """Try to get the name of the default profile.
 
-    This should be used if the default profile should be returned lazily, at a point for example when the config
-    is not created at import time. Otherwise, the preference should go to calling `get_config` to load the actual
-    config and using `config.default_profile_name` to get the default profile name.
-
-    This all of course unless the `-p/--profile` option was used by the user which trumps everything, in which case the
-    `profile_option_used` attribute on the `ctx.obj` object will have been set and we simply return the profile that
-    was already loaded by `verdi` itself and set in `ctx.obj.profile`.
+    This utility function should only be used for defaults or callbacks in command line interface parameters.
+    Otherwise, the preference should go to calling `get_config` to load the actual config and using
+    `config.default_profile_name` to get the default profile name.
 
     :raises click.UsageError: if the config could not be loaded or no default profile exists
-    :return: the default profile
+    :return: the default profile name or None if no default is defined in the configuration
     """
-    if value:
-        return value
-
-    if ctx.obj.profile_option_used:
-        return ctx.obj.profile
-
     try:
-        config = get_config()
+        config = get_config(create=True)
     except exceptions.ConfigurationError as exception:
         echo.echo_critical(str(exception))
 
     try:
-        default_profile = config.get_profile(config.default_profile_name)
+        default_profile = config.get_profile(config.default_profile_name).name
     except exceptions.ProfileConfigurationError:
         default_profile = None
 

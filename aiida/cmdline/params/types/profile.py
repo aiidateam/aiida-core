@@ -22,6 +22,7 @@ class ProfileParamType(click.ParamType):
 
     def __init__(self, *args, **kwargs):
         self._cannot_exist = kwargs.pop('cannot_exist', False)
+        self._load_profile = kwargs.pop('load_profile', False)  # If True, will load the profile converted from value
         super(ProfileParamType, self).__init__(*args, **kwargs)
 
     @staticmethod
@@ -31,10 +32,10 @@ class ProfileParamType(click.ParamType):
     def convert(self, value, param, ctx):
         """Attempt to match the given value to a valid profile."""
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
-        from aiida.manage.configuration import get_config, Profile
+        from aiida.manage.configuration import get_config, load_profile, Profile
 
         try:
-            config = get_config()
+            config = get_config(create=True)
             profile = config.get_profile(value)
         except (MissingConfigurationError, ProfileConfigurationError) as exception:
             if not self._cannot_exist:
@@ -46,11 +47,13 @@ class ProfileParamType(click.ParamType):
             if self._cannot_exist:
                 self.fail(str('the profile `{}` already exists'.format(value)))
 
+        if self._load_profile:
+            load_profile(profile.name)
+
         return profile
 
     def complete(self, ctx, incomplete):  # pylint: disable=unused-argument,no-self-use
-        """
-        Return possible completions based on an incomplete value
+        """Return possible completions based on an incomplete value
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """

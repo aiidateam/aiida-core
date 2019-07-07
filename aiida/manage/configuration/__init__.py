@@ -41,7 +41,6 @@ def load_profile(profile=None):
     """
     from aiida.common import InvalidOperation
     from aiida.common.log import configure_logging
-    from aiida.manage.manager import get_manager, reset_manager
 
     global PROFILE
     global BACKEND_UUID
@@ -53,6 +52,7 @@ def load_profile(profile=None):
     profile = get_config().get_profile(profile)
 
     if BACKEND_UUID is not None and BACKEND_UUID != profile.uuid:
+        # Once the switching of profiles with different backends becomes possible, the backend has to be reset properly
         raise InvalidOperation('cannot switch profile because backend of another profile is already loaded')
 
     # Set the global variable and make sure the repository is configured
@@ -60,12 +60,9 @@ def load_profile(profile=None):
     PROFILE.configure_repository()
 
     # Reconfigure the logging to make sure that profile specific logging configuration options are taken into account.
-    # Also set `with_orm=True` to make sure that the `DBLogHandler` is configured as well.
-    configure_logging(with_orm=True)
-
-    manager = get_manager()
-    manager.unload_backend()
-    reset_manager()
+    # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded. This should
+    # instead be done lazily in `Manager._load_backend`.
+    configure_logging()
 
     return PROFILE
 

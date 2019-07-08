@@ -79,9 +79,36 @@ class BackendCommentCollection(backends.BackendCollection[BackendComment]):
         """
 
     @abc.abstractmethod
-    def delete(self, comment):
+    def delete(self, comment_id):
         """
         Remove a Comment from the collection with the given id
 
-        :param comment: the id of the comment to delete
+        :param comment_id: the id of the comment to delete
+        :type comment_id: int
+
+        :raises TypeError: if ``comment_id`` is not an `int`
+        :raises `~aiida.common.exceptions.NotExistent`: if Comment with ID ``comment_id`` is not found
+        """
+
+    @abc.abstractmethod
+    def delete_all(self):
+        """
+        Delete all Comment entries.
+
+        :raises `~aiida.common.exceptions.IntegrityError`: if all Comments could not be deleted
+        """
+
+    @abc.abstractmethod
+    def delete_many(self, filters):
+        """
+        Delete Comments based on ``filters``
+
+        :param filters: similar to QueryBuilder filter
+        :type filters: dict
+
+        :return: (former) ``PK`` s of deleted Comments
+        :rtype: list
+
+        :raises TypeError: if ``filters`` is not a `dict`
+        :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty
         """

@@ -35,7 +35,7 @@ class TestLogs(AiidaTestCase):
         Delete all the created log entries
         """
         super(TestLogs, self).tearDown()
-        orm.Log.objects.delete_many({})
+        orm.Log.objects.delete_all()
 
     @with_temp_dir
     def test_critical_log_msg_and_metadata(self, temp_dir):

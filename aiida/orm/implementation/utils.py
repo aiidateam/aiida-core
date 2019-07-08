@@ -7,22 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name
-""" Utilities used by both backends """
+"""Utility functions for AiiDA ORM implementations."""
 from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
-__all__ = ['get_attr']
+__all__ = ('get_attr',)
 
 
 def get_attr(attrs, key):
     """ Get the attribute that corresponds to the given key"""
     path = key.split('.')
 
-    d = attrs
-    for p in path:
-        if p.isdigit():
-            p = int(p)
+    dict_ = attrs
+    for part in path:
+        if part.isdigit():
+            part = int(part)
         # Let it raise the appropriate exception
-        d = d[p]
+        dict_ = dict_[part]
 
-    return d
+    return dict_

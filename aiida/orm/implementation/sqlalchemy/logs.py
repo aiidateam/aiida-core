@@ -8,9 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA Log and LogCollection module"""
+# pylint: disable=import-error,no-name-in-module
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import log as models
@@ -41,9 +44,9 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
     @property
     def uuid(self):
         """
-        Get the UUID of the log entry
+        Get the string representation of the UUID of the log entry
         """
-        return self._dbmodel.uuid
+        return str(self._dbmodel.uuid)
 
     @property
     def time(self):
@@ -97,25 +100,65 @@ class SqlaLogCollection(BackendLogCollection):
         """
         Remove a Log entry from the collection with the given id
 
-        :param log_id: id of the log to delete
+        :param log_id: id of the Log to delete
+        :type log_id: int
+
+        :raises TypeError: if ``log_id`` is not an `int`
+        :raises `~aiida.common.exceptions.NotExistent`: if Log with ID ``log_id`` is not found
         """
-        # pylint: disable=no-name-in-module,import-error
-        from sqlalchemy.orm.exc import NoResultFound
+        if not isinstance(log_id, int):
+            raise TypeError("log_id must be an int")
+
         session = get_scoped_session()
 
         try:
             session.query(models.DbLog).filter_by(id=log_id).one().delete()
             session.commit()
         except NoResultFound:
+            session.rollback()
             raise exceptions.NotExistent("Log with id '{}' not found".format(log_id))
+
+    def delete_all(self):
+        """
+        Delete all Log entries.
+
+        :raises `~aiida.common.exceptions.IntegrityError`: if all Logs could not be deleted
+        """
+        session = get_scoped_session()
+
+        try:
+            session.query(models.DbLog).delete()
+            session.commit()
+        except Exception as exc:
+            session.rollback()
+            raise exceptions.IntegrityError("Could not delete all Logs. Full exception: {}".format(exc))
 
     def delete_many(self, filters):
         """
-        Delete all log entries in the table
+        Delete Logs based on ``filters``
+
+        :param filters: similar to QueryBuilder filter
+        :type filters: dict
+
+        :return: (former) ``PK`` s of deleted Logs
+        :rtype: list
+
+        :raises TypeError: if ``filters`` is not a `dict`
+        :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty
         """
+        from aiida.orm import Log, QueryBuilder
+
+        # Checks
+        if not isinstance(filters, dict):
+            raise TypeError("filters must be a dictionary")
         if not filters:
-            for entry in models.DbLog.query.all():
-                entry.delete()
-            get_scoped_session().commit()
-        else:
-            raise NotImplementedError('Only deleting all by passing an empty filter dictionary is currently supported')
+            raise exceptions.ValidationError("filter must not be empty")
+
+        # Apply filter and delete found entities
+        builder = QueryBuilder().append(Log, filters=filters, project='id').all()
+        entities_to_delete = [_[0] for _ in builder]
+        for entity in entities_to_delete:
+            self.delete(entity)
+
+        # Return list of deleted entities' (former) PKs for checking
+        return entities_to_delete

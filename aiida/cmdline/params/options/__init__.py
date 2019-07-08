@@ -255,6 +255,11 @@ PROCESS_STATE = OverridableOption(
     type=types.LazyChoice(valid_process_states), cls=MultipleValueOption, default=active_process_states,
     help='Only include entries with this process state.')
 
+PROCESS_LABEL = OverridableOption(
+    '-L', '--process-label', 'process_label',
+    type=click.STRING, required=False,
+    help='Only include entries with this process label.')
+
 EXIT_STATUS = OverridableOption(
     '-E', '--exit-status', 'exit_status',
     type=click.INT,

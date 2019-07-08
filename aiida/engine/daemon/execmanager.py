@@ -42,10 +42,19 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
     :param transport: an already opened transport to use to submit the calculation.
     :param calc_info: the calculation info datastructure returned by `CalcJobNode.presubmit`
     :param script_filename: the job launch script returned by `CalcJobNode.presubmit`
+    :return: tuple of ``calc_info`` and ``script_filename``
     """
     from logging import LoggerAdapter
     from tempfile import NamedTemporaryFile
     from aiida.orm import load_node, Code, RemoteData
+
+    # If the calculation already has a `remote_folder`, simply return. The upload was apparently already completed
+    # before, which can happen if the daemon is restarted and it shuts down after uploading but before getting the
+    # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the upload.
+    link_label = 'remote_folder'
+    if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
+        execlogger.warning('CalcJobNode<{}> already has a `{}` output: skipping upload'.format(node.pk, link_label))
+        return calc_info, script_filename
 
     computer = node.computer
 
@@ -214,6 +223,11 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
                               "calculation {}".format(node.pk))
 
     if not dry_run:
+        # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
+        # chance of making this method idempotent. That is to say, if a runner gets interrupted during this action, it
+        # will simply retry the upload, unless we got here and managed to link it up, in which case we move to the next
+        # task. Because in that case, the check for the existence of this link at the top of this function will exit
+        # early from this command.
         remotedata = RemoteData(computer=computer, remote_path=workdir)
         remotedata.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
         remotedata.store()
@@ -306,7 +320,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
         retrieved_files.store()
 
     # Make sure that attaching the `retrieved` folder with a link is the last thing we do. This gives the biggest chance
-    # of making this method idempotent. That is to say, if a runner get's interrupted during this action, it will simply
+    # of making this method idempotent. That is to say, if a runner gets interrupted during this action, it will simply
     # retry the retrieval, unless we got here and managed to link it up, in which case we move to the next task.
     retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 

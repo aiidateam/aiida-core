@@ -1,6 +1,6 @@
 Practical information concerning how to set up your development environment and how
 to contribute to aiida core can be found on the 
-`AiiDA Wiki <https://github.com/aiidateam/aiida_core/wiki>`_.
+`AiiDA Wiki <https://github.com/aiidateam/aiida-core/wiki>`_.
 
 .. toctree::
    :maxdepth: 1

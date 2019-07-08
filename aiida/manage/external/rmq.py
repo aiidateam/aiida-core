@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -32,7 +32,7 @@ CommunicationTimeout = communications.TimeoutError  # pylint: disable=invalid-na
 # running on IPv6 one gets an annoying warning. When moving this to
 # a user-configurable variable, make sure users are aware of this and
 # know how to avoid warnings. For more info see
-# https://github.com/aiidateam/aiida_core/issues/1142
+# https://github.com/aiidateam/aiida-core/issues/1142
 _RMQ_URL = 'amqp://127.0.0.1'
 _RMQ_TASK_PREFETCH_COUNT = 100  # This value should become configurable per profile at some point
 _RMQ_HEARTBEAT_TIMEOUT = 600  # Maximum that can be set by client, with default RabbitMQ server configuration

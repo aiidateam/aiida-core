@@ -127,8 +127,8 @@ add the following code to a ``.py`` file (create one if there isn't any) in ``<h
       load_ipython_extension(ipython)
 
 This file will be executed when the ipython kernel starts up and enable the line magic ``%aiida``.
-Alternatively, if you have a ``aiida_core`` repository checked out locally,
-you can just copy the file ``<aiida_core>/aiida/tools/ipython/aiida_magic_register.py`` to the same folder.
+Alternatively, if you have a ``aiida-core`` repository checked out locally,
+you can just copy the file ``<aiida-core>/aiida/tools/ipython/aiida_magic_register.py`` to the same folder.
 The current ipython profile folder can be located using::
 
   ipython locate profile

@@ -6,7 +6,7 @@ Writing tests for plugin
 When developing a plugin it is important to write tests. The main concern of running
 tests is that the test environment has to be separated from the production environment
 and care should be taken to avoid any unwanted change to the user's database.
-You may have noticed that ``aiida_core`` has its own test framework for developments.
+You may have noticed that ``aiida-core`` has its own test framework for developments.
 While it is possible to use the same framework for the plugins,
 it is not ideal as any tests of plugins has to be run with
 the ``verdi devel tests`` command-line interface.
@@ -133,15 +133,15 @@ The discovery of the tests will be handled by pytest (file, class and function n
 Using the unittest framework
 ----------------------------
 
-The ``uniitest`` package is included in the python standard library.
-It is widely used despite some limitations (it is also used for testing ``aiida_core``).
+The ``unittest`` package is included in the python standard library.
+It is widely used despite some limitations (it is also used for testing ``aiida-core``).
 We provide a :py:class:`aiida.manage.fixtures.PluginTestCase` to be used for inheritance.
 By default, each test method in the test case class runs with a fresh aiida database.
-Due to the limitation of ``uniitest``, sub-clasess of ``PluginTestCase`` has to be run
+Due to the limitation of ``unittest``, sub-clasess of ``PluginTestCase`` has to be run
 with the special runner in  :py:class:`aiida.manage.fixtures.TestRunner`.
 To run the actually tests, you need to prepare a run script in python::
 
-  import uniitest
+  import unittest
   from aiida.manage.fixtures import TestRunner
 
   test = unittest.deaultTestLoader.discover('.')
@@ -265,7 +265,7 @@ modifications and use it as the superclass for other test classes.
   More details can be found in the `pytest documentation`_ about running ``unittest`` tests.
 
 .. note::
-  The modification will break the compatibility of ``uniitest`` and you will not be able
+  The modification will break the compatibility of ``unittest`` and you will not be able
   to run with ``verdi devel tests`` interface.
   Do not forget to remove redundant entry points in your setup.json. 
 

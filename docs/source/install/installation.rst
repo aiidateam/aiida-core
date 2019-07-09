@@ -48,7 +48,7 @@ Aiida python package
 ====================
 
 .. _PyPI: https://pypi.python.org/pypi/aiida
-.. _github repository: https://github.com/aiidateam/aiida_core
+.. _github repository: https://github.com/aiidateam/aiida-core
 
 AiiDA can be installed either from the python package index `PyPI`_ (good for general use) or directly from the aiida-core `github repository`_ (good for developers).
 
@@ -74,8 +74,8 @@ Alternatively, you can create a directory where to clone the AiiDA source code a
 
     mkdir <your_directory>
     cd <your_directory>
-    git clone https://github.com/aiidateam/aiida_core
-    pip install -e aiida_core
+    git clone https://github.com/aiidateam/aiida-core
+    pip install -e aiida-core
 
 
 .. _install_optional_dependencies:
@@ -92,7 +92,7 @@ There are additional optional packages that you may want to install, which are g
 
 In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command::
 
-    (aiida) $ pip install -e aiida_core[atomic_tools,docs,advanced_plotting]
+    (aiida) $ pip install -e aiida-core[atomic_tools,docs,advanced_plotting]
 
 .. note:: If you are installing the optional ``ssh_kerberos`` and you are on Ubuntu you might encounter an error related to the ``gss`` package.
   To fix this you need to install the ``libffi-dev`` and ``libkrb5-dev`` packages::

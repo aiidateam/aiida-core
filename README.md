@@ -1,5 +1,5 @@
-[![Build Status](https://travis-ci.org/aiidateam/aiida_core.svg?branch=develop)](https://travis-ci.org/aiidateam/aiida_core)
-[![Coverage Status](https://coveralls.io/repos/github/aiidateam/aiida_core/badge.svg?branch=develop)](https://coveralls.io/github/aiidateam/aiida_core?branch=develop)
+[![Build Status](https://travis-ci.org/aiidateam/aiida-core.svg?branch=develop)](https://travis-ci.org/aiidateam/aiida-core)
+[![Coverage Status](https://coveralls.io/repos/github/aiidateam/aiida-core/badge.svg?branch=develop)](https://coveralls.io/github/aiidateam/aiida-core?branch=develop)
 [![Docs status](https://readthedocs.org/projects/aiida-core/badge)](http://aiida-core.readthedocs.io/)
 [![PyPI version](https://badge.fury.io/py/aiida-core.svg)](https://badge.fury.io/py/aiida-core)
 
@@ -22,7 +22,7 @@ of simulations.
 The official homepage is at <http://www.aiida.net>
 
 The code is hosted on GitHub at
-<https://github.com/aiidateam/aiida_core>
+<https://github.com/aiidateam/aiida-core>
 
 The documentation is hosted on Read The Docs at:
 
@@ -33,10 +33,10 @@ Which branch should you use?
 ----------------------------
 
 -   **Users**: the stable version of the code is in the [master
-    branch](https://github.com/aiidateam/aiida_core/tree/master)
+    branch](https://github.com/aiidateam/aiida-core/tree/master)
 -   **Developers**: the procedure to contribute through pull-requests
     can be found in the
-    [wiki](https://github.com/aiidateam/aiida_core/wiki/Contributing-guide-and-branch-descriptions)
+    [wiki](https://github.com/aiidateam/aiida-core/wiki/Contributing-guide-and-branch-descriptions)
 
 How to cite AiiDA
 -----------------

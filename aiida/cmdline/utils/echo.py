@@ -169,7 +169,8 @@ def echo_dictionary(dictionary, fmt='json+date'):
     :param dictionary: the dictionary
     :param fmt: the format to use for printing, valid options: ['json+data']
     """
-    valid_formats_table = {'json+date': _format_dictionary_json_date}
+    from aiida.orm.utils.serialize import serialize
+    valid_formats_table = {'json+date': _format_dictionary_json_date, 'yaml': serialize}
 
     try:
         format_function = valid_formats_table[fmt]

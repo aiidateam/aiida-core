@@ -393,3 +393,17 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
 
 CONFIG_FILE = ConfigFileOption(
     '--config', help='Load option values from configuration file in yaml format.')
+
+DICT_FORMAT = OverridableOption(
+    '-f', '--format', 'fmt',
+    type=click.Choice(["json+date", "yaml"]),
+    default="json+date",
+    help="format for the output"
+)
+
+DICT_KEYS = OverridableOption(
+    '-k', '--keys',
+    type=click.STRING,
+    cls=MultipleValueOption,
+    help="show only these keys"
+)

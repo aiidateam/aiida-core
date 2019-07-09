@@ -162,6 +162,36 @@ def show(nodes, print_groups):
                     echo.echo(gr_specs)
 
 
+@verdi_node.command('attributes')
+@arguments.NODES()
+@options.DICT_KEYS()
+@options.DICT_FORMAT()
+@with_dbenv()
+def attributes(nodes, keys, fmt):
+    """Show the attributes of one or more nodes."""
+    for node in nodes:
+        echo.echo("Pk: {}".format(node.pk), bold=True)
+        attr_dict = node.attributes
+        if keys is not None:
+            attr_dict = {k: v for k, v in attr_dict.items() if k in keys}
+        echo.echo_dictionary(attr_dict, fmt=fmt)
+
+
+@verdi_node.command('extras')
+@arguments.NODES()
+@options.DICT_KEYS()
+@options.DICT_FORMAT()
+@with_dbenv()
+def extras(nodes, keys, fmt):
+    """Show the extras of one or more nodes."""
+    for node in nodes:
+        echo.echo("Pk: {}".format(node.pk), bold=True)
+        extras_dict = node.extras
+        if keys is not None:
+            extras_dict = {k: v for k, v in extras_dict.items() if k in keys}
+        echo.echo_dictionary(extras_dict, fmt=fmt)
+
+
 @verdi_node.command()
 @arguments.NODES()
 @click.option('-d', '--depth', 'depth', default=1, help="Show children of nodes up to given depth")

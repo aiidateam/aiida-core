@@ -101,11 +101,32 @@ class BackendLogCollection(backends.BackendCollection[BackendLog]):
         """
         Remove a Log entry from the collection with the given id
 
-        :param log_id: id of the log to delete
+        :param log_id: id of the Log to delete
+        :type log_id: int
+
+        :raises TypeError: if ``log_id`` is not an `int`
+        :raises `~aiida.common.exceptions.NotExistent`: if Log with ID ``log_id`` is not found
+        """
+
+    @abc.abstractmethod
+    def delete_all(self):
+        """
+        Delete all Log entries.
+
+        :raises `~aiida.common.exceptions.IntegrityError`: if all Logs could not be deleted
         """
 
     @abc.abstractmethod
     def delete_many(self, filters):
         """
-        Delete multiple log entries in the table
+        Delete Logs based on ``filters``
+
+        :param filters: similar to QueryBuilder filter
+        :type filters: dict
+
+        :return: (former) ``PK`` s of deleted Logs
+        :rtype: list
+
+        :raises TypeError: if ``filters`` is not a `dict`
+        :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty
         """

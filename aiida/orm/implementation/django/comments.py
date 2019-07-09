@@ -8,11 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django implementations for the Comment entity and collection."""
+# pylint: disable=import-error,no-name-in-module
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
 from datetime import datetime
+from django.core.exceptions import ObjectDoesNotExist
 
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions, lang
@@ -117,16 +119,63 @@ class DjangoCommentCollection(BackendCommentCollection):
         """
         return DjangoComment(self.backend, node, user, content, **kwargs)
 
-    def delete(self, comment):
+    def delete(self, comment_id):
         """
         Remove a Comment from the collection with the given id
 
-        :param comment: the id of the comment to delete
+        :param comment_id: the id of the comment to delete
+        :type comment_id: int
+
+        :raises TypeError: if ``comment_id`` is not an `int`
+        :raises `~aiida.common.exceptions.NotExistent`: if Comment with ID ``comment_id`` is not found
         """
-        # pylint: disable=no-name-in-module,import-error
-        from django.core.exceptions import ObjectDoesNotExist
-        assert comment is not None
+        if not isinstance(comment_id, int):
+            raise TypeError("comment_id must be an int")
+
         try:
-            models.DbComment.objects.get(id=comment).delete()
+            models.DbComment.objects.get(id=comment_id).delete()
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent("Comment with id '{}' not found".format(comment))
+            raise exceptions.NotExistent("Comment with id '{}' not found".format(comment_id))
+
+    def delete_all(self):
+        """
+        Delete all Comment entries.
+
+        :raises `~aiida.common.exceptions.IntegrityError`: if all Comments could not be deleted
+        """
+        from django.db import transaction
+        try:
+            with transaction.atomic():
+                models.DbComment.objects.all().delete()
+        except Exception as exc:
+            raise exceptions.IntegrityError("Could not delete all Comments. Full exception: {}".format(exc))
+
+    def delete_many(self, filters):
+        """
+        Delete Comments based on ``filters``
+
+        :param filters: similar to QueryBuilder filter
+        :type filters: dict
+
+        :return: (former) ``PK`` s of deleted Comments
+        :rtype: list
+
+        :raises TypeError: if ``filters`` is not a `dict`
+        :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty
+        """
+        from aiida.orm import Comment, QueryBuilder
+
+        # Checks
+        if not isinstance(filters, dict):
+            raise TypeError("filters must be a dictionary")
+        if not filters:
+            raise exceptions.ValidationError("filters must not be empty")
+
+        # Apply filter and delete found entities
+        builder = QueryBuilder().append(Comment, filters=filters, project='id').all()
+        entities_to_delete = [_[0] for _ in builder]
+        for entity in entities_to_delete:
+            self.delete(entity)
+
+        # Return list of deleted entities' (former) PKs for checking
+        return entities_to_delete

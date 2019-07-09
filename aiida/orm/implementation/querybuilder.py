@@ -75,7 +75,7 @@ class BackendQueryBuilder(object):
     @abc.abstractmethod
     def AuthInfo(self):
         """
-        A property, decorated with @property. Returns the implementation for the Group
+        A property, decorated with @property. Returns the implementation for the AuthInfo
         """
 
     @abc.abstractmethod

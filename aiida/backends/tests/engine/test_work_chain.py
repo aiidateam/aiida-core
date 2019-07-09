@@ -721,7 +721,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.outputs.dynamic = True
 
             def run(self):
-                orm.Log.objects.delete_many({})
+                orm.Log.objects.delete_all()
                 self.report("Testing the report function")
                 return
 

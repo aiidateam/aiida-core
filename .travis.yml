@@ -104,7 +104,7 @@ jobs:
               password:
                   secure: NhV11e1kVJaumNMb7YGENngZwa6qJjzoGWzmzqdU5BwFgpXaxbaFAk2fn+Cckrkz4MmNJaW1HaKEAhn07WsbrkjOXK7QVNK48/eagiquKbCQbyNZNjzF+C24EYQHI93y40JQcl2JaCahSqKXbYQCpLlX0Rbtob4psQH29uHRcbq4lm5t3Jmb8WckEzcDLMZX3+uPFwDJxMbbsDW+pONGF1z2/B0j+7m4beTgCepuvIEaXS97rTQj2egKYEJV+V3DbH2o2nr0+3z4lzH2FAdoAnZMlFwHfWoY3WIuYcHcwXDWyLGWQKvncaoh1sLU7gfjjup3dZ4Iq74Zp43x2eXUhbmZBp2cPN3CZpN9baE4NE6MNKeQ/erkg31qdq50OG/rjGgPKyfg5ShO3Kt1CyVbSJX5dqPxtDQblYE8TAGhHfO2O8M1kLhyWvrV5TaQuVB/IAsTkRC+t1NtdWTxaU6wdMz36O5so89oKbFljjk9744m4Ei8DCgc98WH6b96qn0VifjxGuBs6o1aqRoa8O7e29a0TwDVAwxkczgjxbXkP6okRY5IAxsr5Rsbm8urXEo874uQA8n1gGyN6+YKSbjvPbHD9RIRl9IddC6y2wKTv/1JBifNjHcLhadl7RVRPSU7vFSs2cknN+5Gkw3FgZ/jA8SoMxMLFsvHcFxchrurAkE=
               on:
-                  repo: aiidateam/aiida_core
+                  repo: aiidateam/aiida-core
                   all_branches: true
                   tags: true
         - stage: transifex_docs

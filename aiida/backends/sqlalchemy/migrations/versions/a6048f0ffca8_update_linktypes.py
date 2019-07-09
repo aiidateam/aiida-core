@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -32,7 +32,7 @@ def upgrade():
 
     # I am first migrating the wrongly declared returnlinks out of
     # the InlineCalculations.
-    # This bug is reported #628 https://github.com/aiidateam/aiida_core/issues/628
+    # This bug is reported #628 https://github.com/aiidateam/aiida-core/issues/628
     # There is an explicit check in the code of the inline calculation
     # ensuring that the calculation returns UNSTORED nodes.
     # Therefore, no cycle can be created with that migration!
@@ -56,9 +56,9 @@ def upgrade():
     """)
     conn.execute(stmt1)
     # Now I am updating the link-types that are null because of either an export and subsequent import
-    # https://github.com/aiidateam/aiida_core/issues/685
+    # https://github.com/aiidateam/aiida-core/issues/685
     # or because the link types don't exist because the links were added before the introduction of link types.
-    # This is reported here: https://github.com/aiidateam/aiida_core/issues/687
+    # This is reported here: https://github.com/aiidateam/aiida-core/issues/687
     #
     # The following sql statement:
     # 1) selects all links that

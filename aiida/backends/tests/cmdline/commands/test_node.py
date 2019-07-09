@@ -37,25 +37,18 @@ class TestVerdiCalculation(AiidaTestCase):
         cls.ATTR_KEY_TWO = "b"
         cls.ATTR_VAL_TWO = "test"
 
-        node.set_attribute_many({
-            cls.ATTR_KEY_ONE: cls.ATTR_VAL_ONE,
-            cls.ATTR_KEY_TWO: cls.ATTR_VAL_TWO
-        })
+        node.set_attribute_many({cls.ATTR_KEY_ONE: cls.ATTR_VAL_ONE, cls.ATTR_KEY_TWO: cls.ATTR_VAL_TWO})
 
         cls.EXTRA_KEY_ONE = "x"
         cls.EXTRA_VAL_ONE = "2"
         cls.EXTRA_KEY_TWO = "y"
         cls.EXTRA_VAL_TWO = "other"
 
-        node.set_extra_many({
-            cls.EXTRA_KEY_ONE: cls.EXTRA_VAL_ONE,
-            cls.EXTRA_KEY_TWO: cls.EXTRA_VAL_TWO
-        })
+        node.set_extra_many({cls.EXTRA_KEY_ONE: cls.EXTRA_VAL_ONE, cls.EXTRA_KEY_TWO: cls.EXTRA_VAL_TWO})
 
         node.store()
 
         cls.node = node
-
 
     def setUp(self):
         self.cli_runner = CliRunner()

@@ -65,6 +65,7 @@ class TestUsers(AiidaTestCase):
         sd2.label = 'sd2'
         sd2.store()
         sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')  # I assume jc1 CREATED sd2
+        jc1.seal()
 
         jc2 = orm.CalcJobNode()
         jc2.computer = self.computer
@@ -77,6 +78,7 @@ class TestUsers(AiidaTestCase):
         sd3.label = 'sd3'
         sd3.store()
         sd3.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
+        jc2.seal()
 
         uuids_u1 = [sd1.uuid, jc1.uuid, sd2.uuid]
         uuids_u2 = [jc2.uuid, sd3.uuid]
@@ -97,7 +99,7 @@ class TestUsers(AiidaTestCase):
             self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user)
 
     @with_temp_dir
-    def test_non_default_user_nodes(self, temp_dir):
+    def test_non_default_user_nodes(self, temp_dir):  # pylint: disable=too-many-statements
         """
         This test checks that nodes belonging to user A (which is not the
         default user) can be correctly exported, imported, enriched with nodes
@@ -134,6 +136,7 @@ class TestUsers(AiidaTestCase):
         sd2.label = 'sd2'
         sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')
         sd2.store()
+        jc1.seal()
         sd2_uuid = sd2.uuid
 
         # At this point we export the generated data
@@ -164,6 +167,7 @@ class TestUsers(AiidaTestCase):
         sd3.label = 'sd3'
         sd3.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
         sd3.store()
+        jc2.seal()
 
         # Store the UUIDs of the nodes that should be checked
         # if they can be imported correctly.

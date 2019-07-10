@@ -175,28 +175,18 @@ def import_data_sqla(in_path,
         ###################################
         # DOUBLE-CHECK MODEL DEPENDENCIES #
         ###################################
-        # The entity import order. It is defined by the database model
-        # relationships.
-        # It is a list of strings, e.g.:
-        # ['aiida.backends.djsite.db.models.DbUser', 'aiida.backends.djsite.db.models.DbComputer',
-        # 'aiida.backends.djsite.db.models.DbNode', 'aiida.backends.djsite.db.models.DbGroup']
+        # The entity import order. It is defined by the database model relationships.
         entity_sig_order = [
             entity_names_to_signatures[m] for m in (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME,
                                                     GROUP_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME)
         ]
 
-        all_known_entity_sigs = entity_sig_order
-
         #  I make a new list that contains the entity names:
-        # eg: ['User', 'Computer', 'Node', 'Group', 'Link', 'Attribute']
-        all_entity_names = [signatures_to_entity_names[entity_sig] for entity_sig in all_known_entity_sigs]
+        # eg: ['User', 'Computer', 'Node', 'Group']
+        all_entity_names = [signatures_to_entity_names[entity_sig] for entity_sig in entity_sig_order]
         for import_field_name in metadata['all_fields_info']:
             if import_field_name not in all_entity_names:
-                if import_field_name not in ['Attribute', 'Link']:
-                    raise NotImplementedError("Apparently, you are importing a "
-                                              "file with a model '{}', but this "
-                                              "does not appear in "
-                                              "all_known_models!".format(import_field_name))
+                raise NotImplementedError("You are trying to import an unknown model '{}'!".format(import_field_name))
 
         for idx, entity_sig in enumerate(entity_sig_order):
             dependencies = []

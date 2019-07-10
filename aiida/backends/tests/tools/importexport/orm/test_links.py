@@ -94,6 +94,8 @@ class TestLinks(AiidaTestCase):
         node_work.store()
         node_output.add_incoming(node_work, LinkType.CREATE, 'output')
 
+        node_work.seal()
+
         export_links = get_all_node_links()
         export_file = os.path.join(temp_dir, 'export.tar.gz')
         export([node_output], outfile=export_file, silent=True)
@@ -108,7 +110,7 @@ class TestLinks(AiidaTestCase):
 
         self.assertSetEqual(set(export_set), set(import_set))
 
-    def construct_complex_graph(self, export_combination=0, work_nodes=None, calc_nodes=None):
+    def construct_complex_graph(self, export_combination=0, work_nodes=None, calc_nodes=None):  # pylint: disable=too-many-statements
         """
         This method creates a "complex" graph with all available link types:
         INPUT_WORK, INPUT_CALC, CALL_WORK, CALL_CALC, CREATE, and RETURN
@@ -200,6 +202,11 @@ class TestLinks(AiidaTestCase):
         data5.store()
         data6.store()
 
+        work1.seal()
+        work2.seal()
+        calc1.seal()
+        calc2.seal()
+
         graph_nodes = [data1, data2, data3, data4, data5, data6, calc1, calc2, work1, work2]
 
         # Create various combinations of nodes that should be exported
@@ -229,6 +236,7 @@ class TestLinks(AiidaTestCase):
         calc.store()
         data_output.add_incoming(calc, LinkType.CREATE, 'create')
         data_output_uuid = data_output.uuid
+        calc.seal()
 
         group = orm.Group(label='test_group').store()
         group.add_nodes(data_output)
@@ -400,6 +408,9 @@ class TestLinks(AiidaTestCase):
         work1.store()
         data_out.add_incoming(work1, LinkType.RETURN, 'returned')
 
+        work1.seal()
+        work2.seal()
+
         links_count_wanted = 2  # All 3 links, except CALL links (the CALL_WORK)
         links_wanted = [
             l for l in get_all_node_links() if l[3] not in (LinkType.CALL_WORK.value, LinkType.CALL_CALC.value)
@@ -443,6 +454,9 @@ class TestLinks(AiidaTestCase):
         data_out.add_incoming(work1, LinkType.RETURN, 'return1')
         data_out.add_incoming(work2, LinkType.RETURN, 'return2')
         links_count = 4
+
+        work1.seal()
+        work2.seal()
 
         uuids_wanted = set(_.uuid for _ in (work1, data_out, data_in, work2))
         links_wanted = get_all_node_links()

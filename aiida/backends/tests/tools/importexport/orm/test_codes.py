@@ -78,6 +78,7 @@ class TestCode(AiidaTestCase):
 
         calc.add_incoming(code, LinkType.INPUT_CALC, 'code')
         calc.store()
+        calc.seal()
         links_count = 1
 
         export_links = get_all_node_links()

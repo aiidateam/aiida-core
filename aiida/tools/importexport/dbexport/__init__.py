@@ -25,7 +25,8 @@ from aiida.common.utils import export_shard_uuid
 from aiida.orm import QueryBuilder, Node, Data, Group, Log, Comment, Computer, ProcessNode
 from aiida.orm.utils.repository import Repository
 
-from aiida.tools.importexport.dbexport.utils import check_licences, fill_in_query, serialize_dict
+from aiida.tools.importexport.dbexport.utils import (check_licences, fill_in_query, serialize_dict,
+                                                     check_process_nodes_sealed)
 from aiida.tools.importexport.config import (NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, LOG_ENTITY_NAME,
                                              COMMENT_ENTITY_NAME, EXPORT_VERSION)
 from aiida.tools.importexport.config import (get_all_fields_info, file_fields_to_model_fields, entity_names_to_entities,
@@ -658,15 +659,21 @@ def export_tree(what,
                 else:
                     groups_uuid[str(res[0])] = [str(res[1])]
 
+    #######################################
+    # Final check for unsealed ProcessNodes
+    #######################################
+    process_nodes = set()
+    for node_pk, content in export_data.get(NODE_ENTITY_NAME, {}).items():
+        if content['node_type'].startswith('process.'):
+            process_nodes.add(node_pk)
+
+    check_process_nodes_sealed(process_nodes)
+
     ######################################
     # Now I store
     ######################################
     # subfolder inside the export package
     nodesubfolder = folder.get_subfolder('nodes', create=True, reset_limit=True)
-
-    # Add the proper signatures to the exported data
-    for entity_name in export_data:
-        export_data[entity_name] = (export_data.pop(entity_name))
 
     if not silent:
         print("STORING DATA...")

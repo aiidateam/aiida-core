@@ -232,3 +232,39 @@ def serialize_dict(datadict, remove_fields=None, rename_fields=None, track_conve
         return (ret_dict, conversions)
     # else
     return ret_dict
+
+
+def check_process_nodes_sealed(nodes):
+    """Check ``ProcessNode`` s are sealed
+    Only sealed ``ProcessNode`` s may be exported.
+
+    :param nodes: :py:class:`~aiida.orm.nodes.process.process.ProcessNode` s to be checked. Should be their PK(s).
+    :type nodes: list, int
+
+    :raises TypeError: if nodes is not a `list`, `set`, or `int`.
+    :raises `~aiida.common.exceptions.InvalidOperation`: if a ``ProcessNode`` is not sealed.
+    """
+    from aiida.common.exceptions import InvalidOperation
+    from aiida.orm import QueryBuilder, ProcessNode
+
+    if not nodes:
+        return
+
+    # Check `nodes` type, and if necessary change to set
+    if isinstance(nodes, set):
+        pass
+    elif isinstance(nodes, list):
+        nodes = set(nodes)
+    elif isinstance(nodes, int):
+        nodes = set([nodes])
+    else:
+        raise TypeError("nodes must be either an int or set/list of ints")
+
+    filters = {'id': {'in': nodes}, 'attributes.sealed': True}
+    sealed_nodes = QueryBuilder().append(ProcessNode, filters=filters, project=['id']).all()
+    sealed_nodes = {_[0] for _ in sealed_nodes}
+
+    if sealed_nodes != nodes:
+        raise InvalidOperation("All ProcessNodes must be sealed before they can be exported. "
+                               "Node(s) with PK(s): {} is/are not sealed.".format(', '.join(
+                                   str(pk) for pk in nodes - sealed_nodes)))

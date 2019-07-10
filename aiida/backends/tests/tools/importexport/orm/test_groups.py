@@ -56,6 +56,7 @@ class TestGroups(AiidaTestCase):
         jc1.label = 'jc1'
         jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
         jc1.store()
+        jc1.seal()
 
         # Create a group and add the data inside
         gr1 = orm.Group(label="node_group")

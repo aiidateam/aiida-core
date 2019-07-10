@@ -12,6 +12,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from six.moves import range
+
 from click.testing import CliRunner
 from click.exceptions import BadParameter
 
@@ -19,6 +21,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.archives import get_archive_file
 from aiida.cmdline.commands import cmd_import
 from aiida.orm import Group
+from aiida.tools.importexport import EXPORT_VERSION
 
 
 class TestVerdiImport(AiidaTestCase):
@@ -32,6 +35,7 @@ class TestVerdiImport(AiidaTestCase):
         cls.url_path = "https://raw.githubusercontent.com/aiidateam/aiida-core/" \
             "0599dabf0887bee172a04f308307e99e3c3f3ff2/aiida/backends/tests/fixtures/export/migrate/"
         cls.archive_path = "export/migrate"
+        cls.newest_archive = "export_v{}_simple.aiida".format(EXPORT_VERSION)
 
     def setUp(self):
         self.cli_runner = CliRunner()
@@ -56,13 +60,10 @@ class TestVerdiImport(AiidaTestCase):
     def test_import_archive(self):
         """
         Test import for archive files from disk
-
-        NOTE: When the export format version is upped, the test export_v0.6.aiida archive will have to be
-        replaced with the version of the new format
         """
         archives = [
             get_archive_file('arithmetic.add.aiida', filepath='calcjob'),
-            get_archive_file('export_v0.6_simple.aiida', filepath=self.archive_path)
+            get_archive_file(self.newest_archive, filepath=self.archive_path)
         ]
 
         options = [] + archives
@@ -73,12 +74,12 @@ class TestVerdiImport(AiidaTestCase):
 
     def test_import_to_group(self):
         """
-        Test import to existing Group and that Nodes are added correctly for multiple imports
-        of the same, as well as separate, archives.
+        Test import to existing Group and that Nodes are added correctly for multiple imports of the same,
+        as well as separate, archives.
         """
         archives = [
             get_archive_file('arithmetic.add.aiida', filepath='calcjob'),
-            get_archive_file('export_v0.6_simple.aiida', filepath=self.archive_path)
+            get_archive_file(self.newest_archive, filepath=self.archive_path)
         ]
 
         group_label = "import_madness"
@@ -124,7 +125,7 @@ class TestVerdiImport(AiidaTestCase):
         """Make sure imported entities are saved in new Group"""
         # Initialization
         group_label = "new_group_for_verdi_import"
-        archives = [get_archive_file('export_v0.6_simple.aiida', filepath=self.archive_path)]
+        archives = [get_archive_file(self.newest_archive, filepath=self.archive_path)]
 
         # Check Group does not already exist
         group_search = Group.objects.find(filters={'label': group_label})
@@ -144,7 +145,7 @@ class TestVerdiImport(AiidaTestCase):
 
     def test_comment_mode(self):
         """Test comment mode flag works as intended"""
-        archives = [get_archive_file('export_v0.6_simple.aiida', filepath=self.archive_path)]
+        archives = [get_archive_file(self.newest_archive, filepath=self.archive_path)]
 
         options = ['--comment-mode', 'newest'] + archives
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
@@ -162,9 +163,9 @@ class TestVerdiImport(AiidaTestCase):
         """ Test import of old local archives
         Expected behavior: Automatically migrate to newest version and import correctly.
         """
-        archives = [('export_v0.1_simple.aiida', '0.1'), ('export_v0.2_simple.aiida', '0.2'),
-                    ('export_v0.3_simple.aiida', '0.3'), ('export_v0.4_simple.aiida', '0.4'),
-                    ('export_v0.5_simple.aiida', '0.5')]
+        archives = []
+        for version in range(1, int(EXPORT_VERSION.split('.')[-1]) - 1):
+            archives.append(("export_v0.{}_simple.aiida".format(version), "0.{}".format(version)))
 
         for archive, version in archives:
             options = [get_archive_file(archive, filepath=self.archive_path)]
@@ -193,7 +194,7 @@ class TestVerdiImport(AiidaTestCase):
     def test_import_url_and_local_archives(self):
         """Test import of both a remote and local archive"""
         url_archive = "export_v0.4_no_UPF.aiida"
-        local_archive = "export_v0.5_simple.aiida"
+        local_archive = self.newest_archive
 
         options = [
             get_archive_file(local_archive, filepath=self.archive_path), self.url_path + url_archive,
@@ -236,7 +237,7 @@ class TestVerdiImport(AiidaTestCase):
         `migration` = False, `non_interactive` = False (default), Expected: No query, no migrate
         `migration` = False, `non_interactive` = True, Expected: No query, no migrate
         """
-        archive = get_archive_file('export_v0.5_simple.aiida', filepath=self.archive_path)
+        archive = get_archive_file('export_v0.1_simple.aiida', filepath=self.archive_path)
         confirm_message = "Do you want to try and migrate {} to the newest export file version?".format(archive)
         success_message = "Success: imported archive {}".format(archive)
 

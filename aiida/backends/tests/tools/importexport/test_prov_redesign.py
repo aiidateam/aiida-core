@@ -220,6 +220,8 @@ class TestProvenanceRedesign(AiidaTestCase):
         # Create Groups
         node1 = orm.CalculationNode().store()
         node2 = orm.CalculationNode().store()
+        node1.seal()
+        node2.seal()
         group_user = orm.Group(label=groups_label[0]).store()
         group_user.add_nodes([node1, node2])
 

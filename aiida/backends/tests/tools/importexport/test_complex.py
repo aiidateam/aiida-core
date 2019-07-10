@@ -80,6 +80,9 @@ class TestComplex(AiidaTestCase):
         fd1.store()
         fd1.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
 
+        calc1.seal()
+        calc2.seal()
+
         node_uuids_labels = {
             calc1.uuid: calc1.label,
             pd1.uuid: pd1.label,
@@ -189,6 +192,8 @@ class TestComplex(AiidaTestCase):
         group = orm.Group(label='test-group')
         group.store()
         group.add_nodes(array)
+
+        calc.seal()
 
         hash_from_dbcontent = get_hash_from_db_content(grouplabel)
 

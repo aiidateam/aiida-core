@@ -21,9 +21,9 @@ Attribute keys that are removed entirely:
   * `_aborted`
   * `_do_abort`
 
-Finally, after these first migrations, any remaining process nodes that still do not have a sealed attribute and have
-it set to `True`. Excluding the nodes that have a `process_state` attribute of one of the active states `created`,
-running` or `waiting`, because those are actual valid active processes that are not yet sealed.
+Finally, after these first migrations, any remaining process nodes that still do not have a sealed attribute, have
+it set to `True`. Excluding the nodes that have a `process_state` attribute of one of the active states: `created`;
+`running`; or `waiting`, because those are valid active processes that are not yet sealed.
 
 """
 from __future__ import division

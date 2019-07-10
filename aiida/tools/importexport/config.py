@@ -16,7 +16,7 @@ from __future__ import print_function
 from aiida.orm import Computer, Group, GroupTypeString, Node, User, Log, Comment
 
 # Current export version
-EXPORT_VERSION = '0.6'
+EXPORT_VERSION = '0.7'
 
 IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE.value
 DUPL_SUFFIX = ' (Imported #{})'

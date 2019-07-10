@@ -21,6 +21,7 @@ from .v02_to_v03 import migrate_v2_to_v3
 from .v03_to_v04 import migrate_v3_to_v4
 from .v04_to_v05 import migrate_v4_to_v5
 from .v05_to_v06 import migrate_v5_to_v6
+from .v06_to_v07 import migrate_v6_to_v7
 
 __all__ = ('migrate_recursively', 'verify_metadata_version')
 
@@ -29,7 +30,8 @@ MIGRATE_FUNCTIONS = {
     '0.2': migrate_v2_to_v3,
     '0.3': migrate_v3_to_v4,
     '0.4': migrate_v4_to_v5,
-    '0.5': migrate_v5_to_v6
+    '0.5': migrate_v5_to_v6,
+    '0.6': migrate_v6_to_v7
 }
 
 

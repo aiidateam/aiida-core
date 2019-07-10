@@ -18,11 +18,14 @@ import tarfile
 import traceback
 import zipfile
 
+from six.moves import range
+
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands import cmd_export
 from aiida.backends.tests.utils.archives import get_archive_file
+from aiida.cmdline.commands import cmd_export
+from aiida.tools.importexport import EXPORT_VERSION
 
 
 def delete_temporary_file(filepath):
@@ -67,7 +70,9 @@ class TestVerdiExport(AiidaTestCase):
         os.chdir(cls.cwd)
 
         # Utility helper
-        cls.fixture_archive = 'export/migrate'
+        cls.fixture_archive = "export/migrate"
+        cls.newest_archive = "export_v{}_simple.aiida".format(EXPORT_VERSION)
+        cls.penultimate_archive = "export_v0.6_simple.aiida"
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
@@ -145,13 +150,9 @@ class TestVerdiExport(AiidaTestCase):
 
     def test_migrate_versions_old(self):
         """Migrating archives with a version older than the current should work."""
-        archives = [
-            'export_v0.1_simple.aiida',
-            'export_v0.2_simple.aiida',
-            'export_v0.3_simple.aiida',
-            'export_v0.4_simple.aiida',
-            'export_v0.5_simple.aiida'
-        ]
+        archives = []
+        for version in range(1, int(EXPORT_VERSION.split('.')[-1]) - 1):
+            archives.append("export_v0.{}_simple.aiida".format(version))
 
         for archive in archives:
 
@@ -169,101 +170,72 @@ class TestVerdiExport(AiidaTestCase):
 
     def test_migrate_versions_recent(self):
         """Migrating an archive with the current version should exit with non-zero status."""
-        archives = [
-            'export_v0.6_simple.aiida',
-        ]
+        filename_input = get_archive_file(self.newest_archive, filepath=self.fixture_archive)
+        filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
-        for archive in archives:
-
-            filename_input = get_archive_file(archive, filepath=self.fixture_archive)
-            filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
-
-            try:
-                options = [filename_input, filename_output]
-                result = self.cli_runner.invoke(cmd_export.migrate, options)
-                self.assertIsNotNone(result.exception)
-            finally:
-                delete_temporary_file(filename_output)
+        try:
+            options = [filename_input, filename_output]
+            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            self.assertIsNotNone(result.exception)
+        finally:
+            delete_temporary_file(filename_output)
 
     def test_migrate_force(self):
         """Test that passing the -f/--force option will overwrite the output file even if it exists."""
-        archives = [
-            'export_v0.1_simple.aiida',
-        ]
+        filename_input = get_archive_file(self.penultimate_archive, filepath=self.fixture_archive)
 
-        for archive in archives:
+        # Using the context manager will create the file and so the command should fail
+        with tempfile.NamedTemporaryFile() as file_output:
+            options = [filename_input, file_output.name]
+            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            self.assertIsNotNone(result.exception)
 
-            filename_input = get_archive_file(archive, filepath=self.fixture_archive)
-
-            # Using the context manager will create the file and so the command should fail
+        for option in ['-f', '--force']:
+            # Using the context manager will create the file, but we pass the force flag so it should work
             with tempfile.NamedTemporaryFile() as file_output:
-                options = [filename_input, file_output.name]
+                filename_output = file_output.name
+                options = [option, filename_input, filename_output]
                 result = self.cli_runner.invoke(cmd_export.migrate, options)
-                self.assertIsNotNone(result.exception)
-
-            for option in ['-f', '--force']:
-                # Using the context manager will create the file, but we pass the force flag so it should work
-                with tempfile.NamedTemporaryFile() as file_output:
-                    filename_output = file_output.name
-                    options = [option, filename_input, filename_output]
-                    result = self.cli_runner.invoke(cmd_export.migrate, options)
-                    self.assertIsNone(result.exception, result.output)
-                    self.assertTrue(os.path.isfile(filename_output))
-                    self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
+                self.assertIsNone(result.exception, result.output)
+                self.assertTrue(os.path.isfile(filename_output))
+                self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
 
     def test_migrate_silent(self):
         """Test that the captured output is an empty string when the -s/--silent option is passed."""
-        archives = [
-            'export_v0.1_simple.aiida',
-        ]
+        filename_input = get_archive_file(self.penultimate_archive, filepath=self.fixture_archive)
+        filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
-        for archive in archives:
-
-            filename_input = get_archive_file(archive, filepath=self.fixture_archive)
-            filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
-
-            for option in ['-s', '--silent']:
-                try:
-                    options = [option, filename_input, filename_output]
-                    result = self.cli_runner.invoke(cmd_export.migrate, options)
-                    self.assertEqual(result.output, '')
-                    self.assertIsNone(result.exception, result.output)
-                    self.assertTrue(os.path.isfile(filename_output))
-                    self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
-                finally:
-                    delete_temporary_file(filename_output)
+        for option in ['-s', '--silent']:
+            try:
+                options = [option, filename_input, filename_output]
+                result = self.cli_runner.invoke(cmd_export.migrate, options)
+                self.assertEqual(result.output, '')
+                self.assertIsNone(result.exception, result.output)
+                self.assertTrue(os.path.isfile(filename_output))
+                self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
+            finally:
+                delete_temporary_file(filename_output)
 
     def test_migrate_tar_gz(self):
         """Test that -F/--archive-format option can be used to write a tar.gz instead."""
-        archives = [
-            'export_v0.1_simple.aiida',
-        ]
+        filename_input = get_archive_file(self.penultimate_archive, filepath=self.fixture_archive)
+        filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
-        for archive in archives:
-
-            filename_input = get_archive_file(archive, filepath=self.fixture_archive)
-            filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
-
-            for option in ['-F', '--archive-format']:
-                try:
-                    options = [option, 'tar.gz', filename_input, filename_output]
-                    result = self.cli_runner.invoke(cmd_export.migrate, options)
-                    self.assertIsNone(result.exception, result.output)
-                    self.assertTrue(os.path.isfile(filename_output))
-                    self.assertTrue(tarfile.is_tarfile(filename_output))
-                finally:
-                    delete_temporary_file(filename_output)
+        for option in ['-F', '--archive-format']:
+            try:
+                options = [option, 'tar.gz', filename_input, filename_output]
+                result = self.cli_runner.invoke(cmd_export.migrate, options)
+                self.assertIsNone(result.exception, result.output)
+                self.assertTrue(os.path.isfile(filename_output))
+                self.assertTrue(tarfile.is_tarfile(filename_output))
+            finally:
+                delete_temporary_file(filename_output)
 
     def test_inspect(self):
         """Test the functionality of `verdi export inspect`."""
-        archives = [
-            ('export_v0.1_simple.aiida', '0.1'),
-            ('export_v0.2_simple.aiida', '0.2'),
-            ('export_v0.3_simple.aiida', '0.3'),
-            ('export_v0.4_simple.aiida', '0.4'),
-            ('export_v0.5_simple.aiida', '0.5'),
-            ('export_v0.6_simple.aiida', '0.6')
-        ]
+        archives = []
+        for version in range(1, int(EXPORT_VERSION.split('.')[-1])):
+            archives.append(("export_v0.{}_simple.aiida".format(version), "0.{}".format(version)))
 
         for archive, version_number in archives:
 

@@ -53,6 +53,7 @@ class TestComputer(AiidaTestCase):
         calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc1.label = calc1_label
         calc1.store()
+        calc1.seal()
 
         calc2_label = "calc2"
         calc2 = orm.CalcJobNode()
@@ -60,6 +61,7 @@ class TestComputer(AiidaTestCase):
         calc2.set_option('resources', {"num_machines": 2, "num_mpiprocs_per_machine": 2})
         calc2.label = calc2_label
         calc2.store()
+        calc2.seal()
 
         # Store locally the computer name
         comp_name = six.text_type(comp.name)
@@ -146,6 +148,7 @@ class TestComputer(AiidaTestCase):
         calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc1.label = calc1_label
         calc1.store()
+        calc1.seal()
 
         # Store locally the computer name
         comp1_name = six.text_type(comp1.name)
@@ -164,6 +167,7 @@ class TestComputer(AiidaTestCase):
         calc2.set_option('resources', {"num_machines": 2, "num_mpiprocs_per_machine": 2})
         calc2.label = calc2_label
         calc2.store()
+        calc2.seal()
 
         # Export the second job calculation
         filename2 = os.path.join(temp_dir, "export2.tar.gz")
@@ -228,6 +232,7 @@ class TestComputer(AiidaTestCase):
         calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc1.label = calc1_label
         calc1.store()
+        calc1.seal()
 
         # Export the first job calculation
         filename1 = os.path.join(temp_dir, "export1.tar.gz")
@@ -247,6 +252,7 @@ class TestComputer(AiidaTestCase):
         calc2.set_option('resources', {"num_machines": 2, "num_mpiprocs_per_machine": 2})
         calc2.label = calc2_label
         calc2.store()
+        calc2.seal()
 
         # Export the second job calculation
         filename2 = os.path.join(temp_dir, "export2.tar.gz")
@@ -266,6 +272,7 @@ class TestComputer(AiidaTestCase):
         calc3.set_option('resources', {"num_machines": 2, "num_mpiprocs_per_machine": 2})
         calc3.label = calc3_label
         calc3.store()
+        calc3.seal()
 
         # Export the third job calculation
         filename3 = os.path.join(temp_dir, "export3.tar.gz")
@@ -320,6 +327,7 @@ class TestComputer(AiidaTestCase):
         calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc1.label = calc1_label
         calc1.store()
+        calc1.seal()
 
         # Export the first job calculation
         filename1 = os.path.join(temp_dir, "export1.tar.gz")

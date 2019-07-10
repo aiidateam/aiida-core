@@ -115,6 +115,9 @@ class TestSpecificImport(AiidaTestCase):
         child_calculation.store()
         structure.add_incoming(child_calculation, link_type=LinkType.CREATE, link_label='link')
 
+        parent_process.seal()
+        child_calculation.seal()
+
         with tempfile.NamedTemporaryFile() as handle:
 
             nodes = [structure, child_calculation, parent_process, remote_folder]

@@ -72,6 +72,7 @@ class TestSimple(AiidaTestCase):
 
         calc.add_incoming(struct, link_type=LinkType.INPUT_CALC, link_label='link')
         calc.store()
+        calc.seal()
 
         pks = [struct.pk, calc.pk]
 

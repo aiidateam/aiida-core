@@ -44,6 +44,7 @@ class TestComments(AiidaTestCase):
 
         # Create Node and initial comments and save UUIDs prior to export
         node = orm.CalculationNode().store()
+        node.seal()
         comment_one = orm.Comment(node, user, self.comments[0]).store()
         comment_two = orm.Comment(node, user, self.comments[1]).store()
         node_uuid = node.uuid
@@ -154,6 +155,7 @@ class TestComments(AiidaTestCase):
         user = orm.User.objects.get_default()
 
         calc_node = orm.CalculationNode().store()
+        calc_node.seal()
         data_node = orm.Data().store()
 
         comment_one = orm.Comment(calc_node, user, self.comments[0]).store()
@@ -205,6 +207,7 @@ class TestComments(AiidaTestCase):
         user_two = orm.User(email="commenting@user.s").store()
 
         node = orm.CalculationNode().store()
+        node.seal()
 
         comment_one = orm.Comment(node, user_one, self.comments[0]).store()
         comment_two = orm.Comment(node, user_one, self.comments[1]).store()
@@ -290,6 +293,7 @@ class TestComments(AiidaTestCase):
 
         # Create node
         calc = orm.CalculationNode().store()
+        calc.seal()
 
         # Create comment
         orm.Comment(calc, user, comment_content).store()
@@ -346,6 +350,7 @@ class TestComments(AiidaTestCase):
         ## Test comment_mode='newest'
         # Create node
         calc = orm.CalculationNode().store()
+        calc.seal()
         calc_uuid = calc.uuid
 
         # Creates comment
@@ -453,6 +458,7 @@ class TestComments(AiidaTestCase):
         # Create node and save UUID
         calc = orm.CalculationNode()
         calc.store()
+        calc.seal()
         calc_uuid = calc.uuid
 
         # Create first comment

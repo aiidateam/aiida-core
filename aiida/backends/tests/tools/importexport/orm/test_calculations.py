@@ -90,6 +90,9 @@ class TestCalculations(AiidaTestCase):
 
         output_1.add_incoming(master, LinkType.RETURN, 'RETURN')
 
+        master.seal()
+        slave.seal()
+
         uuids_values = [(v.uuid, v.value) for v in (output_1,)]
         filename1 = os.path.join(temp_dir, "export1.tar.gz")
         export([output_1], outfile=filename1, silent=True)

@@ -173,20 +173,14 @@ def import_data_dj(in_path,
         ###################################
         # DOUBLE-CHECK MODEL DEPENDENCIES #
         ###################################
-        # I hardcode here the model order, for simplicity; in any case, this is
-        # fixed by the export version
+        # The entity import order. It is defined by the database model relationships.
 
         model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
                        COMMENT_ENTITY_NAME)
 
-        all_known_models = model_order
-
         for import_field_name in metadata['all_fields_info']:
-            if import_field_name not in all_known_models:
-                if import_field_name not in ['Attribute', 'Link']:
-                    raise NotImplementedError("Apparently, you are importing a "
-                                              "file with a model '{}', but this does not appear in "
-                                              "all_known_models!".format(import_field_name))
+            if import_field_name not in model_order:
+                raise NotImplementedError("You are trying to import an unknown model '{}'!".format(import_field_name))
 
         for idx, model_name in enumerate(model_order):
             dependencies = []

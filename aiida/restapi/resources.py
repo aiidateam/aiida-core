@@ -374,120 +374,15 @@ class User(BaseResource):
         self.parse_pk_uuid = 'pk'
 
 
-class Calculation(Node):
-    """ Resource for Calculation """
+class ProcessNode(Node):
+    """ Resource for ProcessNode """
 
     def __init__(self, **kwargs):
-        super(Calculation, self).__init__(**kwargs)
+        super(ProcessNode, self).__init__(**kwargs)
 
         from aiida.restapi.translator.nodes.calculation import CalculationTranslator
         self.trans = CalculationTranslator(**kwargs)
         from aiida.orm import CalcJobNode as CalculationTclass
         self.tclass = CalculationTclass
-
-        self.parse_pk_uuid = 'uuid'
-
-
-class Data(Node):
-    """ Resource for Data node """
-
-    def __init__(self, **kwargs):
-        super(Data, self).__init__(**kwargs)
-
-        from aiida.restapi.translator.nodes.data import DataTranslator
-        self.trans = DataTranslator(**kwargs)
-        from aiida.orm import Data as DataTclass
-        self.tclass = DataTclass
-
-        self.parse_pk_uuid = 'uuid'
-
-
-class Code(Data):
-    """ Resource for Code """
-
-    def __init__(self, **kwargs):
-        super(Code, self).__init__(**kwargs)
-
-        from aiida.restapi.translator.nodes.data.code import CodeTranslator
-        self.trans = CodeTranslator(**kwargs)
-        from aiida.orm import Code as CodeTclass
-        self.tclass = CodeTclass
-
-        self.parse_pk_uuid = 'uuid'
-
-
-class StructureData(Data):
-    """ Resource for structure data """
-
-    def __init__(self, **kwargs):
-
-        super(StructureData, self).__init__(**kwargs)
-
-        from aiida.restapi.translator.nodes.data.structure import \
-            StructureDataTranslator
-        self.trans = StructureDataTranslator(**kwargs)
-        from aiida.orm import StructureData as StructureDataTclass
-        self.tclass = StructureDataTclass
-
-        self.parse_pk_uuid = 'uuid'
-
-
-class KpointsData(Data):
-    """ Resource for kpoints data """
-
-    def __init__(self, **kwargs):
-        super(KpointsData, self).__init__(**kwargs)
-
-        from aiida.restapi.translator.nodes.data.kpoints import KpointsDataTranslator
-        self.trans = KpointsDataTranslator(**kwargs)
-        from aiida.orm import KpointsData as KpointsDataTclass
-        self.tclass = KpointsDataTclass
-
-        self.parse_pk_uuid = 'uuid'
-
-
-class BandsData(Data):
-    """ Resource for Bands data """
-
-    def __init__(self, **kwargs):
-        super(BandsData, self).__init__(**kwargs)
-
-        from aiida.restapi.translator.nodes.data.bands import \
-            BandsDataTranslator
-        self.trans = BandsDataTranslator(**kwargs)
-        from aiida.orm import BandsData as BandsDataTclass
-        self.tclass = BandsDataTclass
-
-        self.parse_pk_uuid = 'uuid'
-
-
-class CifData(Data):
-    """ Resource for cif data """
-
-    def __init__(self, **kwargs):
-
-        super(CifData, self).__init__(**kwargs)
-
-        from aiida.restapi.translator.nodes.data.cif import \
-            CifDataTranslator
-        self.trans = CifDataTranslator(**kwargs)
-        from aiida.orm import CifData as CifDataTclass
-        self.tclass = CifDataTclass
-
-        self.parse_pk_uuid = 'uuid'
-
-
-class UpfData(Data):
-    """ Resource for upf data """
-
-    def __init__(self, **kwargs):
-
-        super(UpfData, self).__init__(**kwargs)
-
-        from aiida.restapi.translator.nodes.data.upf import \
-            UpfDataTranslator
-        self.trans = UpfDataTranslator(**kwargs)
-        from aiida.orm import UpfData as UpfDataTclass
-        self.tclass = UpfDataTclass
 
         self.parse_pk_uuid = 'uuid'

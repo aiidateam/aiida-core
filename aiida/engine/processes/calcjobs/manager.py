@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import contextlib
+import logging
 import time
 
 from six import iteritems, itervalues
@@ -20,7 +21,6 @@ from tornado import concurrent, gen
 
 from aiida import schedulers
 from aiida.common import exceptions, lang
-from aiida.common.log import AIIDA_LOGGER
 
 __all__ = ('JobsList', 'JobManager')
 
@@ -57,7 +57,7 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
         self._authinfo = authinfo
         self._transport_queue = transport_queue
         self._loop = transport_queue.loop()
-        self._logger = AIIDA_LOGGER.getChild('calcjobs')
+        self._logger = logging.getLogger(__name__)
 
         self._jobs_cache = {}
         self._job_update_requests = {}  # Mapping: {job_id: Future}
@@ -97,6 +97,7 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
         :rtype: dict
         """
         with self._transport_queue.request_transport(self._authinfo) as request:
+            self.logger.info('waiting for transport')
             transport = yield request
 
             scheduler = self._authinfo.computer.get_scheduler()
@@ -147,6 +148,13 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
             for future in itervalues(self._job_update_requests):
                 if not future.done():
                     future.set_exception(exception)
+
+            # Reset the `_update_handle` manually. Normally this is done in the `updating` coroutine, but since we
+            # reraise this exception, that code path is never hit. If the next time a request comes in, the method
+            # `_ensure_updating` will falsely conclude we are still updating, since the handle is not `None` and so it
+            # will not schedule the next update, causing the job update futures to never be resolved.
+            self._update_handle = None
+
             raise
         else:
             for job_id, future in iteritems(self._job_update_requests):

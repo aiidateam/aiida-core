@@ -122,37 +122,80 @@ def validate_link(source, target, link_type, link_label):
     if not isinstance(source, type_source) or not isinstance(target, type_target):
         raise ValueError('cannot add a {} link from {} to {}'.format(link_type, type(source), type(target)))
 
-    # Validate the outdegree of the source node
-    outgoing = source.get_outgoing(link_type=link_type)
+    def get_unique_triple(source, target, link_type, link_label):
+        """
+        Return the query for a specific source, target, link_type/label
+        The query can then used for testing the uniquess of the LinkTriple
+        formed between source and target node.
+        The LinkTriples returned has the uuid of the source stored under
+        the node attribute.
+        """
+        from aiida.orm import QueryBuilder
+        from aiida.common.escaping import sql_string_match
+
+        query = QueryBuilder()
+        query.append(Node, filters={'uuid': source.uuid})
+        query.append(
+            Node,
+            filters={'uuid': target.uuid},
+            edge_filters={
+                'type': link_type.value,
+                'label': link_label
+            },
+            project=['uuid'],
+        )
+        # There is not need to project, counting is sufficient
+        link_triples = [LinkTriple(source.uuid, link_type, link_label)] * query.count()
+
+        # Added cached links from the target node
+        # pylint: disable=protected-access
+        for link_triple in target._incoming_cache:
+            link_triple = LinkTriple(link_triple.node.uuid, link_triple.link_type, link_triple.link_label)
+            if link_triple in link_triples:
+                raise exceptions.InternalError('Node<{}> has both a stored and cached link triple {}'.format(
+                    target.pk, link_triple))
+
+            if link_triple.link_type == link_type and \
+               link_triple.node == source.uuid and \
+               sql_string_match(string=link_triple.link_label,
+                                pattern=link_label):
+                link_triples.append(link_triple)
+
+        return link_triples
+
+    # Get the triple unique LinkTriples is check is necessary
+    if outdegree == 'unique_triple' or indegree == 'unique_triple':
+        unique_triple_links = get_unique_triple(source, target, link_type, link_label)
 
     # If the outdegree is `unique` there cannot already be any other incoming links of that type
-    if outdegree == 'unique' and outgoing.all():
+    if outdegree == 'unique' and source.get_outgoing(link_type=link_type, only_uuid=True).all():
         raise ValueError('node<{}> already has an outgoing {} link'.format(source.uuid, link_type))
 
     # If the outdegree is `unique_pair` than the link labels for outgoing links of this type should be unique
-    elif outdegree == 'unique_pair' and LinkPair(link_type, link_label) in outgoing.all_link_pairs():
+    elif outdegree == 'unique_pair' and source.get_outgoing(
+            link_type=link_type, only_uuid=True, link_label_filter=link_label).all():
         raise ValueError('node<{}> already has an outgoing {} link with label "{}"'.format(
             target.uuid, link_type, link_label))
 
     # If the outdegree is `unique_triple` than the link triples of link type, link label and target should be unique
-    elif outdegree == 'unique_triple' and LinkTriple(target, link_type, link_label) in outgoing.all():
+    elif outdegree == 'unique_triple' and unique_triple_links:
+        # Use the query, the source should not have any cached outgoing links
         raise ValueError('node<{}> already has an outgoing {} link with label "{}" from node<{}>'.format(
             source.uuid, link_type, link_label, target.uuid))
 
-    # Validate the indegree of the target node
-    incoming = target.get_incoming(link_type=link_type)
-
     # If the indegree is `unique` there cannot already be any other incoming links of that type
-    if indegree == 'unique' and incoming.all():
+    if indegree == 'unique' and target.get_incoming(link_type=link_type, only_uuid=True).all():
         raise ValueError('node<{}> already has an incoming {} link'.format(target.uuid, link_type))
 
     # If the indegree is `unique_pair` than the link labels for incoming links of this type should be unique
-    elif indegree == 'unique_pair' and LinkPair(link_type, link_label) in incoming.all_link_pairs():
+    elif indegree == 'unique_pair' and target.get_incoming(
+            link_type=link_type, link_label_filter=link_label, only_uuid=True).all():
         raise ValueError('node<{}> already has an incoming {} link with label "{}"'.format(
             target.uuid, link_type, link_label))
 
     # If the indegree is `unique_triple` than the link triples of link type, link label and source should be unique
-    elif indegree == 'unique_triple' and LinkTriple(source, link_type, link_label) in incoming.all():
+    elif indegree == 'unique_triple' and unique_triple_links:
+        # We cannot use the query since the incoming links may be cached
         raise ValueError('node<{}> already has an incoming {} link with label "{}" from node<{}>'.format(
             target.uuid, link_type, link_label, source.uuid))
 

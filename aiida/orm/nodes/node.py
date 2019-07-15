@@ -829,7 +829,12 @@ class Node(Entity):
 
         self._incoming_cache.append(link_triple)
 
-    def get_stored_link_triples(self, node_class=None, link_type=(), link_label_filter=None, link_direction='incoming'):
+    def get_stored_link_triples(self,
+                                node_class=None,
+                                link_type=(),
+                                link_label_filter=None,
+                                link_direction='incoming',
+                                only_uuid=False):
         """Return the list of stored link triples directly incoming to or outgoing of this node.
 
         Note this will only return link triples that are stored in the database. Anything in the cache is ignored.
@@ -839,6 +844,7 @@ class Node(Entity):
         :param link_label_filter: filters the incoming nodes by its link label. This should be a regex statement as
             one would pass directly to a QuerBuilder filter statement with the 'like' operation.
         :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
+        :param only_uuid: Store the uuid of nodes in the NodeTriple instead of the actual node
         """
         if not isinstance(link_type, tuple):
             link_type = (link_type,)
@@ -859,24 +865,25 @@ class Node(Entity):
         builder = QueryBuilder()
         builder.append(Node, filters=node_filters, tag='main')
 
+        node_project = ['uuid'] if only_uuid else ['*']
         if link_direction == 'outgoing':
             builder.append(
                 node_class,
                 with_incoming='main',
-                project=['*'],
+                project=node_project,
                 edge_project=['type', 'label'],
                 edge_filters=edge_filters)
         else:
             builder.append(
                 node_class,
                 with_outgoing='main',
-                project=['*'],
+                project=node_project,
                 edge_project=['type', 'label'],
                 edge_filters=edge_filters)
 
         return [LinkTriple(entry[0], LinkType(entry[1]), entry[2]) for entry in builder.all()]
 
-    def get_incoming(self, node_class=None, link_type=(), link_label_filter=None):
+    def get_incoming(self, node_class=None, link_type=(), link_label_filter=None, only_uuid=False):
         """Return a list of link triples that are (directly) incoming into this node.
 
         :param node_class: If specified, should be a class or tuple of classes, and it filters only
@@ -885,18 +892,22 @@ class Node(Entity):
             link type, if None then returns all inputs of all link types.
         :param link_label_filter: filters the incoming nodes by its link label.
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
+        :param only_uuid: Use the uuid of the nodes instead of the `Node` objects
         """
         if not isinstance(link_type, tuple):
             link_type = (link_type,)
 
         if self.is_stored:
-            link_triples = self.get_stored_link_triples(node_class, link_type, link_label_filter, 'incoming')
+            link_triples = self.get_stored_link_triples(
+                node_class, link_type, link_label_filter, 'incoming', only_uuid=only_uuid)
         else:
             link_triples = []
 
         # Get all cached link triples
         for link_triple in self._incoming_cache:
 
+            if only_uuid:
+                link_triple = LinkTriple(link_triple.node.uuid, link_triple.link_type, link_triple.link_label)
             if link_triple in link_triples:
                 raise exceptions.InternalError('Node<{}> has both a stored and cached link triple {}'.format(
                     self.pk, link_triple))
@@ -910,7 +921,7 @@ class Node(Entity):
 
         return LinkManager(link_triples)
 
-    def get_outgoing(self, node_class=None, link_type=(), link_label_filter=None):
+    def get_outgoing(self, node_class=None, link_type=(), link_label_filter=None, only_uuid=False):
         """Return a list of link triples that are (directly) outgoing of this node.
 
         :param node_class: If specified, should be a class or tuple of classes, and it filters only
@@ -920,7 +931,7 @@ class Node(Entity):
         :param link_label_filter: filters the outgoing nodes by its link label.
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
         """
-        link_triples = self.get_stored_link_triples(node_class, link_type, link_label_filter, 'outgoing')
+        link_triples = self.get_stored_link_triples(node_class, link_type, link_label_filter, 'outgoing', only_uuid)
         return LinkManager(link_triples)
 
     def has_cached_links(self):

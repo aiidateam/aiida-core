@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -222,12 +222,12 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
     def first(self):
         """Return the first entry from the iterator.
 
-        :return: LinkTriple instance
-        :raises ValueError: if the iterator contains anything but one entry
+        :return: LinkTriple instance or None if no entries were matched
         """
         if self.link_triples:
             return self.link_triples[0]
-        raise ValueError('no entries found')
+
+        return None
 
     def all(self):
         """Return all entries from the list.

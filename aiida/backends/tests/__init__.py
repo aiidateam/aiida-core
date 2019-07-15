@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -126,8 +126,9 @@ DB_TEST_LIST = {
         'orm.entities': ['aiida.backends.tests.orm.test_entities'],
         'orm.groups': ['aiida.backends.tests.orm.test_groups'],
         'orm.implementation.backend': ['aiida.backends.tests.orm.implementation.test_backend'],
-        'orm.implementation.nodes': ['aiida.backends.tests.orm.implementation.test_nodes'],
         'orm.implementation.comments': ['aiida.backends.tests.orm.implementation.test_comments'],
+        'orm.implementation.logs': ['aiida.backends.tests.orm.implementation.test_logs'],
+        'orm.implementation.nodes': ['aiida.backends.tests.orm.implementation.test_nodes'],
         'orm.logs': ['aiida.backends.tests.orm.test_logs'],
         'orm.mixins': ['aiida.backends.tests.orm.test_mixins'],
         'orm.node.calcjob': ['aiida.backends.tests.orm.node.test_calcjob'],
@@ -161,7 +162,8 @@ DB_TEST_LIST = {
         'tools.importexport.orm.groups': ['aiida.backends.tests.tools.importexport.orm.test_groups'],
         'tools.importexport.orm.links': ['aiida.backends.tests.tools.importexport.orm.test_links'],
         'tools.importexport.orm.logs': ['aiida.backends.tests.tools.importexport.orm.test_logs'],
-        'tools.importexport.orm.users': ['aiida.backends.tests.tools.importexport.orm.test_users']
+        'tools.importexport.orm.users': ['aiida.backends.tests.tools.importexport.orm.test_users'],
+        'tools.visualization.graph': ['aiida.backends.tests.tools.visualization.test_graph']
     }
 }
 

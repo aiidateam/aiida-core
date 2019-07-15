@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -29,7 +29,7 @@ class TestVerdiImport(AiidaTestCase):
         super(TestVerdiImport, cls).setUpClass(*args, **kwargs)
 
         # Helper variables
-        cls.url_path = "https://raw.githubusercontent.com/aiidateam/aiida_core/" \
+        cls.url_path = "https://raw.githubusercontent.com/aiidateam/aiida-core/" \
             "0599dabf0887bee172a04f308307e99e3c3f3ff2/aiida/backends/tests/fixtures/export/migrate/"
         cls.archive_path = "export/migrate"
 

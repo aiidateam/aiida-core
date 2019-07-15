@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -807,7 +807,7 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
             # JQuery adds _=timestamp a parameter to not use cached data/response.
             # To handle query, remove this "_" parameter from the query string
             # For more details check issue #789
-            # (https://github.com/aiidateam/aiida_core/issues/789) in aiida_core
+            # (https://github.com/aiidateam/aiida-core/issues/789) in aiida-core
             field_list = [entry for entry in fields.asList() if entry[0] != "_"]
 
         except ParseException as err:

@@ -31,12 +31,13 @@ enum34==1.1.6; python_version<'3.5'
 ete3==3.1.1
 flask-marshmallow==0.9.0
 futures; python_version=='2.7'
+graphviz==0.10.1
 ipython>=4.0,<6.0
 itsdangerous==1.1.0
 kiwipy[rmq]==0.5.1
 marshmallow-sqlalchemy==0.16.0
 mock==2.0.0
-numpy==1.16.1
+numpy==1.16.4
 paramiko==2.6.0
 passlib==1.7.1
 pg8000<1.13.0

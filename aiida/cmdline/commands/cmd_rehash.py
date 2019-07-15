@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -42,23 +42,18 @@ def rehash(nodes, entry_point):
 
     if nodes:
         to_hash = [(node,) for node in nodes if isinstance(node, entry_point)]
+        num_nodes = len(to_hash)
     else:
         builder = QueryBuilder()
         builder.append(entry_point, tag='node')
         to_hash = builder.all()
+        num_nodes = builder.count()
 
     if not to_hash:
         echo.echo_critical('no matching nodes found')
 
-    count = 0
+    with click.progressbar(to_hash, label="Rehashing Nodes:") as iter_hash:
+        for node, in iter_hash:
+            node.rehash()
 
-    for i, (node,) in enumerate(to_hash):
-
-        if i % 100 == 0:
-            echo.echo('.', nl=False)
-
-        node.rehash()
-        count += 1
-
-    echo.echo('')
-    echo.echo_success('{} nodes re-hashed'.format(count))
+    echo.echo_success('{} nodes re-hashed.'.format(num_nodes))

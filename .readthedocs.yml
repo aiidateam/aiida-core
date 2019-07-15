@@ -5,7 +5,7 @@
 # https://docs.readthedocs.io/en/latest/yaml-config.html#formats 
 # Especially, the 'htmlzip' format takes a LOT of memory and causes
 # the build to fail - see our issue #1472:
-# https://github.com/aiidateam/aiida_core/issues/1472
+# https://github.com/aiidateam/aiida-core/issues/1472
 formats: []
 
 ## For now I don't specify any other parameter, that is 

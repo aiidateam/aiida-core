@@ -115,7 +115,7 @@ In such cases, you can follow these steps to disable caching:
             n.clear_hash()
 3. Run your calculation again. Now it should not use caching.
 
-If you instead think that there is a bug in the AiiDA implementation, please open an issue (with enough information to be able to reproduce the error, otherwise it is hard for us to help you) in the AiiDA GitHub repository: https://github.com/aiidateam/aiida_core/issues/new.
+If you instead think that there is a bug in the AiiDA implementation, please open an issue (with enough information to be able to reproduce the error, otherwise it is hard for us to help you) in the AiiDA GitHub repository: https://github.com/aiidateam/aiida-core/issues/new.
 
 .. _caching_provenance:
 

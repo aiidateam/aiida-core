@@ -35,8 +35,10 @@ the source of the problem.
 .. note:: In the command above, you can use a different level than ``DEBUG``.
   The list of the levels and their order is the same of the `standard python
   logging module <https://docs.python.org/3/library/logging.html#logging-levels>`_.
-  In addition to the standard loggin levels we define our custom ``REPORT`` level
-  that has a value of ``23``.
+  In addition to the standard logging levels, we define our custom ``REPORT`` level,
+  which, with a value of ``23``, sits between the standard ``INFO`` and ``WARNING``
+  levels. The ``REPORT`` level is the default logging level as this is what is used
+  by messages from, among other things, the work chain report..
 
 When the problem is solved, we suggest to bring back the default logging level, using the two commands::
 

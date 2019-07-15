@@ -130,6 +130,7 @@ class Migration(migrations.Migration):
                 node.type = 'node.process.calculation.calcjob.CalcJobNode.' AND
                 node.id = attribute.dbnode_id;
             -- parser_name -> parser
-            """),
+            """
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

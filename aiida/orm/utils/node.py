@@ -32,8 +32,10 @@ from aiida.common.constants import AIIDA_FLOAT_PRECISION  # pylint: disable=wron
 # therefore is not allowed in individual attribute or extra keys.
 FIELD_SEPARATOR = '.'
 
-__all__ = ('load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string', 'AbstractNodeMeta',
-           'validate_attribute_extra_key', 'clean_value')
+__all__ = (
+    'load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string', 'AbstractNodeMeta',
+    'validate_attribute_extra_key', 'clean_value'
+)
 
 
 def load_node_class(type_string):
@@ -170,7 +172,8 @@ def validate_attribute_extra_key(key):
 
     if FIELD_SEPARATOR in key:
         raise exceptions.ValidationError(
-            'key for attributes or extras cannot contain the character `{}`'.format(FIELD_SEPARATOR))
+            'key for attributes or extras cannot contain the character `{}`'.format(FIELD_SEPARATOR)
+        )
 
 
 def clean_value(value):

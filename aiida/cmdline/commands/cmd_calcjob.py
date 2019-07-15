@@ -102,11 +102,12 @@ def calcjob_inputcat(calcjob, path):
         content = calcjob.get_object_content(path)
     except Exception as exception:  # pylint: disable=broad-except
         # No path available or is incorrect
-        echo.echo_critical('"{}" and its process class "{}" do not define a default input file '
-                           '(option "input_filename" not found).\n'
-                           'Please specify a path explicitly.\n'
-                           'Exception: {}'.format(calcjob.__class__.__name__, calcjob.process_class.__name__,
-                                                  exception))
+        echo.echo_critical(
+            '"{}" and its process class "{}" do not define a default input file '
+            '(option "input_filename" not found).\n'
+            'Please specify a path explicitly.\n'
+            'Exception: {}'.format(calcjob.__class__.__name__, calcjob.process_class.__name__, exception)
+        )
     else:
         echo.echo(content)
 
@@ -141,11 +142,12 @@ def calcjob_outputcat(calcjob, path):
         content = retrieved.get_object_content(path)
     except Exception as exception:  # pylint: disable=broad-except
         # No path available or is incorrect
-        echo.echo_critical('"{}" and its process class "{}" do not define a default output file '
-                           '(option "output_filename" not found).\n'
-                           'Please specify a path explicitly.\n'
-                           'Exception: {}'.format(calcjob.__class__.__name__, calcjob.process_class.__name__,
-                                                  exception))
+        echo.echo_critical(
+            '"{}" and its process class "{}" do not define a default output file '
+            '(option "output_filename" not found).\n'
+            'Please specify a path explicitly.\n'
+            'Exception: {}'.format(calcjob.__class__.__name__, calcjob.process_class.__name__, exception)
+        )
     else:
         echo.echo(content)
 

@@ -49,6 +49,7 @@ class Migration(migrations.Migration):
                 UPDATE db_dbnode
                 SET type = regexp_replace(type, '^process.', 'node.process.')
                 WHERE type LIKE 'process.%';
-                """),
+                """
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

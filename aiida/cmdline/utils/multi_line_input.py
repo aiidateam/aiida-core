@@ -60,13 +60,17 @@ def edit_pre_post(pre=None, post=None, summary=None):
             pre, post = mlinput.split(separator)
         except ValueError as err:
             if str(err) == "need more than 1 value to unpack":
-                raise InputValidationError("Looks like you modified the "
-                                           "separator that should NOT be modified. Please be "
-                                           "careful!")
+                raise InputValidationError(
+                    "Looks like you modified the "
+                    "separator that should NOT be modified. Please be "
+                    "careful!"
+                )
             elif str(err) == "too many values to unpack":
-                raise InputValidationError("Looks like you have more than one "
-                                           "separator, while only one is needed "
-                                           "(and allowed). Please be careful!")
+                raise InputValidationError(
+                    "Looks like you have more than one "
+                    "separator, while only one is needed "
+                    "(and allowed). Please be careful!"
+                )
             else:
                 raise err
 

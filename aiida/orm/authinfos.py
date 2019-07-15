@@ -146,7 +146,8 @@ class AuthInfo(entities.Entity):
         try:
             transport_class = TransportFactory(transport_type)
         except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError('transport type `{}` could not be loaded: {}'.format(
-                transport_type, exception))
+            raise exceptions.ConfigurationError(
+                'transport type `{}` could not be loaded: {}'.format(transport_type, exception)
+            )
 
         return transport_class(machine=computer.hostname, **self.get_auth_params())

@@ -34,11 +34,13 @@ if __name__ == '__main__':
         += SETUP_JSON['extras_require']['rest'] \
         + SETUP_JSON['extras_require']['atomic_tools']
 
-    SETUP_JSON['extras_require']['all'] = list(
-        {item for sublist in SETUP_JSON['extras_require'].values() for item in sublist if item != 'bpython'})
+    SETUP_JSON['extras_require']['all'] = list({
+        item for sublist in SETUP_JSON['extras_require'].values() for item in sublist if item != 'bpython'
+    })
 
     setup(
         packages=find_packages(),
         long_description=open(path.join(THIS_FOLDER, 'README.md')).read(),
         long_description_content_type='text/markdown',
-        **SETUP_JSON)
+        **SETUP_JSON
+    )

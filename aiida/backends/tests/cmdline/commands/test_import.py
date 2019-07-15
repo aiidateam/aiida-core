@@ -107,7 +107,9 @@ class TestVerdiImport(AiidaTestCase):
             group.count(),
             nodes_in_group,
             msg="The Group count should not have changed from {}. Instead it is now {}".format(
-                nodes_in_group, group.count()))
+                nodes_in_group, group.count()
+            )
+        )
 
         # Invoke `verdi import` again with new archive, making sure Group count is upped
         options = ['-G', group.label] + [archives[1]]
@@ -119,7 +121,9 @@ class TestVerdiImport(AiidaTestCase):
             group.count(),
             nodes_in_group,
             msg="There should now be more than {} nodes in group {} , instead there are {}".format(
-                nodes_in_group, group_label, group.count()))
+                nodes_in_group, group_label, group.count()
+            )
+        )
 
     def test_import_make_new_group(self):
         """Make sure imported entities are saved in new Group"""
@@ -130,7 +134,8 @@ class TestVerdiImport(AiidaTestCase):
         # Check Group does not already exist
         group_search = Group.objects.find(filters={'label': group_label})
         self.assertEqual(
-            len(group_search), 0, msg="A Group with label '{}' already exists, this shouldn't be.".format(group_label))
+            len(group_search), 0, msg="A Group with label '{}' already exists, this shouldn't be.".format(group_label)
+        )
 
         # Invoke `verdi import`, making sure there are no exceptions
         options = ['-G', group_label] + archives

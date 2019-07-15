@@ -39,8 +39,10 @@ def migrate_infer_calculation_entry_point(connection):
     from aiida.manage.database.integrity.plugins import infer_calculation_entry_point
     from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR
 
-    DbNode = table('db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String),
-                   column('process_type', String))
+    DbNode = table(
+        'db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String),
+        column('process_type', String)
+    )
 
     query_set = connection.execute(select([DbNode.c.type]).where(DbNode.c.type.like('calculation.%'))).fetchall()
     type_strings = set(entry[0] for entry in query_set)
@@ -55,14 +57,17 @@ def migrate_infer_calculation_entry_point(connection):
         # All affected entries should be logged to file that the user can consult.
         if ENTRY_POINT_STRING_SEPARATOR not in entry_point_string:
             query_set = connection.execute(
-                select([DbNode.c.uuid]).where(DbNode.c.type == op.inline_literal(type_string))).fetchall()
+                select([DbNode.c.uuid]).where(DbNode.c.type == op.inline_literal(type_string))
+            ).fetchall()
 
             uuids = [str(entry.uuid) for entry in query_set]
             for uuid in uuids:
                 fallback_cases.append([uuid, type_string, entry_point_string])
 
-        connection.execute(DbNode.update().where(DbNode.c.type == op.inline_literal(type_string)).values(
-            process_type=op.inline_literal(entry_point_string)))
+        connection.execute(
+            DbNode.update().where(DbNode.c.type == op.inline_literal(type_string)
+                                 ).values(process_type=op.inline_literal(entry_point_string))
+        )
 
     if fallback_cases:
         headers = ['UUID', 'type (old)', 'process_type (fallback)']
@@ -98,7 +103,8 @@ def upgrade():
     # Detect if the database contain any unexpected links
     detect_unexpected_links(connection)
 
-    statement = text("""
+    statement = text(
+        """
         DELETE FROM db_dblink WHERE db_dblink.id IN (
             SELECT db_dblink.id FROM db_dblink
             INNER JOIN db_dbnode ON db_dblink.input_id = db_dbnode.id
@@ -167,7 +173,8 @@ def upgrade():
         WHERE db_dblink.output_id = db_dbnode.id AND db_dbnode.type LIKE 'node.process.workflow%'
         AND db_dblink.type = 'calllink';
          -- Rename `calllink` to `call_work` if the target node is a workflow type node
-        """)
+        """
+    )
     connection.execute(statement)
 
 
@@ -175,7 +182,8 @@ def downgrade():
     """The downgrade migration actions."""
     connection = op.get_bind()
 
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dbnode SET type = 'calculation.job.JobCalculation.'
         WHERE type = 'node.process.calculation.calcjob.CalcJobNode.';
 
@@ -200,5 +208,6 @@ def downgrade():
 
         UPDATE db_dblink SET type = 'returnlink'
         WHERE type = 'return';
-        """)
+        """
+    )
     connection.execute(statement)

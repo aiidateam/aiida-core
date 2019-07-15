@@ -88,8 +88,11 @@ class Profile(object):  # pylint: disable=useless-object-inheritance,too-many-pu
                     internal_key = self._map_config_to_internal[internal_key]
                 except KeyError:
                     from aiida.cmdline.utils import echo
-                    echo.echo_warning('removed unsupported key `{}` with value `{}` from profile `{}`'.format(
-                        internal_key, value, name))
+                    echo.echo_warning(
+                        'removed unsupported key `{}` with value `{}` from profile `{}`'.format(
+                            internal_key, value, name
+                        )
+                    )
                     continue
             setattr(self, internal_key, value)
 
@@ -280,8 +283,9 @@ class Profile(object):  # pylint: disable=useless-object-inheritance,too-many-pu
             os.makedirs(self.repository_path)
         except OSError as exception:
             if exception.errno != errno.EEXIST:
-                raise exceptions.ConfigurationError('could not create the configured repository `{}`: {}'.format(
-                    self.repository_path, str(exception)))
+                raise exceptions.ConfigurationError(
+                    'could not create the configured repository `{}`: {}'.format(self.repository_path, str(exception))
+                )
 
     @property
     def filepaths(self):

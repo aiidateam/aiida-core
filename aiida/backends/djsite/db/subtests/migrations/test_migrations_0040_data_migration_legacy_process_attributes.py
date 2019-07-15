@@ -33,7 +33,8 @@ class TestLegacyProcessAttributeDataMigration(TestMigrations):
                 '_failed': False,
                 '_aborted': False,
                 '_do_abort': False,
-            })
+            }
+        )
         node_process.save()
         self.node_process_id = node_process.id
 
@@ -47,7 +48,8 @@ class TestLegacyProcessAttributeDataMigration(TestMigrations):
                 '_failed': False,
                 '_aborted': False,
                 '_do_abort': False,
-            })
+            }
+        )
         node_process_active.save()
         self.node_process_active_id = node_process_active.id
 
@@ -62,7 +64,8 @@ class TestLegacyProcessAttributeDataMigration(TestMigrations):
                 '_failed': False,
                 '_aborted': False,
                 '_do_abort': False,
-            })
+            }
+        )
         node_data.save()
         self.node_data_id = node_data.id
 

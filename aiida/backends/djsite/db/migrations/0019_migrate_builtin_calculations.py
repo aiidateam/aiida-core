@@ -84,6 +84,7 @@ class Migration(migrations.Migration):
                 AND a.key = 'input_plugin'
                 AND a.tval = 'templatereplacer'
                 AND n.type = 'data.code.Code.';
-            """),
+            """
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

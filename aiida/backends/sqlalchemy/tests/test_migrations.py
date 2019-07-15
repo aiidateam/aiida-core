@@ -347,8 +347,11 @@ class TestMigrationSchemaVsModelsSchema(AiidaTestCase):
 
         result = compare(self.db_url_left, self.db_url_right, set(['alembic_version']))
 
-        self.assertTrue(result.is_match, "The migration database doesn't match to the one "
-                        "created by the models.\nDifferences: " + result._dump_data(result.errors))  # pylint: disable=protected-access
+        self.assertTrue(
+            result.is_match,
+            "The migration database doesn't match to the one "
+            "created by the models.\nDifferences: " + result._dump_data(result.errors)  # pylint: disable=protected-access
+        )
 
 
 class TestProvenanceRedesignMigration(TestMigrationsSQLA):
@@ -372,12 +375,14 @@ class TestProvenanceRedesignMigration(TestMigrationsSQLA):
                 session.commit()
 
                 node_calc_job_known = DbNode(
-                    type='calculation.job.arithmetic.add.ArithmeticAddCalculation.', user_id=user.id)
+                    type='calculation.job.arithmetic.add.ArithmeticAddCalculation.', user_id=user.id
+                )
                 node_calc_job_unknown = DbNode(type='calculation.job.unknown.PluginJobCalculation.', user_id=user.id)
                 node_process = DbNode(type='calculation.process.ProcessCalculation.', user_id=user.id)
                 node_work_chain = DbNode(type='calculation.work.WorkCalculation.', user_id=user.id)
                 node_work_function = DbNode(
-                    type='calculation.work.WorkCalculation.', attributes={'function_name': 'test'}, user_id=user.id)
+                    type='calculation.work.WorkCalculation.', attributes={'function_name': 'test'}, user_id=user.id
+                )
                 node_inline = DbNode(type='calculation.inline.InlineCalculation.', user_id=user.id)
                 node_function = DbNode(type='calculation.function.FunctionCalculation.', user_id=user.id)
 
@@ -474,15 +479,18 @@ class TestGroupRenamingMigration(TestMigrationsSQLA):
                 session.add(group_user)
                 # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
                 group_data_upf = DbGroup(
-                    label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family')
+                    label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family'
+                )
                 session.add(group_data_upf)
                 # test auto.import group type_string: 'aiida.import' -> 'auto.import'
                 group_autoimport = DbGroup(
-                    label='test_import_group', user_id=default_user.id, type_string='aiida.import')
+                    label='test_import_group', user_id=default_user.id, type_string='aiida.import'
+                )
                 session.add(group_autoimport)
                 # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
                 group_autorun = DbGroup(
-                    label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run')
+                    label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run'
+                )
                 session.add(group_autorun)
 
                 session.commit()
@@ -565,7 +573,8 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 }
                 node_work = DbNode(type='node.process.workflow.WorkflowNode.', attributes=attributes, user_id=user.id)
                 node_calc = DbNode(
-                    type='node.process.calculation.calcjob.CalcJobNode.', attributes=attributes, user_id=user.id)
+                    type='node.process.calculation.calcjob.CalcJobNode.', attributes=attributes, user_id=user.id
+                )
                 # Create a node of a different type to ensure that its attributes are not updated
                 node_other = DbNode(type='node.othernode.', attributes=attributes, user_id=user.id)
 
@@ -601,7 +610,8 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_NEW), self.parser_name)
                 self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_NEW), self.resources)
                 self.assertEqual(
-                    node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
+                    node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables
+                )
                 self.assertEqual(node_calc.attributes.get(self.KEY_PROCESS_LABEL_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_OLD, not_found), not_found)
@@ -614,7 +624,8 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 self.assertEqual(node_other.attributes.get(self.KEY_PARSER_NAME_OLD), self.parser_name)
                 self.assertEqual(node_other.attributes.get(self.KEY_RESOURCES_OLD), self.resources)
                 self.assertEqual(
-                    node_other.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_OLD), self.environment_variables)
+                    node_other.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_OLD), self.environment_variables
+                )
                 self.assertEqual(node_other.attributes.get(self.KEY_PROCESS_LABEL_NEW, not_found), not_found)
                 self.assertEqual(node_other.attributes.get(self.KEY_PARSER_NAME_NEW, not_found), not_found)
                 self.assertEqual(node_other.attributes.get(self.KEY_RESOURCES_NEW, not_found), not_found)
@@ -657,7 +668,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
         from aiida.backends.general.migrations.utils import dumps_json
 
         log_migration = importlib.import_module(
-            'aiida.backends.sqlalchemy.migrations.versions.041a79fc615f_dblog_cleaning')
+            'aiida.backends.sqlalchemy.migrations.versions.041a79fc615f_dblog_cleaning'
+        )
 
         DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
@@ -698,17 +710,20 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                         "levelno": 23,
                         "message": "calculation node 1",
                         "objname": "node.calculation.job.quantumespresso.pw.",
-                    })
+                    }
+                )
                 log_2 = DbLog(
                     loggername='something.else logger',
                     objpk=param.id,
                     objname='something.else.',
-                    message='parameter data with log message')
+                    message='parameter data with log message'
+                )
                 log_3 = DbLog(
                     loggername='TopologicalWorkflow logger',
                     objpk=leg_workf.id,
                     objname='aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow',
-                    message='parameter data with log message')
+                    message='parameter data with log message'
+                )
                 log_4 = DbLog(
                     loggername='CalculationNode logger',
                     objpk=calc_2.id,
@@ -721,7 +736,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                         "levelno": 23,
                         "message": "calculation node 1",
                         "objname": "node.calculation.job.quantumespresso.pw.",
-                    })
+                    }
+                )
                 # Creating two more log records that don't correspond to a node
                 log_5 = DbLog(
                     loggername='CalculationNode logger',
@@ -735,7 +751,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                         "levelno": 25,
                         "message": "calculation node 1000",
                         "objname": "node.calculation.job.quantumespresso.pw.",
-                    })
+                    }
+                )
                 log_6 = DbLog(
                     loggername='CalculationNode logger',
                     objpk=(calc_2.id + 1001),
@@ -748,7 +765,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                         "levelno": 24,
                         "message": "calculation node 1001",
                         "objname": "node.calculation.job.quantumespresso.pw.",
-                    })
+                    }
+                )
 
                 session.add(log_1)
                 session.add(log_2)
@@ -776,8 +794,9 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                     cols_to_project.append(getattr(DbLog, val))
 
                 # Getting the serialized Dict logs
-                param_data = session.query(DbLog).filter(DbLog.objpk == param.id).filter(
-                    DbLog.objname == 'something.else.').with_entities(*cols_to_project).one()
+                param_data = session.query(DbLog).filter(DbLog.objpk == param.id
+                                                        ).filter(DbLog.objname == 'something.else.'
+                                                                ).with_entities(*cols_to_project).one()
                 serialized_param_data = dumps_json([(dict(list(zip(param_data.keys(), param_data))))])
                 # Getting the serialized logs for the unknown entity logs (as the export migration fuction
                 # provides them) - this should coincide to the above

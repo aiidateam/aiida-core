@@ -59,11 +59,13 @@ def construct_awaitable(target):
     else:
         raise ValueError('invalid class for awaitable target: {}'.format(type(target)))
 
-    awaitable = Awaitable(**{
-        'pk': target.pk,
-        'action': AwaitableAction.ASSIGN,
-        'target': awaitable_target,
-        'outputs': False,
-    })
+    awaitable = Awaitable(
+        **{
+            'pk': target.pk,
+            'action': AwaitableAction.ASSIGN,
+            'target': awaitable_target,
+            'outputs': False,
+        }
+    )
 
     return awaitable

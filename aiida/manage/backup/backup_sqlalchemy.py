@@ -54,7 +54,8 @@ class Backup(AbstractBackup):
         :return:
         """
         q_nodes = aiida.backends.sqlalchemy.get_scoped_session().query(DbNode).filter(
-            DbNode.mtime >= start_of_backup).filter(DbNode.mtime <= backup_end_for_this_round)
+            DbNode.mtime >= start_of_backup
+        ).filter(DbNode.mtime <= backup_end_for_this_round)
 
         return [q_nodes]
 

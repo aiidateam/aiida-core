@@ -33,7 +33,9 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             sql=r"""UPDATE db_dbnode SET type = 'data.dict.Dict.' WHERE type = 'data.parameter.ParameterData.';""",
-            reverse_sql=
-            r"""UPDATE db_dbnode SET type = 'data.parameter.ParameterData.' WHERE type = 'data.dict.Dict.';"""),
+            reverse_sql=r"""
+                UPDATE db_dbnode SET type = 'data.parameter.ParameterData.' WHERE type = 'data.dict.Dict.';
+                """
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

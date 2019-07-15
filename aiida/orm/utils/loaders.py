@@ -21,8 +21,10 @@ from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.lang import abstractclassmethod, classproperty
 from aiida.orm.querybuilder import QueryBuilder
 
-__all__ = ('get_loader', 'OrmEntityLoader', 'CalculationEntityLoader', 'CodeEntityLoader', 'ComputerEntityLoader',
-           'GroupEntityLoader', 'NodeEntityLoader')
+__all__ = (
+    'get_loader', 'OrmEntityLoader', 'CalculationEntityLoader', 'CodeEntityLoader', 'ComputerEntityLoader',
+    'GroupEntityLoader', 'NodeEntityLoader'
+)
 
 
 def get_loader(orm_class):

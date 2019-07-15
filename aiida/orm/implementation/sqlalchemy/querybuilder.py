@@ -238,8 +238,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 raise InputValidationError("You have to give an integer when comparing to a length")
         elif operator in ('like', 'ilike'):
             if not isinstance(value, six.string_types):
-                raise InputValidationError("Value for operator {} has to be a string (you gave {})"
-                                           "".format(operator, value))
+                raise InputValidationError(
+                    "Value for operator {} has to be a string (you gave {})"
+                    "".format(operator, value)
+                )
 
         elif operator == 'in':
             value_type_set = set(type(i) for i in value)
@@ -259,7 +261,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             is_attribute=is_attribute,
                             alias=alias,
                             column=column,
-                            column_name=column_name))
+                            column_name=column_name
+                        )
+                    )
             if operator == 'and':
                 expr = and_(*expressions_for_this_path)
             elif operator == 'or':
@@ -268,7 +272,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         if expr is None:
             if is_attribute:
                 expr = self.get_filter_expr_from_attributes(
-                    operator, value, attr_key, column=column, column_name=column_name, alias=alias)
+                    operator, value, attr_key, column=column, column_name=column_name, alias=alias
+                )
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
@@ -332,8 +337,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             #  Possible types are object, array, string, number, boolean, and null.
             valid_types = ('object', 'array', 'string', 'number', 'boolean', 'null')
             if value not in valid_types:
-                raise InputValidationError("value {} for of_type is not among valid types\n"
-                                           "{}".format(value, valid_types))
+                raise InputValidationError(
+                    "value {} for of_type is not among valid types\n"
+                    "{}".format(value, valid_types)
+                )
             expr = jsonb_typeof(database_entity) == value
         elif operator == 'like':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
@@ -349,18 +356,21 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'has_key':
             expr = database_entity.cast(JSONB).has_key(value)  # noqa
         elif operator == 'of_length':
-            expr = case(
-                [(jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) == value)],
-                else_=False)
+            expr = case([
+                (jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) == value)
+            ],
+                        else_=False)
 
         elif operator == 'longer':
-            expr = case(
-                [(jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) > value)],
-                else_=False)
+            expr = case([
+                (jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) > value)
+            ],
+                        else_=False)
         elif operator == 'shorter':
-            expr = case(
-                [(jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) < value)],
-                else_=False)
+            expr = case([
+                (jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) < value)
+            ],
+                        else_=False)
         else:
             raise InputValidationError("Unknown operator {} for filters in JSON field".format(operator))
         return expr
@@ -495,8 +505,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                     yield {
                         tag: {
                             self.get_corresponding_property(
-                                get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema):
-                            self.get_aiida_res(attrkey, this_result[index_in_sql_result])
+                                get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
+                            ): self.get_aiida_res(attrkey, this_result[index_in_sql_result])
                             for attrkey, index_in_sql_result in projected_entities_dict.items()
                         } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
                     }
@@ -508,8 +518,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         yield {
                             tag: {
                                 self.get_corresponding_property(
-                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema):
-                                self.get_aiida_res(attrkey, this_result)
+                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
+                                ): self.get_aiida_res(attrkey, this_result)
                                 for attrkey, position in projected_entities_dict.items()
                             } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
                         }
@@ -518,8 +528,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         yield {
                             tag: {
                                 self.get_corresponding_property(
-                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema):
-                                self.get_aiida_res(attrkey, this_result)
+                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
+                                ): self.get_aiida_res(attrkey, this_result)
                                 for attrkey, position in projected_entities_dict.items()
                             } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
                         }

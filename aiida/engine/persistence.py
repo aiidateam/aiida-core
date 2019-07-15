@@ -63,14 +63,16 @@ class AiiDAPersister(plumpy.Persister):
             bundle = plumpy.Bundle(process, plumpy.LoadSaveContext(loader=get_object_loader()))
         except ValueError:
             # Couldn't create the bundle
-            raise plumpy.PersistenceError("Failed to create a bundle for '{}': {}".format(
-                process, traceback.format_exc()))
+            raise plumpy.PersistenceError(
+                "Failed to create a bundle for '{}': {}".format(process, traceback.format_exc())
+            )
 
         try:
             process.node.set_checkpoint(serialize.serialize(bundle))
         except Exception:
-            raise plumpy.PersistenceError("Failed to store a checkpoint for '{}': {}".format(
-                process, traceback.format_exc()))
+            raise plumpy.PersistenceError(
+                "Failed to store a checkpoint for '{}': {}".format(process, traceback.format_exc())
+            )
 
         return bundle
 
@@ -93,8 +95,9 @@ class AiiDAPersister(plumpy.Persister):
         try:
             calculation = load_node(pid)
         except (MultipleObjectsError, NotExistent):
-            raise plumpy.PersistenceError("Failed to load the node for process<{}>: {}".format(
-                pid, traceback.format_exc()))
+            raise plumpy.PersistenceError(
+                "Failed to load the node for process<{}>: {}".format(pid, traceback.format_exc())
+            )
 
         checkpoint = calculation.checkpoint
 
@@ -104,8 +107,9 @@ class AiiDAPersister(plumpy.Persister):
         try:
             bundle = serialize.deserialize(checkpoint)
         except Exception:
-            raise plumpy.PersistenceError("Failed to load the checkpoint for process<{}>: {}".format(
-                pid, traceback.format_exc()))
+            raise plumpy.PersistenceError(
+                "Failed to load the checkpoint for process<{}>: {}".format(pid, traceback.format_exc())
+            )
 
         return bundle
 

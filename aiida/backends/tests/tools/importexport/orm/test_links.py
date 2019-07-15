@@ -214,10 +214,10 @@ class TestLinks(AiidaTestCase):
         # predecessor(INPUT, CREATE)/successor(CALL, RETURN, CREATE) links.
         export_list = [(work1, [data1, data2, data3, data4, calc1, work1, work2]),
                        (work2, [data1, data3, data4, calc1, work2]), (data3, [data1, data3, data4, calc1]),
-                       (data4, [data1, data3, data4, calc1]), (data5, [data1, data3, data4, data5, data6, calc1,
-                                                                       calc2]),
-                       (data6, [data1, data3, data4, data5, data6, calc1, calc2]), (calc1, [data1, data3, data4,
-                                                                                            calc1]),
+                       (data4, [data1, data3, data4, calc1]),
+                       (data5, [data1, data3, data4, data5, data6, calc1, calc2]),
+                       (data6, [data1, data3, data4, data5, data6, calc1,
+                                calc2]), (calc1, [data1, data3, data4, calc1]),
                        (calc2, [data1, data3, data4, data5, data6, calc1, calc2]), (data1, [data1]), (data2, [data2])]
 
         return graph_nodes, export_list[export_combination]
@@ -276,10 +276,13 @@ class TestLinks(AiidaTestCase):
             edge_project=['label', 'type'],
             edge_filters={
                 'type': {
-                    'in': (LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value, LinkType.CREATE.value,
-                           LinkType.RETURN.value, LinkType.CALL_CALC.value, LinkType.CALL_WORK.value)
+                    'in': (
+                        LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value, LinkType.CREATE.value,
+                        LinkType.RETURN.value, LinkType.CALL_CALC.value, LinkType.CALL_WORK.value
+                    )
                 }
-            })
+            }
+        )
         export_links = builder.all()
 
         export_file = os.path.join(temp_dir, 'export.tar.gz')
@@ -320,7 +323,8 @@ class TestLinks(AiidaTestCase):
                 export_target_uuids, imported_node_uuids,
                 "Problem in comparison of export node: " + str(export_node_str) + "\n" + "Expected set: " +
                 str(export_target_uuids) + "\n" + "Imported set: " + str(imported_node_uuids) + "\n" + "Difference: " +
-                str([_ for _ in export_target_uuids.symmetric_difference(imported_node_uuids)]))
+                str([_ for _ in export_target_uuids.symmetric_difference(imported_node_uuids)])
+            )
 
     @with_temp_dir
     def test_high_level_workflow_links(self, temp_dir):
@@ -351,15 +355,19 @@ class TestLinks(AiidaTestCase):
                     edge_project=['label', 'type'],
                     edge_filters={
                         'type': {
-                            'in': (LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value, LinkType.CREATE.value,
-                                   LinkType.RETURN.value, LinkType.CALL_CALC.value, LinkType.CALL_WORK.value)
+                            'in': (
+                                LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value, LinkType.CREATE.value,
+                                LinkType.RETURN.value, LinkType.CALL_CALC.value, LinkType.CALL_WORK.value
+                            )
                         }
-                    })
+                    }
+                )
 
                 self.assertEqual(
                     builder.count(),
                     13,
-                    msg="Failed with c1={}, c2={}, w1={}, w2={}".format(calcs[0], calcs[1], works[0], works[1]))
+                    msg="Failed with c1={}, c2={}, w1={}, w2={}".format(calcs[0], calcs[1], works[0], works[1])
+                )
 
                 export_links = builder.all()
 
@@ -377,7 +385,8 @@ class TestLinks(AiidaTestCase):
                 self.assertSetEqual(
                     set(export_set),
                     set(import_set),
-                    msg="Failed with c1={}, c2={}, w1={}, w2={}".format(calcs[0], calcs[1], works[0], works[1]))
+                    msg="Failed with c1={}, c2={}, w1={}, w2={}".format(calcs[0], calcs[1], works[0], works[1])
+                )
 
     @with_temp_dir
     def test_links_for_workflows(self, temp_dir):

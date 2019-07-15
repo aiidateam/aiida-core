@@ -81,7 +81,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag
         tag=entity_separator.join(tag_suffixes) + entity_separator + current_entity_str,
         project=project_cols,
         outerjoin=True,
-        **mydict)
+        **mydict
+    )
 
     # prepare the recursion for the referenced entities
     foreign_fields = {
@@ -115,10 +116,12 @@ def check_licences(node_licenses, allowed_licenses, forbidden_licenses):
                     if license_ not in allowed_licenses:
                         raise LicensingException
             except LicensingException:
-                raise LicensingException("Node {} is licensed "
-                                         "under {} license, which "
-                                         "is not in the list of "
-                                         "allowed licenses".format(pk, license_))
+                raise LicensingException(
+                    "Node {} is licensed "
+                    "under {} license, which "
+                    "is not in the list of "
+                    "allowed licenses".format(pk, license_)
+                )
         if forbidden_licenses is not None:
             try:
                 if isfunction(forbidden_licenses):
@@ -131,10 +134,12 @@ def check_licences(node_licenses, allowed_licenses, forbidden_licenses):
                     if license_ in forbidden_licenses:
                         raise LicensingException
             except LicensingException:
-                raise LicensingException("Node {} is licensed "
-                                         "under {} license, which "
-                                         "is in the list of "
-                                         "forbidden licenses".format(pk, license_))
+                raise LicensingException(
+                    "Node {} is licensed "
+                    "under {} license, which "
+                    "is in the list of "
+                    "forbidden licenses".format(pk, license_)
+                )
 
 
 def serialize_field(data, track_conversion=False):
@@ -223,8 +228,9 @@ def serialize_dict(datadict, remove_fields=None, rename_fields=None, track_conve
             # rename_fields.get(key,key): use the replacement if found in rename_fields,
             # otherwise use 'key' as the default value.
             if track_conversion:
-                (ret_dict[rename_fields.get(key, key)], conversions[rename_fields.get(key, key)]) = serialize_field(
-                    data=value, track_conversion=track_conversion)
+                (ret_dict[rename_fields.get(key, key)],
+                 conversions[rename_fields.get(key,
+                                               key)]) = serialize_field(data=value, track_conversion=track_conversion)
             else:
                 ret_dict[rename_fields.get(key, key)] = serialize_field(data=value, track_conversion=track_conversion)
 
@@ -265,6 +271,7 @@ def check_process_nodes_sealed(nodes):
     sealed_nodes = {_[0] for _ in sealed_nodes}
 
     if sealed_nodes != nodes:
-        raise InvalidOperation("All ProcessNodes must be sealed before they can be exported. "
-                               "Node(s) with PK(s): {} is/are not sealed.".format(', '.join(
-                                   str(pk) for pk in nodes - sealed_nodes)))
+        raise InvalidOperation(
+            "All ProcessNodes must be sealed before they can be exported. "
+            "Node(s) with PK(s): {} is/are not sealed.".format(', '.join(str(pk) for pk in nodes - sealed_nodes))
+        )

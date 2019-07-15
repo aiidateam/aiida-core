@@ -38,8 +38,10 @@ from aiida.manage.manager import get_manager
 @options_setup.SETUP_DATABASE_PASSWORD()
 @options_setup.SETUP_REPOSITORY_URI()
 @options.CONFIG_FILE()
-def setup(non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
-          db_name, db_username, db_password, repository):
+def setup(
+    non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
+    db_name, db_username, db_password, repository
+):
     """Setup a new profile."""
     # pylint: disable=too-many-arguments,too-many-locals,unused-argument
     from aiida import orm
@@ -72,7 +74,8 @@ def setup(non_interactive, profile, email, first_name, last_name, institution, d
         backend.migrate()
     except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(
-            'database migration failed, probably because connection details are incorrect:\n{}'.format(exception))
+            'database migration failed, probably because connection details are incorrect:\n{}'.format(exception)
+        )
     else:
         echo.echo_success('database migration completed.')
 
@@ -84,7 +87,8 @@ def setup(non_interactive, profile, email, first_name, last_name, institution, d
 
     # Create the user if it does not yet exist
     created, user = orm.User.objects.get_or_create(
-        email=email, first_name=first_name, last_name=last_name, institution=institution)
+        email=email, first_name=first_name, last_name=last_name, institution=institution
+    )
     if created:
         user.store()
     profile.default_user = user.email
@@ -115,8 +119,10 @@ def setup(non_interactive, profile, email, first_name, last_name, institution, d
 @options_setup.QUICKSETUP_REPOSITORY_URI()
 @options.CONFIG_FILE()
 @click.pass_context
-def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host,
-               db_port, db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, repository):
+def quicksetup(
+    ctx, non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
+    db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, repository
+):
     """Setup a new profile where the database is automatically created and configured."""
     # pylint: disable=too-many-arguments,too-many-locals
     from aiida.manage.external.postgres import Postgres, manual_setup_instructions
@@ -142,13 +148,15 @@ def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, inst
         if create:
             postgres.create_db(db_username, db_name)
     except Exception as exception:
-        echo.echo_error('\n'.join([
-            'Oops! quicksetup was unable to create the AiiDA database for you.',
-            'For AiiDA to work, please either create the database yourself as follows:',
-            manual_setup_instructions(dbuser=su_db_username, dbname=su_db_name), '',
-            'Alternatively, give your (operating system) user permission to create postgresql databases' +
-            'and run quicksetup again.', ''
-        ]))
+        echo.echo_error(
+            '\n'.join([
+                'Oops! quicksetup was unable to create the AiiDA database for you.',
+                'For AiiDA to work, please either create the database yourself as follows:',
+                manual_setup_instructions(dbuser=su_db_username, dbname=su_db_name), '',
+                'Alternatively, give your (operating system) user permission to create postgresql databases' +
+                'and run quicksetup again.', ''
+            ])
+        )
         raise exception
 
     # The contextual defaults or `verdi setup` are not being called when `invoking`, so we have to explicitly define

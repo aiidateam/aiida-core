@@ -26,8 +26,9 @@ class FixtureManagerTestCase(unittest.TestCase):
 
     def setUp(self):
         self.fixture_manager = FixtureManager()
-        self.backend = BACKEND_DJANGO if os.environ.get('TEST_AIIDA_BACKEND',
-                                                        BACKEND_DJANGO) == BACKEND_DJANGO else BACKEND_SQLA
+        self.backend = BACKEND_DJANGO if os.environ.get(
+            'TEST_AIIDA_BACKEND', BACKEND_DJANGO
+        ) == BACKEND_DJANGO else BACKEND_SQLA
         self.fixture_manager.backend = self.backend
 
     def test_create_db_cluster(self):

@@ -44,8 +44,9 @@ def trajectory_list(raw, past_days, groups, all_users):
     elements = None
     elements_only = False
     formulamode = None
-    entry_list = data_list(TrajectoryData, LIST_PROJECT_HEADERS, elements, elements_only, formulamode, past_days,
-                           groups, all_users)
+    entry_list = data_list(
+        TrajectoryData, LIST_PROJECT_HEADERS, elements, elements_only, formulamode, past_days, groups, all_users
+    )
 
     counter = 0
     struct_list_data = list()

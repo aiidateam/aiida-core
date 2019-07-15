@@ -199,7 +199,8 @@ class TestGroups(AiidaTestCase):
             import_data(filename, group=group_label, silent=True)
         exc = exc.exception
         self.assertEqual(
-            str(exc), "group must be a Group entity", msg="The error message should be the same for both backends.")
+            str(exc), "group must be a Group entity", msg="The error message should be the same for both backends."
+        )
 
         # Import properly now, providing the Group object
         import_data(filename, group=group, silent=True)
@@ -210,7 +211,8 @@ class TestGroups(AiidaTestCase):
             builder.count(),
             1,
             msg="There should be exactly one Group with label {}. "
-            "Instead {} was found.".format(group_label, builder.count()))
+            "Instead {} was found.".format(group_label, builder.count())
+        )
         imported_group = load_group(builder.all()[0][0])
         self.assertEqual(imported_group.uuid, group_uuid)
         for node in imported_group.nodes:

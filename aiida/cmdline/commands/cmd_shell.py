@@ -27,12 +27,14 @@ from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
 @click.option(
     '--no-startup',
     is_flag=True,
-    help='When using plain Python, ignore the PYTHONSTARTUP environment variable and ~/.pythonrc.py script.')
+    help='When using plain Python, ignore the PYTHONSTARTUP environment variable and ~/.pythonrc.py script.'
+)
 @click.option(
     '-i',
     '--interface',
     type=click.Choice(AVAILABLE_SHELLS.keys()),
-    help='Specify an interactive interpreter interface.')
+    help='Specify an interactive interpreter interface.'
+)
 def shell(plain, no_startup, interface):
     """Start a python shell with preloaded AiiDA environment."""
 

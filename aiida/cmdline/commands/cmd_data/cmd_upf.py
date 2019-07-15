@@ -34,7 +34,8 @@ def upf():
     '--stop-if-existing',
     is_flag=True,
     default=False,
-    help='Interrupt pseudos import if a pseudo was already present in the AiiDA database')
+    help='Interrupt pseudos import if a pseudo was already present in the AiiDA database'
+)
 @decorators.with_dbenv()
 def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
     """
@@ -56,7 +57,8 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
     'with_description',
     is_flag=True,
     default=False,
-    help="Show also the description for the UPF family")
+    help="Show also the description for the UPF family"
+)
 @options.WITH_ELEMENTS()
 @decorators.with_dbenv()
 def upf_listfamilies(elements, with_description):
@@ -79,7 +81,8 @@ def upf_listfamilies(elements, with_description):
         project=["label", "description"],
         filters={"type_string": {
             '==': UPFGROUP_TYPE
-        }})
+        }}
+    )
 
     query.distinct()
     if query.count() > 0:

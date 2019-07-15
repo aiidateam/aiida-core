@@ -66,7 +66,8 @@ class PluginTestCase1(PluginTestCase):
             transport_type='local',
             scheduler_type='direct',
             workdir=temp_dir,
-            backend=cls.backend).store()
+            backend=cls.backend
+        ).store()
         return computer
 
     def test_data_loaded(self):

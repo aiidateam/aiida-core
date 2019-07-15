@@ -44,7 +44,7 @@ Revises: 07fac78e6209
 Create Date: 2019-06-22 09:55:25.284168
 
 """
-# pylint: disable=invalid-name,no-member,import-error,no-name-in-module
+# pylint: disable=invalid-name,no-member,import-error,no-name-in-module,line-too-long
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -67,7 +67,8 @@ def upgrade():
     # New `CalcJobs` will have the same node type and while their active can have a `state` attribute with a value
     # of the enum `CalcJobState`, some of which match the deprecated `JobCalcState`, however, the new ones are stored
     # in lower case, so we do not run the risk of matching them by accident.
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dbnode
         SET attributes = attributes - 'state' || '{"process_state": "killed", "process_status": "Legacy `JobCalculation` with state `NEW`", "process_label": "Legacy JobCalculation"}'
         WHERE node_type = 'process.calculation.calcjob.CalcJobNode.' AND attributes @> '{"state": "NEW"}';
@@ -104,7 +105,8 @@ def upgrade():
         UPDATE db_dbnode
         SET attributes = attributes - 'state' || '{"process_state": "finished", "exit_status": 0, "process_label": "Legacy JobCalculation"}'
         WHERE node_type = 'process.calculation.calcjob.CalcJobNode.' AND attributes @> '{"state": "FINISHED"}';
-    """)
+    """
+    )
     conn.execute(statement)
 
 

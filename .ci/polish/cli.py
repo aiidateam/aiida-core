@@ -25,48 +25,55 @@ from aiida.cmdline.utils import decorators
 @options.CODE(
     type=types.CodeParamType(entry_point='arithmetic.add'),
     required=False,
-    help='Code to perform the add operations with. Required if -C flag is specified')
+    help='Code to perform the add operations with. Required if -C flag is specified'
+)
 @click.option(
     '-C',
     '--use-calculations',
     is_flag=True,
     default=False,
     show_default=True,
-    help='Use job calculations to perform all additions')
+    help='Use job calculations to perform all additions'
+)
 @click.option(
     '-F',
     '--use-calcfunctions',
     is_flag=True,
     default=False,
     show_default=True,
-    help='Use calcfunctions to perform all substractions')
+    help='Use calcfunctions to perform all substractions'
+)
 @click.option(
     '-s',
     '--sleep',
     type=click.INT,
     default=5,
     show_default=True,
-    help='When submitting to the daemon, the number of seconds to sleep between polling the workchain process state')
+    help='When submitting to the daemon, the number of seconds to sleep between polling the workchain process state'
+)
 @click.option(
     '-t',
     '--timeout',
     type=click.INT,
     default=60,
     show_default=True,
-    help='When submitting to the daemon, the number of seconds to wait for a workchain to finish before timing out')
+    help='When submitting to the daemon, the number of seconds to wait for a workchain to finish before timing out'
+)
 @click.option(
     '-m',
     '--modulo',
     type=click.INT,
     default=1000000,
     show_default=True,
-    help='Specify an integer to modulo all intermediate and the final result to avoid integer overflow')
+    help='Specify an integer to modulo all intermediate and the final result to avoid integer overflow'
+)
 @click.option(
     '-n',
     '--dry-run',
     is_flag=True,
     default=False,
-    help='Only evaluate the expression and generate the workchain but do not launch it')
+    help='Only evaluate the expression and generate the workchain but do not launch it'
+)
 @decorators.with_dbenv()
 def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout, modulo, dry_run, daemon):
     """
@@ -150,7 +157,8 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
                 click.secho('Failed: ', fg='red', bold=True, nl=False)
                 click.secho(
                     'the workchain<{}> did not finish in time and the operation timed out'.format(workchain.pk),
-                    bold=True)
+                    bold=True
+                )
                 sys.exit(1)
 
             try:

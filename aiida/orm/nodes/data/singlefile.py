@@ -119,5 +119,6 @@ class SinglefileData(Data):
         objects = self.list_object_names()
 
         if [filename] != objects:
-            raise exceptions.ValidationError('respository files {} do not match the `filename` attribute {}.'.format(
-                objects, filename))
+            raise exceptions.ValidationError(
+                'respository files {} do not match the `filename` attribute {}.'.format(objects, filename)
+            )

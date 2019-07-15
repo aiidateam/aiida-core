@@ -45,7 +45,9 @@ def config_needs_migrating(config):
     if oldest_compatible_version > CURRENT_CONFIG_VERSION:
         raise exceptions.ConfigurationVersionError(
             'The configuration file has version {} which is not compatible with the current version {}.'.format(
-                current_version, CURRENT_CONFIG_VERSION))
+                current_version, CURRENT_CONFIG_VERSION
+            )
+        )
 
     return CURRENT_CONFIG_VERSION > current_version
 

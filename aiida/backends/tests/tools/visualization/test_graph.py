@@ -149,7 +149,8 @@ class TestVisGraph(AiidaTestCase):
             graph.edges,
             set([(nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
                  (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
-                 (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1'))]))
+                 (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1'))])
+        )
 
     def test_graph_add_outgoing(self):
         """ test adding a node and all its outgoing nodes to a graph"""
@@ -162,7 +163,8 @@ class TestVisGraph(AiidaTestCase):
         self.assertEqual(
             graph.edges,
             set([(nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
-                 (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2'))]))
+                 (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2'))])
+        )
 
     def test_graph_recurse_ancestors(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph"""
@@ -179,7 +181,8 @@ class TestVisGraph(AiidaTestCase):
                  (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
                  (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1')),
                  (nodes.pd0.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input1')),
-                 (nodes.pd1.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input2'))]))
+                 (nodes.pd1.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input2'))])
+        )
 
     def test_graph_recurse_ancestors_filter_links(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph, but filter link types"""
@@ -193,7 +196,8 @@ class TestVisGraph(AiidaTestCase):
             graph.edges,
             set([(nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
                  (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
-                 (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2'))]))
+                 (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2'))])
+        )
 
     def test_graph_recurse_descendants(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph"""
@@ -209,7 +213,8 @@ class TestVisGraph(AiidaTestCase):
                 (nodes.rd1.pk, nodes.calcf1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
                 (nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
                 (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2')),
-            ]))
+            ])
+        )
 
     def test_graph_graphviz_source(self):
         """ test the output of graphviz source """
@@ -252,7 +257,8 @@ class TestVisGraph(AiidaTestCase):
         # dedent before comparison
         self.assertEqual(
             sorted([l.strip() for l in graph.graphviz.source.splitlines()]),
-            sorted([l.strip() for l in expected.splitlines()]))
+            sorted([l.strip() for l in expected.splitlines()])
+        )
 
     def test_graph_graphviz_source_pstate(self):
         """ test the output of graphviz source, with the `pstate_node_styles` function """
@@ -295,4 +301,5 @@ class TestVisGraph(AiidaTestCase):
         # dedent before comparison
         self.assertEqual(
             sorted([l.strip() for l in graph.graphviz.source.splitlines()]),
-            sorted([l.strip() for l in expected.splitlines()]))
+            sorted([l.strip() for l in expected.splitlines()])
+        )

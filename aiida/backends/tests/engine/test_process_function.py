@@ -80,10 +80,11 @@ class TestProcessFunction(AiidaTestCase):
 
         @workfunction
         def function_defaults(
-                data_a=orm.Int(DEFAULT_INT), metadata={
-                    'label': DEFAULT_LABEL,
-                    'description': DEFAULT_DESCRIPTION
-                }):  # pylint: disable=unused-argument,dangerous-default-value,missing-docstring
+            data_a=orm.Int(DEFAULT_INT), metadata={
+                'label': DEFAULT_LABEL,
+                'description': DEFAULT_DESCRIPTION
+            }
+        ):  # pylint: disable=unused-argument,dangerous-default-value,missing-docstring
             return data_a
 
         @workfunction

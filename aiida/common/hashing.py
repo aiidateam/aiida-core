@@ -80,8 +80,7 @@ try:
     using_sysrandom = True
 except NotImplementedError:
     import warnings
-    warnings.warn('A secure pseudo-random number generator is not available '  # pylint: disable=no-member
-                  'on your system. Falling back to Mersenne Twister.')
+    warnings.warn('A secure pseudo-random number generator is not available. Falling back to Mersenne Twister.')  # pylint: disable=no-member
     using_sysrandom = False  # pylint: disable=invalid-name
 
 
@@ -185,16 +184,16 @@ def _(val, **kwargs):
 @_make_hash.register(abc.Sequence)
 def _(sequence_obj, **kwargs):
     # unpack the list and use the elements
-    return [_single_digest('list(')] + list(chain.from_iterable(
-        _make_hash(i, **kwargs) for i in sequence_obj)) + [_END_DIGEST]
+    return [_single_digest('list(')] + list(chain.from_iterable(_make_hash(i, **kwargs) for i in sequence_obj)
+                                           ) + [_END_DIGEST]
 
 
 @_make_hash.register(abc.Set)
 def _(set_obj, **kwargs):
     # turn the set objects into a list of hashes which are always sortable,
     # then return a flattened list of the hashes
-    return [_single_digest('set(')] + list(chain.from_iterable(sorted(
-        _make_hash(i, **kwargs) for i in set_obj))) + [_END_DIGEST]
+    return [_single_digest('set(')] + list(chain.from_iterable(sorted(_make_hash(i, **kwargs) for i in set_obj))
+                                          ) + [_END_DIGEST]
 
 
 @_make_hash.register(abc.Mapping)
@@ -206,8 +205,10 @@ def _(mapping, **kwargs):
             yield (_make_hash(key, **kwargs), value)
 
     return [_single_digest('dict(')] + list(
-        chain.from_iterable((k_digest + _make_hash(val, **kwargs))
-                            for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0)))) + [_END_DIGEST]
+        chain.from_iterable(
+            (k_digest + _make_hash(val, **kwargs)) for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0))
+        )
+    ) + [_END_DIGEST]
 
 
 @_make_hash.register(OrderedDict)
@@ -222,8 +223,8 @@ def _(mapping, **kwargs):
         return _make_hash.registry[abc.Mapping](mapping)
 
     return ([_single_digest('odict(')] + list(
-        chain.from_iterable(
-            (_make_hash(key, **kwargs) + _make_hash(val, **kwargs)) for key, val in mapping.items())) + [_END_DIGEST])
+        chain.from_iterable((_make_hash(key, **kwargs) + _make_hash(val, **kwargs)) for key, val in mapping.items())
+    ) + [_END_DIGEST])
 
 
 @_make_hash.register(numbers.Real)
@@ -243,8 +244,9 @@ def _(val, **kwargs):
     return [
         _single_digest(
             'complex', u"{}!{}".format(
-                float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION),
-                float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)).encode('utf-8'))
+                float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION), float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)
+            ).encode('utf-8')
+        )
     ]
 
 

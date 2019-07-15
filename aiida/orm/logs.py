@@ -77,7 +77,8 @@ class Log(entities.Entity):
                 levelname=record.levelname,
                 dbnode_id=dbnode_id,
                 message=message,
-                metadata=metadata)
+                metadata=metadata
+            )
 
         def get_logs_for(self, entity, order_by=None):
             """
@@ -175,7 +176,8 @@ class Log(entities.Entity):
             levelname=levelname,
             dbnode_id=dbnode_id,
             message=message,
-            metadata=metadata)
+            metadata=metadata
+        )
         super(Log, self).__init__(model)
         self.store()  # Logs are immutable and automatically stored
 

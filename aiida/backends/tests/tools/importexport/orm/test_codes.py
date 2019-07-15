@@ -98,10 +98,12 @@ class TestCode(AiidaTestCase):
         self.assertListEqual(sorted(export_links), sorted(import_links))
         self.assertEqual(
             len(export_links), links_count, "Expected to find only one link from code to "
-            "the calculation node before export. {} found.".format(len(export_links)))
+            "the calculation node before export. {} found.".format(len(export_links))
+        )
         self.assertEqual(
             len(import_links), links_count, "Expected to find only one link from code to "
-            "the calculation node after import. {} found.".format(len(import_links)))
+            "the calculation node after import. {} found.".format(len(import_links))
+        )
 
     @with_temp_dir
     def test_solo_code(self, temp_dir):

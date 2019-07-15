@@ -87,7 +87,8 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pyli
         echo.echo_error("* ERROR! The command 'echo -n' returned a non-zero return code ({})!".format(retval))
         return False
     if stdout:
-        echo.echo_error(u"""* ERROR! There is some spurious output in the standard output,
+        echo.echo_error(
+            u"""* ERROR! There is some spurious output in the standard output,
 that we report below between the === signs:
 =========================================================
 {}
@@ -98,10 +99,12 @@ remove the code, but just to disable it for non-interactive
 shells, see comments in issue #1980 on GitHub:
 https://github.com/aiidateam/aiida-core/issues/1890
 (and in the AiiDA documentation, linked from that issue)
-""".format(stdout))
+""".format(stdout)
+        )
         return False
     if stderr:
-        echo.echo_error(u"""* ERROR! There is some spurious output in the stderr,
+        echo.echo_error(
+            u"""* ERROR! There is some spurious output in the stderr,
 that we report below between the === signs:
 =========================================================
 {}
@@ -112,7 +115,8 @@ remove the code, but just to disable it for non-interactive
 shells, see comments in issue #1980 on GitHub:
 https://github.com/aiidateam/aiida-core/issues/1890
 (and in the AiiDA documentation, linked from that issue)
-""".format(stderr))
+""".format(stderr)
+        )
         return False
 
     echo.echo("      [OK]")
@@ -242,9 +246,11 @@ def computer_setup(ctx, non_interactive, **kwargs):
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
-        echo.echo_critical('A computer called {c} already exists. '
-                           'Use "verdi computer duplicate {c}" to set up a new '
-                           'computer starting from the settings of {c}.'.format(c=kwargs['label']))
+        echo.echo_critical(
+            'A computer called {c} already exists. '
+            'Use "verdi computer duplicate {c}" to set up a new '
+            'computer starting from the settings of {c}.'.format(c=kwargs['label'])
+        )
 
     if not non_interactive:
         try:
@@ -348,15 +354,17 @@ def computer_enable(computer, user):
     try:
         authinfo = computer.get_authinfo(user)
     except NotExistent:
-        echo.echo_critical("User with email '{}' is not configured for computer '{}' yet.".format(
-            user.email, computer.name))
+        echo.echo_critical(
+            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.name)
+        )
 
     if not authinfo.enabled:
         authinfo.enabled = True
         echo.echo_info("Computer '{}' enabled for user {}.".format(computer.name, user.get_full_name()))
     else:
-        echo.echo_info("Computer '{}' was already enabled for user {} {}.".format(computer.name, user.first_name,
-                                                                                  user.last_name))
+        echo.echo_info(
+            "Computer '{}' was already enabled for user {} {}.".format(computer.name, user.first_name, user.last_name)
+        )
 
 
 @verdi_computer.command('disable')
@@ -372,15 +380,17 @@ def computer_disable(computer, user):
     try:
         authinfo = computer.get_authinfo(user)
     except NotExistent:
-        echo.echo_critical("User with email '{}' is not configured for computer '{}' yet.".format(
-            user.email, computer.name))
+        echo.echo_critical(
+            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.name)
+        )
 
     if authinfo.enabled:
         authinfo.enabled = False
         echo.echo_info("Computer '{}' disabled for user {}.".format(computer.name, user.get_full_name()))
     else:
-        echo.echo_info("Computer '{}' was already disabled for user {} {}.".format(computer.name, user.first_name,
-                                                                                   user.last_name))
+        echo.echo_info(
+            "Computer '{}' was already disabled for user {} {}.".format(computer.name, user.first_name, user.last_name)
+        )
 
 
 @verdi_computer.command('list')
@@ -434,9 +444,11 @@ def computer_rename(computer, new_name):
     except ValidationError as error:
         echo.echo_critical("Invalid input! {}".format(error))
     except UniquenessError as error:
-        echo.echo_critical("Uniqueness error encountered! Probably a "
-                           "computer with name '{}' already exists"
-                           "".format(new_name))
+        echo.echo_critical(
+            "Uniqueness error encountered! Probably a "
+            "computer with name '{}' already exists"
+            "".format(new_name)
+        )
         echo.echo_critical("(Message was: {})".format(error))
 
     echo.echo_success("Computer '{}' renamed to '{}'".format(old_name, new_name))
@@ -558,7 +570,8 @@ def computer_configure():
 
 @computer_configure.command('show')
 @click.option(
-    '--defaults', is_flag=True, default=False, help='Show the default configuration settings for this computer.')
+    '--defaults', is_flag=True, default=False, help='Show the default configuration settings for this computer.'
+)
 @click.option('--as-option-string', is_flag=True)
 @options.USER()
 @arguments.COMPUTER()
@@ -585,11 +598,11 @@ def computer_config_show(computer, user, defaults, as_option_string):
             t_opt = transport_cls.auth_options[option.name]
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
-                    option_value = option.opts[-1] if config.get(option.name) else '--no-{}'.format(
-                        option.name.replace('_', '-'))
+                    option_value = option.opts[-1] if config.get(option.name
+                                                                ) else '--no-{}'.format(option.name.replace('_', '-'))
                 elif t_opt.get('is_flag'):
-                    is_default = config.get(option.name) == transport_cli.transport_option_default(
-                        option.name, computer)
+                    is_default = config.get(option.name
+                                           ) == transport_cli.transport_option_default(option.name, computer)
                     option_value = option.opts[-1] if is_default else ''
                 else:
                     option_value = '{}={}'.format(option.opts[-1], option.type(config[option.name]))

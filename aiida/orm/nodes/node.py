@@ -120,7 +120,8 @@ class Node(Entity):
             raise ValueError('the user cannot be None')
 
         backend_entity = backend.nodes.create(
-            node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs)
+            node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs
+        )
         super(Node, self).__init__(backend_entity)
 
     def __repr__(self):
@@ -829,12 +830,9 @@ class Node(Entity):
 
         self._incoming_cache.append(link_triple)
 
-    def get_stored_link_triples(self,
-                                node_class=None,
-                                link_type=(),
-                                link_label_filter=None,
-                                link_direction='incoming',
-                                only_uuid=False):
+    def get_stored_link_triples(
+        self, node_class=None, link_type=(), link_label_filter=None, link_direction='incoming', only_uuid=False
+    ):
         """Return the list of stored link triples directly incoming to or outgoing of this node.
 
         Note this will only return link triples that are stored in the database. Anything in the cache is ignored.
@@ -872,14 +870,16 @@ class Node(Entity):
                 with_incoming='main',
                 project=node_project,
                 edge_project=['type', 'label'],
-                edge_filters=edge_filters)
+                edge_filters=edge_filters
+            )
         else:
             builder.append(
                 node_class,
                 with_outgoing='main',
                 project=node_project,
                 edge_project=['type', 'label'],
-                edge_filters=edge_filters)
+                edge_filters=edge_filters
+            )
 
         return [LinkTriple(entry[0], LinkType(entry[1]), entry[2]) for entry in builder.all()]
 
@@ -899,7 +899,8 @@ class Node(Entity):
 
         if self.is_stored:
             link_triples = self.get_stored_link_triples(
-                node_class, link_type, link_label_filter, 'incoming', only_uuid=only_uuid)
+                node_class, link_type, link_label_filter, 'incoming', only_uuid=only_uuid
+            )
         else:
             link_triples = []
 
@@ -910,8 +911,9 @@ class Node(Entity):
                 link_triple = LinkTriple(link_triple.node.uuid, link_triple.link_type, link_triple.link_label)
 
             if link_triple in link_triples:
-                raise exceptions.InternalError('Node<{}> has both a stored and cached link triple {}'.format(
-                    self.pk, link_triple))
+                raise exceptions.InternalError(
+                    'Node<{}> has both a stored and cached link triple {}'.format(self.pk, link_triple)
+                )
 
             if not link_type or link_triple.link_type in link_type:
                 if link_label_filter is not None:
@@ -1051,7 +1053,8 @@ class Node(Entity):
         for link_triple in self._incoming_cache:
             if not link_triple.node.is_stored:
                 raise exceptions.ModificationNotAllowed(
-                    'Cannot store because source node of link triple {} is not stored'.format(link_triple))
+                    'Cannot store because source node of link triple {} is not stored'.format(link_triple)
+                )
 
     def _store_from_cache(self, cache_node, with_transaction):
         """Store this node from an existing cache node."""

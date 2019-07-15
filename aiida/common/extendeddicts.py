@@ -67,8 +67,10 @@ class AttributeDict(dict):
         try:
             self[attr] = value
         except KeyError:
-            raise AttributeError("AttributeError: '{}' is not a valid attribute of the object "
-                                 "'{}'".format(attr, self.__class__.__name__))
+            raise AttributeError(
+                "AttributeError: '{}' is not a valid attribute of the object "
+                "'{}'".format(attr, self.__class__.__name__)
+            )
 
     def __delattr__(self, attr):
         """Delete a key as an attribute.
@@ -222,8 +224,9 @@ class DefaultFieldsAttributeDict(AttributeDict):
                 try:
                     validator(self[key])
                 except Exception as exc:
-                    raise exceptions.ValidationError("Invalid value for key '{}' [{}]: {}".format(
-                        key, exc.__class__.__name__, exc))
+                    raise exceptions.ValidationError(
+                        "Invalid value for key '{}' [{}]: {}".format(key, exc.__class__.__name__, exc)
+                    )
 
     def __setattr__(self, attr, value):
         """

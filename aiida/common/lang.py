@@ -101,8 +101,10 @@ def protected_decorator(check=False):
                     calling_class = stack()[1][0].f_locals['self']
                     assert self is calling_class
                 except (KeyError, AssertionError):
-                    raise RuntimeError("Cannot access protected function {} from outside"
-                                       " class hierarchy".format(func.__name__))
+                    raise RuntimeError(
+                        "Cannot access protected function {} from outside"
+                        " class hierarchy".format(func.__name__)
+                    )
 
                 return func(self, *args, **kwargs)
         else:

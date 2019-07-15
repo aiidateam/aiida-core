@@ -31,8 +31,9 @@ from aiida.orm.implementation import BackendComputer, BackendGroup, BackendUser,
 
 @singledispatch
 def get_orm_entity(backend_entity):
-    raise TypeError("No corresponding AiiDA ORM class exists for backend instance {}".format(
-        backend_entity.__class__.__name__))
+    raise TypeError(
+        "No corresponding AiiDA ORM class exists for backend instance {}".format(backend_entity.__class__.__name__)
+    )
 
 
 @get_orm_entity.register(Mapping)

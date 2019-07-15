@@ -40,8 +40,10 @@ class FoldersTest(unittest.TestCase):
     """
 
     @classmethod
-    @unittest.skipUnless(fs_encoding_is_utf8(), ("Testing for unicode folders "
-                                                 "requires UTF-8 to be set for filesystem encoding"))
+    @unittest.skipUnless(
+        fs_encoding_is_utf8(), ("Testing for unicode folders "
+                                "requires UTF-8 to be set for filesystem encoding")
+    )
     def test_unicode(cls):
         """
         Check that there are no exceptions raised when

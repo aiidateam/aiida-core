@@ -47,7 +47,8 @@ def upgrade():
     """
     conn = op.get_bind()
 
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dbnode
         SET attributes = jsonb_set(attributes, '{environment_variables}', attributes->'custom_environment_variables')
         WHERE
@@ -91,7 +92,8 @@ def upgrade():
             attributes ? 'parser' AND
             type = 'node.process.calculation.calcjob.CalcJobNode.';
         -- parser -> parser_name
-        """)
+        """
+    )
     conn.execute(statement)
 
 

@@ -93,8 +93,10 @@ def migration_data_migration_legacy_process_attributes(data):
                           "that should never have been allowed to be exported."
         write_database_integrity_violation(illegal_cases, headers, warning_message)
 
-        raise IntegrityError("Your export archive is corrupt! "
-                             "Please see the log-file in your current directory for more details.")
+        raise IntegrityError(
+            "Your export archive is corrupt! "
+            "Please see the log-file in your current directory for more details."
+        )
 
 
 def remove_attribute_link_metadata(metadata):

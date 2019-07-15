@@ -241,8 +241,9 @@ def get_calcjob_report(calcjob):
     report = []
 
     if calcjob_state == CalcJobState.WITHSCHEDULER:
-        state_string = '{}, scheduler state: {}'.format(calcjob_state,
-                                                        scheduler_state if scheduler_state else '(unknown)')
+        state_string = '{}, scheduler state: {}'.format(
+            calcjob_state, scheduler_state if scheduler_state else '(unknown)'
+        )
     else:
         state_string = '{}'.format(calcjob_state)
 
@@ -329,7 +330,8 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
             # for now, CALL links are the only ones allowing calc-calc
             # (we here really want instead to follow CALL links)
             with_incoming='workcalculation',
-            tag='subworkchains')
+            tag='subworkchains'
+        )
         result = list(itertools.chain(*builder.distinct().all()))
 
         # This will return a single flat list of tuples, where the first element
@@ -366,7 +368,8 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
             time=entry.time,
             width_id=width_id,
             width_levelname=width_levelname,
-            indent=' ' * (depth * indent_size))
+            indent=' ' * (depth * indent_size)
+        )
         report.append(line)
 
     return '\n'.join(report)

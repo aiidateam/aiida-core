@@ -29,17 +29,20 @@ SHOW_OPTIONS = [
         '--sampling-stepsize',
         type=click.INT,
         default=None,
-        help="Sample positions in plot every sampling_stepsize timestep"),
+        help="Sample positions in plot every sampling_stepsize timestep"
+    ),
     click.option(
         '--stepsize',
         type=click.INT,
         default=None,
-        help="The stepsize for the trajectory, set it higher to reduce number of points"),
+        help="The stepsize for the trajectory, set it higher to reduce number of points"
+    ),
     click.option('--mintime', type=click.INT, default=None, help="The time to plot from"),
     click.option('--maxtime', type=click.INT, default=None, help="The time to plot to"),
     click.option('--indices', type=click.INT, cls=MultipleValueOption, default=None, help="Show only these indices"),
     click.option(
-        '--dont-block', 'block', is_flag=True, default=True, help="Don't block interpreter when showing plot."),
+        '--dont-block', 'block', is_flag=True, default=True, help="Don't block interpreter when showing plot."
+    ),
 ]
 
 
@@ -70,8 +73,10 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
             echo.echo_info("the call to {} ended with an error.".format(exec_name))
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical("No executable '{}' found. Add to the path, "
-                                   "or try with an absolute path.".format(exec_name))
+                echo.echo_critical(
+                    "No executable '{}' found. Add to the path, "
+                    "or try with an absolute path.".format(exec_name)
+                )
             else:
                 raise
 
@@ -99,8 +104,10 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
             echo.echo_info("the call to {} ended with an error.".format(exec_name))
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical("No executable '{}' found. Add to the path, "
-                                   "or try with an absolute path.".format(exec_name))
+                echo.echo_critical(
+                    "No executable '{}' found. Add to the path, "
+                    "or try with an absolute path.".format(exec_name)
+                )
             else:
                 raise
 
@@ -159,8 +166,10 @@ def _show_vesta(exec_name, structure_list):
             echo.echo_info("the call to {} ended with an error.".format(exec_name))
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical("No executable '{}' found. Add to the path, "
-                                   "or try with an absolute path.".format(exec_name))
+                echo.echo_critical(
+                    "No executable '{}' found. Add to the path, "
+                    "or try with an absolute path.".format(exec_name)
+                )
             else:
                 raise
 
@@ -188,8 +197,10 @@ def _show_vmd(exec_name, structure_list):
             echo.echo_info("the call to {} ended with an error.".format(exec_name))
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical("No executable '{}' found. Add to the path, "
-                                   "or try with an absolute path.".format(exec_name))
+                echo.echo_critical(
+                    "No executable '{}' found. Add to the path, "
+                    "or try with an absolute path.".format(exec_name)
+                )
             else:
                 raise
 
@@ -210,7 +221,8 @@ def _show_xmgrace(exec_name, list_bands):
         nbnds = bnds.get_bands().shape[1]
         # pylint: disable=protected-access
         text, _ = bnds._exportcontent(
-            'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % max_num_agr_colors))
+            'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % max_num_agr_colors)
+        )
         # write a tempfile
         tempf = tempfile.NamedTemporaryFile('w+', suffix='.agr')
         tempf.write(text)

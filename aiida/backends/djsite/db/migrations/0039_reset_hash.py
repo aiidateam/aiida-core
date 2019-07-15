@@ -44,6 +44,7 @@ class Migration(migrations.Migration):
         migrations.RunPython(notify_user, reverse_code=notify_user),
         migrations.RunSQL(
             """UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""",
-            reverse_sql="""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];"""),
+            reverse_sql="""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];"""
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

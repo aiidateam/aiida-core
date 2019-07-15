@@ -32,9 +32,11 @@ def upgrade():
     """Migrations for the upgrade."""
     conn = op.get_bind()
 
-    statement = text(r"""
+    statement = text(
+        r"""
         UPDATE db_dbnode SET type = 'data.dict.Dict.' WHERE type = 'data.parameter.ParameterData.';
-    """)
+    """
+    )
     conn.execute(statement)
 
 
@@ -42,7 +44,9 @@ def downgrade():
     """Migrations for the downgrade."""
     conn = op.get_bind()
 
-    statement = text(r"""
+    statement = text(
+        r"""
         UPDATE db_dbnode SET type = 'data.parameter.ParameterData.' WHERE type = 'data.dict.Dict.';
-    """)
+    """
+    )
     conn.execute(statement)

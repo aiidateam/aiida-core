@@ -60,8 +60,10 @@ class Group(entities.Entity):
 
             if 'type_string' in kwargs:
                 if not isinstance(kwargs['type_string'], six.string_types):
-                    raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
-                                                     "{}".format(str, type(kwargs['type_string'])))
+                    raise exceptions.ValidationError(
+                        "type_string must be {}, you provided an object of type "
+                        "{}".format(str, type(kwargs['type_string']))
+                    )
 
                 filters['type_string'] = kwargs['type_string']
 
@@ -107,15 +109,18 @@ class Group(entities.Entity):
 
         # Check that chosen type_string is allowed
         if not isinstance(type_string, six.string_types):
-            raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
-                                             "{}".format(str, type(type_string)))
+            raise exceptions.ValidationError(
+                "type_string must be {}, you provided an object of type "
+                "{}".format(str, type(type_string))
+            )
 
         backend = backend or get_manager().get_backend()
         user = user or users.User.objects(backend).get_default()
         type_check(user, users.User)
 
         model = backend.groups.create(
-            label=label, user=user.backend_entity, description=description, type_string=type_string)
+            label=label, user=user.backend_entity, description=description, type_string=type_string
+        )
         super(Group, self).__init__(model)
 
     def __repr__(self):
@@ -293,8 +298,10 @@ class Group(entities.Entity):
         filters = {}
         if 'type_string' in kwargs:
             if not isinstance(kwargs['type_string'], six.string_types):
-                raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
-                                                 "{}".format(str, type(kwargs['type_string'])))
+                raise exceptions.ValidationError(
+                    "type_string must be {}, you provided an object of type "
+                    "{}".format(str, type(kwargs['type_string']))
+                )
 
         query = QueryBuilder()
         for key, val in kwargs.items():

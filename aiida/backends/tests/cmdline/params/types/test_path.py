@@ -62,9 +62,11 @@ class TestImportPath(AiidaTestCase):
         upper_path = ImportPath(timeout_seconds=upper)
 
         msg_lower = "timeout_seconds should have been corrected to the lower bound: '{}', but instead it is {}".format(
-            range_timeout[0], lower_path.timeout_seconds)
+            range_timeout[0], lower_path.timeout_seconds
+        )
         self.assertEqual(lower_path.timeout_seconds, range_timeout[0], msg_lower)
 
         msg_upper = "timeout_seconds should have been corrected to the upper bound: '{}', but instead it is {}".format(
-            range_timeout[1], upper_path.timeout_seconds)
+            range_timeout[1], upper_path.timeout_seconds
+        )
         self.assertEqual(upper_path.timeout_seconds, range_timeout[1], msg_upper)

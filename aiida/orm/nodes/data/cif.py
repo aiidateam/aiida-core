@@ -152,9 +152,11 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
         pass
 
     if names and len(names) < len(datablocks):
-        raise ValueError("Not enough names supplied for "
-                         "datablocks: {} (names) < "
-                         "{} (datablocks)".format(len(names), len(datablocks)))
+        raise ValueError(
+            "Not enough names supplied for "
+            "datablocks: {} (names) < "
+            "{} (datablocks)".format(len(names), len(datablocks))
+        )
     for i, values in enumerate(datablocks):
         name = str(i)
         if names:
@@ -173,10 +175,12 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
                     if row_size is None:
                         row_size = len(tag_values)
                     elif row_size != len(tag_values):
-                        raise ValueError("Number of values for tag "
-                                         "'{}' is different from "
-                                         "the others in the same "
-                                         "loop".format(tag))
+                        raise ValueError(
+                            "Number of values for tag "
+                            "'{}' is different from "
+                            "the others in the same "
+                            "loop".format(tag)
+                        )
                     if row_size == 0:
                         continue
                     datablock.AddItem(tag, tag_values)
@@ -237,14 +241,9 @@ class CifData(SinglefileData):
     _values = None
     _ase = None
 
-    def __init__(self,
-                 ase=None,
-                 file=None,
-                 values=None,
-                 source=None,
-                 scan_type='standard',
-                 parse_policy='eager',
-                 **kwargs):
+    def __init__(
+        self, ase=None, file=None, values=None, source=None, scan_type='standard', parse_policy='eager', **kwargs
+    ):
         # pylint: disable=too-many-arguments, redefined-builtin
 
         args = {
@@ -350,9 +349,11 @@ class CifData(SinglefileData):
             if use_first:
                 return (cifs[0], False)
 
-            raise ValueError("More than one copy of a CIF file "
-                             "with the same MD5 has been found in "
-                             "the DB. pks={}".format(",".join([str(i.pk) for i in cifs])))
+            raise ValueError(
+                "More than one copy of a CIF file "
+                "with the same MD5 has been found in "
+                "the DB. pks={}".format(",".join([str(i.pk) for i in cifs]))
+            )
 
         return cifs[0], False
 

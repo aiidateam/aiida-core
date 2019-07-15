@@ -64,7 +64,8 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
         # Setting the oldest backup timestamp
         oldest_object_bk = utils.ask_question(
             "Please provide the oldest backup timestamp "
-            "(e.g. 2014-07-18 13:54:53.688484+00:00). ", datetime.datetime, True)
+            "(e.g. 2014-07-18 13:54:53.688484+00:00). ", datetime.datetime, True
+        )
 
         if oldest_object_bk is None:
             backup_variables[AbstractBackup.OLDEST_OBJECT_BK_KEY] = None
@@ -75,25 +76,26 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
         backup_variables[AbstractBackup.BACKUP_DIR_KEY] = file_backup_folder_abs
 
         # Setting the days_to_backup
-        backup_variables[AbstractBackup.DAYS_TO_BACKUP_KEY] = utils.ask_question(
-            "Please provide the number of days to backup.", int, True)
+        backup_variables[AbstractBackup.DAYS_TO_BACKUP_KEY
+                        ] = utils.ask_question("Please provide the number of days to backup.", int, True)
 
         # Setting the end date
         end_date_of_backup_key = utils.ask_question(
             "Please provide the end date of the backup " + "(e.g. 2014-07-18 13:54:53.688484+00:00).",
-            datetime.datetime, True)
+            datetime.datetime, True
+        )
         if end_date_of_backup_key is None:
             backup_variables[AbstractBackup.END_DATE_OF_BACKUP_KEY] = None
         else:
             backup_variables[AbstractBackup.END_DATE_OF_BACKUP_KEY] = str(end_date_of_backup_key)
 
         # Setting the backup periodicity
-        backup_variables[AbstractBackup.PERIODICITY_KEY] = utils.ask_question("Please periodicity (in days).", int,
-                                                                              False)
+        backup_variables[AbstractBackup.PERIODICITY_KEY
+                        ] = utils.ask_question("Please periodicity (in days).", int, False)
 
         # Setting the backup threshold
-        backup_variables[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY] = utils.ask_question(
-            "Please provide the backup threshold (in hours).", int, False)
+        backup_variables[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY
+                        ] = utils.ask_question("Please provide the backup threshold (in hours).", int, False)
 
         return backup_variables
 
@@ -167,12 +169,14 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
         """Run the backup."""
         conf_backup_folder_abs = self.create_dir(
             "Please provide the backup folder by providing the full path.",
-            os.path.join(os.path.expanduser(AIIDA_CONFIG_FOLDER), self._conf_backup_folder_rel))
+            os.path.join(os.path.expanduser(AIIDA_CONFIG_FOLDER), self._conf_backup_folder_rel)
+        )
 
         file_backup_folder_abs = self.create_dir(
             "Please provide the destination folder of the backup (normally in "
-            "the previously provided backup folder).", os.path.join(conf_backup_folder_abs,
-                                                                    self._file_backup_folder_rel))
+            "the previously provided backup folder).",
+            os.path.join(conf_backup_folder_abs, self._file_backup_folder_rel)
+        )
 
         # The template backup configuration file
         template_conf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), self._backup_info_tmpl_filename)
@@ -181,14 +185,16 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
         try:
             shutil.copy(template_conf_path, conf_backup_folder_abs)
         except Exception:
-            self._logger.error("Error copying the file %s to the directory %s", template_conf_path,
-                               conf_backup_folder_abs)
+            self._logger.error(
+                "Error copying the file %s to the directory %s", template_conf_path, conf_backup_folder_abs
+            )
             raise
 
         if utils.query_yes_no(
-                "A sample configuration file was copied to {}. "
-                "Would you like to ".format(conf_backup_folder_abs) + "see the configuration parameters explanation?",
-                default="yes"):
+            "A sample configuration file was copied to {}. "
+            "Would you like to ".format(conf_backup_folder_abs) + "see the configuration parameters explanation?",
+            default="yes"
+        ):
             self.print_info()
 
         # Construct the path to the backup configuration file
@@ -204,13 +210,16 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
                 json.dump(backup_variables, backup_info_file)
         # If the backup parameters are configured manually
         else:
-            sys.stdout.write("Please rename the file {} ".format(self._backup_info_tmpl_filename) +
-                             "found in {} to ".format(conf_backup_folder_abs) +
-                             "{} and ".format(self._backup_info_filename) +
-                             "change the backup parameters accordingly.\n")
-            sys.stdout.write("Please adapt the startup script accordingly to point to the " +
-                             "correct backup configuration file. For the moment, it points " +
-                             "to {}\n".format(os.path.join(conf_backup_folder_abs, self._backup_info_filename)))
+            sys.stdout.write(
+                "Please rename the file {} ".format(self._backup_info_tmpl_filename) +
+                "found in {} to ".format(conf_backup_folder_abs) + "{} and ".format(self._backup_info_filename) +
+                "change the backup parameters accordingly.\n"
+            )
+            sys.stdout.write(
+                "Please adapt the startup script accordingly to point to the " +
+                "correct backup configuration file. For the moment, it points " +
+                "to {}\n".format(os.path.join(conf_backup_folder_abs, self._backup_info_filename))
+            )
 
         # The contents of the startup script
         if configuration.PROFILE.database_backend == BACKEND_DJANGO:

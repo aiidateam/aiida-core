@@ -99,8 +99,9 @@ class NodeLinksManager(object):  # pylint: disable=too-few-public-methods,useles
 
     def __str__(self):
         """Return a string representation of the manager"""
-        return "Manager for {} {} links for node pk={}".format("incoming" if self._incoming else "outgoing",
-                                                               self._link_type.value.upper(), self._node.pk)
+        return "Manager for {} {} links for node pk={}".format(
+            "incoming" if self._incoming else "outgoing", self._link_type.value.upper(), self._node.pk
+        )
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))

@@ -242,9 +242,11 @@ def validate_pyproject():
 
     if reentry_requirement not in pyproject_toml_requires:
         click.echo(
-            'Reentry requirement from {} {} is not mirrored in {}'.format(FILEPATH_SETUP_JSON, reentry_requirement,
-                                                                          FILEPATH_TOML),
-            err=True)
+            'Reentry requirement from {} {} is not mirrored in {}'.format(
+                FILEPATH_SETUP_JSON, reentry_requirement, FILEPATH_TOML
+            ),
+            err=True
+        )
         sys.exit(1)
 
 
@@ -261,7 +263,8 @@ def update_environment_yml():
     yaml.add_representer(
         OrderedDict,
         lambda self, data: yaml.representer.SafeRepresenter.represent_dict(self, data.items()),
-        Dumper=yaml.SafeDumper)
+        Dumper=yaml.SafeDumper
+    )
 
     # fix incompatibilities between conda and pypi
     replacements = {'psycopg2-binary': 'psycopg2', 'graphviz': 'python-graphviz'}
@@ -290,7 +293,8 @@ def update_environment_yml():
     with open(file_path, 'w') as env_file:
         env_file.write('# Usage: conda env create -n myenvname -f environment.yml python=3.6\n')
         yaml.safe_dump(
-            environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True)
+            environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True
+        )
 
 
 if __name__ == '__main__':

@@ -107,7 +107,8 @@ class Migration(migrations.Migration):
                 related_name='user_set',
                 related_query_name='user',
                 to='auth.Group',
-                verbose_name='groups'),
+                verbose_name='groups'
+            ),
         ),
         migrations.AlterField(
             model_name='dbworkflow',

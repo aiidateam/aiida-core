@@ -39,7 +39,9 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
                 levelname=levelname,
                 dbnode_id=dbnode_id,
                 message=message,
-                metadata=metadata))
+                metadata=metadata
+            )
+        )
 
     @property
     def uuid(self):

@@ -252,13 +252,9 @@ def get_node_id_label(node, id_type):
     raise ValueError("node_id_type not recognised: {}".format(id_type))
 
 
-def _add_graphviz_node(graph,
-                       node,
-                       node_style_func,
-                       node_sublabel_func,
-                       style_override=None,
-                       include_sublabels=True,
-                       id_type="pk"):
+def _add_graphviz_node(
+    graph, node, node_style_func, node_sublabel_func, style_override=None, include_sublabels=True, id_type="pk"
+):
     """create a node in the graph
 
     The first line of the node text is always '<node.name> (<node.pk>)'.
@@ -298,8 +294,10 @@ def _add_graphviz_node(graph,
         node_style = node_style_func(node)
 
         label = [
-            "{} ({})".format(node.__class__.__name__ if node.process_label is None else node.process_label,
-                             get_node_id_label(node, id_type))
+            "{} ({})".format(
+                node.__class__.__name__ if node.process_label is None else node.process_label,
+                get_node_id_label(node, id_type)
+            )
         ]
 
     if include_sublabels:
@@ -342,16 +340,18 @@ class Graph(object):
 
     # pylint: disable=useless-object-inheritance
 
-    def __init__(self,
-                 engine=None,
-                 graph_attr=None,
-                 global_node_style=None,
-                 global_edge_style=None,
-                 include_sublabels=True,
-                 link_style_fn=None,
-                 node_style_fn=None,
-                 node_sublabel_fn=None,
-                 node_id_type="pk"):
+    def __init__(
+        self,
+        engine=None,
+        graph_attr=None,
+        global_node_style=None,
+        global_edge_style=None,
+        include_sublabels=True,
+        link_style_fn=None,
+        node_style_fn=None,
+        node_sublabel_fn=None,
+        node_id_type="pk"
+    ):
         """a class to create graphviz graphs of the AiiDA node provenance
 
         Nodes and edges, are cached, so that they are only created once
@@ -440,7 +440,8 @@ class Graph(object):
                 node_sublabel_func=self._node_sublabels,
                 style_override=style,
                 include_sublabels=self._include_sublabels,
-                id_type=self._node_id_type)
+                id_type=self._node_id_type
+            )
             self._nodes.add(node.pk)
         return node
 
@@ -510,7 +511,8 @@ class Graph(object):
             self.add_node(link_triple.node)
             link_pair = LinkPair(link_triple.link_type, link_triple.link_label)
             style = self._link_styles(
-                link_pair, add_label=annotate_links in ["label", "both"], add_type=annotate_links in ["type", "both"])
+                link_pair, add_label=annotate_links in ["label", "both"], add_type=annotate_links in ["type", "both"]
+            )
             self.add_edge(link_triple.node, node, link_pair, style=style)
             nodes.append(link_triple.node.pk if return_pks else link_triple.node)
 
@@ -540,20 +542,23 @@ class Graph(object):
             self.add_node(link_triple.node)
             link_pair = LinkPair(link_triple.link_type, link_triple.link_label)
             style = self._link_styles(
-                link_pair, add_label=annotate_links in ["label", "both"], add_type=annotate_links in ["type", "both"])
+                link_pair, add_label=annotate_links in ["label", "both"], add_type=annotate_links in ["type", "both"]
+            )
             self.add_edge(node, link_triple.node, link_pair, style=style)
             nodes.append(link_triple.node.pk if return_pks else link_triple.node)
 
         return nodes
 
-    def recurse_descendants(self,
-                            origin,
-                            depth=None,
-                            link_types=(),
-                            annotate_links=False,
-                            origin_style=(),
-                            include_process_inputs=False,
-                            print_func=None):
+    def recurse_descendants(
+        self,
+        origin,
+        depth=None,
+        link_types=(),
+        annotate_links=False,
+        origin_style=(),
+        include_process_inputs=False,
+        print_func=None
+    ):
         """add nodes and edges from an origin recursively,
         following outgoing links
 
@@ -590,7 +595,8 @@ class Graph(object):
             new_nodes = []
             for node in leaf_nodes:
                 outgoing_nodes = self.add_outgoing(
-                    node, link_types=link_types, annotate_links=annotate_links, return_pks=False)
+                    node, link_types=link_types, annotate_links=annotate_links, return_pks=False
+                )
                 if outgoing_nodes and print_func:
                     print_func("  {} -> {}".format(node.pk, [on.pk for on in outgoing_nodes]))
                 new_nodes.extend(outgoing_nodes)
@@ -606,14 +612,16 @@ class Graph(object):
                 leaf_nodes.append(new_node)
                 traversed_pks.append(new_node.pk)
 
-    def recurse_ancestors(self,
-                          origin,
-                          depth=None,
-                          link_types=(),
-                          annotate_links=False,
-                          origin_style=(),
-                          include_process_outputs=False,
-                          print_func=None):
+    def recurse_ancestors(
+        self,
+        origin,
+        depth=None,
+        link_types=(),
+        annotate_links=False,
+        origin_style=(),
+        include_process_outputs=False,
+        print_func=None
+    ):
         """add nodes and edges from an origin recursively,
         following incoming links
 
@@ -650,7 +658,8 @@ class Graph(object):
             new_nodes = []
             for node in last_nodes:
                 incoming_nodes = self.add_incoming(
-                    node, link_types=link_types, annotate_links=annotate_links, return_pks=False)
+                    node, link_types=link_types, annotate_links=annotate_links, return_pks=False
+                )
                 if incoming_nodes and print_func:
                     print_func("  {} -> {}".format(node.pk, [n.pk for n in incoming_nodes]))
                 new_nodes.extend(incoming_nodes)
@@ -666,14 +675,16 @@ class Graph(object):
                 last_nodes.append(new_node)
                 traversed_pks.append(new_node.pk)
 
-    def add_origin_to_targets(self,
-                              origin,
-                              target_cls,
-                              target_filters=None,
-                              include_target_inputs=False,
-                              include_target_outputs=False,
-                              origin_style=(),
-                              annotate_links=False):
+    def add_origin_to_targets(
+        self,
+        origin,
+        target_cls,
+        target_filters=None,
+        include_target_inputs=False,
+        include_target_outputs=False,
+        origin_style=(),
+        annotate_links=False
+    ):
         """Add nodes and edges from an origin node to all nodes of a target node class.
 
         :param origin: node or node pk/uuid
@@ -707,15 +718,15 @@ class Graph(object):
                         "id": origin_node.pk
                     },
                     'tag': "origin"
-                },
-                         {
-                             'cls': target_cls,
-                             'filters': target_filters,
-                             'with_ancestors': 'origin',
-                             'tag': "target",
-                             'project': "*"
-                         }]
-            })
+                }, {
+                    'cls': target_cls,
+                    'filters': target_filters,
+                    'with_ancestors': 'origin',
+                    'tag': "target",
+                    'project': "*"
+                }]
+            }
+        )
 
         for (target_node,) in query.iterall():
             self.add_node(target_node)
@@ -727,15 +738,17 @@ class Graph(object):
             if include_target_outputs:
                 self.add_outgoing(target_node, annotate_links=annotate_links)
 
-    def add_origins_to_targets(self,
-                               origin_cls,
-                               target_cls,
-                               origin_filters=None,
-                               target_filters=None,
-                               include_target_inputs=False,
-                               include_target_outputs=False,
-                               origin_style=(),
-                               annotate_links=False):
+    def add_origins_to_targets(
+        self,
+        origin_cls,
+        target_cls,
+        origin_filters=None,
+        target_filters=None,
+        include_target_inputs=False,
+        include_target_outputs=False,
+        origin_style=(),
+        annotate_links=False
+    ):
         """Add nodes and edges from all nodes of an origin class to all node of a target node class.
 
         :param origin_cls: origin node class
@@ -764,7 +777,8 @@ class Graph(object):
                 "filters": origin_filters,
                 'tag': "origin",
                 'project': "*"
-            }]})
+            }]}
+        )
 
         for (node,) in query.iterall():
             self.add_origin_to_targets(
@@ -774,4 +788,5 @@ class Graph(object):
                 include_target_inputs=include_target_inputs,
                 include_target_outputs=include_target_outputs,
                 origin_style=origin_style,
-                annotate_links=annotate_links)
+                annotate_links=annotate_links
+            )

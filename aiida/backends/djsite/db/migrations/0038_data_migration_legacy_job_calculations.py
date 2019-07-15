@@ -104,6 +104,7 @@ class Migration(migrations.Migration):
                 SET attributes = attributes - 'state' || '{"process_state": "finished", "exit_status": 0, "process_label": "Legacy JobCalculation"}'
                 WHERE node_type = 'process.calculation.calcjob.CalcJobNode.' AND attributes @> '{"state": "FINISHED"}';
                 """,
-            reverse_sql=""),
+            reverse_sql=""
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

@@ -61,8 +61,9 @@ class Computer(entities.Entity):
             """Delete the computer with the given id"""
             return self._backend.computers.delete(id)
 
-    def __init__(self, name, hostname, description='', transport_type='', scheduler_type='', workdir=None,
-                 backend=None):
+    def __init__(
+        self, name, hostname, description='', transport_type='', scheduler_type='', workdir=None, backend=None
+    ):
         """Construct a new computer
 
         :type name: str
@@ -82,7 +83,8 @@ class Computer(entities.Entity):
             hostname=hostname,
             description=description,
             transport_type=transport_type,
-            scheduler_type=scheduler_type)
+            scheduler_type=scheduler_type
+        )
         super(Computer, self).__init__(model)
         if workdir is not None:
             self.set_workdir(workdir)
@@ -271,10 +273,12 @@ class Computer(entities.Entity):
             return
 
         if not isinstance(def_cpus_per_machine, six.integer_types) or def_cpus_per_machine <= 0:
-            raise exceptions.ValidationError("Invalid value for default_mpiprocs_per_machine, "
-                                             "must be a positive integer, or an empty "
-                                             "string if you do not want to provide a "
-                                             "default value.")
+            raise exceptions.ValidationError(
+                "Invalid value for default_mpiprocs_per_machine, "
+                "must be a positive integer, or an empty "
+                "string if you do not want to provide a "
+                "default value."
+            )
 
     # endregion
 
@@ -446,8 +450,9 @@ class Computer(entities.Entity):
         :return: The minimum interval (in seconds)
         :rtype: float
         """
-        return self.get_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL,
-                                 self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT)
+        return self.get_property(
+            self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
+        )
 
     def set_minimum_job_poll_interval(self, interval):
         """
@@ -636,8 +641,11 @@ class Computer(entities.Entity):
         try:
             return TransportFactory(self.get_transport_type())
         except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError('No transport found for {} [type {}], message: {}'.format(
-                self.name, self.get_transport_type(), exception))
+            raise exceptions.ConfigurationError(
+                'No transport found for {} [type {}], message: {}'.format(
+                    self.name, self.get_transport_type(), exception
+                )
+            )
 
     def get_scheduler(self):
         """
@@ -651,8 +659,11 @@ class Computer(entities.Entity):
             # I call the init without any parameter
             return scheduler_class()
         except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
-                self.name, self.get_scheduler_type(), exception))
+            raise exceptions.ConfigurationError(
+                'No scheduler found for {} [type {}], message: {}'.format(
+                    self.name, self.get_scheduler_type(), exception
+                )
+            )
 
     def configure(self, user=None, **kwargs):
         """
@@ -671,8 +682,11 @@ class Computer(entities.Entity):
 
         if not set(kwargs.keys()).issubset(valid_keys):
             invalid_keys = [key for key in kwargs if key not in valid_keys]
-            raise ValueError('{transport}: received invalid authentication parameter(s) "{invalid}"'.format(
-                transport=transport_cls, invalid=invalid_keys))
+            raise ValueError(
+                '{transport}: received invalid authentication parameter(s) "{invalid}"'.format(
+                    transport=transport_cls, invalid=invalid_keys
+                )
+            )
 
         try:
             authinfo = self.get_authinfo(user)
@@ -780,8 +794,8 @@ class Computer(entities.Entity):
                 "valid_choices": {
                     "local": {
                         "doc":
-                        "Support copy and command execution on the same host on which AiiDA is running via direct file "
-                        "copy and execution commands."
+                        "Support copy and command execution on the same host on which AiiDA is running via direct "
+                        "file copy and execution commands."
                     },
                     "ssh": {
                         "doc":

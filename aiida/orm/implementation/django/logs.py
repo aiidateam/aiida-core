@@ -36,7 +36,8 @@ class DjangoLog(entities.DjangoModelEntity[models.DbLog], BackendLog):
             levelname=levelname,
             dbnode_id=dbnode_id,
             message=message,
-            metadata=metadata or {})
+            metadata=metadata or {}
+        )
 
     @property
     def uuid(self):

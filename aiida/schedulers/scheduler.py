@@ -403,7 +403,8 @@ stderr:
 
         self.transport.chdir(working_directory)
         retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_submit_command(escape_for_bash(submit_script)))
+            self._get_submit_command(escape_for_bash(submit_script))
+        )
         return self._parse_submit_output(retval, stdout, stderr)
 
     def kill(self, jobid):

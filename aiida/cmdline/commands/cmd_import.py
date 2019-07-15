@@ -82,7 +82,8 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
                         "Do you want to try and migrate {} to the newest export file version?\n"
                         "Note: This will not change your current file.".format(archive),
                         default=True,
-                        abort=True)
+                        abort=True
+                    )
             else:
                 # Abort
                 echo.echo_critical(str(exception))
@@ -121,10 +122,13 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     # Migration
     try:
         ctx.invoke(
-            migrate, input_file=file_to_import, output_file=temp_folder.get_abs_path(temp_out_file), silent=False)
+            migrate, input_file=file_to_import, output_file=temp_folder.get_abs_path(temp_out_file), silent=False
+        )
     except Exception:
-        echo.echo_error("an exception occurred while migrating the archive {}.\n"
-                        "Use 'verdi export migrate' to update this export file.".format(archive))
+        echo.echo_error(
+            "an exception occurred while migrating the archive {}.\n"
+            "Use 'verdi export migrate' to update this export file.".format(archive)
+        )
         echo.echo(traceback.format_exc())
         if not non_interactive:
             click.confirm('do you want to continue?', abort=True)
@@ -142,11 +146,13 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     type=click.STRING,
     cls=options.MultipleValueOption,
     help="Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. "
-    "Automatically discovered archive URLs will be downloadeded and added to ARCHIVES for importing")
+    "Automatically discovered archive URLs will be downloadeded and added to ARCHIVES for importing"
+)
 @options.GROUP(
     type=GroupParamType(create_if_not_exist=True),
     help='Specify group to which all the import nodes will be added. If such a group does not exist, it will be'
-    ' created automatically.')
+    ' created automatically.'
+)
 @click.option(
     '-e',
     '--extras-mode-existing',
@@ -158,7 +164,8 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     "keep_existing: import all extras and keep original value of existing extras. "
     "update_existing: import all extras and overwrite value of existing extras. "
     "mirror: import all extras and remove any existing extras that are not present in the archive. "
-    "none: do not import any extras.")
+    "none: do not import any extras."
+)
 @click.option(
     '-n',
     '--extras-mode-new',
@@ -166,24 +173,28 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     default='import',
     help="Specify whether to import extras of new nodes: "
     "import: import extras. "
-    "none: do not import extras.")
+    "none: do not import extras."
+)
 @click.option(
     '--comment-mode',
     type=click.Choice(COMMENT_MODE),
     default='newest',
     help="Specify the way to import Comments with identical UUIDs: "
     "newest: Only the newest Comments (based on mtime) (default)."
-    "overwrite: Replace existing Comments with those from the import file.")
+    "overwrite: Replace existing Comments with those from the import file."
+)
 @click.option(
     '--migration/--no-migration',
     default=True,
     show_default=True,
-    help="Force migration of export file archives, if needed.")
+    help="Force migration of export file archives, if needed."
+)
 @options.NON_INTERACTIVE()
 @decorators.with_dbenv()
 @click.pass_context
-def cmd_import(ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration,
-               non_interactive):
+def cmd_import(
+    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive
+):
     """Import one or multiple exported AiiDA archives
 
     The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.

@@ -32,7 +32,8 @@ class DjangoUser(entities.DjangoModelEntity[models.DbUser], BackendUser):
         # pylint: disable=too-many-arguments
         super(DjangoUser, self).__init__(backend)
         self._dbmodel = utils.ModelWrapper(
-            DbUser(email=email, first_name=first_name, last_name=last_name, institution=institution))
+            DbUser(email=email, first_name=first_name, last_name=last_name, institution=institution)
+        )
 
     @property
     def email(self):

@@ -27,7 +27,8 @@ from aiida.cmdline.utils import decorators, echo
     '--entry-point',
     type=PluginParamType(group=('aiida.calculations', 'aiida.data', 'aiida.workflows'), load=True),
     default=None,
-    help='Only include nodes that are class or sub class of the class identified by this entry point.')
+    help='Only include nodes that are class or sub class of the class identified by this entry point.'
+)
 @decorators.with_dbenv()
 def rehash(nodes, entry_point):
     """Recompute the hash for nodes in the database

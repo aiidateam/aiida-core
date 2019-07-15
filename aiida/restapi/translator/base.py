@@ -244,11 +244,13 @@ class BaseTranslator(object):
                             self._query_help["filters"][tag][filter_key] \
                                 = filter_value
         else:
-            raise InputValidationError("Pass data in dictionary format where "
-                                       "keys are the tag names given in the "
-                                       "path in query_help and and their values"
-                                       " are the dictionary of filters want "
-                                       "to add for that tag name.")
+            raise InputValidationError(
+                "Pass data in dictionary format where "
+                "keys are the tag names given in the "
+                "path in query_help and and their values"
+                " are the dictionary of filters want "
+                "to add for that tag name."
+            )
 
     def get_default_projections(self):
         """
@@ -285,11 +287,13 @@ class BaseTranslator(object):
                     self._query_help["path"][1]["with_user"] = "user"
                     self._query_help["project"]["user"] = self._default_user_projections
         else:
-            raise InputValidationError("Pass data in dictionary format where "
-                                       "keys are the tag names given in the "
-                                       "path in query_help and values are the "
-                                       "list of the names you want to project "
-                                       "in the final output")
+            raise InputValidationError(
+                "Pass data in dictionary format where "
+                "keys are the tag names given in the "
+                "path in query_help and values are the "
+                "list of the names you want to project "
+                "in the final output"
+            )
 
     def set_order(self, orders):
         """
@@ -300,9 +304,11 @@ class BaseTranslator(object):
         """
         ## Validate input
         if not isinstance(orders, dict):
-            raise InputValidationError("orders has to be a dictionary"
-                                       "compatible with the 'order_by' section"
-                                       "of the query_help")
+            raise InputValidationError(
+                "orders has to be a dictionary"
+                "compatible with the 'order_by' section"
+                "of the query_help"
+            )
 
         ## Auxiliary_function to get the ordering cryterion
         def def_order(columns):
@@ -330,20 +336,22 @@ class BaseTranslator(object):
         for tag, columns in orders.items():
             self._query_help['order_by'][tag] = def_order(columns)
 
-    def set_query(self,
-                  filters=None,
-                  orders=None,
-                  projections=None,
-                  query_type=None,
-                  node_id=None,
-                  alist=None,
-                  nalist=None,
-                  elist=None,
-                  nelist=None,
-                  downloadformat=None,
-                  visformat=None,
-                  filename=None,
-                  rtype=None):
+    def set_query(
+        self,
+        filters=None,
+        orders=None,
+        projections=None,
+        query_type=None,
+        node_id=None,
+        alist=None,
+        nalist=None,
+        elist=None,
+        nelist=None,
+        downloadformat=None,
+        visformat=None,
+        filename=None,
+        rtype=None
+    ):
         # pylint: disable=too-many-arguments,unused-argument
         """
         Adds filters, default projections, order specs to the query_help,
@@ -546,9 +554,11 @@ class BaseTranslator(object):
         except MultipleObjectsError:
             raise RestValidationError("More than one node found. Provide longer starting pattern for id.")
         except NotExistent:
-            raise RestValidationError("either no object's id starts"
-                                      " with '{}' or the corresponding object"
-                                      " is not of type aiida.orm.{}".format(node_id, self._aiida_type))
+            raise RestValidationError(
+                "either no object's id starts"
+                " with '{}' or the corresponding object"
+                " is not of type aiida.orm.{}".format(node_id, self._aiida_type)
+            )
         else:
             # create a permanent filter
             self._id_filter = {'id': {'==': pk}}

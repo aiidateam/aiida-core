@@ -68,11 +68,13 @@ class MakeHashTest(unittest.TestCase):
 
     def test_unicode_string(self):
         self.assertEqual(
-            make_hash(u'something still in ASCII'), 'd55e492596cf214d877e165cdc3394f27e82e011838474f5ba5b9824074b9e91')
+            make_hash(u'something still in ASCII'), 'd55e492596cf214d877e165cdc3394f27e82e011838474f5ba5b9824074b9e91'
+        )
 
         self.assertEqual(
             make_hash(u"öpis mit Umluut wie ä, ö, ü und emene ß"),
-            'c404bf9a62cba3518de5c2bae8c67010aff6e4051cce565fa247a7f1d71f1fc7')
+            'c404bf9a62cba3518de5c2bae8c67010aff6e4051cce565fa247a7f1d71f1fc7'
+        )
 
     def test_collection_with_ordered_sets(self):
         self.assertEqual(make_hash((1, 2, 3)), 'b6b13d50e3bee7e58371af2b303f629edf32d1be2f7717c9d14193b4b8b23e04')
@@ -95,20 +97,24 @@ class MakeHashTest(unittest.TestCase):
             make_hash({
                 'a': 'b',
                 'c': 'd'
-            }), '656ef313d44684c44977b0c75f48f27a43686c63ae44c8778ea0fe05f629b3b9')
+            }), '656ef313d44684c44977b0c75f48f27a43686c63ae44c8778ea0fe05f629b3b9'
+        )
 
         # order changes in dictionaries should give the same hashes
         self.assertEqual(
             make_hash(collections.OrderedDict([('c', 'd'), ('a', 'b')]), odict_as_unordered=True),
-            make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')]), odict_as_unordered=True))
+            make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')]), odict_as_unordered=True)
+        )
 
     def test_collection_with_odicts(self):
         # ordered dicts should always give a different hash (because they are a different type), unless told otherwise:
         self.assertNotEqual(
-            make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')])), make_hash(dict([('a', 'b'), ('c', 'd')])))
+            make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')])), make_hash(dict([('a', 'b'), ('c', 'd')]))
+        )
         self.assertEqual(
             make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')]), odict_as_unordered=True),
-            make_hash(dict([('a', 'b'), ('c', 'd')])))
+            make_hash(dict([('a', 'b'), ('c', 'd')]))
+        )
 
     def test_nested_collections(self):
         obj_a = collections.OrderedDict([
@@ -132,7 +138,8 @@ class MakeHashTest(unittest.TestCase):
 
         self.assertEqual(
             make_hash(obj_a, odict_as_unordered=True),
-            'e27bf6081c23afcb3db0ee3a24a64c73171c062c7f227fecc7f17189996add44')
+            'e27bf6081c23afcb3db0ee3a24a64c73171c062c7f227fecc7f17189996add44'
+        )
         self.assertEqual(make_hash(obj_a, odict_as_unordered=True), make_hash(obj_b, odict_as_unordered=True))
 
     def test_bytes(self):
@@ -147,21 +154,26 @@ class MakeHashTest(unittest.TestCase):
     def test_datetime(self):
         # test for timezone-naive datetime:
         self.assertEqual(
-            make_hash(datetime(2018, 8, 18, 8, 18)), '714138f1114daa5fdc74c3483260742952b71b568d634c6093bb838afad76646')
+            make_hash(datetime(2018, 8, 18, 8, 18)), '714138f1114daa5fdc74c3483260742952b71b568d634c6093bb838afad76646'
+        )
         self.assertEqual(
-            make_hash(datetime.utcfromtimestamp(0)), 'b4d97d9d486937775bcc25a5cba073f048348c3cd93d4460174a4f72a6feb285')
+            make_hash(datetime.utcfromtimestamp(0)), 'b4d97d9d486937775bcc25a5cba073f048348c3cd93d4460174a4f72a6feb285'
+        )
 
         # test with timezone-aware datetime:
         self.assertEqual(
             make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=pytz.timezone('US/Eastern'))),
-            '194478834b3b8bd0518cf6ca6fefacc13bea15f9c0b8f5d585a0adf2ebbd562f')
+            '194478834b3b8bd0518cf6ca6fefacc13bea15f9c0b8f5d585a0adf2ebbd562f'
+        )
         self.assertEqual(
             make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=pytz.timezone('Europe/Amsterdam'))),
-            'be7c7c7faaff07d796db4cbef4d3d07ed29fdfd4a38c9aded00a4c2da2b89b9c')
+            'be7c7c7faaff07d796db4cbef4d3d07ed29fdfd4a38c9aded00a4c2da2b89b9c'
+        )
 
     def test_numpy_types(self):
         self.assertEqual(
-            make_hash(np.float64(3.141)), 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be')  # pylint: disable=no-member
+            make_hash(np.float64(3.141)), 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be'
+        )  # pylint: disable=no-member
         self.assertEqual(make_hash(np.int64(42)), '9468692328de958d7a8039e8a2eb05cd6888b7911bbc3794d0dfebd8df3482cd')  # pylint: disable=no-member
 
     def test_unhashable_type(self):

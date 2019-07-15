@@ -35,7 +35,8 @@ class TestBackendComment(AiidaTestCase):
     def setUp(self):
         super(TestBackendComment, self).setUp()
         self.node = self.backend.nodes.create(
-            node_type='', user=self.user, computer=self.computer, label='label', description='description').store()
+            node_type='', user=self.user, computer=self.computer, label='label', description='description'
+        ).store()
         self.comment_content = 'comment content'
 
     def create_comment(self, **kwargs):
@@ -46,7 +47,8 @@ class TestBackendComment(AiidaTestCase):
         mtime = kwargs['mtime'] if 'mtime' in kwargs else None
 
         return self.backend.comments.create(
-            node=node, user=user, content=self.comment_content, ctime=ctime, mtime=mtime)
+            node=node, user=user, content=self.comment_content, ctime=ctime, mtime=mtime
+        )
 
     def test_creation(self):
         """Test creation of a BackendComment and all its properties."""
@@ -105,7 +107,8 @@ class TestBackendComment(AiidaTestCase):
         mtime = deserialize_attributes('2019-02-27T16:27:14.798838', 'date')
 
         comment = self.backend.comments.create(
-            node=self.node, user=self.user, content=self.comment_content, mtime=mtime, ctime=ctime)
+            node=self.node, user=self.user, content=self.comment_content, mtime=mtime, ctime=ctime
+        )
 
         # Check that the ctime and mtime are the given ones
         self.assertEqual(comment.ctime, ctime)
@@ -158,7 +161,8 @@ class TestBackendComment(AiidaTestCase):
             len(orm.Comment.objects.all()),
             count,
             msg="No Comments should have been deleted. There should still be {} Comment(s), "
-            "however {} Comment(s) was/were found.".format(count, len(orm.Comment.objects.all())))
+            "however {} Comment(s) was/were found.".format(count, len(orm.Comment.objects.all()))
+        )
 
     def test_delete_many_ids(self):
         """Test `delete_many` method filtering on both `id` and `uuid`"""
@@ -176,7 +180,9 @@ class TestBackendComment(AiidaTestCase):
             count_comments_found,
             len(comment_uuids),
             msg="There should be {} Comments, instead {} Comment(s) was/were found".format(
-                len(comment_uuids), count_comments_found))
+                len(comment_uuids), count_comments_found
+            )
+        )
 
         # Delete last two comments (comment2, comment3)
         filters = {'or': [{'id': comment2.id}, {'uuid': str(comment3.uuid)}]}
@@ -191,7 +197,8 @@ class TestBackendComment(AiidaTestCase):
         """Test `delete_many` method filtering on `dbnode_id`"""
         # Create comments and separate node
         calc = self.backend.nodes.create(
-            node_type='', user=self.user, computer=self.computer, label='label', description='description').store()
+            node_type='', user=self.user, computer=self.computer, label='label', description='description'
+        ).store()
         comment1 = self.create_comment(node=calc)
         comment2 = self.create_comment()
         comment3 = self.create_comment()
@@ -206,7 +213,9 @@ class TestBackendComment(AiidaTestCase):
             count_comments_found,
             len(comment_uuids),
             msg="There should be {} Comments, instead {} Comment(s) was/were found".format(
-                len(comment_uuids), count_comments_found))
+                len(comment_uuids), count_comments_found
+            )
+        )
 
         # Delete comments for self.node
         filters = {'dbnode_id': self.node.id}
@@ -325,7 +334,8 @@ class TestBackendComment(AiidaTestCase):
         deleted_entities = self.backend.comments.delete_many(filters={'id': id_})
         self.assertEqual(
             deleted_entities, [],
-            msg="No entities should have been deleted, since Comment id {} does not exist".format(id_))
+            msg="No entities should have been deleted, since Comment id {} does not exist".format(id_)
+        )
 
         # Try to delete non-existing Comment - using delete
         # NotExistent should be raised, since no entities are found
@@ -364,7 +374,8 @@ class TestBackendComment(AiidaTestCase):
             comment_count_after,
             comment_count_before,
             msg="The number of comments changed after performing `delete_many`, "
-            "while filtering for a non-existing 'dbnode_id'")
+            "while filtering for a non-existing 'dbnode_id'"
+        )
 
     def test_delete_many_same_twice(self):
         """Test no exception is raised when entity is filtered by both `id` and `uuid`"""

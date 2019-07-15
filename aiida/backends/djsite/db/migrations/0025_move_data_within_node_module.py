@@ -42,6 +42,7 @@ class Migration(migrations.Migration):
                 UPDATE db_dbnode
                 SET type = regexp_replace(type, '^node.data.', 'data.')
                 WHERE type LIKE 'node.data.%'
-                """),
+                """
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

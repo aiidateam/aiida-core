@@ -83,16 +83,19 @@ class TestMigrateV03toV04(AiidaTestCase):
         self.assertEqual(
             metadata_v3.pop('conversion_info')[-1],
             conversion_message,
-            msg="The conversion message after migration is wrong")
+            msg="The conversion message after migration is wrong"
+        )
         metadata_v4.pop('conversion_info')
 
         # Assert changes were performed correctly
         self.assertDictEqual(
             metadata_v3,
             metadata_v4,
-            msg="After migration, metadata.json should equal intended metadata.json from archives")
+            msg="After migration, metadata.json should equal intended metadata.json from archives"
+        )
         self.assertDictEqual(
-            data_v3, data_v4, msg="After migration, data.json should equal intended data.json from archives")
+            data_v3, data_v4, msg="After migration, data.json should equal intended data.json from archives"
+        )
 
     def test_migrate_v3_to_v4_complete(self):
         """Test migration for file containing complete v0.3 era possibilities"""
@@ -149,7 +152,8 @@ class TestMigrateV03toV04(AiidaTestCase):
             self.assertIn(
                 change,
                 metadata['all_fields_info']['Node'],
-                msg="'{}' not found in metadata.json for Node".format(change))
+                msg="'{}' not found in metadata.json for Node".format(change)
+            )
 
         # Check Node types
         legal_node_types = {
@@ -163,12 +167,15 @@ class TestMigrateV03toV04(AiidaTestCase):
             self.assertIn(
                 node['node_type'],
                 legal_node_types,
-                msg="{} is not a legal node_type. Legal node types: {}".format(node['node_type'], legal_node_types))
+                msg="{} is not a legal node_type. Legal node types: {}".format(node['node_type'], legal_node_types)
+            )
             self.assertIn(
                 node['process_type'],
                 legal_process_types,
                 msg="{} is not a legal process_type. Legal process types: {}".format(
-                    node['process_type'], legal_node_types))
+                    node['process_type'], legal_node_types
+                )
+            )
 
         # Check links
         # Make sure the two illegal create links were removed during the migration
@@ -176,7 +183,8 @@ class TestMigrateV03toV04(AiidaTestCase):
             len(data['links_uuid']),
             links_count_org - 2,
             msg="Two of the org. {} links should have been removed during the migration, "
-            "instead there are now {} links".format(links_count_org, len(data['links_uuid'])))
+            "instead there are now {} links".format(links_count_org, len(data['links_uuid']))
+        )
         legal_link_types = {"unspecified", "create", "return", "input_calc", "input_work", "call_calc", "call_work"}
         for link in data['links_uuid']:
             self.assertIn(link['type'], legal_link_types)
@@ -194,7 +202,8 @@ class TestMigrateV03toV04(AiidaTestCase):
                 self.assertIn(
                     group['type_string'],
                     legal_group_type,
-                    msg="{} is not a legal Group type_string".format(group['type_string']))
+                    msg="{} is not a legal Group type_string".format(group['type_string'])
+                )
             # metadata.json
             self.assertIn(attr, metadata['all_fields_info']['Group'], msg="{} not found in metadata.json".format(attr))
 
@@ -217,19 +226,22 @@ class TestMigrateV03toV04(AiidaTestCase):
                     self.assertIn(
                         attr,
                         data[field][node_id],
-                        msg="Updated attribute name '{}' not found in {} for node_id: {}".format(attr, field, node_id))
+                        msg="Updated attribute name '{}' not found in {} for node_id: {}".format(attr, field, node_id)
+                    )
                 for old, new in optional_updated_calcjob_attrs.items():
                     self.assertNotIn(
                         old,
                         data[field][node_id],
                         msg="Old attribute '{}' found in {} for node_id: {}. "
-                        "It should now be updated to '{}' or not exist".format(old, field, node_id, new))
+                        "It should now be updated to '{}' or not exist".format(old, field, node_id, new)
+                    )
             for node_id in process_nodes:
                 for attr in updated_process_attrs:
                     self.assertIn(
                         attr,
                         data[field][node_id],
-                        msg="Updated attribute name '{}' not found in {} for node_id: {}".format(attr, field, node_id))
+                        msg="Updated attribute name '{}' not found in {} for node_id: {}".format(attr, field, node_id)
+                    )
 
         # Check TrajectoryData
         # There should be minimum one TrajectoryData in the export file
@@ -247,7 +259,9 @@ class TestMigrateV03toV04(AiidaTestCase):
                         attr,
                         data[field][node_id],
                         msg="Updated attribute name '{}' not found in {} for TrajecteoryData node_id: {}".format(
-                            attr, field, node_id))
+                            attr, field, node_id
+                        )
+                    )
 
         # Check Computer
         removed_attrs = {'enabled'}
@@ -255,12 +269,14 @@ class TestMigrateV03toV04(AiidaTestCase):
             # data.json
             for computer in data['export_data']['Computer'].values():
                 self.assertNotIn(
-                    attr, computer, msg="'{}' should have been removed from Computer {}".format(attr, computer['name']))
+                    attr, computer, msg="'{}' should have been removed from Computer {}".format(attr, computer['name'])
+                )
             # metadata.json
             self.assertNotIn(
                 attr,
                 metadata['all_fields_info']['Computer'],
-                msg="'{}' should have been removed from Computer in metadata.json".format(attr))
+                msg="'{}' should have been removed from Computer in metadata.json".format(attr)
+            )
 
         # Check new entities
         new_entities = {'Log', 'Comment'}
@@ -280,7 +296,9 @@ class TestMigrateV03toV04(AiidaTestCase):
                 len(data[field]),
                 attrs_count,
                 msg="New field '{}' found to have only {} entries, but should have had {} entries".format(
-                    field, len(data[field]), attrs_count))
+                    field, len(data[field]), attrs_count
+                )
+            )
 
     def test_compare_migration_with_aiida_made(self):
         """
@@ -365,7 +383,8 @@ class TestMigrateV03toV04(AiidaTestCase):
             self.assertListEqual(
                 sorted(details['migrated']),
                 sorted(details['made']),
-                msg="Number of {}-entities differ, see diff for details".format(entity))
+                msg="Number of {}-entities differ, see diff for details".format(entity)
+            )
 
         fields = {
             'groups_uuid', 'node_attributes_conversion', 'node_attributes', 'node_extras', 'node_extras_conversion'
@@ -379,7 +398,8 @@ class TestMigrateV03toV04(AiidaTestCase):
             self.assertEqual(
                 len(data_v3[field]),
                 len(data_v4[field]) - correction,
-                msg="Number of entities in {} differs for the export files".format(field))
+                msg="Number of entities in {} differs for the export files".format(field)
+            )
 
         number_of_links_v3 = {
             'unspecified': 0,
@@ -408,7 +428,8 @@ class TestMigrateV03toV04(AiidaTestCase):
         self.assertDictEqual(
             number_of_links_v3,
             number_of_links_v4,
-            msg="There are a different number of specific links in the migrated export file than the AiiDA made one.")
+            msg="There are a different number of specific links in the migrated export file than the AiiDA made one."
+        )
 
         self.assertEqual(number_of_links_v3['unspecified'], 0)
         self.assertEqual(number_of_links_v4['unspecified'], 0)
@@ -461,7 +482,9 @@ class TestMigrateV03toV04(AiidaTestCase):
                 len(violations),
                 known_illegal_links,
                 msg="{} illegal create links were expected, instead {} was/were found".format(
-                    known_illegal_links, len(violations)))
+                    known_illegal_links, len(violations)
+                )
+            )
 
             # Migrate to v0.4
             migrate_v3_to_v4(metadata, data, folder)
@@ -470,8 +493,10 @@ class TestMigrateV03toV04(AiidaTestCase):
         self.assertEqual(
             len(data['links_uuid']),
             links_count_migrated,
-            msg="{} links were expected, instead {} was/were found".format(links_count_migrated,
-                                                                           len(data['links_uuid'])))
+            msg="{} links were expected, instead {} was/were found".format(
+                links_count_migrated, len(data['links_uuid'])
+            )
+        )
 
         workfunc_uuids = {
             value['uuid']
@@ -483,4 +508,5 @@ class TestMigrateV03toV04(AiidaTestCase):
             if link['input'] in workfunc_uuids and link['type'] == 'create':
                 violations.append(link)
         self.assertEqual(
-            len(violations), 0, msg="0 illegal links were expected, instead {} was/were found".format(len(violations)))
+            len(violations), 0, msg="0 illegal links were expected, instead {} was/were found".format(len(violations))
+        )

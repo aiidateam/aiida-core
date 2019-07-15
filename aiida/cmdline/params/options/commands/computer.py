@@ -37,7 +37,8 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
             raise ImportError("Unable to load the '{}' scheduler".format(scheduler_ep.name))
     else:
         raise ValidationError(
-            "The should_call_... function should always be run (and prompted) AFTER asking for a scheduler")
+            "The should_call_... function should always be run (and prompted) AFTER asking for a scheduler"
+        )
 
     job_resource_cls = scheduler_cls.job_resource_class
     if job_resource_cls is None:
@@ -48,16 +49,19 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
 
 
 LABEL = options.LABEL.clone(
-    prompt='Computer label', cls=InteractiveOption, required=True, type=types.NonEmptyStringParamType())
+    prompt='Computer label', cls=InteractiveOption, required=True, type=types.NonEmptyStringParamType()
+)
 
 HOSTNAME = options.HOSTNAME.clone(
     prompt='Hostname',
     cls=InteractiveOption,
     required=True,
-    help='The fully qualified hostname of this computer; for local transports, use localhost.')
+    help='The fully qualified hostname of this computer; for local transports, use localhost.'
+)
 
 DESCRIPTION = options.DESCRIPTION.clone(
-    prompt='Description', cls=InteractiveOption, help='A human-readable description of this computer.')
+    prompt='Description', cls=InteractiveOption, help='A human-readable description of this computer.'
+)
 
 TRANSPORT = options.TRANSPORT.clone(prompt='Transport plugin', cls=InteractiveOption)
 
@@ -69,7 +73,8 @@ SHEBANG = OverridableOption(
     default='#!/bin/bash',
     cls=InteractiveOption,
     help='This line specifies the first line of the submission script for this computer.',
-    type=types.ShebangParamType())
+    type=types.ShebangParamType()
+)
 
 WORKDIR = OverridableOption(
     '-w',
@@ -80,7 +85,8 @@ WORKDIR = OverridableOption(
     help='The absolute path of the directory on the computer where AiiDA will '
     'run the calculations (typically, the scratch of the computer). You '
     'can use the {username} replacement, that will be replaced by your '
-    'username on the remote computer.')
+    'username on the remote computer.'
+)
 
 MPI_RUN_COMMAND = OverridableOption(
     '-m',
@@ -92,7 +98,8 @@ MPI_RUN_COMMAND = OverridableOption(
     'programs. You can use the {tot_num_mpiprocs} replacement, that will be '
     'replaced by the total number of cpus, or the other scheduler-dependent '
     'replacement fields (see the scheduler docs for more information).',
-    type=types.MpirunCommandParamType())
+    type=types.MpirunCommandParamType()
+)
 
 MPI_PROCS_PER_MACHINE = OverridableOption(
     '--mpiprocs-per-machine',

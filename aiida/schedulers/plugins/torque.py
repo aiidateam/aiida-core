@@ -46,8 +46,9 @@ class TorqueScheduler(PbsBaseClass):
     ## for the time being, but I can redefine it if needed.
     # _map_status = _map_status_pbs_common
 
-    def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb,
-                            max_wallclock_seconds):
+    def _get_resource_lines(
+        self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb, max_wallclock_seconds
+    ):
         """
         Return the lines for machines, memory and wallclock relative
         to pbspro.
@@ -68,9 +69,11 @@ class TorqueScheduler(PbsBaseClass):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError("max_wallclock_seconds must be "
-                                 "a positive integer (in seconds)! It is instead '{}'"
-                                 "".format(max_wallclock_seconds))
+                raise ValueError(
+                    "max_wallclock_seconds must be "
+                    "a positive integer (in seconds)! It is instead '{}'"
+                    "".format(max_wallclock_seconds)
+                )
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
             minutes = tot_minutes // 60
@@ -85,9 +88,11 @@ class TorqueScheduler(PbsBaseClass):
                 if virtual_memory_kb <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError("max_memory_kb must be "
-                                 "a positive integer (in kB)! It is instead '{}'"
-                                 "".format((max_memory_kb)))
+                raise ValueError(
+                    "max_memory_kb must be "
+                    "a positive integer (in kB)! It is instead '{}'"
+                    "".format((max_memory_kb))
+                )
             # There is always something before, at least the total #
             # of nodes
             select_string += ",mem={}kb".format(virtual_memory_kb)

@@ -73,35 +73,43 @@ def inspect(archive, version, data, meta_data):
     '--input-forward/--no-input-forward',
     default=False,
     show_default=True,
-    help='Follow forward INPUT links (recursively) when calculating the node set to export.')
+    help='Follow forward INPUT links (recursively) when calculating the node set to export.'
+)
 @click.option(
     '--create-reversed/--no-create-reversed',
     default=True,
     show_default=True,
-    help='Follow reverse CREATE links (recursively) when calculating the node set to export.')
+    help='Follow reverse CREATE links (recursively) when calculating the node set to export.'
+)
 @click.option(
     '--return-reversed/--no-return-reversed',
     default=False,
     show_default=True,
-    help='Follow reverse RETURN links (recursively) when calculating the node set to export.')
+    help='Follow reverse RETURN links (recursively) when calculating the node set to export.'
+)
 @click.option(
     '--call-reversed/--no-call-reversed',
     default=False,
     show_default=True,
-    help='Follow reverse CALL links (recursively) when calculating the node set to export.')
+    help='Follow reverse CALL links (recursively) when calculating the node set to export.'
+)
 @click.option(
     '--include-logs/--exclude-logs',
     default=True,
     show_default=True,
-    help='Include or exclude logs for node(s) in export.')
+    help='Include or exclude logs for node(s) in export.'
+)
 @click.option(
     '--include-comments/--exclude-comments',
     default=True,
     show_default=True,
-    help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).')
+    help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).'
+)
 @decorators.with_dbenv()
-def create(output_file, codes, computers, groups, nodes, archive_format, force, input_forward, create_reversed,
-           return_reversed, call_reversed, include_comments, include_logs):
+def create(
+    output_file, codes, computers, groups, nodes, archive_format, force, input_forward, create_reversed,
+    return_reversed, call_reversed, include_comments, include_logs
+):
     """
     Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
     sharing purposes.

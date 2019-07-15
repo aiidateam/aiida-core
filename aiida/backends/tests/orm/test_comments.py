@@ -174,7 +174,8 @@ class TestComment(AiidaTestCase):
         for comment in comments:
             self.assertIn(
                 str(comment[0]),
-                [self.comment.uuid, comment_one.uuid, comment_two.uuid, comment_three.uuid, comment_five.uuid])
+                [self.comment.uuid, comment_one.uuid, comment_two.uuid, comment_three.uuid, comment_five.uuid]
+            )
 
         # Retrieve users from comments of a single node by joining specific node
         builder = orm.QueryBuilder()

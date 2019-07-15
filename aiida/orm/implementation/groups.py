@@ -206,17 +206,19 @@ class BackendGroupCollection(backends.BackendCollection[BackendGroup]):
 
     @abc.abstractmethod
     # pylint: disable=too-many-arguments
-    def query(self,
-              label=None,
-              type_string=None,
-              pk=None,
-              uuid=None,
-              nodes=None,
-              user=None,
-              node_attributes=None,
-              past_days=None,
-              label_filters=None,
-              **kwargs):
+    def query(
+        self,
+        label=None,
+        type_string=None,
+        pk=None,
+        uuid=None,
+        nodes=None,
+        user=None,
+        node_attributes=None,
+        past_days=None,
+        label_filters=None,
+        **kwargs
+    ):
         """
         Query for groups.
 

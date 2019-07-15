@@ -276,17 +276,19 @@ class SqlaGroupCollection(BackendGroupCollection):
 
     ENTITY_CLASS = SqlaGroup
 
-    def query(self,
-              label=None,
-              type_string=None,
-              pk=None,
-              uuid=None,
-              nodes=None,
-              user=None,
-              node_attributes=None,
-              past_days=None,
-              label_filters=None,
-              **kwargs):  # pylint: disable=too-many-arguments
+    def query(
+        self,
+        label=None,
+        type_string=None,
+        pk=None,
+        uuid=None,
+        nodes=None,
+        user=None,
+        node_attributes=None,
+        past_days=None,
+        label_filters=None,
+        **kwargs
+    ):  # pylint: disable=too-many-arguments
         # pylint: disable=too-many-branches
         from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
@@ -309,15 +311,20 @@ class SqlaGroupCollection(BackendGroupCollection):
                 nodes = [nodes]
 
             if not all(isinstance(n, (SqlaNode, DbNode)) for n in nodes):
-                raise TypeError("At least one of the elements passed as "
-                                "nodes for the query on Group is neither "
-                                "a Node nor a DbNode")
+                raise TypeError(
+                    "At least one of the elements passed as "
+                    "nodes for the query on Group is neither "
+                    "a Node nor a DbNode"
+                )
 
             # In the case of the Node orm from Sqlalchemy, there is an id
             # property on it.
-            sub_query = (session.query(table_groups_nodes).filter(
-                table_groups_nodes.c["dbnode_id"].in_([n.id for n in nodes]),
-                table_groups_nodes.c["dbgroup_id"] == DbGroup.id).exists())
+            sub_query = (
+                session.query(table_groups_nodes).filter(
+                    table_groups_nodes.c["dbnode_id"].in_([n.id for n in nodes]),
+                    table_groups_nodes.c["dbgroup_id"] == DbGroup.id
+                ).exists()
+            )
 
             filters.append(sub_query)
         if user:

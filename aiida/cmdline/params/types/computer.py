@@ -81,8 +81,10 @@ class MpirunCommandParamType(StringParamType):
             except ImportError:
                 self.fail("Unable to load the '{}' scheduler".format(scheduler_ep.name))
         else:
-            self.fail("Scheduler not specified for this computer! The mpirun-command must always be asked "
-                      "after asking for the scheduler.")
+            self.fail(
+                "Scheduler not specified for this computer! The mpirun-command must always be asked "
+                "after asking for the scheduler."
+            )
 
         # Prepare some substitution values to check if it is all ok
         subst = {i: 'value' for i in job_resource_keys}

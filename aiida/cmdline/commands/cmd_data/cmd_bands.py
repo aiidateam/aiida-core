@@ -107,13 +107,15 @@ def bands_show(data, fmt):
     type=click.FLOAT,
     default=None,
     help='The minimum value for the y axis.'
-    ' Default: minimum of all bands')
+    ' Default: minimum of all bands'
+)
 @click.option(
     '--y-max-lim',
     type=click.FLOAT,
     default=None,
     help='The maximum value for the y axis.'
-    ' Default: maximum of all bands')
+    ' Default: maximum of all bands'
+)
 @click.option(
     '-o',
     '--output',
@@ -121,13 +123,15 @@ def bands_show(data, fmt):
     default=None,
     help="If present, store the output directly on a file "
     "with the given name. It is essential to use this option "
-    "if more than one file needs to be created.")
+    "if more than one file needs to be created."
+)
 @options.FORCE(help="If passed, overwrite files without checking.")
 @click.option(
     '--prettify-format',
     default=None,
     type=click.Choice(Prettifier.get_prettifiers()),
-    help='The style of labels for the prettifier')
+    help='The style of labels for the prettifier'
+)
 @decorators.with_dbenv()
 def bands_export(fmt, y_min_lim, y_max_lim, output, force, prettify_format, datum):
     """Export BandsData objects."""

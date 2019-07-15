@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=cyclic-import
 """AiiDA manager for global settings"""
 from __future__ import division
 from __future__ import print_function
@@ -307,7 +308,8 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
             loop=runner_loop,
             persister=self.get_persister(),
             load_context=plumpy.LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader())
+            loader=persistence.get_object_loader()
+        )
 
         def callback(*args, **kwargs):
             return plumpy.create_task(functools.partial(task_receiver, *args, **kwargs), loop=runner_loop)

@@ -68,8 +68,9 @@ def upgrade():
     connection = op.get_bind()
 
     # Create the UUID column
-    op.add_column('db_dblog',
-                  sa.Column('uuid', postgresql.UUID(), autoincrement=False, nullable=True, default=get_new_uuid))
+    op.add_column(
+        'db_dblog', sa.Column('uuid', postgresql.UUID(), autoincrement=False, nullable=True, default=get_new_uuid)
+    )
 
     # Populate the uuid column
     set_new_uuid(connection)

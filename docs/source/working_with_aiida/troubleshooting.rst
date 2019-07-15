@@ -19,7 +19,7 @@ level of AiiDA messages::
 
   verdi config logging.aiida_loglevel DEBUG
 
-You might also be interested in circus log messages (circus is the library that manages AiiDA processes) but most often it is used by AiiDA developers::
+You might also be interested in circus log messages (the ``circus`` library is the daemonizer that manages the daemon runners) but most often it is used by AiiDA developers::
 
   verdi config logging.circus_loglevel DEBUG
 
@@ -34,7 +34,9 @@ the source of the problem.
 
 .. note:: In the command above, you can use a different level than ``DEBUG``.
   The list of the levels and their order is the same of the `standard python
-  logging module <https://docs.python.org/2/library/logging.html#logging-levels>`_.
+  logging module <https://docs.python.org/3/library/logging.html#logging-levels>`_.
+  In addition to the standard loggin levels we define our custom ``REPORT`` level
+  that has a value of ``23``.
 
 When the problem is solved, we suggest to bring back the default logging level, using the two commands::
 

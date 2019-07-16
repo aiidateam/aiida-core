@@ -141,6 +141,7 @@ DB_TEST_LIST = {
         'orm.utils.repository': ['aiida.backends.tests.orm.utils.test_repository'],
         'parsers.parser': ['aiida.backends.tests.parsers.test_parser'],
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
+        'plugins.utils': ['aiida.backends.tests.plugins.test_utils'],
         'query': ['aiida.backends.tests.test_query'],
         'restapi': ['aiida.backends.tests.test_restapi'],
         'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals'],

@@ -120,6 +120,18 @@ class TestProcessFunction(AiidaTestCase):
         super(TestProcessFunction, self).tearDown()
         self.assertIsNone(Process.current())
 
+    def test_plugin_version(self):
+        """Test the version attributes of a process function."""
+        from aiida import __version__ as version_core
+
+        _, node = self.function_args_with_default.run_get_node()
+
+        # Since the "plugin" i.e. the process function is defined in `aiida-core` the `version.plugin` is the same as
+        # the version of `aiida-core` itself
+        version_info = node.get_attribute('version')
+        self.assertEqual(version_info['core'], version_core)
+        self.assertEqual(version_info['plugin'], version_core)
+
     def test_process_state(self):
         """Test the process state for a process function."""
         _, node = self.function_args_with_default.run_get_node()

@@ -107,7 +107,7 @@
       "futures; python_version=='2.7'",
       "pytest==4.3.0",
       "pytest-cov==2.6.1",
-      "aiida-export-migration-tests==0.5.2"
+      "aiida-export-migration-tests==0.7.0"
     ],
     "dev_precommit": [
       "astroid==2.1.0; python_version>='3.0'",

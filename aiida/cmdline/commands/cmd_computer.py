@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -96,7 +96,7 @@ Please check that you don't have code producing output in
 your ~/.bash_profile (or ~/.bashrc). If you don't want to
 remove the code, but just to disable it for non-interactive
 shells, see comments in issue #1980 on GitHub:
-https://github.com/aiidateam/aiida_core/issues/1890
+https://github.com/aiidateam/aiida-core/issues/1890
 (and in the AiiDA documentation, linked from that issue)
 """.format(stdout))
         return False
@@ -110,7 +110,7 @@ Please check that you don't have code producing output in
 your ~/.bash_profile (or ~/.bashrc). If you don't want to
 remove the code, but just to disable it for non-interactive
 shells, see comments in issue #1980 on GitHub:
-https://github.com/aiidateam/aiida_core/issues/1890
+https://github.com/aiidateam/aiida-core/issues/1890
 (and in the AiiDA documentation, linked from that issue)
 """.format(stderr))
         return False

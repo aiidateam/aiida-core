@@ -126,12 +126,15 @@ An example input port that explicitly sets all these attributes is the following
     spec.input('positive_number', required=False, default=Int(1), valid_type=(Int, Float), validator=is_number_positive)
 
 Here we define an input named ``positive_number`` that is not required, if a value is not explicitly passed, the default ``Int(1)`` will be used and if a value *is* passed, it should be of type ``Int`` or ``Float`` and it should be valid according to the ``is_number_positive`` validator.
-Note that the validator is nothing more than a free function which takes a single argument, being the value that is to be validated and should return ``True`` if that value is valid or ``False`` otherwise, for example:
+Note that the validator is nothing more than a free function which takes a single argument, being the value that is to be validated.
+If nothing is returned, the value is considered to be valid.
+To signal that the value is invalid and to have a validation error raised, simply return a string with the validation error message, for example:
 
 .. code:: python
 
     def is_number_positive(number):
-        return number >= 0
+        if number < 0:
+            return 'The number has to be greater or equal to zero'
 
 The ``valid_type`` can define a single type, or a tuple of valid types.
 

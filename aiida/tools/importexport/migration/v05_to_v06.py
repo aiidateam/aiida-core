@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -66,7 +66,7 @@ def migrate_deserialized_datetime(data, conversion):
     return ret_data
 
 
-def migration_serialize_datetime_objects(_, data):
+def migration_serialize_datetime_objects(data):
     """Apply migration 0037 - REV. 1.0.37
 
     Migrates the node `attributes` and `extras` from the EAV schema to JSONB columns. Since JSON does not support
@@ -89,7 +89,7 @@ def migration_serialize_datetime_objects(_, data):
     data.pop('node_extras_conversion', None)
 
 
-def migration_migrate_legacy_job_calculation_data(_, data):
+def migration_migrate_legacy_job_calculation_data(data):
     """Apply migration 0038 - REV. 1.0.38
 
     Migrates legacy `JobCalculation` data to the new process system. Essentially old `JobCalculation` nodes, which
@@ -142,5 +142,5 @@ def migrate_v5_to_v6(metadata, data, *args):  # pylint: disable=unused-argument
     update_metadata(metadata, new_version)
 
     # Apply migrations
-    migration_serialize_datetime_objects(metadata, data)
-    migration_migrate_legacy_job_calculation_data(metadata, data)
+    migration_serialize_datetime_objects(data)
+    migration_migrate_legacy_job_calculation_data(data)

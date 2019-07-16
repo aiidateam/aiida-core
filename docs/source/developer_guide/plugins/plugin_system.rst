@@ -63,7 +63,7 @@ Example
 
 In the following snippet only the most relevant code lines are picked to give an idea of the functioning. We will look only at one type of plugin, calculations, for simplicity.
 
-First of all, AiiDA defines groups of of entry points in ``aiida_core/setup.py``::
+First of all, AiiDA defines groups of of entry points in ``aiida-core/setup.py``::
 
     # in setuptools.setup() call
     entry_points = {

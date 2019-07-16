@@ -375,6 +375,13 @@ Returning an instance of ``ToContext`` signals to the engine that it has to wait
 In this example, that is the ``inspect_workchain`` method.
 At this point we are sure that the process, a work chain in this case, has terminated its execution, although not necessarily successful, and we can continue the logic of the work chain.
 
+.. warning::
+
+    Using the ``ToContext`` construct alone is not enough to tell the engine that it should wait for the sub process to finish.
+    There **needs** to be at least another step in the outline to follow the step that added the awaitables.
+    If there is no more step to follow, according to the outline, the engine interprets this as the work chain being done and so it will not wait for the sub process to finish.
+    Think about it like this: if there is not even a single step to follow, there is also nothing the work chain could do with the results of the sub process, so there is no point in waiting.
+
 Sometimes one wants to launch not just one, but multiple processes at the same time that can run in parallel.
 With the mechanism described above, this will not be possible since after submitting a single process and returning the ``ToContext`` instance, the work chain has to wait for the process to be finished before it can continue.
 To solve this problem, there is another way to add futures to the context:

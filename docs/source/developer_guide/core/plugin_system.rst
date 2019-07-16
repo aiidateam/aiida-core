@@ -2,7 +2,7 @@ Developing The Plugin System
 ============================
 
 .. note:: this page is intended for people wanting to contribute to 
-   the plugin system in ``aiida_core`` and is not needed for people who just want to contribute a plugin.
+   the plugin system in ``aiida-core`` and is not needed for people who just want to contribute a plugin.
 
 Design Principles
 +++++++++++++++++

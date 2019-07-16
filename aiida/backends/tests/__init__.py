@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -25,6 +25,7 @@ DB_TEST_LIST = {
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_many',
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0037_attributes_extras_settings_json',
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0038_data_migration_legacy_job_calculations',
+            'aiida.backends.djsite.db.subtests.migrations.test_migrations_0040_data_migration_legacy_process_attributes',
         ],
     },
     BACKEND_SQLA: {
@@ -140,6 +141,7 @@ DB_TEST_LIST = {
         'orm.utils.repository': ['aiida.backends.tests.orm.utils.test_repository'],
         'parsers.parser': ['aiida.backends.tests.parsers.test_parser'],
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
+        'plugins.utils': ['aiida.backends.tests.plugins.test_utils'],
         'query': ['aiida.backends.tests.test_query'],
         'restapi': ['aiida.backends.tests.test_restapi'],
         'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals'],
@@ -153,6 +155,7 @@ DB_TEST_LIST = {
         'tools.importexport.migration.v03_to_v04': ['aiida.backends.tests.tools.importexport.migration.test_v03_to_v04'],
         'tools.importexport.migration.v04_to_v05': ['aiida.backends.tests.tools.importexport.migration.test_v04_to_v05'],
         'tools.importexport.migration.v05_to_v06': ['aiida.backends.tests.tools.importexport.migration.test_v05_to_v06'],
+        'tools.importexport.migration.v06_to_v07': ['aiida.backends.tests.tools.importexport.migration.test_v06_to_v07'],
         'tools.importexport.orm.attributes': ['aiida.backends.tests.tools.importexport.orm.test_attributes'],
         'tools.importexport.orm.calculations': ['aiida.backends.tests.tools.importexport.orm.test_calculations'],
         'tools.importexport.orm.codes': ['aiida.backends.tests.tools.importexport.orm.test_codes'],

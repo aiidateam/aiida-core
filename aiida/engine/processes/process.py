@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -633,6 +633,9 @@ class Process(plumpy.Process):
 
     def _setup_metadata(self):
         """Store the metadata on the ProcessNode."""
+        version_info = self.runner.plugin_version_provider.get_version_info(self)
+        self.node.set_attribute_many(version_info)
+
         for name, metadata in self.metadata.items():
             if name in ['store_provenance', 'dry_run', 'call_link_label']:
                 continue

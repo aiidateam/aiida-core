@@ -14,6 +14,6 @@ Below is a list of available plugins:
 
 .. toctree::
    :maxdepth: 4
- 
+
    dbimporters/icsd
    dbimporters/cod

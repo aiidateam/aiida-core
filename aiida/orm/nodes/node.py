@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -1095,8 +1095,7 @@ class Node(Entity):
             {
                 key: val
                 for key, val in self.attributes_items()
-                if (key not in self._hash_ignored_attributes and
-                    key not in getattr(self, '_updatable_attributes', tuple()))
+                if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
             },
             self._repository._get_base_folder(),  # pylint: disable=protected-access
             self.computer.uuid if self.computer is not None else None

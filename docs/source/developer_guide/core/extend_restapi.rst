@@ -267,7 +267,7 @@ To route a request to the API from a terminal you can employ ``curl``. Alternati
 
 .. code-block:: bash
 
-    curl http://127.0.0.2:6000/api/v2/new-endpoint/ -X GET
+    curl http://127.0.0.2:6000/api/v3/new-endpoint/ -X GET
 
 The form of the output (and only the form) should resemble
 
@@ -281,9 +281,9 @@ Now, let us create a node through the POST method, and check it again through GE
 
 .. code-block:: bash
 
-    curl http://127.0.0.2:6000/api/v2/new-endpoint/ -X POST
+    curl http://127.0.0.2:6000/api/v3/new-endpoint/ -X POST
     {"id": 410618}
-    curl http://127.0.0.2:6000/api/v2/new-endpoint/ -X GET
+    curl http://127.0.0.2:6000/api/v3/new-endpoint/ -X GET
     {"attributes": {"property1": "spam", "property2": "egg"}, "ctime": "2017-06-20T15:36:56.320180+00:00", "id": 410618}
 
 The POST request triggers the creation of a new Dict node, as confirmed by the response to the GET request.

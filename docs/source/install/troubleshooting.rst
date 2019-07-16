@@ -21,7 +21,7 @@ If all services are up and running and you are still experiencing problems, cons
 Installation phase
 ------------------
 
-* [**numpy dependency**] On a clean Ubuntu 16.04 install the pip install command ``pip install -e aiida_core``
+* [**numpy dependency**] On a clean Ubuntu 16.04 install the pip install command ``pip install -e aiida-core``
   may fail due to a problem with dependencies on the ``numpy`` package. In this case
   you may be presented with a message like the following::
 
@@ -167,9 +167,9 @@ Configuring remote SSH computers
      verdi computer test <COMPUTERNAME>
 
   which checks and, in case of problems, suggests how to solve the problem.
-  You can track the discussion on this issue in `aiidateam/aiida_core#1890`_.
+  You can track the discussion on this issue in `aiidateam/aiida-core#1890`_.
 
-.. _aiidateam/aiida_core#1890: https://github.com/aiidateam/aiida_core/issues/1890
+.. _aiidateam/aiida-core#1890: https://github.com/aiidateam/aiida-core/issues/1890
 .. _StackExchange thread: https://apple.stackexchange.com/questions/51036/what-is-the-difference-between-bash-profile-and-bashrc
 
 

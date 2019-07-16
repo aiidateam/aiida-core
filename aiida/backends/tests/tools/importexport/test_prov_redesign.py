@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -220,6 +220,8 @@ class TestProvenanceRedesign(AiidaTestCase):
         # Create Groups
         node1 = orm.CalculationNode().store()
         node2 = orm.CalculationNode().store()
+        node1.seal()
+        node2.seal()
         group_user = orm.Group(label=groups_label[0]).store()
         group_user.add_nodes([node1, node2])
 

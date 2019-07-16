@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import copy
 import logging
 import types
 import six
@@ -161,7 +162,9 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     """
     from logging.config import dictConfig
 
-    config = evaluate_logging_configuration(LOGGING)
+    # Evaluate the `LOGGING` configuration to resolve the lambdas that will retrieve the correct values based on the
+    # currently configured profile. Pass a deep copy of `LOGGING` to ensure that the original remains unaltered.
+    config = evaluate_logging_configuration(copy.deepcopy(LOGGING))
     daemon_handler_name = 'daemon_log_file'
 
     # Add the daemon file handler to all loggers if daemon=True

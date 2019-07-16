@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -35,7 +35,7 @@ class TestLogs(AiidaTestCase):
         Delete all the created log entries
         """
         super(TestLogs, self).tearDown()
-        orm.Log.objects.delete_many({})
+        orm.Log.objects.delete_all()
 
     @with_temp_dir
     def test_critical_log_msg_and_metadata(self, temp_dir):
@@ -50,6 +50,7 @@ class TestLogs(AiidaTestCase):
 
         # After storing the node, logs above log level should be stored
         calc.store()
+        calc.seal()
         calc.logger.critical(message)
 
         # Store Log metadata
@@ -77,6 +78,7 @@ class TestLogs(AiidaTestCase):
         # Create node
         calc = orm.CalculationNode()
         calc.store()
+        calc.seal()
 
         # Create log message
         calc.logger.critical(log_msg)
@@ -111,6 +113,7 @@ class TestLogs(AiidaTestCase):
         # Create node
         calc = orm.CalculationNode()
         calc.store()
+        calc.seal()
 
         # Create log message
         calc.logger.critical(log_msg)
@@ -168,6 +171,7 @@ class TestLogs(AiidaTestCase):
 
         # Create Node and initial log message and save UUIDs prior to export
         node = orm.CalculationNode().store()
+        node.seal()
         node.logger.critical(log_msgs[0])
         node_uuid = node.uuid
         log_uuid_existing = orm.QueryBuilder().append(orm.Log, project=['uuid']).all()
@@ -272,6 +276,7 @@ class TestLogs(AiidaTestCase):
         # Create node and save UUID
         calc = orm.CalculationNode()
         calc.store()
+        calc.seal()
         calc_uuid = calc.uuid
 
         # Create first log message

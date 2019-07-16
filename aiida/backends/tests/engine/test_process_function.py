@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -119,6 +119,18 @@ class TestProcessFunction(AiidaTestCase):
     def tearDown(self):
         super(TestProcessFunction, self).tearDown()
         self.assertIsNone(Process.current())
+
+    def test_plugin_version(self):
+        """Test the version attributes of a process function."""
+        from aiida import __version__ as version_core
+
+        _, node = self.function_args_with_default.run_get_node()
+
+        # Since the "plugin" i.e. the process function is defined in `aiida-core` the `version.plugin` is the same as
+        # the version of `aiida-core` itself
+        version_info = node.get_attribute('version')
+        self.assertEqual(version_info['core'], version_core)
+        self.assertEqual(version_info['plugin'], version_core)
 
     def test_process_state(self):
         """Test the process state for a process function."""

@@ -4,7 +4,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -183,7 +183,7 @@ def validate_verdi_documentation():
 def validate_version():
     """Check that version numbers match.
 
-    Check version number in setup.json and aiida_core/__init__.py and make sure
+    Check version number in setup.json and aiida-core/__init__.py and make sure
     they match.
     """
     # Get version from python package
@@ -264,9 +264,7 @@ def update_environment_yml():
         Dumper=yaml.SafeDumper)
 
     # fix incompatibilities between conda and pypi
-    replacements = {
-        'psycopg2-binary': 'psycopg2',
-    }
+    replacements = {'psycopg2-binary': 'psycopg2', 'graphviz': 'python-graphviz'}
     install_requires = get_setup_json()['install_requires']
 
     conda_requires = []
@@ -277,7 +275,9 @@ def update_environment_yml():
             continue
 
         for (regex, replacement) in iter(replacements.items()):
-            conda_requires.append(re.sub(regex, replacement, req))
+            req = re.sub(regex, replacement, req)
+
+        conda_requires.append(req)
 
     environment = OrderedDict([
         ('name', 'aiida'),

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -330,7 +330,7 @@ class Group(entities.Entity):
         return {
             "description": {
                 "display_name": "Description",
-                "help_text": "short description of the Computer",
+                "help_text": "Short description of the group",
                 "is_foreign_key": False,
                 "type": "str"
             },
@@ -348,7 +348,7 @@ class Group(entities.Entity):
             },
             "type_string": {
                 "display_name": "Type_string",
-                "help_text": "Code type",
+                "help_text": "Type of the group",
                 "is_foreign_key": False,
                 "type": "str"
             },

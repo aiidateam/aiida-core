@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -89,6 +89,9 @@ class TestCalculations(AiidaTestCase):
         slave.store()
 
         output_1.add_incoming(master, LinkType.RETURN, 'RETURN')
+
+        master.seal()
+        slave.seal()
 
         uuids_values = [(v.uuid, v.value) for v in (output_1,)]
         filename1 = os.path.join(temp_dir, "export1.tar.gz")

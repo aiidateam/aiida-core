@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -1901,7 +1901,7 @@ class QueryBuilder(object):
         # Dirty solution coming up:
         # Sqlalchemy is by default de-duplicating results if possible.
         # This can lead to strange results, as shown in:
-        # https://github.com/aiidateam/aiida_core/issues/1600
+        # https://github.com/aiidateam/aiida-core/issues/1600
         # essentially qb.count() != len(qb.all()) in some cases.
         # We also addressed this with sqlachemy:
         # https://github.com/sqlalchemy/sqlalchemy/issues/4395#event-2002418814

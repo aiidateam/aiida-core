@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=invalid-name,import-error,no-name-in-module,too-few-public-methods,no-member
 """Adding JSONB field for Node.attributes and Node.Extras"""
+from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 

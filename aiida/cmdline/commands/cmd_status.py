@@ -48,7 +48,7 @@ STATUS_SYMBOLS = {
 def verdi_status():
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements
-    from aiida.cmdline.utils.daemon import get_daemon_status
+    from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
     from aiida.common.utils import Capturing, get_repository_folder
     from aiida.manage.external.rmq import get_rmq_url
     from aiida.manage.manager import get_manager
@@ -101,6 +101,7 @@ def verdi_status():
     # getting the daemon status
     try:
         client = manager.get_daemon_client()
+        delete_stale_pid_file(client)
         daemon_status = get_daemon_status(client)
 
         daemon_status = daemon_status.split('\n')[0]  # take only the first line

@@ -2,6 +2,17 @@ Here you will find all sorts of tutorials that show how to work with AiiDA and t
 The AiiDA plugins for Quantum ESPRESSO provide a set of tutorials for some of the main Quantum ESPRESSO codes (PW, PH, CP, and one of the post-processing tools PROJWFC).
 You can find them on the `plugin documentation page <http://aiida-quantumespresso.readthedocs.io/en/latest/user_guide/get_started/index.html>`_.
 
+
+*****************************
+Visualising Provenance Graphs
+*****************************
+
+.. toctree::
+    :maxdepth: 2
+
+    visualising_graphs/visualising_graphs
+
+
 *************
 StructureData
 *************

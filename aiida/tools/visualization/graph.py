@@ -442,6 +442,7 @@ class Graph(object):
                 include_sublabels=self._include_sublabels,
                 id_type=self._node_id_type)
             self._nodes.add(node.pk)
+        return node
 
     def add_edge(self, in_node, out_node, link_pair=None, style=None, overwrite=False):
         """add single node to the graph
@@ -502,7 +503,7 @@ class Graph(object):
         if annotate_links not in [None, False, "label", "type", "both"]:
             raise AssertionError('annotate_links must be one of False, "label", "type" or "both"')
 
-        self.add_node(node)
+        node = self.add_node(node)
 
         nodes = []
         for link_triple in node.get_incoming(link_type=self._convert_link_types(link_types)).link_triples:
@@ -532,7 +533,7 @@ class Graph(object):
         if annotate_links not in [None, False, "label", "type", "both"]:
             raise AssertionError('annotate_links must be one of False, "label", "type" or "both"')
 
-        self.add_node(node)
+        node = self.add_node(node)
 
         nodes = []
         for link_triple in node.get_outgoing(link_type=self._convert_link_types(link_types)).link_triples:

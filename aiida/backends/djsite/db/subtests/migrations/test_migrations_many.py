@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -795,3 +795,29 @@ class TestTextFieldToJSONFieldMigration(TestMigrations):  # pylint: disable=too-
         self.assertDictEqual(auth_info.metadata, self.auth_info_metadata)
         self.assertDictEqual(auth_info.auth_params, self.auth_info_auth_params)
         self.assertDictEqual(log.metadata, self.log_metadata)
+
+
+class TestResetHash(TestMigrations):
+    """
+    This test class checks that only the hash extra is removed.
+    """
+
+    migrate_from = '0038_data_migration_legacy_job_calculations'
+    migrate_to = '0039_reset_hash'
+
+    def setUpBeforeMigration(self):
+        self.node = self.DbNode(
+            node_type='process.calculation.calcjob.CalcJobNode.',
+            user_id=self.default_user.id,
+            extras={
+                'something': 123,
+                '_aiida_hash': 'abcd'
+            })
+        self.node.save()
+
+    def test_data_migrated(self):
+        """Verify that type string of the nodes was successfully adapted."""
+        node = self.load_node(self.node.id)
+        extras = node.extras
+        self.assertEqual(extras.get('something'), 123)  # Other extras should be untouched
+        self.assertNotIn('_aiida_hash', extras)  # The hash extra should have been removed

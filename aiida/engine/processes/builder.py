@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -12,10 +12,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+from six import PY2
 
-import collections
+if PY2:
+    import collections
+else:
+    import collections.abc as collections  # pylint: disable=import-error, no-name-in-module
 
-from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.ports import PortNamespace  # pylint: disable=wrong-import-position
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 

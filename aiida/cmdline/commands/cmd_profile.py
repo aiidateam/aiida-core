@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -52,10 +52,10 @@ def profile_list():
 
 
 @verdi_profile.command('show')
-@arguments.PROFILE(required=False, callback=defaults.get_default_profile)
+@arguments.PROFILE(default=defaults.get_default_profile)
 def profile_show(profile):
     """Show details for PROFILE or, when not specified, the default profile."""
-    if not profile:
+    if profile is None:
         echo.echo_critical('no profile to show')
 
     echo.echo_info('Configuration for: {}'.format(profile.name))
@@ -64,7 +64,7 @@ def profile_show(profile):
 
 
 @verdi_profile.command('setdefault')
-@arguments.PROFILE()
+@arguments.PROFILE(required=True, default=None)
 def profile_setdefault(profile):
     """Set PROFILE as the default profile."""
     try:

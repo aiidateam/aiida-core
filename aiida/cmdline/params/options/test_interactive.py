@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -93,10 +93,10 @@ class InteractiveOptionTest(unittest.TestCase):
         expected_4 = '1.0'
         self.assertIsNone(result.exception)
         lines = result.output.split('\n')
-        self.assertIn(expected_1, lines[2])
-        self.assertIn(expected_2, lines[5])
-        self.assertIn(expected_3, lines[8])
-        self.assertIn(expected_4, lines[11])
+        self.assertIn(expected_1, lines[3])
+        self.assertIn(expected_2, lines[6])
+        self.assertIn(expected_3, lines[9])
+        self.assertIn(expected_4, lines[12])
 
     def test_prompt_str(self):
         """
@@ -223,6 +223,26 @@ class InteractiveOptionTest(unittest.TestCase):
         expected = '\n'
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, expected)
+
+    def test_default_value_ignore_character(self):
+        """
+        scenario: InteractiveOption with default value, invoke with ignore default character `!`
+        behaviour: return `None` for the value
+        """
+        cmd = self.simple_command(default='default')
+        runner = CliRunner()
+
+        # Check the interactive mode, by not specifying the input on the command line and then enter `!` at the prompt
+        result = runner.invoke(cmd, [], input='!\n')
+        expected = 'None'
+        self.assertIsNone(result.exception)
+        self.assertIn(expected, result.output.split('\n')[3])  # Fourth line should be parsed value printed to stdout
+
+        # In the non-interactive mode the special character `!` should have no special meaning and be accepted as is
+        result = runner.invoke(cmd, ['--opt=!'])
+        expected = '!\n'
+        self.assertIsNone(result.exception)
+        self.assertIn(expected, result.output)
 
     def test_opt_given_valid(self):
         """

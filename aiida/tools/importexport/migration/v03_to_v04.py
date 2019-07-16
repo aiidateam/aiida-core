@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -33,7 +33,7 @@ import os
 import numpy as np
 
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.migration.utils import verify_metadata_version, update_metadata, remove_fields
+from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata, remove_fields
 
 
 def migration_base_data_plugin_type_string(data):

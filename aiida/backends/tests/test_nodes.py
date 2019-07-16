@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -134,25 +134,11 @@ class TestNodeHashing(AiidaTestCase):
         return node
 
     def test_folder_file_different(self):
-        f1 = self.create_folderdata_with_empty_file()
-        f2 = self.create_folderdata_with_empty_folder()
+        f1 = self.create_folderdata_with_empty_file().store()
+        f2 = self.create_folderdata_with_empty_folder().store()
 
         assert (f1.list_object_names('path') == f2.list_object_names('path'))
         assert f1.get_hash() != f2.get_hash()
-
-    def test_folder_same(self):
-        f1 = self.create_folderdata_with_empty_folder()
-        f2 = self.create_folderdata_with_empty_folder()
-        f1.store()
-        f2.store(use_cache=True)
-        assert f1.uuid == f2.get_extra('_aiida_cached_from')
-
-    def test_file_same(self):
-        f1 = self.create_folderdata_with_empty_file()
-        f2 = self.create_folderdata_with_empty_file()
-        f1.store()
-        f2.store(use_cache=True)
-        assert f1.uuid == f2.get_extra('_aiida_cached_from')
 
     def test_simple_unequal_nodes(self):
         attributes = [
@@ -188,12 +174,47 @@ class TestNodeHashing(AiidaTestCase):
         """
         Tests that updatable attributes are ignored.
         """
-        node = orm.ProcessNode()
+        node = orm.CalculationNode().store()
         hash1 = node.get_hash()
         node.set_process_state('finished')
         hash2 = node.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)
+
+
+class TestNodeHashing(AiidaTestCase):
+    """
+    Test that the source is taken from the expected node.
+
+    Important: these tests must run on an empty database.
+    """
+    @staticmethod
+    def create_folderdata_with_empty_file():
+        node = orm.FolderData()
+        with tempfile.NamedTemporaryFile() as handle:
+            node.put_object_from_filelike(handle, 'path/name')
+        return node
+
+    @staticmethod
+    def create_folderdata_with_empty_folder():
+        dirpath = tempfile.mkdtemp()
+        node = orm.FolderData()
+        node.put_object_from_tree(dirpath, 'path/name')
+        return node
+
+    def test_folder_same(self):
+        f1 = self.create_folderdata_with_empty_folder()
+        f2 = self.create_folderdata_with_empty_folder()
+        f1.store()
+        f2.store(use_cache=True)
+        assert f1.uuid == f2.get_extra('_aiida_cached_from')
+
+    def test_file_same(self):
+        f1 = self.create_folderdata_with_empty_file()
+        f2 = self.create_folderdata_with_empty_file()
+        f1.store()
+        f2.store(use_cache=True)
+        assert f1.uuid == f2.get_extra('_aiida_cached_from')
 
 
 class TestTransitiveNoLoops(AiidaTestCase):

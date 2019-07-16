@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -464,27 +464,12 @@ class TrajectoryData(ArrayData):
                 cif = cif + ciffile.WriteOut()
         return cif.encode('utf-8'), {}
 
-    def _get_aiida_structure(self, store=False, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
-
-        :param converter: specify the converter. Default 'ase'.
-        :param store: If True, intermediate calculation gets stored in the
-            AiiDA database for record. Default False.
-        :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn(  # pylint: disable=no-member
-            'This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0', DeprecationWarning)
-        return self.get_structure(store=store, **kwargs)
-
     def get_structure(self, store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
 
         .. versionadded:: 1.0
-           Renamed from _get_aiida_structure
+            Renamed from _get_aiida_structure
 
         :param converter: specify the converter. Default 'ase'.
         :param store: If True, intermediate calculation gets stored in the
@@ -498,16 +483,6 @@ class TrajectoryData(ArrayData):
 
         ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})  # pylint: disable=unexpected-keyword-arg
         return ret_dict['structure']
-
-    def _get_cif(self, index=None, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.nodes.data.cif.CifData`
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn(  # pylint: disable=no-member
-            'This method has been deprecated and will be renamed to get_cif() in AiiDA v1.0', DeprecationWarning)
-        return self.get_cif(index=index, **kwargs)
 
     def get_cif(self, index=None, **kwargs):
         """

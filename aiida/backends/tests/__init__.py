@@ -3,10 +3,11 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=line-too-long
 """
 Module for defining tests that required access to (a temporary) database
 """
@@ -24,6 +25,7 @@ DB_TEST_LIST = {
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_many',
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0037_attributes_extras_settings_json',
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0038_data_migration_legacy_job_calculations',
+            'aiida.backends.djsite.db.subtests.migrations.test_migrations_0040_data_migration_legacy_process_attributes',
         ],
     },
     BACKEND_SQLA: {
@@ -91,6 +93,7 @@ DB_TEST_LIST = {
         'engine.daemon': ['aiida.backends.tests.engine.test_daemon'],
         'engine.futures': ['aiida.backends.tests.engine.test_futures'],
         'engine.launch': ['aiida.backends.tests.engine.test_launch'],
+        'engine.manager': ['aiida.backends.tests.engine.test_manager'],
         'engine.persistence': ['aiida.backends.tests.engine.test_persistence'],
         'engine.ports': ['aiida.backends.tests.engine.test_ports'],
         'engine.process': ['aiida.backends.tests.engine.test_process'],
@@ -104,13 +107,6 @@ DB_TEST_LIST = {
         'engine.utils': ['aiida.backends.tests.engine.test_utils'],
         'engine.work_chain': ['aiida.backends.tests.engine.test_work_chain'],
         'engine.workfunctions': ['aiida.backends.tests.engine.test_workfunctions'],
-        'export_and_import': ['aiida.backends.tests.test_export_and_import'],
-        'export_migration.migration': ['aiida.backends.tests.tools.importexport.migration.test_migration'],
-        'export_migration.v01_to_v02': ['aiida.backends.tests.tools.importexport.migration.test_v01_to_v02'],
-        'export_migration.v02_to_v03': ['aiida.backends.tests.tools.importexport.migration.test_v02_to_v03'],
-        'export_migration.v03_to_v04': ['aiida.backends.tests.tools.importexport.migration.test_v03_to_v04'],
-        'export_migration.v04_to_v05': ['aiida.backends.tests.tools.importexport.migration.test_v04_to_v05'],
-        'export_migration.v05_to_v06': ['aiida.backends.tests.tools.importexport.migration.test_v05_to_v06'],
         'generic': ['aiida.backends.tests.test_generic'],
         'manage.configuration.config.': ['aiida.backends.tests.manage.configuration.test_config'],
         'manage.configuration.migrations.': ['aiida.backends.tests.manage.configuration.migrations.test_migrations'],
@@ -131,8 +127,9 @@ DB_TEST_LIST = {
         'orm.entities': ['aiida.backends.tests.orm.test_entities'],
         'orm.groups': ['aiida.backends.tests.orm.test_groups'],
         'orm.implementation.backend': ['aiida.backends.tests.orm.implementation.test_backend'],
-        'orm.implementation.nodes': ['aiida.backends.tests.orm.implementation.test_nodes'],
         'orm.implementation.comments': ['aiida.backends.tests.orm.implementation.test_comments'],
+        'orm.implementation.logs': ['aiida.backends.tests.orm.implementation.test_logs'],
+        'orm.implementation.nodes': ['aiida.backends.tests.orm.implementation.test_nodes'],
         'orm.logs': ['aiida.backends.tests.orm.test_logs'],
         'orm.mixins': ['aiida.backends.tests.orm.test_mixins'],
         'orm.node.calcjob': ['aiida.backends.tests.orm.node.test_calcjob'],
@@ -144,9 +141,32 @@ DB_TEST_LIST = {
         'orm.utils.repository': ['aiida.backends.tests.orm.utils.test_repository'],
         'parsers.parser': ['aiida.backends.tests.parsers.test_parser'],
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
+        'plugins.utils': ['aiida.backends.tests.plugins.test_utils'],
         'query': ['aiida.backends.tests.test_query'],
         'restapi': ['aiida.backends.tests.test_restapi'],
-        'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals']
+        'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals'],
+        'tools.importexport.complex': ['aiida.backends.tests.tools.importexport.test_complex'],
+        'tools.importexport.prov_redesign': ['aiida.backends.tests.tools.importexport.test_prov_redesign'],
+        'tools.importexport.simple': ['aiida.backends.tests.tools.importexport.test_simple'],
+        'tools.importexport.specific_import': ['aiida.backends.tests.tools.importexport.test_specific_import'],
+        'tools.importexport.migration.migration': ['aiida.backends.tests.tools.importexport.migration.test_migration'],
+        'tools.importexport.migration.v01_to_v02': ['aiida.backends.tests.tools.importexport.migration.test_v01_to_v02'],
+        'tools.importexport.migration.v02_to_v03': ['aiida.backends.tests.tools.importexport.migration.test_v02_to_v03'],
+        'tools.importexport.migration.v03_to_v04': ['aiida.backends.tests.tools.importexport.migration.test_v03_to_v04'],
+        'tools.importexport.migration.v04_to_v05': ['aiida.backends.tests.tools.importexport.migration.test_v04_to_v05'],
+        'tools.importexport.migration.v05_to_v06': ['aiida.backends.tests.tools.importexport.migration.test_v05_to_v06'],
+        'tools.importexport.migration.v06_to_v07': ['aiida.backends.tests.tools.importexport.migration.test_v06_to_v07'],
+        'tools.importexport.orm.attributes': ['aiida.backends.tests.tools.importexport.orm.test_attributes'],
+        'tools.importexport.orm.calculations': ['aiida.backends.tests.tools.importexport.orm.test_calculations'],
+        'tools.importexport.orm.codes': ['aiida.backends.tests.tools.importexport.orm.test_codes'],
+        'tools.importexport.orm.comments': ['aiida.backends.tests.tools.importexport.orm.test_comments'],
+        'tools.importexport.orm.computers': ['aiida.backends.tests.tools.importexport.orm.test_computers'],
+        'tools.importexport.orm.extras': ['aiida.backends.tests.tools.importexport.orm.test_extras'],
+        'tools.importexport.orm.groups': ['aiida.backends.tests.tools.importexport.orm.test_groups'],
+        'tools.importexport.orm.links': ['aiida.backends.tests.tools.importexport.orm.test_links'],
+        'tools.importexport.orm.logs': ['aiida.backends.tests.tools.importexport.orm.test_logs'],
+        'tools.importexport.orm.users': ['aiida.backends.tests.tools.importexport.orm.test_users'],
+        'tools.visualization.graph': ['aiida.backends.tests.tools.visualization.test_graph']
     }
 }
 

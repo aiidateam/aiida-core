@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -18,7 +18,9 @@ from __future__ import absolute_import
 
 import warnings
 
-warnings.warn('this module is deprecated', DeprecationWarning)  # pylint: disable=no-member
+from aiida.common.warnings import AiidaDeprecationWarning
+
+warnings.warn('this module is deprecated', AiidaDeprecationWarning)  # pylint: disable=no-member
 
 # Possible choices for backend
 BACKEND_DJANGO = 'django'

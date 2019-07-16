@@ -110,7 +110,7 @@ If you need to change the database schema follow these steps:
    to the next step.
 
 7. Prepare tests for your migrations. An example of a test can be found here:
-   ``aiida_core/aiida/backends/djsite/db/subtests/migrations.py``
+   ``aiida-core/aiida/backends/djsite/db/subtests/migrations.py``
    
 .. note:: Such a test can only be applied to the migration of the database
   content. For example, you can **not** test modifications of the database
@@ -187,7 +187,7 @@ If you need to change the database schema follow these steps:
    the help of the alembic_manage.py script as you can see below.
 
 5. Prepare tests for your migrations. An example of a test can be found here:
-   ``aiida_core/aiida/backends/sqlalchemy/tests/migrations.py``
+   ``aiida-core/aiida/backends/sqlalchemy/tests/migrations.py``
 
 
 Overview of alembic_manage.py commands

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -16,16 +16,15 @@ plugin-specific operations.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 
-import warnings
 from six.moves import zip
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import FolderData
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.plugins import DataFactory
@@ -43,10 +42,19 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
     :param transport: an already opened transport to use to submit the calculation.
     :param calc_info: the calculation info datastructure returned by `CalcJobNode.presubmit`
     :param script_filename: the job launch script returned by `CalcJobNode.presubmit`
+    :return: tuple of ``calc_info`` and ``script_filename``
     """
     from logging import LoggerAdapter
     from tempfile import NamedTemporaryFile
     from aiida.orm import load_node, Code, RemoteData
+
+    # If the calculation already has a `remote_folder`, simply return. The upload was apparently already completed
+    # before, which can happen if the daemon is restarted and it shuts down after uploading but before getting the
+    # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the upload.
+    link_label = 'remote_folder'
+    if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
+        execlogger.warning('CalcJobNode<{}> already has a `{}` output: skipping upload'.format(node.pk, link_label))
+        return calc_info, script_filename
 
     computer = node.computer
 
@@ -215,6 +223,11 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
                               "calculation {}".format(node.pk))
 
     if not dry_run:
+        # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
+        # chance of making this method idempotent. That is to say, if a runner gets interrupted during this action, it
+        # will simply retry the upload, unless we got here and managed to link it up, in which case we move to the next
+        # task. Because in that case, the check for the existence of this link at the top of this function will exit
+        # early from this command.
         remotedata = RemoteData(computer=computer, remote_path=workdir)
         remotedata.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
         remotedata.store()
@@ -230,6 +243,7 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     :param transport: an already opened transport to use to submit the calculation.
     :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
     :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
+    :return: the job id as returned by the scheduler `submit_from_script` call
     """
     scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
@@ -237,6 +251,7 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     workdir = calculation.get_remote_workdir()
     job_id = scheduler.submit_from_script(workdir, script_filename)
     calculation.set_job_id(job_id)
+    return job_id
 
 
 def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
@@ -250,22 +265,24 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     :param transport: an already opened transport to use for the retrieval.
     :param retrieved_temporary_folder: the absolute path to a directory in which to store the files
         listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
-
-    .. deprecated:: 1.0.0
-        `retrieve_singlefile_list` will be removed in `v2.0.0`, use `retrieve_temporary_list` instead.
     """
     logger_extra = get_dblogger_extra(calculation)
-
-    execlogger.debug("Retrieving calc {}".format(calculation.pk), extra=logger_extra)
     workdir = calculation.get_remote_workdir()
 
-    execlogger.debug(
-        "[retrieval of calc {}] chdir {}".format(calculation.pk, workdir),
-        extra=logger_extra)
+    execlogger.debug("Retrieving calc {}".format(calculation.pk), extra=logger_extra)
+    execlogger.debug("[retrieval of calc {}] chdir {}".format(calculation.pk, workdir), extra=logger_extra)
 
-    # Create the FolderData node to attach everything to
+    # If the calculation already has a `retrieved` folder, simply return. The retrieval was apparently already completed
+    # before, which can happen if the daemon is restarted and it shuts down after retrieving but before getting the
+    # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the retrieval.
+    link_label = calculation.link_label_retrieved
+    if calculation.get_outgoing(FolderData, link_label_filter=link_label).first():
+        execlogger.warning('CalcJobNode<{}> already has a `{}` output folder: skipping retrieval'.format(
+            calculation.pk, link_label))
+        return
+
+    # Create the FolderData node into which to store the files that are to be retrieved
     retrieved_files = FolderData()
-    retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
     with transport:
         transport.chdir(workdir)
@@ -282,8 +299,6 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
 
         # Second, retrieve the singlefiles, if any files were specified in the 'retrieve_temporary_list' key
         if retrieve_singlefile_list:
-            warnings.warn('`retrieve_singlefile_list` has been deprecated, use `retrieve_temporary_list` instead',
-                AiidaDeprecationWarning)  # pylint: disable=no-member
             with SandboxFolder() as folder:
                 _retrieve_singlefiles(calculation, transport, folder, retrieve_singlefile_list, logger_extra)
 
@@ -303,6 +318,11 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
             "Storing retrieved_files={}".format(calculation.pk, retrieved_files.pk),
             extra=logger_extra)
         retrieved_files.store()
+
+    # Make sure that attaching the `retrieved` folder with a link is the last thing we do. This gives the biggest chance
+    # of making this method idempotent. That is to say, if a runner gets interrupted during this action, it will simply
+    # retry the retrieval, unless we got here and managed to link it up, in which case we move to the next task.
+    retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
 
 def kill_calculation(calculation, transport):

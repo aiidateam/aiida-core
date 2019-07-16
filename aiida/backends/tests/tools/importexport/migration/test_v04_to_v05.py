@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -19,12 +19,12 @@ import zipfile
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.archives import get_archive_file, get_json_files
-from aiida.cmdline.utils.migration.utils import verify_metadata_version
-from aiida.cmdline.utils.migration.v04_to_v05 import migrate_v4_to_v5
 from aiida.common.archive import extract_tar, extract_zip
 from aiida.common.exceptions import NotExistent
 from aiida.common.folders import SandboxFolder
 from aiida.common.json import load as jsonload
+from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.tools.importexport.migration.v04_to_v05 import migrate_v4_to_v5
 
 
 class TestMigrateV04toV05(AiidaTestCase):

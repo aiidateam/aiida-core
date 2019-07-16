@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -125,10 +125,10 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         self.assertClickSuccess(result)
         self.assertTrue(profile_name_non_default in result.output)
 
-        # Specifying `-p/--profile` should override the configured default
+        # Specifying `-p/--profile` should not override the argument default (which should be the default profile)
         result = self.cli_runner.invoke(cmd_verdi.verdi, ['-p', profile_name_non_default, 'profile', 'show'])
         self.assertClickSuccess(result)
-        self.assertTrue(profile_name_non_default in result.output)
+        self.assertTrue(profile_name_non_default not in result.output)
 
     @with_temporary_config_instance
     def test_delete_partial(self):

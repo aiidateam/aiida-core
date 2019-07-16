@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -13,15 +13,15 @@ This module manages the UPF pseudopotentials in the local repository.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import io
 import re
 
 import six
 
-import aiida.orm.users
 from aiida.common.lang import classproperty
-from .singlefile import SinglefileData
 from aiida.orm import GroupTypeString
+from .singlefile import SinglefileData
 
 __all__ = ('UpfData',)
 
@@ -520,19 +520,18 @@ class UpfData(SinglefileData):
         from aiida.orm import User
 
         query = QueryBuilder()
-        filters = {'type': {'==': cls.upffamily_type_string}}
+        filters = {'type_string': {'==': cls.upffamily_type_string}}
 
         query.append(Group, filters=filters, tag='group', project='*')
 
         if user:
-            query.append(User, filters={'email':{'==':user}}, with_group='group')
+            query.append(User, filters={'email': {'==': user}}, with_group='group')
 
         if isinstance(filter_elements, six.string_types):
             filter_elements = [filter_elements]
 
         if filter_elements is not None:
-            actual_filter_elements = [_ for _ in filter_elements]
-            query.append(UpfData, filters={'attributes.element':{'in': filter_elements}}, with_group='group')
+            query.append(UpfData, filters={'attributes.element': {'in': filter_elements}}, with_group='group')
 
-        query.order_by({Group:{'id':'asc'}}) 
+        query.order_by({Group: {'id': 'asc'}})
         return [_[0] for _ in query.all()]

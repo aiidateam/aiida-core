@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -39,64 +39,30 @@ def database_migrate(force):
         backend.migrate()
         return
 
-    echo.echo('\n' + '*' * 79 + '\n')
-    echo.echo_warning('Before continuing, make sure the daemon is stopped and you have a backup of your database.')
-    echo.echo_warning(
-        'It is ESSENTIAL to have a backup of your database - once you do this migration you can NEVER go back!')
-    echo.echo_warning('You will be committed to this new version of AiiDA.')
-    echo.echo_warning('Please be patient - migrating your database might take a while.')
+    echo.echo_warning('Migrating your database might take a while and is not reversible.')
+    echo.echo_warning('Before continuing, make sure you have completed the following steps:')
+    echo.echo_warning('')
+    echo.echo_warning(' 1. Make sure you have no active calculations and workflows.')
+    echo.echo_warning(' 2. If you do, revert the code to the previous version and finish running them first.')
+    echo.echo_warning(' 3. Stop the daemon using `verdi daemon stop`')
+    echo.echo_warning(' 4. Make a backup of your database and repository')
+    echo.echo_warning('')
+    echo.echo_warning('', nl=False)
 
-    echo.echo('\n' + '*' * 79 + '\n')
+    expected_answer = 'MIGRATE NOW'
+    confirm_message = 'If you have completed the steps above and want to migrate profile "{}", type {}'.format(
+        profile.name, expected_answer)
 
     try:
-        # First prompt
-        backup_prompt = 'Have you got a back up of the database for profile "{}"?'.format(profile.name)
-        echo.echo_warning(backup_prompt)
-        echo.echo_warning('', nl=False)
-        confirm_message = 'Type "I DO HAVE A BACKUP"'
-        response = ''
-        while response != 'I DO HAVE A BACKUP':
+        response = click.prompt(confirm_message)
+        while response != expected_answer:
             response = click.prompt(confirm_message)
-
-        # Second prompt
-        echo.echo('')
-        echo.echo_warning('Have you stopped the daemon?')
-        echo.echo_warning('', nl=False)
-        confirm_message = 'Type "I HAVE STOPPED THE DAEMON"'
-        response = ''
-        while response != 'I HAVE STOPPED THE DAEMON':
-            response = click.prompt(confirm_message)
-
-        # Final prompt
-        echo.echo('')
-        message = 'Are you absolutely ready to migrate profile "{}"? This will be PERMANENT.'.format(profile.name)
-        echo.echo_warning(message)
-        echo.echo_warning('', nl=False)
-        confirm_message = 'Type "MAKE IT SO"'
-        response = ''
-        while response != 'MAKE IT SO':
-            response = click.prompt(confirm_message)
-
-        # Do the migration
-        echo.echo('\nRunning the migrations...\n')
-        backend.migrate()
-
     except click.Abort:
         echo.echo('\n')
-        echo.echo_critical('Cannot start the migration without a positive confirmation. '
-                           'Your data has not been affected.')
-
-    # Below is the `old` behaviour from the `provenance_redesign branch`. We may replace the above
-    # with this in the future, but for v1.0.0b release, we're using the above logic to emphasise
-    # the severity of choosing to execute this migration.
-    # if not force:
-    #    echo.echo_warning('Migrating your database might take a while.')
-    #    echo.echo_warning('Before continuing, make sure the daemon is stopped and you have a backup of your database.')
-    #    echo.echo_warning('', nl=False)
-    #    confirm_message = 'Are you really sure you want to migrate the database for profile "{}"?'.format(profile.name)
-    #    click.confirm(confirm_message, abort=True)
-
-    #backend.migrate()
+        echo.echo_critical('Migration aborted, the data has not been affected.')
+    else:
+        backend.migrate()
+        echo.echo_success('migration completed')
 
 
 @verdi_database.group('integrity')

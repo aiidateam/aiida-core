@@ -266,11 +266,11 @@ Retrieve list
 ~~~~~~~~~~~~~
 The retrieve list supports various formats to define what files should be retrieved.
 The simplest is retrieving a single file, whose filename you know before hand and you simply want to copy with the same name in the retrieved folder.
-Imagine you want to retrieve the files ``output.out`` and ``output_folder/output.out`` you would simply add them as strings to the retrieve list:
+Imagine you want to retrieve the files ``output1.out`` and ``output_folder/output2.out`` you would simply add them as strings to the retrieve list:
 
 .. code:: python
 
-    calc_info.retrieve_list = ['output.out', 'output_folder/output.out']
+    calc_info.retrieve_list = ['output1.out', 'output_folder/output2.out']
 
 The retrieved files will be copied over keeping the exact names and hierarchy.
 If you require more control over the hierarchy and nesting, you can use tuples of length three instead, with the following items:
@@ -284,7 +284,7 @@ If you want to copy the file, with the final resulting path ``path/files/output.
 
 .. code:: python
 
-    calc_info.retrieve_list = ['some/remote/path/files/output.dat', '.', 2]
+    calc_info.retrieve_list = [('some/remote/path/files/output.dat', '.', 2)]
 
 The depth of two, ensures that only two levels of nesting are copied.
 If the output files have dynamic names that one cannot know beforehand, the ``'*'`` glob pattern can be used.
@@ -292,7 +292,7 @@ For example, if the code will generate a number of XML files in the folder ``rel
 
 .. code:: python
 
-    calc_info.retrieve_list = ['relative/path/output/file_*[0-9].xml', '.', 1]
+    calc_info.retrieve_list = [('relative/path/output/file_*[0-9].xml', '.', 1)]
 
 The second item when using globbing *has* to be ``'.'`` and the depth works just as before.
 In this example, all files matching the globbing pattern will be copied in the directory ``output`` in the retrieved folder data node. 

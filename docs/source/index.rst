@@ -15,13 +15,34 @@
 Welcome to AiiDA's documentation!
 #################################
 
-AiiDA is a sophisticated framework designed from scratch to be a flexible and scalable infrastructure for computational science.
-Being able to store the full data provenance of each simulation, and based on a tailored database solution built for efficient data mining implementations, AiiDA gives the user the ability to interact seamlessly with any number of HPC machines and codes thanks to its flexible plugin interface, together with a powerful workflow engine for the automation of simulations.
-The software is available at http://www.aiida.net.
+`AiiDA`_ is a python framework that aims to help researchers with managing complex workflows and making them fully reproducible.
 
- * To install AiiDA follow the instructions in the :ref:`installation section<installation>`
- * After you have successfully installed AiiDA, you can find some tips in the :ref:`get started section<get_started>` to help you on your way
- * Use the complete :doc:`API reference<apidoc/aiida>`, the :ref:`modindex` or the :ref:`genindex` to find code you're looking for
+.. _AiiDA: http://www.aiida.net
+
+
+************
+Features
+************
+
+ * **Workflows:** Write complex, auto-documenting workflows in python, linked to arbitrary executables on local and remote computers. The event-based workflow engine supports tens of thousands of processes per hour with full checkpointing.
+ * **Data provenance:** Automatically track inputs, outpus & metadata of all calculations in a provenance graph for full reproducibility. Perform fast queries on graphs containing millions of nodes.
+ * **HPC interface:** Move your calculations to a different computer by changing one line of code. AiiDA is compatible with schedulers like `SLURM <https://slurm.schedmd.com>`_, `PBS Pro <https://www.pbspro.org/>`_, `torque <http://www.adaptivecomputing.com/products/torque/>`_, `SGE <http://gridscheduler.sourceforge.net/>`_ or `LSF <https://www.ibm.com/support/knowledgecenter/SSETD4/product_welcome_platform_lsf.html>`_ out of the box.
+ * **Plugin interface:** Extend AiiDA with `plugins <https://aiidateam.github.io/aiida-registry/>`_ for new simulation codes (input generation & parsing), data types, schedulers, transport modes and more.
+ * **Open Science:** Export subsets of your provenance graph and share them with peers or make them available online for everyone on the `Materials Cloud <https://www.materialscloud.org>`_.
+ * **Open source:** AiiDA is released under the `MIT open source license <https://github.com/aiidateam/aiida-core/blob/develop/LICENSE.txt>`_.
+
+See also the `AiiDA home page`_.
+
+.. _AiiDA home page: http://www.aiida.net
+
+***************
+Getting started
+***************
+
+ * The `AiiDA tutorials <https://aiida-tutorials.readthedocs.io/en/latest/>`_ are a good place to get started with using AiiDA.
+ * Afterwards, you might want to :ref:`install AiiDA<installation>` on your machine.
+ * For setting up a production environment, you may find the :ref:`configuration <configure_aiida>` section helpful.
+ * For the advanced, there is the complete :doc:`AiiDA API reference<apidoc/aiida>` (including a :ref:`modindex`), and of course you can always peek into the code on the `AiiDA git repository <https://github.com/aiidateam/aiida-core>`_.
 
 .. toctree::
     :maxdepth: 1
@@ -132,12 +153,13 @@ This work is supported by the `MARVEL National Centre for Competency in Research
 funded by the `Swiss National Science Foundation`_, as well as by the 
 `MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598.
 
-.. figure:: images/MARVEL.png
-    :height: 100px
-    :align: center
-.. figure:: images/MaX.png
-    :height: 80px
-    :align: center
+.. image:: images/MARVEL.png
+   :height: 100px
+   :target: `MARVEL National Centre for Competency in Research`_
+
+.. image:: images/MaX.png
+   :height: 80px
+   :target: `MaX European Centre of Excellence`_
 
 .. _MARVEL National Centre for Competency in Research: http://www.marvel-nccr.ch
 .. _Swiss National Science Foundation: http://www.snf.ch/en

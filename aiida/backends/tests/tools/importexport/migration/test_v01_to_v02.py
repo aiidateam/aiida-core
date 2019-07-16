@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -15,8 +15,8 @@ from __future__ import absolute_import
 from aiida import get_version
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.archives import get_json_files
-from aiida.cmdline.utils.migration.utils import verify_metadata_version
-from aiida.cmdline.utils.migration.v01_to_v02 import migrate_v1_to_v2
+from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.tools.importexport.migration.v01_to_v02 import migrate_v1_to_v2
 
 
 class TestMigrateV01toV02(AiidaTestCase):

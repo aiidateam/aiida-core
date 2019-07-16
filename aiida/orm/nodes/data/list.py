@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -11,10 +11,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+from six import PY2
 
-from collections import MutableSequence
+if PY2:
+    from collections import MutableSequence  # pylint: disable=no-name-in-module
+else:
+    from collections.abc import MutableSequence  # pylint: disable=no-name-in-module, import-error
 
-from .data import Data
+from .data import Data  # pylint: disable=wrong-import-position
 
 __all__ = ('List',)
 

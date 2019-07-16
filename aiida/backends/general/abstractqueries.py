@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -166,8 +166,7 @@ class AbstractQueryManager(object):
         if args.group_pk is not None:
             group_filters.update({"id": {"in": args.group_pk}})
         if group_filters:
-            qb.append(orm.Group, tag="group", filters=group_filters,
-                      group_of="bdata")
+            qb.append(orm.Group, tag="group", filters=group_filters, with_node="bdata")
 
         qb.append(orm.StructureData, tag="sdata", with_descendants="bdata",
                   # We don't care about the creator of StructureData

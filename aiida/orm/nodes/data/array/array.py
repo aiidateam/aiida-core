@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -91,24 +91,12 @@ class ArrayData(Data):
         """
         return tuple(self.get_attribute("{}{}".format(self.array_prefix, name)))
 
-    def iterarrays(self):
-        """
-        Iterator that returns tuples (name, array) for each array stored in the
-        node.
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn(  # pylint: disable=no-member
-            'This method has been deprecated and will be renamed to get_iterarrays() in AiiDA v1.0', DeprecationWarning)
-        return self.get_iterarrays()
-
     def get_iterarrays(self):
         """
-        Iterator that returns tuples (name, array) for each array stored in the
-        node.
+        Iterator that returns tuples (name, array) for each array stored in the node.
 
         .. versionadded:: 1.0
-           Renamed from iterarrays
+            Renamed from iterarrays
         """
         for name in self.get_arraynames():
             yield (name, self.get_array(name))

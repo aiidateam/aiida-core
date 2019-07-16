@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -12,18 +12,23 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import collections
 import functools
-import inspect
 import logging
 import signal
+import inspect
 
 from six.moves import zip  # pylint: disable=unused-import
+from six import PY2
 
-from aiida.common.lang import override
-from aiida.manage.manager import get_manager
+if PY2:
+    import collections
+else:
+    import collections.abc as collections  # pylint: disable=ungrouped-imports, no-name-in-module, import-error
 
-from .process import Process
+from aiida.common.lang import override  # pylint: disable=wrong-import-position
+from aiida.manage.manager import get_manager  # pylint: disable=wrong-import-position
+
+from .process import Process  # pylint: disable=wrong-import-position
 
 __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
@@ -240,7 +245,10 @@ class FunctionProcess(Process):
         if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
-        args, varargs, keywords, defaults = inspect.getargspec(func)  # pylint: disable=deprecated-method
+        if PY2:
+            args, varargs, keywords, defaults = inspect.getargspec(func)  # pylint: disable=deprecated-method
+        else:
+            args, varargs, keywords, defaults, _, _, _ = inspect.getfullargspec(func)  # pylint: disable=no-member
         nargs = len(args)
         ndefaults = len(defaults) if defaults else 0
         first_default_pos = nargs - ndefaults
@@ -287,6 +295,8 @@ class FunctionProcess(Process):
 
         return type(
             func.__name__, (FunctionProcess,), {
+                '__module__': func.__module__,
+                '__name__': func.__name__,
                 '_func': staticmethod(func),
                 Process.define.__name__: classmethod(_define),
                 '_func_args': args,
@@ -387,6 +397,13 @@ class FunctionProcess(Process):
         """
         from aiida.orm import Data
         from .exit_code import ExitCode
+
+        # The following conditional is required for the caching to properly work. Even if the source node has a process
+        # state of `Finished` the cached process will still enter the running state. The process state will have then
+        # been overridden by the engine to `Running` so we cannot check that, but if the `exit_status` is anything other
+        # than `None`, it should mean this node was taken from the cache, so the process should not be rerun.
+        if self.node.exit_status is not None:
+            return self.node.exit_status
 
         # Split the inputs into positional and keyword arguments
         args = [None] * len(self._func_args)

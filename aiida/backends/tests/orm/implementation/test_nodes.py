@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -104,7 +104,7 @@ class TestBackendNode(AiidaTestCase):
         Test creation of a BackendNode when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        from aiida.orm.importexport import deserialize_attributes
+        from aiida.tools.importexport.dbimport.backends.utils import deserialize_attributes
 
         ctime = deserialize_attributes('2019-02-27T16:20:12.245738', 'date')
         mtime = deserialize_attributes('2019-02-27T16:27:14.798838', 'date')

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import click
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+from ...utils import defaults
 from .. import types
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
@@ -59,6 +60,7 @@ def active_process_states():
 PROFILE = OverridableOption(
     '-p', '--profile', 'profile',
     type=types.ProfileParamType(),
+    default=defaults.get_default_profile,
     help='Execute the command for this profile instead of the default profile.')
 
 CALCULATION = OverridableOption(
@@ -254,6 +256,11 @@ PROCESS_STATE = OverridableOption(
     '-S', '--process-state', 'process_state',
     type=types.LazyChoice(valid_process_states), cls=MultipleValueOption, default=active_process_states,
     help='Only include entries with this process state.')
+
+PROCESS_LABEL = OverridableOption(
+    '-L', '--process-label', 'process_label',
+    type=click.STRING, required=False,
+    help='Only include entries with this process label.')
 
 EXIT_STATUS = OverridableOption(
     '-E', '--exit-status', 'exit_status',

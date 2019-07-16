@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -21,15 +21,17 @@ from .v02_to_v03 import migrate_v2_to_v3
 from .v03_to_v04 import migrate_v3_to_v4
 from .v04_to_v05 import migrate_v4_to_v5
 from .v05_to_v06 import migrate_v5_to_v6
+from .v06_to_v07 import migrate_v6_to_v7
 
-__all__ = ('migrate_recursively', 'verify_metadata_version', 'update_metadata')
+__all__ = ('migrate_recursively', 'verify_metadata_version')
 
 MIGRATE_FUNCTIONS = {
     '0.1': migrate_v1_to_v2,
     '0.2': migrate_v2_to_v3,
     '0.3': migrate_v3_to_v4,
     '0.4': migrate_v4_to_v5,
-    '0.5': migrate_v5_to_v6
+    '0.5': migrate_v5_to_v6,
+    '0.6': migrate_v6_to_v7
 }
 
 
@@ -42,7 +44,7 @@ def migrate_recursively(metadata, data, folder):
     :param data: the content of an export archive data.json file
     :param folder: SandboxFolder in which the archive has been unpacked (workdir)
     """
-    from aiida.orm.importexport import EXPORT_VERSION as newest_version
+    from aiida.tools.importexport import EXPORT_VERSION as newest_version
 
     old_version = verify_metadata_version(metadata)
 

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -376,6 +376,8 @@ def check_schema_version(profile_name):
 
     if code_schema_version != db_schema_version:
         raise ConfigurationError('Database schema version {} is outdated compared to the code schema version {}\n'
+                                 'Before you upgrade, make sure all calculations and workflows have finished running.\n'
+                                 'If this is not the case, revert the code to the previous version and finish them first.\n'
                                  'To migrate the database to the current version, run the following commands:'
                                  '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(
                                     db_schema_version, code_schema_version, profile_name, profile_name))

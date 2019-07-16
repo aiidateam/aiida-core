@@ -44,37 +44,11 @@ To leave or deactivate the environment, simply run::
     (aiida) $ pip install -U setuptools pip
 
 
-.. _aiida_path_in_virtualenv:
-
-Isolating the configuration folder in your virtual environment
---------------------------------------------------------------
-
-When you run AiiDA in multiple virtual environments, it can be convenient to use a separate ``.aiida`` configuration folder for each environment.
-To do this, you can use the :ref:`AIIDA_PATH mechanism <directory_location>` as follows:
-
-1. Create your virtual environment, as described above
-2. At the end of ``~/.virtualenvs/aiida/bin/activate``, add the following line, which will set the ``AIIDA_PATH`` environment variable::
-
-    export AIIDA_PATH='~/.virtualenvs/aiida'
-
-3. Deactivate and re-activate the virtual environment
-4. You can test that everything is set up correctly if you can reproduce the following::
-
-    (aiida)$ echo $AIIDA_PATH
-    >>> ~/.virtualenvs/aiida
-
-    (aiida)$ verdi profile list
-    >>> Info: configuration folder: /home/my_username/.virtualenvs/aiida/.aiida
-    >>> Critical: configuration file /home/my_username/.virtualenvs/aiida/.aiida/config.json does not exist
-
-   Note: if you get the 'Critical' message, it simply means that you have not yet run `verdi setup` to configure at least one AiiDA profile.
-5. Continue setting up AiiDA with ``verdi setup`` or ``verdi quicksetup``.
-
 Aiida python package
 ====================
 
 .. _PyPI: https://pypi.python.org/pypi/aiida
-.. _github repository: https://github.com/aiidateam/aiida_core
+.. _github repository: https://github.com/aiidateam/aiida-core
 
 AiiDA can be installed either from the python package index `PyPI`_ (good for general use) or directly from the aiida-core `github repository`_ (good for developers).
 
@@ -100,8 +74,8 @@ Alternatively, you can create a directory where to clone the AiiDA source code a
 
     mkdir <your_directory>
     cd <your_directory>
-    git clone https://github.com/aiidateam/aiida_core
-    pip install -e aiida_core
+    git clone https://github.com/aiidateam/aiida-core
+    pip install -e aiida-core
 
 
 .. _install_optional_dependencies:
@@ -118,7 +92,7 @@ There are additional optional packages that you may want to install, which are g
 
 In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command::
 
-    (aiida) $ pip install -e aiida_core[atomic_tools,docs,advanced_plotting]
+    (aiida) $ pip install -e aiida-core[atomic_tools,docs,advanced_plotting]
 
 .. note:: If you are installing the optional ``ssh_kerberos`` and you are on Ubuntu you might encounter an error related to the ``gss`` package.
   To fix this you need to install the ``libffi-dev`` and ``libkrb5-dev`` packages::
@@ -333,4 +307,4 @@ In the example output, all service have a green check mark and so should be runn
 
 At this point, you're ready to :ref:`get started<get_started>`.
 
-For configuration of tab completion or using AiiDA in jupyter, see the :ref:`configuration instructions <configure_aiida>` before moving on.
+For configuration of tab completion , using AiiDA in jupyter & more, see the :ref:`configuration instructions <configure_aiida>` before moving on.

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -285,7 +285,7 @@ class TestVerdiDataArray(AiidaTestCase):
 
 class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
     """
-    Testing verdi data bands 
+    Testing verdi data bands
     """
 
     @staticmethod
@@ -324,7 +324,7 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
 
             k = KpointsData()
             k.set_cell(cell)
-            k.set_kpoints_path([('G', 'M', 2)])
+            k.set_kpoints([[0.,0.,0.],[0.1,0.1,0.1]])
 
             b = BandsData()
             b.set_kpointsdata(k)
@@ -412,7 +412,7 @@ class TestVerdiDataDict(AiidaTestCase):
 
 class TestVerdiDataRemote(AiidaTestCase):
     """
-    Testing verdi data remote 
+    Testing verdi data remote
     """
 
     @classmethod

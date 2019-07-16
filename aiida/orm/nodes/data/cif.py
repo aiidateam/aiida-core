@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -279,18 +279,27 @@ class CifData(SinglefileData):
         A wrapper method that simulates the behavior of the old
         function ase.io.cif.read_cif by using the new generic ase.io.read
         function.
+
+        Somewhere from 3.12 to 3.17 the tag concept was bundled with each Atom object. When
+        reading a CIF file, this is incremented and signifies the atomic species, even though
+        the CIF file do not have specific tags embedded. On reading CIF files we thus force the
+        ASE tag to zero for all Atom elements.
+
         """
         from ase.io import read
 
-        # the read function returns a list as a cif file might contain multiple
-        # structures
+        # The read function returns a list as a cif file might contain multiple
+        # structures.
         struct_list = read(fileobj, index=':', format='cif', **kwargs)
 
         if index is None:
             # If index is explicitely set to None, the list is returned as such.
+            for atoms_entry in struct_list:
+                atoms_entry.set_tags(0)
             return struct_list
-        # otherwise return the desired structure specified by index.
-        # If no index is specified, the last structure is assumed by default
+        # Otherwise return the desired structure specified by index, if no index is specified,
+        # the last structure is assumed by default.
+        struct_list[index].set_tags(0)
         return struct_list[index]
 
     @classmethod
@@ -689,27 +698,6 @@ class CifData(SinglefileData):
         # Open in binary mode which is required for generating the md5 checksum
         with self.open(mode='rb') as handle:
             return md5_from_filelike(handle)
-
-    def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
-
-        :param converter: specify the converter. Default 'pymatgen'.
-        :param store: if True, intermediate calculation gets stored in the
-            AiiDA database for record. Default False.
-        :param primitive_cell: if True, primitive cell is returned,
-            conventional cell if False. Default False.
-        :param occupancy_tolerance: If total occupancy of a site is between 1 and occupancy_tolerance,
-            the occupancies will be scaled down to 1. (pymatgen only)
-        :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
-            in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
-        :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn(  # pylint: disable=no-member
-            'This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0', DeprecationWarning)
-        return self.get_structure(converter=converter, store=store, **kwargs)
 
     def get_structure(self, converter='pymatgen', store=False, **kwargs):
         """

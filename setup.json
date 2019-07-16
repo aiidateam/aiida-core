@@ -43,7 +43,7 @@
     "psycopg2-binary==2.8",
     "paramiko==2.6.0",
     "ipython>=4.0,<6.0",
-    "plumpy==0.14.1",
+    "plumpy==0.14.2",
     "kiwipy[rmq]==0.5.1",
     "pika==1.0.0",
     "circus==0.15.0",

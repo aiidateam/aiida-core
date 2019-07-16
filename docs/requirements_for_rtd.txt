@@ -43,7 +43,7 @@ passlib==1.7.1
 pg8000<1.13.0
 pgtest==1.2.0
 pika==1.0.0
-plumpy==0.14.1
+plumpy==0.14.2
 psutil==5.5.1
 pyblake2==1.1.2; python_version<'3.6'
 pymatgen<=2018.12.12

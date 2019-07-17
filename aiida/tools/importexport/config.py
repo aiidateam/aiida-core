@@ -21,6 +21,9 @@ EXPORT_VERSION = '0.7'
 IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE.value
 DUPL_SUFFIX = ' (Imported #{})'
 
+# The name of the subfolder in which the node files are stored
+NODES_EXPORT_SUBFOLDER = 'nodes'
+
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
 # references to them).

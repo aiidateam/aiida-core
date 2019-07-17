@@ -18,22 +18,23 @@ import tarfile
 import time
 
 from aiida import get_version
-from aiida.common import json
+from aiida.common import json, exceptions
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.links import LinkType
-from aiida.common.utils import export_shard_uuid
 from aiida.orm import QueryBuilder, Node, Data, Group, Log, Comment, Computer, ProcessNode
 from aiida.orm.utils.repository import Repository
 
-from aiida.tools.importexport.dbexport.utils import (
-    check_licences, fill_in_query, serialize_dict, check_process_nodes_sealed
-)
+from aiida.tools.importexport.config import EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.config import (
-    NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME, EXPORT_VERSION
+    NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
 from aiida.tools.importexport.config import (
     get_all_fields_info, file_fields_to_model_fields, entity_names_to_entities, model_fields_to_file_fields
 )
+from aiida.tools.importexport.dbexport.utils import (
+    check_licences, fill_in_query, serialize_dict, check_process_nodes_sealed
+)
+from aiida.tools.importexport.utils import export_shard_uuid
 
 from .zip import ZipFolder
 
@@ -716,7 +717,7 @@ def export_tree(
     # Now I store
     ######################################
     # subfolder inside the export package
-    nodesubfolder = folder.get_subfolder('nodes', create=True, reset_limit=True)
+    nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
 
     if not silent:
         print('STORING DATA...')
@@ -748,24 +749,28 @@ def export_tree(
         fhandle.write(json.dumps(metadata))
 
     if silent is not True:
-        print('STORING FILES...')
+        print("STORING REPOSITORY FILES...")
 
-    # If there are no nodes, there are no files to store
+    # If there are no nodes, there are no repository files to store
     if all_nodes_pk:
-        # Large speed increase by not getting the node itself and looping in memory
-        # in python, but just getting the uuid
+        # Large speed increase by not getting the node itself and looping in memory in python, but just getting the uuid
         uuid_query = QueryBuilder()
         uuid_query.append(Node, filters={'id': {'in': all_nodes_pk}}, project=['uuid'])
         for res in uuid_query.all():
             uuid = str(res[0])
             sharded_uuid = export_shard_uuid(uuid)
 
-            # Important to set create=False, otherwise creates
-            # twice a subfolder. Maybe this is a bug of insert_path??
+            # Important to set create=False, otherwise creates twice a subfolder. Maybe this is a bug of insert_path?
             thisnodefolder = nodesubfolder.get_subfolder(sharded_uuid, create=False, reset_limit=True)
+
+            # Make sure the node's repository folder was not deleted
+            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)
+            if not src.exists():
+                raise exceptions.ArchiveIntegrityError(
+                    "Unable to find the repository folder for Node with UUID={} in the local repository".format(uuid))
+
             # In this way, I copy the content of the folder, and not the folder itself
-            src = RepositoryFolder(section=Repository._section_name, uuid=uuid).abspath
-            thisnodefolder.insert_path(src=src, dest_name='.')
+            thisnodefolder.insert_path(src=src.abspath, dest_name='.')
 
 
 def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=False, **kwargs):

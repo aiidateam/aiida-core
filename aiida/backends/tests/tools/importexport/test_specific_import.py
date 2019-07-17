@@ -13,12 +13,18 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import with_statement
 
+import os
+import shutil
 import tempfile
 
 import numpy as np
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
+from aiida.backends.tests.utils.configuration import with_temp_dir
+from aiida.common.exceptions import ArchiveIntegrityError
+from aiida.common.folders import RepositoryFolder
+from aiida.orm.utils.repository import Repository
 from aiida.tools.importexport import import_data, export
 
 
@@ -167,3 +173,84 @@ class TestSpecificImport(AiidaTestCase):
             builder.append(orm.RemoteData, project=['uuid'], with_incoming='parent', tag='remote')
             builder.append(orm.CalculationNode, with_incoming='remote')
             self.assertGreater(len(builder.all()), 0)
+
+    @with_temp_dir
+    def test_missing_node_repo_folder_export(self, temp_dir):
+        """Make sure ArchiveIntegrityError is raised during export when missing Node repository folder
+        Create and store a new Node and manually remove its repository folder.
+        Attempt to export it and make sure ArchiveIntegrityError is raised, due to the missing folder.
+        """
+        node = orm.CalculationNode().store()
+        node.seal()
+        node_uuid = node.uuid
+
+        node_repo = RepositoryFolder(section=Repository._section_name, uuid=node_uuid)  # pylint: disable=protected-access
+        self.assertTrue(
+            node_repo.exists(), msg="Newly created and stored Node should have had an existing repository folder")
+
+        # Removing the Node's local repository folder
+        shutil.rmtree(node_repo.abspath, ignore_errors=True)
+        self.assertFalse(
+            node_repo.exists(), msg="Newly created and stored Node should have had its repository folder removed")
+
+        # Try to export, check it raises and check the raise message
+        filename = os.path.join(temp_dir, "export.tar.gz")
+        with self.assertRaises(ArchiveIntegrityError) as exc:
+            export([node], outfile=filename, silent=True)
+
+        self.assertIn("Unable to find the repository folder for Node with UUID={}".format(node_uuid),
+                      exc.exception.__repr__())
+        self.assertFalse(os.path.exists(filename), msg="The export file should not exist")
+
+    @with_temp_dir
+    def test_missing_node_repo_folder_import(self, temp_dir):
+        """Make sure ArchiveIntegrityError is raised during import when missing Node repository folder
+        Create and export a Node and manually remove its repository folder in the export file.
+        Attempt to import it and make sure ArchiveIntegrityError is raised, due to the missing folder.
+        """
+        import tarfile
+
+        from aiida.common.archive import extract_tar
+        from aiida.common.folders import SandboxFolder
+        from aiida.tools.importexport.config import NODES_EXPORT_SUBFOLDER
+        from aiida.tools.importexport.utils import export_shard_uuid
+
+        node = orm.CalculationNode().store()
+        node.seal()
+        node_uuid = node.uuid
+
+        node_repo = RepositoryFolder(section=Repository._section_name, uuid=node_uuid)  # pylint: disable=protected-access
+        self.assertTrue(
+            node_repo.exists(), msg="Newly created and stored Node should have had an existing repository folder")
+
+        # Export and reset db
+        filename = os.path.join(temp_dir, "export.tar.gz")
+        export([node], outfile=filename, silent=True)
+        self.reset_database()
+
+        # Untar export file, remove repository folder, re-tar
+        node_shard_uuid = export_shard_uuid(node_uuid)
+        node_top_folder = node_shard_uuid.split('/')[0]
+        with SandboxFolder() as folder:
+            extract_tar(filename, folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+            node_folder = folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_shard_uuid))
+            self.assertTrue(
+                node_folder.exists(), msg="The Node's repository folder should still exist in the export file")
+
+            # Removing the Node's repository folder from the export file
+            shutil.rmtree(
+                folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_top_folder)).abspath, ignore_errors=True)
+            self.assertFalse(
+                node_folder.exists(),
+                msg="The Node's repository folder should now have been removed in the export file")
+
+            filename_corrupt = os.path.join(temp_dir, "export_corrupt.tar.gz")
+            with tarfile.open(filename_corrupt, "w:gz", format=tarfile.PAX_FORMAT, dereference=True) as tar:
+                tar.add(folder.abspath, arcname="")
+
+        # Try to import, check it raises and check the raise message
+        with self.assertRaises(ArchiveIntegrityError) as exc:
+            import_data(filename_corrupt, silent=True)
+
+        self.assertIn("Unable to find the repository folder for Node with UUID={}".format(node_uuid),
+                      exc.exception.__repr__())

@@ -25,15 +25,16 @@ from aiida.common import exceptions, timezone, json
 from aiida.common.archive import extract_tree, extract_tar, extract_zip
 from aiida.common.links import LinkType
 from aiida.common.folders import SandboxFolder, RepositoryFolder
-from aiida.common.utils import grouper, export_shard_uuid, get_object_from_string
+from aiida.common.utils import grouper, get_object_from_string
 from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group
-from aiida.tools.importexport.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION
+from aiida.tools.importexport.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
 from aiida.tools.importexport.config import entity_names_to_signatures
 from aiida.tools.importexport.dbimport.backends.utils import deserialize_field, merge_comment, merge_extras
+from aiida.tools.importexport.utils import export_shard_uuid
 
 __all__ = ('import_data_dj',)
 
@@ -80,9 +81,6 @@ def import_data_dj(
     # This is the export version expected by this function
     expected_export_version = StrictVersion(EXPORT_VERSION)
 
-    # The name of the subfolder in which the node files are stored
-    nodes_export_subfolder = 'nodes'
-
     # The returned dictionary with new and existing nodes and links
     ret_dict = {}
 
@@ -102,10 +100,10 @@ def import_data_dj(
             extract_tree(in_path, folder)
         else:
             if tarfile.is_tarfile(in_path):
-                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=nodes_export_subfolder)
+                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
             elif zipfile.is_zipfile(in_path):
                 try:
-                    extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=nodes_export_subfolder)
+                    extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
                 except ValueError as exc:
                     print('The following problem occured while processing the provided file: {}'.format(exc))
                     return
@@ -364,7 +362,7 @@ def import_data_dj(
 
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print('STORING NEW NODE FILES...')
+                        print("STORING NEW NODE REPOSITORY FILES...")
 
                     # NEW NODES
                     for object_ in objects_to_create:
@@ -374,18 +372,15 @@ def import_data_dj(
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
                         subfolder = folder.get_subfolder(
-                            os.path.join(nodes_export_subfolder, export_shard_uuid(import_entry_uuid))
-                        )
+                            os.path.join(NODES_EXPORT_SUBFOLDER, export_shard_uuid(import_entry_uuid)))
                         if not subfolder.exists():
                             raise exceptions.ArchiveIntegrityError(
                                 'Unable to find the repository folder for Node with UUID={} in the exported '
                                 'file'.format(import_entry_uuid)
                             )
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
-                        # Replace the folder, possibly destroying existing
-                        # previous folders, and move the files (faster if we
-                        # are on the same filesystem, and
-                        # in any case the source is a SandboxFolder)
+                        # Replace the folder, possibly destroying existing previous folders, and move the files
+                        # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
                         destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
                         # For DbNodes, we also have to store its attributes

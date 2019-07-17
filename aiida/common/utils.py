@@ -220,13 +220,6 @@ def get_object_from_string(class_string):
     return getattr(importlib.import_module(the_module), the_name)
 
 
-def export_shard_uuid(uuid):
-    """
-    Sharding of the UUID for the import/export
-    """
-    return os.path.join(uuid[:2], uuid[2:4], uuid[4:])
-
-
 def grouper(n, iterable):  # pylint: disable=invalid-name
     """
     Given an iterable, returns an iterable that returns tuples of groups of

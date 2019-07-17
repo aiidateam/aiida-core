@@ -844,7 +844,7 @@ class Node(Entity):
         :param link_label_filter: filters the incoming nodes by its link label. This should be a regex statement as
             one would pass directly to a QuerBuilder filter statement with the 'like' operation.
         :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
-        :param only_uuid: Store the uuid of nodes in the NodeTriple instead of the actual node
+        :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
         if not isinstance(link_type, tuple):
             link_type = (link_type,)
@@ -892,7 +892,7 @@ class Node(Entity):
             link type, if None then returns all inputs of all link types.
         :param link_label_filter: filters the incoming nodes by its link label.
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
-        :param only_uuid: Use the uuid of the nodes instead of the `Node` objects
+        :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
         if not isinstance(link_type, tuple):
             link_type = (link_type,)
@@ -908,6 +908,7 @@ class Node(Entity):
 
             if only_uuid:
                 link_triple = LinkTriple(link_triple.node.uuid, link_triple.link_type, link_triple.link_label)
+
             if link_triple in link_triples:
                 raise exceptions.InternalError('Node<{}> has both a stored and cached link triple {}'.format(
                     self.pk, link_triple))
@@ -930,6 +931,7 @@ class Node(Entity):
             link type, if None then returns all outputs of all link types.
         :param link_label_filter: filters the outgoing nodes by its link label.
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
+        :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
         link_triples = self.get_stored_link_triples(node_class, link_type, link_label_filter, 'outgoing', only_uuid)
         return LinkManager(link_triples)

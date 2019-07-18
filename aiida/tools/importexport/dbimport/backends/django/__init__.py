@@ -264,7 +264,8 @@ def import_data_dj(in_path,
                 fields_info = metadata['all_fields_info'].get(model_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(model_name, None)
 
-                for import_entry_id, entry_data in existing_entries[model_name].items():
+                # EXISTING ENTRIES
+                for import_entry_pk, entry_data in existing_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
                     import_data = dict(
@@ -280,23 +281,24 @@ def import_data_dj(in_path,
                         new_entry_uuid = merge_comment(import_data, comment_mode)
                         if new_entry_uuid is not None:
                             entry_data[unique_identifier] = new_entry_uuid
-                            new_entries[model_name][import_entry_id] = entry_data
+                            new_entries[model_name][import_entry_pk] = entry_data
 
                     if model_name not in ret_dict:
                         ret_dict[model_name] = {'new': [], 'existing': []}
-                    ret_dict[model_name]['existing'].append((import_entry_id, existing_entry_id))
+                    ret_dict[model_name]['existing'].append((import_entry_pk, existing_entry_id))
                     if not silent:
-                        print("existing %s: %s (%s->%s)" % (model_name, unique_id, import_entry_id, existing_entry_id))
+                        print("existing %s: %s (%s->%s)" % (model_name, unique_id, import_entry_pk, existing_entry_id))
                         # print("  `-> WARNING: NO DUPLICITY CHECK DONE!")
                         # CHECK ALSO FILES!
 
-                # Store all objects for this model in a list, and store them
-                # all in once at the end.
+                # Store all objects for this model in a list, and store them all in once at the end.
                 objects_to_create = []
                 # This is needed later to associate the import entry with the new pk
-                import_entry_ids = {}
+                import_new_entry_pks = {}
                 imported_comp_names = set()
-                for import_entry_id, entry_data in new_entries[model_name].items():
+
+                # NEW ENTRIES
+                for import_entry_pk, entry_data in new_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(
                         deserialize_field(
@@ -336,23 +338,26 @@ def import_data_dj(in_path,
                         imported_comp_names.add(import_data['name'])
 
                     objects_to_create.append(model(**import_data))
-                    import_entry_ids[unique_id] = import_entry_id
+                    import_new_entry_pks[unique_id] = import_entry_pk
 
-                # Before storing entries in the DB, I store the files (if these
-                # are nodes). Note: only for new entries!
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
                         print("STORING NEW NODE FILES...")
-                    for object_ in objects_to_create:
 
+                    # NEW NODES
+                    for object_ in objects_to_create:
+                        import_entry_uuid = object_.uuid
+                        import_entry_pk = import_new_entry_pks[import_entry_uuid]
+
+                        # Before storing entries in the DB, I store the files (if these are nodes).
+                        # Note: only for new entries!
                         subfolder = folder.get_subfolder(
-                            os.path.join(nodes_export_subfolder, export_shard_uuid(object_.uuid)))
+                            os.path.join(nodes_export_subfolder, export_shard_uuid(import_entry_uuid)))
                         if not subfolder.exists():
-                            raise ValueError("Unable to find the repository "
-                                             "folder for node with UUID={} " \
-                                             "in the exported "
-                                             "file".format(object_.uuid))
-                        destdir = RepositoryFolder(section=Repository._section_name, uuid=object_.uuid)
+                            raise exceptions.ArchiveIntegrityError(
+                                "Unable to find the repository folder for Node with UUID={} in the exported "
+                                "file".format(import_entry_uuid))
+                        destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing
                         # previous folders, and move the files (faster if we
                         # are on the same filesystem, and
@@ -363,27 +368,24 @@ def import_data_dj(in_path,
                         if not silent:
                             print("STORING NEW NODE ATTRIBUTES...")
 
-                        import_entry_id = import_entry_ids[object_.uuid]
-
                         # Get attributes from import file
                         try:
-                            object_.attributes = data['node_attributes'][str(import_entry_id)]
+                            object_.attributes = data['node_attributes'][str(import_entry_pk)]
                         except KeyError:
-                            raise ValueError("Unable to find attribute info "
-                                             "for DbNode with UUID = {}".format(unique_id))
+                            raise exceptions.ArchiveIntegrityError(
+                                "Unable to find attribute info for Node with UUID={}".format(import_entry_uuid))
 
                         # For DbNodes, we also have to store its extras
                         if extras_mode_new == 'import':
                             if not silent:
                                 print("STORING NEW NODE EXTRAS...")
-                            # for unique_id, new_pk in just_saved.items():
-                            import_entry_id = import_entry_ids[object_.uuid]
+
                             # Get extras from import file
                             try:
-                                extras = data['node_extras'][str(import_entry_id)]
+                                extras = data['node_extras'][str(import_entry_pk)]
                             except KeyError:
-                                raise ValueError("Unable to find extras info "
-                                                 "for DbNode with UUID = {}".format(unique_id))
+                                raise exceptions.ArchiveIntegrityError(
+                                    "Unable to find extra info for Node with UUID={}".format(import_entry_uuid))
                             # TODO: remove when aiida extras will be moved somewhere else
                             # from here
                             extras = {key: value for key, value in extras.items() if not key.startswith('_aiida_')}
@@ -395,37 +397,40 @@ def import_data_dj(in_path,
                             if not silent:
                                 print("SKIPPING NEW NODE EXTRAS...")
                         else:
-                            raise ValueError("Unknown extras_mode_new value: {}, should be either 'import' or "
-                                             "'none'".format(extras_mode_new))
+                            raise ValueError(
+                                "Unknown extras_mode_new value: {}, should be either 'import' or 'none'".format(
+                                    extras_mode_new))
 
+                    # EXISTING NODES (Extras)
                     # For the existing nodes that are also in the imported list we also update their extras if necessary
                     if not silent:
                         print("UPDATING EXISTING NODE EXTRAS (mode: {})".format(extras_mode_existing))
 
-                    uuid_import_pk_match = {
-                        entry_data[unique_identifier]: import_entry_id
-                        for import_entry_id, entry_data in existing_entries[model_name].items()
+                    import_existing_entry_pks = {
+                        entry_data[unique_identifier]: import_entry_pk
+                        for import_entry_pk, entry_data in existing_entries[model_name].items()
                     }
-                    for db_node in models.DbNode.objects.filter(uuid__in=uuid_import_pk_match).distinct():
-                        import_entry_id = uuid_import_pk_match[str(db_node.uuid)]
-                        existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
+                    for node in models.DbNode.objects.filter(uuid__in=import_existing_entry_pks).all():
+                        import_entry_uuid = str(node.uuid)
+                        import_entry_pk = import_existing_entry_pks[import_entry_uuid]
+
                         # Get extras from import file
                         try:
-                            extras = data['node_extras'][str(import_entry_id)]
+                            extras = data['node_extras'][str(import_entry_pk)]
                         except KeyError:
-                            raise ValueError("Unable to find extras info "
-                                             "for DbNode with UUID = {}".format(unique_id))
+                            raise exceptions.ArchiveIntegrityError(
+                                "Unable to find extra info for ode with UUID={}".format(import_entry_uuid))
 
-                        # Here I have to deserialize the extras
-                        old_extras = db_node.extras
                         # TODO: remove when aiida extras will be moved somewhere else
                         # from here
                         extras = {key: value for key, value in extras.items() if not key.startswith('_aiida_')}
-                        if models.DbNode.objects.filter(uuid=unique_id)[0].node_type.endswith('code.Code.'):
+                        if node.node_type.endswith('code.Code.'):
                             extras = {key: value for key, value in extras.items() if not key == 'hidden'}
                         # till here
-                        db_node.extras = merge_extras(old_extras, extras, extras_mode_existing)
-                        db_node.save()
+                        node.extras = merge_extras(node.extras, extras, extras_mode_existing)
+
+                        # Already saving existing node here to update its extras
+                        node.save()
 
                 # If there is an mtime in the field, disable the automatic update
                 # to keep the mtime that we have set here
@@ -437,23 +442,24 @@ def import_data_dj(in_path,
                     model.objects.bulk_create(objects_to_create)
 
                 # Get back the just-saved entries
-                just_saved_queryset = model.objects.filter(**{
-                    "{}__in".format(unique_identifier): import_entry_ids.keys()
-                }).values_list(unique_identifier, 'pk')
+                just_saved_queryset = model.objects.filter(
+                    **{
+                        "{}__in".format(unique_identifier): import_new_entry_pks.keys()
+                    }).values_list(unique_identifier, 'pk')
                 # note: convert uuids from type UUID to strings
                 just_saved = {str(key): value for key, value in just_saved_queryset}
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreign_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.items():
-                    import_entry_id = import_entry_ids[unique_id]
+                    import_entry_pk = import_new_entry_pks[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
                     if model_name not in ret_dict:
                         ret_dict[model_name] = {'new': [], 'existing': []}
-                    ret_dict[model_name]['new'].append((import_entry_id, new_pk))
+                    ret_dict[model_name]['new'].append((import_entry_pk, new_pk))
 
                     if not silent:
-                        print("NEW %s: %s (%s->%s)" % (model_name, unique_id, import_entry_id, new_pk))
+                        print("NEW %s: %s (%s->%s)" % (model_name, unique_id, import_entry_pk, new_pk))
 
             if not silent:
                 print("STORING NODE LINKS...")

@@ -243,3 +243,11 @@ class CircusCallError(AiidaException):
     """
     Raised when an attempt to contact Circus returns an error in the response
     """
+
+
+class ArchiveIntegrityError(IntegrityError):
+    """
+    Raised when there is an integrity error in an export archive.
+    This may be if a Node's repository folder is missing or a Node is missing a representation in a dictionary of
+    `data.json`.
+    """

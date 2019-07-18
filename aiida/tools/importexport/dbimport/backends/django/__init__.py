@@ -410,7 +410,7 @@ def import_data_dj(in_path,
                         entry_data[unique_identifier]: import_entry_pk
                         for import_entry_pk, entry_data in existing_entries[model_name].items()
                     }
-                    for node in models.DbNode.objects.filter(uuid__in=import_existing_entry_pks).all():
+                    for node in models.DbNode.objects.filter(uuid__in=import_existing_entry_pks).all():  # pylint: disable=no-member
                         import_entry_uuid = str(node.uuid)
                         import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 

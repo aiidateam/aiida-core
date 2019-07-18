@@ -167,14 +167,14 @@ def show(nodes, print_groups):
 @click.option('-d', '--depth', 'depth', default=1, help="Show children of nodes up to given depth")
 @with_dbenv()
 def tree(nodes, depth):
-    """
-    Show trees of nodes.
-    """
+    """Show tree of nodes."""
+    from aiida.common import LinkType
+
     for node in nodes:
-        NodeTreePrinter.print_node_tree(node, depth)
+        NodeTreePrinter.print_node_tree(node, depth, tuple(LinkType.__members__.values()))
 
         if len(nodes) > 1:
-            echo.echo("")
+            echo.echo('')
 
 
 class NodeTreePrinter(object):  # pylint: disable=useless-object-inheritance
@@ -193,8 +193,8 @@ class NodeTreePrinter(object):  # pylint: disable=useless-object-inheritance
         echo.echo(tmp.get_ascii(show_internal=True))
 
     @staticmethod
-    def _ctime(nodelab):
-        return nodelab[1].ctime
+    def _ctime(link_triple):
+        return link_triple.node.ctime
 
     @classmethod
     def _build_tree(cls, node, show_pk=True, max_depth=None, follow_links=None, depth=0):

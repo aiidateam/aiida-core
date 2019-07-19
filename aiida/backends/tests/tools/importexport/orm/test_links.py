@@ -40,9 +40,9 @@ class TestLinks(AiidaTestCase):
 
     @with_temp_dir
     def test_links_to_unknown_nodes(self, temp_dir):
-        """
-        Test importing of nodes, that have links to unknown nodes.
-        """
+        """Test importing of nodes, that have links to unknown nodes."""
+        from aiida.tools.importexport.common.exceptions import ImportValidationError
+
         node_label = 'Test structure data'
         struct = orm.StructureData()
         struct.label = str(node_label)
@@ -74,7 +74,7 @@ class TestLinks(AiidaTestCase):
         self.clean_db()
         self.create_user()
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(filename, silent=True)
 
         import_data(filename, ignore_unknown_nodes=True, silent=True)

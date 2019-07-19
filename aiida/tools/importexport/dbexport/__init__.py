@@ -18,12 +18,13 @@ import tarfile
 import time
 
 from aiida import get_version
-from aiida.common import json, exceptions
+from aiida.common import json
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.links import LinkType
 from aiida.orm import QueryBuilder, Node, Data, Group, Log, Comment, Computer, ProcessNode
 from aiida.orm.utils.repository import Repository
 
+from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.config import EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
@@ -44,7 +45,7 @@ __all__ = ('export_tree', 'export', 'export_zip')
 def export_zip(what, outfile='testzip', overwrite=False, silent=False, use_compression=True, **kwargs):
     """Export in a zipped folder"""
     if not overwrite and os.path.exists(outfile):
-        raise IOError("the output file '{}' already exists".format(outfile))
+        raise exceptions.AiidaExportError("the output file '{}' already exists".format(outfile))
 
     time_start = time.time()
     with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
@@ -130,9 +131,8 @@ def export_tree(
         elif issubclass(entry.__class__, Computer):
             given_computer_entry_ids.add(entry.pk)
         else:
-            raise ValueError(
-                'I was given {} ({}), which is not a Node, Computer, or Group instance'.format(entry, type(entry))
-            )
+            raise exceptions.AiidaExportError(
+                'I was given {} ({}), which is not a Node, Computer, or Group instance'.format(entry, type(entry)))
 
     # Add all the nodes contained within the specified groups
     for group in given_groups:
@@ -766,7 +766,7 @@ def export_tree(
             # Make sure the node's repository folder was not deleted
             src = RepositoryFolder(section=Repository._section_name, uuid=uuid)
             if not src.exists():
-                raise exceptions.ArchiveIntegrityError(
+                raise exceptions.AiidaExportError(
                     "Unable to find the repository folder for Node with UUID={} in the local repository".format(uuid))
 
             # In this way, I copy the content of the folder, and not the folder itself
@@ -797,13 +797,14 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
     license is allowed, False otherwise.
     :param outfile: the filename of the file on which to export
     :param overwrite: if True, overwrite the output file without asking.
-    if False, raise an IOError in this case.
+    if False, raise an `~aiida.tools.importexport.common.exceptions.AiidaExportError` in this case.
     :param silent: suppress debug print
 
-    :raise IOError: if overwrite==False and the filename already exists.
+    :raises `~aiida.tools.importexport.common.exceptions.AiidaExportError`: if overwrite==False and the filename already
+        exists.
     """
     if not overwrite and os.path.exists(outfile):
-        raise IOError("The output file '{}' already exists".format(outfile))
+        raise exceptions.AiidaExportError("The output file '{}' already exists".format(outfile))
 
     folder = SandboxFolder()
     time_export_start = time.time()

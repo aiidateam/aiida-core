@@ -22,9 +22,11 @@ from six.moves import zip
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import exceptions, json
+from aiida.common import json
+from aiida.common.exceptions import LicensingException
 from aiida.backends.tests.utils.configuration import with_temp_dir
 from aiida.tools.importexport import import_data, export
+from aiida.tools.importexport.common import exceptions
 
 
 class TestSimple(AiidaTestCase):
@@ -154,11 +156,11 @@ class TestSimple(AiidaTestCase):
         self.assertEqual(len(folder.get_content_list()), 3)
 
         folder = SandboxFolder()
-        with self.assertRaises(exceptions.LicensingException):
+        with self.assertRaises(LicensingException):
             export_tree([struct], folder=folder, silent=True, allowed_licenses=['CC0'])
 
         folder = SandboxFolder()
-        with self.assertRaises(exceptions.LicensingException):
+        with self.assertRaises(LicensingException):
             export_tree([struct], folder=folder, silent=True, forbidden_licenses=['GPL'])
 
         def cc_filter(license_):
@@ -171,17 +173,17 @@ class TestSimple(AiidaTestCase):
             raise NotImplementedError('not implemented yet')
 
         folder = SandboxFolder()
-        with self.assertRaises(exceptions.LicensingException):
+        with self.assertRaises(LicensingException):
             export_tree([struct], folder=folder, silent=True, allowed_licenses=cc_filter)
 
         folder = SandboxFolder()
-        with self.assertRaises(exceptions.LicensingException):
+        with self.assertRaises(LicensingException):
             export_tree([struct], folder=folder, silent=True, forbidden_licenses=gpl_filter)
 
         folder = SandboxFolder()
-        with self.assertRaises(exceptions.LicensingException):
+        with self.assertRaises(LicensingException):
             export_tree([struct], folder=folder, silent=True, allowed_licenses=crashing_filter)
 
         folder = SandboxFolder()
-        with self.assertRaises(exceptions.LicensingException):
+        with self.assertRaises(LicensingException):
             export_tree([struct], folder=folder, silent=True, forbidden_licenses=crashing_filter)

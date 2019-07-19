@@ -12,6 +12,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from aiida.tools.importexport.common import exceptions
+
 
 def verify_metadata_version(metadata, version=None):
     """
@@ -25,13 +27,14 @@ def verify_metadata_version(metadata, version=None):
     try:
         metadata_version = metadata['export_version']
     except KeyError:
-        raise ValueError("metadata is missing the 'export_version' key")
+        raise exceptions.ArchiveMigrationError("metadata is missing the 'export_version' key")
 
     if version is None:
         return metadata_version
 
     if metadata_version != version:
-        raise ValueError('expected export file with version {} but found version {}'.format(version, metadata_version))
+        raise exceptions.MigrationValidationError('expected export file with version {} but found version {}'.format(
+            version, metadata_version))
 
     return None
 

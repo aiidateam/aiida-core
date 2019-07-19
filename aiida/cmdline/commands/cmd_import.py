@@ -20,7 +20,6 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types import GroupParamType, ImportPath
 from aiida.cmdline.utils import decorators, echo
-from aiida.common import exceptions
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
 EXTRAS_MODE_NEW = ['import', 'none']
@@ -40,19 +39,20 @@ class ExtrasImportCode(Enum):
 def _try_import(migration_performed, file_to_import, archive, group, migration, non_interactive, **kwargs):
     """Utility function for `verdi import` to try to import archive
 
-    :param migration_performed: Boolean to determine the exception message to throw for IncompatibleArchiveVersionError
+    :param migration_performed: Boolean to determine the exception message to throw for
+        `~aiida.tools.importexport.common.exceptions.IncompatibleArchiveVersionError`
     :param file_to_import: Absolute path, including filename, of file to be migrated.
     :param archive: Filename of archive to be migrated, and later attempted imported.
     :param group: AiiDA Group into which the import will be associated.
     :param migration: Whether or not to force migration of archive, if needed.
     :param non_interactive: Whether or not the user should be asked for input for any reason.
     :param kwargs: Key-word-arguments that _must_ contain:
-
-    `'extras_mode_existing'`: `import_data`'s `'extras_mode_existing'` keyword, determining import rules for Extras.
-    `'extras_mode_new'`: `import_data`'s `'extras_mode_new'` keyword, determining import rules for Extras.
-    `'comment_mode'`: `import_data`'s `'comment_mode'` keyword, determining import rules for Comments.
+        * `'extras_mode_existing'`: `import_data`'s `'extras_mode_existing'` keyword, determining import rules for
+        Extras.
+        * `'extras_mode_new'`: `import_data`'s `'extras_mode_new'` keyword, determining import rules for Extras.
+        * `'comment_mode'`: `import_data`'s `'comment_mode'` keyword, determining import rules for Comments.
     """
-    from aiida.tools.importexport import import_data
+    from aiida.tools.importexport import import_data, IncompatibleArchiveVersionError
 
     # Checks
     expected_keys = ['extras_mode_existing', 'extras_mode_new', 'comment_mode']
@@ -65,7 +65,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
 
     try:
         import_data(file_to_import, group, **kwargs)
-    except exceptions.IncompatibleArchiveVersionError as exception:
+    except IncompatibleArchiveVersionError as exception:
         if migration_performed:
             # Migration has been performed, something is still wrong
             crit_message = '{} has been migrated, but it still cannot be imported.\n{}'.format(archive, exception)

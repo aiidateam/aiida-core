@@ -118,9 +118,9 @@ class TestMigrateV06toV07(AiidaTestCase):
                     msg="key '{}' should have been removed from '{}' in metadata.json".format(entity, dict_)
                 )
 
-    def test_migration_0040_integrity_error(self):
-        """Check IntegrityError is raised for different cases during migration 0040"""
-        from aiida.common.exceptions import IntegrityError
+    def test_migration_0040_corrupt_archive(self):
+        """Check CorruptArchive is raised for different cases during migration 0040"""
+        from aiida.tools.importexport.common.exceptions import CorruptArchive
 
         # data has one "valid" entry, in the form of Node <PK=42>.
         # At least it has the needed key `node_type`.
@@ -145,7 +145,7 @@ class TestMigrateV06toV07(AiidaTestCase):
             }
         }
 
-        with self.assertRaises(IntegrityError) as exc:
+        with self.assertRaises(CorruptArchive) as exc:
             migration_data_migration_legacy_process_attributes(data)
 
         self.assertIn('Your export archive is corrupt! Org. exception:', exc.exception.__repr__())
@@ -175,7 +175,7 @@ class TestMigrateV06toV07(AiidaTestCase):
             }
         }
 
-        with self.assertRaises(IntegrityError) as exc:
+        with self.assertRaises(CorruptArchive) as exc:
             migration_data_migration_legacy_process_attributes(data)
 
         self.assertIn('Your export archive is corrupt! Please see the log-file', exc.exception.__repr__())

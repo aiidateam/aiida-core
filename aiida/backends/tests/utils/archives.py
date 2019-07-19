@@ -19,7 +19,7 @@ import zipfile
 
 from aiida.common import json
 from aiida.common.exceptions import NotExistent
-from aiida.common.archive import extract_tar, extract_zip
+from aiida.tools.importexport.common.archive import extract_tar, extract_zip
 from aiida.common.folders import SandboxFolder
 
 

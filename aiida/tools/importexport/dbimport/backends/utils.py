@@ -18,8 +18,8 @@ from six.moves import zip
 import click
 
 from aiida.orm import QueryBuilder, Comment
-from aiida.common import exceptions
 from aiida.common.utils import get_new_uuid
+from aiida.tools.importexport.common import exceptions
 
 
 def merge_comment(incoming_comment, comment_mode):
@@ -37,7 +37,7 @@ def merge_comment(incoming_comment, comment_mode):
         # Get existing Comment's 'mtime' and 'content'
         builder = QueryBuilder().append(Comment, filters={'uuid': incoming_uuid}, project=['mtime', 'content'])
         if builder.count() != 1:
-            raise exceptions.ValidationError('Multiple Comments with the same UUID: {}'.format(incoming_uuid))
+            raise exceptions.ImportValidationError('Multiple Comments with the same UUID: {}'.format(incoming_uuid))
         builder = builder.all()
 
         existing_mtime = builder[0][0]
@@ -73,7 +73,7 @@ def merge_comment(incoming_comment, comment_mode):
 
     # Invalid comment_mode
     else:
-        raise ValueError(
+        raise exceptions.ImportValidationError(
             'Unknown comment_mode value: {}. Should be '
             "either 'newest' or 'overwrite'".format(comment_mode)
         )
@@ -93,9 +93,11 @@ def merge_extras(old_extras, new_extras, mode):
     """
     from six import string_types
     if not isinstance(mode, string_types):
-        raise TypeError("Parameter 'mode' should be of string type, you provided '{}' type".format(type(mode)))
+        raise exceptions.ImportValidationError(
+            "Parameter 'mode' should be of string type, you provided '{}' type".format(type(mode)))
     elif not len(mode) == 3:
-        raise ValueError("Parameter 'mode' should be a 3-letter string, you provided: '{}'".format(mode))
+        raise exceptions.ImportValidationError(
+            "Parameter 'mode' should be a 3-letter string, you provided: '{}'".format(mode))
 
     old_keys = set(old_extras.keys())
     new_keys = set(new_extras.keys())
@@ -144,15 +146,15 @@ def merge_extras(old_extras, new_extras, mode):
             for key in old_keys_only:
                 final_extras[key] = old_extras[key]
         elif mode[0] != 'n':
-            raise ValueError("Unknown first letter of the update extras mode: '{}'. " \
-                             "Should be either 'k' or 'n'".format(mode))
+            raise exceptions.ImportValidationError(
+                "Unknown first letter of the update extras mode: '{}'. Should be either 'k' or 'n'".format(mode))
 
         if mode[1] == 'c':
             for key in new_keys_only:
                 final_extras[key] = new_extras[key]
         elif mode[1] != 'n':
-            raise ValueError("Unknown second letter of the update extras mode: '{}'. " \
-                             "Should be either 'c' or 'n'".format(mode))
+            raise exceptions.ImportValidationError(
+                "Unknown second letter of the update extras mode: '{}'. Should be either 'c' or 'n'".format(mode))
 
         if mode[2] == 'u':
             for key in collided_keys:
@@ -173,8 +175,8 @@ def merge_extras(old_extras, new_extras, mode):
                     else:
                         final_extras[key] = old_extras[key]
         elif mode[2] != 'd':
-            raise ValueError("Unknown third letter of the update extras mode: '{}'. " \
-                             "Should be one of 'u'/'l'/'a'/'d'".format(mode))
+            raise exceptions.ImportValidationError(
+                "Unknown third letter of the update extras mode: '{}'. Should be one of 'u'/'l'/'a'/'d'".format(mode))
 
     return final_extras
 
@@ -206,7 +208,7 @@ def deserialize_attributes(attributes_data, conversion_data):
             if conversion_data == 'date':
                 ret_data = datetime.datetime.strptime(attributes_data, '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=pytz.utc)
             else:
-                raise ValueError("Unknown convert_type '{}'".format(conversion_data))
+                raise exceptions.AiidaImportError("Unknown convert_type '{}'".format(conversion_data))
 
     return ret_data
 
@@ -216,10 +218,10 @@ def deserialize_field(key, value, fields_info, import_unique_ids_mappings, forei
     try:
         field_info = fields_info[key]
     except KeyError:
-        raise ValueError("Unknown field '{}'".format(key))
+        raise exceptions.AiidaImportError("Unknown field '{}'".format(key))
 
     if key in ('id', 'pk'):
-        raise ValueError('ID or PK explicitly passed!')
+        raise exceptions.ImportValidationError('ID or PK explicitly passed!')
 
     requires = field_info.get('requires', None)
     if requires is None:

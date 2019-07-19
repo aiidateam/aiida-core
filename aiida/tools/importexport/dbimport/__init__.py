@@ -44,6 +44,7 @@ def import_data(in_path, group=None, silent=False, **kwargs):
     """
     from aiida.manage import configuration
     from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+    from aiida.tools.importexport.common.exceptions import AiidaImportError
 
     if configuration.PROFILE.database_backend == BACKEND_SQLA:
         from aiida.tools.importexport.dbimport.backends.sqla import import_data_sqla
@@ -54,4 +55,4 @@ def import_data(in_path, group=None, silent=False, **kwargs):
         return import_data_dj(in_path, group=group, silent=silent, **kwargs)
 
     # else
-    raise Exception('Unknown backend: {}'.format(configuration.PROFILE.database_backend))
+    raise AiidaImportError('Unknown backend: {}'.format(configuration.PROFILE.database_backend))

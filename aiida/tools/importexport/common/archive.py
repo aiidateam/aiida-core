@@ -24,10 +24,9 @@ from aiida.common import json
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
 from aiida.common.folders import SandboxFolder
 from aiida.tools.importexport.config import NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.exceptions import CorruptArchive
 
-
-class CorruptArchive(Exception):
-    """Raised when an operation is applied to a corrupt export archive, e.g. missing files or invalid formats."""
+__all__ = ('Archive', 'extract_zip', 'extract_tar', 'extract_tree')
 
 
 class Archive(object):
@@ -240,7 +239,8 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
     :type silent: bool
 
     :raises TypeError: if parameter types are not respected
-    :raises `CorruptArchive`: if the archive misses files or files have incorrect formats
+    :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: if the archive misses files or files have
+        incorrect formats
     """
     # pylint: disable=fixme
     if not silent:
@@ -299,7 +299,8 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
     :type silent: bool
 
     :raises TypeError: if parameter types are not respected
-    :raises `CorruptArchive`: if the archive misses files or files have incorrect formats
+    :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: if the archive misses files or files have
+        incorrect formats
     """
     # pylint: disable=fixme
     if not silent:

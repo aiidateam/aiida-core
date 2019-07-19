@@ -178,6 +178,7 @@ class TestGroups(AiidaTestCase):
         Make sure the Group is correctly handled and used for imported nodes.
         """
         from aiida.orm import load_group
+        from aiida.tools.importexport.common.exceptions import ImportValidationError
 
         # Create Nodes to export
         data1 = orm.Data().store()
@@ -195,12 +196,9 @@ class TestGroups(AiidaTestCase):
         group_uuid = group.uuid
 
         # Try to import to this Group, providing only label - this should fail
-        with self.assertRaises(TypeError, msg='Labels should no longer be passable to `import_data`') as exc:
+        with self.assertRaises(ImportValidationError) as exc:
             import_data(filename, group=group_label, silent=True)
-        exc = exc.exception
-        self.assertEqual(
-            str(exc), 'group must be a Group entity', msg='The error message should be the same for both backends.'
-        )
+        self.assertIn('group must be a Group entity', str(exc.exception))
 
         # Import properly now, providing the Group object
         import_data(filename, group=group, silent=True)

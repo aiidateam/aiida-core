@@ -21,13 +21,15 @@ import zipfile
 from itertools import chain
 import six
 
-from aiida.common import exceptions, timezone, json
-from aiida.common.archive import extract_tree, extract_tar, extract_zip
+from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_object_from_string
 from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group
+
+from aiida.tools.importexport.common import exceptions
+from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
 from aiida.tools.importexport.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
@@ -91,7 +93,7 @@ def import_data_sqla(
     # Initial check(s)
     if group:
         if not isinstance(group, Group):
-            raise TypeError('group must be a Group entity')
+            raise exceptions.ImportValidationError("group must be a Group entity")
         elif not group.is_stored:
             group.store()
 
@@ -108,15 +110,11 @@ def import_data_sqla(
             elif zipfile.is_zipfile(in_path):
                 extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
             else:
-                raise ValueError(
-                    'Unable to detect the input file format, it '
-                    'is neither a (possibly compressed) tar '
-                    'file, nor a zip file.'
-                )
+                raise exceptions.ImportValidationError("Unable to detect the input file format, it is neither a "
+                                                       "(possibly compressed) tar file, nor a zip file.")
 
         if not folder.get_content_list():
-            from aiida.common.exceptions import ContentNotExistent
-            raise ContentNotExistent('The provided file/folder ({}) is empty'.format(in_path))
+            raise exceptions.CorruptArchive("The provided file/folder ({}) is empty".format(in_path))
         try:
             with io.open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
@@ -124,7 +122,8 @@ def import_data_sqla(
             with io.open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
                 data = json.load(fhandle)
         except IOError as error:
-            raise ValueError('Unable to find the file {} in the import file or folder'.format(error.filename))
+            raise exceptions.CorruptArchive("Unable to find the file {} in the import file or folder".format(
+                error.filename))
 
         ######################
         # PRELIMINARY CHECKS #
@@ -170,13 +169,10 @@ def import_data_sqla(
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(import_nodes_uuid)
 
         if unknown_nodes and not ignore_unknown_nodes:
-            raise ValueError(
-                'The import file refers to {} nodes with unknown UUID, '
-                'therefore it cannot be imported. Either first import the '
-                'unknown nodes, or export also the parents when exporting. '
-                'The unknown UUIDs are:\n'.format(len(unknown_nodes)) +
-                '\n'.join('* {}'.format(uuid) for uuid in unknown_nodes)
-            )
+            raise exceptions.ImportValidationError(
+                "The import file refers to {} nodes with unknown UUID, therefore it cannot be imported. Either first "
+                "import the unknown nodes, or export also the parents when exporting. The unknown UUIDs are:\n".format(
+                    len(unknown_nodes)) + "\n".join('* {}'.format(uuid) for uuid in unknown_nodes))
 
         ###################################
         # DOUBLE-CHECK MODEL DEPENDENCIES #
@@ -194,7 +190,8 @@ def import_data_sqla(
         all_entity_names = [signatures_to_entity_names[entity_sig] for entity_sig in entity_sig_order]
         for import_field_name in metadata['all_fields_info']:
             if import_field_name not in all_entity_names:
-                raise NotImplementedError("You are trying to import an unknown model '{}'!".format(import_field_name))
+                raise exceptions.ImportValidationError(
+                    "You are trying to import an unknown model '{}'!".format(import_field_name))
 
         for idx, entity_sig in enumerate(entity_sig_order):
             dependencies = []
@@ -208,10 +205,8 @@ def import_data_sqla(
                     pass
             for dependency in dependencies:
                 if dependency not in all_entity_names[:idx]:
-                    raise ValueError(
-                        'Entity {} requires {} but would be '
-                        'loaded first; stopping...'.format(entity_sig, dependency)
-                    )
+                    raise exceptions.AiidaImportError(
+                        "Entity {} requires {} but would be loaded first; stopping...".format(entity_sig, dependency))
 
         ###################################################
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
@@ -296,11 +291,9 @@ def import_data_sqla(
                                     value['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
                                     dupl_counter += 1
                                     if dupl_counter == 100:
-                                        raise exceptions.UniquenessError(
-                                            'A group of that label ( {} )'
-                                            '  already exists and I could not create a new one'
-                                            ''.format(orig_label)
-                                        )
+                                        raise exceptions.ImportUniquenessError(
+                                            "A group of that label ( {} ) already exists and I could not create a new "
+                                            "one".format(orig_label))
 
                             elif entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
@@ -326,15 +319,18 @@ def import_data_sqla(
                                 orig_name = value['name']
                                 while dupl:
                                     # Rename the new computer
-                                    value['name'] = (orig_name + DUPL_SUFFIX.format(dupl_counter))
-                                    dupl_counter += 1
+                                    value["name"] = (orig_name + DUPL_SUFFIX.format(dupl_counter))
                                     builder = QueryBuilder()
                                     builder.append(
                                         entity, filters={'name': {
-                                            '==': value['name']
-                                        }}, project=['*'], tag='res'
-                                    )
-                                    dupl = (builder.count() or value['name'] in imported_comp_names)
+                                            "==": value["name"]
+                                        }}, project=["*"], tag="res")
+                                    dupl = (builder.count() or value["name"] in imported_comp_names)
+                                    dupl_counter += 1
+                                    if dupl_counter == 100:
+                                        raise exceptions.ImportUniquenessError(
+                                            "A computer of that name ( {} ) already exists and I could not create a "
+                                            "new one".format(orig_name))
 
                                 imported_comp_names.add(value['name'])
 
@@ -451,10 +447,9 @@ def import_data_sqla(
                         subfolder = folder.get_subfolder(
                             os.path.join(NODES_EXPORT_SUBFOLDER, export_shard_uuid(import_entry_uuid)))
                         if not subfolder.exists():
-                            raise exceptions.ArchiveIntegrityError(
-                                'Unable to find the repository folder for Node with UUID={} in the exported '
-                                'file'.format(import_entry_uuid)
-                            )
+                            raise exceptions.CorruptArchive(
+                                "Unable to find the repository folder for Node with UUID={} in the exported "
+                                "file".format(import_entry_uuid))
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing previous folders, and move the files
                         # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
@@ -465,9 +460,8 @@ def import_data_sqla(
                         try:
                             object_.attributes = data['node_attributes'][str(import_entry_pk)]
                         except KeyError:
-                            raise exceptions.ArchiveIntegrityError(
-                                'Unable to find attribute info for Node with UUID={}'.format(import_entry_uuid)
-                            )
+                            raise exceptions.CorruptArchive(
+                                "Unable to find attribute info for Node with UUID={}".format(import_entry_uuid))
 
                         # For DbNodes, we also have to store extras
                         # Get extras from import file
@@ -477,9 +471,8 @@ def import_data_sqla(
                             try:
                                 extras = data['node_extras'][str(import_entry_pk)]
                             except KeyError:
-                                raise exceptions.ArchiveIntegrityError(
-                                    'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
-                                )
+                                raise exceptions.CorruptArchive(
+                                    "Unable to find extra info for Node with UUID={}".format(import_entry_uuid))
                             # TODO: remove when aiida extras will be moved somewhere else
                             # from here
                             extras = {key: value for key, value in extras.items() if not key.startswith('_aiida_')}
@@ -491,10 +484,9 @@ def import_data_sqla(
                             if not silent:
                                 print('SKIPPING NEW NODE EXTRAS...')
                         else:
-                            raise ValueError(
-                                "Unknown extras_mode_new value: {}, should be either 'import' or 'none'".
-                                format(extras_mode_new)
-                            )
+                            raise exceptions.ImportValidationError(
+                                "Unknown extras_mode_new value: {}, should be either 'import' or 'none'".format(
+                                    extras_mode_new))
 
                     # EXISTING NODES (Extras)
                     if not silent:
@@ -512,9 +504,8 @@ def import_data_sqla(
                         try:
                             extras = data['node_extras'][str(import_entry_pk)]
                         except KeyError:
-                            raise exceptions.ArchiveIntegrityError(
-                                'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
-                            )
+                            raise exceptions.CorruptArchive(
+                                "Unable to find extra info for Node with UUID={}".format(import_entry_uuid))
 
                         # TODO: remove when aiida extras will be moved somewhere else
                         # from here
@@ -585,21 +576,16 @@ def import_data_sqla(
                     if ignore_unknown_nodes:
                         continue
                     else:
-                        raise ValueError(
-                            'Trying to create a link with one '
-                            'or both unknown nodes, stopping '
-                            '(in_uuid={}, out_uuid={}, '
-                            'label={})'.format(link['input'], link['output'], link['label'])
-                        )
+                        raise exceptions.ImportValidationError(
+                            "Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, "
+                            "out_uuid={}, label={})".format(link['input'], link['output'], link['label']))
 
                 try:
                     existing_label = existing_links_labels[in_id, out_id]
                     if existing_label != link['label']:
-                        raise ValueError(
-                            'Trying to rename an existing link '
-                            'name, stopping (in={}, out={}, '
-                            'old_label={}, new_label={})'.format(in_id, out_id, existing_label, link['label'])
-                        )
+                        raise exceptions.ImportValidationError(
+                            "Trying to rename an existing link name, stopping (in={}, out={}, old_label={}, "
+                            "new_label={})".format(in_id, out_id, existing_label, link['label']))
                         # Do nothing, the link is already in place and has
                         # the correct name
                 except KeyError:
@@ -616,14 +602,10 @@ def import_data_sqla(
                         existing_input = existing_input_links[out_id, link['label']]
 
                         if link['type'] != LinkType.RETURN:
-                            raise ValueError(
-                                'There exists already an input link to node '
-                                'with UUID {} with label {} but it does not '
-                                'come from the expected input with UUID {} '
-                                'but from a node with UUID {}.'.format(
-                                    link['output'], link['label'], link['input'], existing_input
-                                )
-                            )
+                            raise exceptions.ImportValidationError(
+                                "There exists already an input link to node with UUID {} with label {} but it does not"
+                                " come from the expected input with UUID {} but from a node with UUID {}.".format(
+                                    link['output'], link['label'], link['input'], existing_input))
                     except KeyError:
                         # New link
                         links_to_store.append(
@@ -674,24 +656,22 @@ def import_data_sqla(
             if pks_for_group:
                 # If user specified a group, import all things into it
                 if not group:
+                    from aiida.backends.sqlalchemy.models.group import DbGroup
+
                     # Get an unique name for the import group, based on the current (local) time
                     basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S')
                     counter = 0
-                    created = False
-                    while not created:
-                        if counter == 0:
-                            group_label = basename
-                        else:
-                            group_label = '{}_{}'.format(basename, counter)
+                    group_label = basename
+                    while session.query(DbGroup).filter(DbGroup.label == group_label).count() > 0:
+                        counter += 1
+                        group_label = "{}_{}".format(basename, counter)
 
-                        group = Group(label=group_label, type_string=IMPORTGROUP_TYPE)
-                        from aiida.backends.sqlalchemy.models.group import DbGroup
-                        if session.query(DbGroup).filter(DbGroup.label == group.backend_entity._dbmodel.label
-                                                        ).count() == 0:
-                            session.add(group.backend_entity._dbmodel)
-                            created = True
-                        else:
-                            counter += 1
+                        if counter == 100:
+                            raise exceptions.ImportUniquenessError(
+                                "Overflow of import groups (more than 100 import groups exists with basename '{}')"
+                                "".format(basename))
+                    group = Group(label=group_label, type_string=IMPORTGROUP_TYPE)
+                    session.add(group.backend_entity._dbmodel)
 
                 # Adding nodes to group avoiding the SQLA ORM to increase speed
                 nodes = [

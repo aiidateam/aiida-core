@@ -19,8 +19,7 @@ __all__ = (
     'InvalidOperation', 'ParsingError', 'InternalError', 'PluginInternalError', 'ValidationError', 'ConfigurationError',
     'ProfileConfigurationError', 'MissingConfigurationError', 'ConfigurationVersionError', 'DbContentError',
     'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError',
-    'UnsupportedSpeciesError', 'DanglingLinkError', 'TransportTaskException', 'IncompatibleArchiveVersionError',
-    'OutputParsingError'
+    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError'
 )
 
 
@@ -217,21 +216,9 @@ class UnsupportedSpeciesError(ValueError):
     """
 
 
-class DanglingLinkError(Exception):
-    """
-    Raised when an export archive is detected to contain dangling links when importing
-    """
-
-
-class TransportTaskException(Exception):
+class TransportTaskException(AiidaException):
     """
     Raised when a TransportTask, an task to be completed by the engine that requires transport, fails
-    """
-
-
-class IncompatibleArchiveVersionError(Exception):
-    """
-    Raised when trying to import an export archive with an incompatible schema version.
     """
 
 
@@ -244,12 +231,4 @@ class OutputParsingError(ParsingError):
 class CircusCallError(AiidaException):
     """
     Raised when an attempt to contact Circus returns an error in the response
-    """
-
-
-class ArchiveIntegrityError(IntegrityError):
-    """
-    Raised when there is an integrity error in an export archive.
-    This may be if a Node's repository folder is missing or a Node is missing a representation in a dictionary of
-    `data.json`.
     """

@@ -22,10 +22,10 @@ import numpy as np
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.configuration import with_temp_dir
-from aiida.common.exceptions import ArchiveIntegrityError
 from aiida.common.folders import RepositoryFolder
 from aiida.orm.utils.repository import Repository
 from aiida.tools.importexport import import_data, export
+from aiida.tools.importexport.common import exceptions
 
 
 class TestSpecificImport(AiidaTestCase):
@@ -176,9 +176,12 @@ class TestSpecificImport(AiidaTestCase):
 
     @with_temp_dir
     def test_missing_node_repo_folder_export(self, temp_dir):
-        """Make sure ArchiveIntegrityError is raised during export when missing Node repository folder
+        """
+        Make sure `~aiida.tools.importexport.common.exceptions.AiidaExportError` is raised during export when missing
+        Node repository folder.
         Create and store a new Node and manually remove its repository folder.
-        Attempt to export it and make sure ArchiveIntegrityError is raised, due to the missing folder.
+        Attempt to export it and make sure `~aiida.tools.importexport.common.exceptions.AiidaExportError` is raised,
+        due to the missing folder.
         """
         node = orm.CalculationNode().store()
         node.seal()
@@ -195,7 +198,7 @@ class TestSpecificImport(AiidaTestCase):
 
         # Try to export, check it raises and check the raise message
         filename = os.path.join(temp_dir, "export.tar.gz")
-        with self.assertRaises(ArchiveIntegrityError) as exc:
+        with self.assertRaises(exceptions.AiidaExportError) as exc:
             export([node], outfile=filename, silent=True)
 
         self.assertIn("Unable to find the repository folder for Node with UUID={}".format(node_uuid),
@@ -204,14 +207,17 @@ class TestSpecificImport(AiidaTestCase):
 
     @with_temp_dir
     def test_missing_node_repo_folder_import(self, temp_dir):
-        """Make sure ArchiveIntegrityError is raised during import when missing Node repository folder
+        """
+        Make sure `~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised during import when missing
+        Node repository folder.
         Create and export a Node and manually remove its repository folder in the export file.
-        Attempt to import it and make sure ArchiveIntegrityError is raised, due to the missing folder.
+        Attempt to import it and make sure `~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised,
+        due to the missing folder.
         """
         import tarfile
 
-        from aiida.common.archive import extract_tar
         from aiida.common.folders import SandboxFolder
+        from aiida.tools.importexport.common.archive import extract_tar
         from aiida.tools.importexport.config import NODES_EXPORT_SUBFOLDER
         from aiida.tools.importexport.utils import export_shard_uuid
 
@@ -249,7 +255,7 @@ class TestSpecificImport(AiidaTestCase):
                 tar.add(folder.abspath, arcname="")
 
         # Try to import, check it raises and check the raise message
-        with self.assertRaises(ArchiveIntegrityError) as exc:
+        with self.assertRaises(exceptions.CorruptArchive) as exc:
             import_data(filename_corrupt, silent=True)
 
         self.assertIn("Unable to find the repository folder for Node with UUID={}".format(node_uuid),

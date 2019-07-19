@@ -71,10 +71,10 @@ class TestExportFileMigration(AiidaTestCase):
         import tarfile
         import zipfile
 
-        from aiida.common.archive import extract_tar, extract_zip
         from aiida.common.exceptions import NotExistent
         from aiida.common.folders import SandboxFolder
         from aiida.common.json import load as jsonload
+        from aiida.tools.importexport.common.archive import extract_tar, extract_zip
 
         # Get metadata.json and data.json as dicts from v0.1 file archive
         # Cannot use 'get_json_files' for 'export_v0.1_simple.aiida',

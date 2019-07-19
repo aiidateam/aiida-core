@@ -42,7 +42,7 @@ def inspect(archive, version, data, meta_data):
     By default a summary of the archive contents will be printed. The various options can be used to change exactly what
     information is displayed.
     """
-    from aiida.common.archive import Archive, CorruptArchive
+    from aiida.tools.importexport import Archive, CorruptArchive
 
     with Archive(archive) as archive_object:
         try:
@@ -176,8 +176,7 @@ def migrate(input_file, output_file, force, silent, archive_format):
 
     from aiida.common import json
     from aiida.common.folders import SandboxFolder
-    from aiida.common.archive import extract_zip, extract_tar
-    from aiida.tools.importexport import migration
+    from aiida.tools.importexport import migration, extract_zip, extract_tar
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')

@@ -236,8 +236,7 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
 
 
 def submit_calculation(calculation, transport, calc_info, script_filename):
-    """
-    Submit a calculation
+    """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
     :param transport: an already opened transport to use to submit the calculation.
@@ -245,18 +244,28 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     :return: the job id as returned by the scheduler `submit_from_script` call
     """
+    job_id = calculation.get_job_id()
+
+    # If the `job_id` attribute is already set, that means this function was already executed once and the scheduler
+    # submit command was successful as the job id it returned was set on the node. This scenario can happen when the
+    # daemon runner gets shutdown right after accomplishing the submission task, but before it gets the chance to
+    # finalize the state transition of the `CalcJob` to the `UPDATE` transport task. Since the job is already submitted
+    # we do not want to submit it a second time, so we simply return the existing job id here.
+    if job_id is not None:
+        return job_id
+
     scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
 
     workdir = calculation.get_remote_workdir()
     job_id = scheduler.submit_from_script(workdir, script_filename)
     calculation.set_job_id(job_id)
+
     return job_id
 
 
 def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
-    """
-    Retrieve all the files of a completed job calculation using the given transport.
+    """Retrieve all the files of a completed job calculation using the given transport.
 
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
     `retrieved_temporary_folder`. The caller is responsible for creating and destroying this folder.

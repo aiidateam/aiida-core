@@ -162,7 +162,7 @@ def show(nodes, print_groups):
                     echo.echo(gr_specs)
 
 
-def echo_node_dict(nodes, keys, fmt, identifier, raw, attributes=True):
+def echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=True):
     """Show the attributes or extras of one or more nodes."""
     all_nodes = []
     for node in nodes:
@@ -173,7 +173,7 @@ def echo_node_dict(nodes, keys, fmt, identifier, raw, attributes=True):
             id_name = 'UUID'
             id_value = node.uuid
 
-        if attributes:
+        if use_attrs:
             node_dict = node.attributes
             dict_name = 'attributes'
         else:
@@ -213,7 +213,7 @@ def attributes(nodes, keys, fmt, identifier, raw):
 @with_dbenv()
 def extras(nodes, keys, fmt, identifier, raw):
     """Show the extras of one or more nodes."""
-    echo_node_dict(nodes, keys, fmt, identifier, raw, attributes=False)
+    echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=False)
 
 
 @verdi_node.command()

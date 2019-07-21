@@ -79,6 +79,23 @@ class TestVerdiCalculation(AiidaTestCase):
             self.assertNotIn(self.ATTR_KEY_TWO, result.output)
             self.assertNotIn(self.ATTR_VAL_TWO, result.output)
 
+        for flag in ['-r', '--raw']:
+            options = [flag, str(self.node.uuid)]
+            result = self.cli_runner.invoke(cmd_node.attributes, options)
+            self.assertIsNone(result.exception, result.output)
+
+        for flag in ['-f', '--format']:
+            for fmt in ['json+date', 'yaml']:
+                options = [flag, fmt, str(self.node.uuid)]
+                result = self.cli_runner.invoke(cmd_node.attributes, options)
+                self.assertIsNone(result.exception, result.output)
+
+        for flag in ['-id', '--identifier']:
+            for fmt in ['pk', 'uuid']:
+                options = [flag, fmt, str(self.node.uuid)]
+                result = self.cli_runner.invoke(cmd_node.attributes, options)
+                self.assertIsNone(result.exception, result.output)
+
     def test_node_extras(self):
         """Test verdi node extras"""
         options = [str(self.node.uuid)]
@@ -97,3 +114,20 @@ class TestVerdiCalculation(AiidaTestCase):
             self.assertIn(self.EXTRA_VAL_ONE, result.output)
             self.assertNotIn(self.EXTRA_KEY_TWO, result.output)
             self.assertNotIn(self.EXTRA_VAL_TWO, result.output)
+
+        for flag in ['-r', '--raw']:
+            options = [flag, str(self.node.uuid)]
+            result = self.cli_runner.invoke(cmd_node.extras, options)
+            self.assertIsNone(result.exception, result.output)
+
+        for flag in ['-f', '--format']:
+            for fmt in ['json+date', 'yaml']:
+                options = [flag, fmt, str(self.node.uuid)]
+                result = self.cli_runner.invoke(cmd_node.extras, options)
+                self.assertIsNone(result.exception, result.output)
+
+        for flag in ['-id', '--identifier']:
+            for fmt in ['pk', 'uuid']:
+                options = [flag, fmt, str(self.node.uuid)]
+                result = self.cli_runner.invoke(cmd_node.extras, options)
+                self.assertIsNone(result.exception, result.output)

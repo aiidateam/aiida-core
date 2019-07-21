@@ -162,34 +162,58 @@ def show(nodes, print_groups):
                     echo.echo(gr_specs)
 
 
+def echo_node_dict(nodes, keys, fmt, identifier, raw, attributes=True):
+    """Show the attributes or extras of one or more nodes."""
+    all_nodes = []
+    for node in nodes:
+        if identifier == 'pk':
+            id_name = 'PK'
+            id_value = node.pk
+        else:
+            id_name = 'UUID'
+            id_value = node.uuid
+
+        if attributes:
+            node_dict = node.attributes
+            dict_name = 'attributes'
+        else:
+            node_dict = node.extras
+            dict_name = 'extras'
+
+        if keys is not None:
+            node_dict = {k: v for k, v in node_dict.items() if k in keys}
+
+        if raw:
+            all_nodes.append({id_name: id_value, dict_name: node_dict})
+        else:
+            echo.echo('{}: {}'.format(id_name, id_value), bold=True)
+            echo.echo_dictionary(node_dict, fmt=fmt)
+    if raw:
+        echo.echo_dictionary(all_nodes, fmt=fmt)
+
+
 @verdi_node.command('attributes')
 @arguments.NODES()
 @options.DICT_KEYS()
 @options.DICT_FORMAT()
+@options.IDENTIFIER()
+@options.RAW(help='Print the results as a single dictionary.')
 @with_dbenv()
-def attributes(nodes, keys, fmt):
+def attributes(nodes, keys, fmt, identifier, raw):
     """Show the attributes of one or more nodes."""
-    for node in nodes:
-        echo.echo("Pk: {}".format(node.pk), bold=True)
-        attr_dict = node.attributes
-        if keys is not None:
-            attr_dict = {k: v for k, v in attr_dict.items() if k in keys}
-        echo.echo_dictionary(attr_dict, fmt=fmt)
+    echo_node_dict(nodes, keys, fmt, identifier, raw)
 
 
 @verdi_node.command('extras')
 @arguments.NODES()
 @options.DICT_KEYS()
 @options.DICT_FORMAT()
+@options.IDENTIFIER()
+@options.RAW(help='Print the results as a single dictionary.')
 @with_dbenv()
-def extras(nodes, keys, fmt):
+def extras(nodes, keys, fmt, identifier, raw):
     """Show the extras of one or more nodes."""
-    for node in nodes:
-        echo.echo("Pk: {}".format(node.pk), bold=True)
-        extras_dict = node.extras
-        if keys is not None:
-            extras_dict = {k: v for k, v in extras_dict.items() if k in keys}
-        echo.echo_dictionary(extras_dict, fmt=fmt)
+    echo_node_dict(nodes, keys, fmt, identifier, raw, attributes=False)
 
 
 @verdi_node.command()

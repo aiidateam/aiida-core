@@ -16,7 +16,7 @@ from __future__ import absolute_import
 import click
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
-from ...utils import defaults
+from ...utils import defaults, echo
 from .. import types
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
@@ -394,16 +394,22 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
 CONFIG_FILE = ConfigFileOption(
     '--config', help='Load option values from configuration file in yaml format.')
 
+IDENTIFIER = OverridableOption(
+    '-id', '--identifier', 'identifier',
+    help='The type of identifier used for specifying each node.',
+    default='pk',
+    type=click.Choice(['pk', 'uuid']))
+
 DICT_FORMAT = OverridableOption(
     '-f', '--format', 'fmt',
-    type=click.Choice(["json+date", "yaml"]),
-    default="json+date",
-    help="format for the output"
+    type=click.Choice(list(echo.VALID_DICT_FORMATS_MAPPING.keys())),
+    default=list(echo.VALID_DICT_FORMATS_MAPPING.keys())[0],
+    help='The format of the output data.'
 )
 
 DICT_KEYS = OverridableOption(
     '-k', '--keys',
     type=click.STRING,
     cls=MultipleValueOption,
-    help="show only these keys"
+    help='Filter the output by one or more keys.'
 )

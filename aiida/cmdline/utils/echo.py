@@ -13,9 +13,12 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from enum import IntEnum
+from collections import OrderedDict
 import sys
 
 import click
+
+from aiida.orm.utils.serialize import serialize
 
 __all__ = ('echo', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
 
@@ -162,25 +165,6 @@ def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=
             click.secho(template.format(symbol=' ', *values))
 
 
-def echo_dictionary(dictionary, fmt='json+date'):
-    """
-    Print the given dictionary to stdout in the given format
-
-    :param dictionary: the dictionary
-    :param fmt: the format to use for printing, valid options: ['json+data']
-    """
-    from aiida.orm.utils.serialize import serialize
-    valid_formats_table = {'json+date': _format_dictionary_json_date, 'yaml': serialize}
-
-    try:
-        format_function = valid_formats_table[fmt]
-    except KeyError:
-        formats = ', '.join(valid_formats_table.keys())
-        raise ValueError('Unrecognised printing format. Valid formats are: {}'.format(formats))
-
-    echo(format_function(dictionary))
-
-
 def _format_dictionary_json_date(dictionary):
     """Return a dictionary formatted as a string using the json format and converting dates to strings."""
     from aiida.common import json
@@ -195,6 +179,25 @@ def _format_dictionary_json_date(dictionary):
         raise TypeError(repr(data) + ' is not JSON serializable')
 
     return json.dumps(dictionary, indent=4, sort_keys=True, default=default_jsondump)
+
+
+VALID_DICT_FORMATS_MAPPING = OrderedDict((('json+date', _format_dictionary_json_date), ('yaml', serialize)))
+
+
+def echo_dictionary(dictionary, fmt='json+date'):
+    """
+    Print the given dictionary to stdout in the given format
+
+    :param dictionary: the dictionary
+    :param fmt: the format to use for printing, valid options: ['json+data']
+    """
+    try:
+        format_function = VALID_DICT_FORMATS_MAPPING[fmt]
+    except KeyError:
+        formats = ', '.join(VALID_DICT_FORMATS_MAPPING.keys())
+        raise ValueError('Unrecognised printing format. Valid formats are: {}'.format(formats))
+
+    echo(format_function(dictionary))
 
 
 def is_stdout_redirected():

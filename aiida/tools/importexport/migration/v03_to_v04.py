@@ -345,7 +345,7 @@ def migration_trajectory_symbols_to_attribute(data, folder):
     """Apply migrations: 0026 - REV. 1.0.26 and 0027 - REV. 1.0.27
     Create the symbols attribute from the repository array for all `TrajectoryData` nodes.
     """
-    from aiida.tools.importexport.config import NODES_EXPORT_SUBFOLDER
+    from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
 
     for node_id, content in data['export_data'].get('Node', {}).items():
         if content.get('type', '') == 'node.data.array.trajectory.TrajectoryData.':

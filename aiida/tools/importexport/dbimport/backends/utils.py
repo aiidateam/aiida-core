@@ -208,7 +208,7 @@ def deserialize_attributes(attributes_data, conversion_data):
             if conversion_data == 'date':
                 ret_data = datetime.datetime.strptime(attributes_data, '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=pytz.utc)
             else:
-                raise exceptions.AiidaImportError("Unknown convert_type '{}'".format(conversion_data))
+                raise exceptions.ArchiveImportError("Unknown convert_type '{}'".format(conversion_data))
 
     return ret_data
 
@@ -218,7 +218,7 @@ def deserialize_field(key, value, fields_info, import_unique_ids_mappings, forei
     try:
         field_info = fields_info[key]
     except KeyError:
-        raise exceptions.AiidaImportError("Unknown field '{}'".format(key))
+        raise exceptions.ArchiveImportError("Unknown field '{}'".format(key))
 
     if key in ('id', 'pk'):
         raise exceptions.ImportValidationError('ID or PK explicitly passed!')

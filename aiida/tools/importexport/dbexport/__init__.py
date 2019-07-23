@@ -25,17 +25,17 @@ from aiida.orm import QueryBuilder, Node, Data, Group, Log, Comment, Computer, P
 from aiida.orm.utils.repository import Repository
 
 from aiida.tools.importexport.common import exceptions
-from aiida.tools.importexport.config import EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
-from aiida.tools.importexport.config import (
+from aiida.tools.importexport.common.config import EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
-from aiida.tools.importexport.config import (
+from aiida.tools.importexport.common.config import (
     get_all_fields_info, file_fields_to_model_fields, entity_names_to_entities, model_fields_to_file_fields
 )
+from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
     check_licences, fill_in_query, serialize_dict, check_process_nodes_sealed
 )
-from aiida.tools.importexport.utils import export_shard_uuid
 
 from .zip import ZipFolder
 
@@ -45,7 +45,7 @@ __all__ = ('export_tree', 'export', 'export_zip')
 def export_zip(what, outfile='testzip', overwrite=False, silent=False, use_compression=True, **kwargs):
     """Export in a zipped folder"""
     if not overwrite and os.path.exists(outfile):
-        raise exceptions.AiidaExportError("the output file '{}' already exists".format(outfile))
+        raise exceptions.ArchiveExportError("the output file '{}' already exists".format(outfile))
 
     time_start = time.time()
     with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
@@ -67,35 +67,50 @@ def export_tree(
     include_comments=True,
     include_logs=True
 ):
-    """
-    Export the entries passed in the 'what' list to a file tree.
-    :todo: limit the export to finished or failed calculations.
-    :param what: a list of entity instances; they can belong to
-    different models/entities.
-    :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
-    :param input_forward: Follow forward INPUT links (recursively) when
-    calculating the node set to export.
-    :param create_reversed: Follow reversed CREATE links (recursively) when
-    calculating the node set to export.
-    :param return_reversed: Follow reversed RETURN links (recursively) when
-    calculating the node set to export.
-    :param call_reversed: Follow reversed CALL links (recursively) when
-    calculating the node set to export.
-    :param allowed_licenses: a list or a function. If a list, then checks
-    whether all licenses of Data nodes are in the list. If a function,
-    then calls function for licenses of Data nodes expecting True if
-    license is allowed, False otherwise.
-    :param forbidden_licenses: a list or a function. If a list, then checks
-    whether all licenses of Data nodes are in the list. If a function,
-    then calls function for licenses of Data nodes expecting True if
-    license is allowed, False otherwise.
-    :param include_comments: Bool: In-/exclude export of comments for given node(s).
-    Default: True, *include* comments in export (as well as relevant users).
-    :param include_logs: Bool: In-/exclude export of logs for given node(s).
-    Default: True, *include* logs in export.
-    :param silent: suppress debug prints
-    :raises LicensingException: if any node is licensed under forbidden
-    license
+    """Export the entries passed in the 'what' list to a file tree.
+
+    :param what: a list of entity instances; they can belong to different models/entities.
+    :type what: list
+
+    :param folder: a temporary folder to build the archive before compression.
+    :type folder: :py:class:`~aiida.common.folders.Folder`
+
+    :param input_forward: Follow forward INPUT links (recursively) when calculating the node set to export.
+    :type input_forward: bool
+
+    :param create_reversed: Follow reversed CREATE links (recursively) when calculating the node set to export.
+    :type create_reversed: bool
+
+    :param return_reversed: Follow reversed RETURN links (recursively) when calculating the node set to export.
+    :type return_reversed: bool
+
+    :param call_reversed: Follow reversed CALL links (recursively) when calculating the node set to export.
+    :type call_reversed: bool
+
+    :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
+        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+        otherwise.
+    :type allowed_licenses: list
+
+    :param forbidden_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
+        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+        otherwise.
+    :type forbidden_licenses: list
+
+    :param include_comments: In-/exclude export of comments for given node(s) in ``what``.
+        Default: True, *include* comments in export (as well as relevant users).
+    :type include_comments: bool
+
+    :param include_logs: In-/exclude export of logs for given node(s) in ``what``.
+        Default: True, *include* logs in export.
+    :type include_logs: bool
+
+    :param silent: suppress prints.
+    :type silent: bool
+
+    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
+        exporting.
+    :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
     if not silent:
         print('STARTING EXPORT...')
@@ -131,7 +146,7 @@ def export_tree(
         elif issubclass(entry.__class__, Computer):
             given_computer_entry_ids.add(entry.pk)
         else:
-            raise exceptions.AiidaExportError(
+            raise exceptions.ArchiveExportError(
                 'I was given {} ({}), which is not a Node, Computer, or Group instance'.format(entry, type(entry)))
 
     # Add all the nodes contained within the specified groups
@@ -766,7 +781,7 @@ def export_tree(
             # Make sure the node's repository folder was not deleted
             src = RepositoryFolder(section=Repository._section_name, uuid=uuid)
             if not src.exists():
-                raise exceptions.AiidaExportError(
+                raise exceptions.ArchiveExportError(
                     "Unable to find the repository folder for Node with UUID={} in the local repository".format(uuid))
 
             # In this way, I copy the content of the folder, and not the folder itself
@@ -774,37 +789,60 @@ def export_tree(
 
 
 def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=False, **kwargs):
-    """
-    Export the entries passed in the 'what' list to a file tree.
-    :todo: limit the export to finished or failed calculations.
-    :param what: a list of entity instances; they can belong to
-    different models/entities.
-    :param input_forward: Follow forward INPUT links (recursively) when
-    calculating the node set to export.
-    :param create_reversed: Follow reversed CREATE links (recursively) when
-    calculating the node set to export.
-    :param return_reversed: Follow reversed RETURN links (recursively) when
-    calculating the node set to export.
-    :param call_reversed: Follow reversed CALL links (recursively) when
-    calculating the node set to export.
-    :param allowed_licenses: a list or a function. If a list, then checks
-    whether all licenses of Data nodes are in the list. If a function,
-    then calls function for licenses of Data nodes expecting True if
-    license is allowed, False otherwise.
-    :param forbidden_licenses: a list or a function. If a list, then checks
-    whether all licenses of Data nodes are in the list. If a function,
-    then calls function for licenses of Data nodes expecting True if
-    license is allowed, False otherwise.
-    :param outfile: the filename of the file on which to export
-    :param overwrite: if True, overwrite the output file without asking.
-    if False, raise an `~aiida.tools.importexport.common.exceptions.AiidaExportError` in this case.
-    :param silent: suppress debug print
+    """Export the entries passed in the 'what' list to a file tree.
 
-    :raises `~aiida.tools.importexport.common.exceptions.AiidaExportError`: if overwrite==False and the filename already
-        exists.
+    :param what: a list of entity instances; they can belong to different models/entities.
+    :type what: list
+
+    :param outfile: the filename (possibly including the absolute path) of the file on which to export.
+    :type outfile: str
+
+    :param overwrite: if True, overwrite the output file without asking, if it exists. If False, raise an
+        :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError` if the output file already exists.
+    :type overwrite: bool
+
+    :param folder: a temporary folder to build the archive before compression.
+    :type folder: :py:class:`~aiida.common.folders.Folder`
+
+    :param input_forward: Follow forward INPUT links (recursively) when calculating the node set to export.
+    :type input_forward: bool
+
+    :param create_reversed: Follow reversed CREATE links (recursively) when calculating the node set to export.
+    :type create_reversed: bool
+
+    :param return_reversed: Follow reversed RETURN links (recursively) when calculating the node set to export.
+    :type return_reversed: bool
+
+    :param call_reversed: Follow reversed CALL links (recursively) when calculating the node set to export.
+    :type call_reversed: bool
+
+    :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
+        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+        otherwise.
+    :type allowed_licenses: list
+
+    :param forbidden_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
+        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+        otherwise.
+    :type forbidden_licenses: list
+
+    :param include_comments: In-/exclude export of comments for given node(s) in ``what``.
+        Default: True, *include* comments in export (as well as relevant users).
+    :type include_comments: bool
+
+    :param include_logs: In-/exclude export of logs for given node(s) in ``what``.
+        Default: True, *include* logs in export.
+    :type include_logs: bool
+
+    :param silent: suppress prints.
+    :type silent: bool
+
+    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
+        exporting.
+    :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
     if not overwrite and os.path.exists(outfile):
-        raise exceptions.AiidaExportError("The output file '{}' already exists".format(outfile))
+        raise exceptions.ArchiveExportError("The output file '{}' already exists".format(outfile))
 
     folder = SandboxFolder()
     time_export_start = time.time()

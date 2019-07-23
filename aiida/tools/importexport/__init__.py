@@ -17,6 +17,5 @@ from .dbexport import export
 from .dbexport.zip import *
 from .dbimport import *
 from .common import *
-from .config import EXPORT_VERSION
 
-__all__ = ('export', 'EXPORT_VERSION') + dbexport.zip.__all__ + dbimport.__all__ + common.__all__
+__all__ = ('export',) + dbexport.zip.__all__ + dbimport.__all__ + common.__all__

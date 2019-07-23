@@ -223,7 +223,7 @@ class TestComputer(AiidaTestCase):
         This test checks that if there is a name collision, the imported
         computers are renamed accordingly.
         """
-        from aiida.tools.importexport.config import DUPL_SUFFIX
+        from aiida.tools.importexport.common.config import DUPL_SUFFIX
 
         # Set the computer name
         comp1_name = 'localhost_1'

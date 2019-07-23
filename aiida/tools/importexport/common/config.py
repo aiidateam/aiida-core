@@ -15,6 +15,8 @@ from __future__ import print_function
 
 from aiida.orm import Computer, Group, GroupTypeString, Node, User, Log, Comment
 
+__all__ = ('EXPORT_VERSION',)
+
 # Current export version
 EXPORT_VERSION = '0.7'
 

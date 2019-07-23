@@ -30,19 +30,17 @@ from aiida.orm import QueryBuilder, Node, Group
 
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
-from aiida.tools.importexport.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
-from aiida.tools.importexport.config import (
+from aiida.tools.importexport.common.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
-from aiida.tools.importexport.config import (
+from aiida.tools.importexport.common.config import (
     entity_names_to_signatures, signatures_to_entity_names, entity_names_to_sqla_schema, file_fields_to_model_fields,
     entity_names_to_entities
 )
+from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbimport.backends.utils import deserialize_field, merge_comment, merge_extras
 from aiida.tools.importexport.dbimport.backends.sqla.utils import validate_uuid
-from aiida.tools.importexport.utils import export_shard_uuid
-
-__all__ = ('import_data_sqla',)
 
 
 def import_data_sqla(
@@ -54,32 +52,60 @@ def import_data_sqla(
     comment_mode='newest',
     silent=False
 ):
-    """
-    Import exported AiiDA environment to the AiiDA database.
-    If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
-    detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
-    correct function.
-    :param in_path: the path to a file or folder that can be imported in AiiDA
+    """Import exported AiiDA archive to the AiiDA database and repository.
+
+    Specific for the SQLAlchemy backend.
+    If ``in_path`` is a folder, calls extract_tree; otherwise, tries to detect the compression format
+    (zip, tar.gz, tar.bz2, ...) and calls the correct function.
+
+    :param in_path: the path to a file or folder that can be imported in AiiDA.
+    :type in_path: str
+
     :param group: Group wherein all imported Nodes will be placed.
+    :type group: :py:class:`~aiida.orm.groups.Group`
+
     :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
-    The first letter acts on extras that are present in the original node and not present in the imported node.
-    Can be either:
-    'k' (keep it) or
-    'n' (do not keep it).
-    The second letter acts on the imported extras that are not present in the original node.
-    Can be either:
-    'c' (create it) or
-    'n' (do not create it).
-    The third letter defines what to do in case of a name collision.
-    Can be either:
-    'l' (leave the old value),
-    'u' (update with a new value),
-    'd' (delete the extra), or
-    'a' (ask what to do if the content is different).
-    :param extras_mode_new: 'import' to import extras of new nodes or 'none' to ignore them
-    :param comment_mode: Comment import modes (when same UUIDs are found):
-    'newest': Will keep the Comment with the most recent modification time (mtime)
-    'overwrite': Will overwrite existing Comments with the ones from the import file
+        The first letter acts on extras that are present in the original node and not present in the imported node.
+        Can be either:
+        'k' (keep it) or
+        'n' (do not keep it).
+        The second letter acts on the imported extras that are not present in the original node.
+        Can be either:
+        'c' (create it) or
+        'n' (do not create it).
+        The third letter defines what to do in case of a name collision.
+        Can be either:
+        'l' (leave the old value),
+        'u' (update with a new value),
+        'd' (delete the extra), or
+        'a' (ask what to do if the content is different).
+    :type extras_mode_existing: str
+
+    :param extras_mode_new: 'import' to import extras of new nodes or 'none' to ignore them.
+    :type extras_mode_new: str
+
+    :param comment_mode: Comment import modes (when same UUIDs are found).
+        Can be either:
+        'newest' (will keep the Comment with the most recent modification time (mtime)) or
+        'overwrite' (will overwrite existing Comments with the ones from the import file).
+    :type comment_mode: str
+
+    :param silent: suppress prints.
+    :type silent: bool
+
+    :return: New and existing Nodes and Links.
+    :rtype: dict
+
+    :raises `~aiida.tools.importexport.common.exceptions.ImportValidationError`: if parameters or the contents of
+        `metadata.json` or `data.json` can not be validated.
+    :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: if the provided archive at ``in_path`` is
+        corrupted.
+    :raises `~aiida.tools.importexport.common.exceptions.IncompatibleArchiveVersionError`: if the provided archive's
+        export version is not equal to the export version of AiiDA at the moment of import.
+    :raises `~aiida.tools.importexport.common.exceptions.ArchiveImportError`: if there are any internal errors when
+        importing.
+    :raises `~aiida.tools.importexport.common.exceptions.ImportUniquenessError`: if a new unique entity can not be
+        created.
     """
     from aiida.backends.sqlalchemy.models.node import DbNode
     from aiida.backends.sqlalchemy.utils import flag_modified
@@ -205,7 +231,7 @@ def import_data_sqla(
                     pass
             for dependency in dependencies:
                 if dependency not in all_entity_names[:idx]:
-                    raise exceptions.AiidaImportError(
+                    raise exceptions.ArchiveImportError(
                         "Entity {} requires {} but would be loaded first; stopping...".format(entity_sig, dependency))
 
         ###################################################

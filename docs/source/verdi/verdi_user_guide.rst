@@ -538,8 +538,10 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
+      attributes   Show the attributes of one or more nodes.
       delete       Delete nodes and everything that originates from them.
       description  View or set the descriptions of one or more nodes.
+      extras       Show the extras of one or more nodes.
       label        View or set the labels of one or more nodes.
       repo
       show         Show generic information on node(s).

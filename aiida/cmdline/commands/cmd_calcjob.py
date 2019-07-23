@@ -55,8 +55,8 @@ def calcjob_gotocomputer(calcjob):
 
 @verdi_calcjob.command('res')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
-@click.option('-f', '--format', 'fmt', type=click.STRING, default='json+date', help='format for the output')
-@click.option('-k', '--keys', 'keys', type=click.STRING, cls=options.MultipleValueOption, help='show only these keys')
+@options.DICT_KEYS()
+@options.DICT_FORMAT()
 @decorators.with_dbenv()
 def calcjob_res(calcjob, fmt, keys):
     """Print data from the result output node of a calcjob."""

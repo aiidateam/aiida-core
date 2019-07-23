@@ -260,7 +260,7 @@ PROCESS_STATE = OverridableOption(
 PROCESS_LABEL = OverridableOption(
     '-L', '--process-label', 'process_label',
     type=click.STRING, required=False,
-    help='Only include entries with this process label.')
+    help='Only include entries whose process label matches this filter.')
 
 EXIT_STATUS = OverridableOption(
     '-E', '--exit-status', 'exit_status',

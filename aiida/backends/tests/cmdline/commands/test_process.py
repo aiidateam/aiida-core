@@ -251,11 +251,12 @@ class TestVerdiProcess(AiidaTestCase):
 
         # The process label should limit the query set to nodes with the given `process_label` attribute
         for flag in ['-L', '--process-label']:
-            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, self.process_label])
-            self.assertClickResultNoException(result)
-            self.assertEqual(len(get_result_lines(result)), 3)  # Should only match the active `WorkFunctionNodes`
-            for line in get_result_lines(result):
-                self.assertIn(self.process_label, line.strip())
+            for process_label in [self.process_label, self.process_label.replace('Dummy', '%')]:
+                result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, process_label])
+                self.assertClickResultNoException(result)
+                self.assertEqual(len(get_result_lines(result)), 3)  # Should only match the active `WorkFunctionNodes`
+                for line in get_result_lines(result):
+                    self.assertIn(self.process_label, line.strip())
 
     def test_process_show(self):
         """Test verdi process show"""

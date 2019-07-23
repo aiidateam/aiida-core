@@ -148,7 +148,7 @@ class TestMigrateV06toV07(AiidaTestCase):
         with self.assertRaises(CorruptArchive) as exc:
             migration_data_migration_legacy_process_attributes(data)
 
-        self.assertIn('Your export archive is corrupt! Org. exception:', exc.exception.__repr__())
+        self.assertIn('Your export archive is corrupt! Org. exception:', str(exc.exception))
 
         # data has one "valid" entry, in the form of Node <PK=52>.
         # data also has one "invalid" entry, in form of Node <PK=42>.
@@ -178,7 +178,7 @@ class TestMigrateV06toV07(AiidaTestCase):
         with self.assertRaises(CorruptArchive) as exc:
             migration_data_migration_legacy_process_attributes(data)
 
-        self.assertIn('Your export archive is corrupt! Please see the log-file', exc.exception.__repr__())
+        self.assertIn('Your export archive is corrupt! Please see the log-file', str(exc.exception))
 
     def test_migration_0040_no_process_state(self):
         """Check old ProcessNodes without a `process_state` can be migrated"""

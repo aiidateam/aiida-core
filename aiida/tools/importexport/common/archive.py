@@ -23,7 +23,7 @@ from wrapt import decorator
 from aiida.common import json
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
 from aiida.common.folders import SandboxFolder
-from aiida.tools.importexport.config import NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.exceptions import CorruptArchive
 
 __all__ = ('Archive', 'extract_zip', 'extract_tar', 'extract_tree')
@@ -229,8 +229,8 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
     :param infile: file path
     :type infile: str
 
-    :param folder: a SandboxFolder, used to extract the file tree
-    :type folder: `~aiida.common.folders.SandboxFolders`
+    :param folder: a temporary folder used to extract the file tree
+    :type folder: :py:class:`~aiida.common.folders.SandboxFolder`
 
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
     :type nodes_export_subfolder: str
@@ -289,8 +289,8 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
     :param infile: file path
     :type infile: str
 
-    :param folder: a SandboxFolder, used to extract the file tree
-    :type folder: `~aiida.common.folders.SandboxFolders`
+    :param folder: a temporary fodler used to extract the file tree
+    :type folder: :py:class:`~aiida.common.folders.SandboxFolder`
 
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
     :type nodes_export_subfolder: str
@@ -355,8 +355,8 @@ def extract_tree(infile, folder):
     :param infile: path
     :type infile: str
 
-    :param folder: a SandboxFolder, used to extract the file tree
-    :type folder: `~aiida.common.folders.SandboxFolder`
+    :param folder: a temporary folder used to extract the file tree
+    :type folder: :py:class:`~aiida.common.folders.SandboxFolder`
     """
 
     def add_files(args, path, files):

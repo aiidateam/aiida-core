@@ -202,7 +202,7 @@ def cmd_import(
     from six.moves import urllib
 
     from aiida.common.folders import SandboxFolder
-    from aiida.tools.importexport.utils import get_valid_import_links
+    from aiida.tools.importexport.common.utils import get_valid_import_links
 
     archives_url = []
     archives_file = []

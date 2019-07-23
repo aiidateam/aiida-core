@@ -16,7 +16,7 @@ from __future__ import print_function
 
 from six.moves.html_parser import HTMLParser
 
-from aiida.tools.importexport.config import (
+from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
 

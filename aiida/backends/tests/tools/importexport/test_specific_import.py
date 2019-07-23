@@ -177,10 +177,10 @@ class TestSpecificImport(AiidaTestCase):
     @with_temp_dir
     def test_missing_node_repo_folder_export(self, temp_dir):
         """
-        Make sure `~aiida.tools.importexport.common.exceptions.AiidaExportError` is raised during export when missing
+        Make sure `~aiida.tools.importexport.common.exceptions.ArchiveExportError` is raised during export when missing
         Node repository folder.
         Create and store a new Node and manually remove its repository folder.
-        Attempt to export it and make sure `~aiida.tools.importexport.common.exceptions.AiidaExportError` is raised,
+        Attempt to export it and make sure `~aiida.tools.importexport.common.exceptions.ArchiveExportError` is raised,
         due to the missing folder.
         """
         node = orm.CalculationNode().store()
@@ -198,11 +198,11 @@ class TestSpecificImport(AiidaTestCase):
 
         # Try to export, check it raises and check the raise message
         filename = os.path.join(temp_dir, "export.tar.gz")
-        with self.assertRaises(exceptions.AiidaExportError) as exc:
+        with self.assertRaises(exceptions.ArchiveExportError) as exc:
             export([node], outfile=filename, silent=True)
 
         self.assertIn("Unable to find the repository folder for Node with UUID={}".format(node_uuid),
-                      exc.exception.__repr__())
+                      str(exc.exception))
         self.assertFalse(os.path.exists(filename), msg="The export file should not exist")
 
     @with_temp_dir
@@ -218,8 +218,8 @@ class TestSpecificImport(AiidaTestCase):
 
         from aiida.common.folders import SandboxFolder
         from aiida.tools.importexport.common.archive import extract_tar
-        from aiida.tools.importexport.config import NODES_EXPORT_SUBFOLDER
-        from aiida.tools.importexport.utils import export_shard_uuid
+        from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
+        from aiida.tools.importexport.common.utils import export_shard_uuid
 
         node = orm.CalculationNode().store()
         node.seal()
@@ -259,4 +259,4 @@ class TestSpecificImport(AiidaTestCase):
             import_data(filename_corrupt, silent=True)
 
         self.assertIn("Unable to find the repository folder for Node with UUID={}".format(node_uuid),
-                      exc.exception.__repr__())
+                      str(exc.exception))

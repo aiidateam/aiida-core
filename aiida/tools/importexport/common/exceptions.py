@@ -18,7 +18,7 @@ from __future__ import print_function
 
 from aiida.common.exceptions import AiidaException
 
-__all__ = ('ExportImportException', 'AiidaExportError', 'AiidaImportError', 'CorruptArchive',
+__all__ = ('ExportImportException', 'ArchiveExportError', 'ArchiveImportError', 'CorruptArchive',
            'IncompatibleArchiveVersionError', 'ExportValidationError', 'ImportUniquenessError', 'ImportValidationError',
            'ArchiveMigrationError', 'MigrationValidationError', 'DanglingLinkError')
 
@@ -27,11 +27,11 @@ class ExportImportException(AiidaException):
     """Base class for all AiiDA export/import module exceptions."""
 
 
-class AiidaExportError(ExportImportException):
+class ArchiveExportError(ExportImportException):
     """Base class for all AiiDA export exceptions."""
 
 
-class AiidaImportError(ExportImportException):
+class ArchiveImportError(ExportImportException):
     """Base class for all AiiDA import exceptions."""
 
 
@@ -43,18 +43,18 @@ class IncompatibleArchiveVersionError(ExportImportException):
     """Raised when trying to import an export archive with an incompatible schema version."""
 
 
-class ExportValidationError(AiidaExportError):
+class ExportValidationError(ArchiveExportError):
     """Raised when validation fails during export, e.g. for non-sealed ``ProcessNode`` s."""
 
 
-class ImportUniquenessError(AiidaImportError):
+class ImportUniquenessError(ArchiveImportError):
     """Raised when the user tries to violate a uniqueness constraint.
 
-    Similar to `~aiida.common.exceptions.UniquenessError`.
+    Similar to :py:class:`~aiida.common.exceptions.UniquenessError`.
     """
 
 
-class ImportValidationError(AiidaImportError):
+class ImportValidationError(ArchiveImportError):
     """Raised when validation fails during import, e.g. for parameter types and values."""
 
 

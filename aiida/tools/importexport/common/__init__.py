@@ -13,7 +13,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from .exceptions import *
 from .archive import *
+from .config import *
+from .exceptions import *
 
-__all__ = (exceptions.__all__ + archive.__all__)
+__all__ = (archive.__all__ + config.__all__ + exceptions.__all__)

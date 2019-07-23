@@ -162,6 +162,60 @@ def show(nodes, print_groups):
                     echo.echo(gr_specs)
 
 
+def echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=True):
+    """Show the attributes or extras of one or more nodes."""
+    all_nodes = []
+    for node in nodes:
+        if identifier == 'pk':
+            id_name = 'PK'
+            id_value = node.pk
+        else:
+            id_name = 'UUID'
+            id_value = node.uuid
+
+        if use_attrs:
+            node_dict = node.attributes
+            dict_name = 'attributes'
+        else:
+            node_dict = node.extras
+            dict_name = 'extras'
+
+        if keys is not None:
+            node_dict = {k: v for k, v in node_dict.items() if k in keys}
+
+        if raw:
+            all_nodes.append({id_name: id_value, dict_name: node_dict})
+        else:
+            echo.echo('{}: {}'.format(id_name, id_value), bold=True)
+            echo.echo_dictionary(node_dict, fmt=fmt)
+    if raw:
+        echo.echo_dictionary(all_nodes, fmt=fmt)
+
+
+@verdi_node.command('attributes')
+@arguments.NODES()
+@options.DICT_KEYS()
+@options.DICT_FORMAT()
+@options.IDENTIFIER()
+@options.RAW(help='Print the results as a single dictionary.')
+@with_dbenv()
+def attributes(nodes, keys, fmt, identifier, raw):
+    """Show the attributes of one or more nodes."""
+    echo_node_dict(nodes, keys, fmt, identifier, raw)
+
+
+@verdi_node.command('extras')
+@arguments.NODES()
+@options.DICT_KEYS()
+@options.DICT_FORMAT()
+@options.IDENTIFIER()
+@options.RAW(help='Print the results as a single dictionary.')
+@with_dbenv()
+def extras(nodes, keys, fmt, identifier, raw):
+    """Show the extras of one or more nodes."""
+    echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=False)
+
+
 @verdi_node.command()
 @arguments.NODES()
 @click.option('-d', '--depth', 'depth', default=1, help="Show children of nodes up to given depth")

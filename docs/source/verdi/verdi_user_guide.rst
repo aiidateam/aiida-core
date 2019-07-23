@@ -543,7 +543,7 @@ Below is a list with all available subcommands.
       label        View or set the labels of one or more nodes.
       repo
       show         Show generic information on node(s).
-      tree         Show trees of nodes.
+      tree         Show tree of nodes.
 
 
 .. _verdi_plugin:

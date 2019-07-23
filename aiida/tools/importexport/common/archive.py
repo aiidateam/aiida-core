@@ -55,7 +55,7 @@ class Archive:
 
     def __exit__(self, exc_type, exc_value, traceback):
         """Clean the sandbox folder if it was instatiated."""
-        if self.folder:
+        if self.folder and isinstance(self.folder, SandboxFolder):
             self.folder.erase()
 
     @decorator
@@ -78,7 +78,7 @@ class Archive:
     def unpack(self):
         """Unpack the archive and store the contents in a sandbox."""
         if os.path.isdir(self.filepath):
-            extract_tree(self.filepath, self.folder)
+            self._folder = extract_tree(self.filepath, self.folder)
         elif tarfile.is_tarfile(self.filepath):
             extract_tar(self.filepath, self.folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
         elif zipfile.is_zipfile(self.filepath):
@@ -286,7 +286,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
     :param infile: file path
     :type infile: str
 
-    :param folder: a temporary fodler used to extract the file tree
+    :param folder: a temporary folder used to extract the file tree
     :type folder: :py:class:`~aiida.common.folders.SandboxFolder`
 
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
@@ -349,7 +349,7 @@ def extract_tree(infile, folder):
     """Prepare to import nodes from plain file system tree by copying in the given sandbox folder.
 
     .. note:: the contents of the unpacked archive directory are copied into the sandbox folder, because the files will
-        anyway haven to be copied to the repository at some point. By copying the contents of the source directory now
+        anyway hav to be copied to the repository at some point. By copying the contents of the source directory now
         and continuing operation only on the sandbox folder, we do not risk to modify the source files accidentally.
         During import then, the node files from the sandbox can be moved to the repository, so they won't have to be
         copied again in any case.
@@ -360,4 +360,12 @@ def extract_tree(infile, folder):
     :param folder: a temporary folder to which the archive contents are copied
     :type folder: :py:class:`~aiida.common.folders.SandboxFolder`
     """
+    json_files = {'metadata.json', 'data.json'}
+
+    # Make sure necessary JSON files exist
+    for filename in json_files:
+        if not os.path.exists(os.path.join(infile, filename)):
+            raise CorruptArchive('required file `{}` is not included'.format(filename))
+
     folder.replace_with_folder(infile, move=False, overwrite=True)
+    return folder

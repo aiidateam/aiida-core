@@ -120,7 +120,7 @@ def import_data_dj(
     # The sandbox has to remain open until the end
     with SandboxFolder() as folder:
         if os.path.isdir(in_path):
-            extract_tree(in_path, folder)
+            folder = extract_tree(in_path)
         else:
             if tarfile.is_tarfile(in_path):
                 extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
@@ -392,8 +392,13 @@ def import_data_dj(
                             )
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing previous folders, and move the files
-                        # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
-                        destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
+                        # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder
+                        # - for extract_tar and extract_zip).
+                        # If extract_tree, do not move, i.e. do not destroy the source.
+                        if issubclass(subfolder.__class__, SandboxFolder):
+                            destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
+                        else:
+                            destdir.replace_with_folder(subfolder.abspath, move=False, overwrite=True)
 
                         # For DbNodes, we also have to store its attributes
                         if not silent:

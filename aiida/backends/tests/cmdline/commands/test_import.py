@@ -67,6 +67,28 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertEqual(result.exit_code, 0, result.output)
 
+    def test_import_folder(self):
+        """Test import for archive folder from disk"""
+        import os
+
+        from aiida.common.folders import SandboxFolder
+        from aiida.tools.importexport.common.archive import extract_zip
+
+        archive = get_archive_file(self.newest_archive, filepath=self.archive_path)
+
+        with SandboxFolder() as temp_dir:
+            extract_zip(archive, temp_dir, silent=True)
+
+            # Make sure the JSON files and the nodes subfolder was correctly extracted,
+            # then try to import it by passing the extracted folder to `verdi import`.
+            for name in {'metadata.json', 'data.json', 'nodes'}:
+                self.assertTrue(os.path.exists(os.path.join(temp_dir.abspath, name)))
+
+            result = self.cli_runner.invoke(cmd_import.cmd_import, [temp_dir.abspath])
+
+            self.assertIsNone(result.exception, msg=result.output)
+            self.assertEqual(result.exit_code, 0, msg=result.output)
+
     def test_import_to_group(self):
         """
         Test import to existing Group and that Nodes are added correctly for multiple imports of the same,

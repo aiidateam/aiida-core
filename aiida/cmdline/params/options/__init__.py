@@ -395,7 +395,7 @@ CONFIG_FILE = ConfigFileOption(
     '--config', help='Load option values from configuration file in yaml format.')
 
 IDENTIFIER = OverridableOption(
-    '-id', '--identifier', 'identifier',
+    '-i', '--identifier', 'identifier',
     help='The type of identifier used for specifying each node.',
     default='pk',
     type=click.Choice(['pk', 'uuid']))

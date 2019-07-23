@@ -15,10 +15,9 @@ from __future__ import absolute_import
 from enum import IntEnum
 from collections import OrderedDict
 import sys
+import yaml
 
 import click
-
-from aiida.orm.utils.serialize import serialize
 
 __all__ = ('echo', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
 
@@ -181,7 +180,8 @@ def _format_dictionary_json_date(dictionary):
     return json.dumps(dictionary, indent=4, sort_keys=True, default=default_jsondump)
 
 
-VALID_DICT_FORMATS_MAPPING = OrderedDict((('json+date', _format_dictionary_json_date), ('yaml', serialize)))
+VALID_DICT_FORMATS_MAPPING = OrderedDict((('json+date', _format_dictionary_json_date), ('yaml', yaml.dump),
+                                          ('yaml_expanded', lambda d: yaml.dump(d, default_flow_style=False))))
 
 
 def echo_dictionary(dictionary, fmt='json+date'):
@@ -189,7 +189,7 @@ def echo_dictionary(dictionary, fmt='json+date'):
     Print the given dictionary to stdout in the given format
 
     :param dictionary: the dictionary
-    :param fmt: the format to use for printing, valid options: ['json+data']
+    :param fmt: the format to use for printing
     """
     try:
         format_function = VALID_DICT_FORMATS_MAPPING[fmt]

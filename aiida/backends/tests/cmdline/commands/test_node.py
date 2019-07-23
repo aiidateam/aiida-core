@@ -23,12 +23,12 @@ def get_result_lines(result):
     return [e for e in result.output.split('\n') if e]
 
 
-class TestVerdiCalculation(AiidaTestCase):
+class TestVerdiNode(AiidaTestCase):
     """Tests for `verdi node`."""
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiCalculation, cls).setUpClass(*args, **kwargs)
+        super(TestVerdiNode, cls).setUpClass(*args, **kwargs)
 
         node = orm.Data()
 
@@ -90,7 +90,7 @@ class TestVerdiCalculation(AiidaTestCase):
                 result = self.cli_runner.invoke(cmd_node.attributes, options)
                 self.assertIsNone(result.exception, result.output)
 
-        for flag in ['-id', '--identifier']:
+        for flag in ['-i', '--identifier']:
             for fmt in ['pk', 'uuid']:
                 options = [flag, fmt, str(self.node.uuid)]
                 result = self.cli_runner.invoke(cmd_node.attributes, options)
@@ -121,12 +121,12 @@ class TestVerdiCalculation(AiidaTestCase):
             self.assertIsNone(result.exception, result.output)
 
         for flag in ['-f', '--format']:
-            for fmt in ['json+date', 'yaml']:
+            for fmt in ['json+date', 'yaml', 'yaml_expanded']:
                 options = [flag, fmt, str(self.node.uuid)]
                 result = self.cli_runner.invoke(cmd_node.extras, options)
                 self.assertIsNone(result.exception, result.output)
 
-        for flag in ['-id', '--identifier']:
+        for flag in ['-i', '--identifier']:
             for fmt in ['pk', 'uuid']:
                 options = [flag, fmt, str(self.node.uuid)]
                 result = self.cli_runner.invoke(cmd_node.extras, options)

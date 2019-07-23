@@ -85,7 +85,7 @@ class TestVerdiNode(AiidaTestCase):
             self.assertIsNone(result.exception, result.output)
 
         for flag in ['-f', '--format']:
-            for fmt in ['json+date', 'yaml']:
+            for fmt in ['json+date', 'yaml', 'yaml_expanded']:
                 options = [flag, fmt, str(self.node.uuid)]
                 result = self.cli_runner.invoke(cmd_node.attributes, options)
                 self.assertIsNone(result.exception, result.output)

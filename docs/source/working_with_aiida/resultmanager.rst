@@ -51,12 +51,12 @@ Once you know which keys have been parsed, you can access the parsed
 value simply as an attribute of the ``res`` :class:`~aiida.orm.utils.calcjob.CalcJobResultManager`. For instance, to get the final total energy, you can use
 ::
 
-    print calc.res.energy
+    print(calc.res.energy)
 
 that will print the total energy in units of eV, as also stated in the ``energy_units`` key
 ::
 
-    print calc.res.energy_units
+    print(calc.res.energy_units)
 
 Similarly, you can get any other parsed value, for any code that
 provides a parser.
@@ -72,7 +72,7 @@ provides a parser.
 .. _db_input_output:
 
 Calculations and workflows inputs and outputs
-=============================================
+++++++++++++++++++++++++++++++++++++++++++++++
 
 In the following, we will show the methods to access the input and output nodes of a given calculation or workflow.
 

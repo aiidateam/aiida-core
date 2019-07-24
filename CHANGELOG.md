@@ -1,4 +1,4 @@
-## v0.12.3
+## v0.12.4
 ### Improvements
 - Added new endpoint in rest api to get list of distinct node types [[2745]](https://github.com/aiidateam/aiida-core/pull/2745)
 - Travis: port the deploy stage from the development branch [[2816]](https://github.com/aiidateam/aiida-core/pull/2816)

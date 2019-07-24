@@ -5,8 +5,8 @@ REST API for AiiDA
 ===================
 
 AiiDA provides a
-`RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer/>`_
-`API <https://en.wikipedia.org/wiki/Application_programming_interface/>`_
+`RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_
+`API <https://en.wikipedia.org/wiki/Application_programming_interface>`_
 that provides access to the AiiDA objects stored in the database.
 
 The AiiDA REST API is implemented using the ``Flask RESTFul`` framework
@@ -25,7 +25,7 @@ To start the REST server open a terminal and type
 
     verdi restapi
 
-This command will hook up a REST api with the default parameters, namely on port ``5000`` of ``localhost``, connecting
+This command will hook up a REST API with the default parameters, namely on port ``5000`` of ``localhost``, connecting
 to the default AiiDA profile and assuming the default folder for the REST configuration files, namely ``common``.
 
 For an overview of options accepted by ``verdi restapi`` you can type
@@ -37,7 +37,7 @@ For an overview of options accepted by ``verdi restapi`` you can type
 
 Like all ``verdi`` commands, the AiiDA profile can be changed by putting ``-p PROFILE`` right after ``verdi``.
 
-The base url for your REST API is::
+The base URL for your REST API is::
 
         http://localhost:5000/api/v3
 
@@ -46,20 +46,20 @@ Simply type this URL in your browser or use command-line tools such as ``curl`` 
 
 .. note:: Note that the ``v2`` version of the API was used for versions of AiiDA previous to 1.0.0b3.
 
-For the full list of configuration options, see ``aiida/restapi/config.py``.
+For the full list of configuration options, see the file ``aiida/restapi/common/config.py``.
 
 
-General form of the urls
+General form of the URLs
 ++++++++++++++++++++++++
 
-A generic url to send requests to the REST API is formed by:
+A generic URL to send requests to the REST API is formed by:
 
-    1. the base url. It specifies the host and the version of the API. Example::
+    1. The base URL. It specifies the host and the version of the API. Example::
 
         http://localhost:5000/api/v3
 
-    2. the path. It defines the kind of resource requested by the client and the type of query.
-    3. the query string (not mandatory). It can be used for any further specification of the request, e.g. to introduce
+    2. The path. It defines the kind of resource requested by the client and the type of query.
+    3. The query string (not mandatory). It can be used for any further specification of the request, e.g. to introduce
        query filters, to give instructions for ordering, to set how results have to be paginated, etc.
 
 The query string is introduced by the question mark character ``?``. Here are some examples::
@@ -73,7 +73,7 @@ The trailing slash at the end of the path is not mandatory.
 How to set the number of results
 --------------------------------
 
-Before exploring in details the functionalities of the API it is important to know that the AiiDA RESTAPI provides two
+Before exploring in details the functionalities of the API it is important to know that the AiiDA REST API provides two
 different ways to limit the number of results returned by the server:
 using pagination, or specifying explicitly *limit* and *offset*.
 
@@ -84,7 +84,7 @@ The complete set of results is divided in *pages* containing by default 20 resul
 Individual pages are accessed by appending ``/page/(PAGE)`` to the end of the path, where ``(PAGE)`` has to be replaced
 by the number of the required page.
 The number of results contained in each page can be altered by specifying the ``perpage=(PERPAGE)`` field in the
-query string. However, ``(PERPAGE)`` values larger than 400 are not allowed. Examples::
+query string. Note that ``(PERPAGE)`` values larger than 400 are not allowed. Examples::
 
     http://localhost:5000/api/v3/computers/page/1?
     http://localhost:5000/api/v3/computers/page/1?perpage=5
@@ -93,9 +93,9 @@ query string. However, ``(PERPAGE)`` values larger than 400 are not allowed. Exa
 If no page number is specified, as in the last example, the system redirects the request to page 1.
 When pagination is used the header of the response contains two more non-empty fields:
 
-    - ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e.the sum of the results
-      of all pages)
-    - ``Links``: links to the first, previous, next, and last page. Suppose you send a request whose results would fill
+    - ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e. the sum of the results
+      of all pages
+    - ``Links``: links to the first, previous, next, and last page. Suppose that you send a request whose results  fill
       8 pages. Then the value of the ``Links`` field would look like::
 
             <\http://localhost:5000/.../page/1?... >; rel=first,
@@ -245,8 +245,7 @@ All of them must be followed by the operator ``=``. Here is the complete list:
 
         ::
 
-            http://localhost:5000/api/v3/codes/4fb10ef1-1a/content/attributes?
-                                        alist=append_text,prepend_text
+            http://localhost:5000/api/v3/codes/4fb10ef1-1a/content/attributes?alist=append_text,prepend_text
 
 
     :nalist: (incompatible with ``alist``) This key is used to specify which attributes of a specific object should not
@@ -433,8 +432,7 @@ Examples:
 
         ::
 
-            http://localhost:5000/api/v3/nodes/a67fba41-8a/io/outputs/?
-                              node_type="data.folder.FolderData."
+            http://localhost:5000/api/v3/nodes/a67fba41-8a/io/outputs/?node_type="data.folder.FolderData."
 
     would first search for the outputs of the node with *uuid* starting with "a67fba41-8a" and then select only those
     nodes of type *FolderData*.
@@ -449,7 +447,7 @@ The HTTP response of the REST API consists in a JSON object, a header, and a sta
     1. 200 for successful requests.
     2. 400 for bad requests. In this case, the JSON object contains only an error message describing the problem.
     3. 500 for a generic internal server error. The JSON object contains only a generic error message.
-    4. 404 for invalid url.
+    4. 404 for invalid URL.
        Differently from the 400 status, it is returned when the REST API does not succeed in directing the request
        to a specific resource.
        This typically happens when the path does not match any of the supported format. No JSON is returned.
@@ -482,7 +480,7 @@ We assume you have a working installation of Apache that includes ``mod_wsgi``.
 The goal of the example is to hookup the APIs ``django`` and ``sqlalchemy`` pointing to two AiiDA profiles, called for
 simplicity ``django`` and ``sqlalchemy``.
 
-All the relevant files are enclosed under the path ``<aiida.source.code.path>/docs/wsgi/``.
+All the relevant files are enclosed under the path ``/docs/wsgi/`` starting from the AiiDA source code path.
 In each of the folders ``app1/`` and ``app2/``, there is a file named ``rest.wsgi`` containing a python script that
 instantiates and configures a python web app called ``application``, according to the rules of ``mod_wsgi``.
 For how the script is written, the object ``application`` is configured through the file ``config.py`` contained in the
@@ -545,7 +543,7 @@ the Apache server. In Ubuntu, this is usually done with the commands:
 We believe the two basic architectures we have just explained can be successfully applied in many different deployment
 scenarios.
 Nevertheless, we suggest users who need finer tuning of the deployment setup to look into to the official documentation
-of `Apache <https://httpd.apache.org/>`_ and, more importantly, `WSGI <modwsgi.readthedocs.io/>`_.
+of `Apache <https://httpd.apache.org/>`_ and, more importantly, `WSGI <wsgi.readthedocs.io/>`__.
 
 The URLs of the requests handled by Apache must start with one of the paths specified in the directives
 ``WSGIScriptAlias``.
@@ -571,7 +569,7 @@ Computers
 
 1. Get a list of the *Computers* objects.
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/computers?limit=3&offset=2&orderby=id
 
@@ -627,7 +625,7 @@ Computers
 
 2. Get details of a single *Computer* object:
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/computers/5d490d77-638d
 
@@ -665,7 +663,7 @@ Nodes
 
 1.  Get a list of *Node* objects
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/nodes?limit=2&offset=8&orderby=-id
 
@@ -716,7 +714,7 @@ Nodes
 
 2. Get the details of a single *Node* object:
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/nodes/e30da7cc
 
@@ -753,7 +751,7 @@ Nodes
 
 3. Get the list of inputs of a specific node.
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/nodes/de83b1/io/inputs?limit=2
 
@@ -803,7 +801,7 @@ Nodes
 
 4. Filter the inputs/outputs of a node by their node type.
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/nodes/de83b1/io/inputs?node_type="data.array.kpoints.KpointsData."
 
@@ -839,7 +837,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/nodes/de83b1/io/outputs?node_type="data.remote.RemoteData."
 
@@ -878,7 +876,7 @@ Nodes
 
 5. Getting the list of the attributes/extras of a specific node
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/nodes/ffe11/content/attributes
 
@@ -908,7 +906,7 @@ Nodes
 
 
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/nodes/ffe11/content/extras
 
@@ -938,7 +936,7 @@ Nodes
 
 6. Getting a user-defined list of attributes/extras of a specific node
 
-    REST url::
+    REST URL::
 
          http://localhost:5000/api/v3/codes/ffe11/content/attributes?alist=append_text,is_local
 
@@ -965,7 +963,7 @@ Nodes
 
 
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/codes/ffe11/content/extras?elist=trialBool,trialInt
 
@@ -993,7 +991,7 @@ Nodes
 7. Getting all the attributes/extras of a specific node except a user-defined list
 
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/codes/ffe11/content/attributes?nalist=append_text,is_local
 
@@ -1020,7 +1018,7 @@ Nodes
         }
 
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/codes/ffe11/content/extras?nelist=trialBool,trialInt
 
@@ -1046,7 +1044,7 @@ Nodes
         }
 
 
-.. note:: The same REST urls supported for the resource ``nodes`` are also available with the derived resources, namely,
+.. note:: The same REST URLs supported for the resource ``nodes`` are also available with the derived resources, namely,
     ``calculations`` and ``data``, just changing the resource field in the path.
 
 
@@ -1055,7 +1053,7 @@ Users
 
 1. Getting a list of the users
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/users/
 
@@ -1092,7 +1090,7 @@ Users
 
 2. Getting a list of users whose first name starts with a given string
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/users/?first_name=ilike="aii%"
 
@@ -1127,7 +1125,7 @@ Groups
 
 1. Getting a list of groups
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/groups/?limit=10&orderby=-user_id
 
@@ -1174,7 +1172,7 @@ Groups
 
 2. Getting the details of a specific group
 
-    REST url::
+    REST URL::
 
         http://localhost:5000/api/v3/groups/a6e5b
 

@@ -1,5 +1,20 @@
 ## v0.12.3
 ### Improvements
+- Added new endpoint in rest api to get list of distinct node types [[2745]](https://github.com/aiidateam/aiida-core/pull/2745)
+- Travis: port the deploy stage from the development branch [[2816]](https://github.com/aiidateam/aiida-core/pull/2816)
+
+### Minor bug fixes
+- Corrected the graph export set expansion rules [[2632]](https://github.com/aiidateam/aiida-core/pull/2632)
+
+### Miscellaneous
+- Backport streamlined quick install instructions from `provenance_redesign` [[#2555]](	https://github.com/aiidateam/aiida_core/pull/2555)
+- Remove useless chainmap dependency [[2799]](https://github.com/aiidateam/aiida-core/pull/2799)
+- Add aiida-core version to docs home page [[3058]](https://github.com/aiidateam/aiida-core/pull/3058)
+- Docs: add note on increasing work_mem [[2952]](https://github.com/aiidateam/aiida-core/pull/2952)
+
+
+## v0.12.3
+### Improvements
 - Fast addition of nodes to groups with `skip_orm=True` [[#2471]](https://github.com/aiidateam/aiida_core/pull/2471)
 - Add `environment.yml` for installing dependencies using conda; release of `aiida-core` on conda-forge channel [[#2081]](https://github.com/aiidateam/aiida_core/pull/2081)
 - REST API: io tree response now includes link type and node label [[#2033]](https://github.com/aiidateam/aiida_core/pull/2033) [[#2511]](https://github.com/aiidateam/aiida_core/pull/2511)

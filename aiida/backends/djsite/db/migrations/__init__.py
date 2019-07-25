@@ -23,7 +23,7 @@ class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0041_seal_unsealed_processes'
+LATEST_MIGRATION = '0042_prepare_schema_reset'
 
 
 def _update_schema_version(version, apps, schema_editor):

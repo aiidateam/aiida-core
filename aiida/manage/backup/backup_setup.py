@@ -20,10 +20,9 @@ import shutil
 import stat
 import sys
 
-from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common import json
 from aiida.manage import configuration
-from aiida.manage.backup.backup_base import AbstractBackup, BackupError
+from aiida.manage.backup.backup_base import AbstractBackup
 from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
 from aiida.manage.backup import backup_utils as utils
@@ -146,7 +145,6 @@ class BackupSetup(object):
    date. E.g. ``"end_date_of_backup": null`` or ``"end_date_of_backup":
    "2015-07-20 11:13:08.145804+02:00"``
 
-
  * ``days_to_backup``: If set, you specify how many days you will backup from
    the starting date of your backup. If it set to ``null`` and also
    ``end_date_of_backup`` is set to ``null``, then the end date of the backup
@@ -221,14 +219,6 @@ class BackupSetup(object):
                 'to {}\n'.format(os.path.join(conf_backup_folder_abs, self._backup_info_filename))
             )
 
-        # The contents of the startup script
-        if configuration.PROFILE.database_backend == BACKEND_DJANGO:
-            backup_import = ('from aiida.manage.backup.backup_django import Backup')
-        elif configuration.PROFILE.database_backend == BACKEND_SQLA:
-            backup_import = ('from aiida.manage.backup.backup_sqlalchemy import Backup')
-        else:
-            raise BackupError('Following backend is unknown: {}'.format(configuration.PROFILE.database_backend))
-
         script_content = \
 u"""#!/usr/bin/env python
 import logging
@@ -236,7 +226,7 @@ from aiida.manage.configuration import load_profile
 
 load_profile(profile='{}')
 
-{}
+from aiida.manage.backup.backup_general import Backup
 
 # Create the backup instance
 backup_inst = Backup(backup_info_filepath="{}", additional_back_time_mins = 2)
@@ -246,7 +236,7 @@ backup_inst._logger.setLevel(logging.INFO)
 
 # Start the backup
 backup_inst.run()
-""".format(configuration.PROFILE.name, backup_import, final_conf_filepath)
+""".format(configuration.PROFILE.name, final_conf_filepath)
 
         # Script full path
         script_path = os.path.join(conf_backup_folder_abs, self._script_filename)

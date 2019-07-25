@@ -78,8 +78,6 @@
         aiida/backends/sqlalchemy/utils.py|
         aiida/backends/testbase.py|
         aiida/backends/testimplbase.py|
-        aiida/backends/tests/test_backup_script.py|
-        aiida/backends/tests/test_backup_setup_script.py|
         aiida/backends/tests/test_base_dataclasses.py|
         aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/commands/test_comment.py|
@@ -113,7 +111,6 @@
         aiida/common/datastructures.py|
         aiida/engine/daemon/execmanager.py|
         aiida/engine/processes/calcjobs/tasks.py|
-        aiida/manage/backup/backup_base.py|
         aiida/orm/autogroup.py|
         aiida/orm/querybuilder.py|
         aiida/orm/nodes/data/array/bands.py|

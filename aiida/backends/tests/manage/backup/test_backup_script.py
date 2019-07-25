@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=protected-access,invalid-name
+"""Tests for the Backup classes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -18,15 +20,14 @@ import tempfile
 
 from dateutil.parser import parse
 
-from aiida.backends.utils import BACKEND_SQLA, BACKEND_DJANGO
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import utils, json
-from aiida.manage import configuration
-from aiida.manage.backup import backup_setup
-from aiida.manage.backup import backup_utils
+from aiida.manage.backup import backup_setup, backup_utils
+from aiida.manage.backup.backup_general import Backup
 
 
 class TestBackupScriptUnit(AiidaTestCase):
+    """Unit tests of the Backup classes."""
 
     _json_test_input_1 = '{"backup_length_threshold": 2, "periodicity": 2,' + \
         ' "oldest_object_backedup": "2014-07-18 13:54:53.688484+00:00", ' + \
@@ -62,15 +63,6 @@ class TestBackupScriptUnit(AiidaTestCase):
 
     def setUp(self):
         super(TestBackupScriptUnit, self).setUp()
-        configuration.load_profile()
-
-        if configuration.PROFILE.database_backend == BACKEND_SQLA:
-            from aiida.manage.backup.backup_sqlalchemy import Backup
-        elif configuration.PROFILE.database_backend == BACKEND_DJANGO:
-            from aiida.manage.backup.backup_django import Backup
-        else:
-            self.skipTest('Unknown backend')
-
         self._backup_setup_inst = Backup('', 2)
 
     def tearDown(self):
@@ -87,25 +79,22 @@ class TestBackupScriptUnit(AiidaTestCase):
         self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 
         self.assertEqual(
-            self._backup_setup_inst._oldest_object_bk,
-            parse('2014-07-18 13:54:53.688484+00:00'),
-            'Last _backup_setup_inst start date is not parsed correctly')
+            self._backup_setup_inst._oldest_object_bk, parse('2014-07-18 13:54:53.688484+00:00'),
+            'Last _backup_setup_inst start date is not parsed correctly'
+        )
 
         # The destination directory of the _backup_setup_inst
         self.assertEqual(
-            self._backup_setup_inst._backup_dir,
-            '/scratch/aiida_user/backupScriptDest',
-            '_backup_setup_inst destination directory not parsed correctly')
+            self._backup_setup_inst._backup_dir, '/scratch/aiida_user/backupScriptDest',
+            '_backup_setup_inst destination directory not parsed correctly'
+        )
 
         self.assertEqual(
-            self._backup_setup_inst._backup_length_threshold,
-            datetime.timedelta(hours=2),
-            '_backup_length_threshold not parsed correctly')
+            self._backup_setup_inst._backup_length_threshold, datetime.timedelta(hours=2),
+            '_backup_length_threshold not parsed correctly'
+        )
 
-        self.assertEqual(
-            self._backup_setup_inst._periodicity,
-            2,
-            '_periodicity not parsed correctly')
+        self.assertEqual(self._backup_setup_inst._periodicity, 2, '_periodicity not parsed correctly')
 
     def test_loading_backup_time_params_from_file_1(self):
         """
@@ -119,19 +108,17 @@ class TestBackupScriptUnit(AiidaTestCase):
         self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 
         self.assertEqual(
-            self._backup_setup_inst._days_to_backup,
-            None,
-            '_days_to_backup should be None/null but it is not')
+            self._backup_setup_inst._days_to_backup, None, '_days_to_backup should be None/null but it is not'
+        )
 
         self.assertEqual(
-            self._backup_setup_inst._end_date_of_backup,
-            None,
-            '_end_date_of_backup should be None/null but it is not')
+            self._backup_setup_inst._end_date_of_backup, None, '_end_date_of_backup should be None/null but it is not'
+        )
 
         self.assertEqual(
-            self._backup_setup_inst._internal_end_date_of_backup,
-            None,
-            '_internal_end_date_of_backup should be None/null but it is not')
+            self._backup_setup_inst._internal_end_date_of_backup, None,
+            '_internal_end_date_of_backup should be None/null but it is not'
+        )
 
     def test_loading_backup_time_params_from_file_2(self):
         """
@@ -144,20 +131,16 @@ class TestBackupScriptUnit(AiidaTestCase):
         self._backup_setup_inst._ignore_backup_dir_existence_check = True
         self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 
-        self.assertEqual(
-            self._backup_setup_inst._days_to_backup,
-            2,
-            '_days_to_backup should be 2 but it is not')
+        self.assertEqual(self._backup_setup_inst._days_to_backup, 2, '_days_to_backup should be 2 but it is not')
 
         self.assertEqual(
-            self._backup_setup_inst._end_date_of_backup,
-            None,
-            '_end_date_of_backup should be None/null but it is not')
+            self._backup_setup_inst._end_date_of_backup, None, '_end_date_of_backup should be None/null but it is not'
+        )
 
         self.assertEqual(
-            self._backup_setup_inst._internal_end_date_of_backup,
-            parse('2014-07-20 13:54:53.688484+00:00'),
-            '_internal_end_date_of_backup is not the expected one')
+            self._backup_setup_inst._internal_end_date_of_backup, parse('2014-07-20 13:54:53.688484+00:00'),
+            '_internal_end_date_of_backup is not the expected one'
+        )
 
     def test_loading_backup_time_params_from_file_3(self):
         """
@@ -171,19 +154,18 @@ class TestBackupScriptUnit(AiidaTestCase):
         self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 
         self.assertEqual(
-            self._backup_setup_inst._days_to_backup,
-            None,
-            '_days_to_backup should be None/null but it is not')
+            self._backup_setup_inst._days_to_backup, None, '_days_to_backup should be None/null but it is not'
+        )
 
         self.assertEqual(
-            self._backup_setup_inst._end_date_of_backup,
-            parse('2014-07-22 14:54:53.688484+00:00'),
-            '_end_date_of_backup should be None/null but it is not')
+            self._backup_setup_inst._end_date_of_backup, parse('2014-07-22 14:54:53.688484+00:00'),
+            '_end_date_of_backup should be None/null but it is not'
+        )
 
         self.assertEqual(
-            self._backup_setup_inst._internal_end_date_of_backup,
-            parse('2014-07-22 14:54:53.688484+00:00'),
-            '_internal_end_date_of_backup is not the expected one')
+            self._backup_setup_inst._internal_end_date_of_backup, parse('2014-07-22 14:54:53.688484+00:00'),
+            '_internal_end_date_of_backup is not the expected one'
+        )
 
     def test_loading_backup_time_params_from_file_4(self):
         """
@@ -203,17 +185,17 @@ class TestBackupScriptUnit(AiidaTestCase):
             self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 
     def check_full_deserialization_serialization(self, input_string, backup_inst):
+        """Utility function to compare input string with content from Backup classes."""
         input_variables = json.loads(input_string)
         backup_inst._ignore_backup_dir_existence_check = True
         backup_inst._read_backup_info_from_dict(input_variables)
         target_variables = backup_inst._dictionarize_backup_info()
 
-        self.assertEqual(input_variables, target_variables,
-                      'The test string {} did not succeed'.format(
-                          input_string) +
-                      ' the serialization deserialization test.\n' +
-                      'Input variables: {}\n'.format(input_variables) +
-                      'Output variables: {}\n'.format(target_variables))
+        self.assertEqual(
+            input_variables, target_variables,
+            'The test string {} did not succeed'.format(input_string) + ' the serialization deserialization test.\n' +
+            'Input variables: {}\n'.format(input_variables) + 'Output variables: {}\n'.format(target_variables)
+        )
 
     def test_full_deserialization_serialization_1(self):
         """
@@ -268,28 +250,30 @@ class TestBackupScriptUnit(AiidaTestCase):
 
         self.assertIsNotNone(
             self._backup_setup_inst._oldest_object_bk.tzinfo,
-            'Timezone info should not be none (timestamp: {}).'
-            .format(self._backup_setup_inst._oldest_object_bk))
+            'Timezone info should not be none (timestamp: {}).'.format(self._backup_setup_inst._oldest_object_bk)
+        )
 
         self.assertIsNotNone(
             self._backup_setup_inst._end_date_of_backup.tzinfo,
-            'Timezone info should not be none (timestamp: {}).'
-            .format(self._backup_setup_inst._end_date_of_backup))
+            'Timezone info should not be none (timestamp: {}).'.format(self._backup_setup_inst._end_date_of_backup)
+        )
 
         self.assertIsNotNone(
             self._backup_setup_inst._internal_end_date_of_backup.tzinfo,
-            'Timezone info should not be none (timestamp: {}).'
-            .format(self._backup_setup_inst._internal_end_date_of_backup))
+            'Timezone info should not be none (timestamp: {}).'.format(
+                self._backup_setup_inst._internal_end_date_of_backup
+            )
+        )
 
         # The destination directory of the _backup_setup_inst
         self.assertEqual(
-            self._backup_setup_inst._backup_dir,
-            '/scratch/aiida_user/backup',
-            '_backup_setup_inst destination directory is '
-            'not normalized as expected.')
+            self._backup_setup_inst._backup_dir, '/scratch/aiida_user/backup',
+            '_backup_setup_inst destination directory is not normalized as expected.'
+        )
 
 
 class TestBackupScriptIntegration(AiidaTestCase):
+    """Integration tests for the Backup classes."""
 
     _aiida_rel_path = '.aiida'
     _backup_rel_path = 'backup'
@@ -298,6 +282,7 @@ class TestBackupScriptIntegration(AiidaTestCase):
     _bs_instance = backup_setup.BackupSetup()
 
     def test_integration(self):
+        """Test integration"""
         from aiida.common.utils import Capturing
 
         # Fill in the repository with data
@@ -326,16 +311,17 @@ class TestBackupScriptIntegration(AiidaTestCase):
 
             dirpath_repository = get_profile().repository_path
             source_dir = os.path.join(dirpath_repository, self._repo_rel_path)
-            dest_dir = os.path.join(backup_full_path,
-                                    self._bs_instance._file_backup_folder_rel,
-                                    self._repo_rel_path)
+            dest_dir = os.path.join(backup_full_path, self._bs_instance._file_backup_folder_rel, self._repo_rel_path)
             res, msg = are_dir_trees_equal(source_dir, dest_dir)
-            self.assertTrue(res, 'The backed-up repository has differences to the original one. ' + str(msg)
-                             + '. If the test fails, report it in issue #2134.')
+            self.assertTrue(
+                res, 'The backed-up repository has differences to the original one. ' + str(msg) +
+                '. If the test fails, report it in issue #2134.'
+            )
         finally:
             shutil.rmtree(temp_folder, ignore_errors=True)
 
     def fill_repo(self):
+        """Utility function to create repository nodes"""
         from aiida.orm import CalcJobNode, Data, Dict
 
         extra_name = self.__class__.__name__ + '/test_with_subclasses'
@@ -361,26 +347,28 @@ class TestBackupScriptIntegration(AiidaTestCase):
         a7.store()
 
     def create_backup_scripts(self, tmp_folder):
-        backup_full_path = '{}/{}/{}/'.format(tmp_folder, self._aiida_rel_path,
-                                              self._backup_rel_path)
+        """Utility function to create backup scripts"""
+        backup_full_path = '{}/{}/{}/'.format(tmp_folder, self._aiida_rel_path, self._backup_rel_path)
         # The predefined answers for the setup script
         ac = utils.ArrayCounter()
-        answers = [backup_full_path,   # the backup folder path
-                   '',                  # should the folder be created?
-                   '',                  # destination folder of the backup
-                   '',                  # should the folder be created?
-                   'n',                 # print config explanation?
-                   '',                  # configure the backup conf file now?
-                   '', # start date of backup?
-                   '',                  # is it correct?
-                   '',                  # days to backup?
-                   '',                  # is it correct?
-                   '', # end date of backup
-                   '',                  # is it correct?
-                   '1',                 # periodicity
-                   '',                  # is it correct?
-                   '0',                 # threshold?
-                   '']                  # is it correct?
+        answers = [
+            backup_full_path,  # the backup folder path
+            '',  # should the folder be created?
+            '',  # destination folder of the backup
+            '',  # should the folder be created?
+            'n',  # print config explanation?
+            '',  # configure the backup conf file now?
+            '',  # start date of backup?
+            '',  # is it correct?
+            '',  # days to backup?
+            '',  # is it correct?
+            '',  # end date of backup
+            '',  # is it correct?
+            '1',  # periodicity
+            '',  # is it correct?
+            '0',  # threshold?
+            ''  # is it correct?
+        ]
         backup_utils.input = lambda _: answers[ac.array_counter()]
 
         # Run the setup script

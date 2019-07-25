@@ -35,7 +35,7 @@ CIRCUS_PUBSUB_SOCKET_TEMPLATE = 'circus.p.sock'
 CIRCUS_STATS_SOCKET_TEMPLATE = 'circus.s.sock'
 
 
-class Profile(object):  # pylint: disable=useless-object-inheritance,too-many-public-methods
+class Profile(object):  # pylint: disable=too-many-public-methods
     """Class that models a profile as it is stored in the configuration file of an AiiDA instance."""
 
     RMQ_PREFIX = 'aiida-{uuid}'

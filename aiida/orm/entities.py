@@ -164,7 +164,7 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         return [_[0] for _ in self.query().all()]
 
 
-class Entity(object):  # pylint: disable=useless-object-inheritance
+class Entity(object):
     """An AiiDA entity"""
 
     _objects = None

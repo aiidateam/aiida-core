@@ -47,7 +47,7 @@ class Transport(object):
     Abstract class for a generic transport (ssh, local, ...)
     Contains the set of minimal methods
     """
-    # pylint: disable=too-many-public-methods,useless-object-inheritance,bad-option-value
+    # pylint: disable=too-many-public-methods
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format

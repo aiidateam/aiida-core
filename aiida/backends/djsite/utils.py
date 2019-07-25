@@ -17,7 +17,7 @@ import os
 import django
 
 from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting, validate_schema_generation
-from aiida.common import NotExistent
+from aiida.common import ConfigurationError, NotExistent
 
 SCHEMA_VERSION_DB_KEY = 'db|schemaversion'
 SCHEMA_VERSION_DB_DESCRIPTION = 'The version of the schema used in this database.'
@@ -116,9 +116,6 @@ def unload_dbenv():
     """
 
 
-_aiida_autouser_cache = None  # pylint: disable=invalid-name
-
-
 def migrate_database():
     """Migrate the database to the latest schema version."""
     validate_schema_generation()
@@ -127,9 +124,7 @@ def migrate_database():
 
 
 def check_schema_version(profile_name):
-    """
-    Check if the version stored in the database is the same of the version
-    of the code.
+    """Check if the version stored in the database is the same of the version of the code.
 
     :note: if the DbSetting table does not exist, this function does not
       fail. The reason is to avoid to have problems before running the first
@@ -146,7 +141,6 @@ def check_schema_version(profile_name):
     from django.db import connection
 
     import aiida.backends.djsite.db.models
-    from aiida.common.exceptions import ConfigurationError
 
     # Do not do anything if the table does not exist yet
     if 'db_dbsetting' not in connection.introspection.table_names():
@@ -162,16 +156,44 @@ def check_schema_version(profile_name):
         set_db_schema_version(code_schema_version)
         db_schema_version = get_db_schema_version()
 
+    db_schema_version = validate_schema_generation(code_schema_version, db_schema_version)
+
     if code_schema_version != db_schema_version:
+        kwargs = {
+            'schema_version_database': db_schema_version,
+            'schema_version_code': code_schema_version,
+            'profile_name': profile_name
+        }
         raise ConfigurationError(
-            'Database schema version {} is outdated compared to the code schema version {}\n'
-            'Before you upgrade, make sure all calculations and workflows have finished running.\n'
-            'If this is not the case, revert the code to the previous version and finish them first.\n'
+            'Database schema version {schema_version_database} is outdated compared to the code schema version '
+            '{schema_version_code}\nBefore you upgrade, make sure all calculations and workflows have finished running.'
+            '\nIf this is not the case, revert the code to the previous version and finish them first.\n'
             'To migrate the database to the current version, run the following commands:'
-            '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(
-                db_schema_version, code_schema_version, profile_name, profile_name
-            )
+            '\n  verdi -p {profile_name} daemon stop\n  verdi -p {profile_name} database migrate'.format(**kwargs)
         )
+
+
+def validate_schema_generation(schema_version_code, schema_version_database):
+    """Validate that the current database schema generation."""
+    from distutils.version import StrictVersion
+    from ..schema import get_schema_generation, update_schema_generation, SCHEMA_GENERATION_VALUE, SCHEMA_VERSION_RESET
+
+    schema_generation_current = get_schema_generation()
+    schema_generation_required = StrictVersion(SCHEMA_GENERATION_VALUE)
+    schema_version_reset = SCHEMA_VERSION_RESET
+
+    if schema_generation_current < schema_generation_required and schema_version_database != schema_version_reset:
+        raise ConfigurationError(
+            'Database schema version {} is outdated and belongs to the previous generation.\nTo start using this '
+            'version of `aiida-core`, you have to first install `aiida-core==1.0.0` and perform the migration.\nThen '
+            'you can reinstall this version of `aiida-core` and continue your work.'.format(schema_version_database)
+        )
+
+    if schema_generation_current < schema_generation_required:
+        set_db_schema_version(schema_version_code)
+        update_schema_generation()
+
+    return schema_version_code
 
 
 def set_db_schema_version(version):
@@ -188,16 +210,8 @@ def get_db_schema_version():
     Get the current schema version stored in the DB. Return None if
     it is not stored.
     """
-    from django.db.utils import ProgrammingError
-    from aiida.manage.manager import get_manager
-    backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
-
-    try:
-        result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
-    except ProgrammingError:
-        result = backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'db|schemaversion';""")
-
-    return result[0][0]
+    manager = DjangoSettingsManager()
+    return manager.get(SCHEMA_VERSION_DB_KEY).value
 
 
 def delete_nodes_and_connections_django(pks_to_delete):  # pylint: disable=invalid-name

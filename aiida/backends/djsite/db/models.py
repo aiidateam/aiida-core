@@ -12,18 +12,14 @@ from __future__ import division
 from __future__ import print_function
 
 import contextlib
-import six
-from six.moves import range
 
 from django.contrib.postgres.fields import JSONField
-from django.db import models as m
 from django.db import models as m
 from django.db.models.query import QuerySet
 from django.utils.encoding import python_2_unicode_compatible
 from pytz import UTC
 
 import aiida.backends.djsite.db.migrations as migrations
-from aiida.backends.djsite.settings import AUTH_USER_MODEL
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 
@@ -389,34 +385,31 @@ class DbLog(m.Model):
 
 @contextlib.contextmanager
 def suppress_auto_now(list_of_models_fields):
+    """This context manager disables the auto_now & editable flags for the fields of the given models.
+
+    This is useful when we would like to update the datetime fields of an entry bypassing the automatic set of the date
+    (with the current time). This is very useful when entries are imported and we would like to keep e.g. the
+    modification time that we set during the import and not allow Django to set it to the datetime that corresponds to
+    when the entry was saved. In the end the flags are returned to their original value.
+
+    :param list_of_models_fields: A list of (model, fields) tuples for which the flags will be updated.
+        The model is an object that corresponds to the model objects and fields is a list of strings with the field
+        names. Here we store the original values of the fields of the models that will be updated e.g.::
+
+            _original_model_values = {
+                ModelA: [
+                    fieldA: {
+                        'auto_now': orig_valA1
+                        'editable': orig_valA2
+                    },
+                    fieldB: {
+                        'auto_now': orig_valB1
+                        'editable': orig_valB2
+                    }
+                ]
+                ...
+            }
     """
-    This context manager disables the auto_now & editable flags for the
-    fields of the given models.
-    This is useful when we would like to update the datetime fields of an
-    entry bypassing the automatic set of the date (with the current time).
-    This is very useful when entries are imported and we would like to keep e.g.
-    the modification time that we set during the import and not allow Django
-    to set it to the datetime that corresponds to when the entry was saved.
-    In the end the flags are returned to their original value.
-    :param list_of_models_fields: A list of (model, fields) tuples for
-    which the flags will be updated. The model is an object that corresponds
-    to the model objects and fields is a list of strings with the field names.
-    """
-    # Here we store the original values of the fields of the models that will
-    # be updated
-    # E.g.
-    # _original_model_values = {
-    #   ModelA: [fieldA: {
-    #                       'auto_now': orig_valA1
-    #                       'editable': orig_valA2
-    #            },
-    #            fieldB: {
-    #                       'auto_now': orig_valB1
-    #                       'editable': orig_valB2
-    #            }
-    #    ]
-    #   ...
-    # }
     _original_model_values = dict()
     for model, fields in list_of_models_fields:
         _original_field_values = dict()

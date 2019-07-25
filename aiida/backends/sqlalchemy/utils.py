@@ -93,7 +93,6 @@ class SqlaSettingsManager(SettingsManager):
             raise NotExistent('setting `{}` does not exist'.format(key))
 
 
-
 def flag_modified(instance, key):
     """Wrapper around `sqlalchemy.orm.attributes.flag_modified` to correctly dereference utils.ModelWrapper
 
@@ -137,211 +136,6 @@ def unload_dbenv():
     sa.SCOPED_SESSION_CLASS = None
 
 
-_aiida_autouser_cache = None
-
-
-# XXX the code here isn't different from the one use in Django. We may be able
-# to refactor it in some way
-def install_tc(session):
-    """
-    Install the transitive closure table with SqlAlchemy.
-    """
-    links_table_name = 'db_dblink'
-    links_table_input_field = 'input_id'
-    links_table_output_field = 'output_id'
-    closure_table_name = 'db_dbpath'
-    closure_table_parent_field = 'parent_id'
-    closure_table_child_field = 'child_id'
-
-    session.execute(get_pg_tc(links_table_name, links_table_input_field,
-                              links_table_output_field, closure_table_name,
-                              closure_table_parent_field,
-                              closure_table_child_field))
-
-
-def get_pg_tc(links_table_name,
-              links_table_input_field,
-              links_table_output_field,
-              closure_table_name,
-              closure_table_parent_field,
-              closure_table_child_field):
-    """
-    Return the transitive closure table template
-    """
-    from string import Template
-
-    pg_tc = Template("""
-
-DROP TRIGGER IF EXISTS autoupdate_tc ON $links_table_name;
-DROP FUNCTION IF EXISTS update_tc();
-
-CREATE OR REPLACE FUNCTION update_tc()
-  RETURNS trigger AS
-$$BODY$$
-DECLARE
-
-    new_id INTEGER;
-    old_id INTEGER;
-    num_rows INTEGER;
-
-BEGIN
-
-  IF tg_op = 'INSERT' THEN
-
-    IF EXISTS (
-      SELECT Id FROM $closure_table_name
-      WHERE $closure_table_parent_field = new.$links_table_input_field
-         AND $closure_table_child_field = new.$links_table_output_field
-         AND depth = 0
-         )
-    THEN
-      RETURN null;
-    END IF;
-
-    IF new.$links_table_input_field = new.$links_table_output_field
-    OR EXISTS (
-      SELECT id FROM $closure_table_name
-        WHERE $closure_table_parent_field = new.$links_table_output_field
-        AND $closure_table_child_field = new.$links_table_input_field
-        )
-    THEN
-      RETURN null;
-    END IF;
-
-    INSERT INTO $closure_table_name (
-         $closure_table_parent_field,
-         $closure_table_child_field,
-         depth)
-      VALUES (
-         new.$links_table_input_field,
-         new.$links_table_output_field,
-         0);
-
-    new_id := lastval();
-
-    UPDATE $closure_table_name
-      SET entry_edge_id = new_id
-        , exit_edge_id = new_id
-        , direct_edge_id = new_id
-      WHERE id = new_id;
-
-
-    INSERT INTO $closure_table_name (
-      entry_edge_id,
-      direct_edge_id,
-      exit_edge_id,
-      $closure_table_parent_field,
-      $closure_table_child_field,
-      depth)
-      SELECT id
-         , new_id
-         , new_id
-         , $closure_table_parent_field
-         , new.$links_table_output_field
-         , depth + 1
-        FROM $closure_table_name
-        WHERE $closure_table_child_field = new.$links_table_input_field;
-
-
-    INSERT INTO $closure_table_name (
-      entry_edge_id,
-      direct_edge_id,
-      exit_edge_id,
-      $closure_table_parent_field,
-      $closure_table_child_field,
-      depth)
-      SELECT new_id
-        , new_id
-        , id
-        , new.$links_table_input_field
-        , $closure_table_child_field
-        , depth + 1
-        FROM $closure_table_name
-        WHERE $closure_table_parent_field = new.$links_table_output_field;
-
-    INSERT INTO $closure_table_name (
-      entry_edge_id,
-      direct_edge_id,
-      exit_edge_id,
-      $closure_table_parent_field,
-      $closure_table_child_field,
-      depth)
-      SELECT A.id
-        , new_id
-        , B.id
-        , A.$closure_table_parent_field
-        , B.$closure_table_child_field
-        , A.depth + B.depth + 2
-     FROM $closure_table_name A
-        CROSS JOIN $closure_table_name B
-     WHERE A.$closure_table_child_field = new.$links_table_input_field
-       AND B.$closure_table_parent_field = new.$links_table_output_field;
-
-  END IF;
-
-  IF tg_op = 'DELETE' THEN
-
-    IF NOT EXISTS(
-        SELECT id FROM $closure_table_name
-        WHERE $closure_table_parent_field = old.$links_table_input_field
-        AND $closure_table_child_field = old.$links_table_output_field AND
-        depth = 0 )
-    THEN
-        RETURN NULL;
-    END IF;
-
-    CREATE TABLE PurgeList (Id int);
-
-    INSERT INTO PurgeList
-      SELECT id FROM $closure_table_name
-          WHERE $closure_table_parent_field = old.$links_table_input_field
-        AND $closure_table_child_field = old.$links_table_output_field AND
-        depth = 0;
-
-    WHILE (1 = 1)
-    loop
-
-      INSERT INTO PurgeList
-        SELECT id FROM $closure_table_name
-          WHERE depth > 0
-          AND ( entry_edge_id IN ( SELECT Id FROM PurgeList )
-          OR direct_edge_id IN ( SELECT Id FROM PurgeList )
-          OR exit_edge_id IN ( SELECT Id FROM PurgeList ) )
-          AND Id NOT IN (SELECT Id FROM PurgeList );
-
-      GET DIAGNOSTICS num_rows = ROW_COUNT;
-      if (num_rows = 0) THEN
-        EXIT;
-      END IF;
-    end loop;
-
-    DELETE FROM $closure_table_name WHERE Id IN ( SELECT Id FROM PurgeList);
-    DROP TABLE PurgeList;
-
-  END IF;
-
-  RETURN NULL;
-
-END
-$$BODY$$
-  LANGUAGE plpgsql VOLATILE
-  COST 100;
-
-
-CREATE TRIGGER autoupdate_tc
-  AFTER INSERT OR DELETE OR UPDATE
-  ON $links_table_name FOR each ROW
-  EXECUTE PROCEDURE update_tc();
-
-""")
-    return pg_tc.substitute(links_table_name=links_table_name,
-                            links_table_input_field=links_table_input_field,
-                            links_table_output_field=links_table_output_field,
-                            closure_table_name=closure_table_name,
-                            closure_table_parent_field=closure_table_parent_field,
-                            closure_table_child_field=closure_table_child_field)
-
-
 def migrate_database(alembic_cfg=None):
     """Migrate the database to the latest schema version.
 
@@ -374,17 +168,57 @@ def check_schema_version(profile_name):
     # Getting the version of the code and the database, reusing the existing engine (initialized by AiiDA)
     with sa.ENGINE.begin() as connection:
         alembic_cfg.attributes['connection'] = connection
-        code_schema_version = get_migration_head(alembic_cfg)
-        db_schema_version = get_db_schema_version(alembic_cfg)
+        schema_version_code = get_migration_head(alembic_cfg)
+        schema_version_database = get_db_schema_version(alembic_cfg)
 
-    if code_schema_version != db_schema_version:
-        raise ConfigurationError('Database schema version {} is outdated compared to the code schema version {}\n'
-                                 'Before you upgrade, make sure all calculations and workflows have finished running.\n'
-                                 'If this is not the case, revert the code to the previous version and finish them first.\n'
-                                 'To migrate the database to the current version, run the following commands:'
-                                 '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(
-                                    db_schema_version, code_schema_version, profile_name, profile_name))
+    schema_version_database = validate_schema_generation(schema_version_code, schema_version_database)
 
+    if schema_version_code != schema_version_database:
+        kwargs = {
+            'schema_version_database': schema_version_database,
+            'schema_version_code': schema_version_code,
+            'profile_name': profile_name
+        }
+        raise ConfigurationError(
+            'Database schema version {schema_version_database} is outdated compared to the code schema version '
+            '{schema_version_code}\nBefore you upgrade, make sure all calculations and workflows have finished running.'
+            '\nIf this is not the case, revert the code to the previous version and finish them first.\n'
+            'To migrate the database to the current version, run the following commands:'
+            '\n  verdi -p {profile_name} daemon stop\n  verdi -p {profile_name} database migrate'.format(**kwargs))
+
+
+SCHEMA_VERSION_RESET = '91b573400be5'
+
+
+def validate_schema_generation(schema_version_code, schema_version_database):
+    """Validate that the current database schema generation."""
+    from distutils.version import StrictVersion
+    from aiida.common.exceptions import ConfigurationError
+    from ..schema import get_schema_generation, update_schema_generation, SCHEMA_GENERATION_VALUE
+
+    schema_generation_current = get_schema_generation()
+    schema_generation_required = StrictVersion(SCHEMA_GENERATION_VALUE)
+    schema_version_reset = SCHEMA_VERSION_RESET
+
+    if schema_generation_current < schema_generation_required and schema_version_database != schema_version_reset:
+        raise ConfigurationError(
+            'Database schema version {} is outdated and belongs to the previous generation.\nTo start using this version '
+            'of `aiida-core`, you have to first install `aiida-core==1.0.0` and perform the migration.\nThen you can '
+            'reinstall this version of `aiida-core` and continue your work.'.format(
+                schema_version_database))
+
+    if schema_generation_current < schema_generation_required:
+        reset_schema_version(schema_version_code)
+        update_schema_generation()
+
+    return schema_version_code
+
+
+def reset_schema_version(schema_version):
+    """Reset the schema version."""
+    from aiida.manage.manager import get_manager
+    backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+    backend.execute_raw(r"""UPDATE alembic_version SET version_num='{}';""".format(schema_version))
 
 
 def get_migration_head(config):
@@ -417,9 +251,9 @@ def get_db_schema_version(config):
         return []
 
     with EnvironmentContext(
-            config,
-            script,
-            fn=get_db_version
+        config,
+        script,
+        fn=get_db_version
     ):
         script.run_env()
         return config.attributes['rev']

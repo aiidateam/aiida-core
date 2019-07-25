@@ -114,11 +114,16 @@ class DjangoBackend(SqlBackend[models.Model]):
         """Execute a raw SQL statement and return the result.
 
         :param query: a string containing a raw SQL statement
-        :return: the result of the query
+        :return: the result of the query or None
         """
+        from django.db.utils import ProgrammingError
+
         with self.cursor() as cursor:
             cursor.execute(query)
-            results = cursor.fetchall()
+            try:
+                results = cursor.fetchall()
+            except ProgrammingError:
+                return None
 
         return results
 

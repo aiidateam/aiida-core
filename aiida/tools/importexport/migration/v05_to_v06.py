@@ -28,8 +28,29 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from collections import namedtuple
 from six.moves import zip
 from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+
+StateMapping = namedtuple('StateMapping', ['state', 'process_state', 'exit_status', 'process_status'])
+
+# Mapping of old `state` attribute values of legacy `JobCalculation` to new process related attributes.
+# This is used in migration `0038_data_migration_legacy_job_calculations.py`
+STATUS_TEMPLATE = 'Legacy `JobCalculation` with state `{}`'
+STATE_MAPPING = {
+    'NEW': StateMapping('NEW', 'killed', None, STATUS_TEMPLATE.format('NEW')),
+    'TOSUBMIT': StateMapping('TOSUBMIT', 'killed', None, STATUS_TEMPLATE.format('TOSUBMIT')),
+    'SUBMITTING': StateMapping('SUBMITTING', 'killed', None, STATUS_TEMPLATE.format('SUBMITTING')),
+    'WITHSCHEDULER': StateMapping('WITHSCHEDULER', 'killed', None, STATUS_TEMPLATE.format('WITHSCHEDULER')),
+    'COMPUTED': StateMapping('COMPUTED', 'killed', None, STATUS_TEMPLATE.format('COMPUTED')),
+    'RETRIEVING': StateMapping('RETRIEVING', 'killed', None, STATUS_TEMPLATE.format('RETRIEVING')),
+    'PARSING': StateMapping('PARSING', 'killed', None, STATUS_TEMPLATE.format('PARSING')),
+    'SUBMISSIONFAILED': StateMapping('SUBMISSIONFAILED', 'excepted', None, STATUS_TEMPLATE.format('SUBMISSIONFAILED')),
+    'RETRIEVALFAILED': StateMapping('RETRIEVALFAILED', 'excepted', None, STATUS_TEMPLATE.format('RETRIEVALFAILED')),
+    'PARSINGFAILED': StateMapping('PARSINGFAILED', 'excepted', None, STATUS_TEMPLATE.format('PARSINGFAILED')),
+    'FAILED': StateMapping('FAILED', 'finished', 2, None),
+    'FINISHED': StateMapping('FINISHED', 'finished', 0, None),
+}
 
 
 def migrate_deserialized_datetime(data, conversion):
@@ -99,8 +120,6 @@ def migration_migrate_legacy_job_calculation_data(data):
     `process_status`. These are inferred from the old `state` attribute, which is then discarded as its values have
     been deprecated.
     """
-    from aiida.backends.general.migrations.calc_state import STATE_MAPPING
-
     calc_job_node_type = 'process.calculation.calcjob.CalcJobNode.'
     node_data = data['export_data'].get('Node', {})
     calc_jobs = {pk for pk, values in node_data.items() if values['node_type'] == calc_job_node_type}

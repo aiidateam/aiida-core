@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import alembic
 import click
 
-from aiida.cmdline.params import options
+from aiida.cmdline.params import options, types
 
 
 def execute_alembic_command(command_name, **kwargs):
@@ -37,22 +37,20 @@ def execute_alembic_command(command_name, **kwargs):
 
 
 @click.group()
-@options.PROFILE(required=True)
-def alembic_cli(profile):
+@options.PROFILE(required=True, type=types.ProfileParamType(load_profile=True))
+def alembic_cli(profile):  # pylint: disable=unused-argument
     """Simple wrapper around the alembic command line tool that first loads an AiiDA profile."""
-    from aiida.manage.configuration import load_profile
     from aiida.manage.manager import get_manager
-
-    load_profile(profile=profile.name)
     manager = get_manager()
     manager._load_backend(schema_check=False)  # pylint: disable=protected-access
 
 
 @alembic_cli.command('revision')
 @click.argument('message')
-def alembic_revision(message):
+@click.option('--autogenerate', is_flag=True)
+def alembic_revision(message, autogenerate):
     """Create a new database revision."""
-    execute_alembic_command('revision', message=message, autogenerate=True)
+    execute_alembic_command('revision', message=message, autogenerate=autogenerate)
 
 
 @alembic_cli.command('current')

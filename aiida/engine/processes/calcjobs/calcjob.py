@@ -194,6 +194,10 @@ class CalcJob(Process):
                 with LocalTransport() as transport:
                     transport.chdir(folder.abspath)
                     upload_calculation(self.node, transport, calc_info, script_filename, dry_run=True)
+                    self.node.dry_run_info = {
+                        'folder': folder.abspath,
+                        'script_filename': script_filename
+                    }
                 return plumpy.Stop(None, True)
 
         # Launch the upload operation

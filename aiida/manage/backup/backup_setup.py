@@ -26,7 +26,7 @@ from aiida.manage import configuration
 from aiida.manage.backup.backup_base import AbstractBackup, BackupError
 from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
-from . import backup_utils as utils
+from aiida.manage.backup import backup_utils as utils
 
 
 class BackupSetup(object):  # pylint: disable=useless-object-inheritance

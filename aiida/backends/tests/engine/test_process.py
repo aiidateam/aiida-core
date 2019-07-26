@@ -10,6 +10,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import threading
 
 import plumpy
@@ -19,8 +20,9 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils import processes as test_processes
 from aiida.common.lang import override
-from aiida.engine import Process, run, run_get_pk, run_get_node
+from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_pk, run_get_node
 from aiida.engine.processes.ports import PortNamespace
+from aiida.plugins import CalculationFactory
 
 
 class NameSpacedProcess(Process):
@@ -166,6 +168,23 @@ class TestProcess(AiidaTestCase):
         bundle = plumpy.Bundle(proc)
         proc.close()
         bundle.unbundle()
+
+    def test_exit_codes(self):
+        """Test the properties to return various (sub) sets of existing exit codes."""
+        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+
+        exit_codes = ArithmeticAddCalculation.exit_codes
+        self.assertIsInstance(exit_codes, ExitCodesNamespace)
+        for key, value in exit_codes.items():
+            self.assertIsInstance(value, ExitCode)
+
+        exit_statuses = ArithmeticAddCalculation.get_exit_statuses(['ERROR_NO_RETRIEVED_FOLDER'])
+        self.assertIsInstance(exit_statuses, list)
+        for entry in exit_statuses:
+            self.assertIsInstance(entry, int)
+
+        with self.assertRaises(AttributeError):
+            ArithmeticAddCalculation.get_exit_statuses(['NON_EXISTING_EXIT_CODE_LABEL'])
 
     def test_process_type_with_entry_point(self):
         """

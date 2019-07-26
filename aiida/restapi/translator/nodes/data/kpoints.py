@@ -104,9 +104,9 @@ class KpointsDataTranslator(DataTranslator):
 
             json_visualization['reciprocal_vectors_unit'] = u'1/\u212b'
 
-            # Get BZ facesa and add them to the json. Fields: faces,
+            # Get BZ faces and add them to the json. Fields: faces,
             # triangles, triangle_vertices. Most probably only faces is needed.
-            from seekpath.brillouinzone.brillouinzone import get_BZ
+            from seekpath.brillouinzone.brillouinzone import get_BZ  # pylint: disable=import-error,no-name-in-module
             json_visualization['faces_data'] = get_BZ(coords1, coords2, coords3)
 
             # Provide kpoints cooridnates in absolute units ...

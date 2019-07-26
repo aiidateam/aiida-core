@@ -136,7 +136,7 @@ class TestLaunchersDryRun(AiidaTestCase):
 
         code = orm.Code(
             input_plugin_name='arithmetic.add',
-            remote_computer_exec=[self.computer, '/bin/true'])
+            remote_computer_exec=[self.computer, '/bin/true']).store()
 
         inputs = {
             'code': code,
@@ -160,6 +160,51 @@ class TestLaunchersDryRun(AiidaTestCase):
         result, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
         self.assertEqual(result, {})
         self.assertIsInstance(node, orm.CalcJobNode)
+        self.assertIsInstance(node.dry_run_info, dict)
+        self.assertIn('folder', node.dry_run_info)
+        self.assertIn('script_filename', node.dry_run_info)
 
         node = launch.submit(ArithmeticAddCalculation, **inputs)
         self.assertIsInstance(node, orm.CalcJobNode)
+
+    def test_launchers_dry_run_no_provenance(self):
+        """Test the launchers in `dry_run` mode with `store_provenance=False`."""
+        from aiida.plugins import CalculationFactory
+
+        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+
+        code = orm.Code(
+            input_plugin_name='arithmetic.add',
+            remote_computer_exec=[self.computer, '/bin/true']).store()
+
+        inputs = {
+            'code': code,
+            'x': orm.Int(1),
+            'y': orm.Int(1),
+            'metadata': {
+                'dry_run': True,
+                'store_provenance': False,
+                'options': {
+                    'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+                }
+            }
+        }
+
+        result = launch.run(ArithmeticAddCalculation, **inputs)
+        self.assertEqual(result, {})
+
+        result, pk = launch.run_get_pk(ArithmeticAddCalculation, **inputs)
+        self.assertEqual(result, {})
+        self.assertIsNone(pk)
+
+        result, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
+        self.assertEqual(result, {})
+        self.assertIsInstance(node, orm.CalcJobNode)
+        self.assertFalse(node.is_stored)
+        self.assertIsInstance(node.dry_run_info, dict)
+        self.assertIn('folder', node.dry_run_info)
+        self.assertIn('script_filename', node.dry_run_info)
+
+        node = launch.submit(ArithmeticAddCalculation, **inputs)
+        self.assertIsInstance(node, orm.CalcJobNode)
+        self.assertFalse(node.is_stored)

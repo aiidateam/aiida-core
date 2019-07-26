@@ -7,6 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Various utilities to deal with KpointsData instances or create new ones
+(e.g. band paths, kpoints from a parsed input text file, ...)
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -45,17 +49,17 @@ def get_kpoints_path(structure, method='seekpath', **kwargs):
     :param kwargs: optional keyword arguments that depend on the selected method
     :returns: dictionary as described above in the docstring
     """
-    if method not in _get_kpoints_path_methods.keys():
+    if method not in _GET_KPOINTS_PATH_METHODS.keys():
         raise ValueError("the method '{}' is not implemented".format(method))
 
     if method == 'seekpath':
         try:
             seekpath.check_seekpath_is_installed()
-        except ImportError as exception:
+        except ImportError:
             raise ValueError("selected method is 'seekpath' but the package is not installed\n"
                              "Either install it or pass method='legacy' as input to the function call")
 
-    method = _get_kpoints_path_methods[method]
+    method = _GET_KPOINTS_PATH_METHODS[method]
 
     return method(structure, **kwargs)
 
@@ -88,17 +92,17 @@ def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
     :param kwargs: optional keyword arguments that depend on the selected method
     :returns: dictionary as described above in the docstring
     """
-    if method not in _get_explicit_kpoints_path_methods.keys():
+    if method not in _GET_EXPLICIT_KPOINTS_PATH_METHODS.keys():
         raise ValueError("the method '{}' is not implemented".format(method))
 
     if method == 'seekpath':
         try:
             seekpath.check_seekpath_is_installed()
-        except ImportError as exception:
+        except ImportError:
             raise ValueError("selected method is 'seekpath' but the package is not installed\n"
                              "Either install it or pass method='legacy' as input to the function call")
 
-    method = _get_explicit_kpoints_path_methods[method]
+    method = _GET_EXPLICIT_KPOINTS_PATH_METHODS[method]
 
     return method(structure, **kwargs)
 
@@ -190,9 +194,7 @@ def _legacy_get_kpoints_path(structure, **kwargs):
     if args_unknown:
         raise ValueError("unknown arguments {}".format(args_unknown))
 
-    point_coords, path, bravais_info = legacy.get_kpoints_path(
-        cell=structure.cell, pbc=structure.pbc, **kwargs
-    )
+    point_coords, path, bravais_info = legacy.get_kpoints_path(cell=structure.cell, pbc=structure.pbc, **kwargs)
 
     parameters = {
         'bravais_info': bravais_info,
@@ -223,8 +225,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
         raise ValueError("unknown arguments {}".format(args_unknown))
 
     point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(
-        cell=structure.cell, pbc=structure.pbc, **kwargs
-    )
+        cell=structure.cell, pbc=structure.pbc, **kwargs)
 
     kpoints = KpointsData()
     kpoints.set_cell(structure.cell)
@@ -237,19 +238,71 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {
-        'parameters': Dict(dict=parameters),
-        'explicit_kpoints': kpoints
-    }
+    return {'parameters': Dict(dict=parameters), 'explicit_kpoints': kpoints}
 
 
-
-_get_kpoints_path_methods = {
+_GET_KPOINTS_PATH_METHODS = {
     'legacy': _legacy_get_kpoints_path,
     'seekpath': _seekpath_get_kpoints_path,
 }
 
-_get_explicit_kpoints_path_methods = {
+_GET_EXPLICIT_KPOINTS_PATH_METHODS = {
     'legacy': _legacy_get_explicit_kpoints_path,
     'seekpath': _seekpath_get_explicit_kpoints_path,
 }
+
+
+def get_kpointsdata_from_qetools(qetools_instance):
+    """
+    Return a KpointsData object starting from one of the classes defined
+    in the qetools external library (that must be installed in order
+    for this to work).
+
+    This uses all of the data in the input file to do the necessary unit
+    conversion, ect. and then creates an AiiDA KpointsData object.
+
+
+    **Note:** If the calculation uses only the gamma k-point (`if
+    qetools_instance.k_points['type'] == 'gamma'`), it is necessary to also attach a
+    settings node to the calculation with `gamma_only = True`.
+
+    :param qetools_instance: an instance of the class returned by KpointsData
+    :return: KpointsData object of the kpoints in the input file
+    :rtype: aiida.orm.data.array.kpoints.KpointsData
+    :raises NotImplementedError: if the kpoints are
+        in a format not yet supported.
+    """
+    import numpy as np
+
+    try:
+        import qe_tools  # pylint: disable=unused-variable,unused-import
+    except ImportError:
+        raise ValueError("You have not installed the package qe-tools. "
+                         "You can install it with: pip install qe-tools")
+    from aiida.tools.data.structure import get_structuredata_from_qetools
+
+    # Initialize the KpointsData node
+    kpointsdata = KpointsData()
+    # Get the structure using this class's method.
+    structuredata = get_structuredata_from_qetools(qetools_instance)
+    # Set the structure information of the kpoints node.
+    kpointsdata.set_cell_from_structure(structuredata)
+
+    # Set the kpoints and weights, doing any necessary units conversion.
+    if qetools_instance.k_points['type'] == 'crystal':  # relative to recip latt vecs
+        kpointsdata.set_kpoints(qetools_instance.k_points['points'], weights=qetools_instance.k_points['weights'])
+    elif qetools_instance.k_points['type'] == 'tpiba':  # cartesian; units of 2*pi/alat
+        alat = np.linalg.norm(structuredata.cell[0])  # alat in Angstrom
+        kpointsdata.set_kpoints(
+            np.array(qetools_instance.k_points['points']) * (2. * np.pi / alat),
+            weights=qetools_instance.k_points['weights'],
+            cartesian=True)
+    elif qetools_instance.k_points['type'] == 'automatic':
+        kpointsdata.set_kpoints_mesh(qetools_instance.k_points['points'], offset=qetools_instance.k_points['offset'])
+    elif qetools_instance.k_points['type'] == 'gamma':
+        kpointsdata.set_kpoints_mesh([1, 1, 1])
+    else:
+        raise NotImplementedError('Support for creating KpointsData from input units of {} is'
+                                  'not yet implemented'.format(qetools_instance.k_points['type']))
+
+    return kpointsdata

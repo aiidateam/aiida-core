@@ -145,11 +145,9 @@
         aiida/sphinxext/tests/workchain_source/conf.py|
         aiida/sphinxext/tests/workchain_source/demo_workchain.py|
         aiida/sphinxext/workchain.py|
-        aiida/tools/data/array/kpoints/__init__.py|
         aiida/tools/data/array/kpoints/legacy.py|
         aiida/tools/data/array/kpoints/seekpath.py|
         aiida/tools/data/__init__.py|
-        aiida/tools/data/structure/__init__.py|
         aiida/tools/dbexporters/__init__.py|
         aiida/tools/dbimporters/baseclasses.py|
         aiida/tools/dbimporters/__init__.py|

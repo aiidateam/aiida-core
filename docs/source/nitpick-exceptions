@@ -272,3 +272,6 @@ py:class aldjemy.orm.DbAuthInfo
 py:class aldjemy.orm.DbComment
 py:class aldjemy.orm.DbLog
 py:class aldjemy.orm.DbSetting
+
+# Alembic
+py:class alembic.config.Config

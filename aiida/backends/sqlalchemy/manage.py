@@ -8,7 +8,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint:
 """Simple wrapper around the alembic command line tool that first loads an AiiDA profile."""
 from __future__ import division
 from __future__ import print_function
@@ -26,14 +25,13 @@ def execute_alembic_command(command_name, **kwargs):
     :param command_name: the sub command name
     :param kwargs: parameters to pass to the command
     """
-    from aiida.backends import sqlalchemy as sa
-    from aiida.backends.sqlalchemy.utils import get_alembic_conf
+    from aiida.backends.sqlalchemy.manager import SqlaBackendManager
 
-    with sa.ENGINE.begin() as connection:
-        alembic_cfg = get_alembic_conf()
-        alembic_cfg.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
+    manager = SqlaBackendManager()
+
+    with manager.alembic_config() as config:
         command = getattr(alembic.command, command_name)
-        command(alembic_cfg, **kwargs)
+        command(config, **kwargs)
 
 
 @click.group()

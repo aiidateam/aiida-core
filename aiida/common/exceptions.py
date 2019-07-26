@@ -18,9 +18,9 @@ __all__ = (
     'EntryPointError', 'MissingEntryPointError', 'MultipleEntryPointError', 'LoadingEntryPointError',
     'InvalidEntryPointTypeError', 'InvalidOperation', 'ParsingError', 'InternalError', 'PluginInternalError',
     'ValidationError', 'ConfigurationError', 'ProfileConfigurationError', 'MissingConfigurationError',
-    'ConfigurationVersionError', 'DbContentError', 'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled',
-    'LicensingException', 'TestsNotAllowedError', 'UnsupportedSpeciesError', 'TransportTaskException',
-    'OutputParsingError'
+    'ConfigurationVersionError', 'IncompatibleDatabaseSchema', 'DbContentError', 'InputValidationError',
+    'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError', 'UnsupportedSpeciesError',
+    'TransportTaskException', 'OutputParsingError'
 )
 
 
@@ -171,6 +171,10 @@ class ConfigurationVersionError(ConfigurationError):
     Configuration error raised when the configuration file version is not
     compatible with the current version.
     """
+
+
+class IncompatibleDatabaseSchema(ConfigurationError):
+    """Raised when the database schema is incompatible with that of the code."""
 
 
 class DbContentError(AiidaException):

@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from django.db import models, transaction
 
 from aiida.backends.djsite.queries import DjangoQueryManager
-from aiida.backends.djsite.utils import migrate_database
+from aiida.backends.djsite.manager import DjangoBackendManager
 
 from ..sql import SqlBackend
 from . import authinfos
@@ -46,11 +46,11 @@ class DjangoBackend(SqlBackend[models.Model]):
         self._logs = logs.DjangoLogCollection(self)
         self._nodes = nodes.DjangoNodeCollection(self)
         self._query_manager = DjangoQueryManager(self)
+        self._backend_manager = DjangoBackendManager()
         self._users = users.DjangoUserCollection(self)
 
-    @staticmethod
-    def migrate():
-        migrate_database()
+    def migrate(self):
+        self._backend_manager.migrate()
 
     @property
     def authinfos(self):

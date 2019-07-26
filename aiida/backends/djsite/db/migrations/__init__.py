@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.backends.djsite.utils import SCHEMA_VERSION_DB_KEY, SCHEMA_VERSION_DB_DESCRIPTION
+from aiida.backends.manager import SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION, SCHEMA_GENERATION_KEY, SCHEMA_GENERATION_DESCRIPTION
 
 
 LATEST_MIGRATION = '0001_initial_schema_generation_2'
@@ -24,17 +24,15 @@ def _update_schema_version(version, apps, schema_editor):
     settings table to JSONB)
     """
     db_setting_model = apps.get_model('db', 'DbSetting')
-    res = db_setting_model.objects.filter(key=SCHEMA_VERSION_DB_KEY).first()
+    result = db_setting_model.objects.filter(key=SCHEMA_VERSION_KEY).first()
     # If there is no schema record, create ones
-    if res is None:
-        res = db_setting_model()
-        res.key = SCHEMA_VERSION_DB_KEY
-        res.description = SCHEMA_VERSION_DB_DESCRIPTION
+    if result is None:
+        result = db_setting_model()
+        result.key = SCHEMA_VERSION_KEY
+        result.description = SCHEMA_VERSION_DESCRIPTION
 
-    res.val = str(version)
-
-    # Store the final result
-    res.save()
+    result.val = str(version)
+    result.save()
 
 
 def _upgrade_schema_generation(version, apps, schema_editor):
@@ -43,19 +41,16 @@ def _upgrade_schema_generation(version, apps, schema_editor):
     to avoid to use the DbSettings schema that may change (as it changed with the migration of the
     settings table to JSONB)
     """
-    SCHEMA_GENERATION_KEY = 'schema_generation'
     db_setting_model = apps.get_model('db', 'DbSetting')
-    res = db_setting_model.objects.filter(key=SCHEMA_GENERATION_KEY).first()
+    result = db_setting_model.objects.filter(key=SCHEMA_GENERATION_KEY).first()
     # If there is no schema record, create ones
-    if res is None:
-        res = db_setting_model()
-        res.key = SCHEMA_GENERATION_KEY
-        res.description = 'Database schema generation'
+    if result is None:
+        result = db_setting_model()
+        result.key = SCHEMA_GENERATION_KEY
+        result.description = SCHEMA_GENERATION_DESCRIPTION
 
-    res.val = str(version)
-
-    # Store the final result
-    res.save()
+    result.val = str(version)
+    result.save()
 
 
 def upgrade_schema_generation(schema_generation):

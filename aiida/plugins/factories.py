@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,inconsistent-return-statements
+# pylint: disable=invalid-name,inconsistent-return-statements,cyclic-import
 """Definition of factories to load classes from the various plugin groups."""
 from __future__ import division
 from __future__ import print_function

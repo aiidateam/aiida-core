@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cyclic-import
 """AiiDA manager for global settings"""
 from __future__ import division
 from __future__ import print_function
@@ -48,22 +47,8 @@ class Manager(object):
 
     def unload_backend(self):
         """Unload the current backend and its corresponding database environment."""
-        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
-        from aiida.common import ConfigurationError
-
-        profile = self.get_profile()
-        backend = profile.database_backend
-
-        if backend == BACKEND_DJANGO:
-            from aiida.backends.djsite.utils import unload_dbenv
-            unload_backend = unload_dbenv
-        elif backend == BACKEND_SQLA:
-            from aiida.backends.sqlalchemy.utils import unload_dbenv
-            unload_backend = unload_dbenv
-        else:
-            raise ConfigurationError('Invalid backend type {} in profile: {}'.format(backend, profile.name))
-
-        unload_backend()
+        manager = self.get_backend_manager()
+        manager.reset_backend_environment()
         self._backend = None
 
     def _load_backend(self, schema_check=True):
@@ -91,21 +76,13 @@ class Manager(object):
         if configuration.BACKEND_UUID is not None and configuration.BACKEND_UUID != profile.uuid:
             raise InvalidOperation('cannot load backend because backend of another profile is already loaded')
 
-        backend_type = profile.database_backend
-
-        if backend_type == BACKEND_DJANGO:
-            from aiida.backends.djsite.utils import load_dbenv, _load_dbenv_noschemacheck
-            load_backend = load_dbenv if schema_check else _load_dbenv_noschemacheck
-        elif backend_type == BACKEND_SQLA:
-            from aiida.backends.sqlalchemy.utils import load_dbenv, _load_dbenv_noschemacheck
-            load_backend = load_dbenv if schema_check else _load_dbenv_noschemacheck
-        else:
-            raise ConfigurationError('Invalid backend type {} in profile: {}'.format(backend_type, profile.name))
-
         # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
         if configuration.BACKEND_UUID is None:
-            load_backend(profile)
+            manager = self.get_backend_manager()
+            manager.load_backend_environment(profile, validate_schema=schema_check)
             configuration.BACKEND_UUID = profile.uuid
+
+        backend_type = profile.database_backend
 
         # Can only import the backend classes after the backend has been loaded
         if backend_type == BACKEND_DJANGO:
@@ -129,9 +106,23 @@ class Manager(object):
         """
         return self._backend is not None
 
-    def get_backend(self):
+    def get_backend_manager(self):
+        """Return the database backend manager.
+
+        .. note:: this is not the actual backend, but a manager class that is necessary for database operations that
+            go around the actual ORM. For example when the schema version has not yet been validated.
+
+        :return: the database backend manager
+        :rtype: :class:`aiida.backend.manager.BackendManager`
         """
-        Get the database backend
+        if self._backend_manager is None:
+            from aiida.backends import get_backend_manager
+            self._backend_manager = get_backend_manager(self.get_profile().database_backend)
+
+        return self._backend_manager
+
+    def get_backend(self):
+        """Return the database backend
 
         :return: the database backend
         :rtype: :class:`aiida.orm.implementation.Backend`
@@ -142,8 +133,7 @@ class Manager(object):
         return self._backend
 
     def get_persister(self):
-        """
-        Get the persister
+        """Return the persister
 
         :return: the current persister instance
         :rtype: :class:`plumpy.Persister`
@@ -156,8 +146,7 @@ class Manager(object):
         return self._persister
 
     def get_communicator(self):
-        """
-        Get the communicator
+        """Return the communicator
 
         :return: a global communicator instance
         :rtype: :class:`kiwipy.Communicator`
@@ -168,8 +157,7 @@ class Manager(object):
         return self._communicator
 
     def create_communicator(self, task_prefetch_count=None, with_orm=True):
-        """
-        Create a Communicator
+        """Create a Communicator
 
         :param task_prefetch_count: optional specify how many tasks this communicator take simultaneously
         :param with_orm: if True, use ORM (de)serializers. If false, use json.
@@ -218,8 +206,7 @@ class Manager(object):
         )
 
     def get_daemon_client(self):
-        """
-        Return the daemon client for the current profile.
+        """Return the daemon client for the current profile.
 
         :return: the daemon client
         :rtype: :class:`aiida.daemon.client.DaemonClient`
@@ -234,8 +221,7 @@ class Manager(object):
         return self._daemon_client
 
     def get_process_controller(self):
-        """
-        Get a process controller
+        """Return the process controller
 
         :return: the process controller instance
         :rtype: :class:`plumpy.RemoteProcessThreadController`
@@ -247,8 +233,7 @@ class Manager(object):
         return self._process_controller
 
     def get_runner(self):
-        """
-        Get a runner that is based on the current profile settings and can be used globally by the code.
+        """Return a runner that is based on the current profile settings and can be used globally by the code.
 
         :return: the global runner
         :rtype: :class:`aiida.engine.runners.Runner`
@@ -259,8 +244,7 @@ class Manager(object):
         return self._runner
 
     def set_runner(self, new_runner):
-        """
-        Set the currently used runner
+        """Set the currently used runner
 
         :param new_runner: the new runner to use
         :type new_runner: :class:`aiida.engine.runners.Runner`
@@ -271,8 +255,7 @@ class Manager(object):
         self._runner = new_runner
 
     def create_runner(self, with_persistence=True, **kwargs):
-        """
-        Create a new runner
+        """Create and return a new runner
 
         :param with_persistence: create a runner with persistence enabled
         :type with_persistence: bool
@@ -299,8 +282,9 @@ class Manager(object):
         return runners.Runner(**settings)
 
     def create_daemon_runner(self, loop=None):
-        """
-        Create a new daemon runner.  This is used by workers when the daemon is running and in testing.
+        """Create and return a new daemon runner.
+
+        This is used by workers when the daemon is running and in testing.
 
         :param loop: the (optional) tornado event loop to use
         :type loop: :class:`tornado.ioloop.IOLoop`
@@ -329,15 +313,14 @@ class Manager(object):
         return runner
 
     def close(self):
-        """
-        Reset the global settings entirely and release any global objects
-        """
+        """Reset the global settings entirely and release any global objects."""
         if self._communicator is not None:
             self._communicator.stop()
         if self._runner is not None:
             self._runner.stop()
 
         self._backend = None
+        self._backend_manager = None
         self._config = None
         self._profile = None
         self._communicator = None
@@ -349,6 +332,7 @@ class Manager(object):
     def __init__(self):
         super(Manager, self).__init__()
         self._backend = None  # type: aiida.orm.implementation.Backend
+        self._backend_manager = None  # type: aiida.backend.manager.BackendManager
         self._config = None  # type: aiida.manage.configuration.config.Config
         self._daemon_client = None  # type: aiida.daemon.client.DaemonClient
         self._profile = None  # type: aiida.manage.configuration.profile.Profile

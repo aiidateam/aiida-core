@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines
 """Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
 from __future__ import absolute_import
 from __future__ import division
@@ -20,7 +19,7 @@ from alembic import command
 from alembic.config import Config
 
 from aiida.backends import sqlalchemy as sa
-from aiida.backends.sqlalchemy import utils
+from aiida.backends.sqlalchemy import manager
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.tests.test_utils import new_database
 from aiida.backends.testbase import AiidaTestCase
@@ -48,10 +47,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         Prepare the test class with the alembivc configuration
         """
         super(TestMigrationsSQLA, cls).setUpClass(*args, **kwargs)
-        cls.migr_method_dir_path = os.path.dirname(os.path.realpath(utils.__file__))
-        alembic_dpath = os.path.join(cls.migr_method_dir_path, utils.ALEMBIC_REL_PATH)
-        cls.alembic_cfg = Config()
-        cls.alembic_cfg.set_main_option('script_location', alembic_dpath)
+        cls.manager = manager.SqlaBackendManager()
 
     def setUp(self):
         """
@@ -84,9 +80,8 @@ class TestMigrationsSQLA(AiidaTestCase):
         :param destination: the name of the destination migration
         """
         # Undo all previous real migration of the database
-        with sa.ENGINE.connect() as connection:
-            self.alembic_cfg.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
-            command.upgrade(self.alembic_cfg, destination)
+        with self.manager.alembic_config() as config:
+            command.upgrade(config, destination)
 
     def migrate_db_down(self, destination):
         """
@@ -94,9 +89,8 @@ class TestMigrationsSQLA(AiidaTestCase):
 
         :param destination: the name of the destination migration
         """
-        with sa.ENGINE.connect() as connection:
-            self.alembic_cfg.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
-            command.downgrade(self.alembic_cfg, destination)
+        with self.manager.alembic_config() as config:
+            command.downgrade(config, destination)
 
     def tearDown(self):
         """
@@ -244,9 +238,9 @@ class TestMigrationSchemaVsModelsSchema(AiidaTestCase):
         from sqlalchemydiff.util import get_temporary_uri
         from aiida.backends.sqlalchemy.migrations import versions
 
-        self.migr_method_dir_path = os.path.dirname(os.path.realpath(utils.__file__))
+        self.migr_method_dir_path = os.path.dirname(os.path.realpath(manager.__file__))
         # Set the alembic script directory location
-        self.alembic_dpath = os.path.join(self.migr_method_dir_path, utils.ALEMBIC_REL_PATH)
+        self.alembic_dpath = os.path.join(self.migr_method_dir_path, manager.ALEMBIC_REL_PATH)  # pylint: disable=no-member
 
         # Constructing the versions directory
         versions_dpath = os.path.join(os.path.dirname(versions.__file__))

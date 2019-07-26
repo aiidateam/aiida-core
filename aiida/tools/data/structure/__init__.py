@@ -7,7 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Various utilities to deal with StructureData instances or create new ones
+(e.g. convert format to/from SPGLIB, create a StructureData from a different
+format, ...)
 
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -60,6 +65,7 @@ def structure_to_spglib_tuple(structure):
         the Z number of the element, otherwise it uses numbers > 1000;
         kinds is a list of the kinds of the structure.
     """
+
     def get_new_number(the_list, start_from):
         """
         Get the first integer >= start_from not yet in the list
@@ -79,20 +85,19 @@ def structure_to_spglib_tuple(structure):
                 found = True
                 return retval
 
-    Z = {v['symbol']: k for k, v in elements.items()}
+    z_numbers = {v['symbol']: k for k, v in elements.items()}
 
     cell = np.array(structure.cell)
     abs_pos = np.array([_.position for _ in structure.sites])
     rel_pos = np.dot(abs_pos, np.linalg.inv(cell))
-    kinds = {k.name: k for k in structure.kinds}
+    # kinds = {k.name: k for k in structure.kinds}
 
     kind_numbers = {}
     for kind in structure.kinds:
         if len(kind.symbols) == 1:
-            realnumber = Z[kind.symbols[0]]
+            realnumber = z_numbers[kind.symbols[0]]
             if realnumber in kind_numbers.values():
-                number = get_new_number(
-                    list(kind_numbers.values()), start_from=realnumber * 1000)
+                number = get_new_number(list(kind_numbers.values()), start_from=realnumber * 1000)
             else:
                 number = realnumber
             kind_numbers[kind.name] = number
@@ -105,7 +110,7 @@ def structure_to_spglib_tuple(structure):
     return ((cell, rel_pos, numbers), kind_numbers, list(structure.kinds))
 
 
-def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
+def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # pylint: disable=too-many-locals
     """
     Convert a tuple of the format (cell, scaled_positions, element_numbers) to an AiiDA structure.
 
@@ -123,7 +128,7 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
     if kinds is None and kind_info is not None:
         raise ValueError("If you pass kinds, you should also pass kind_info")
 
-    Z = {v['symbol']: k for k, v in elements.items()}
+    #Z = {v['symbol']: k for k, v in elements.items()}
     cell, rel_pos, numbers = structure_tuple
     if kind_info:
         _kind_info = copy.copy(kind_info)
@@ -143,17 +148,14 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
     _kinds_dict = {k.name: k for k in _kinds}
     # Now I will use in any case _kinds and _kind_info
     if len(_kind_info) != len(set(_kind_info.values())):
-        raise ValueError(
-            "There is at least a number repeated twice in kind_info!")
+        raise ValueError("There is at least a number repeated twice in kind_info!")
     # Invert the mapping
     mapping_num_kindname = {v: k for k, v in _kind_info.items()}
     # Create the actual mapping
     try:
-        mapping_to_kinds = {num: _kinds_dict[kindname] for num, kindname
-                            in mapping_num_kindname.items()}
+        mapping_to_kinds = {num: _kinds_dict[kindname] for num, kindname in mapping_num_kindname.items()}
     except KeyError as exc:
-        raise ValueError(
-            "Unable to find '{}' in the kinds list".format(exc.args[0]))
+        raise ValueError("Unable to find '{}' in the kinds list".format(exc.args[0]))
 
     try:
         site_kinds = [mapping_to_kinds[num] for num in numbers]
@@ -165,8 +167,7 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
         structure.append_kind(k)
     abs_pos = np.dot(rel_pos, cell)
     if len(abs_pos) != len(site_kinds):
-        raise ValueError("The length of the positions array is different from the "
-                         "length of the element numbers")
+        raise ValueError("The length of the positions array is different from the " "length of the element numbers")
 
     for kind, pos in zip(site_kinds, abs_pos):
         structure.append_site(Site(kind_name=kind.name, position=pos))
@@ -183,7 +184,7 @@ def xyz_parser_iterator(xyz_string):
     :param xyz_string: a string containing XYZ-structured text
     """
 
-    class BlockIterator(object):
+    class BlockIterator(object):  # pylint: disable=useless-object-inheritance
         """
         An iterator for wrapping the iterator returned by `match.finditer`
         to extract the required fields directly from the match object
@@ -279,3 +280,72 @@ def xyz_parser_iterator(xyz_string):
     for block in pos_block_regex.finditer(xyz_string):
         natoms = int(block.group('natoms'))
         yield (natoms, block.group('comment'), BlockIterator(pos_regex.finditer(block.group('positions')), natoms))
+
+
+def get_structuredata_from_qetools(qetools_instance):
+    """
+    Return a StructureData object starting from one of the classes defined
+    in the qetools external library (that must be installed in order
+    for this to work).
+
+    This uses all of the data in the input file to do the necessary unit
+    conversion, ect. and then creates an AiiDA StructureData object.
+
+    All of the names corresponding of the Kind objects composing the
+    StructureData object will match those found in the ATOMIC_SPECIES
+    block, so the pseudopotentials can be linked to the calculation using
+    the kind.name for each specific type of atom (in the event that you
+    wish to use different pseudo's for two or more of the same atom).
+
+    :param qetools_instance: an instance of the class returned by KpointsData
+    :return: StructureData object of the structure in the input file
+    :rtype: aiida.orm.data.structure.StructureData
+    :raises qe_tools.utils.exceptions.ParsingError: if there are issues
+        parsing the input.
+    """
+    try:
+        import qe_tools  # pylint: disable=unused-variable,unused-import
+    except ImportError:
+        raise ValueError("You have not installed the package qe-tools. "
+                         "You can install it with: pip install qe-tools")
+
+    valid_elements_regex = re.compile(
+        """
+        (?P<ele>
+H  | He |
+Li | Be | B  | C  | N  | O  | F  | Ne |
+Na | Mg | Al | Si | P  | S  | Cl | Ar |
+K  | Ca | Sc | Ti | V  | Cr | Mn | Fe | Co | Ni | Cu | Zn | Ga | Ge | As | Se | Br | Kr |
+Rb | Sr | Y  | Zr | Nb | Mo | Tc | Ru | Rh | Pd | Ag | Cd | In | Sn | Sb | Te | I  | Xe |
+Cs | Ba | Hf | Ta | W  | Re | Os | Ir | Pt | Au | Hg | Tl | Pb | Bi | Po | At | Rn |
+Fr | Ra | Rf | Db | Sg | Bh | Hs | Mt |
+La | Ce | Pr | Nd | Pm | Sm | Eu | Gd | Tb | Dy | Ho | Er | Tm | Yb | Lu | # Lanthanides
+Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Actinides
+    )
+    [^a-z]  # Any specification of an element is followed by some number
+            # or capital letter or special character.
+""", re.X | re.I)
+
+    structure_dict = qetools_instance.get_structure_from_qeinput()
+    # instance and set the cell
+    structuredata = StructureData()
+
+    structuredata.set_cell(structure_dict['cell'])
+
+    #################  KINDS ##########################
+    for mass, name, pseudo in zip(structure_dict['species']['masses'], structure_dict['species']['names'],
+                                  structure_dict['species']['pseudo_file_names']):
+        try:
+            # IMPORTANT: The symbols is parsed from the Pseudo file name
+            # Is this the best way??
+            # Should we also try from the associated kind name?
+            symbols = valid_elements_regex.search(pseudo).group('ele').capitalize()
+        except Exception:
+            raise qetools.utils.exceptions.ParsingError(  # pylint: disable=undefined-variable
+                'I could not read an element name in {}'.format(symbols.group(0)))
+        structuredata.append_kind(Kind(name=name, symbols=symbols, mass=mass))
+
+    for sym, pos in zip(structure_dict['atom_names'], structure_dict['positions']):
+        structuredata.append_site(Site(kind_name=sym, position=pos))
+
+    return structuredata

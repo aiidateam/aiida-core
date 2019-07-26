@@ -570,6 +570,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
 
 
 class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
+    from aiida.orm.nodes.data.structure import has_ase, has_qe_tools
 
     @staticmethod
     def create_structure_data():
@@ -636,9 +637,24 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
     def test_importhelp(self):
         res = self.runner.invoke(cmd_structure.structure_import, ['--help'])
         self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
-                                                   ' of verdi data import --help')
+                                                   ' of verdi data structure import --help')
 
-    def test_import(self):
+    def test_importhelp_ase(self):
+        res = self.runner.invoke(cmd_structure.import_ase, ['--help'])
+        self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
+                                                   ' of verdi data structure import ase --help')
+
+    def test_importhelp_aiida_xyz(self):
+        res = self.runner.invoke(cmd_structure.import_aiida_xyz, ['--help'])
+        self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
+                                                   ' of verdi data structure import aiida-xyz --help')
+
+    def test_importhelp_qetools_pwinput(self):
+        res = self.runner.invoke(cmd_structure.import_qetools_pwinput, ['--help'])
+        self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
+                                                   ' of verdi data structure import qetools-pwinput --help')
+
+    def test_import_aiida_xyz(self):
         xyzcontent = '''
         2
 
@@ -650,8 +666,6 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
             fhandle.flush()
             options = [
                 fhandle.name,
-                '--format',
-                'xyz',
                 '--vacuum-factor',
                 '1.0',
                 '--vacuum-addition',
@@ -661,19 +675,106 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
                 '1',
                 '1',
             ]
-            res = self.cli_runner.invoke(cmd_structure.structure_import, options, catch_exceptions=False)
-            self.assertIn(b'PK = None', res.stdout_bytes, 'The string "PK = None" was not found in the output'
-                                                          ' of verdi data structure import with --store option.')
-            options.append('--store')
-            res = self.cli_runner.invoke(cmd_structure.structure_import, options, catch_exceptions=False)
-            self.assertIn(b'Succesfully imported', res.stdout_bytes,
-                          'The string "Succesfully imported" was not found in the output'
+            res = self.cli_runner.invoke(cmd_structure.import_aiida_xyz, options, catch_exceptions=False)
+            self.assertIn(b'Successfully imported', res.stdout_bytes,
+                          'The string "Successfully imported" was not found in the output'
+                          ' of verdi data structure import.')
+            self.assertIn(b'PK', res.stdout_bytes,
+                          'The string "PK" was not found in the output'
                           ' of verdi data structure import.')
 
-    def test_showhelp(self):
-        res = self.runner.invoke(cmd_structure.structure_import, ['--help'])
-        self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
-                                                   ' of verdi data show --help')
+    def test_import_aiida_xyz(self):
+        xyzcontent = '''
+        2
+
+        Fe     0.0 0.0 0.0
+        O      2.0 2.0 2.0
+        '''
+        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
+            fhandle.write(xyzcontent)
+            fhandle.flush()
+            options = [
+                fhandle.name,
+                '-n' # dry-run
+            ]
+            res = self.cli_runner.invoke(cmd_structure.import_aiida_xyz, options, catch_exceptions=False)
+            self.assertIn(b'Successfully imported', res.stdout_bytes,
+                          'The string "Successfully imported" was not found in the output'
+                          ' of verdi data structure import.')
+            self.assertIn(b'dry-run', res.stdout_bytes,
+                          'The string "dry-run" was not found in the output'
+                          ' of verdi data structure import.')
+
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    def test_import_ase(self):
+        xsfcontent = '''CRYSTAL
+PRIMVEC
+    2.7100000000    2.7100000000    0.0000000000
+    2.7100000000    0.0000000000    2.7100000000
+    0.0000000000    2.7100000000    2.7100000000
+ PRIMCOORD
+           2           1
+ 16      0.0000000000     0.0000000000     0.0000000000
+ 30      1.3550000000    -1.3550000000    -1.3550000000
+        '''
+        with tempfile.NamedTemporaryFile(mode='w+', suffix='.xsf') as fhandle:
+            fhandle.write(xsfcontent)
+            fhandle.flush()
+            options = [
+                fhandle.name,
+            ]
+            res = self.cli_runner.invoke(cmd_structure.import_ase, options, catch_exceptions=False)
+            self.assertIn(b'Successfully imported', res.stdout_bytes,
+                          'The string "Successfully imported" was not found in the output'
+                          ' of verdi data structure import.')
+            self.assertIn(b'PK', res.stdout_bytes,
+                          'The string "PK" was not found in the output'
+                          ' of verdi data structure import.')
+
+    @unittest.skipIf(not has_qe_tools(), "Unable to import qe-tools")
+    def test_import_qetools_pwinput(self):
+        qeinpcontent = '''&CONTROL
+  calculation = 'nscf'
+  outdir = './out/'
+  prefix = 'aiida'
+  pseudo_dir = './pseudo/'
+  verbosity = 'high'
+/
+&SYSTEM
+  ecutrho =   2.4000000000d+02
+  ecutwfc =   3.0000000000d+01
+  ibrav = 0
+  nat = 2
+  ntyp = 2
+/
+&ELECTRONS
+/
+ATOMIC_SPECIES
+As     74.9216 As.pbesol-n-rrkjus_psl.0.2.UPF
+Ga     69.723 Ga.pbesol-dn-rrkjus_psl.0.2.UPF
+ATOMIC_POSITIONS angstrom
+Ga           2.8317405232       0.0000000000       2.8317405232 
+As           1.4158702616       1.4158702616       4.2476107848 
+K_POINTS automatic
+2 2 2 0 0 0
+CELL_PARAMETERS angstrom
+      0.0000000000       2.8317405232       2.8317405232
+      2.8317405232       0.0000000000       2.8317405232
+      2.8317405232       2.8317405232       0.0000000000
+        '''
+        with tempfile.NamedTemporaryFile(mode='w+', suffix='.in') as fhandle:
+            fhandle.write(qeinpcontent)
+            fhandle.flush()
+            options = [
+                fhandle.name,
+            ]
+            res = self.cli_runner.invoke(cmd_structure.import_qetools_pwinput, options, catch_exceptions=False)
+            self.assertIn(b'Successfully imported', res.stdout_bytes,
+                          'The string "Successfully imported" was not found in the output'
+                          ' of verdi data structure import.')
+            self.assertIn(b'PK', res.stdout_bytes,
+                          'The string "PK" was not found in the output'
+                          ' of verdi data structure import.')
 
     def test_list(self):
         self.data_listing_test(StructureData, 'BaO3Ti', self.ids)

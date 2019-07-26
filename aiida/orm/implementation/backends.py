@@ -27,7 +27,7 @@ class Backend(object):
 
     @abc.abstractmethod
     def migrate(self):
-        """Migrate the database to the latest schema version."""
+        """Migrate the database to the latest schema generation or version."""
 
     @abc.abstractproperty
     def authinfos(self):

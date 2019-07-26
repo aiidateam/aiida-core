@@ -44,6 +44,14 @@ Getting started
  * For setting up a production environment, you may find the :ref:`configuration <configure_aiida>` section helpful.
  * For the advanced, there is the complete :doc:`AiiDA API reference<apidoc/aiida>` (including a :ref:`modindex`), and of course you can always peek into the code on the `AiiDA git repository <https://github.com/aiidateam/aiida-core>`_.
 
+**************
+For developers
+**************
+
+ * If you wish to start developing a plugin for AiiDA the :ref:`plugin_development` section is a good place to start.
+ * Practical information concerning how to set up your development environment and how to contribute to aiida core can be found on the `AiiDA Wiki <https://github.com/aiidateam/aiida-core/wiki>`_.
+ * You are also more than welcome to join the `AiiDA mailing list <http://www.aiida.net/mailing-list/>`_ or contribute to aiida-core on `GitHub <https://github.com/aiidateam/aiida-core>`_.
+
 .. toctree::
     :maxdepth: 1
     :caption: Installation
@@ -102,7 +110,15 @@ Getting started
     :caption: For AiiDA developers
     :hidden:
 
-    developer_guide/index
+    developer_guide/core/internals
+    developer_guide/core/transport
+    developer_guide/core/database_schema
+    developer_guide/core/modifying_the_schema
+    developer_guide/core/extend_restapi
+    developer_guide/core/caching
+    developer_guide/core/plugin_system
+    developer_guide/tools/sphinx_cheatsheet
+    developer_guide/design/changes
 
 .. toctree::
     :maxdepth: 1
@@ -132,15 +148,14 @@ Getting started
    developer_guide/devel_tutorial/parser_warnings_policy
    developer_guide/aiida_sphinxext
 
-
 ***********
 How to cite
 ***********
 
 If you use AiiDA for your research, please cite the following work:
-  
+
 .. highlights:: Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,
-    and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database 
+    and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database
     for computational science*, Comp. Mat. Sci 111, 218-230 (2016);
     https://doi.org/10.1016/j.commatsci.2015.09.013; http://www.aiida.net.
 

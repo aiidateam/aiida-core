@@ -80,7 +80,10 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
             filters[process_state_attribute] = {'in': process_state}
 
         if process_label is not None:
-            filters[process_label_attribute] = process_label
+            if '%' in process_label or '_' in process_label:
+                filters[process_label_attribute] = {'like': process_label}
+            else:
+                filters[process_label_attribute] = process_label
 
         if failed:
             filters[process_state_attribute] = {'==': ProcessState.FINISHED.value}

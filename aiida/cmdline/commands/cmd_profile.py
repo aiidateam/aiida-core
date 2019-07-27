@@ -54,7 +54,9 @@ def profile_list():
 @verdi_profile.command('show')
 @arguments.PROFILE(default=defaults.get_default_profile)
 def profile_show(profile):
-    """Show details for PROFILE or, when not specified, the default profile."""
+    """Show details for PROFILE.
+
+    If no PROFILE is specified, then the current default is used."""
     if profile is None:
         echo.echo_critical('no profile to show')
 
@@ -95,8 +97,8 @@ def profile_setdefault(profile):
 )
 @arguments.PROFILES(required=True)
 def profile_delete(force, include_config, include_db, include_repository, profiles):
-    """
-    Delete PROFILES (names, separated by spaces) from the aiida config file,
+    """Delete one or multiple PROFILES.
+
     including the associated databases and file repositories.
     """
     from aiida.manage.configuration.setup import delete_profile

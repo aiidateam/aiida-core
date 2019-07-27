@@ -46,7 +46,7 @@ STATUS_SYMBOLS = {
 
 @verdi.command('status')
 def verdi_status():
-    """Print status of AiiDA services."""
+    """Print status of services."""
     # pylint: disable=broad-except,too-many-statements
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
     from aiida.common.utils import Capturing, get_repository_folder

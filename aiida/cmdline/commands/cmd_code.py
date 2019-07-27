@@ -125,7 +125,7 @@ def setup_code(non_interactive, **kwargs):
 @click.pass_context
 @with_dbenv()
 def code_duplicate(ctx, code, non_interactive, **kwargs):
-    """Create duplicate of existing Code."""
+    """Create duplicate of an existing Code."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
 
@@ -174,7 +174,10 @@ def show(code, verbose):
 @arguments.CODES()
 @with_dbenv()
 def delete(codes):
-    """Delete codes that have not yet been used for calculations, i.e. if it has outgoing links."""
+    """Delete a Code.
+
+    Note, one can only deleted codes that have not yet been used for calculations, i.e. if it has outgoing links.
+    """
     from aiida.common.exceptions import InvalidOperation
     from aiida.orm import Node
 
@@ -193,7 +196,10 @@ def delete(codes):
 @arguments.CODES()
 @with_dbenv()
 def hide(codes):
-    """Hide one or more codes from the `verdi code list` command."""
+    """Hide one or more codes.
+
+    Hidden codes do not show up by default in the output of `verdi code list`.
+    """
     for code in codes:
         code.hide()
         echo.echo_success('Code<{}> {} hidden'.format(code.pk, code.full_label))
@@ -203,7 +209,10 @@ def hide(codes):
 @arguments.CODES()
 @with_dbenv()
 def reveal(codes):
-    """Reveal one or more hidden codes to the `verdi code list` command."""
+    """Reveal one or more hidden codes.
+
+    Hidden codes do not show up by default in the output of `verdi code list`.
+    """
     for code in codes:
         code.reveal()
         echo.echo_success('Code<{}> {} revealed'.format(code.pk, code.full_label))
@@ -214,7 +223,7 @@ def reveal(codes):
 @arguments.LABEL()
 @with_dbenv()
 def relabel(code, label):
-    """Relabel a code."""
+    """Relabel a Code."""
     old_label = code.full_label
 
     try:

@@ -30,8 +30,7 @@ def verdi_calcjob():
 @verdi_calcjob.command('gotocomputer')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 def calcjob_gotocomputer(calcjob):
-    """
-    Open a shell and go to the calcjob folder on the computer
+    """Open a shell and go to the calcjob folder on the computer.
 
     This command opens a ssh connection to the folder on the remote
     computer on which the calcjob is being/has been executed.
@@ -83,9 +82,9 @@ def calcjob_res(calcjob, fmt, keys):
 @click.argument('path', type=click.STRING, required=False)
 @decorators.with_dbenv()
 def calcjob_inputcat(calcjob, path):
-    """
-    Show the contents of a file with relative PATH in the raw input folder of the CALCULATION.
+    """Show the contents of an input file of a CALCULATION.
 
+    The PATH argument can be used to indicate a specific file using its relative path in the repository.
     If PATH is not specified, the default input file path will be used, if defined by the calcjob plugin class.
     """
     # Get path from the given CalcJobNode if not defined by user
@@ -117,9 +116,9 @@ def calcjob_inputcat(calcjob, path):
 @click.argument('path', type=click.STRING, required=False)
 @decorators.with_dbenv()
 def calcjob_outputcat(calcjob, path):
-    """
-    Show the contents of a file with relative PATH in the retrieved folder of the CALCULATION.
+    """Show the contents of an output file of a CALCULATION.
 
+    The PATH argument can be used to indicate a specific file using its relative path in the repository.
     If PATH is not specified, the default output file path will be used, if defined by the calcjob plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
     """
@@ -158,9 +157,9 @@ def calcjob_outputcat(calcjob, path):
 @click.argument('path', type=click.STRING, required=False)
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calcjob_inputls(calcjob, path, color):
-    """
-    Show the list of files in the directory with relative PATH in the raw input folder of the CALCULATION.
+    """Show the list of inputs files for the given CALCULATION.
 
+    The PATH argument can be used to specify a sub directory in the input folder.
     If PATH is not specified, the base path of the input folder will be used.
     """
     from aiida.cmdline.utils.repository import list_repository_contents
@@ -177,9 +176,9 @@ def calcjob_inputls(calcjob, path, color):
 @click.argument('path', type=click.STRING, required=False)
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calcjob_outputls(calcjob, path, color):
-    """
-    Show the list of files in the directory with relative PATH in the retrieved folder of the CALCULATION.
+    """Show the list of output files of the CALCULATION.
 
+    The PATH argument can be used to specify a sub directory in the output folder.
     If PATH is not specified, the base path of the retrieved folder will be used.
     Content can only be shown after the daemon has retrieved the remote files.
     """
@@ -204,8 +203,7 @@ def calcjob_outputls(calcjob, path, color):
 @options.COMPUTERS(help='include only calcjobs that were ran on these computers')
 @options.FORCE()
 def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force):
-    """
-    Clean all content of all output remote folders of calcjobs.
+    """Clean all content of all output remote folders of calcjobs.
 
     If no explicit calcjobs are specified as arguments, one or both of the -p and -o options has to be specified.
     If both are specified, a logical AND is done between the two, i.e. the calcjobs that will be cleaned have been

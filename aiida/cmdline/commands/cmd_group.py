@@ -136,7 +136,7 @@ def group_description(group, description):
 @arguments.GROUP()
 @with_dbenv()
 def group_show(group, raw, uuid):
-    """Show information on a given group. Pass the GROUP as a parameter."""
+    """Show information for a given GROUP."""
     from tabulate import tabulate
 
     from aiida.common.utils import str_timedelta
@@ -323,7 +323,7 @@ def group_list(
 @click.argument('group_label', nargs=1, type=click.STRING)
 @with_dbenv()
 def group_create(group_label):
-    """Create a new empty group with the name GROUP_NAME."""
+    """Create a new group with the name GROUP_NAME."""
     from aiida import orm
     from aiida.orm import GroupTypeString
 
@@ -340,7 +340,7 @@ def group_create(group_label):
 @click.argument('destination_group', nargs=1, type=click.STRING)
 @with_dbenv()
 def group_copy(source_group, destination_group):
-    """Add all nodes that belong to source group to the destination group (which may or may not exist)."""
+    """Create a copy of the given GROUP."""
     from aiida import orm
 
     dest_group, created = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)

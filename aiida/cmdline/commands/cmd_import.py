@@ -38,7 +38,7 @@ class ExtrasImportCode(Enum):
 
 
 def _try_import(migration_performed, file_to_import, archive, group, migration, non_interactive, **kwargs):
-    """Utility function for `verdi import` to try to import archive
+    """Utility function for `verdi import` to try to import archive.
 
     :param migration_performed: Boolean to determine the exception message to throw for IncompatibleArchiveVersionError
     :param file_to_import: Absolute path, including filename, of file to be migrated.
@@ -99,7 +99,8 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
 
 
 def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive, **kwargs):  # pylint: disable=unused-argument
-    """Utility function for `verdi import` to migrate archive
+    """Utility function for `verdi import` to migrate archive.
+
     Invoke click command `verdi export migrate`, passing in the archive,
     outputting the migrated archive in a temporary SandboxFolder.
     Try again to import the now migrated file, after a successful migration.
@@ -195,7 +196,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
 def cmd_import(
     ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive
 ):
-    """Import one or multiple exported AiiDA archives
+    """Import one or multiple export archives.
 
     The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.
     """

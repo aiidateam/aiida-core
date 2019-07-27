@@ -103,7 +103,7 @@ def process_show(processes):
 @arguments.PROCESSES()
 @decorators.with_dbenv()
 def process_call_root(processes):
-    """Show the root process of the call stack for the given processes."""
+    """Show the root process of the call stack for PROCESSES."""
     for process in processes:
 
         caller = process.caller

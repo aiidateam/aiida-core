@@ -27,7 +27,7 @@ def verdi_node():
 
 @verdi_node.group('repo')
 def verdi_node_repo():
-    pass
+    """Commands to interact with a node's repository."""
 
 
 @verdi_node_repo.command('cat')

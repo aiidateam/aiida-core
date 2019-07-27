@@ -31,7 +31,7 @@ from aiida.cmdline.utils import decorators, echo
 )
 @decorators.with_dbenv()
 def rehash(nodes, entry_point):
-    """Recompute the hash for nodes in the database
+    """Recompute the hash for nodes in the database.
 
     The set of nodes that will be rehashed can be filtered by their identifier and/or based on their class.
     """

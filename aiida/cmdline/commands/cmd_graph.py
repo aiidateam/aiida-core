@@ -21,8 +21,7 @@ from aiida.cmdline.utils import decorators, echo
 
 @verdi.group('graph')
 def verdi_graph():
-    """Create visual representations of part of the provenance graph.
-    """
+    """Create visual representations of the provenance graph."""
 
 
 @verdi_graph.command('generate')
@@ -73,9 +72,7 @@ def generate(
     root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
     output_format, show
 ):
-    """
-    Generate a graph from a ROOT_NODE (specified by pk or uuid).
-    """
+    """Generate a graph from a given ROOT_NODE."""
     # pylint: disable=too-many-arguments
     from aiida.tools.visualization import Graph
     print_func = echo.echo_info if verbose else None

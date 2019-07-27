@@ -38,8 +38,7 @@ def upf():
 )
 @decorators.with_dbenv()
 def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
-    """
-    Upload a new pseudopotential family.
+    """Upload a new pseudopotential family.
 
     Returns the numbers of files found and the number of nodes uploaded.
 
@@ -62,9 +61,7 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
 @options.WITH_ELEMENTS()
 @decorators.with_dbenv()
 def upf_listfamilies(elements, with_description):
-    """
-    Print on screen the list of upf families installed
-    """
+    """Print the list of upf families installed."""
     from aiida import orm
     from aiida.plugins import DataFactory
     from aiida.orm.nodes.data.upf import UPFGROUP_TYPE
@@ -109,8 +106,8 @@ def upf_listfamilies(elements, with_description):
 @arguments.GROUP()
 @decorators.with_dbenv()
 def upf_exportfamily(folder, group):
-    """
-    Export a pseudopotential family into a folder.
+    """Export a pseudopotential family into a folder.
+
     Call without parameters to get some help.
     """
     if group.is_empty:
@@ -129,9 +126,7 @@ def upf_exportfamily(folder, group):
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @decorators.with_dbenv()
 def upf_import(filename):
-    """
-    Import upf data object
-    """
+    """Import upf data object."""
     from aiida.orm import UpfData
 
     node, _ = UpfData.get_or_create(filename)

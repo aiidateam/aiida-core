@@ -36,9 +36,7 @@ def verdi_computer():
 
 
 def get_computer_names():
-    """
-    Retrieve the list of computers in the DB.
-    """
+    """Retrieve the list of computers in the DB."""
     from aiida.orm.querybuilder import QueryBuilder
     builder = QueryBuilder()
     builder.append(entity_type='computer', project=['name'])
@@ -53,8 +51,7 @@ def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argum
 
 
 def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=unused-argument
-    """
-    Internal test to check if it is possible to check the queue state.
+    """Internal test to check if it is possible to check the queue state.
 
     :param transport: an open transport
     :param scheduler: the corresponding scheduler class
@@ -68,8 +65,7 @@ def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=
 
 
 def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pylint: disable=unused-argument
-    """
-    Test that there is no unexpected output from the connection.
+    """Test that there is no unexpected output from the connection.
 
     This can happen if e.g. there is some spurious command in the
     .bashrc or .bash_profile that is not guarded in case of non-interactive
@@ -124,9 +120,7 @@ https://github.com/aiidateam/aiida-core/issues/1890
 
 
 def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disable=unused-argument
-    """
-    Internal test to check if it is possible to create a temporary file
-    and then delete it in the work directory
+    """Internal test to check if it is possible to create a temporary file and then delete it in the work directory
 
     :note: exceptions could be raised
 
@@ -194,8 +188,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
 
 
 def get_parameter_default(parameter, ctx):
-    """
-    Get the value for a specific parameter from the computer_builder or the default value of that option
+    """Get the value for a specific parameter from the computer_builder or the default value of that option.
 
     :param parameter: parameter name
     :param ctx: click context of the command
@@ -469,8 +462,7 @@ def computer_rename(computer, new_name):
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_test(user, print_traceback, computer):
-    """
-    Test the connection to a computer.
+    """Test the connection to a computer.
 
     It tries to connect, to get the list of calculations on the queue and
     to perform other tests.
@@ -544,11 +536,9 @@ def computer_test(user, print_traceback, computer):
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_delete(computer):
-    """
-    Configure the authentication information for a given computer
+    """Configure the authentication information for a given computer.
 
-    Does not delete the computer if there are calculations that are using
-    it.
+    Does not delete the computer if there are calculations that are using it.
     """
     from aiida.common.exceptions import InvalidOperation
     from aiida import orm

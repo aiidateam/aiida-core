@@ -23,7 +23,7 @@ from aiida.cmdline.utils import decorators, echo
 
 @verdi_data.group('upf')
 def upf():
-    """Manipulation of the upf families."""
+    """Manipulate UpfData objects (UPF-format pseudopotentials)."""
 
 
 @upf.command('uploadfamily')
@@ -39,7 +39,7 @@ def upf():
 @decorators.with_dbenv()
 def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
     """
-    Upload a new pseudopotential family.
+    Create a new UPF family from a folder of UPF files.
 
     Returns the numbers of files found and the number of nodes uploaded.
 
@@ -63,7 +63,7 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
 @decorators.with_dbenv()
 def upf_listfamilies(elements, with_description):
     """
-    Print on screen the list of upf families installed
+    List all UPF families that exist in the database.
     """
     from aiida import orm
     from aiida.plugins import DataFactory
@@ -130,7 +130,7 @@ def upf_exportfamily(folder, group):
 @decorators.with_dbenv()
 def upf_import(filename):
     """
-    Import upf data object
+    Import a UPF pseudopotential from a file.
     """
     from aiida.orm import UpfData
 

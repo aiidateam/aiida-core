@@ -54,7 +54,7 @@ def _store_structure(new_structure, dry_run):
 
 @verdi_data.group('structure')
 def structure():
-    """Manipulation of StructureData objects."""
+    """Manipulate StructureData objects (crystal structures)."""
 
 
 # pylint: disable=too-many-locals,too-many-branches
@@ -64,7 +64,7 @@ def structure():
 @list_options
 @decorators.with_dbenv()
 def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
-    """List stored StructureData objects."""
+    """List StructureData objects."""
     from aiida.orm.nodes.data.structure import StructureData, get_formula, get_symbols_string
     from tabulate import tabulate
 
@@ -150,7 +150,7 @@ def structure_show(data, fmt):
 @export_options
 @decorators.with_dbenv()
 def structure_export(**kwargs):
-    """Export StructureData object."""
+    """Export StructureData object to file."""
     node = kwargs.pop('datum')
     output = kwargs.pop('output')
     fmt = kwargs.pop('fmt')
@@ -163,7 +163,7 @@ def structure_export(**kwargs):
 
 @structure.group('import')
 def structure_import():
-    """Import crystal structures from a file."""
+    """Import a crystal structure from file into a StructureData object."""
 
 
 @structure_import.command('aiida-xyz')

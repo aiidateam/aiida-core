@@ -33,7 +33,7 @@ VISUALIZATION_FORMATS = ['xmgrace']
 
 @verdi_data.group('bands')
 def bands():
-    """Manipulate BandsData objects."""
+    """Manipulate BandsData objects (band structures)."""
 
 
 # pylint: disable=too-many-arguments

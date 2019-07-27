@@ -47,7 +47,7 @@ CONFIG_DIR = os.path.join(os.path.split(os.path.abspath(aiida.restapi.__file__))
 @click.option('--hookup/--no-hookup', 'hookup', is_flag=True, default=True, help='to hookup app')
 def restapi(hostname, port, config_dir, debug, wsgi_profile, hookup):
     """
-    Run the AiiDA REST API server
+    Run the AiiDA REST API server.
 
     Example Usage:
 

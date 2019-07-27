@@ -31,7 +31,7 @@ def verdi_calcjob():
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 def calcjob_gotocomputer(calcjob):
     """
-    Open a shell and go to the calcjob folder on the computer
+    Open a shell in the remote folder on the calcjob.
 
     This command opens a ssh connection to the folder on the remote
     computer on which the calcjob is being/has been executed.
@@ -59,7 +59,7 @@ def calcjob_gotocomputer(calcjob):
 @options.DICT_FORMAT()
 @decorators.with_dbenv()
 def calcjob_res(calcjob, fmt, keys):
-    """Print data from the result output node of a calcjob."""
+    """Print data from the result output Dict node of a calcjob."""
     from aiida.cmdline.utils.echo import echo_dictionary
 
     try:
@@ -84,7 +84,9 @@ def calcjob_res(calcjob, fmt, keys):
 @decorators.with_dbenv()
 def calcjob_inputcat(calcjob, path):
     """
-    Show the contents of a file with relative PATH in the raw input folder of the CALCULATION.
+    Show the contents of one of the calcjob input files.
+
+    You can specify the relative PATH in the raw input folder of the CalcJob.
 
     If PATH is not specified, the default input file path will be used, if defined by the calcjob plugin class.
     """
@@ -118,7 +120,9 @@ def calcjob_inputcat(calcjob, path):
 @decorators.with_dbenv()
 def calcjob_outputcat(calcjob, path):
     """
-    Show the contents of a file with relative PATH in the retrieved folder of the CALCULATION.
+    Show the contents of one of the calcjob retrieved outputs.
+
+    You can specify the relative PATH in the retrieved folder of the CalcJob.
 
     If PATH is not specified, the default output file path will be used, if defined by the calcjob plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
@@ -159,7 +163,9 @@ def calcjob_outputcat(calcjob, path):
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calcjob_inputls(calcjob, path, color):
     """
-    Show the list of files in the directory with relative PATH in the raw input folder of the CALCULATION.
+    Show the list of the generated calcjob input files.
+
+    You can specify a relative PATH in the raw input folder of the CalcJob.
 
     If PATH is not specified, the base path of the input folder will be used.
     """
@@ -178,7 +184,9 @@ def calcjob_inputls(calcjob, path, color):
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calcjob_outputls(calcjob, path, color):
     """
-    Show the list of files in the directory with relative PATH in the retrieved folder of the CALCULATION.
+    Show the list of the retrieved calcjob output files.
+
+    You can specify a relative PATH in the retrieved folder of the CalcJob.
 
     If PATH is not specified, the base path of the retrieved folder will be used.
     Content can only be shown after the daemon has retrieved the remote files.

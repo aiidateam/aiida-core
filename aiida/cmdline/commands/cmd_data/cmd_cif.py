@@ -29,7 +29,7 @@ VISUALIZATION_FORMATS = ['jmol', 'vesta']
 
 @verdi_data.group('cif')
 def cif():
-    """Manipulation of CIF data objects."""
+    """Manipulate CifData objects (crystal structures in .cif format)."""
 
 
 @cif.command('list')
@@ -92,7 +92,7 @@ def cif_show(data, fmt):
 @arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:cif',)))
 @decorators.with_dbenv()
 def cif_content(data):
-    """Show the content of the file behind CifData objects."""
+    """Show the content of the CIF file."""
     for node in data:
         try:
             echo.echo(node.get_content())
@@ -121,7 +121,7 @@ def cif_export(**kwargs):
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @decorators.with_dbenv()
 def cif_import(filename):
-    """Import structure into CifData object."""
+    """Import .cif file into CifData object."""
     from aiida.orm import CifData
 
     try:

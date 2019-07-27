@@ -194,7 +194,7 @@ def deprecated_command(message):
         if not profile.is_test_profile:
             template = templates.env.get_template('deprecated.tpl')
             width = 80
-            echo.echo(template.render(msg=wrap(message, width), width=width))
+            echo.echo(template.render(msg=wrap(message, width - 4), width=width))
 
         return wrapped(*args, **kwargs)
 

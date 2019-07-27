@@ -68,7 +68,7 @@ def database_migrate(force):
 
 @verdi_database.group('integrity')
 def verdi_database_integrity():
-    """Various commands that will check the integrity of the database and fix potential issues when asked."""
+    """Check the integrity of the database and fix potential issues."""
 
 
 @verdi_database_integrity.command('detect-duplicate-uuid')
@@ -83,7 +83,7 @@ def verdi_database_integrity():
     '-a', '--apply-patch', is_flag=True, help='Actually apply the proposed changes instead of performing a dry run.'
 )
 def detect_duplicate_uuid(table, apply_patch):
-    """Detect and solve entities with duplicate UUIDs in a given database table.
+    """Detect and fix entities with duplicate UUIDs.
 
     Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the node table in the database
     and a few other tables as well. This made it possible to store multiple entities with identical UUIDs in the same

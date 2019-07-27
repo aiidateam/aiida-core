@@ -70,7 +70,7 @@ class IcsdDbImporter(DbImporter):
 
         or (if e.g. you get an URLError with Errno 111 (Connection refused)
         upon querying)::
-        
+
             ssh -L 3306:localhost:3306 -L 8010:localhost:80 username@hostname.com
 
     :param user: mysql database username (default: dba)
@@ -359,7 +359,7 @@ class IcsdDbImporter(DbImporter):
                 "year": ("year", _parse_all),
                 "crystal_system": ("system", _parse_system),
     }
-    
+
     def query(self, **kwargs):
         """
         Depending on the db_parameters, the mysql database or the web page are queried.
@@ -386,8 +386,8 @@ class IcsdDbImporter(DbImporter):
         for k, v in kwargs.items():
             if not isinstance(v, list):
                 v = [v]
-            sql_where_query.append("({})".format(self.keywords_db[k][1](self, 
-                                                        self.keywords_db[k][0], 
+            sql_where_query.append("({})".format(self.keywords_db[k][1](self,
+                                                        self.keywords_db[k][0],
                                                         k, v)))
         if "crystal_system" in kwargs.keys():  # to query another table than the main one, add LEFT JOIN in front of WHERE
             sql_query = "LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT "\
@@ -486,7 +486,7 @@ class IcsdSearchResults(DbSearchResults):
         self.db_version = None
         self.sql_select_query = "SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM "
         self.sql_from_query = "FROM icsd "
-        
+
         if self.db_parameters["querydb"]:
             self.query_db_version()
         self.query_page()
@@ -522,14 +522,14 @@ class IcsdSearchResults(DbSearchResults):
 
         if position not in self.entries:
             if self.db_parameters["querydb"]:
-                self.entries[position] = IcsdEntry(self.db_parameters["server"] + 
+                self.entries[position] = IcsdEntry(self.db_parameters["server"] +
                         self.db_parameters["dl_db"] + self.cif_url.format(
                         self._results[position]),
-                    db_name=self.db_name, id=self.cif_numbers[position], 
-                    version = self.db_version, 
+                    db_name=self.db_name, id=self.cif_numbers[position],
+                    version = self.db_version,
                     extras={'idnum': self._results[position]})
             else:
-                self.entries[position] = IcsdEntry(self.db_parameters["server"] + 
+                self.entries[position] = IcsdEntry(self.db_parameters["server"] +
                         self.db_parameters["dl_db"] + self.cif_url.format(
                         self._results[position]),
                     db_name=self.db_name, extras={'idnum': self._results[position]})
@@ -563,7 +563,7 @@ class IcsdSearchResults(DbSearchResults):
         else:
             raise NotImplementedError("Cannot query the database version with "
                                       "a web query.")
-        
+
     def query_page(self):
         """
         Query the mysql or web page database, depending on the db_parameters.
@@ -598,8 +598,8 @@ class IcsdSearchResults(DbSearchResults):
             from bs4 import BeautifulSoup
             import re
 
-            self.html = urllib.request.urlopen(self.db_parameters["server"] + 
-                                               self.db_parameters["db"] + "/" + 
+            self.html = urllib.request.urlopen(self.db_parameters["server"] +
+                                               self.db_parameters["db"] + "/" +
                                                self.query.format(str(self.page))).read()
 
             self.soup = BeautifulSoup(self.html)
@@ -642,12 +642,12 @@ class IcsdSearchResults(DbSearchResults):
 class IcsdEntry(CifEntry):
     """
     Represent an entry from Icsd.
-    
+
     :note:
       - Before July 2nd 2015, source['id'] contained icsd.IDNUM (internal
-        icsd id number) and source['extras']['cif_nr'] the cif number 
+        icsd id number) and source['extras']['cif_nr'] the cif number
         (icsd.COLL_CODE).
-      - After July 2nd 2015, source['id'] has been replaced by the cif 
+      - After July 2nd 2015, source['id'] has been replaced by the cif
         number and source['extras']['idnum'] is icsd.IDNUM .
     """
     _license = 'ICSD'
@@ -706,7 +706,7 @@ def correct_cif(cif):
     :param cif: A string containing the content of the CIF file.
     :return: a string containing the corrected CIF file.
     """
-    # Do more checks to be sure it's working in everycase 
+    # Do more checks to be sure it's working in everycase
     # -> no _publ_author_name, several lines, correct input
     lines = cif.split('\n')
 

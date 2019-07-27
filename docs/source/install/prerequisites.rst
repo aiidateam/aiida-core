@@ -19,7 +19,7 @@ Depending on your set up, there are a few optional dependencies:
 * `graphviz`_ (For plotting AiiDA provenance graphs)
 * `git`_ (Version control system used for AiiDA development)
 
-.. _graphviz: https://www.graphviz.org/download 
+.. _graphviz: https://www.graphviz.org/download
 .. _git: https://git-scm.com/downloads
 .. _python: https://www.python.org/downloads
 .. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
@@ -197,14 +197,14 @@ Make sure that RabbitMQ is running with:
 
 .. note::
     If you have encounter the following error
-    
+
     .. code-block:: bash
-    
+
         Argument '-smp enable' not supported."
-    
+
     Remove the mentioned option from the file ``/usr/libexec/rabbitmq/rabbitmq-env`` and restart the server.
     If you still have trouble getting RabbitMQ to run, please refer to the detailed instructions provided on the `website of RabbitMQ itself for generic Unix systems <https://www.rabbitmq.com/install-generic-unix.html>`_.
-    
+
 .. _details_wsl:
 
 Windows Subsystem for Linux (Ubuntu)
@@ -222,7 +222,7 @@ The guide for Ubuntu above can be followed but there are a few things to note:
      sudo service postgresql start
 
 #. There is a `known issue <https://github.com/Microsoft/WSL/issues/856>`_ in WSL Ubuntu 18.04 where the timezone is not
-   configured correctly out-of-the-box, which may cause problem for the database. 
+   configured correctly out-of-the-box, which may cause problem for the database.
    The following command can be used to re-configure the time zone::
 
      dpkg-reconfigure tzdata

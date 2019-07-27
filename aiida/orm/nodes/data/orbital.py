@@ -45,7 +45,7 @@ class OrbitalData(Data):
 
         :param site: if provided, returns all orbitals with position of site
         :kwargs: attributes than can filter the set of returned orbitals
-        :return list_of_outputs: a list of orbitals 
+        :return list_of_outputs: a list of orbitals
         """
 
         orbital_dicts = copy.deepcopy(self.get_attribute('orbital_dicts', None))

@@ -39,7 +39,7 @@ To utilize the ``fixture_manager``, we first need to define the actual fixtures:
 
 .. literalinclude:: conftest.py
 
-  
+
 The ``aiida_profile`` fixture initialize the ``fixture_manager`` yields it to the test function.
 By using the *with* clause, we ensure that the test profile to run tests are destroyed in the end.
 The scope of this fixture should be *session*, since there is no need to re-initialize the
@@ -186,7 +186,7 @@ First, let's see a typical test class using the ``unittest``::
           comdata.store()
 
       def test_complex_retrieve(self):
-          """Test if the complex 
+          """Test if the complex
 
           comp_num = 1 + 2j
           pk = self.store_complex(cnum)
@@ -242,7 +242,7 @@ run with ``pytest`` directly, as shown below:
           comdata = load_node(pk)
           self.assertEqual(comdata.value == comp_num)
 
- 
+
 To allow pytest to run the tests, we first swap the ``AiidaTestCase`` with the generic
 ``TestCase``. We define a module scope fixture ``module_import`` to import the
 required AiiDA modules and make them available in the module namespace.
@@ -257,7 +257,7 @@ we define a ``reset_db`` fixture to reset the database for every tests.
 The ``autouse=True`` flag tells all test methods inside the class to use it automatically.
 
 When migrating your code to use the pytest, you may define a base class with these
-modifications and use it as the superclass for other test classes. 
+modifications and use it as the superclass for other test classes.
 
 .. _request: https://docs.pytest.org/en/3.6.3/reference.html#request
 
@@ -267,6 +267,6 @@ modifications and use it as the superclass for other test classes.
 .. note::
   The modification will break the compatibility of ``unittest`` and you will not be able
   to run with ``verdi devel tests`` interface.
-  Do not forget to remove redundant entry points in your setup.json. 
+  Do not forget to remove redundant entry points in your setup.json.
 
 .. _pytest documentation: https://docs.pytest.org/en/latest/unittest.html

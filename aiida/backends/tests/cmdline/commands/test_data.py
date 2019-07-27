@@ -753,8 +753,8 @@ ATOMIC_SPECIES
 As     74.9216 As.pbesol-n-rrkjus_psl.0.2.UPF
 Ga     69.723 Ga.pbesol-dn-rrkjus_psl.0.2.UPF
 ATOMIC_POSITIONS angstrom
-Ga           2.8317405232       0.0000000000       2.8317405232 
-As           1.4158702616       1.4158702616       4.2476107848 
+Ga           2.8317405232       0.0000000000       2.8317405232
+As           1.4158702616       1.4158702616       4.2476107848
 K_POINTS automatic
 2 2 2 0 0 0
 CELL_PARAMETERS angstrom

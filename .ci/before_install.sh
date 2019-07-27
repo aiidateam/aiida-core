@@ -13,12 +13,12 @@ then
     docker run -d --privileged -p=10022:22 --name="torquesshmachine" --env-file "${TRAVIS_BUILD_DIR}/torquessh.env" torquessh
     # Docker ps to see what is going on
     echo "Running docker ps to see if the 'torquessh' docker image is up..."
-    docker ps    
+    docker ps
     # Wait for SSH to be up
     "${TRAVIS_BUILD_DIR}"/.ci/wait-for-it.sh localhost:10022 -t 0
 
     # I will add the key to the known_hosts later, to give the time to ssh
     # to be really up - see the before_script script
     #ssh-keyscan -p 10022 localhost >> ${HOME}/.ssh/known_hosts
-    
+
 fi

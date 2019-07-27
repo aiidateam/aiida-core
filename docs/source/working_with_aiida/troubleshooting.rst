@@ -5,8 +5,8 @@ Some tricks
   :maxdepth: 1
 
   ../setup/ssh_proxycommand
-  
-   
+
+
 Increasing the debug level
 ==========================
 
@@ -30,7 +30,7 @@ in the ``~/.aiida/daemon/log`` folder.
 
 After rebooting the daemon (``verdi daemon restart``), the number of messages
 logged will increase significantly and may help in understanding
-the source of the problem. 
+the source of the problem.
 
 .. note:: In the command above, you can use a different level than ``DEBUG``.
   The list of the levels and their order is the same of the `standard python
@@ -76,11 +76,11 @@ backup described in the :ref:`repository backup section<repository_backup>`.
 mlocate cron job
 ----------------
 
-Under typical Linux distributions, there is a cron job (called 
-``updatedb.mlocate``) running every day to update a database of files and 
-folders -- this is to be used by the ``locate`` command. This might become 
-problematic since the repository contains many folders and 
-will be scanned everyday. The net effect is a hard drive almost constantly 
+Under typical Linux distributions, there is a cron job (called
+``updatedb.mlocate``) running every day to update a database of files and
+folders -- this is to be used by the ``locate`` command. This might become
+problematic since the repository contains many folders and
+will be scanned everyday. The net effect is a hard drive almost constantly
 working.
 
 To avoid this issue, edit as root the file ``/etc/updatedb.conf``

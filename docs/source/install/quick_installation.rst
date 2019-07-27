@@ -9,7 +9,7 @@ Prerequisites
 
 .. toggle-header::
     :header: **Ubuntu**
-    
+
     .. code-block:: bash
 
         sudo apt-get install git python2.7-dev python3-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client rabbitmq-server
@@ -19,7 +19,7 @@ Prerequisites
 
 .. toggle-header::
     :header: **MacOS X (Homebrew)**
-    
+
     .. code-block:: bash
 
         brew install git python postgresql rabbitmq
@@ -33,7 +33,7 @@ Prerequisites
 
 .. toggle-header::
     :header: **MacOS X (MacPorts)**
-    
+
     .. code-block:: bash
 
         sudo port install git python postgresql96 postgresql96-server rabbitmq-server
@@ -46,7 +46,7 @@ Prerequisites
 
 .. toggle-header::
     :header: **Gentoo Linux**
-    
+
     .. code-block:: bash
 
         emerge -av git python postgresql rabbitmq-server
@@ -56,7 +56,7 @@ Prerequisites
 
 .. toggle-header::
     :header: **Windows Subsystem for Linux**
-    
+
     .. code-block:: bash
 
         sudo apt-get install git python2.7-dev python3-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client
@@ -110,8 +110,8 @@ Check that all services are up and running:
 
 If you see all checkmarks, it is time to :ref:`get started<get_started>`!
 
-If the quick installation fails at any point, please refer 
-to the :ref:`full installation guide<installation>` for more details 
+If the quick installation fails at any point, please refer
+to the :ref:`full installation guide<installation>` for more details
 or the :ref:`troubleshooting section<troubleshooting>`.
 
 For configuration of tab completion or using AiiDA in jupyter, see the :ref:`configuration instructions <configure_aiida>` before moving on.

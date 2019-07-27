@@ -1,7 +1,7 @@
 Developing The Plugin System
 ============================
 
-.. note:: this page is intended for people wanting to contribute to 
+.. note:: this page is intended for people wanting to contribute to
    the plugin system in ``aiida-core`` and is not needed for people who just want to contribute a plugin.
 
 Design Principles
@@ -49,7 +49,7 @@ Terms
    * tools.dbimporters
 
    Each category maps to an entry point group called::
-   
+
       aiida.<category>
 
 Interfaces

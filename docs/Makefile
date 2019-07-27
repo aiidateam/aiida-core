@@ -6,7 +6,7 @@
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build
- 
+
 # Added for sphinx-apidoc
 APIDOCDIR     = source/apidoc
 

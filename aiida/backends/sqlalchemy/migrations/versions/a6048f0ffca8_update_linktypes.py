@@ -45,7 +45,7 @@ def upgrade():
     # 2) set for these links the type to 'createlink'
     stmt1 = text("""
         UPDATE db_dblink set type='createlink' WHERE db_dblink.id IN (
-            SELECT db_dblink_1.id 
+            SELECT db_dblink_1.id
             FROM db_dbnode AS db_dbnode_1
                 JOIN db_dblink AS db_dblink_1 ON db_dblink_1.input_id = db_dbnode_1.id
                 JOIN db_dbnode AS db_dbnode_2 ON db_dblink_1.output_id = db_dbnode_2.id
@@ -112,7 +112,7 @@ def upgrade():
             SELECT db_dblink_1.id
             FROM db_dbnode AS db_dbnode_1
                 JOIN db_dblink AS db_dblink_1 ON db_dblink_1.input_id = db_dbnode_1.id
-                JOIN db_dbnode AS db_dbnode_2 ON db_dblink_1.output_id = db_dbnode_2.id 
+                JOIN db_dbnode AS db_dbnode_2 ON db_dblink_1.output_id = db_dbnode_2.id
             WHERE db_dbnode_2.type LIKE 'data.%'
                 AND db_dbnode_1.type = 'calculation.work.WorkCalculation.'
                 AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
@@ -131,7 +131,7 @@ def upgrade():
             SELECT db_dblink_1.id
             FROM db_dbnode AS db_dbnode_1
                 JOIN db_dblink AS db_dblink_1 ON db_dblink_1.input_id = db_dbnode_1.id
-                JOIN db_dbnode AS db_dbnode_2 ON db_dblink_1.output_id = db_dbnode_2.id 
+                JOIN db_dbnode AS db_dbnode_2 ON db_dblink_1.output_id = db_dbnode_2.id
             WHERE db_dbnode_1.type = 'calculation.work.WorkCalculation.'
                 AND db_dbnode_2.type LIKE 'calculation.%'
                 AND ( db_dblink_1.type = null  OR db_dblink_1.type = '')

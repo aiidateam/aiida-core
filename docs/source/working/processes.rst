@@ -245,6 +245,24 @@ This is an infinitely more robust way of communcating specific errors to a non-h
 Additionally, The exit codes make it also very easy to query for failed processes with specific error codes.
 
 
+.. _working_processes_exit_code_conventions:
+
+Exit code conventions
+.....................
+In principle, the only restriction on the exit status of an exit code is that it should be a positive integer or zero.
+However, to make effective use of exit codes, there are some guidelines and conventions as to decide what integers to use.
+Note that since the following rules are *guidelines* you can choose to ignore them and currently the engine will not complain, but this might change in the future.
+Regardless, we advise you to follow the guidelines since it will improve the interoperability of your code with other existing plugins.
+The following integer ranges are reserved or suggested:
+
+    *   0 -  99: Reserved for internal use by `aiida-core`
+    * 100 - 199: Reserved for errors parsed from scheduler output of calculation jobs (note: this is not yet implemented)
+    * 200 - 299: Suggested to be used for process input validation errors
+    * 300 - 399: Suggested for critical process errors
+
+For any other exit codes, one can use the integers from 400 and up.
+
+
 .. _working_processes_metadata:
 
 Process metadata

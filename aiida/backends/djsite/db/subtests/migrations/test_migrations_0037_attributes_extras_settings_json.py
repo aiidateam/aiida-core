@@ -33,7 +33,7 @@ SAMPLE_DICT = {
     '17': 'string',
     'integer': 12,
     'float': 26.2,
-    'string': "a string",
+    'string': 'a string',
     'dict': {
         '25': [True, False],
         'a': 'b',
@@ -84,7 +84,7 @@ class TestAttributesExtrasToJSONMigrationSimple(TestMigrations):
             hostname='localhost',
             transport_type='local',
             scheduler_type='pbspro',
-            metadata={"workdir": "/tmp/aiida"}
+            metadata={'workdir': '/tmp/aiida'}
         )
         computer.save()
 
@@ -140,7 +140,7 @@ class TestAttributesExtrasToJSONMigrationManyNodes(TestMigrations):
             hostname='localhost',
             transport_type='local',
             scheduler_type='pbspro',
-            metadata={"workdir": "/tmp/aiida"}
+            metadata={'workdir': '/tmp/aiida'}
         )
         computer.save()
 
@@ -368,12 +368,12 @@ class DbMultipleValueAttributeBaseClass():
                 transaction.savepoint_rollback(sid)
             if isinstance(exc, IntegrityError) and stop_if_existing:
                 raise UniquenessError(
-                    "Impossible to create the required "
-                    "entry "
+                    'Impossible to create the required '
+                    'entry '
                     "in table '{}', "
-                    "another entry already exists and the creation would "
-                    "violate an uniqueness constraint.\nFurther details: "
-                    "{}".format(cls.__name__, exc)
+                    'another entry already exists and the creation would '
+                    'violate an uniqueness constraint.\nFurther details: '
+                    '{}'.format(cls.__name__, exc)
                 )
             raise
 
@@ -410,9 +410,9 @@ class DbMultipleValueAttributeBaseClass():
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:
                 raise ValueError(
-                    "You cannot specify a subspecifier value for "
-                    "class {} because it has no subspecifiers"
-                    "".format(cls.__name__)
+                    'You cannot specify a subspecifier value for '
+                    'class {} because it has no subspecifiers'
+                    ''.format(cls.__name__)
                 )
             if issubclass(cls, DbAttributeFunctionality):
                 new_entry = db_attribute_base_model(key=key, **other_attribs)
@@ -421,8 +421,8 @@ class DbMultipleValueAttributeBaseClass():
         else:
             if subspecifier_value is None:
                 raise ValueError(
-                    "You also have to specify a subspecifier value "
-                    "for class {} (the {})".format(cls.__name__, cls._subspecifier_field_name)
+                    'You also have to specify a subspecifier value '
+                    'for class {} (the {})'.format(cls.__name__, cls._subspecifier_field_name)
                 )
             further_params = other_attribs.copy()
             further_params.update({cls._subspecifier_field_name: subspecifier_value})
@@ -507,7 +507,7 @@ class DbMultipleValueAttributeBaseClass():
                 # NOTE: I do not pass other_attribs
                 list_to_return.extend(
                     cls.create_value(
-                        key=("{}{}{:d}".format(key, cls._sep, i)), value=subv, subspecifier_value=subspecifier_value
+                        key=('{}{}{:d}'.format(key, cls._sep, i)), value=subv, subspecifier_value=subspecifier_value
                     )
                 )
 
@@ -529,7 +529,7 @@ class DbMultipleValueAttributeBaseClass():
                 # NOTE: I do not pass other_attribs
                 list_to_return.extend(
                     cls.create_value(
-                        key="{}{}{}".format(key, cls._sep, subk), value=subv, subspecifier_value=subspecifier_value
+                        key='{}{}{}'.format(key, cls._sep, subk), value=subv, subspecifier_value=subspecifier_value
                     )
                 )
         else:
@@ -537,7 +537,7 @@ class DbMultipleValueAttributeBaseClass():
                 jsondata = json.dumps(value)
             except TypeError:
                 raise ValueError(
-                    "Unable to store the value: it must be either a basic datatype, or json-serializable: {}".
+                    'Unable to store the value: it must be either a basic datatype, or json-serializable: {}'.
                     format(value)
                 )
 
@@ -606,7 +606,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             internally to unpack dictionaries and lists (defined in cls._sep).
         """
         if isinstance(dbnode, six.integer_types):
-            raise ValueError("Integers (the dbnode pk) are not supported as input.")
+            raise ValueError('Integers (the dbnode pk) are not supported as input.')
         else:
             dbnode_node = dbnode
 
@@ -620,8 +620,8 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
 
     def __str__(self):
         # pylint: disable=no-member
-        return "[{} ({})].{} ({})".format(
-            self.dbnode.get_simple_name(invalid_result="Unknown node"),
+        return '[{} ({})].{} ({})'.format(
+            self.dbnode.get_simple_name(invalid_result='Unknown node'),
             self.dbnode.pk,
             self.key,
             self.datatype,

@@ -2,6 +2,7 @@
   rev: v2.2.3
   hooks:
   - id: trailing-whitespace
+  - id: double-quote-string-fixer
 
 - repo: local
   hooks:

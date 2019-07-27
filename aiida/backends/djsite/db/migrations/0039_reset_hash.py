@@ -30,7 +30,7 @@ _HASH_EXTRA_KEY = '_aiida_hash'
 
 
 def notify_user(apps, schema_editor):  # pylint: disable=unused-argument
-    echo_warning("Invalidating all the hashes of all the nodes. Please run verdi rehash", bold=True)
+    echo_warning('Invalidating all the hashes of all the nodes. Please run verdi rehash', bold=True)
 
 
 class Migration(migrations.Migration):

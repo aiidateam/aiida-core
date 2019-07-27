@@ -89,7 +89,7 @@ def import_data_dj(
     # Initial check(s)
     if group:
         if not isinstance(group, Group):
-            raise TypeError("group must be a Group entity")
+            raise TypeError('group must be a Group entity')
         elif not group.is_stored:
             group.store()
 
@@ -107,18 +107,18 @@ def import_data_dj(
                 try:
                     extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=nodes_export_subfolder)
                 except ValueError as exc:
-                    print("The following problem occured while processing the provided file: {}".format(exc))
+                    print('The following problem occured while processing the provided file: {}'.format(exc))
                     return
             else:
                 raise ValueError(
-                    "Unable to detect the input file format, it "
-                    "is neither a (possibly compressed) tar file, "
-                    "nor a zip file."
+                    'Unable to detect the input file format, it '
+                    'is neither a (possibly compressed) tar file, '
+                    'nor a zip file.'
                 )
 
         if not folder.get_content_list():
             from aiida.common.exceptions import ContentNotExistent
-            raise ContentNotExistent("The provided file/folder ({}) is empty".format(in_path))
+            raise ContentNotExistent('The provided file/folder ({}) is empty'.format(in_path))
         try:
             with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
@@ -126,19 +126,19 @@ def import_data_dj(
             with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
                 data = json.load(fhandle)
         except IOError as error:
-            raise ValueError("Unable to find the file {} in the import file or folder".format(error.filename))
+            raise ValueError('Unable to find the file {} in the import file or folder'.format(error.filename))
 
         ######################
         # PRELIMINARY CHECKS #
         ######################
         export_version = StrictVersion(str(metadata['export_version']))
         if export_version != expected_export_version:
-            msg = "Export file version is {}, can import only version {}"\
+            msg = 'Export file version is {}, can import only version {}'\
                     .format(metadata['export_version'], expected_export_version)
             if export_version < expected_export_version:
                 msg += "\nUse 'verdi export migrate' to update this export file."
             else:
-                msg += "\nUpdate your AiiDA version in order to import this file."
+                msg += '\nUpdate your AiiDA version in order to import this file.'
 
             raise exceptions.IncompatibleArchiveVersionError(msg)
 
@@ -170,10 +170,10 @@ def import_data_dj(
 
         if unknown_nodes and not ignore_unknown_nodes:
             raise ValueError(
-                "The import file refers to {} nodes with unknown UUID, therefore "
-                "it cannot be imported. Either first import the unknown nodes, "
-                "or export also the parents when exporting. The unknown UUIDs "
-                "are:\n".format(len(unknown_nodes)) + "\n".join('* {}'.format(uuid) for uuid in unknown_nodes)
+                'The import file refers to {} nodes with unknown UUID, therefore '
+                'it cannot be imported. Either first import the unknown nodes, '
+                'or export also the parents when exporting. The unknown UUIDs '
+                'are:\n'.format(len(unknown_nodes)) + '\n'.join('* {}'.format(uuid) for uuid in unknown_nodes)
             )
 
         ###################################
@@ -201,8 +201,8 @@ def import_data_dj(
             for dependency in dependencies:
                 if dependency not in model_order[:idx]:
                     raise ValueError(
-                        "Model {} requires {} but would be loaded "
-                        "first; stopping...".format(model_name, dependency)
+                        'Model {} requires {} but would be loaded '
+                        'first; stopping...'.format(model_name, dependency)
                     )
 
         ###################################################
@@ -266,7 +266,7 @@ def import_data_dj(
             # Show Comment mode if not silent and Comments exist in existing_entries
             if not silent:
                 if COMMENT_ENTITY_NAME in existing_entries:
-                    print("Comment mode: {}".format(comment_mode))
+                    print('Comment mode: {}'.format(comment_mode))
 
             # I import data from the given model
             for model_name in model_order:
@@ -300,7 +300,7 @@ def import_data_dj(
                         ret_dict[model_name] = {'new': [], 'existing': []}
                     ret_dict[model_name]['existing'].append((import_entry_pk, existing_entry_id))
                     if not silent:
-                        print("existing %s: %s (%s->%s)" % (model_name, unique_id, import_entry_pk, existing_entry_id))
+                        print('existing %s: %s (%s->%s)' % (model_name, unique_id, import_entry_pk, existing_entry_id))
                         # print("  `-> WARNING: NO DUPLICITY CHECK DONE!")
                         # CHECK ALSO FILES!
 
@@ -332,8 +332,8 @@ def import_data_dj(
                             dupl_counter += 1
                             if dupl_counter == 100:
                                 raise exceptions.UniquenessError(
-                                    "A group of that label ( {} ) already exists"
-                                    " and I could not create a new one".format(orig_label)
+                                    'A group of that label ( {} ) already exists'
+                                    ' and I could not create a new one'.format(orig_label)
                                 )
 
                     elif model is models.DbComputer:
@@ -353,8 +353,8 @@ def import_data_dj(
                             dupl_counter += 1
                             if dupl_counter == 100:
                                 raise exceptions.UniquenessError(
-                                    "A computer of that name ( {} ) already exists"
-                                    " and I could not create a new one".format(orig_name)
+                                    'A computer of that name ( {} ) already exists'
+                                    ' and I could not create a new one'.format(orig_name)
                                 )
 
                         imported_comp_names.add(import_data['name'])
@@ -364,7 +364,7 @@ def import_data_dj(
 
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print("STORING NEW NODE FILES...")
+                        print('STORING NEW NODE FILES...')
 
                     # NEW NODES
                     for object_ in objects_to_create:
@@ -378,8 +378,8 @@ def import_data_dj(
                         )
                         if not subfolder.exists():
                             raise exceptions.ArchiveIntegrityError(
-                                "Unable to find the repository folder for Node with UUID={} in the exported "
-                                "file".format(import_entry_uuid)
+                                'Unable to find the repository folder for Node with UUID={} in the exported '
+                                'file'.format(import_entry_uuid)
                             )
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing
@@ -390,27 +390,27 @@ def import_data_dj(
 
                         # For DbNodes, we also have to store its attributes
                         if not silent:
-                            print("STORING NEW NODE ATTRIBUTES...")
+                            print('STORING NEW NODE ATTRIBUTES...')
 
                         # Get attributes from import file
                         try:
                             object_.attributes = data['node_attributes'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.ArchiveIntegrityError(
-                                "Unable to find attribute info for Node with UUID={}".format(import_entry_uuid)
+                                'Unable to find attribute info for Node with UUID={}'.format(import_entry_uuid)
                             )
 
                         # For DbNodes, we also have to store its extras
                         if extras_mode_new == 'import':
                             if not silent:
-                                print("STORING NEW NODE EXTRAS...")
+                                print('STORING NEW NODE EXTRAS...')
 
                             # Get extras from import file
                             try:
                                 extras = data['node_extras'][str(import_entry_pk)]
                             except KeyError:
                                 raise exceptions.ArchiveIntegrityError(
-                                    "Unable to find extra info for Node with UUID={}".format(import_entry_uuid)
+                                    'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
                                 )
                             # TODO: remove when aiida extras will be moved somewhere else
                             # from here
@@ -421,7 +421,7 @@ def import_data_dj(
                             object_.extras = extras
                         elif extras_mode_new == 'none':
                             if not silent:
-                                print("SKIPPING NEW NODE EXTRAS...")
+                                print('SKIPPING NEW NODE EXTRAS...')
                         else:
                             raise ValueError(
                                 "Unknown extras_mode_new value: {}, should be either 'import' or 'none'".
@@ -431,7 +431,7 @@ def import_data_dj(
                     # EXISTING NODES (Extras)
                     # For the existing nodes that are also in the imported list we also update their extras if necessary
                     if not silent:
-                        print("UPDATING EXISTING NODE EXTRAS (mode: {})".format(extras_mode_existing))
+                        print('UPDATING EXISTING NODE EXTRAS (mode: {})'.format(extras_mode_existing))
 
                     import_existing_entry_pks = {
                         entry_data[unique_identifier]: import_entry_pk
@@ -446,7 +446,7 @@ def import_data_dj(
                             extras = data['node_extras'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.ArchiveIntegrityError(
-                                "Unable to find extra info for ode with UUID={}".format(import_entry_uuid)
+                                'Unable to find extra info for ode with UUID={}'.format(import_entry_uuid)
                             )
 
                         # TODO: remove when aiida extras will be moved somewhere else
@@ -472,7 +472,7 @@ def import_data_dj(
                 # Get back the just-saved entries
                 just_saved_queryset = model.objects.filter(
                     **{
-                        "{}__in".format(unique_identifier): import_new_entry_pks.keys()
+                        '{}__in'.format(unique_identifier): import_new_entry_pks.keys()
                     }
                 ).values_list(unique_identifier, 'pk')
                 # note: convert uuids from type UUID to strings
@@ -488,10 +488,10 @@ def import_data_dj(
                     ret_dict[model_name]['new'].append((import_entry_pk, new_pk))
 
                     if not silent:
-                        print("NEW %s: %s (%s->%s)" % (model_name, unique_id, import_entry_pk, new_pk))
+                        print('NEW %s: %s (%s->%s)' % (model_name, unique_id, import_entry_pk, new_pk))
 
             if not silent:
-                print("STORING NODE LINKS...")
+                print('STORING NODE LINKS...')
             ## TODO: check that we are not creating input links of an already
             ##       existing node...
             import_links = data['links_uuid']
@@ -513,19 +513,19 @@ def import_data_dj(
                         continue
                     else:
                         raise ValueError(
-                            "Trying to create a link with one "
-                            "or both unknown nodes, stopping "
-                            "(in_uuid={}, out_uuid={}, "
-                            "label={})".format(link['input'], link['output'], link['label'])
+                            'Trying to create a link with one '
+                            'or both unknown nodes, stopping '
+                            '(in_uuid={}, out_uuid={}, '
+                            'label={})'.format(link['input'], link['output'], link['label'])
                         )
 
                 try:
                     existing_label = existing_links_labels[in_id, out_id]
                     if existing_label != link['label']:
                         raise ValueError(
-                            "Trying to rename an existing link "
-                            "name, stopping (in={}, out={}, "
-                            "old_label={}, new_label={})".format(in_id, out_id, existing_label, link['label'])
+                            'Trying to rename an existing link '
+                            'name, stopping (in={}, out={}, '
+                            'old_label={}, new_label={})'.format(in_id, out_id, existing_label, link['label'])
                         )
                         # Do nothing, the link is already in place and has
                         # the correct name
@@ -544,10 +544,10 @@ def import_data_dj(
 
                         if link['type'] != LinkType.RETURN:
                             raise ValueError(
-                                "There exists already an input link to node "
-                                "with UUID {} with label {} but it does not "
-                                "come from the expected input with UUID {} "
-                                "but from a node with UUID {}.".format(
+                                'There exists already an input link to node '
+                                'with UUID {} with label {} but it does not '
+                                'come from the expected input with UUID {} '
+                                'but from a node with UUID {}.'.format(
                                     link['output'], link['label'], link['input'], existing_input
                                 )
                             )
@@ -561,22 +561,22 @@ def import_data_dj(
                                 type=LinkType(link['type']).value
                             )
                         )
-                        if "Link" not in ret_dict:
-                            ret_dict["Link"] = {'new': []}
-                        ret_dict["Link"]['new'].append((in_id, out_id))
+                        if 'Link' not in ret_dict:
+                            ret_dict['Link'] = {'new': []}
+                        ret_dict['Link']['new'].append((in_id, out_id))
 
             # Store new links
             if links_to_store:
                 if not silent:
-                    print("   ({} new links...)".format(len(links_to_store)))
+                    print('   ({} new links...)'.format(len(links_to_store)))
 
                 models.DbLink.objects.bulk_create(links_to_store)
             else:
                 if not silent:
-                    print("   (0 new links...)")
+                    print('   (0 new links...)')
 
             if not silent:
-                print("STORING GROUP ELEMENTS...")
+                print('STORING GROUP ELEMENTS...')
             import_groups = data['groups_uuid']
             for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
@@ -601,14 +601,14 @@ def import_data_dj(
                 # If user specified a group, import all things into it
                 if not group:
                     # Get an unique name for the import group, based on the current (local) time
-                    basename = timezone.localtime(timezone.now()).strftime("%Y%m%d-%H%M%S")
+                    basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S')
                     counter = 0
                     created = False
                     while not created:
                         if counter == 0:
                             group_label = basename
                         else:
-                            group_label = "{}_{}".format(basename, counter)
+                            group_label = '{}_{}'.format(basename, counter)
                         try:
                             group = Group(label=group_label, type_string=IMPORTGROUP_TYPE).store()
                             created = True
@@ -624,11 +624,11 @@ def import_data_dj(
                     print("IMPORTED NODES ARE GROUPED IN THE IMPORT GROUP LABELED '{}'".format(group.label))
             else:
                 if not silent:
-                    print("NO NODES TO IMPORT, SO NO GROUP CREATED, IF IT DID NOT ALREADY EXIST")
+                    print('NO NODES TO IMPORT, SO NO GROUP CREATED, IF IT DID NOT ALREADY EXIST')
 
     if not silent:
-        print("*** WARNING: MISSING EXISTING UUID CHECKS!!")
-        print("*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)")
-        print("DONE.")
+        print('*** WARNING: MISSING EXISTING UUID CHECKS!!')
+        print('*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)')
+        print('DONE.')
 
     return ret_dict

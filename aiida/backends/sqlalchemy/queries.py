@@ -69,16 +69,16 @@ class SqlaQueryManager(AbstractQueryManager):
             stat_query = stat_query.filter(m.node.DbNode.user_id == user_pk)
 
         # Total number of nodes
-        retdict["total"] = total_query.count()
+        retdict['total'] = total_query.count()
 
         # Nodes per type
-        retdict["types"] = dict(types_query.group_by('typestring').all())
+        retdict['types'] = dict(types_query.group_by('typestring').all())
 
         # Nodes created per day
         stat = stat_query.group_by('cday').order_by('cday').all()
 
         ctime_by_day = {_[0].strftime('%Y-%m-%d'): _[1] for _ in stat}
-        retdict["ctime_by_day"] = ctime_by_day
+        retdict['ctime_by_day'] = ctime_by_day
 
         return retdict
         # Still not containing all dates

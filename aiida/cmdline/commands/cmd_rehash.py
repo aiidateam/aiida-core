@@ -53,7 +53,7 @@ def rehash(nodes, entry_point):
     if not to_hash:
         echo.echo_critical('no matching nodes found')
 
-    with click.progressbar(to_hash, label="Rehashing Nodes:") as iter_hash:
+    with click.progressbar(to_hash, label='Rehashing Nodes:') as iter_hash:
         for node, in iter_hash:
             node.rehash()
 

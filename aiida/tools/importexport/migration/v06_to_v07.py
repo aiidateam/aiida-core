@@ -85,17 +85,17 @@ def migration_data_migration_legacy_process_attributes(data):
                 for attr in attrs_to_remove:
                     content.pop(attr, None)
         except KeyError as exc:
-            raise IntegrityError("Your export archive is corrupt! Org. exception: {}".format(exc))
+            raise IntegrityError('Your export archive is corrupt! Org. exception: {}'.format(exc))
 
     if illegal_cases:
         headers = ['UUID/PK', 'process_state']
-        warning_message = "Found ProcessNodes with active process states " \
-                          "that should never have been allowed to be exported."
+        warning_message = 'Found ProcessNodes with active process states ' \
+                          'that should never have been allowed to be exported.'
         write_database_integrity_violation(illegal_cases, headers, warning_message)
 
         raise IntegrityError(
-            "Your export archive is corrupt! "
-            "Please see the log-file in your current directory for more details."
+            'Your export archive is corrupt! '
+            'Please see the log-file in your current directory for more details.'
         )
 
 

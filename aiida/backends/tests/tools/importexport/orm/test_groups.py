@@ -39,7 +39,7 @@ class TestGroups(AiidaTestCase):
         from aiida.common.links import LinkType
 
         # Create another user
-        new_email = "newuser@new.n"
+        new_email = 'newuser@new.n'
         user = orm.User(email=new_email)
         user.store()
 
@@ -51,7 +51,7 @@ class TestGroups(AiidaTestCase):
 
         jc1 = orm.CalcJobNode()
         jc1.computer = self.computer
-        jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        jc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         jc1.user = user
         jc1.label = 'jc1'
         jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
@@ -59,13 +59,13 @@ class TestGroups(AiidaTestCase):
         jc1.seal()
 
         # Create a group and add the data inside
-        gr1 = orm.Group(label="node_group")
+        gr1 = orm.Group(label='node_group')
         gr1.store()
         gr1.add_nodes([sd1, jc1])
         gr1_uuid = gr1.uuid
 
         # At this point we export the generated data
-        filename1 = os.path.join(temp_dir, "export1.tar.gz")
+        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
         export([sd1, jc1, gr1], outfile=filename1, silent=True)
         n_uuids = [sd1.uuid, jc1.uuid]
         self.clean_db()
@@ -80,13 +80,13 @@ class TestGroups(AiidaTestCase):
         # Check that the exported group is imported correctly
         builder = orm.QueryBuilder()
         builder.append(orm.Group, filters={'uuid': {'==': gr1_uuid}})
-        self.assertEqual(builder.count(), 1, "The group was not found.")
+        self.assertEqual(builder.count(), 1, 'The group was not found.')
 
     @with_temp_dir
     def test_group_export(self, temp_dir):
         """Test that when exporting just a group, its nodes are also exported"""
         # Create another user
-        new_email = "newuser@new.n"
+        new_email = 'newuser@new.n'
         user = orm.User(email=new_email)
         user.store()
 
@@ -97,13 +97,13 @@ class TestGroups(AiidaTestCase):
         sd1.store()
 
         # Create a group and add the data inside
-        group = orm.Group(label="node_group")
+        group = orm.Group(label='node_group')
         group.store()
         group.add_nodes([sd1])
         group_uuid = group.uuid
 
         # At this point we export the generated data
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
         export([group], outfile=filename, silent=True)
         n_uuids = [sd1.uuid]
         self.clean_db()
@@ -118,7 +118,7 @@ class TestGroups(AiidaTestCase):
         # Check that the exported group is imported correctly
         builder = orm.QueryBuilder()
         builder.append(orm.Group, filters={'uuid': {'==': group_uuid}})
-        self.assertEqual(builder.count(), 1, "The group was not found.")
+        self.assertEqual(builder.count(), 1, 'The group was not found.')
 
     @with_temp_dir
     def test_group_import_existing(self, temp_dir):
@@ -126,10 +126,10 @@ class TestGroups(AiidaTestCase):
         Testing what happens when I try to import a group that already exists in the
         database. This should raise an appropriate exception
         """
-        grouplabel = "node_group_existing"
+        grouplabel = 'node_group_existing'
 
         # Create another user
-        new_email = "newuser@new.n"
+        new_email = 'newuser@new.n'
         user = orm.User(email=new_email)
         user.store()
 
@@ -145,13 +145,13 @@ class TestGroups(AiidaTestCase):
         group.add_nodes([sd1])
 
         # At this point we export the generated data
-        filename = os.path.join(temp_dir, "export1.tar.gz")
+        filename = os.path.join(temp_dir, 'export1.tar.gz')
         export([group], outfile=filename, silent=True)
         self.clean_db()
         self.insert_data()
 
         # Creating a group of the same name
-        group = orm.Group(label="node_group_existing")
+        group = orm.Group(label='node_group_existing')
         group.store()
         import_data(filename, silent=True)
         # The import should have created a new group with a suffix
@@ -185,21 +185,21 @@ class TestGroups(AiidaTestCase):
         node_uuids = [node.uuid for node in [data1, data2]]
 
         # Export Nodes
-        filename = os.path.join(temp_dir, "export.aiida")
+        filename = os.path.join(temp_dir, 'export.aiida')
         export([data1, data2], outfile=filename, silent=True)
         self.reset_database()
 
         # Create Group, do not store
-        group_label = "import_madness"
+        group_label = 'import_madness'
         group = orm.Group(label=group_label)
         group_uuid = group.uuid
 
         # Try to import to this Group, providing only label - this should fail
-        with self.assertRaises(TypeError, msg="Labels should no longer be passable to `import_data`") as exc:
+        with self.assertRaises(TypeError, msg='Labels should no longer be passable to `import_data`') as exc:
             import_data(filename, group=group_label, silent=True)
         exc = exc.exception
         self.assertEqual(
-            str(exc), "group must be a Group entity", msg="The error message should be the same for both backends."
+            str(exc), 'group must be a Group entity', msg='The error message should be the same for both backends.'
         )
 
         # Import properly now, providing the Group object
@@ -210,8 +210,8 @@ class TestGroups(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             1,
-            msg="There should be exactly one Group with label {}. "
-            "Instead {} was found.".format(group_label, builder.count())
+            msg='There should be exactly one Group with label {}. '
+            'Instead {} was found.'.format(group_label, builder.count())
         )
         imported_group = load_group(builder.all()[0][0])
         self.assertEqual(imported_group.uuid, group_uuid)

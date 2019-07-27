@@ -164,7 +164,7 @@ class Log(entities.Entity):
         from aiida.common import exceptions
 
         if metadata is not None and not isinstance(metadata, dict):
-            raise TypeError("metadata must be a dict")
+            raise TypeError('metadata must be a dict')
 
         if not loggername or not levelname:
             raise exceptions.ValidationError('The loggername and levelname cannot be empty')

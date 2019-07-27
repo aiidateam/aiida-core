@@ -72,7 +72,7 @@ def transition_attributes_extras(apps, _):
                     pr_bar.update(1)
 
                     if error:
-                        raise Exception("There has been some errors during the migration")
+                        raise Exception('There has been some errors during the migration')
 
 
 def transition_settings(apps, _):
@@ -95,17 +95,17 @@ def transition_settings(apps, _):
                     # Migrating dbsetting.val
                     dt = curr_dbsetting.datatype
                     val = None
-                    if dt == "txt":
+                    if dt == 'txt':
                         val = curr_dbsetting.tval
-                    elif dt == "float":
+                    elif dt == 'float':
                         val = curr_dbsetting.fval
                         if math.isnan(val) or math.isinf(val):
                             val = str(val)
-                    elif dt == "int":
+                    elif dt == 'int':
                         val = curr_dbsetting.ival
-                    elif dt == "bool":
+                    elif dt == 'bool':
                         val = curr_dbsetting.bval
-                    elif dt == "date":
+                    elif dt == 'date':
                         val = datetime_to_isoformat(curr_dbsetting.dval)
 
                     curr_dbsetting.val = val
@@ -115,7 +115,7 @@ def transition_settings(apps, _):
                     pr_bar.update(1)
 
                     if error:
-                        raise Exception("There has been some errors during the migration")
+                        raise Exception('There has been some errors during the migration')
 
 
 def attributes_to_dict(attr_list):
@@ -140,23 +140,23 @@ def attributes_to_dict(attr_list):
 
         dt = a.datatype
 
-        if dt == "dict":
+        if dt == 'dict':
             tmp_d[key] = {}
-        elif dt == "list":
+        elif dt == 'list':
             tmp_d[key] = [None] * a.ival
         else:
             val = None
-            if dt == "txt":
+            if dt == 'txt':
                 val = a.tval
-            elif dt == "float":
+            elif dt == 'float':
                 val = a.fval
                 if math.isnan(val) or math.isinf(val):
                     val = str(val)
-            elif dt == "int":
+            elif dt == 'int':
                 val = a.ival
-            elif dt == "bool":
+            elif dt == 'bool':
                 val = a.bval
-            elif dt == "date":
+            elif dt == 'date':
                 val = datetime_to_isoformat(a.dval)
 
             tmp_d[key] = val

@@ -917,7 +917,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
@@ -940,12 +940,12 @@ class TestSubmitScript(unittest.TestCase):
 
         scheduler = PbsproScheduler()
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
 
-        for (shebang, expected_first_line) in ((None, '#!/bin/bash'), ("", ""), ("NOSET", '#!/bin/bash')):
+        for (shebang, expected_first_line) in ((None, '#!/bin/bash'), ('', ''), ('NOSET', '#!/bin/bash')):
             job_tmpl = JobTemplate()
-            if shebang == "NOSET":
+            if shebang == 'NOSET':
                 pass
             else:
                 job_tmpl.shebang = shebang
@@ -975,7 +975,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
@@ -1007,7 +1007,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
@@ -1041,7 +1041,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL

@@ -61,7 +61,7 @@ def delete_nodes(
     if not starting_pks:
         # I prefer checking explicitly, an empty set might be problematic for the queries done below.
         if verbosity:
-            echo.echo("Nothing to delete")
+            echo.echo('Nothing to delete')
         return
 
     # The following code is just for the querying of downwards provenance.
@@ -98,7 +98,7 @@ def delete_nodes(
 
     if verbosity > 0:
         echo.echo(
-            "I {} delete {} node{}".format(
+            'I {} delete {} node{}'.format(
                 'would' if dry_run else 'will', len(pks_set_to_delete), 's' if len(pks_set_to_delete) > 1 else ''
             )
         )
@@ -108,13 +108,13 @@ def delete_nodes(
                     'in': pks_set_to_delete
                 }}, project=('uuid', 'id', 'node_type', 'label')
             )
-            echo.echo("The nodes I {} delete:".format('would' if dry_run else 'will'))
+            echo.echo('The nodes I {} delete:'.format('would' if dry_run else 'will'))
             for uuid, pk, type_string, label in builder.iterall():
                 try:
                     short_type_string = type_string.split('.')[-2]
                 except IndexError:
                     short_type_string = type_string
-                echo.echo("   {} {} {} {}".format(uuid, pk, short_type_string, label))
+                echo.echo('   {} {} {} {}'.format(uuid, pk, short_type_string, label))
 
     # Here I am checking whether I am deleting
     # A data instance without also deleting the creator, which brakes relationship between a calculation and its data
@@ -140,14 +140,14 @@ def delete_nodes(
         if verbosity > 0 and caller_to_called2delete:
             calculation_pks_losing_called = set(next(zip(*caller_to_called2delete)))
             echo.echo(
-                "\n{} calculation{} {} lose at least one called instance".format(
+                '\n{} calculation{} {} lose at least one called instance'.format(
                     len(calculation_pks_losing_called), 's' if len(calculation_pks_losing_called) > 1 else '',
                     'would' if dry_run else 'will'
                 )
             )
             if verbosity > 1:
                 echo.echo(
-                    "These are the calculations that {} lose a called instance:".format('would' if dry_run else 'will')
+                    'These are the calculations that {} lose a called instance:'.format('would' if dry_run else 'will')
                 )
                 for calc_losing_called_pk in calculation_pks_losing_called:
                     echo.echo('  ', load_node(calc_losing_called_pk))
@@ -170,14 +170,14 @@ def delete_nodes(
         if verbosity > 0 and creator_to_created2delete:
             calculation_pks_losing_created = set(next(zip(*creator_to_created2delete)))
             echo.echo(
-                "\n{} calculation{} {} lose at least one created data-instance".format(
+                '\n{} calculation{} {} lose at least one created data-instance'.format(
                     len(calculation_pks_losing_created), 's' if len(calculation_pks_losing_created) > 1 else '',
                     'would' if dry_run else 'will'
                 )
             )
             if verbosity > 1:
                 echo.echo(
-                    "These are the calculations that {} lose a created data-instance:".
+                    'These are the calculations that {} lose a created data-instance:'.
                     format('would' if dry_run else 'will')
                 )
                 for calc_losing_created_pk in calculation_pks_losing_created:
@@ -185,16 +185,16 @@ def delete_nodes(
 
     if dry_run:
         if verbosity > 0:
-            echo.echo("\nThis was a dry run, exiting without deleting anything")
+            echo.echo('\nThis was a dry run, exiting without deleting anything')
         return
 
     # Asking for user confirmation here
     if force:
         pass
     else:
-        echo.echo_warning("YOU ARE ABOUT TO DELETE {} NODES! THIS CANNOT BE UNDONE!".format(len(pks_set_to_delete)))
-        if not click.confirm("Shall I continue?"):
-            echo.echo("Exiting without deleting")
+        echo.echo_warning('YOU ARE ABOUT TO DELETE {} NODES! THIS CANNOT BE UNDONE!'.format(len(pks_set_to_delete)))
+        if not click.confirm('Shall I continue?'):
+            echo.echo('Exiting without deleting')
             return
 
     # Recover the list of folders to delete before actually deleting the nodes. I will delete the folders only later,
@@ -208,19 +208,19 @@ def delete_nodes(
         for calc_pk, calc_type_string, link_label in caller_to_called2delete:
             calc = load_node(calc_pk)
             calc.logger.warning(
-                "User {} deleted "
-                "an instance of type {} "
-                "called with the label {} "
-                "by this calculation".format(user_email, calc_type_string, link_label)
+                'User {} deleted '
+                'an instance of type {} '
+                'called with the label {} '
+                'by this calculation'.format(user_email, calc_type_string, link_label)
             )
 
         for calc_pk, data_type_string, link_label in creator_to_created2delete:
             calc = load_node(calc_pk)
             calc.logger.warning(
-                "User {} deleted "
-                "an instance of type {} "
-                "created with the label {} "
-                "by this calculation".format(user_email, data_type_string, link_label)
+                'User {} deleted '
+                'an instance of type {} '
+                'created with the label {} '
+                'by this calculation'.format(user_email, data_type_string, link_label)
             )
 
     # If we are here, we managed to delete the entries from the DB.

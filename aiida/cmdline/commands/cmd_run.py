@@ -84,7 +84,7 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
         if automatic_group_name is None:
             from aiida.common import timezone
 
-            automatic_group_name = 'Verdi autogroup on ' + timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+            automatic_group_name = 'Verdi autogroup on ' + timezone.now().strftime('%Y-%m-%d %H:%M:%S')
 
         aiida_verdilib_autogroup = autogroup.Autogroup()
         aiida_verdilib_autogroup.set_exclude(exclude)

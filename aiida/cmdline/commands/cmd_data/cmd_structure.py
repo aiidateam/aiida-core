@@ -80,12 +80,12 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
         # When QueryBuilder will support this (attribute)s filtering,
         # it will be pushed in the query.
         if elements is not None:
-            all_symbols = [_["symbols"][0] for _ in akinds]
+            all_symbols = [_['symbols'][0] for _ in akinds]
             if not any([s in elements for s in all_symbols]):
                 continue
 
             if elements_only:
-                echo.echo_critical("Not implemented elements-only search")
+                echo.echo_critical('Not implemented elements-only search')
 
         # We want only the StructureData that have attributes
         if akinds is None or asites is None:
@@ -105,7 +105,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
         # If for some reason there is no kind with the name
         # referenced by the site
         except KeyError:
-            formula = "<<UNKNOWN>>"
+            formula = '<<UNKNOWN>>'
         entry_list.append([str(pid), str(formula), label])
 
     counter = 0
@@ -115,7 +115,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
     for entry in entry_list:
         for i, value in enumerate(entry):
             if isinstance(value, list):
-                entry[i] = ",".join(value)
+                entry[i] = ','.join(value)
         for i in range(len(entry), len(LIST_PROJECT_HEADERS)):
             entry.append(None)
         counter += 1
@@ -123,8 +123,8 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
     if raw:
         echo.echo(tabulate(struct_list_data, tablefmt='plain'))
     else:
-        echo.echo(tabulate(struct_list_data, headers="firstrow"))
-        echo.echo("\nTotal results: {}\n".format(counter))
+        echo.echo(tabulate(struct_list_data, headers='firstrow'))
+        echo.echo('\nTotal results: {}\n'.format(counter))
 
 
 @structure.command('show')
@@ -173,7 +173,7 @@ def structure_import():
     type=click.FLOAT,
     show_default=True,
     default=1.0,
-    help="The factor by which the cell accomodating the structure should be increased (angstrom)."
+    help='The factor by which the cell accomodating the structure should be increased (angstrom).'
 )
 @click.option(
     '--vacuum-addition',
@@ -209,7 +209,7 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, dry_run):
         elif pbc_int == 1:
             pbc_bools.append(True)
         else:
-            raise click.BadParameter("values for pbc must be either 0 or 1", param_hint='pbc')
+            raise click.BadParameter('values for pbc must be either 0 or 1', param_hint='pbc')
 
     try:
         new_structure._parse_xyz(xyz_txt)  # pylint: disable=protected-access
@@ -236,8 +236,8 @@ def import_qetools_pwinput(filename, dry_run):
         import qe_tools
     except ImportError:
         echo.echo_critical(
-            "You have not installed the package qe-tools. \n"
-            "You can install it with: pip install qe-tools"
+            'You have not installed the package qe-tools. \n'
+            'You can install it with: pip install qe-tools'
         )
     from aiida.tools.data.structure import get_structuredata_from_qetools
 
@@ -266,7 +266,7 @@ def import_ase(filename, dry_run):
     try:
         import ase.io
     except ImportError:
-        echo.echo_critical("You have not installed the package ase. \n" "You can install it with: pip install ase")
+        echo.echo_critical('You have not installed the package ase. \n' 'You can install it with: pip install ase')
 
     try:
         asecell = ase.io.read(filename)

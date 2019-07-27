@@ -21,12 +21,12 @@ class CifDataTranslator(DataTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "cifs"
+    __label__ = 'cifs'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import CifData
     _aiida_class = CifData
     # The string name of the AiiDA class
-    _aiida_type = "data.cif.CifData"
+    _aiida_type = 'data.cif.CifData'
 
     _result_type = __label__
 
@@ -45,15 +45,15 @@ class CifDataTranslator(DataTranslator):
         in a format required by chemdoodle to visualize a structure.
         """
         response = {}
-        response["str_viz_info"] = {}
+        response['str_viz_info'] = {}
 
         if visformat is None:
             visformat = 'cif'
 
         if visformat in node.get_export_formats():
             try:
-                response["str_viz_info"]["data"] = node._exportcontent(format)[0]  # pylint: disable=protected-access
-                response["str_viz_info"]["format"] = visformat
+                response['str_viz_info']['data'] = node._exportcontent(format)[0]  # pylint: disable=protected-access
+                response['str_viz_info']['format'] = visformat
             except LicensingException as exc:
                 response = str(exc)
 
@@ -78,11 +78,11 @@ class CifDataTranslator(DataTranslator):
 
         download_format = 'cif'
         try:
-            response["data"] = node._exportcontent(download_format)[0]  # pylint: disable=protected-access
-            response["status"] = 200
-            response["filename"] = node.uuid + "." + download_format
+            response['data'] = node._exportcontent(download_format)[0]  # pylint: disable=protected-access
+            response['status'] = 200
+            response['filename'] = node.uuid + '.' + download_format
         except LicensingException as exc:
-            response["status"] = 500
-            response["data"] = str(exc)
+            response['status'] = 500
+            response['data'] = str(exc)
 
         return response

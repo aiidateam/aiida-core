@@ -146,16 +146,16 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
 
     cif = CifFile.CifFile()  # pylint: disable=no-member
     try:
-        cif.set_grammar("1.1")
+        cif.set_grammar('1.1')
     except AttributeError:
         # if no grammar can be set, we assume it's 1.1 (widespread standard)
         pass
 
     if names and len(names) < len(datablocks):
         raise ValueError(
-            "Not enough names supplied for "
-            "datablocks: {} (names) < "
-            "{} (datablocks)".format(len(names), len(datablocks))
+            'Not enough names supplied for '
+            'datablocks: {} (names) < '
+            '{} (datablocks)'.format(len(names), len(datablocks))
         )
     for i, values in enumerate(datablocks):
         name = str(i)
@@ -176,10 +176,10 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
                         row_size = len(tag_values)
                     elif row_size != len(tag_values):
                         raise ValueError(
-                            "Number of values for tag "
+                            'Number of values for tag '
                             "'{}' is different from "
-                            "the others in the same "
-                            "loop".format(tag)
+                            'the others in the same '
+                            'loop'.format(tag)
                         )
                     if row_size == 0:
                         continue
@@ -334,7 +334,7 @@ class CifData(SinglefileData):
         from aiida.common.files import md5_file
 
         if not os.path.abspath(filename):
-            raise ValueError("filename must be an absolute path")
+            raise ValueError('filename must be an absolute path')
         md5 = md5_file(filename)
 
         cifs = cls.from_md5(md5)
@@ -350,9 +350,9 @@ class CifData(SinglefileData):
                 return (cifs[0], False)
 
             raise ValueError(
-                "More than one copy of a CIF file "
-                "with the same MD5 has been found in "
-                "the DB. pks={}".format(",".join([str(i.pk) for i in cifs]))
+                'More than one copy of a CIF file '
+                'with the same MD5 has been found in '
+                'the DB. pks={}'.format(','.join([str(i.pk) for i in cifs]))
             )
 
         return cifs[0], False
@@ -497,7 +497,7 @@ class CifData(SinglefileData):
         if scan_type in self._scan_types:
             self.set_attribute('scan_type', scan_type)
         else:
-            raise ValueError("Got unknown scan_type {}".format(scan_type))
+            raise ValueError('Got unknown scan_type {}'.format(scan_type))
 
     def set_parse_policy(self, parse_policy):
         """
@@ -509,7 +509,7 @@ class CifData(SinglefileData):
         if parse_policy in self._parse_policies:
             self.set_attribute('parse_policy', parse_policy)
         else:
-            raise ValueError("Got unknown parse_policy {}".format(parse_policy))
+            raise ValueError('Got unknown parse_policy {}'.format(parse_policy))
 
     def get_formulae(self, mode='sum'):
         """
@@ -520,7 +520,7 @@ class CifData(SinglefileData):
         """
         # note: If formulae are not None, they could be returned
         # directly (but the function is very cheap anyhow).
-        formula_tag = "_chemical_formula_{}".format(mode)
+        formula_tag = '_chemical_formula_{}'.format(mode)
         formulae = []
         for datablock in self.values.keys():
             formula = None
@@ -536,7 +536,7 @@ class CifData(SinglefileData):
         """
         # note: If spacegroup_numbers are not None, they could be returned
         # directly (but the function is very cheap anyhow).
-        spg_tags = ["_space_group.it_number", "_space_group_it_number", "_symmetry_int_tables_number"]
+        spg_tags = ['_space_group.it_number', '_space_group_it_number', '_symmetry_int_tables_number']
         spacegroup_numbers = []
         for datablock in self.values.keys():
             spacegroup_number = None
@@ -733,7 +733,7 @@ class CifData(SinglefileData):
         return result['structure']
 
     # pylint: disable=unused-argument
-    def _prepare_cif(self, main_file_name=""):
+    def _prepare_cif(self, main_file_name=''):
         """
         Return CIF string of CifData object.
 

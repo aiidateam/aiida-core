@@ -88,7 +88,7 @@ class AiidaWorkchainDirective(Directive):
 
     def build_signature(self):
         """Returns the signature of the workchain."""
-        signature = addnodes.desc_signature(first=False, fullname="Workchain")
+        signature = addnodes.desc_signature(first=False, fullname='Workchain')
         signature += addnodes.desc_annotation(text='workchain')
         signature += addnodes.desc_addname(text=self.module_name + '.')
         signature += addnodes.desc_name(text=self.class_name)

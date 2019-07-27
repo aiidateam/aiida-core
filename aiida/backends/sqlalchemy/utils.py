@@ -24,8 +24,8 @@ from aiida.backends.utils import validate_attribute_key, SettingsManager, Settin
 from aiida.common import NotExistent
 
 
-ALEMBIC_FILENAME = "alembic.ini"
-ALEMBIC_REL_PATH = "migrations"
+ALEMBIC_FILENAME = 'alembic.ini'
+ALEMBIC_REL_PATH = 'migrations'
 
 
 class SqlaSettingsManager(SettingsManager):
@@ -146,12 +146,12 @@ def install_tc(session):
     """
     Install the transitive closure table with SqlAlchemy.
     """
-    links_table_name = "db_dblink"
-    links_table_input_field = "input_id"
-    links_table_output_field = "output_id"
-    closure_table_name = "db_dbpath"
-    closure_table_parent_field = "parent_id"
-    closure_table_child_field = "child_id"
+    links_table_name = 'db_dblink'
+    links_table_input_field = 'input_id'
+    links_table_output_field = 'output_id'
+    closure_table_name = 'db_dbpath'
+    closure_table_parent_field = 'parent_id'
+    closure_table_child_field = 'child_id'
 
     session.execute(get_pg_tc(links_table_name, links_table_input_field,
                               links_table_output_field, closure_table_name,
@@ -354,7 +354,7 @@ def migrate_database(alembic_cfg=None):
 
     with sa.ENGINE.connect() as connection:
         alembic_cfg.attributes['connection'] = connection
-        command.upgrade(alembic_cfg, "head")
+        command.upgrade(alembic_cfg, 'head')
 
 
 def check_schema_version(profile_name):

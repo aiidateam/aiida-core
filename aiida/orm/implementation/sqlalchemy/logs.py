@@ -29,7 +29,7 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
 
     MODEL_CLASS = models.DbLog
 
-    def __init__(self, backend, time, loggername, levelname, dbnode_id, message="", metadata=None):
+    def __init__(self, backend, time, loggername, levelname, dbnode_id, message='', metadata=None):
         # pylint: disable=too-many-arguments
         super(SqlaLog, self).__init__(backend)
         self._dbmodel = utils.ModelWrapper(
@@ -109,7 +109,7 @@ class SqlaLogCollection(BackendLogCollection):
         :raises `~aiida.common.exceptions.NotExistent`: if Log with ID ``log_id`` is not found
         """
         if not isinstance(log_id, int):
-            raise TypeError("log_id must be an int")
+            raise TypeError('log_id must be an int')
 
         session = get_scoped_session()
 
@@ -133,7 +133,7 @@ class SqlaLogCollection(BackendLogCollection):
             session.commit()
         except Exception as exc:
             session.rollback()
-            raise exceptions.IntegrityError("Could not delete all Logs. Full exception: {}".format(exc))
+            raise exceptions.IntegrityError('Could not delete all Logs. Full exception: {}'.format(exc))
 
     def delete_many(self, filters):
         """
@@ -152,9 +152,9 @@ class SqlaLogCollection(BackendLogCollection):
 
         # Checks
         if not isinstance(filters, dict):
-            raise TypeError("filters must be a dictionary")
+            raise TypeError('filters must be a dictionary')
         if not filters:
-            raise exceptions.ValidationError("filter must not be empty")
+            raise exceptions.ValidationError('filter must not be empty')
 
         # Apply filter and delete found entities
         builder = QueryBuilder().append(Log, filters=filters, project='id').all()

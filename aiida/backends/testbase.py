@@ -58,13 +58,13 @@ class AiidaTestCase(unittest.TestCase):
                 from aiida.backends.djsite.db.testbase import DjangoTests
                 cls.__impl_class = DjangoTests
             else:
-                raise ConfigurationError("Unknown backend type")
+                raise ConfigurationError('Unknown backend type')
 
             # Check that it is of the right class
             if not issubclass(cls.__impl_class, AiidaTestImplementation):
                 raise InternalError(
-                    "The AiiDA test implementation is not of type "
-                    "{}, that is not a subclass of AiidaTestImplementation".format(
+                    'The AiiDA test implementation is not of type '
+                    '{}, that is not a subclass of AiidaTestImplementation'.format(
                         cls.__impl_class.__name__
                     )
                 )
@@ -141,7 +141,7 @@ class AiidaTestCase(unittest.TestCase):
         check_if_tests_can_run()
 
         if not cls._class_was_setup:
-            raise InvalidOperation("You cannot call clean_db before running the setUpClass")
+            raise InvalidOperation('You cannot call clean_db before running the setUpClass')
 
         cls.__backend_instance.clean_db()
 
@@ -161,10 +161,10 @@ class AiidaTestCase(unittest.TestCase):
         TEST_KEYWORD = 'test_'
         base_repo_path = os.path.basename(os.path.normpath(dirpath_repository))
         if TEST_KEYWORD not in base_repo_path:
-            raise InvalidOperation("Warning: The repository folder {} does not "
-                                   "seem to belong to a test profile and will therefore not be deleted.\n"
-                                   "Full repository path: "
-                                   "{}".format(base_repo_path, dirpath_repository))
+            raise InvalidOperation('Warning: The repository folder {} does not '
+                                   'seem to belong to a test profile and will therefore not be deleted.\n'
+                                   'Full repository path: '
+                                   '{}'.format(base_repo_path, dirpath_repository))
 
         # Clean the test repository
         shutil.rmtree(dirpath_repository, ignore_errors=True)
@@ -237,7 +237,7 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
             modulenames = get_db_test_list()[test]
         except KeyError:
             if verbose:
-                print("Unknown DB test {}... skipping"
+                print('Unknown DB test {}... skipping'
                       .format(test), file=sys.stderr)
             continue
         actually_run_tests.append(test)
@@ -259,13 +259,13 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
         num_tests_expected = test_suite.countTestCases()
 
     if verbose:
-        print("DB tests that will be run: {} (expecting {} tests)"
-              .format(",".join(actually_run_tests), num_tests_expected), file=sys.stderr)
+        print('DB tests that will be run: {} (expecting {} tests)'
+              .format(','.join(actually_run_tests), num_tests_expected), file=sys.stderr)
         results = unittest.TextTestRunner(failfast=False, verbosity=2).run(test_suite)
     else:
         results = unittest.TextTestRunner(failfast=False).run(test_suite)
 
     if verbose:
-        print("Run tests: {}".format(results.testsRun))
+        print('Run tests: {}'.format(results.testsRun))
 
     return results

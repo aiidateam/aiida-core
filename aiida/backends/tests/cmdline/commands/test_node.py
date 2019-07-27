@@ -32,17 +32,17 @@ class TestVerdiNode(AiidaTestCase):
 
         node = orm.Data()
 
-        cls.ATTR_KEY_ONE = "a"
-        cls.ATTR_VAL_ONE = "1"
-        cls.ATTR_KEY_TWO = "b"
-        cls.ATTR_VAL_TWO = "test"
+        cls.ATTR_KEY_ONE = 'a'
+        cls.ATTR_VAL_ONE = '1'
+        cls.ATTR_KEY_TWO = 'b'
+        cls.ATTR_VAL_TWO = 'test'
 
         node.set_attribute_many({cls.ATTR_KEY_ONE: cls.ATTR_VAL_ONE, cls.ATTR_KEY_TWO: cls.ATTR_VAL_TWO})
 
-        cls.EXTRA_KEY_ONE = "x"
-        cls.EXTRA_VAL_ONE = "2"
-        cls.EXTRA_KEY_TWO = "y"
-        cls.EXTRA_VAL_TWO = "other"
+        cls.EXTRA_KEY_ONE = 'x'
+        cls.EXTRA_VAL_ONE = '2'
+        cls.EXTRA_KEY_TWO = 'y'
+        cls.EXTRA_VAL_TWO = 'other'
 
         node.set_extra_many({cls.EXTRA_KEY_ONE: cls.EXTRA_VAL_ONE, cls.EXTRA_KEY_TWO: cls.EXTRA_VAL_TWO})
 

@@ -212,12 +212,12 @@ def clean_value(value):
 
         if isinstance(val, numbers.Real) and (math.isnan(val) or math.isinf(val)):
             # see https://www.postgresql.org/docs/current/static/datatype-json.html#JSON-TYPE-MAPPING-TABLE
-            raise exceptions.ValidationError("nan and inf/-inf can not be serialized to the database")
+            raise exceptions.ValidationError('nan and inf/-inf can not be serialized to the database')
 
         # This is for float-like types, like ``numpy.float128`` that are not json-serializable
         # Note that `numbers.Real` also match booleans but they are already returned above
         if isinstance(val, numbers.Real):
-            string_representation = "{{:.{}g}}".format(AIIDA_FLOAT_PRECISION).format(val)
+            string_representation = '{{:.{}g}}'.format(AIIDA_FLOAT_PRECISION).format(val)
             new_val = float(string_representation)
             if 'e' in string_representation and new_val.is_integer():
                 # This is indeed often quite unexpected, because it is going to change the type of the data

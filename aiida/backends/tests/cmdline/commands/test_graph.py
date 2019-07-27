@@ -203,7 +203,7 @@ class TestVerdiGraph(AiidaTestCase):
         filename = root_node + '.dot.pdf'
 
         for id_label_type in ['uuid', 'pk', 'label']:
-            options = ["--identifier", id_label_type, root_node]
+            options = ['--identifier', id_label_type, root_node]
             try:
                 result = self.cli_runner.invoke(cmd_graph.generate, options)
                 self.assertIsNone(result.exception, result.output)

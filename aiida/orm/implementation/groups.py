@@ -106,13 +106,13 @@ class BackendGroup(backends.BackendEntity):
         :return: (group, created) where group is the group (new or existing,
           in any case already stored) and created is a boolean saying
         """
-        res = cls.query(name=kwargs.get("name"), type_string=kwargs.get("type_string"))
+        res = cls.query(name=kwargs.get('name'), type_string=kwargs.get('type_string'))
 
         if not res:
             return cls.create(*args, **kwargs), True
 
         if len(res) > 1:
-            raise exceptions.MultipleObjectsError("More than one groups found in the database")
+            raise exceptions.MultipleObjectsError('More than one groups found in the database')
 
         return res[0], False
 

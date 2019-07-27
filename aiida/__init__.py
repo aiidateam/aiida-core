@@ -148,7 +148,7 @@ If you use AiiDA for publication purposes, please cite:
 """.format(__version__, __paper__)
 
 
-def get_file_header(comment_char="# "):
+def get_file_header(comment_char='# '):
     """
     Get the default header for source AiiDA source code files.
 

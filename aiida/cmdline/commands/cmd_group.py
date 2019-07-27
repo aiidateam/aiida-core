@@ -125,13 +125,13 @@ def group_description(group, description):
 
 
 @verdi_group.command('show')
-@options.RAW(help="Show only a space-separated list of PKs of the calculations in the group")
+@options.RAW(help='Show only a space-separated list of PKs of the calculations in the group')
 @click.option(
     '-u',
     '--uuid',
     is_flag=True,
     default=False,
-    help="Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs."
+    help='Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs.'
 )
 @arguments.GROUP()
 @with_dbenv()
@@ -194,45 +194,45 @@ def user_defined_group():
     '--user',
     'user_email',
     type=click.STRING,
-    help="Add a filter to show only groups belonging to a specific user"
+    help='Add a filter to show only groups belonging to a specific user'
 )
-@click.option('-a', '--all-types', is_flag=True, default=False, help="Show groups of all types")
+@click.option('-a', '--all-types', is_flag=True, default=False, help='Show groups of all types')
 @click.option(
     '-t',
     '--type',
     'group_type',
     type=types.LazyChoice(valid_group_type_strings),
     default=user_defined_group,
-    help="Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to "
-    "specify aiida-internal type"
+    help='Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to '
+    'specify aiida-internal type'
 )
 @click.option(
-    '-d', '--with-description', 'with_description', is_flag=True, default=False, help="Show also the group description"
+    '-d', '--with-description', 'with_description', is_flag=True, default=False, help='Show also the group description'
 )
-@click.option('-C', '--count', is_flag=True, default=False, help="Show also the number of nodes in the group")
-@options.PAST_DAYS(help="add a filter to show only groups created in the past N days", default=None)
+@click.option('-C', '--count', is_flag=True, default=False, help='Show also the number of nodes in the group')
+@options.PAST_DAYS(help='add a filter to show only groups created in the past N days', default=None)
 @click.option(
     '-s',
     '--startswith',
     type=click.STRING,
     default=None,
-    help="add a filter to show only groups for which the name begins with STRING"
+    help='add a filter to show only groups for which the name begins with STRING'
 )
 @click.option(
     '-e',
     '--endswith',
     type=click.STRING,
     default=None,
-    help="add a filter to show only groups for which the name ends with STRING"
+    help='add a filter to show only groups for which the name ends with STRING'
 )
 @click.option(
     '-c',
     '--contains',
     type=click.STRING,
     default=None,
-    help="add a filter to show only groups for which the name contains STRING"
+    help='add a filter to show only groups for which the name contains STRING'
 )
-@options.NODE(help="Show only the groups that contain the node")
+@options.NODE(help='Show only the groups that contain the node')
 @with_dbenv()
 def group_list(
     all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith, contains,
@@ -315,7 +315,7 @@ def group_list(
         table.append([projection_lambdas[field](group[0]) for field in projection_fields])
 
     if not all_types:
-        echo.echo_info("If you want to see the groups of all types, please add -a/--all-types option")
+        echo.echo_info('If you want to see the groups of all types, please add -a/--all-types option')
     echo.echo(tabulate(table, headers=projection_header))
 
 

@@ -43,7 +43,7 @@ def delete_repository(profile, non_interactive=True):
 
     if non_interactive or click.confirm(
         "Delete associated file repository '{}'?\n"
-        "WARNING: All data will be lost.".format(repo_path)
+        'WARNING: All data will be lost.'.format(repo_path)
     ):
         echo.echo_info("Deleting directory '{}'.".format(repo_path))
         import shutil
@@ -68,7 +68,7 @@ def delete_db(profile, non_interactive=True, verbose=False):
     postgres = Postgres.from_profile(profile, interactive=not non_interactive, quiet=False)
 
     if verbose:
-        echo.echo_info("Parameters used to connect to postgres:")
+        echo.echo_info('Parameters used to connect to postgres:')
         echo.echo(json.dumps(postgres.dbinfo, indent=4))
 
     database_name = profile.database_name
@@ -76,7 +76,7 @@ def delete_db(profile, non_interactive=True, verbose=False):
         echo.echo_info("Associated database '{}' does not exist.".format(database_name))
     elif non_interactive or click.confirm(
         "Delete associated database '{}'?\n"
-        "WARNING: All data will be lost.".format(database_name)
+        'WARNING: All data will be lost.'.format(database_name)
     ):
         echo.echo_info("Deleting database '{}'.".format(database_name))
         postgres.drop_db(database_name)
@@ -90,7 +90,7 @@ def delete_db(profile, non_interactive=True, verbose=False):
     elif users.count(user) > 1:
         echo.echo_info(
             "Associated database user '{}' is used by other profiles "
-            "and will not be deleted.".format(user)
+            'and will not be deleted.'.format(user)
         )
     elif non_interactive or click.confirm("Delete database user '{}'?".format(user)):
         echo.echo_info("Deleting user '{}'.".format(user))
@@ -110,7 +110,7 @@ def delete_from_config(profile, non_interactive=True):
 
     if non_interactive or click.confirm(
         "Delete configuration for profile '{}'?\n"
-        "WARNING: Permanently removes profile from the list of AiiDA profiles.".format(profile.name)
+        'WARNING: Permanently removes profile from the list of AiiDA profiles.'.format(profile.name)
     ):
         echo.echo_info("Deleting configuration for profile '{}'.".format(profile.name))
         config = get_config()

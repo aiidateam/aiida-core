@@ -308,7 +308,7 @@ def _execute_psql(command, user='postgres', quiet=True, interactive=False, **kwa
     elif not quiet:
         click.echo(
             "Warning: Found host 'localhost' but dropping '-h localhost' option for psql " +
-            "since this may cause psql to switch to password-based authentication."
+            'since this may cause psql to switch to password-based authentication.'
         )
 
     port = kwargs.pop('port', None)

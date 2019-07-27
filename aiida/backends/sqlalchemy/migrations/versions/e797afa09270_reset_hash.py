@@ -40,7 +40,7 @@ def upgrade():
     conn = op.get_bind()
 
     # Invalidate all the hashes & inform the user
-    echo_warning("Invalidating all the hashes of all the nodes. Please run verdi rehash", bold=True)
+    echo_warning('Invalidating all the hashes of all the nodes. Please run verdi rehash', bold=True)
     statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
     conn.execute(statement)
 
@@ -50,6 +50,6 @@ def downgrade():
     conn = op.get_bind()
 
     # Invalidate all the hashes & inform the user
-    echo_warning("Invalidating all the hashes of all the nodes. Please run verdi rehash", bold=True)
+    echo_warning('Invalidating all the hashes of all the nodes. Please run verdi rehash', bold=True)
     statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
     conn.execute(statement)

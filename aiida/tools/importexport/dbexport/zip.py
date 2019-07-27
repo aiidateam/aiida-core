@@ -28,7 +28,7 @@ class MyWritingZipFile(object):
 
     def open(self):
         if self._buffer is not None:
-            raise IOError("Cannot open again!")
+            raise IOError('Cannot open again!')
         self._buffer = six.moves.StringIO()
 
     def write(self, data):
@@ -71,7 +71,7 @@ class ZipFolder(object):
         if isinstance(zipfolder_or_fname, six.string_types):
             the_mode = mode
             if the_mode is None:
-                the_mode = "r"
+                the_mode = 'r'
             if use_compression:
                 compression = zipfile.ZIP_DEFLATED
             else:
@@ -125,7 +125,7 @@ class ZipFolder(object):
         src = six.text_type(src)
 
         if not os.path.isabs(src):
-            raise ValueError("src must be an absolute path in insert_file")
+            raise ValueError('src must be an absolute path in insert_file')
 
         if not overwrite:
             try:
@@ -134,7 +134,7 @@ class ZipFolder(object):
             except KeyError:
                 exists = False
             if exists:
-                raise IOError("destination already exists: {}".format(base_filename))
+                raise IOError('destination already exists: {}'.format(base_filename))
 
         # print src, filename
         if os.path.isdir(src):

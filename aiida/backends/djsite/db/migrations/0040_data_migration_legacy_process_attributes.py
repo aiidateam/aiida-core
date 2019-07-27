@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
                     attributes->>'process_state' NOT IN ('created', 'running', 'waiting');
                 -- Set `sealed=True` for process nodes that do not yet have a `sealed` attribute AND are not in an active state
                 """,
-            reverse_sql=""
+            reverse_sql=''
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

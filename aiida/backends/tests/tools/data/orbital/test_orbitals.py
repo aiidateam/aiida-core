@@ -46,7 +46,7 @@ class TestOrbital(AiidaTestCase):
         # position must be a list of three floats
         with self.assertRaises(ValidationError) as exc:
             Orbital(position=(1, 2, 3), some_strange_key=1)
-        self.assertIn("some_strange_key", str(exc.exception))
+        self.assertIn('some_strange_key', str(exc.exception))
 
 
 class TestRealhydrogenOrbital(AiidaTestCase):
@@ -87,7 +87,7 @@ class TestRealhydrogenOrbital(AiidaTestCase):
                     'radial_nodes': 2
                 }
             )
-        self.assertIn("angular_momentum", str(exc.exception))
+        self.assertIn('angular_momentum', str(exc.exception))
 
         with self.assertRaises(ValidationError) as exc:
             RealhydrogenOrbital(
@@ -98,7 +98,7 @@ class TestRealhydrogenOrbital(AiidaTestCase):
                     'radial_nodes': 2
                 }
             )
-        self.assertIn("magnetic number must be in the range", str(exc.exception))
+        self.assertIn('magnetic number must be in the range', str(exc.exception))
 
         with self.assertRaises(ValidationError) as exc:
             RealhydrogenOrbital(
@@ -109,7 +109,7 @@ class TestRealhydrogenOrbital(AiidaTestCase):
                     'radial_nodes': 100
                 }
             )
-        self.assertIn("radial_nodes", str(exc.exception))
+        self.assertIn('radial_nodes', str(exc.exception))
 
     def test_optional_fields(self):
         """
@@ -151,10 +151,10 @@ class TestRealhydrogenOrbital(AiidaTestCase):
                     'magnetic_number': 0,
                     'radial_nodes': 2,
                     'spin': 1,
-                    'diffusivity': "a"
+                    'diffusivity': 'a'
                 }
             )
-        self.assertIn("diffusivity", str(exc.exception))
+        self.assertIn('diffusivity', str(exc.exception))
 
         with self.assertRaises(ValidationError) as exc:
             RealhydrogenOrbital(
@@ -167,7 +167,7 @@ class TestRealhydrogenOrbital(AiidaTestCase):
                     'diffusivity': 3.1
                 }
             )
-        self.assertIn("spin", str(exc.exception))
+        self.assertIn('spin', str(exc.exception))
 
     def test_unknown_fields(self):
         """Verify that unkwown fields raise a validation error."""
@@ -183,7 +183,7 @@ class TestRealhydrogenOrbital(AiidaTestCase):
                     'some_strange_key': 1
                 }
             )
-        self.assertIn("some_strange_key", str(exc.exception))
+        self.assertIn('some_strange_key', str(exc.exception))
 
     def test_get_name_from_quantum_numbers(self):
         """

@@ -40,9 +40,9 @@ class FloatToTextTest(unittest.TestCase):
     """
 
     def test_subnormal(self):
-        self.assertEqual(float_to_text(3.555, sig=2), "3.6")
-        self.assertEqual(float_to_text(3.555, sig=3), "3.56")
-        self.assertEqual(float_to_text(3.141592653589793238462643383279502884197, sig=14), "3.1415926535898")
+        self.assertEqual(float_to_text(3.555, sig=2), '3.6')
+        self.assertEqual(float_to_text(3.555, sig=3), '3.56')
+        self.assertEqual(float_to_text(3.141592653589793238462643383279502884197, sig=14), '3.1415926535898')
 
 
 class MakeHashTest(unittest.TestCase):
@@ -72,7 +72,7 @@ class MakeHashTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            make_hash(u"öpis mit Umluut wie ä, ö, ü und emene ß"),
+            make_hash(u'öpis mit Umluut wie ä, ö, ü und emene ß'),
             'c404bf9a62cba3518de5c2bae8c67010aff6e4051cce565fa247a7f1d71f1fc7'
         )
 
@@ -189,7 +189,7 @@ class MakeHashTest(unittest.TestCase):
         with SandboxFolder(sandbox_in_repo=False) as folder:
             folder.open('file1', 'a').close()
             fhandle = folder.open('file2', 'w')
-            fhandle.write(u"hello there!\n")
+            fhandle.write(u'hello there!\n')
             fhandle.close()
 
             folder_hash = make_hash(folder)
@@ -206,7 +206,7 @@ class MakeHashTest(unittest.TestCase):
             # ... unless we explicitly tell it to ignore the new file
             self.assertEqual(make_hash(folder, ignored_folder_content='file3.npy'), folder_hash)
 
-            subfolder = folder.get_subfolder("some_subdir", create=True)
+            subfolder = folder.get_subfolder('some_subdir', create=True)
 
             with subfolder.open('file4.npy', 'wb') as fhandle:
                 np.save(fhandle, np.arange(5))

@@ -31,17 +31,17 @@ def prepare_header_comment(uuid, plot_info, comment_char='#'):
     from aiida import get_file_header
 
     filetext = []
-    filetext += get_file_header(comment_char="").splitlines()
-    filetext.append("")
-    filetext.append("Dumped from BandsData UUID={}".format(uuid))
-    filetext.append("\tpoints\tbands")
-    filetext.append("\t{}\t{}".format(*plot_info['y'].shape))
-    filetext.append("")
-    filetext.append("\tlabel\tpoint")
+    filetext += get_file_header(comment_char='').splitlines()
+    filetext.append('')
+    filetext.append('Dumped from BandsData UUID={}'.format(uuid))
+    filetext.append('\tpoints\tbands')
+    filetext.append('\t{}\t{}'.format(*plot_info['y'].shape))
+    filetext.append('')
+    filetext.append('\tlabel\tpoint')
     for l in plot_info['raw_labels']:
-        filetext.append("\t{}\t{:.8f}".format(l[1], l[0]))
+        filetext.append('\t{}\t{:.8f}'.format(l[1], l[0]))
 
-    return "\n".join("{} {}".format(comment_char, l) for l in filetext)
+    return '\n'.join('{} {}'.format(comment_char, l) for l in filetext)
 
 
 # TODO: set and get bands could have more functionalities: how do I know the number of bands for example?
@@ -87,12 +87,12 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             return int(num - .5)
 
     if fermi_energy and number_electrons:
-        raise ValueError("Specify either the number of electrons or the Fermi energy, but not both")
+        raise ValueError('Specify either the number of electrons or the Fermi energy, but not both')
 
     try:
         stored_bands = bandsdata.get_bands()
     except KeyError:
-        raise KeyError("Cannot do much of a band analysis without bands")
+        raise KeyError('Cannot do much of a band analysis without bands')
 
     if len(stored_bands.shape) == 3:
         # I write the algorithm for the generic case of having both the
@@ -145,8 +145,8 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 try:
                     lumo = [_[0][_[1] + 1] for _ in zip(bands, homo_indexes)]
                 except IndexError:
-                    raise ValueError("To understand if it is a metal or insulator, "
-                                     "need more bands than n_band=number_electrons")
+                    raise ValueError('To understand if it is a metal or insulator, '
+                                     'need more bands than n_band=number_electrons')
 
         else:
             bands = numpy.sort(bands)
@@ -161,8 +161,8 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 # gather the energies of the lumo band, for every kpoint
                 lumo = [i[number_electrons // number_electrons_per_band] for i in bands]  # take the n+1th level
             except IndexError:
-                raise ValueError("To understand if it is a metal or insulator, "
-                                 "need more bands than n_band=number_electrons")
+                raise ValueError('To understand if it is a metal or insulator, '
+                                 'need more bands than n_band=number_electrons')
 
         if number_electrons % 2 == 1 and len(stored_bands.shape) == 2:
             # if #electrons is odd and we have a non spin polarized calculation
@@ -209,7 +209,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             lumo = min([i[1] for i in max_mins if i[1] > fermi_energy])
             gap = lumo - homo
             if gap <= 0.:
-                raise Exception("Something wrong has been implemented. Revise the code!")
+                raise Exception('Something wrong has been implemented. Revise the code!')
             return True, gap
 
 
@@ -233,7 +233,7 @@ class BandsData(KpointsData):
         :param kpointsdata: an instance of KpointsData class
         """
         if not isinstance(kpointsdata, KpointsData):
-            raise ValueError("kpointsdata must be of the KpointsData class")
+            raise ValueError('kpointsdata must be of the KpointsData class')
         try:
             self.cell = kpointsdata.cell
         except AttributeError:
@@ -267,27 +267,27 @@ class BandsData(KpointsData):
         try:
             kpoints = self.get_kpoints()
         except AttributeError:
-            raise AttributeError("Must first set the kpoints, then the bands")
+            raise AttributeError('Must first set the kpoints, then the bands')
 
         the_bands = numpy.array(bands)
 
         if len(the_bands.shape) not in [2, 3]:
-            raise ValueError("Bands must be an array of dimension 2"
-                             "([N_kpoints, N_bands]) or of dimension 3 "
-                             " ([N_arrays, N_kpoints, N_bands]), found instead {}".format(len(the_bands.shape)))
+            raise ValueError('Bands must be an array of dimension 2'
+                             '([N_kpoints, N_bands]) or of dimension 3 '
+                             ' ([N_arrays, N_kpoints, N_bands]), found instead {}'.format(len(the_bands.shape)))
 
         list_of_arrays_to_be_checked = []
 
         # check that the shape of everything is consistent with the kpoints
         num_kpoints_from_bands = the_bands.shape[0] if len(the_bands.shape) == 2 else the_bands.shape[1]
         if num_kpoints_from_bands != len(kpoints):
-            raise ValueError("There must be energy values for every kpoint")
+            raise ValueError('There must be energy values for every kpoint')
 
         if occupations is not None:
             the_occupations = numpy.array(occupations)
             if the_occupations.shape != the_bands.shape:
-                raise ValueError("Shape of occupations {} different from shape"
-                                 "shape of bands {}".format(the_occupations.shape, the_bands.shape))
+                raise ValueError('Shape of occupations {} different from shape'
+                                 'shape of bands {}'.format(the_occupations.shape, the_bands.shape))
 
             if not the_bands.dtype.type == numpy.float64:
                 list_of_arrays_to_be_checked.append([the_occupations, 'occupations'])
@@ -303,7 +303,7 @@ class BandsData(KpointsData):
             try:
                 [float(_) for _ in x.flatten() if _ is not None]
             except (TypeError, ValueError):
-                raise ValueError("The {} array can only contain float or None values".format(msg))
+                raise ValueError('The {} array can only contain float or None values'.format(msg))
 
         # check the labels
         if labels is not None:
@@ -312,13 +312,13 @@ class BandsData(KpointsData):
             elif isinstance(labels, (tuple, list)) and all([isinstance(_, six.string_types) for _ in labels]):
                 the_labels = [str(_) for _ in labels]
             else:
-                raise ValidationError("Band labels have an unrecognized type ({})"
-                                      "but should be a string or a list of strings".format(labels.__class__))
+                raise ValidationError('Band labels have an unrecognized type ({})'
+                                      'but should be a string or a list of strings'.format(labels.__class__))
 
             if len(the_bands.shape) == 2 and len(the_labels) != 1:
-                raise ValidationError("More array labels than the number of arrays")
+                raise ValidationError('More array labels than the number of arrays')
             elif len(the_bands.shape) == 3 and len(the_labels) != the_bands.shape[0]:
-                raise ValidationError("More array labels than the number of arrays")
+                raise ValidationError('More array labels than the number of arrays')
         else:
             the_labels = None
 
@@ -379,7 +379,7 @@ class BandsData(KpointsData):
         from aiida.orm.nodes.data.structure import get_valid_pbc
 
         if self.is_stored:
-            raise ModificationNotAllowed("The KpointsData object cannot be modified, it has already been stored")
+            raise ModificationNotAllowed('The KpointsData object cannot be modified, it has already been stored')
         the_pbc = get_valid_pbc(value)
         self.set_attribute('pbc1', the_pbc[0])
         self.set_attribute('pbc2', the_pbc[1])
@@ -395,7 +395,7 @@ class BandsData(KpointsData):
         try:
             bands = numpy.array(self.get_array('bands'))
         except KeyError:
-            raise AttributeError("No stored bands has been found")
+            raise AttributeError('No stored bands has been found')
 
         to_return = [bands]
 
@@ -449,7 +449,7 @@ class BandsData(KpointsData):
             band_type_idx = numpy.array([0] * stored_bands.shape[2] + [1] * stored_bands.shape[2])
             two_band_types = True
         else:
-            raise ValueError("Unexpected shape of bands")
+            raise ValueError('Unexpected shape of bands')
 
         bands -= y_origin
 
@@ -524,8 +524,8 @@ class BandsData(KpointsData):
                     }
                     plot_info['paths'].append(path_dict)
             else:
-                label_from = "0"
-                label_to = "1"
+                label_from = '0'
+                label_to = '1'
                 path_dict = {
                     'length': bands.shape[0] - 1,
                     'from': label_from,
@@ -539,7 +539,7 @@ class BandsData(KpointsData):
 
         return plot_info
 
-    def _prepare_agr_batch(self, main_file_name="", comments=True, prettify_format=None):
+    def _prepare_agr_batch(self, main_file_name='', comments=True, prettify_format=None):
         """
         Prepare two files, data and batch, to be plot with xmgrace as:
         xmgrace -batch file.dat
@@ -555,13 +555,13 @@ class BandsData(KpointsData):
         """
         import os
 
-        dat_filename = os.path.splitext(main_file_name)[0] + "_data.dat"
+        dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
 
         if prettify_format is None:
             # Default. Specified like this to allow caller functions to pass 'None'
             prettify_format = 'agr_seekpath'
 
-        plot_info = self._get_bandplot_data(cartesian=True, prettify_format=prettify_format, join_symbol="|")
+        plot_info = self._get_bandplot_data(cartesian=True, prettify_format=prettify_format, join_symbol='|')
 
         bands = plot_info['y']
         x = plot_info['x']
@@ -589,12 +589,12 @@ class BandsData(KpointsData):
 
         batch = []
         if comments:
-            batch.append(prepare_header_comment(self.uuid, plot_info, comment_char="#"))
+            batch.append(prepare_header_comment(self.uuid, plot_info, comment_char='#'))
 
         batch.append('READ XY "{}"'.format(dat_filename))
 
         # axis limits
-        batch.append("world {}, {}, {}, {}".format(x_min_lim, y_min_lim, x_max_lim, y_max_lim))
+        batch.append('world {}, {}, {}, {}'.format(x_min_lim, y_min_lim, x_max_lim, y_max_lim))
 
         # axis label
         batch.append('yaxis label "Dispersion"')
@@ -605,35 +605,35 @@ class BandsData(KpointsData):
         batch.append('xaxis  tick spec {}'.format(len(labels)))
         # set the name of the special points
         for i, l in enumerate(labels):
-            batch.append("xaxis  tick major {}, {}".format(i, l[0]))
+            batch.append('xaxis  tick major {}, {}'.format(i, l[0]))
             batch.append('xaxis  ticklabel {}, "{}"'.format(i, l[1]))
         batch.append('xaxis  tick major color 7')
         batch.append('xaxis  tick major grid on')
 
         # minor graphical tweak
-        batch.append("yaxis  tick minor ticks 3")
-        batch.append("frame linewidth 1.0")
+        batch.append('yaxis  tick minor ticks 3')
+        batch.append('frame linewidth 1.0')
 
         # use helvetica fonts
         batch.append('map font 4 to "Helvetica", "Helvetica"')
-        batch.append("yaxis  label font 4")
-        batch.append("xaxis  label font 4")
+        batch.append('yaxis  label font 4')
+        batch.append('xaxis  label font 4')
 
         # set color and linewidths of bands
         for i in range(num_bands):
-            batch.append("s{} line color 1".format(i))
-            batch.append("s{} linewidth 1".format(i))
+            batch.append('s{} line color 1'.format(i))
+            batch.append('s{} linewidth 1'.format(i))
 
         ## set color and linewidths of label lines - not needed! use gridlines
         #for i in range(num_bands, num_bands + num_labels):
         #    batch.append("s{} hidden true".format(i))
 
-        batch_data = "\n".join(batch) + "\n"
+        batch_data = '\n'.join(batch) + '\n'
         extra_files = {dat_filename: raw_data}
 
         return batch_data.encode('utf-8'), extra_files
 
-    def _prepare_dat_multicolumn(self, main_file_name="", comments=True):
+    def _prepare_dat_multicolumn(self, main_file_name='', comments=True):
         """
         Write an N x M matrix. First column is the distance between kpoints,
         The other columns are the bands. Header contains number of kpoints and
@@ -642,22 +642,22 @@ class BandsData(KpointsData):
         :param comments: if True, print comments (if it makes sense for the given
             format)
         """
-        plot_info = self._get_bandplot_data(cartesian=True, prettify_format=None, join_symbol="|")
+        plot_info = self._get_bandplot_data(cartesian=True, prettify_format=None, join_symbol='|')
 
         bands = plot_info['y']
         x = plot_info['x']
 
         return_text = []
         if comments:
-            return_text.append(prepare_header_comment(self.uuid, plot_info, comment_char="#"))
+            return_text.append(prepare_header_comment(self.uuid, plot_info, comment_char='#'))
 
         for i in zip(x, bands):
-            line = ["{:.8f}".format(i[0])] + ["{:.8f}".format(j) for j in i[1]]
-            return_text.append("\t".join(line))
+            line = ['{:.8f}'.format(i[0])] + ['{:.8f}'.format(j) for j in i[1]]
+            return_text.append('\t'.join(line))
 
-        return ("\n".join(return_text) + '\n').encode('utf-8'), {}
+        return ('\n'.join(return_text) + '\n').encode('utf-8'), {}
 
-    def _prepare_dat_blocks(self, main_file_name="", comments=True):
+    def _prepare_dat_blocks(self, main_file_name='', comments=True):
         """
         Format suitable for gnuplot using blocks.
         Columns with x and y (path and band energy). Several blocks, separated
@@ -666,30 +666,30 @@ class BandsData(KpointsData):
         :param comments: if True, print comments (if it makes sense for the given
             format)
         """
-        plot_info = self._get_bandplot_data(cartesian=True, prettify_format=None, join_symbol="|")
+        plot_info = self._get_bandplot_data(cartesian=True, prettify_format=None, join_symbol='|')
 
         bands = plot_info['y']
         x = plot_info['x']
 
         return_text = []
         if comments:
-            return_text.append(prepare_header_comment(self.uuid, plot_info, comment_char="#"))
+            return_text.append(prepare_header_comment(self.uuid, plot_info, comment_char='#'))
 
         the_bands = numpy.transpose(bands)
 
         for b in the_bands:
             for i in zip(x, b):
-                line = ["{:.8f}".format(i[0]), "{:.8f}".format(i[1])]
-                return_text.append("\t".join(line))
-            return_text.append("")
-            return_text.append("")
+                line = ['{:.8f}'.format(i[0]), '{:.8f}'.format(i[1])]
+                return_text.append('\t'.join(line))
+            return_text.append('')
+            return_text.append('')
 
-        return ("\n".join(return_text)).encode('utf-8'), {}
+        return ('\n'.join(return_text)).encode('utf-8'), {}
 
     def _matplotlib_get_dict(self,
-                             main_file_name="",
+                             main_file_name='',
                              comments=True,
-                             title="",
+                             title='',
                              legend=None,
                              legend2=None,
                              y_max_lim=None,
@@ -727,27 +727,27 @@ class BandsData(KpointsData):
 
         # Only these keywords are accepted in kwargs, and then set into the json
         valid_additional_keywords = [
-            "bands_color",  # Color of band lines
-            "bands_linewidth",  # linewidth of bands
-            "bands_linestyle",  # linestyle of bands
-            "bands_marker",  # marker for bands
-            "bands_markersize",  # size of the marker of bands
-            "bands_markeredgecolor",  # marker edge color for bands
-            "bands_markeredgewidth",  # marker edge width for bands
-            "bands_markerfacecolor",  # marker face color for bands
-            "bands_color2",  # Color of band lines (for other spin, if present)
-            "bands_linewidth2",  # linewidth of bands (for other spin, if present)
-            "bands_linestyle2",  # linestyle of bands (for other spin, if present)
-            "bands_marker2",  # marker for bands (for other spin, if present)
-            "bands_markersize2",  # size of the marker of bands (for other spin, if present)
-            "bands_markeredgecolor2",  # marker edge color for bands (for other spin, if present)
-            "bands_markeredgewidth2",  # marker edge width for bands (for other spin, if present)
-            "bands_markerfacecolor2",  # marker face color for bands (for other spin, if present)
-            "plot_zero_axis",  # If true, plot an axis at y=0
-            "zero_axis_color",  # Color of the axis at y=0
-            "zero_axis_linestyle",  # linestyle of the axis at y=0
-            "zero_axis_linewidth",  # linewidth of the axis at y=0
-            "use_latex",  # If true, use latex to render captions
+            'bands_color',  # Color of band lines
+            'bands_linewidth',  # linewidth of bands
+            'bands_linestyle',  # linestyle of bands
+            'bands_marker',  # marker for bands
+            'bands_markersize',  # size of the marker of bands
+            'bands_markeredgecolor',  # marker edge color for bands
+            'bands_markeredgewidth',  # marker edge width for bands
+            'bands_markerfacecolor',  # marker face color for bands
+            'bands_color2',  # Color of band lines (for other spin, if present)
+            'bands_linewidth2',  # linewidth of bands (for other spin, if present)
+            'bands_linestyle2',  # linestyle of bands (for other spin, if present)
+            'bands_marker2',  # marker for bands (for other spin, if present)
+            'bands_markersize2',  # size of the marker of bands (for other spin, if present)
+            'bands_markeredgecolor2',  # marker edge color for bands (for other spin, if present)
+            'bands_markeredgewidth2',  # marker edge width for bands (for other spin, if present)
+            'bands_markerfacecolor2',  # marker face color for bands (for other spin, if present)
+            'plot_zero_axis',  # If true, plot an axis at y=0
+            'zero_axis_color',  # Color of the axis at y=0
+            'zero_axis_linestyle',  # linestyle of the axis at y=0
+            'zero_axis_linewidth',  # linewidth of the axis at y=0
+            'use_latex',  # If true, use latex to render captions
         ]
 
         # Note: I do not want to import matplotlib here, for two reasons:
@@ -762,7 +762,7 @@ class BandsData(KpointsData):
             prettify_format = 'latex_seekpath'
 
         # The default for use_latex is False
-        join_symbol = r"\textbar{}" if kwargs.get('use_latex', False) else "|"
+        join_symbol = r'\textbar{}' if kwargs.get('use_latex', False) else '|'
 
         plot_info = self._get_bandplot_data(
             cartesian=True,
@@ -792,7 +792,7 @@ class BandsData(KpointsData):
         all_data['tick_labels'] = tick_labels
         all_data['legend_text'] = legend
         all_data['legend_text2'] = legend2
-        all_data['yaxis_label'] = "Dispersion ({})".format(self.units)
+        all_data['yaxis_label'] = 'Dispersion ({})'.format(self.units)
         all_data['title'] = title
         if comments:
             all_data['comment'] = prepare_header_comment(self.uuid, plot_info, comment_char='#')
@@ -838,7 +838,7 @@ class BandsData(KpointsData):
 
         return s.encode('utf-8'), {}
 
-    def _prepare_mpl_withjson(self, main_file_name="", *args, **kwargs):
+    def _prepare_mpl_withjson(self, main_file_name='', *args, **kwargs):
         """
         Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
@@ -852,7 +852,7 @@ class BandsData(KpointsData):
 
         all_data = self._matplotlib_get_dict(*args, main_file_name=main_file_name, **kwargs)
 
-        json_fname = os.path.splitext(main_file_name)[0] + "_data.json"
+        json_fname = os.path.splitext(main_file_name)[0] + '_data.json'
         # Escape double_quotes
         json_fname = json_fname.replace('"', '\"')
 
@@ -868,8 +868,8 @@ class BandsData(KpointsData):
         return s.encode('utf-8'), ext_files
 
     def _prepare_gnuplot(self,
-                         main_file_name="",
-                         title="",
+                         main_file_name='',
+                         title='',
                          comments=True,
                          prettify_format=None,
                          y_max_lim=None,
@@ -891,14 +891,14 @@ class BandsData(KpointsData):
         """
         import os
 
-        dat_filename = os.path.splitext(main_file_name)[0] + "_data.dat"
+        dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
 
         if prettify_format is None:
             # Default. Specified like this to allow caller functions to pass 'None'
             prettify_format = 'gnuplot_seekpath'
 
         plot_info = self._get_bandplot_data(
-            cartesian=True, prettify_format=prettify_format, join_symbol="|", y_origin=y_origin)
+            cartesian=True, prettify_format=prettify_format, join_symbol='|', y_origin=y_origin)
 
         bands = plot_info['y']
         x = plot_info['x']
@@ -918,14 +918,14 @@ class BandsData(KpointsData):
         # first prepare the xy coordinates of the sets
         raw_data, _ = self._prepare_dat_blocks(plot_info, comments=comments)
 
-        xtics_string = u", ".join(u'"{}" {}'.format(label, pos) for pos, label in plot_info['labels'])
+        xtics_string = u', '.join(u'"{}" {}'.format(label, pos) for pos, label in plot_info['labels'])
 
         script = []
         # Start with some useful comments
 
         if comments:
-            script.append(prepare_header_comment(self.uuid, plot_info=plot_info, comment_char="# "))
-        script.append("")
+            script.append(prepare_header_comment(self.uuid, plot_info=plot_info, comment_char='# '))
+        script.append('')
 
         script.append(u"""## Uncomment the next two lines to write directly to PDF
 ## Note: You need to have gnuplot installed with pdfcairo support!
@@ -955,7 +955,7 @@ class BandsData(KpointsData):
         script.append(u'set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
         script.append(u'set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
 
-        script.append(u'set ylabel "{}"'.format(u"Dispersion ({})".format(self.units)))
+        script.append(u'set ylabel "{}"'.format(u'Dispersion ({})'.format(self.units)))
 
         if title:
             script.append(u'set title "{}"'.format(title.replace('"', '\"')))
@@ -963,12 +963,12 @@ class BandsData(KpointsData):
         # Plot, escaping filename
         script.append(u'plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
 
-        script_data = u"\n".join(script) + u"\n"
+        script_data = u'\n'.join(script) + u'\n'
         extra_files = {dat_filename: raw_data.encode('utf-8')}
 
         return script_data.encode('utf-8'), extra_files
 
-    def _prepare_mpl_pdf(self, main_file_name="", *args, **kwargs):
+    def _prepare_mpl_pdf(self, main_file_name='', *args, **kwargs):
         """
         Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
@@ -997,7 +997,7 @@ class BandsData(KpointsData):
 
         escaped_fname = filename.replace('"', '\"')
 
-        s_footer = matplotlib_footer_template_exportfile.substitute(fname=escaped_fname, format="pdf")
+        s_footer = matplotlib_footer_template_exportfile.substitute(fname=escaped_fname, format='pdf')
 
         s = s_header + s_import + s_body + s_footer
 
@@ -1012,7 +1012,7 @@ class BandsData(KpointsData):
             subprocess.check_output([sys.executable, f.name])
 
         if not os.path.exists(filename):
-            raise RuntimeError("Unable to generate the PDF...")
+            raise RuntimeError('Unable to generate the PDF...')
 
         with io.open(filename, 'rb', encoding=None) as f:
             imgdata = f.read()
@@ -1020,7 +1020,7 @@ class BandsData(KpointsData):
 
         return imgdata, {}
 
-    def _prepare_mpl_png(self, main_file_name="", *args, **kwargs):
+    def _prepare_mpl_png(self, main_file_name='', *args, **kwargs):
         """
         Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
@@ -1048,7 +1048,7 @@ class BandsData(KpointsData):
 
         escaped_fname = filename.replace('"', '\"')
 
-        s_footer = matplotlib_footer_template_exportfile_with_dpi.substitute(fname=escaped_fname, format="png", dpi=300)
+        s_footer = matplotlib_footer_template_exportfile_with_dpi.substitute(fname=escaped_fname, format='png', dpi=300)
 
         s = s_header + s_import + s_body + s_footer
 
@@ -1063,7 +1063,7 @@ class BandsData(KpointsData):
             subprocess.check_output([sys.executable, f.name])
 
         if not os.path.exists(filename):
-            raise RuntimeError("Unable to generate the PNG...")
+            raise RuntimeError('Unable to generate the PNG...')
 
         with io.open(filename, 'rb', encoding=None) as f:
             imgdata = f.read()
@@ -1087,13 +1087,13 @@ class BandsData(KpointsData):
         exec (code_obj, code_globals)  # pylint: disable=exec-used
 
     def _prepare_agr(self,
-                     main_file_name="",
+                     main_file_name='',
                      comments=True,
                      setnumber_offset=0,
                      color_number=1,
                      color_number2=2,
-                     legend="",
-                     title="",
+                     legend='',
+                     title='',
                      y_max_lim=None,
                      y_min_lim=None,
                      y_origin=0.,
@@ -1130,14 +1130,14 @@ class BandsData(KpointsData):
             prettify_format = 'agr_seekpath'
 
         plot_info = self._get_bandplot_data(
-            cartesian=True, prettify_format=prettify_format, join_symbol="|", y_origin=y_origin)
+            cartesian=True, prettify_format=prettify_format, join_symbol='|', y_origin=y_origin)
 
         import math
         # load the x and y of every set
         if color_number > max_num_agr_colors:
-            raise ValueError("Color number is too high (should be less than {})".format(max_num_agr_colors))
+            raise ValueError('Color number is too high (should be less than {})'.format(max_num_agr_colors))
         if color_number2 > max_num_agr_colors:
-            raise ValueError("Color number 2 is too high (should be less than {})".format(max_num_agr_colors))
+            raise ValueError('Color number 2 is too high (should be less than {})'.format(max_num_agr_colors))
 
         bands = plot_info['y']
         x = plot_info['x']
@@ -1155,7 +1155,7 @@ class BandsData(KpointsData):
         ytick_spacing = 10**int(math.log10((y_max_lim - y_min_lim)))
 
         # prepare xticks labels
-        sx1 = ""
+        sx1 = ''
         for i, l in enumerate(labels):
             sx1 += agr_single_xtick_template.substitute(
                 index=i,
@@ -1170,13 +1170,13 @@ class BandsData(KpointsData):
         # build the arrays with the xy coordinates
         all_sets = []
         for b in the_bands:
-            this_set = ""
+            this_set = ''
             for i in zip(x, b):
-                line = "{:.8f}".format(i[0]) + '\t' + "{:.8f}".format(i[1]) + "\n"
+                line = '{:.8f}'.format(i[0]) + '\t' + '{:.8f}'.format(i[1]) + '\n'
                 this_set += line
             all_sets.append(this_set)
 
-        set_descriptions = ""
+        set_descriptions = ''
         for i, (this_set, band_type) in enumerate(zip(all_sets, plot_info['band_type_idx'])):
             if band_type % 2 == 0:
                 linecolor = color_number
@@ -1187,7 +1187,7 @@ class BandsData(KpointsData):
                 set_number=i + setnumber_offset,
                 linewidth=width,
                 color_number=linecolor,
-                legend=legend if i == 0 else "")
+                legend=legend if i == 0 else '')
 
         units = self.units
 
@@ -1196,7 +1196,7 @@ class BandsData(KpointsData):
             y_min_lim=y_min_lim,
             x_max_lim=x_max_lim,
             y_max_lim=y_max_lim,
-            yaxislabel="Dispersion ({})".format(units),
+            yaxislabel='Dispersion ({})'.format(units),
             xticks_template=xticks,
             set_descriptions=set_descriptions,
             ytick_spacing=ytick_spacing,
@@ -1205,12 +1205,12 @@ class BandsData(KpointsData):
         sets = []
         for i, this_set in enumerate(all_sets):
             sets.append(agr_singleset_template.substitute(set_number=i + setnumber_offset, xydata=this_set))
-        the_sets = "&\n".join(sets)
+        the_sets = '&\n'.join(sets)
 
         s = agr_template.substitute(graphs=graphs, sets=the_sets)
 
         if comments:
-            s = prepare_header_comment(self.uuid, plot_info, comment_char="#") + "\n" + s
+            s = prepare_header_comment(self.uuid, plot_info, comment_char='#') + '\n' + s
 
         return s.encode('utf-8'), {}
 
@@ -1225,7 +1225,7 @@ class BandsData(KpointsData):
 
         return out_dict
 
-    def _prepare_json(self, main_file_name="", comments=True):
+    def _prepare_json(self, main_file_name='', comments=True):
         """
         Prepare a json file in a format compatible with the AiiDA band visualizer
 
@@ -1239,7 +1239,7 @@ class BandsData(KpointsData):
         json_dict['original_uuid'] = self.uuid
 
         if comments:
-            json_dict['comments'] = get_file_header(comment_char="")
+            json_dict['comments'] = get_file_header(comment_char='')
 
         return json.dumps(json_dict).encode('utf-8'), {}
 

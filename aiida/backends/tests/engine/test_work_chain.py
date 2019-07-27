@@ -92,8 +92,8 @@ class Wf(WorkChain):
     @classmethod
     def define(cls, spec):
         super(Wf, cls).define(spec)
-        spec.input("value", default=Str('A'))
-        spec.input("n", default=Int(3))
+        spec.input('value', default=Str('A'))
+        spec.input('n', default=Int(3))
         spec.outputs.dynamic = True
         spec.outline(
             cls.s1,
@@ -324,21 +324,21 @@ class TestWorkchain(AiidaTestCase):
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.items():
             if step not in ['s3', 's4', 'isB']:
-                self.assertTrue(finished, "Step {} was not called by workflow".format(step))
+                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
         # Try the elif(..) part
         finished_steps = launch.run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 's4']:
-                self.assertTrue(finished, "Step {} was not called by workflow".format(step))
+                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
         # Try the else... part
         finished_steps = launch.run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 'isB', 's3']:
-                self.assertTrue(finished, "Step {} was not called by workflow".format(step))
+                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
     def test_incorrect_outline(self):
 
@@ -405,8 +405,8 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(Wf, a=x, b=x)
 
     def test_context(self):
-        A = Str("a").store()
-        B = Str("b").store()
+        A = Str('a').store()
+        B = Str('b').store()
 
         test_case = self
 
@@ -502,21 +502,21 @@ class TestWorkchain(AiidaTestCase):
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['s3', 's4', 'isB']:
-                self.assertTrue(finished, "Step {} was not called by workflow".format(step))
+                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
         # Try the elif(..) part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 's4']:
-                self.assertTrue(finished, "Step {} was not called by workflow".format(step))
+                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
         # Try the else... part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['isA', 's2', 'isB', 's3']:
-                self.assertTrue(finished, "Step {} was not called by workflow".format(step))
+                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
     def test_return(self):
 
@@ -602,7 +602,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.outputs.dynamic = True
 
             def do_run(self):
-                self.out("value", Int(5).store())
+                self.out('value', Int(5).store())
 
         run_and_check_success(MainWorkChain)
 
@@ -722,7 +722,7 @@ class TestWorkchain(AiidaTestCase):
 
             def run(self):
                 orm.Log.objects.delete_all()
-                self.report("Testing the report function")
+                self.report('Testing the report function')
                 return
 
             def check(self):

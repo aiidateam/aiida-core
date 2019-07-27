@@ -35,8 +35,8 @@ def fix_calc_states(apps, schema_editor):
         # Now add a note in the log to say what we've done
         calc = load_node(pk=calc_state.dbnode.pk)
         calc.logger.warning(
-            "Job state {} found for calculation {} which should never be in "
-            "the database. Changed state to FAILED.".format(
+            'Job state {} found for calculation {} which should never be in '
+            'the database. Changed state to FAILED.'.format(
                 old_state, calc_state.dbnode.pk))
 
 

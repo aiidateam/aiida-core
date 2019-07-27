@@ -62,7 +62,7 @@ def cif_list(raw, formula_mode, past_days, groups, all_users):
                         new_entry.append('')
                     else:
                         new_entry.append(elm)
-                entry[i] = ",".join(new_entry)
+                entry[i] = ','.join(new_entry)
         for i in range(len(entry), len(LIST_PROJECT_HEADERS)):
             entry.append(None)
         counter += 1

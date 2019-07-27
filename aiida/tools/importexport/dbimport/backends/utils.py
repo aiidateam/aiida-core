@@ -37,7 +37,7 @@ def merge_comment(incoming_comment, comment_mode):
         # Get existing Comment's 'mtime' and 'content'
         builder = QueryBuilder().append(Comment, filters={'uuid': incoming_uuid}, project=['mtime', 'content'])
         if builder.count() != 1:
-            raise exceptions.ValidationError("Multiple Comments with the same UUID: {}".format(incoming_uuid))
+            raise exceptions.ValidationError('Multiple Comments with the same UUID: {}'.format(incoming_uuid))
         builder = builder.all()
 
         existing_mtime = builder[0][0]
@@ -74,7 +74,7 @@ def merge_comment(incoming_comment, comment_mode):
     # Invalid comment_mode
     else:
         raise ValueError(
-            "Unknown comment_mode value: {}. Should be "
+            'Unknown comment_mode value: {}. Should be '
             "either 'newest' or 'overwrite'".format(comment_mode)
         )
 
@@ -219,7 +219,7 @@ def deserialize_field(key, value, fields_info, import_unique_ids_mappings, forei
         raise ValueError("Unknown field '{}'".format(key))
 
     if key in ('id', 'pk'):
-        raise ValueError("ID or PK explicitly passed!")
+        raise ValueError('ID or PK explicitly passed!')
 
     requires = field_info.get('requires', None)
     if requires is None:
@@ -237,7 +237,7 @@ def deserialize_field(key, value, fields_info, import_unique_ids_mappings, forei
         # I store it in the FIELDNAME_id variable, that directly stores the
         # PK in the remote table, rather than requiring to create Model
         # instances for the foreign relations
-        return ("{}_id".format(key), foreign_ids_reverse_mappings[requires][unique_id])
+        return ('{}_id'.format(key), foreign_ids_reverse_mappings[requires][unique_id])
 
     # else
-    return ("{}_id".format(key), None)
+    return ('{}_id'.format(key), None)

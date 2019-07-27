@@ -24,11 +24,11 @@ class GroupTranslator(BaseTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "groups"
+    __label__ = 'groups'
     # The AiiDA class one-to-one associated to the present class
     _aiida_class = orm.Group
     # The string name of the AiiDA class
-    _aiida_type = "groups.Group"
+    _aiida_type = 'groups.Group'
 
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = True
@@ -39,28 +39,28 @@ class GroupTranslator(BaseTranslator):
     # All the values from column_order must present in additional info dict
     # Note: final schema will contain details for only the fields present in column order
     _schema_projections = {
-        "column_order": ["id", "label", "type_string", "description", "user_id", "user_email", "uuid"],
-        "additional_info": {
-            "id": {
-                "is_display": True
+        'column_order': ['id', 'label', 'type_string', 'description', 'user_id', 'user_email', 'uuid'],
+        'additional_info': {
+            'id': {
+                'is_display': True
             },
-            "label": {
-                "is_display": True
+            'label': {
+                'is_display': True
             },
-            "type_string": {
-                "is_display": True
+            'type_string': {
+                'is_display': True
             },
-            "description": {
-                "is_display": False
+            'description': {
+                'is_display': False
             },
-            "user_id": {
-                "is_display": False
+            'user_id': {
+                'is_display': False
             },
-            "user_email": {
-                "is_display": True
+            'user_email': {
+                'is_display': True
             },
-            "uuid": {
-                "is_display": False
+            'uuid': {
+                'is_display': False
             }
         }
     }

@@ -108,39 +108,39 @@ class TestTimes(unittest.TestCase):
         "days-hours", "days-hours:minutes" and "days-hours:minutes:seconds".
         """
         scheduler = SlurmScheduler()
-        self.assertEquals(scheduler._convert_time("2"), 2 * 60)
-        self.assertEquals(scheduler._convert_time("02"), 2 * 60)
+        self.assertEquals(scheduler._convert_time('2'), 2 * 60)
+        self.assertEquals(scheduler._convert_time('02'), 2 * 60)
 
-        self.assertEquals(scheduler._convert_time("02:3"), 2 * 60 + 3)
-        self.assertEquals(scheduler._convert_time("02:03"), 2 * 60 + 3)
+        self.assertEquals(scheduler._convert_time('02:3'), 2 * 60 + 3)
+        self.assertEquals(scheduler._convert_time('02:03'), 2 * 60 + 3)
 
-        self.assertEquals(scheduler._convert_time("1:02:03"), 3600 + 2 * 60 + 3)
-        self.assertEquals(scheduler._convert_time("01:02:03"), 3600 + 2 * 60 + 3)
+        self.assertEquals(scheduler._convert_time('1:02:03'), 3600 + 2 * 60 + 3)
+        self.assertEquals(scheduler._convert_time('01:02:03'), 3600 + 2 * 60 + 3)
 
-        self.assertEquals(scheduler._convert_time("1-3"), 86400 + 3 * 3600)
-        self.assertEquals(scheduler._convert_time("01-3"), 86400 + 3 * 3600)
-        self.assertEquals(scheduler._convert_time("01-03"), 86400 + 3 * 3600)
+        self.assertEquals(scheduler._convert_time('1-3'), 86400 + 3 * 3600)
+        self.assertEquals(scheduler._convert_time('01-3'), 86400 + 3 * 3600)
+        self.assertEquals(scheduler._convert_time('01-03'), 86400 + 3 * 3600)
 
-        self.assertEquals(scheduler._convert_time("1-3:5"), 86400 + 3 * 3600 + 5 * 60)
-        self.assertEquals(scheduler._convert_time("01-3:05"), 86400 + 3 * 3600 + 5 * 60)
-        self.assertEquals(scheduler._convert_time("01-03:05"), 86400 + 3 * 3600 + 5 * 60)
+        self.assertEquals(scheduler._convert_time('1-3:5'), 86400 + 3 * 3600 + 5 * 60)
+        self.assertEquals(scheduler._convert_time('01-3:05'), 86400 + 3 * 3600 + 5 * 60)
+        self.assertEquals(scheduler._convert_time('01-03:05'), 86400 + 3 * 3600 + 5 * 60)
 
-        self.assertEquals(scheduler._convert_time("1-3:5:7"), 86400 + 3 * 3600 + 5 * 60 + 7)
-        self.assertEquals(scheduler._convert_time("01-3:05:7"), 86400 + 3 * 3600 + 5 * 60 + 7)
-        self.assertEquals(scheduler._convert_time("01-03:05:07"), 86400 + 3 * 3600 + 5 * 60 + 7)
+        self.assertEquals(scheduler._convert_time('1-3:5:7'), 86400 + 3 * 3600 + 5 * 60 + 7)
+        self.assertEquals(scheduler._convert_time('01-3:05:7'), 86400 + 3 * 3600 + 5 * 60 + 7)
+        self.assertEquals(scheduler._convert_time('01-03:05:07'), 86400 + 3 * 3600 + 5 * 60 + 7)
 
         # Disable logging to avoid excessive output during test
         logging.disable(logging.ERROR)
         with self.assertRaises(ValueError):
             # Empty string not valid
-            scheduler._convert_time("")
+            scheduler._convert_time('')
         with self.assertRaises(ValueError):
             # there should be something after the dash
-            scheduler._convert_time("1-")
+            scheduler._convert_time('1-')
         with self.assertRaises(ValueError):
             # there should be something after the dash
             # there cannot be a dash after the colons
-            scheduler._convert_time("1:2-3")
+            scheduler._convert_time('1:2-3')
         # Reset logging level
         logging.disable(logging.NOTSET)
 
@@ -162,7 +162,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
@@ -184,12 +184,12 @@ class TestSubmitScript(unittest.TestCase):
 
         scheduler = SlurmScheduler()
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
 
-        for (shebang, expected_first_line) in ((None, '#!/bin/bash'), ("", ""), ("NOSET", '#!/bin/bash')):
+        for (shebang, expected_first_line) in ((None, '#!/bin/bash'), ('', ''), ('NOSET', '#!/bin/bash')):
             job_tmpl = JobTemplate()
-            if shebang == "NOSET":
+            if shebang == 'NOSET':
                 pass
             else:
                 job_tmpl.shebang = shebang
@@ -219,7 +219,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
@@ -251,7 +251,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
@@ -286,7 +286,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL

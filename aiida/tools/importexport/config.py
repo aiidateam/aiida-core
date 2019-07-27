@@ -24,20 +24,20 @@ DUPL_SUFFIX = ' (Imported #{})'
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
 # references to them).
-NODE_ENTITY_NAME = "Node"
-GROUP_ENTITY_NAME = "Group"
-COMPUTER_ENTITY_NAME = "Computer"
-USER_ENTITY_NAME = "User"
-LOG_ENTITY_NAME = "Log"
-COMMENT_ENTITY_NAME = "Comment"
+NODE_ENTITY_NAME = 'Node'
+GROUP_ENTITY_NAME = 'Group'
+COMPUTER_ENTITY_NAME = 'Computer'
+USER_ENTITY_NAME = 'User'
+LOG_ENTITY_NAME = 'Log'
+COMMENT_ENTITY_NAME = 'Comment'
 
 # The signatures used to reference the entities in the import/export file
-NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode"
-GROUP_SIGNATURE = "aiida.backends.djsite.db.models.DbGroup"
-COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer"
-USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser"
-LOG_SIGNATURE = "aiida.backends.djsite.db.models.DbLog"
-COMMENT_SIGNATURE = "aiida.backends.djsite.db.models.DbComment"
+NODE_SIGNATURE = 'aiida.backends.djsite.db.models.DbNode'
+GROUP_SIGNATURE = 'aiida.backends.djsite.db.models.DbGroup'
+COMPUTER_SIGNATURE = 'aiida.backends.djsite.db.models.DbComputer'
+USER_SIGNATURE = 'aiida.backends.djsite.db.models.DbUser'
+LOG_SIGNATURE = 'aiida.backends.djsite.db.models.DbLog'
+COMMENT_SIGNATURE = 'aiida.backends.djsite.db.models.DbComment'
 
 # Mapping from entity names to signatures (used by the SQLA import/export)
 entity_names_to_signatures = {
@@ -71,12 +71,12 @@ entity_names_to_entities = {
 
 # Mapping of entity names to SQLA class paths
 entity_names_to_sqla_schema = {
-    NODE_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbNode",
-    GROUP_ENTITY_NAME: "aiida.backends.sqlalchemy.models.group.DbGroup",
-    COMPUTER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.computer.DbComputer",
-    USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser",
-    LOG_ENTITY_NAME: "aiida.backends.sqlalchemy.models.log.DbLog",
-    COMMENT_ENTITY_NAME: "aiida.backends.sqlalchemy.models.comment.DbComment"
+    NODE_ENTITY_NAME: 'aiida.backends.sqlalchemy.models.node.DbNode',
+    GROUP_ENTITY_NAME: 'aiida.backends.sqlalchemy.models.group.DbGroup',
+    COMPUTER_ENTITY_NAME: 'aiida.backends.sqlalchemy.models.computer.DbComputer',
+    USER_ENTITY_NAME: 'aiida.backends.sqlalchemy.models.user.DbUser',
+    LOG_ENTITY_NAME: 'aiida.backends.sqlalchemy.models.log.DbLog',
+    COMMENT_ENTITY_NAME: 'aiida.backends.sqlalchemy.models.comment.DbComment'
 }
 
 # Mapping of the export file fields (that coincide with the Django fields) to
@@ -86,38 +86,38 @@ entity_names_to_sqla_schema = {
 
 file_fields_to_model_fields = {
     NODE_ENTITY_NAME: {
-        "dbcomputer": "dbcomputer_id",
-        "user": "user_id"
+        'dbcomputer': 'dbcomputer_id',
+        'user': 'user_id'
     },
     GROUP_ENTITY_NAME: {
-        "user": "user_id"
+        'user': 'user_id'
     },
     COMPUTER_ENTITY_NAME: {},
     LOG_ENTITY_NAME: {
-        "dbnode": "dbnode_id"
+        'dbnode': 'dbnode_id'
     },
     COMMENT_ENTITY_NAME: {
-        "dbnode": "dbnode_id",
-        "user": "user_id"
+        'dbnode': 'dbnode_id',
+        'user': 'user_id'
     }
 }
 # As above but the opposite procedure
 model_fields_to_file_fields = {
     NODE_ENTITY_NAME: {
-        "dbcomputer_id": "dbcomputer",
-        "user_id": "user"
+        'dbcomputer_id': 'dbcomputer',
+        'user_id': 'user'
     },
     GROUP_ENTITY_NAME: {
-        "user_id": "user"
+        'user_id': 'user'
     },
     COMPUTER_ENTITY_NAME: {},
     USER_ENTITY_NAME: {},
     LOG_ENTITY_NAME: {
-        "dbnode_id": "dbnode"
+        'dbnode_id': 'dbnode'
     },
     COMMENT_ENTITY_NAME: {
-        "dbnode_id": "dbnode",
-        "user_id": "user"
+        'dbnode_id': 'dbnode',
+        'user_id': 'user'
     }
 }
 
@@ -132,89 +132,89 @@ def get_all_fields_info():
 
     """
     unique_identifiers = {
-        USER_ENTITY_NAME: "email",
-        COMPUTER_ENTITY_NAME: "uuid",
-        NODE_ENTITY_NAME: "uuid",
-        GROUP_ENTITY_NAME: "uuid",
-        LOG_ENTITY_NAME: "uuid",
-        COMMENT_ENTITY_NAME: "uuid"
+        USER_ENTITY_NAME: 'email',
+        COMPUTER_ENTITY_NAME: 'uuid',
+        NODE_ENTITY_NAME: 'uuid',
+        GROUP_ENTITY_NAME: 'uuid',
+        LOG_ENTITY_NAME: 'uuid',
+        COMMENT_ENTITY_NAME: 'uuid'
     }
 
     all_fields_info = dict()
-    all_fields_info[USER_ENTITY_NAME] = {"last_name": {}, "first_name": {}, "institution": {}, "email": {}}
+    all_fields_info[USER_ENTITY_NAME] = {'last_name': {}, 'first_name': {}, 'institution': {}, 'email': {}}
     all_fields_info[COMPUTER_ENTITY_NAME] = {
-        "transport_type": {},
-        "hostname": {},
-        "description": {},
-        "scheduler_type": {},
-        "metadata": {},
-        "uuid": {},
-        "name": {}
+        'transport_type': {},
+        'hostname': {},
+        'description': {},
+        'scheduler_type': {},
+        'metadata': {},
+        'uuid': {},
+        'name': {}
     }
     all_fields_info[NODE_ENTITY_NAME] = {
-        "ctime": {
-            "convert_type": "date"
+        'ctime': {
+            'convert_type': 'date'
         },
-        "uuid": {},
-        "mtime": {
-            "convert_type": "date"
+        'uuid': {},
+        'mtime': {
+            'convert_type': 'date'
         },
-        "node_type": {},
-        "label": {},
-        "user": {
-            "requires": USER_ENTITY_NAME,
-            "related_name": "dbnodes"
+        'node_type': {},
+        'label': {},
+        'user': {
+            'requires': USER_ENTITY_NAME,
+            'related_name': 'dbnodes'
         },
-        "dbcomputer": {
-            "requires": COMPUTER_ENTITY_NAME,
-            "related_name": "dbnodes"
+        'dbcomputer': {
+            'requires': COMPUTER_ENTITY_NAME,
+            'related_name': 'dbnodes'
         },
-        "description": {},
-        "process_type": {}
+        'description': {},
+        'process_type': {}
     }
     all_fields_info[GROUP_ENTITY_NAME] = {
-        "description": {},
-        "user": {
-            "related_name": "dbgroups",
-            "requires": USER_ENTITY_NAME
+        'description': {},
+        'user': {
+            'related_name': 'dbgroups',
+            'requires': USER_ENTITY_NAME
         },
-        "time": {
-            "convert_type": "date"
+        'time': {
+            'convert_type': 'date'
         },
-        "type_string": {},
-        "uuid": {},
-        "label": {}
+        'type_string': {},
+        'uuid': {},
+        'label': {}
     }
     all_fields_info[LOG_ENTITY_NAME] = {
-        "uuid": {},
-        "time": {
-            "convert_type": "date"
+        'uuid': {},
+        'time': {
+            'convert_type': 'date'
         },
-        "loggername": {},
-        "levelname": {},
-        "message": {},
-        "metadata": {},
-        "dbnode": {
-            "related_name": "dblogs",
-            "requires": NODE_ENTITY_NAME
+        'loggername': {},
+        'levelname': {},
+        'message': {},
+        'metadata': {},
+        'dbnode': {
+            'related_name': 'dblogs',
+            'requires': NODE_ENTITY_NAME
         }
     }
     all_fields_info[COMMENT_ENTITY_NAME] = {
-        "uuid": {},
-        "ctime": {
-            "convert_type": "date"
+        'uuid': {},
+        'ctime': {
+            'convert_type': 'date'
         },
-        "mtime": {
-            "convert_type": "date"
+        'mtime': {
+            'convert_type': 'date'
         },
-        "content": {},
-        "dbnode": {
-            "related_name": "dbcomments",
-            "requires": NODE_ENTITY_NAME
+        'content': {},
+        'dbnode': {
+            'related_name': 'dbcomments',
+            'requires': NODE_ENTITY_NAME
         },
-        "user": {
-            "related_name": "dbcomments",
-            "requires": USER_ENTITY_NAME
+        'user': {
+            'related_name': 'dbcomments',
+            'requires': USER_ENTITY_NAME
         }
     }
     return all_fields_info, unique_identifiers

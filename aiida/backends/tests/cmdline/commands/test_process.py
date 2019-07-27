@@ -412,7 +412,7 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         # Default cmd should not throw the warning as we are below the limit
         result = self.cli_runner.invoke(cmd_process.process_list)
         self.assertClickResultNoException(result)
-        warning_phrase = "of the available daemon worker slots have been used!"
+        warning_phrase = 'of the available daemon worker slots have been used!'
         self.assertTrue(all([warning_phrase not in line for line in get_result_lines(result)]))
 
         # Add one more running node to put us over the limit
@@ -423,7 +423,7 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         # Now the warning should fire
         result = self.cli_runner.invoke(cmd_process.process_list)
         self.assertClickResultNoException(result)
-        warning_phrase = "% of the available daemon worker slots have been used!"
+        warning_phrase = '% of the available daemon worker slots have been used!'
         self.assertTrue(any([warning_phrase in line for line in get_result_lines(result)]))
 
 

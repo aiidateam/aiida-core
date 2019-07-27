@@ -60,7 +60,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         session = get_scoped_session()
 
         if not self.is_stored:
-            raise exceptions.InvalidOperation("You can copy a computer only after having stored it")
+            raise exceptions.InvalidOperation('You can copy a computer only after having stored it')
 
         dbcomputer = copy(self._dbmodel)
         make_transient(dbcomputer)
@@ -75,7 +75,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         try:
             self._dbmodel.save()
         except SQLAlchemyError:
-            raise ValueError("Integrity error, probably the hostname already exists in the DB")
+            raise ValueError('Integrity error, probably the hostname already exists in the DB')
 
         return self
 
@@ -145,6 +145,6 @@ class SqlaComputerCollection(BackendComputerCollection):
             session.commit()
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(
-                "Unable to delete the requested computer: it is possible that there "
-                "is at least one node using this computer (original message: {})".format(exc)
+                'Unable to delete the requested computer: it is possible that there '
+                'is at least one node using this computer (original message: {})'.format(exc)
             )

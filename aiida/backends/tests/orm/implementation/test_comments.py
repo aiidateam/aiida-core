@@ -143,10 +143,10 @@ class TestBackendComment(AiidaTestCase):
     def test_delete_all(self):
         """Test `delete_all` method"""
         self.create_comment().store()
-        self.assertGreater(len(orm.Comment.objects.all()), 0, msg="There should be Comments in the database")
+        self.assertGreater(len(orm.Comment.objects.all()), 0, msg='There should be Comments in the database')
 
         self.backend.comments.delete_all()
-        self.assertEqual(len(orm.Comment.objects.all()), 0, msg="All Comments should have been deleted")
+        self.assertEqual(len(orm.Comment.objects.all()), 0, msg='All Comments should have been deleted')
 
     def test_delete_many_no_filters(self):
         """Test `delete_many` method with empty filters"""
@@ -160,8 +160,8 @@ class TestBackendComment(AiidaTestCase):
         self.assertEqual(
             len(orm.Comment.objects.all()),
             count,
-            msg="No Comments should have been deleted. There should still be {} Comment(s), "
-            "however {} Comment(s) was/were found.".format(count, len(orm.Comment.objects.all()))
+            msg='No Comments should have been deleted. There should still be {} Comment(s), '
+            'however {} Comment(s) was/were found.'.format(count, len(orm.Comment.objects.all()))
         )
 
     def test_delete_many_ids(self):
@@ -179,7 +179,7 @@ class TestBackendComment(AiidaTestCase):
         self.assertEqual(
             count_comments_found,
             len(comment_uuids),
-            msg="There should be {} Comments, instead {} Comment(s) was/were found".format(
+            msg='There should be {} Comments, instead {} Comment(s) was/were found'.format(
                 len(comment_uuids), count_comments_found
             )
         )
@@ -212,7 +212,7 @@ class TestBackendComment(AiidaTestCase):
         self.assertEqual(
             count_comments_found,
             len(comment_uuids),
-            msg="There should be {} Comments, instead {} Comment(s) was/were found".format(
+            msg='There should be {} Comments, instead {} Comment(s) was/were found'.format(
                 len(comment_uuids), count_comments_found
             )
         )
@@ -334,7 +334,7 @@ class TestBackendComment(AiidaTestCase):
         deleted_entities = self.backend.comments.delete_many(filters={'id': id_})
         self.assertEqual(
             deleted_entities, [],
-            msg="No entities should have been deleted, since Comment id {} does not exist".format(id_)
+            msg='No entities should have been deleted, since Comment id {} does not exist'.format(id_)
         )
 
         # Try to delete non-existing Comment - using delete
@@ -349,7 +349,7 @@ class TestBackendComment(AiidaTestCase):
         deleted_entities = self.backend.comments.delete_many(filters=filters)
         self.assertEqual([comment_id],
                          deleted_entities,
-                         msg="Only Comment id {} should be returned from delete_many".format(comment_id))
+                         msg='Only Comment id {} should be returned from delete_many'.format(comment_id))
 
         # Make sure the existing Comment was deleted
         builder = orm.QueryBuilder().append(orm.Comment, filters={'uuid': comment_uuid})
@@ -373,7 +373,7 @@ class TestBackendComment(AiidaTestCase):
         self.assertEqual(
             comment_count_after,
             comment_count_before,
-            msg="The number of comments changed after performing `delete_many`, "
+            msg='The number of comments changed after performing `delete_many`, '
             "while filtering for a non-existing 'dbnode_id'"
         )
 

@@ -59,7 +59,7 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         :type entity_class: :class:`aiida.orm.Entity`
 
         """
-        assert issubclass(entity_class, Entity), "Must provide an entity type"
+        assert issubclass(entity_class, Entity), 'Must provide an entity type'
         self._backend = backend or get_manager().get_backend()
         self._entity_type = entity_class
 

@@ -33,7 +33,7 @@ class ArrayData(Data):
       If too much RAM memory is used, you can clear the
       cache with the :py:meth:`.clear_internal_cache` method.
     """
-    array_prefix = "array|"
+    array_prefix = 'array|'
     _cached_arrays = None
 
     def initialize(self):
@@ -53,7 +53,7 @@ class ArrayData(Data):
         # remove both file and attribute
         self.delete_object(fname)
         try:
-            self.delete_attribute("{}{}".format(self.array_prefix, name))
+            self.delete_attribute('{}{}'.format(self.array_prefix, name))
         except (KeyError, AttributeError):
             # Should not happen, but do not crash if for some reason the property was not set.
             pass
@@ -89,7 +89,7 @@ class ArrayData(Data):
 
         :param name: The name of the array.
         """
-        return tuple(self.get_attribute("{}{}".format(self.array_prefix, name)))
+        return tuple(self.get_attribute('{}{}'.format(self.array_prefix, name)))
 
     def get_iterarrays(self):
         """
@@ -159,8 +159,8 @@ class ArrayData(Data):
         # Check if the name is valid
         if not name or re.sub('[0-9a-zA-Z_]', '', name):
             raise ValueError(
-                "The name assigned to the array ({}) is not valid,"
-                "it can only contain digits, letters and underscores"
+                'The name assigned to the array ({}) is not valid,'
+                'it can only contain digits, letters and underscores'
             )
 
         # Write the array to a temporary file, and then add it to the repository of the node
@@ -191,7 +191,7 @@ class ArrayData(Data):
 
         if set(files) != set(properties):
             raise ValidationError(
-                "Mismatch of files and properties for ArrayData"
-                " node (pk= {}): {} vs. {}".format(self.pk, files, properties)
+                'Mismatch of files and properties for ArrayData'
+                ' node (pk= {}): {} vs. {}'.format(self.pk, files, properties)
             )
         super(ArrayData, self)._validate()

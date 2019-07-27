@@ -141,4 +141,4 @@ def upgrade():
 
 
 def downgrade():
-    print("There is no downgrade for the link types")
+    print('There is no downgrade for the link types')

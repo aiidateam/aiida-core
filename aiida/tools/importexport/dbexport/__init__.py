@@ -49,7 +49,7 @@ def export_zip(what, outfile='testzip', overwrite=False, silent=False, use_compr
     with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
         export_tree(what, folder=folder, silent=silent, **kwargs)
     if not silent:
-        print("File written in {:10.3g} s.".format(time.time() - time_start))
+        print('File written in {:10.3g} s.'.format(time.time() - time_start))
 
 
 def export_tree(
@@ -96,7 +96,7 @@ def export_tree(
     license
     """
     if not silent:
-        print("STARTING EXPORT...")
+        print('STARTING EXPORT...')
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
@@ -130,7 +130,7 @@ def export_tree(
             given_computer_entry_ids.add(entry.pk)
         else:
             raise ValueError(
-                "I was given {} ({}), which is not a Node, Computer, or Group instance".format(entry, type(entry))
+                'I was given {} ({}), which is not a Node, Computer, or Group instance'.format(entry, type(entry))
             )
 
     # Add all the nodes contained within the specified groups
@@ -348,7 +348,7 @@ def export_tree(
 
     entries_to_add = dict()
     for given_entity in given_entities:
-        project_cols = ["id"]
+        project_cols = ['id']
         # The following gets a list of fields that we need,
         # e.g. user, mtime, uuid, computer
         entity_prop = all_fields_info[given_entity].keys()
@@ -377,8 +377,8 @@ def export_tree(
         builder = QueryBuilder()
         builder.append(
             entity_names_to_entities[given_entity],
-            filters={"id": {
-                "in": entry_ids_to_add
+            filters={'id': {
+                'in': entry_ids_to_add
             }},
             project=project_cols,
             tag=given_entity,
@@ -390,7 +390,7 @@ def export_tree(
     # Check the licenses of exported data.
     if allowed_licenses is not None or forbidden_licenses is not None:
         builder = QueryBuilder()
-        builder.append(Node, project=["id", "attributes.source.license"], filters={"id": {"in": to_be_exported}})
+        builder.append(Node, project=['id', 'attributes.source.license'], filters={'id': {'in': to_be_exported}})
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
         node_licenses = list((a, b) for [a, b] in builder.all() if b is not None)
         check_licences(node_licenses, allowed_licenses, forbidden_licenses)
@@ -399,7 +399,7 @@ def export_tree(
     ##### Start automatic recursive export data generation #####
     ############################################################
     if not silent:
-        print("STORING DATABASE ENTRIES...")
+        print('STORING DATABASE ENTRIES...')
 
     export_data = dict()
     entity_separator = '_'
@@ -423,11 +423,11 @@ def export_tree(
 
                 # This is a empty result of an outer join.
                 # It should not be taken into account.
-                if temp_d[k]["id"] is None:
+                if temp_d[k]['id'] is None:
                     continue
 
                 temp_d2 = {
-                    temp_d[k]["id"]:
+                    temp_d[k]['id']:
                     serialize_dict(
                         temp_d[k], remove_fields=['id'], rename_fields=model_fields_to_file_fields[current_entity]
                     )
@@ -447,42 +447,42 @@ def export_tree(
 
     if sum(len(model_data) for model_data in export_data.values()) == 0:
         if not silent:
-            print("No nodes to store, exiting...")
+            print('No nodes to store, exiting...')
         return
 
     if not silent:
         print(
-            "Exporting a total of {} db entries, of which {} nodes.".format(
+            'Exporting a total of {} db entries, of which {} nodes.'.format(
                 sum(len(model_data) for model_data in export_data.values()), len(all_nodes_pk)
             )
         )
 
     ## ATTRIBUTES
     if not silent:
-        print("STORING NODE ATTRIBUTES...")
+        print('STORING NODE ATTRIBUTES...')
     node_attributes = {}
 
     # A second QueryBuilder query to get the attributes. See if this can be optimized
     if all_nodes_pk:
         all_nodes_query = QueryBuilder()
-        all_nodes_query.append(Node, filters={"id": {"in": all_nodes_pk}}, project=["*"])
+        all_nodes_query.append(Node, filters={'id': {'in': all_nodes_pk}}, project=['*'])
         for res in all_nodes_query.iterall():
             node_attributes[str(res[0].pk)] = res[0].attributes
 
     ## EXTRAS
     if not silent:
-        print("STORING NODE EXTRAS...")
+        print('STORING NODE EXTRAS...')
     node_extras = {}
 
     # A second QueryBuilder query to get the extras. See if this can be optimized
     if all_nodes_pk:
         all_nodes_query = QueryBuilder()
-        all_nodes_query.append(Node, filters={"id": {"in": all_nodes_pk}}, project=["*"])
+        all_nodes_query.append(Node, filters={'id': {'in': all_nodes_pk}}, project=['*'])
         for res in all_nodes_query.iterall():
             node_extras[str(res[0].pk)] = res[0].extras
 
     if not silent:
-        print("STORING NODE LINKS...")
+        print('STORING NODE LINKS...')
 
     links_uuid_dict = dict()
     if all_nodes_pk:
@@ -681,7 +681,7 @@ def export_tree(
     links_uuid = list(links_uuid_dict.values())
 
     if not silent:
-        print("STORING GROUP ELEMENTS...")
+        print('STORING GROUP ELEMENTS...')
     groups_uuid = dict()
     # If a group is in the exported date, we export the group/node correlation
     if GROUP_ENTITY_NAME in export_data:
@@ -719,7 +719,7 @@ def export_tree(
     nodesubfolder = folder.get_subfolder('nodes', create=True, reset_limit=True)
 
     if not silent:
-        print("STORING DATA...")
+        print('STORING DATA...')
 
     data = {
         'node_attributes': node_attributes,
@@ -744,18 +744,18 @@ def export_tree(
         'unique_identifiers': unique_identifiers,
     }
 
-    with folder.open('metadata.json', "w") as fhandle:
+    with folder.open('metadata.json', 'w') as fhandle:
         fhandle.write(json.dumps(metadata))
 
     if silent is not True:
-        print("STORING FILES...")
+        print('STORING FILES...')
 
     # If there are no nodes, there are no files to store
     if all_nodes_pk:
         # Large speed increase by not getting the node itself and looping in memory
         # in python, but just getting the uuid
         uuid_query = QueryBuilder()
-        uuid_query.append(Node, filters={"id": {"in": all_nodes_pk}}, project=["uuid"])
+        uuid_query.append(Node, filters={'id': {'in': all_nodes_pk}}, project=['uuid'])
         for res in uuid_query.all():
             uuid = str(res[0])
             sharded_uuid = export_shard_uuid(uuid)
@@ -807,21 +807,21 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
     time_export_end = time.time()
 
     if not silent:
-        print("COMPRESSING...")
+        print('COMPRESSING...')
 
     time_compress_start = time.time()
-    with tarfile.open(outfile, "w:gz", format=tarfile.PAX_FORMAT, dereference=True) as tar:
-        tar.add(folder.abspath, arcname="")
+    with tarfile.open(outfile, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
+        tar.add(folder.abspath, arcname='')
     time_compress_end = time.time()
 
     if not silent:
         filecr_time = time_export_end - time_export_start
         filecomp_time = time_compress_end - time_compress_start
         print(
-            "Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.".format(
+            'Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.'.format(
                 filecr_time, filecomp_time, filecr_time + filecomp_time
             )
         )
 
     if not silent:
-        print("DONE.")
+        print('DONE.')

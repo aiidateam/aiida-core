@@ -47,7 +47,7 @@ def repo_cat(node, relative_path):
 @verdi_node_repo.command('ls')
 @arguments.NODE()
 @click.argument('relative_path', type=str, default='.')
-@click.option('-c', '--color', 'color', flag_value=True, help="Use different color for folders and files.")
+@click.option('-c', '--color', 'color', flag_value=True, help='Use different color for folders and files.')
 @with_dbenv()
 def repo_ls(node, relative_path, color):
     """List files in the repository folder."""
@@ -124,12 +124,12 @@ def node_description(nodes, description, force, raw):
         for node in nodes:
             node.description = description
 
-        echo.echo_success("Set description for {} nodes".format(len(nodes)))
+        echo.echo_success('Set description for {} nodes'.format(len(nodes)))
 
 
 @verdi_node.command('show')
 @arguments.NODES()
-@click.option('--print-groups', 'print_groups', flag_value=True, help="Show groups containing the nodes.")
+@click.option('--print-groups', 'print_groups', flag_value=True, help='Show groups containing the nodes.')
 @with_dbenv()
 def show(nodes, print_groups):
     """Show generic information on node(s)."""
@@ -151,14 +151,14 @@ def show(nodes, print_groups):
             qb.append(Node, tag='node', filters={'id': {'==': node.pk}})
             qb.append(Group, tag='groups', with_node='node', project=['id', 'name'])
 
-            echo.echo("#### GROUPS:")
+            echo.echo('#### GROUPS:')
 
             if qb.count() == 0:
-                echo.echo("No groups found containing node {}".format(node.pk))
+                echo.echo('No groups found containing node {}'.format(node.pk))
             else:
                 res = qb.iterdict()
                 for gr in res:
-                    gr_specs = "{} {}".format(gr['groups']['name'], gr['groups']['id'])
+                    gr_specs = '{} {}'.format(gr['groups']['name'], gr['groups']['id'])
                     echo.echo(gr_specs)
 
 
@@ -218,7 +218,7 @@ def extras(nodes, keys, fmt, identifier, raw):
 
 @verdi_node.command()
 @arguments.NODES()
-@click.option('-d', '--depth', 'depth', default=1, help="Show children of nodes up to given depth")
+@click.option('-d', '--depth', 'depth', default=1, help='Show children of nodes up to given depth')
 @with_dbenv()
 def tree(nodes, depth):
     """Show tree of nodes."""
@@ -267,18 +267,18 @@ class NodeTreePrinter(object):  # pylint: disable=useless-object-inheritance
 
         out_values = []
         if children:
-            out_values.append("(")
-            out_values.append(", ".join(children))
-            out_values.append(")")
+            out_values.append('(')
+            out_values.append(', '.join(children))
+            out_values.append(')')
 
         lab = node.__class__.__name__
 
         if show_pk:
-            lab += " [{}]".format(node.pk)
+            lab += ' [{}]'.format(node.pk)
 
         out_values.append(lab)
 
-        return "".join(out_values)
+        return ''.join(out_values)
 
 
 @verdi_node.command('delete')

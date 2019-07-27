@@ -52,11 +52,11 @@ class TestMigrateV05toV06(AiidaTestCase):
 
         # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
         self.maxDiff = None  # pylint: disable=invalid-name
-        conversion_message = "Converted from version 0.5 to 0.6 with AiiDA v{}".format(get_version())
+        conversion_message = 'Converted from version 0.5 to 0.6 with AiiDA v{}'.format(get_version())
         self.assertEqual(
             metadata_v5.pop('conversion_info')[-1],
             conversion_message,
-            msg="The conversion message after migration is wrong"
+            msg='The conversion message after migration is wrong'
         )
         metadata_v6.pop('conversion_info')
 
@@ -64,10 +64,10 @@ class TestMigrateV05toV06(AiidaTestCase):
         self.assertDictEqual(
             metadata_v5,
             metadata_v6,
-            msg="After migration, metadata.json should equal intended metadata.json from archives"
+            msg='After migration, metadata.json should equal intended metadata.json from archives'
         )
         self.assertDictEqual(
-            data_v5, data_v6, msg="After migration, data.json should equal intended data.json from archives"
+            data_v5, data_v6, msg='After migration, data.json should equal intended data.json from archives'
         )
 
     def test_migrate_v5_to_v6_calc_states(self):

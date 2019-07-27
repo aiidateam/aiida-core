@@ -61,7 +61,7 @@ class BadOutput(Process):
         spec.outputs.valid_type = Data
 
     def run(self):
-        self.out("bad_output", 5)
+        self.out('bad_output', 5)
 
 
 class ExceptionProcess(Process):

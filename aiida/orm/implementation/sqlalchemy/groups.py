@@ -312,17 +312,17 @@ class SqlaGroupCollection(BackendGroupCollection):
 
             if not all(isinstance(n, (SqlaNode, DbNode)) for n in nodes):
                 raise TypeError(
-                    "At least one of the elements passed as "
-                    "nodes for the query on Group is neither "
-                    "a Node nor a DbNode"
+                    'At least one of the elements passed as '
+                    'nodes for the query on Group is neither '
+                    'a Node nor a DbNode'
                 )
 
             # In the case of the Node orm from Sqlalchemy, there is an id
             # property on it.
             sub_query = (
                 session.query(table_groups_nodes).filter(
-                    table_groups_nodes.c["dbnode_id"].in_([n.id for n in nodes]),
-                    table_groups_nodes.c["dbgroup_id"] == DbGroup.id
+                    table_groups_nodes.c['dbnode_id'].in_([n.id for n in nodes]),
+                    table_groups_nodes.c['dbgroup_id'] == DbGroup.id
                 ).exists()
             )
 
@@ -338,12 +338,12 @@ class SqlaGroupCollection(BackendGroupCollection):
             for key, value in label_filters.items():
                 if not value:
                     continue
-                if key == "startswith":
-                    filters.append(DbGroup.label.like("{}%".format(value)))
-                elif key == "endswith":
-                    filters.append(DbGroup.label.like("%{}".format(value)))
-                elif key == "contains":
-                    filters.append(DbGroup.label.like("%{}%".format(value)))
+                if key == 'startswith':
+                    filters.append(DbGroup.label.like('{}%'.format(value)))
+                elif key == 'endswith':
+                    filters.append(DbGroup.label.like('%{}'.format(value)))
+                elif key == 'contains':
+                    filters.append(DbGroup.label.like('%{}%'.format(value)))
 
         if node_attributes:
             _LOGGER.warning("SQLA query doesn't support node attribute filters, ignoring '%s'", node_attributes)

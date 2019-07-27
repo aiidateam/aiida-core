@@ -40,21 +40,21 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
 
     def __init__(self):
         # The backup directory names
-        self._conf_backup_folder_rel = "backup_{}".format(configuration.PROFILE.name)
-        self._file_backup_folder_rel = "backup_dest"
+        self._conf_backup_folder_rel = 'backup_{}'.format(configuration.PROFILE.name)
+        self._file_backup_folder_rel = 'backup_dest'
 
         # The backup configuration file (& template) names
-        self._backup_info_filename = "backup_info.json"
-        self._backup_info_tmpl_filename = "backup_info.json.tmpl"
+        self._backup_info_filename = 'backup_info.json'
+        self._backup_info_tmpl_filename = 'backup_info.json.tmpl'
 
         # The name of the script that initiates the backup
-        self._script_filename = "start_backup.py"
+        self._script_filename = 'start_backup.py'
 
         # Configuring the logging
         logging.basicConfig(format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 
         # The logger of the backup script
-        self._logger = logging.getLogger("aiida_backup_setup")
+        self._logger = logging.getLogger('aiida_backup_setup')
 
     @staticmethod
     def construct_backup_variables(file_backup_folder_abs):
@@ -63,8 +63,8 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
 
         # Setting the oldest backup timestamp
         oldest_object_bk = utils.ask_question(
-            "Please provide the oldest backup timestamp "
-            "(e.g. 2014-07-18 13:54:53.688484+00:00). ", datetime.datetime, True
+            'Please provide the oldest backup timestamp '
+            '(e.g. 2014-07-18 13:54:53.688484+00:00). ', datetime.datetime, True
         )
 
         if oldest_object_bk is None:
@@ -77,11 +77,11 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
 
         # Setting the days_to_backup
         backup_variables[AbstractBackup.DAYS_TO_BACKUP_KEY
-                        ] = utils.ask_question("Please provide the number of days to backup.", int, True)
+                        ] = utils.ask_question('Please provide the number of days to backup.', int, True)
 
         # Setting the end date
         end_date_of_backup_key = utils.ask_question(
-            "Please provide the end date of the backup " + "(e.g. 2014-07-18 13:54:53.688484+00:00).",
+            'Please provide the end date of the backup ' + '(e.g. 2014-07-18 13:54:53.688484+00:00).',
             datetime.datetime, True
         )
         if end_date_of_backup_key is None:
@@ -91,11 +91,11 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
 
         # Setting the backup periodicity
         backup_variables[AbstractBackup.PERIODICITY_KEY
-                        ] = utils.ask_question("Please periodicity (in days).", int, False)
+                        ] = utils.ask_question('Please periodicity (in days).', int, False)
 
         # Setting the backup threshold
         backup_variables[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY
-                        ] = utils.ask_question("Please provide the backup threshold (in hours).", int, False)
+                        ] = utils.ask_question('Please provide the backup threshold (in hours).', int, False)
 
         return backup_variables
 
@@ -104,11 +104,11 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
         final_path = utils.query_string(question, dir_path)
 
         if not os.path.exists(final_path):
-            if utils.query_yes_no("The path {} doesn't exist. Should it be created?".format(final_path), "yes"):
+            if utils.query_yes_no("The path {} doesn't exist. Should it be created?".format(final_path), 'yes'):
                 try:
                     os.makedirs(final_path)
                 except OSError:
-                    self._logger.error("Error creating the path %s.", final_path)
+                    self._logger.error('Error creating the path %s.', final_path)
                     raise
         return final_path
 
@@ -168,13 +168,13 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
     def run(self):
         """Run the backup."""
         conf_backup_folder_abs = self.create_dir(
-            "Please provide the backup folder by providing the full path.",
+            'Please provide the backup folder by providing the full path.',
             os.path.join(os.path.expanduser(AIIDA_CONFIG_FOLDER), self._conf_backup_folder_rel)
         )
 
         file_backup_folder_abs = self.create_dir(
-            "Please provide the destination folder of the backup (normally in "
-            "the previously provided backup folder).",
+            'Please provide the destination folder of the backup (normally in '
+            'the previously provided backup folder).',
             os.path.join(conf_backup_folder_abs, self._file_backup_folder_rel)
         )
 
@@ -186,14 +186,14 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
             shutil.copy(template_conf_path, conf_backup_folder_abs)
         except Exception:
             self._logger.error(
-                "Error copying the file %s to the directory %s", template_conf_path, conf_backup_folder_abs
+                'Error copying the file %s to the directory %s', template_conf_path, conf_backup_folder_abs
             )
             raise
 
         if utils.query_yes_no(
-            "A sample configuration file was copied to {}. "
-            "Would you like to ".format(conf_backup_folder_abs) + "see the configuration parameters explanation?",
-            default="yes"
+            'A sample configuration file was copied to {}. '
+            'Would you like to '.format(conf_backup_folder_abs) + 'see the configuration parameters explanation?',
+            default='yes'
         ):
             self.print_info()
 
@@ -201,7 +201,7 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
         final_conf_filepath = os.path.join(conf_backup_folder_abs, self._backup_info_filename)
 
         # If the backup parameters are configured now
-        if utils.query_yes_no("Would you like to configure the backup " + "configuration file now?", default="yes"):
+        if utils.query_yes_no('Would you like to configure the backup ' + 'configuration file now?', default='yes'):
 
             # Ask questions to properly setup the backup variables
             backup_variables = self.construct_backup_variables(file_backup_folder_abs)
@@ -211,23 +211,23 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
         # If the backup parameters are configured manually
         else:
             sys.stdout.write(
-                "Please rename the file {} ".format(self._backup_info_tmpl_filename) +
-                "found in {} to ".format(conf_backup_folder_abs) + "{} and ".format(self._backup_info_filename) +
-                "change the backup parameters accordingly.\n"
+                'Please rename the file {} '.format(self._backup_info_tmpl_filename) +
+                'found in {} to '.format(conf_backup_folder_abs) + '{} and '.format(self._backup_info_filename) +
+                'change the backup parameters accordingly.\n'
             )
             sys.stdout.write(
-                "Please adapt the startup script accordingly to point to the " +
-                "correct backup configuration file. For the moment, it points " +
-                "to {}\n".format(os.path.join(conf_backup_folder_abs, self._backup_info_filename))
+                'Please adapt the startup script accordingly to point to the ' +
+                'correct backup configuration file. For the moment, it points ' +
+                'to {}\n'.format(os.path.join(conf_backup_folder_abs, self._backup_info_filename))
             )
 
         # The contents of the startup script
         if configuration.PROFILE.database_backend == BACKEND_DJANGO:
-            backup_import = ("from aiida.manage.backup.backup_django import Backup")
+            backup_import = ('from aiida.manage.backup.backup_django import Backup')
         elif configuration.PROFILE.database_backend == BACKEND_SQLA:
-            backup_import = ("from aiida.manage.backup.backup_sqlalchemy import Backup")
+            backup_import = ('from aiida.manage.backup.backup_sqlalchemy import Backup')
         else:
-            raise BackupError("Following backend is unknown: {}".format(configuration.PROFILE.database_backend))
+            raise BackupError('Following backend is unknown: {}'.format(configuration.PROFILE.database_backend))
 
         script_content = \
 u"""#!/usr/bin/env python
@@ -260,10 +260,10 @@ backup_inst.run()
             statistics = os.stat(script_path)
             os.chmod(script_path, statistics.st_mode | stat.S_IEXEC)
         except OSError:
-            self._logger.error("Problem setting the right permissions to the script %s.", script_path)
+            self._logger.error('Problem setting the right permissions to the script %s.', script_path)
             raise
 
-        sys.stdout.write("Backup setup completed.")
+        sys.stdout.write('Backup setup completed.')
 
 
 if __name__ == '__main__':

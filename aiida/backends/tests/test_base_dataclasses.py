@@ -132,7 +132,7 @@ class TestFloat(AiidaTestCase):
         self.assertAlmostEqual(b.value, get_true_node())
 
         s = Str()
-        self.assertAlmostEqual(s.value, "")
+        self.assertAlmostEqual(s.value, '')
         s = Str('Hello')
         self.assertAlmostEqual(s.value, 'Hello')
 

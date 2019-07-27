@@ -40,28 +40,28 @@ def default_link_styles(link_pair, add_label, add_type):
     """
     style = {
         LinkType.INPUT_CALC: {
-            "style": "solid",
-            "color": "#000000"  # black
+            'style': 'solid',
+            'color': '#000000'  # black
         },
         LinkType.INPUT_WORK: {
-            "style": "dashed",
-            "color": "#000000"  # black
+            'style': 'dashed',
+            'color': '#000000'  # black
         },
         LinkType.CALL_CALC: {
-            "style": "dotted",
-            "color": "#000000"  # black
+            'style': 'dotted',
+            'color': '#000000'  # black
         },
         LinkType.CALL_WORK: {
-            "style": "dotted",
-            "color": "#000000"  # black
+            'style': 'dotted',
+            'color': '#000000'  # black
         },
         LinkType.CREATE: {
-            "style": "solid",
-            "color": "#000000"  # black
+            'style': 'solid',
+            'color': '#000000'  # black
         },
         LinkType.RETURN: {
-            "style": "dashed",
-            "color": "#000000"  # black
+            'style': 'dashed',
+            'color': '#000000'  # black
         }
     }[link_pair.link_type]
 
@@ -70,7 +70,7 @@ def default_link_styles(link_pair, add_label, add_type):
     elif add_type and not add_label:
         style['label'] = link_pair.link_type.name
     elif add_label and add_type:
-        style['label'] = "{}\n{}".format(link_pair.link_type.name, link_pair.link_label)
+        style['label'] = '{}\n{}'.format(link_pair.link_type.name, link_pair.link_label)
 
     return style
 
@@ -89,42 +89,42 @@ def default_node_styles(node):
         default = node.get_style_default()
     except AttributeError:
         default = {
-            "shape": "ellipse",
-            "style": "filled",
-            "fillcolor": "#8cd499ff",  # green,
-            "penwidth": 0
+            'shape': 'ellipse',
+            'style': 'filled',
+            'fillcolor': '#8cd499ff',  # green,
+            'penwidth': 0
         }
 
     node_type_map = {
-        "data.code.Code.": {
-            "shape": "ellipse",
-            "style": "filled",
-            "fillcolor": "#4ca4b9aa",  # blue
-            "penwidth": 0
+        'data.code.Code.': {
+            'shape': 'ellipse',
+            'style': 'filled',
+            'fillcolor': '#4ca4b9aa',  # blue
+            'penwidth': 0
         },
-        "process.calculation.calcjob.CalcJobNode.": {
-            "shape": "rectangle",
-            "style": "filled",
-            "fillcolor": "#de707fff",  # red
-            "penwidth": 0
+        'process.calculation.calcjob.CalcJobNode.': {
+            'shape': 'rectangle',
+            'style': 'filled',
+            'fillcolor': '#de707fff',  # red
+            'penwidth': 0
         },
-        "process.calculation.calcfunction.CalcFunctionNode.": {
-            "shape": "rectangle",
-            "style": "filled",
-            "fillcolor": "#de707f77",  # red
-            "penwidth": 0
+        'process.calculation.calcfunction.CalcFunctionNode.': {
+            'shape': 'rectangle',
+            'style': 'filled',
+            'fillcolor': '#de707f77',  # red
+            'penwidth': 0
         },
-        "process.workflow.workchain.WorkChainNode.": {
-            "shape": "rectangle",
-            "style": "filled",
-            "fillcolor": "#e38851ff",  # orange
-            "penwidth": 0
+        'process.workflow.workchain.WorkChainNode.': {
+            'shape': 'rectangle',
+            'style': 'filled',
+            'fillcolor': '#e38851ff',  # orange
+            'penwidth': 0
         },
-        "process.workflow.workfunction.WorkFunctionNode.": {
-            "shape": "rectangle",
-            "style": "filled",
-            "fillcolor": "#e38851ff",  # orange
-            "penwidth": 0
+        'process.workflow.workfunction.WorkFunctionNode.': {
+            'shape': 'rectangle',
+            'style': 'filled',
+            'fillcolor': '#e38851ff',  # orange
+            'penwidth': 0
         }
     }
 
@@ -143,34 +143,34 @@ def pstate_node_styles(node):
     """
     class_node_type = node.class_node_type
 
-    default = {"shape": "rectangle", "pencolor": "black"}
+    default = {'shape': 'rectangle', 'pencolor': 'black'}
 
     process_map = {
-        "process.calculation.calcjob.CalcJobNode.": {
-            "shape": "ellipse",
-            "style": "filled",
-            "penwidth": 0,
-            "fillcolor": "#ffffffff"
+        'process.calculation.calcjob.CalcJobNode.': {
+            'shape': 'ellipse',
+            'style': 'filled',
+            'penwidth': 0,
+            'fillcolor': '#ffffffff'
         },
-        "process.calculation.calcfunction.CalcFunctionNode.": {
-            "shape": "ellipse",
-            "style": "filled",
-            "penwidth": 0,
-            "fillcolor": "#ffffffff"
+        'process.calculation.calcfunction.CalcFunctionNode.': {
+            'shape': 'ellipse',
+            'style': 'filled',
+            'penwidth': 0,
+            'fillcolor': '#ffffffff'
         },
-        "process.workflow.workchain.WorkChainNode.": {
-            "shape": "polygon",
-            "sides": "6",
-            "style": "filled",
-            "penwidth": 0,
-            "fillcolor": "#ffffffff"
+        'process.workflow.workchain.WorkChainNode.': {
+            'shape': 'polygon',
+            'sides': '6',
+            'style': 'filled',
+            'penwidth': 0,
+            'fillcolor': '#ffffffff'
         },
-        "process.workflow.workfunction.WorkFunctionNode.": {
-            "shape": "polygon",
-            "sides": "6",
-            "style": "filled",
-            "penwidth": 0,
-            "fillcolor": "#ffffffff"
+        'process.workflow.workfunction.WorkFunctionNode.': {
+            'shape': 'polygon',
+            'sides': '6',
+            'style': 'filled',
+            'penwidth': 0,
+            'fillcolor': '#ffffffff'
         }
     }
 
@@ -201,40 +201,40 @@ def default_node_sublabels(node):
     # pylint: disable=too-many-branches
 
     class_node_type = node.class_node_type
-    if class_node_type == "data.int.Int.":
-        sublabel = "value: {}".format(node.get_attribute("value", ""))
-    elif class_node_type == "data.float.Float.":
-        sublabel = "value: {}".format(node.get_attribute("value", ""))
-    elif class_node_type == "data.str.Str.":
-        sublabel = "{}".format(node.get_attribute("value", ""))
-    elif class_node_type == "data.bool.Bool.":
-        sublabel = "{}".format(node.get_attribute("value", ""))
-    elif class_node_type == "data.code.Code.":
-        sublabel = "{}@{}".format(os.path.basename(node.get_execname()), node.get_computer_name())
-    elif class_node_type == "data.singlefile.SinglefileData.":
+    if class_node_type == 'data.int.Int.':
+        sublabel = 'value: {}'.format(node.get_attribute('value', ''))
+    elif class_node_type == 'data.float.Float.':
+        sublabel = 'value: {}'.format(node.get_attribute('value', ''))
+    elif class_node_type == 'data.str.Str.':
+        sublabel = '{}'.format(node.get_attribute('value', ''))
+    elif class_node_type == 'data.bool.Bool.':
+        sublabel = '{}'.format(node.get_attribute('value', ''))
+    elif class_node_type == 'data.code.Code.':
+        sublabel = '{}@{}'.format(os.path.basename(node.get_execname()), node.get_computer_name())
+    elif class_node_type == 'data.singlefile.SinglefileData.':
         sublabel = node.filename
-    elif class_node_type == "data.remote.RemoteData.":
-        sublabel = "@{}".format(node.get_computer_name())
-    elif class_node_type == "data.structure.StructureData.":
+    elif class_node_type == 'data.remote.RemoteData.':
+        sublabel = '@{}'.format(node.get_computer_name())
+    elif class_node_type == 'data.structure.StructureData.':
         sublabel = node.get_formula()
-    elif class_node_type == "data.cif.CifData.":
-        formulae = [str(f).replace(" ", "") for f in node.get_formulae() or []]
+    elif class_node_type == 'data.cif.CifData.':
+        formulae = [str(f).replace(' ', '') for f in node.get_formulae() or []]
         sg_numbers = [str(s) for s in node.get_spacegroup_numbers() or []]
         sublabel_lines = []
         if formulae:
-            sublabel_lines.append(", ".join(formulae))
+            sublabel_lines.append(', '.join(formulae))
         if sg_numbers:
-            sublabel_lines.append(", ".join(sg_numbers))
-        sublabel = "; ".join(sublabel_lines)
-    elif class_node_type == "data.upf.UpfData.":
-        sublabel = "{}".format(node.get_attribute("element", ""))
+            sublabel_lines.append(', '.join(sg_numbers))
+        sublabel = '; '.join(sublabel_lines)
+    elif class_node_type == 'data.upf.UpfData.':
+        sublabel = '{}'.format(node.get_attribute('element', ''))
     elif isinstance(node, ProcessNode):
         sublabel = []
         if node.process_state is not None:
-            sublabel.append("State: {}".format(node.process_state.value))
+            sublabel.append('State: {}'.format(node.process_state.value))
         if node.exit_status is not None:
-            sublabel.append("Exit Code: {}".format(node.exit_status))
-        sublabel = "\n".join(sublabel)
+            sublabel.append('Exit Code: {}'.format(node.exit_status))
+        sublabel = '\n'.join(sublabel)
     else:
         sublabel = node.get_description()
 
@@ -243,17 +243,17 @@ def default_node_sublabels(node):
 
 def get_node_id_label(node, id_type):
     """return an identifier str for the node """
-    if id_type == "pk":
+    if id_type == 'pk':
         return node.pk
-    if id_type == "uuid":
-        return node.uuid.split("-")[0]
-    if id_type == "label":
+    if id_type == 'uuid':
+        return node.uuid.split('-')[0]
+    if id_type == 'label':
         return node.label
-    raise ValueError("node_id_type not recognised: {}".format(id_type))
+    raise ValueError('node_id_type not recognised: {}'.format(id_type))
 
 
 def _add_graphviz_node(
-    graph, node, node_style_func, node_sublabel_func, style_override=None, include_sublabels=True, id_type="pk"
+    graph, node, node_style_func, node_sublabel_func, style_override=None, include_sublabels=True, id_type='pk'
 ):
     """create a node in the graph
 
@@ -287,14 +287,14 @@ def _add_graphviz_node(
     if isinstance(node, Data):
 
         node_style = node_style_func(node)
-        label = ["{} ({})".format(node.__class__.__name__, get_node_id_label(node, id_type))]
+        label = ['{} ({})'.format(node.__class__.__name__, get_node_id_label(node, id_type))]
 
     elif isinstance(node, ProcessNode):
 
         node_style = node_style_func(node)
 
         label = [
-            "{} ({})".format(
+            '{} ({})'.format(
                 node.__class__.__name__ if node.process_label is None else node.process_label,
                 get_node_id_label(node, id_type)
             )
@@ -305,7 +305,7 @@ def _add_graphviz_node(
         if sublabel:
             label.append(sublabel)
 
-    node_style["label"] = "\n".join(label)
+    node_style['label'] = '\n'.join(label)
 
     if style_override is not None:
         node_style.update(style_override)
@@ -313,7 +313,7 @@ def _add_graphviz_node(
     # coerce node style values to strings, required by graphviz
     node_style = {k: str(v) for k, v in node_style.items()}
 
-    return graph.node("N{}".format(node.pk), **node_style)
+    return graph.node('N{}'.format(node.pk), **node_style)
 
 
 def _add_graphviz_edge(graph, in_node, out_node, style=None):
@@ -332,7 +332,7 @@ def _add_graphviz_edge(graph, in_node, out_node, style=None):
     # coerce node style values to strings
     style = {k: str(v) for k, v in style.items()}
 
-    return graph.edge("N{}".format(in_node.pk), "N{}".format(out_node.pk), **style)
+    return graph.edge('N{}'.format(in_node.pk), 'N{}'.format(out_node.pk), **style)
 
 
 class Graph(object):
@@ -350,7 +350,7 @@ class Graph(object):
         link_style_fn=None,
         node_style_fn=None,
         node_sublabel_fn=None,
-        node_id_type="pk"
+        node_id_type='pk'
     ):
         """a class to create graphviz graphs of the AiiDA node provenance
 
@@ -462,10 +462,10 @@ class Graph(object):
         """
         in_node = self._load_node(in_node)
         if in_node.pk not in self._nodes:
-            raise AssertionError("in_node pk={} must have already been added to the graph".format(in_node.pk))
+            raise AssertionError('in_node pk={} must have already been added to the graph'.format(in_node.pk))
         out_node = self._load_node(out_node)
         if out_node.pk not in self._nodes:
-            raise AssertionError("out_node pk={} must have already been added to the graph".format(out_node.pk))
+            raise AssertionError('out_node pk={} must have already been added to the graph'.format(out_node.pk))
 
         if (in_node.pk, out_node.pk, link_pair) in self._edges and not overwrite:
             return
@@ -501,7 +501,7 @@ class Graph(object):
         :returns: list of nodes or node pks
 
         """
-        if annotate_links not in [None, False, "label", "type", "both"]:
+        if annotate_links not in [None, False, 'label', 'type', 'both']:
             raise AssertionError('annotate_links must be one of False, "label", "type" or "both"')
 
         node = self.add_node(node)
@@ -511,7 +511,7 @@ class Graph(object):
             self.add_node(link_triple.node)
             link_pair = LinkPair(link_triple.link_type, link_triple.link_label)
             style = self._link_styles(
-                link_pair, add_label=annotate_links in ["label", "both"], add_type=annotate_links in ["type", "both"]
+                link_pair, add_label=annotate_links in ['label', 'both'], add_type=annotate_links in ['type', 'both']
             )
             self.add_edge(link_triple.node, node, link_pair, style=style)
             nodes.append(link_triple.node.pk if return_pks else link_triple.node)
@@ -532,7 +532,7 @@ class Graph(object):
         :returns: list of nodes or node pks
 
         """
-        if annotate_links not in [None, False, "label", "type", "both"]:
+        if annotate_links not in [None, False, 'label', 'type', 'both']:
             raise AssertionError('annotate_links must be one of False, "label", "type" or "both"')
 
         node = self.add_node(node)
@@ -542,7 +542,7 @@ class Graph(object):
             self.add_node(link_triple.node)
             link_pair = LinkPair(link_triple.link_type, link_triple.link_label)
             style = self._link_styles(
-                link_pair, add_label=annotate_links in ["label", "both"], add_type=annotate_links in ["type", "both"]
+                link_pair, add_label=annotate_links in ['label', 'both'], add_type=annotate_links in ['type', 'both']
             )
             self.add_edge(node, link_triple.node, link_pair, style=style)
             nodes.append(link_triple.node.pk if return_pks else link_triple.node)
@@ -591,14 +591,14 @@ class Graph(object):
             if depth is not None and cur_depth > depth:
                 break
             if print_func:
-                print_func("- Depth: {}".format(cur_depth))
+                print_func('- Depth: {}'.format(cur_depth))
             new_nodes = []
             for node in leaf_nodes:
                 outgoing_nodes = self.add_outgoing(
                     node, link_types=link_types, annotate_links=annotate_links, return_pks=False
                 )
                 if outgoing_nodes and print_func:
-                    print_func("  {} -> {}".format(node.pk, [on.pk for on in outgoing_nodes]))
+                    print_func('  {} -> {}'.format(node.pk, [on.pk for on in outgoing_nodes]))
                 new_nodes.extend(outgoing_nodes)
 
                 if include_process_inputs and isinstance(node, ProcessNode):
@@ -654,14 +654,14 @@ class Graph(object):
             if depth is not None and cur_depth > depth:
                 break
             if print_func:
-                print_func("- Depth: {}".format(cur_depth))
+                print_func('- Depth: {}'.format(cur_depth))
             new_nodes = []
             for node in last_nodes:
                 incoming_nodes = self.add_incoming(
                     node, link_types=link_types, annotate_links=annotate_links, return_pks=False
                 )
                 if incoming_nodes and print_func:
-                    print_func("  {} -> {}".format(node.pk, [n.pk for n in incoming_nodes]))
+                    print_func('  {} -> {}'.format(node.pk, [n.pk for n in incoming_nodes]))
                 new_nodes.extend(incoming_nodes)
 
                 if include_process_outputs and isinstance(node, ProcessNode):
@@ -712,18 +712,18 @@ class Graph(object):
 
         query = QueryBuilder(
             **{
-                "path": [{
+                'path': [{
                     'cls': origin_node.__class__,
-                    "filters": {
-                        "id": origin_node.pk
+                    'filters': {
+                        'id': origin_node.pk
                     },
-                    'tag': "origin"
+                    'tag': 'origin'
                 }, {
                     'cls': target_cls,
                     'filters': target_filters,
                     'with_ancestors': 'origin',
-                    'tag': "target",
-                    'project': "*"
+                    'tag': 'target',
+                    'project': '*'
                 }]
             }
         )
@@ -772,11 +772,11 @@ class Graph(object):
             origin_filters = {}
 
         query = QueryBuilder(
-            **{"path": [{
+            **{'path': [{
                 'cls': origin_cls,
-                "filters": origin_filters,
-                'tag': "origin",
-                'project': "*"
+                'filters': origin_filters,
+                'tag': 'origin',
+                'project': '*'
             }]}
         )
 

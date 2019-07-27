@@ -127,7 +127,7 @@ def get_regex_pattern_from_sql(sql_pattern):
         # regex symbols like $ ^ [ ] etc
         return re.escape(string)
 
-    return "^{}$".format(tokenizer(sql_pattern, tokens_to_apply=[token_pair[0] for token_pair in SQL_TO_REGEX_TOKENS]))
+    return '^{}$'.format(tokenizer(sql_pattern, tokens_to_apply=[token_pair[0] for token_pair in SQL_TO_REGEX_TOKENS]))
 
 
 def sql_string_match(string, pattern):

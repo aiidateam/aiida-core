@@ -103,37 +103,37 @@ class Computer(entities.Entity):
         :rtype: str
         """
         ret_lines = []
-        ret_lines.append("Computer name:     {}".format(self.name))
-        ret_lines.append(" * PK:             {}".format(self.pk))
-        ret_lines.append(" * UUID:           {}".format(self.uuid))
-        ret_lines.append(" * Description:    {}".format(self.description))
-        ret_lines.append(" * Hostname:       {}".format(self.hostname))
-        ret_lines.append(" * Transport type: {}".format(self.get_transport_type()))
-        ret_lines.append(" * Scheduler type: {}".format(self.get_scheduler_type()))
-        ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
-        ret_lines.append(" * Shebang:        {}".format(self.get_shebang()))
-        ret_lines.append(" * mpirun command: {}".format(" ".join(self.get_mpirun_command())))
+        ret_lines.append('Computer name:     {}'.format(self.name))
+        ret_lines.append(' * PK:             {}'.format(self.pk))
+        ret_lines.append(' * UUID:           {}'.format(self.uuid))
+        ret_lines.append(' * Description:    {}'.format(self.description))
+        ret_lines.append(' * Hostname:       {}'.format(self.hostname))
+        ret_lines.append(' * Transport type: {}'.format(self.get_transport_type()))
+        ret_lines.append(' * Scheduler type: {}'.format(self.get_scheduler_type()))
+        ret_lines.append(' * Work directory: {}'.format(self.get_workdir()))
+        ret_lines.append(' * Shebang:        {}'.format(self.get_shebang()))
+        ret_lines.append(' * mpirun command: {}'.format(' '.join(self.get_mpirun_command())))
         def_cpus_machine = self.get_default_mpiprocs_per_machine()
         if def_cpus_machine is not None:
-            ret_lines.append(" * Default number of cpus per machine: {}".format(def_cpus_machine))
+            ret_lines.append(' * Default number of cpus per machine: {}'.format(def_cpus_machine))
         # pylint: disable=fixme
         # TODO: Put back following line when we port Node to new backend system
         # ret_lines.append(" * Used by:        {} nodes".format(len(self._dbcomputer.dbnodes.all())))
 
-        ret_lines.append(" * prepend text:")
+        ret_lines.append(' * prepend text:')
         if self.get_prepend_text().strip():
             for line in self.get_prepend_text().split('\n'):
-                ret_lines.append("   {}".format(line))
+                ret_lines.append('   {}'.format(line))
         else:
-            ret_lines.append("   # No prepend text.")
-        ret_lines.append(" * append text:")
+            ret_lines.append('   # No prepend text.')
+        ret_lines.append(' * append text:')
         if self.get_append_text().strip():
             for line in self.get_append_text().split('\n'):
-                ret_lines.append("   {}".format(line))
+                ret_lines.append('   {}'.format(line))
         else:
-            ret_lines.append("   # No append text.")
+            ret_lines.append('   # No append text.')
 
-        return "\n".join(ret_lines)
+        return '\n'.join(ret_lines)
 
     @property
     def logger(self):
@@ -147,7 +147,7 @@ class Computer(entities.Entity):
         Validates the name.
         """
         if not name.strip():
-            raise exceptions.ValidationError("No name specified")
+            raise exceptions.ValidationError('No name specified')
 
     @classmethod
     def _hostname_validator(cls, hostname):
@@ -155,7 +155,7 @@ class Computer(entities.Entity):
         Validates the hostname.
         """
         if not hostname.strip():
-            raise exceptions.ValidationError("No hostname specified")
+            raise exceptions.ValidationError('No hostname specified')
 
     @classmethod
     def _description_validator(cls, description):
@@ -170,7 +170,7 @@ class Computer(entities.Entity):
         Validates the transport string.
         """
         if transport_type not in transports.Transport.get_valid_transports():
-            raise exceptions.ValidationError("The specified transport is not a valid one")
+            raise exceptions.ValidationError('The specified transport is not a valid one')
 
     @classmethod
     def _scheduler_type_validator(cls, scheduler_type):
@@ -178,7 +178,7 @@ class Computer(entities.Entity):
         Validates the transport string.
         """
         if scheduler_type not in schedulers.Scheduler.get_valid_schedulers():
-            raise exceptions.ValidationError("The specified scheduler is not a valid one")
+            raise exceptions.ValidationError('The specified scheduler is not a valid one')
 
     @classmethod
     def _prepend_text_validator(cls, prepend_text):
@@ -200,17 +200,17 @@ class Computer(entities.Entity):
         Validates the transport string.
         """
         if not workdir.strip():
-            raise exceptions.ValidationError("No workdir specified")
+            raise exceptions.ValidationError('No workdir specified')
 
         try:
-            convertedwd = workdir.format(username="test")
+            convertedwd = workdir.format(username='test')
         except KeyError as exc:
-            raise exceptions.ValidationError("In workdir there is an unknown replacement field {}".format(exc.args[0]))
+            raise exceptions.ValidationError('In workdir there is an unknown replacement field {}'.format(exc.args[0]))
         except ValueError as exc:
             raise exceptions.ValidationError("Error in the string: '{}'".format(exc))
 
         if not os.path.isabs(convertedwd):
-            raise exceptions.ValidationError("The workdir must be an absolute path")
+            raise exceptions.ValidationError('The workdir must be an absolute path')
 
     def _mpirun_command_validator(self, mpirun_cmd):
         """
@@ -218,12 +218,12 @@ class Computer(entities.Entity):
         checking for a valid scheduler.
         """
         if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, six.string_types) for i in mpirun_cmd):
-            raise exceptions.ValidationError("the mpirun_command must be a list of strings")
+            raise exceptions.ValidationError('the mpirun_command must be a list of strings')
 
         try:
             job_resource_keys = self.get_scheduler().job_resource_class.get_valid_keys()
         except exceptions.EntryPointError:
-            raise exceptions.ValidationError("Unable to load the scheduler for this computer")
+            raise exceptions.ValidationError('Unable to load the scheduler for this computer')
 
         subst = {i: 'value' for i in job_resource_keys}
         subst['tot_num_mpiprocs'] = 'value'
@@ -232,7 +232,7 @@ class Computer(entities.Entity):
             for arg in mpirun_cmd:
                 arg.format(**subst)
         except KeyError as exc:
-            raise exceptions.ValidationError("In workdir there is an unknown replacement field {}".format(exc.args[0]))
+            raise exceptions.ValidationError('In workdir there is an unknown replacement field {}'.format(exc.args[0]))
         except ValueError as exc:
             raise exceptions.ValidationError("Error in the string: '{}'".format(exc))
 
@@ -248,7 +248,7 @@ class Computer(entities.Entity):
         In the subclass, always call the super().validate() method first!
         """
         if not self.get_name().strip():
-            raise exceptions.ValidationError("No name specified")
+            raise exceptions.ValidationError('No name specified')
 
         self._hostname_validator(self.get_hostname())
         self._description_validator(self.get_description())
@@ -259,7 +259,7 @@ class Computer(entities.Entity):
         try:
             mpirun_cmd = self.get_mpirun_command()
         except exceptions.DbContentError:
-            raise exceptions.ValidationError("Error in the DB content of the metadata")
+            raise exceptions.ValidationError('Error in the DB content of the metadata')
 
         # To be called AFTER the validation of the scheduler
         self._mpirun_command_validator(mpirun_cmd)
@@ -274,10 +274,10 @@ class Computer(entities.Entity):
 
         if not isinstance(def_cpus_per_machine, six.integer_types) or def_cpus_per_machine <= 0:
             raise exceptions.ValidationError(
-                "Invalid value for default_mpiprocs_per_machine, "
-                "must be a positive integer, or an empty "
-                "string if you do not want to provide a "
-                "default value."
+                'Invalid value for default_mpiprocs_per_machine, '
+                'must be a positive integer, or an empty '
+                'string if you do not want to provide a '
+                'default value.'
             )
 
     # endregion
@@ -384,7 +384,7 @@ class Computer(entities.Entity):
         :return: the property value
         """
         if len(args) > 1:
-            raise TypeError("get_property expected at most 2 arguments")
+            raise TypeError('get_property expected at most 2 arguments')
         olddata = self.get_metadata()
         try:
             return olddata[name]
@@ -394,16 +394,16 @@ class Computer(entities.Entity):
             return args[0]
 
     def get_prepend_text(self):
-        return self.get_property("prepend_text", "")
+        return self.get_property('prepend_text', '')
 
     def set_prepend_text(self, val):
-        self.set_property("prepend_text", six.text_type(val))
+        self.set_property('prepend_text', six.text_type(val))
 
     def get_append_text(self):
-        return self.get_property("append_text", "")
+        return self.get_property('append_text', '')
 
     def set_append_text(self, val):
-        self.set_property("append_text", six.text_type(val))
+        self.set_property('append_text', six.text_type(val))
 
     def get_mpirun_command(self):
         """
@@ -412,7 +412,7 @@ class Computer(entities.Entity):
 
         I also provide a sensible default that may be ok in many cases.
         """
-        return self.get_property("mpirun_command", ["mpirun", "-np", "{tot_num_mpiprocs}"])
+        return self.get_property('mpirun_command', ['mpirun', '-np', '{tot_num_mpiprocs}'])
 
     def set_mpirun_command(self, val):
         """
@@ -420,15 +420,15 @@ class Computer(entities.Entity):
         string.split() if you have a single, space-separated string).
         """
         if not isinstance(val, (tuple, list)) or not all(isinstance(i, six.string_types) for i in val):
-            raise TypeError("the mpirun_command must be a list of strings")
-        self.set_property("mpirun_command", val)
+            raise TypeError('the mpirun_command must be a list of strings')
+        self.set_property('mpirun_command', val)
 
     def get_default_mpiprocs_per_machine(self):
         """
         Return the default number of CPUs per machine (node) for this computer,
         or None if it was not set.
         """
-        return self.get_property("default_mpiprocs_per_machine", None)
+        return self.get_property('default_mpiprocs_per_machine', None)
 
     def set_default_mpiprocs_per_machine(self, def_cpus_per_machine):
         """
@@ -436,11 +436,11 @@ class Computer(entities.Entity):
         Accepts None if you do not want to set this value.
         """
         if def_cpus_per_machine is None:
-            self.delete_property("default_mpiprocs_per_machine", raise_exception=False)
+            self.delete_property('default_mpiprocs_per_machine', raise_exception=False)
         else:
             if not isinstance(def_cpus_per_machine, six.integer_types):
-                raise TypeError("def_cpus_per_machine must be an integer (or None)")
-        self.set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
+                raise TypeError('def_cpus_per_machine must be an integer (or None)')
+        self.set_property('default_mpiprocs_per_machine', def_cpus_per_machine)
 
     def get_minimum_job_poll_interval(self):
         """
@@ -495,22 +495,22 @@ class Computer(entities.Entity):
         :return: The currently configured working directory
         :rtype: str
         """
-        return self.get_property(self.PROPERTY_WORKDIR, "/scratch/{username}/aiida_run/")
+        return self.get_property(self.PROPERTY_WORKDIR, '/scratch/{username}/aiida_run/')
 
     def set_workdir(self, val):
         self.set_property(self.PROPERTY_WORKDIR, val)
 
     def get_shebang(self):
-        return self.get_property(self.PROPERTY_SHEBANG, "#!/bin/bash")
+        return self.get_property(self.PROPERTY_SHEBANG, '#!/bin/bash')
 
     def set_shebang(self, val):
         """
         :param str val: A valid shebang line
         """
         if not isinstance(val, six.string_types):
-            raise ValueError("{} is invalid. Input has to be a string".format(val))
+            raise ValueError('{} is invalid. Input has to be a string'.format(val))
         if not val.startswith('#!'):
-            raise ValueError("{} is invalid. A shebang line has to start with #!".format(val))
+            raise ValueError('{} is invalid. A shebang line has to start with #!'.format(val))
         metadata = self.get_metadata()
         metadata['shebang'] = val
         self.set_metadata(metadata)
@@ -734,79 +734,79 @@ class Computer(entities.Entity):
         :return: get schema of the computer
         """
         return {
-            "description": {
-                "display_name": "Description",
-                "help_text": "short description of the Computer",
-                "is_foreign_key": False,
-                "type": "str"
+            'description': {
+                'display_name': 'Description',
+                'help_text': 'short description of the Computer',
+                'is_foreign_key': False,
+                'type': 'str'
             },
-            "hostname": {
-                "display_name": "Host",
-                "help_text": "Name of the host",
-                "is_foreign_key": False,
-                "type": "str"
+            'hostname': {
+                'display_name': 'Host',
+                'help_text': 'Name of the host',
+                'is_foreign_key': False,
+                'type': 'str'
             },
-            "id": {
-                "display_name": "Id",
-                "help_text": "Id of the object",
-                "is_foreign_key": False,
-                "type": "int"
+            'id': {
+                'display_name': 'Id',
+                'help_text': 'Id of the object',
+                'is_foreign_key': False,
+                'type': 'int'
             },
-            "name": {
-                "display_name": "Name",
-                "help_text": "Name of the object",
-                "is_foreign_key": False,
-                "type": "str"
+            'name': {
+                'display_name': 'Name',
+                'help_text': 'Name of the object',
+                'is_foreign_key': False,
+                'type': 'str'
             },
-            "scheduler_type": {
-                "display_name": "Scheduler",
-                "help_text": "Scheduler type",
-                "is_foreign_key": False,
-                "type": "str",
-                "valid_choices": {
-                    "direct": {
-                        "doc": "Support for the direct execution bypassing schedulers."
+            'scheduler_type': {
+                'display_name': 'Scheduler',
+                'help_text': 'Scheduler type',
+                'is_foreign_key': False,
+                'type': 'str',
+                'valid_choices': {
+                    'direct': {
+                        'doc': 'Support for the direct execution bypassing schedulers.'
                     },
-                    "pbsbaseclasses.PbsBaseClass": {
-                        "doc": "Base class with support for the PBSPro scheduler"
+                    'pbsbaseclasses.PbsBaseClass': {
+                        'doc': 'Base class with support for the PBSPro scheduler'
                     },
-                    "pbspro": {
-                        "doc": "Subclass to support the PBSPro scheduler"
+                    'pbspro': {
+                        'doc': 'Subclass to support the PBSPro scheduler'
                     },
-                    "sge": {
-                        "doc":
-                        "Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, "
-                        "Oracle Grid Engine, ...)"
+                    'sge': {
+                        'doc':
+                        'Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, '
+                        'Oracle Grid Engine, ...)'
                     },
-                    "slurm": {
-                        "doc": "Support for the SLURM scheduler (http://slurm.schedmd.com/)."
+                    'slurm': {
+                        'doc': 'Support for the SLURM scheduler (http://slurm.schedmd.com/).'
                     },
-                    "torque": {
-                        "doc": "Subclass to support the Torque scheduler."
+                    'torque': {
+                        'doc': 'Subclass to support the Torque scheduler.'
                     }
                 }
             },
-            "transport_type": {
-                "display_name": "Transport type",
-                "help_text": "Transport Type",
-                "is_foreign_key": False,
-                "type": "str",
-                "valid_choices": {
-                    "local": {
-                        "doc":
-                        "Support copy and command execution on the same host on which AiiDA is running via direct "
-                        "file copy and execution commands."
+            'transport_type': {
+                'display_name': 'Transport type',
+                'help_text': 'Transport Type',
+                'is_foreign_key': False,
+                'type': 'str',
+                'valid_choices': {
+                    'local': {
+                        'doc':
+                        'Support copy and command execution on the same host on which AiiDA is running via direct '
+                        'file copy and execution commands.'
                     },
-                    "ssh": {
-                        "doc":
-                        "Support connection, command execution and data transfer to remote computers via SSH+SFTP."
+                    'ssh': {
+                        'doc':
+                        'Support connection, command execution and data transfer to remote computers via SSH+SFTP.'
                     }
                 }
             },
-            "uuid": {
-                "display_name": "Unique ID",
-                "help_text": "Universally Unique Identifier",
-                "is_foreign_key": False,
-                "type": "unicode"
+            'uuid': {
+                'display_name': 'Unique ID',
+                'help_text': 'Universally Unique Identifier',
+                'is_foreign_key': False,
+                'type': 'unicode'
             }
         }

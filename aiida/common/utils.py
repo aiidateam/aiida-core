@@ -53,9 +53,9 @@ def get_repository_folder(subfolder=None):
             raise ImportError
         if subfolder is None:
             retval = os.path.abspath(repository_path)
-        elif subfolder == "sandbox":
+        elif subfolder == 'sandbox':
             retval = os.path.abspath(os.path.join(repository_path, 'sandbox'))
-        elif subfolder == "repository":
+        elif subfolder == 'repository':
             retval = os.path.abspath(os.path.join(repository_path, 'repository'))
         else:
             raise ValueError("Invalid 'subfolder' passed to get_repository_folder: {}".format(subfolder))
@@ -79,9 +79,9 @@ def validate_list_of_string_tuples(val, tuple_length):
     from aiida.common.exceptions import ValidationError
 
     err_msg = (
-        "the value must be a list (or tuple) "
-        "of length-N list (or tuples), whose elements are strings; "
-        "N={}".format(tuple_length)
+        'the value must be a list (or tuple) '
+        'of length-N list (or tuples), whose elements are strings; '
+        'N={}'.format(tuple_length)
     )
 
     if not isinstance(val, (list, tuple)):
@@ -120,7 +120,7 @@ def get_unique_filename(filename, list_of_filenames):
     # Not optimized, but for the moment this should be fast enough
     append_int = 1
     while True:
-        new_filename = "{:s}-{:d}{:s}".format(basename, append_int, ext)
+        new_filename = '{:s}-{:d}{:s}'.format(basename, append_int, ext)
         if new_filename not in list_of_filenames:
             break
         append_int += 1
@@ -141,7 +141,7 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  #
     :param negative_to_zero: if True, set dt = 0 if dt < 0.
     """
     if max_num_fields <= 0:
-        raise ValueError("max_num_fields must be > 0")
+        raise ValueError('max_num_fields must be > 0')
 
     s_tot = dt.total_seconds()  # Important to get more than 1 day, and for
     # negative values. dt.seconds would give
@@ -156,7 +156,7 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  #
     negative = (s_tot < 0)
     s_tot = abs(s_tot)
 
-    negative_string = " in the future" if negative else " ago"
+    negative_string = ' in the future' if negative else ' ago'
 
     # For the moment stay away from months and years, difficult to get
     days, remainder = divmod(s_tot, 3600 * 24)
@@ -185,14 +185,14 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  #
             fields.pop(0)  # remove first element
 
     # Join the fields
-    raw_string = ":".join(["{:02d}{}".format(*f) for f in fields])
+    raw_string = ':'.join(['{:02d}{}'.format(*f) for f in fields])
 
     if raw_string.startswith('0'):
         raw_string = raw_string[1:]
 
     # Return the resulting string, appending a suitable string if the time
     # is negative
-    return "{}{}".format(raw_string, negative_string)
+    return '{}{}'.format(raw_string, negative_string)
 
 
 def get_class_string(obj):
@@ -203,9 +203,9 @@ def get_class_string(obj):
     It works both for classes and for class instances.
     """
     if inspect.isclass(obj):
-        return "{}.{}".format(obj.__module__, obj.__name__)
+        return '{}.{}'.format(obj.__module__, obj.__name__)
 
-    return "{}.{}".format(obj.__module__, obj.__class__.__name__)
+    return '{}.{}'.format(obj.__module__, obj.__class__.__name__)
 
 
 def get_object_from_string(class_string):
@@ -279,9 +279,9 @@ def are_dir_trees_equal(dir1, dir2):
     dirs_cmp = filecmp.dircmp(dir1, dir2)
     if dirs_cmp.left_only or dirs_cmp.right_only or dirs_cmp.funny_files:
         return (
-            False, "Left directory: {}, right directory: {}, files only "
-            "in left directory: {}, files only in right directory: "
-            "{}, not comparable files: {}".format(
+            False, 'Left directory: {}, right directory: {}, files only '
+            'in left directory: {}, files only in right directory: '
+            '{}, not comparable files: {}'.format(
                 dir1, dir2, dirs_cmp.left_only, dirs_cmp.right_only, dirs_cmp.funny_files
             )
         )
@@ -290,12 +290,12 @@ def are_dir_trees_equal(dir1, dir2):
     (_, mismatch, errors) = filecmp.cmpfiles(dir1, dir2, dirs_cmp.common_files, shallow=False)
     if mismatch:
         return (
-            False, "The following files in the directories {} and {} "
+            False, 'The following files in the directories {} and {} '
             "don't match: {}".format(dir1, dir2, mismatch)
         )
     if errors:
         return (
-            False, "The following files in the directories {} and {} "
+            False, 'The following files in the directories {} and {} '
             "aren't regular: {}".format(dir1, dir2, errors)
         )
 
@@ -306,7 +306,7 @@ def are_dir_trees_equal(dir1, dir2):
         if not res:
             return False, msg
 
-    return True, "The given directories ({} and {}) are equal".format(dir1, dir2)
+    return True, 'The given directories ({} and {}) are equal'.format(dir1, dir2)
 
 
 class Prettifier(object):  # pylint: disable=useless-object-inheritance
@@ -462,7 +462,7 @@ class Prettifier(object):  # pylint: disable=useless-object-inheritance
             self._prettifier_f = self.prettifiers[format]  # pylint: disable=unsubscriptable-object
         except KeyError:
             raise ValueError(
-                "Unknown prettifier format {}; valid formats: {}".format(format, ", ".join(self.get_prettifiers()))
+                'Unknown prettifier format {}; valid formats: {}'.format(format, ', '.join(self.get_prettifiers()))
             )
 
     def prettify(self, label):
@@ -490,7 +490,7 @@ def prettify_labels(labels, format=None):  # pylint: disable=redefined-builtin
     return [(pos, prettifier.prettify(label)) for pos, label in labels]
 
 
-def join_labels(labels, join_symbol="|", threshold=1.e-6):
+def join_labels(labels, join_symbol='|', threshold=1.e-6):
     """
     Join labels with a joining symbol when they are very close
 

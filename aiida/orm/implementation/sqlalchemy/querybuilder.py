@@ -39,7 +39,7 @@ def compile(element, compiler, **_kw):  # pylint: disable=function-redefined, re
     """
     Get length of array defined in a JSONB column
     """
-    return "jsonb_array_length(%s)" % compiler.process(element.clauses)
+    return 'jsonb_array_length(%s)' % compiler.process(element.clauses)
 
 
 class array_length(FunctionElement):  # pylint: disable=invalid-name
@@ -52,7 +52,7 @@ def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
-    return "array_length(%s)" % compiler.process(element.clauses)
+    return 'array_length(%s)' % compiler.process(element.clauses)
 
 
 class jsonb_typeof(FunctionElement):  # pylint: disable=invalid-name
@@ -65,7 +65,7 @@ def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
-    return "jsonb_typeof(%s)" % compiler.process(element.clauses)
+    return 'jsonb_typeof(%s)' % compiler.process(element.clauses)
 
 
 class SqlaQueryBuilder(BackendQueryBuilder):
@@ -235,12 +235,12 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             negation = False
         if operator in ('longer', 'shorter', 'of_length'):
             if not isinstance(value, int):
-                raise InputValidationError("You have to give an integer when comparing to a length")
+                raise InputValidationError('You have to give an integer when comparing to a length')
         elif operator in ('like', 'ilike'):
             if not isinstance(value, six.string_types):
                 raise InputValidationError(
-                    "Value for operator {} has to be a string (you gave {})"
-                    "".format(operator, value)
+                    'Value for operator {} has to be a string (you gave {})'
+                    ''.format(operator, value)
                 )
 
         elif operator == 'in':
@@ -277,7 +277,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
-                        raise RuntimeError("I need to get the column but do not know the alias and the column name")
+                        raise RuntimeError('I need to get the column but do not know the alias and the column name')
                     column = self.get_column(column_name, alias)
                 expr = self.get_filter_expr_from_column(operator, value, column)
 
@@ -338,8 +338,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             valid_types = ('object', 'array', 'string', 'number', 'boolean', 'null')
             if value not in valid_types:
                 raise InputValidationError(
-                    "value {} for of_type is not among valid types\n"
-                    "{}".format(value, valid_types)
+                    'value {} for of_type is not among valid types\n'
+                    '{}'.format(value, valid_types)
                 )
             expr = jsonb_typeof(database_entity) == value
         elif operator == 'like':
@@ -372,7 +372,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             ],
                         else_=False)
         else:
-            raise InputValidationError("Unknown operator {} for filters in JSON field".format(operator))
+            raise InputValidationError('Unknown operator {} for filters in JSON field'.format(operator))
         return expr
 
     def get_projectable_attribute(self, alias, column_name, attrpath, cast=None, **kwargs):
@@ -395,7 +395,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif cast == 'd':
             entity = entity.astext.cast(DateTime)
         else:
-            raise InputValidationError("Unkown casting key {}".format(cast))
+            raise InputValidationError('Unkown casting key {}'.format(cast))
         return entity
 
     def get_aiida_res(self, key, res):
@@ -459,7 +459,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
     def iterall(self, query, batch_size, tag_to_index_dict):
         if not tag_to_index_dict:
-            raise Exception("Got an empty dictionary: {}".format(tag_to_index_dict))
+            raise Exception('Got an empty dictionary: {}'.format(tag_to_index_dict))
 
         try:
             results = query.yield_per(batch_size)
@@ -481,7 +481,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         for colindex, rowitem in enumerate(resultrow)
                     ]
             else:
-                raise ValueError("Got an empty dictionary")
+                raise ValueError('Got an empty dictionary')
         except Exception:
             self.get_session().rollback()
             raise
@@ -495,7 +495,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         nr_items = sum(len(v) for v in tag_to_projected_properties_dict.values())
 
         if not nr_items:
-            raise ValueError("Got an empty dictionary")
+            raise ValueError('Got an empty dictionary')
 
         # Wrapping everything in an atomic transaction:
         try:
@@ -534,7 +534,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
                         }
             else:
-                raise ValueError("Got an empty dictionary")
+                raise ValueError('Got an empty dictionary')
         except Exception:
             self.get_session().rollback()
             raise

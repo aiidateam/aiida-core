@@ -302,20 +302,20 @@ class TestCommand(unittest.TestCase):
         sge = SgeScheduler()
 
         job_tmpl = JobTemplate()
-        job_tmpl.job_resource = sge.create_job_resource(parallel_env="mpi8", tot_num_mpiprocs=16)
-        job_tmpl.working_directory = "/home/users/dorigm7s/test"
+        job_tmpl.job_resource = sge.create_job_resource(parallel_env='mpi8', tot_num_mpiprocs=16)
+        job_tmpl.working_directory = '/home/users/dorigm7s/test'
         job_tmpl.submit_as_hold = None
         job_tmpl.rerunnable = None
         job_tmpl.email = None
         job_tmpl.email_on_started = None
         job_tmpl.email_on_terminated = None
-        job_tmpl.job_name = "BestJobEver"
+        job_tmpl.job_name = 'BestJobEver'
         job_tmpl.sched_output_path = None
         job_tmpl.sched_join_files = None
-        job_tmpl.queue_name = "FavQ.q"
+        job_tmpl.queue_name = 'FavQ.q'
         job_tmpl.priority = None
-        job_tmpl.max_wallclock_seconds = "3600"  # "23:59:59"
-        job_tmpl.job_environment = {"HOME": "/home/users/dorigm7s/", "WIENROOT": "$HOME:/WIEN2k"}
+        job_tmpl.max_wallclock_seconds = '3600'  # "23:59:59"
+        job_tmpl.job_environment = {'HOME': '/home/users/dorigm7s/', 'WIENROOT': '$HOME:/WIEN2k'}
 
         submit_script_text = sge._get_submit_script_header(job_tmpl)
 
@@ -325,7 +325,7 @@ class TestCommand(unittest.TestCase):
         self.assertTrue('#$ -l h_rt=01:00:00' in submit_script_text)
         # self.assertTrue( 'export HOME=/home/users/dorigm7s/'
         #                 in submit_script_text )
-        self.assertTrue("# ENVIRONMENT VARIABLES BEGIN ###" in submit_script_text)
+        self.assertTrue('# ENVIRONMENT VARIABLES BEGIN ###' in submit_script_text)
         self.assertTrue("export HOME='/home/users/dorigm7s/'" in submit_script_text)
         self.assertTrue("export WIENROOT='$HOME:/WIEN2k'" in submit_script_text)
 
@@ -342,7 +342,7 @@ class TestCommand(unittest.TestCase):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            raise ValueError("Unable to parse time string {}, the message was {}".format(string, exc))
+            raise ValueError('Unable to parse time string {}, the message was {}'.format(string, exc))
 
         # I convert from a time_struct to a datetime object going through
         # the seconds since epoch, as suggested on stackoverflow:

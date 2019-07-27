@@ -30,13 +30,13 @@ EXPORT_OPTIONS = [
         '--parameter-data',
         type=click.INT,
         default=None,
-        help="ID of the Dict to be exported alongside the"
-        " StructureData instance. By default, if StructureData"
-        " originates from a calculation with single"
-        " Dict in the output, aforementioned"
-        " Dict is picked automatically. Instead, the"
-        " option is used in the case the calculation produces"
-        " more than a single instance of Dict."
+        help='ID of the Dict to be exported alongside the'
+        ' StructureData instance. By default, if StructureData'
+        ' originates from a calculation with single'
+        ' Dict in the output, aforementioned'
+        ' Dict is picked automatically. Instead, the'
+        ' option is used in the case the calculation produces'
+        ' more than a single instance of Dict.'
     ),
     click.option(
         '--dump-aiida-database/--no-dump-aiida-database',
@@ -57,19 +57,19 @@ EXPORT_OPTIONS = [
         '--gzip-threshold',
         type=click.INT,
         default=None,
-        help="Specify the minimum size of exported file which should"
-        " be gzipped."
+        help='Specify the minimum size of exported file which should'
+        ' be gzipped.'
     ),
     click.option(
         '-o',
         '--output',
         type=click.STRING,
         default=None,
-        help="If present, store the output directly on a file "
-        "with the given name. It is essential to use this option "
-        "if more than one file needs to be created."
+        help='If present, store the output directly on a file '
+        'with the given name. It is essential to use this option '
+        'if more than one file needs to be created.'
     ),
-    options.FORCE(help="Overwrite files without checking."),
+    options.FORCE(help='Overwrite files without checking.'),
 ]
 
 
@@ -104,13 +104,13 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
             try:
                 node.export(output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
             except OSError as err:
-                echo.echo_critical("OSError while exporting file:\n{}".format(err))
+                echo.echo_critical('OSError while exporting file:\n{}'.format(err))
         else:
             filetext, extra_files = node._exportcontent(fileformat, main_file_name=output_fname, **other_args)
             if extra_files:
                 echo.echo_critical(
-                    "This format requires to write more than one file.\n"
-                    "You need to pass the -o option to specify a file name."
+                    'This format requires to write more than one file.\n'
+                    'You need to pass the -o option to specify a file name.'
                 )
             else:
                 echo.echo(filetext.decode('utf-8'))
@@ -118,7 +118,7 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
         # This typically occurs for parameters that are passed down to the
         # methods in, e.g., BandsData, but they are not accepted
         echo.echo_critical(
-            "TypeError, perhaps a parameter is not "
-            "supported by the specific format?\nError "
-            "message: {}".format(err)
+            'TypeError, perhaps a parameter is not '
+            'supported by the specific format?\nError '
+            'message: {}'.format(err)
         )

@@ -32,7 +32,7 @@ class TestMaterialsProject(AiidaTestCase):
 
     import unittest
 
-    @unittest.skipIf(not run_materialsproject_api_tests(), "MaterialsProject API tests not enabled")
+    @unittest.skipIf(not run_materialsproject_api_tests(), 'MaterialsProject API tests not enabled')
     def test_invalid_api_key(self):  # pylint: disable=no-self-use
         """
         Test if Materials Project rejects an invalid API key and that we catch the error.

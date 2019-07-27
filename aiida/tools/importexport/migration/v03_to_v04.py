@@ -470,38 +470,38 @@ def migrate_v3_to_v4(metadata, data, folder, *args):  # pylint: disable=unused-a
 
     # Update metadata.json with the new Log and Comment entities
     new_entities = {
-        "Log": {
-            "uuid": {},
-            "time": {
-                "convert_type": "date"
+        'Log': {
+            'uuid': {},
+            'time': {
+                'convert_type': 'date'
             },
-            "loggername": {},
-            "levelname": {},
-            "message": {},
-            "metadata": {},
-            "dbnode": {
-                "related_name": "dblogs",
-                "requires": "Node"
+            'loggername': {},
+            'levelname': {},
+            'message': {},
+            'metadata': {},
+            'dbnode': {
+                'related_name': 'dblogs',
+                'requires': 'Node'
             }
         },
-        "Comment": {
-            "uuid": {},
-            "ctime": {
-                "convert_type": "date"
+        'Comment': {
+            'uuid': {},
+            'ctime': {
+                'convert_type': 'date'
             },
-            "mtime": {
-                "convert_type": "date"
+            'mtime': {
+                'convert_type': 'date'
             },
-            "content": {},
-            "dbnode": {
-                "related_name": "dbcomments",
-                "requires": "Node"
+            'content': {},
+            'dbnode': {
+                'related_name': 'dbcomments',
+                'requires': 'Node'
             },
-            "user": {
-                "related_name": "dbcomments",
-                "requires": "User"
+            'user': {
+                'related_name': 'dbcomments',
+                'requires': 'User'
             }
         }
     }
     metadata['all_fields_info'].update(new_entities)
-    metadata['unique_identifiers'].update({"Log": "uuid", "Comment": "uuid"})
+    metadata['unique_identifiers'].update({'Log': 'uuid', 'Comment': 'uuid'})

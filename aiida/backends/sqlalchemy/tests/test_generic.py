@@ -31,7 +31,7 @@ class TestComputer(AiidaTestCase):
         import aiida.backends.sqlalchemy
 
         newcomputer = self.backend.computers.create(
-            name="testdeletioncomputer",
+            name='testdeletioncomputer',
             hostname='localhost',
             transport_type='local',
             scheduler_type='pbspro')

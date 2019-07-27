@@ -103,8 +103,8 @@ class AiidaApi(Api):
 
         self.add_resource(
             ServerInfo,
-            "/server/",
-            "/server/endpoints/",
+            '/server/',
+            '/server/endpoints/',
             endpoint='server',
             strict_slashes=False,
             resource_class_kwargs=kwargs
@@ -367,10 +367,10 @@ class AiidaApi(Api):
 
                 response = {}
 
-                response["status"] = "404 Not Found"
-                response["message"] = "The requested URL is not found on the server."
+                response['status'] = '404 Not Found'
+                response['message'] = 'The requested URL is not found on the server.'
 
-                response["available_endpoints"] = list_routes()
+                response['available_endpoints'] = list_routes()
 
                 return jsonify(response)
 

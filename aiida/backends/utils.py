@@ -77,12 +77,12 @@ def validate_attribute_key(key):
     :raise aiida.common.ValidationError: if the key is not valid
     """
     if not isinstance(key, six.string_types):
-        raise ValidationError("The key must be a string.")
+        raise ValidationError('The key must be a string.')
     if not key:
-        raise ValidationError("The key cannot be an empty string.")
+        raise ValidationError('The key cannot be an empty string.')
     if AIIDA_ATTRIBUTE_SEP in key:
         raise ValidationError("The separator symbol '{}' cannot be present "
-                              "in the key of attributes, extras, etc.".format(AIIDA_ATTRIBUTE_SEP))
+                              'in the key of attributes, extras, etc.'.format(AIIDA_ATTRIBUTE_SEP))
 
 
 def load_dbenv(profile=None, *args, **kwargs):
@@ -95,7 +95,7 @@ def load_dbenv(profile=None, *args, **kwargs):
         from aiida.backends.djsite.utils import load_dbenv as load_dbenv_django
         to_return = load_dbenv_django(profile=profile, *args, **kwargs)
     else:
-        raise ConfigurationError("Invalid configuration.PROFILE.database_backend: {}".format(
+        raise ConfigurationError('Invalid configuration.PROFILE.database_backend: {}'.format(
             configuration.PROFILE.database_backend))
 
     return to_return
@@ -111,7 +111,7 @@ def _load_dbenv_noschemacheck(profile=None, *args, **kwargs):
         from aiida.backends.djsite.utils import _load_dbenv_noschemacheck as _load_dbenv_noschemacheck_django
         to_return = _load_dbenv_noschemacheck_django(profile=profile, *args, **kwargs)
     else:
-        raise ConfigurationError("Invalid configuration.PROFILE.database_backend: {}".format(configuration.PROFILE.database_backend))
+        raise ConfigurationError('Invalid configuration.PROFILE.database_backend: {}'.format(configuration.PROFILE.database_backend))
 
     return to_return
 
@@ -122,6 +122,6 @@ def delete_nodes_and_connections(pks):
     elif configuration.PROFILE.database_backend == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.utils import delete_nodes_and_connections_sqla as delete_nodes_backend
     else:
-        raise Exception("unknown backend {}".format(configuration.PROFILE.database_backend))
+        raise Exception('unknown backend {}'.format(configuration.PROFILE.database_backend))
 
     delete_nodes_backend(pks)

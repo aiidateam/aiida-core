@@ -35,11 +35,11 @@ class TestMigrateV02toV03(AiidaTestCase):
         from aiida import get_version
 
         # Get metadata.json and data.json as dicts from v0.2 file archive
-        metadata_v2, data_v2 = get_json_files("export_v0.2_simple.aiida", **self.core_archive)
+        metadata_v2, data_v2 = get_json_files('export_v0.2_simple.aiida', **self.core_archive)
         verify_metadata_version(metadata_v2, version='0.2')
 
         # Get metadata.json and data.json as dicts from v0.3 file archive
-        metadata_v3, data_v3 = get_json_files("export_v0.3_simple.aiida", **self.core_archive)
+        metadata_v3, data_v3 = get_json_files('export_v0.3_simple.aiida', **self.core_archive)
         verify_metadata_version(metadata_v3, version='0.3')
 
         # Migrate to v0.3
@@ -51,11 +51,11 @@ class TestMigrateV02toV03(AiidaTestCase):
         metadata_v3.pop('aiida_version')
 
         # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
-        conversion_message = "Converted from version 0.2 to 0.3 with AiiDA v{}".format(get_version())
+        conversion_message = 'Converted from version 0.2 to 0.3 with AiiDA v{}'.format(get_version())
         self.assertEqual(
             metadata_v2.pop('conversion_info')[-1],
             conversion_message,
-            msg="The conversion message after migration is wrong"
+            msg='The conversion message after migration is wrong'
         )
         metadata_v3.pop('conversion_info')
 
@@ -64,17 +64,17 @@ class TestMigrateV02toV03(AiidaTestCase):
         self.assertDictEqual(
             metadata_v2,
             metadata_v3,
-            msg="After migration, metadata.json should equal intended metadata.json from archives"
+            msg='After migration, metadata.json should equal intended metadata.json from archives'
         )
         self.assertDictEqual(
-            data_v2, data_v3, msg="After migration, data.json should equal intended data.json from archives"
+            data_v2, data_v3, msg='After migration, data.json should equal intended data.json from archives'
         )
 
     def test_migrate_v2_to_v3_complete(self):
         """Test migration for file containing complete v0.2 era possibilities"""
 
         # Get metadata.json and data.json as dicts from v0.2 file archive
-        metadata, data = get_json_files("export_v0.2.aiida", **self.external_archive)
+        metadata, data = get_json_files('export_v0.2.aiida', **self.external_archive)
         verify_metadata_version(metadata, version='0.2')
 
         # Migrate to v0.3
@@ -83,14 +83,14 @@ class TestMigrateV02toV03(AiidaTestCase):
 
         self.maxDiff = None  # pylint: disable=invalid-name
         # Check link types
-        legal_link_types = {"unspecified", "createlink", "returnlink", "inputlink", "calllink"}
+        legal_link_types = {'unspecified', 'createlink', 'returnlink', 'inputlink', 'calllink'}
         for link in data['links_uuid']:
             self.assertIn('type', link, msg="key 'type' was not added to link: {}".format(link))
             self.assertIn(link['type'], legal_link_types)
 
         # Check entity names
-        legal_entity_names = {"Node", "Link", "Group", "Computer", "User", "Attribute"}
-        for field in {"unique_identifiers", "all_fields_info"}:
+        legal_entity_names = {'Node', 'Link', 'Group', 'Computer', 'User', 'Attribute'}
+        for field in {'unique_identifiers', 'all_fields_info'}:
             for entity, prop in metadata[field].items():
                 self.assertIn(
                     entity,
@@ -100,9 +100,9 @@ class TestMigrateV02toV03(AiidaTestCase):
                     )
                 )
 
-                if field == "all_fields_info":
+                if field == 'all_fields_info':
                     for value in prop.values():
-                        if "requires" in value:
+                        if 'requires' in value:
                             self.assertIn(
                                 value['requires'],
                                 legal_entity_names,
@@ -127,11 +127,11 @@ class TestMigrateV02toV03(AiidaTestCase):
         """
 
         # Get metadata.json and data.json as dicts from v0.2 file archive and migrate
-        metadata_v2, data_v2 = get_json_files("export_v0.2.aiida", **self.external_archive)
+        metadata_v2, data_v2 = get_json_files('export_v0.2.aiida', **self.external_archive)
         migrate_v2_to_v3(metadata_v2, data_v2)
 
         # Get metadata.json and data.json as dicts from v0.3 file archive
-        metadata_v3, data_v3 = get_json_files("export_v0.3.aiida", **self.external_archive)
+        metadata_v3, data_v3 = get_json_files('export_v0.3.aiida', **self.external_archive)
 
         # Compare 'metadata.json'
         metadata_v2.pop('conversion_info')
@@ -185,7 +185,7 @@ class TestMigrateV02toV03(AiidaTestCase):
             self.assertListEqual(
                 sorted(details['migrated']),
                 sorted(details['made']),
-                msg="Number of {}-entities differ, see diff for details".format(entity)
+                msg='Number of {}-entities differ, see diff for details'.format(entity)
             )
 
         fields = {'export_data', 'groups_uuid', 'node_attributes_conversion', 'node_attributes'}
@@ -193,7 +193,7 @@ class TestMigrateV02toV03(AiidaTestCase):
             self.assertEqual(
                 len(data_v2[field]),
                 len(data_v3[field]),
-                msg="Number of entities in {} differs for the export files".format(field)
+                msg='Number of entities in {} differs for the export files'.format(field)
             )
 
         number_of_links_v2 = {
@@ -213,7 +213,7 @@ class TestMigrateV02toV03(AiidaTestCase):
         self.assertDictEqual(
             number_of_links_v2,
             number_of_links_v3,
-            msg="There are a different number of specific links in the migrated export file than the AiiDA made one."
+            msg='There are a different number of specific links in the migrated export file than the AiiDA made one.'
         )
 
         self.assertEqual(number_of_links_v2['unspecified'], 0)

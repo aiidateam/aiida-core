@@ -64,11 +64,11 @@ class PbsproScheduler(PbsBaseClass):
 
         return_lines = []
 
-        select_string = "select={}".format(num_machines)
+        select_string = 'select={}'.format(num_machines)
         if num_mpiprocs_per_machine:
-            select_string += ":mpiprocs={}".format(num_mpiprocs_per_machine)
+            select_string += ':mpiprocs={}'.format(num_mpiprocs_per_machine)
         if num_cores_per_machine:
-            select_string += ":ppn={}".format(num_cores_per_machine)
+            select_string += ':ppn={}'.format(num_cores_per_machine)
 
         if max_wallclock_seconds is not None:
             try:
@@ -77,15 +77,15 @@ class PbsproScheduler(PbsBaseClass):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    "max_wallclock_seconds must be "
+                    'max_wallclock_seconds must be '
                     "a positive integer (in seconds)! It is instead '{}'"
-                    "".format(max_wallclock_seconds)
+                    ''.format(max_wallclock_seconds)
                 )
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
             minutes = tot_minutes // 60
             seconds = tot_minutes % 60
-            return_lines.append("#PBS -l walltime={:02d}:{:02d}:{:02d}".format(hours, minutes, seconds))
+            return_lines.append('#PBS -l walltime={:02d}:{:02d}:{:02d}'.format(hours, minutes, seconds))
 
         if max_memory_kb:
             try:
@@ -94,11 +94,11 @@ class PbsproScheduler(PbsBaseClass):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    "max_memory_kb must be "
+                    'max_memory_kb must be '
                     "a positive integer (in kB)! It is instead '{}'"
-                    "".format((max_memory_kb))
+                    ''.format((max_memory_kb))
                 )
-            select_string += ":mem={}kb".format(virtual_memory_kb)
+            select_string += ':mem={}kb'.format(virtual_memory_kb)
 
-        return_lines.append("#PBS -l {}".format(select_string))
+        return_lines.append('#PBS -l {}'.format(select_string))
         return return_lines

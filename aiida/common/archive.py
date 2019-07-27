@@ -222,7 +222,7 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
             return json.load(fhandle)
 
 
-def extract_zip(infile, folder, nodes_export_subfolder="nodes", silent=False):
+def extract_zip(infile, folder, nodes_export_subfolder='nodes', silent=False):
     """
     Extract the nodes to be imported from a zip file.
 
@@ -266,7 +266,7 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes", silent=False):
         raise ValueError('The input file format for import is not valid (not a zip file)')
 
 
-def extract_tar(infile, folder, nodes_export_subfolder="nodes", silent=False):
+def extract_tar(infile, folder, nodes_export_subfolder='nodes', silent=False):
     """
     Extract the nodes to be imported from a (possibly zipped) tar file.
 

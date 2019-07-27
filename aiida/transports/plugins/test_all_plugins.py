@@ -56,14 +56,14 @@ def get_all_custom_transports():
     try:
         test_modules.remove(thisbasename)
     except IndexError:
-        print("Warning, this module ({}) was not found!".format(thisbasename))
+        print('Warning, this module ({}) was not found!'.format(thisbasename))
 
     all_custom_transports = {}
     for m in test_modules:
-        module = importlib.import_module(".".join([modulename, m]))
+        module = importlib.import_module('.'.join([modulename, m]))
         custom_transport = module.__dict__.get('plugin_transport', None)
         if custom_transport is None:
-            print("Define the plugin_transport variable inside the {} module!".format(m))
+            print('Define the plugin_transport variable inside the {} module!'.format(m))
         else:
             all_custom_transports[m] = custom_transport
 
@@ -101,13 +101,13 @@ def run_for_all_plugins(actual_test_method):
             else:
                 exception_to_raise = CollectiveException
 
-            messages = ["*** At least one test for a subplugin failed. See below ***", ""]
+            messages = ['*** At least one test for a subplugin failed. See below ***', '']
             for exc in exceptions:
                 messages.append("*** [For plugin {}]: Exception '{}': {}"
                                 .format(exc[2], type(exc[0]).__name__, exc[0]))
                 messages.append(exc[1])
 
-            raise exception_to_raise("\n".join(messages))
+            raise exception_to_raise('\n'.join(messages))
 
     return test_all_plugins
 
@@ -506,8 +506,8 @@ class TestDirectoryManipulation(unittest.TestCase):
         with custom_transport as t:
             location = t.normalize(os.path.join('/', 'tmp'))
             t.chdir(location)
-            self.assertFalse(t.isdir(""))
-            self.assertFalse(t.isfile(""))
+            self.assertFalse(t.isdir(''))
+            self.assertFalse(t.isfile(''))
 
     @run_for_all_plugins
     def test_isfile_isdir_to_non_existing_string(self, custom_transport):
@@ -538,7 +538,7 @@ class TestDirectoryManipulation(unittest.TestCase):
         with custom_transport as t:
             new_dir = t.normalize(os.path.join('/', 'tmp'))
             t.chdir(new_dir)
-            t.chdir("")
+            t.chdir('')
             self.assertEquals(new_dir, t.getcwd())
 
 
@@ -1290,7 +1290,7 @@ class TestExecuteCommandWait(unittest.TestCase):
             self.assertEquals(retcode, 0)
             # I have to strip it because 'pwd' returns a trailing \n
             self.assertEquals(stdout.strip(), subfolder_fullpath)
-            self.assertEquals(stderr, "")
+            self.assertEquals(stderr, '')
 
             if delete_at_end:
                 t.chdir(location)
@@ -1298,33 +1298,33 @@ class TestExecuteCommandWait(unittest.TestCase):
 
     @run_for_all_plugins
     def test_exec_with_stdin_string(self, custom_transport):
-        test_string = str("some_test String")
+        test_string = str('some_test String')
         with custom_transport as t:
             retcode, stdout, stderr = t.exec_command_wait('cat', stdin=test_string)
             self.assertEquals(retcode, 0)
             self.assertEquals(stdout, test_string)
-            self.assertEquals(stderr, "")
+            self.assertEquals(stderr, '')
 
     @run_for_all_plugins
     def test_exec_with_stdin_unicode(self, custom_transport):
-        test_string = u"some_test String"
+        test_string = u'some_test String'
         with custom_transport as t:
             retcode, stdout, stderr = t.exec_command_wait('cat', stdin=test_string)
             self.assertEquals(retcode, 0)
             self.assertEquals(stdout, test_string)
-            self.assertEquals(stderr, "")
+            self.assertEquals(stderr, '')
 
     @run_for_all_plugins
     def test_exec_with_stdin_filelike(self, custom_transport):
         from six.moves import cStringIO as StringIO
 
-        test_string = "some_test String"
+        test_string = 'some_test String'
         stdin = StringIO(test_string)
         with custom_transport as t:
             retcode, stdout, stderr = t.exec_command_wait('cat', stdin=stdin)
             self.assertEquals(retcode, 0)
             self.assertEquals(stdout, test_string)
-            self.assertEquals(stderr, "")
+            self.assertEquals(stderr, '')
 
     @run_for_all_plugins
     def test_exec_with_wrong_stdin(self, custom_transport):

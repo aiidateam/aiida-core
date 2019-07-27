@@ -206,8 +206,8 @@ class Process(plumpy.Process):
             try:
                 self.runner.persister.save_checkpoint(self)
             except plumpy.PersistenceError:
-                self.logger.exception("Exception trying to save checkpoint, this means you will "
-                                      "not be able to restart in case of a crash until the next successful checkpoint.")
+                self.logger.exception('Exception trying to save checkpoint, this means you will '
+                                      'not be able to restart in case of a crash until the next successful checkpoint.')
 
     @override
     def save_instance_state(self, out_state, save_context):
@@ -913,8 +913,8 @@ def get_query_string_from_process_type_string(process_type_string):  # pylint: d
     :return: string that can be used to query for subclasses of the process type using 'LIKE <string>'
     :rtype: str
     """
-    if ":" in process_type_string:
-        return process_type_string + "."
+    if ':' in process_type_string:
+        return process_type_string + '.'
 
     path = process_type_string.rsplit('.', 2)[0]
-    return path + "."
+    return path + '.'

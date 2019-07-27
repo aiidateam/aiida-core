@@ -54,4 +54,4 @@ def import_data(in_path, group=None, silent=False, **kwargs):
         return import_data_dj(in_path, group=group, silent=silent, **kwargs)
 
     # else
-    raise Exception("Unknown backend: {}".format(configuration.PROFILE.database_backend))
+    raise Exception('Unknown backend: {}'.format(configuration.PROFILE.database_backend))

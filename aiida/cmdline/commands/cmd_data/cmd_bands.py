@@ -73,7 +73,7 @@ def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, group
     for entry in entry_list:
         for i, value in enumerate(entry):
             if isinstance(value, list):
-                entry[i] = ",".join(value)
+                entry[i] = ','.join(value)
         for i in range(len(entry), len(LIST_PROJECT_HEADERS)):
             entry.append(None)
         counter += 1
@@ -121,11 +121,11 @@ def bands_show(data, fmt):
     '--output',
     type=click.STRING,
     default=None,
-    help="If present, store the output directly on a file "
-    "with the given name. It is essential to use this option "
-    "if more than one file needs to be created."
+    help='If present, store the output directly on a file '
+    'with the given name. It is essential to use this option '
+    'if more than one file needs to be created.'
 )
-@options.FORCE(help="If passed, overwrite files without checking.")
+@options.FORCE(help='If passed, overwrite files without checking.')
 @click.option(
     '--prettify-format',
     default=None,

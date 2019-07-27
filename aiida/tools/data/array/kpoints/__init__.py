@@ -140,7 +140,7 @@ def _seekpath_get_kpoints_path(structure, **kwargs):
     unknown_args = set(kwargs).difference(recognized_args)
 
     if unknown_args:
-        raise ValueError("unknown arguments {}".format(unknown_args))
+        raise ValueError('unknown arguments {}'.format(unknown_args))
 
     return seekpath.get_kpoints_path(structure, kwargs)
 
@@ -178,7 +178,7 @@ def _seekpath_get_explicit_kpoints_path(structure, **kwargs):
     unknown_args = set(kwargs).difference(recognized_args)
 
     if unknown_args:
-        raise ValueError("unknown arguments {}".format(unknown_args))
+        raise ValueError('unknown arguments {}'.format(unknown_args))
 
     return seekpath.get_explicit_kpoints_path(structure, kwargs)
 
@@ -196,7 +196,7 @@ def _legacy_get_kpoints_path(structure, **kwargs):
     args_unknown = set(kwargs).difference(args_recognized)
 
     if args_unknown:
-        raise ValueError("unknown arguments {}".format(args_unknown))
+        raise ValueError('unknown arguments {}'.format(args_unknown))
 
     point_coords, path, bravais_info = legacy.get_kpoints_path(cell=structure.cell, pbc=structure.pbc, **kwargs)
 
@@ -226,7 +226,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     args_unknown = set(kwargs).difference(args_recognized)
 
     if args_unknown:
-        raise ValueError("unknown arguments {}".format(args_unknown))
+        raise ValueError('unknown arguments {}'.format(args_unknown))
 
     point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(
         cell=structure.cell, pbc=structure.pbc, **kwargs
@@ -283,8 +283,8 @@ def get_kpointsdata_from_qetools(qetools_instance):
         import qe_tools  # pylint: disable=unused-variable,unused-import
     except ImportError:
         raise ValueError(
-            "You have not installed the package qe-tools. "
-            "You can install it with: pip install qe-tools"
+            'You have not installed the package qe-tools. '
+            'You can install it with: pip install qe-tools'
         )
     from aiida.tools.data.structure import get_structuredata_from_qetools
 

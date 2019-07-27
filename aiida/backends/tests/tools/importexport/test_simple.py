@@ -40,8 +40,8 @@ class TestSimple(AiidaTestCase):
     def test_base_data_nodes(self, temp_dir):
         """Test ex-/import of Base Data nodes"""
         # producing values for each base type
-        values = ("Hello", 6, -1.2399834e12, False)  # , ["Bla", 1, 1e-10])
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        values = ('Hello', 6, -1.2399834e12, False)  # , ["Bla", 1, 1e-10])
+        filename = os.path.join(temp_dir, 'export.tar.gz')
 
         # producing nodes:
         nodes = [cls(val).store() for val, cls in zip(values, (orm.Str, orm.Int, orm.Float, orm.Bool))]
@@ -68,7 +68,7 @@ class TestSimple(AiidaTestCase):
 
         calc = orm.CalcJobNode()
         calc.computer = self.computer
-        calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
         calc.add_incoming(struct, link_type=LinkType.INPUT_CALC, link_label='link')
         calc.store()
@@ -83,7 +83,7 @@ class TestSimple(AiidaTestCase):
             for k in node.attributes.keys():
                 attrs[node.uuid][k] = node.get_attribute(k)
 
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
 
         export([calc], outfile=filename, silent=True)
 
@@ -108,10 +108,10 @@ class TestSimple(AiidaTestCase):
             struct = orm.StructureData()
             struct.store()
 
-            filename = os.path.join(export_file_tmp_folder, "export.tar.gz")
+            filename = os.path.join(export_file_tmp_folder, 'export.tar.gz')
             export([struct], outfile=filename, silent=True)
 
-            with tarfile.open(filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
+            with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack_tmp_folder)
 
             with io.open(os.path.join(unpack_tmp_folder, 'metadata.json'), 'r', encoding='utf8') as fhandle:
@@ -121,8 +121,8 @@ class TestSimple(AiidaTestCase):
             with io.open(os.path.join(unpack_tmp_folder, 'metadata.json'), 'wb') as fhandle:
                 json.dump(metadata, fhandle)
 
-            with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
-                tar.add(unpack_tmp_folder, arcname="")
+            with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT) as tar:
+                tar.add(unpack_tmp_folder, arcname='')
 
             self.tearDownClass()
             self.setUpClass()
@@ -168,7 +168,7 @@ class TestSimple(AiidaTestCase):
             return license_ == 'GPL'
 
         def crashing_filter():
-            raise NotImplementedError("not implemented yet")
+            raise NotImplementedError('not implemented yet')
 
         folder = SandboxFolder()
         with self.assertRaises(exceptions.LicensingException):

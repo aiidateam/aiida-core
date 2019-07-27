@@ -27,13 +27,13 @@ class NodeTranslator(BaseTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "nodes"
+    __label__ = 'nodes'
 
     # The AiiDA class one-to-one associated to the present class
     _aiida_class = orm.Node
 
     # The string name of the AiiDA class
-    _aiida_type = "node.Node"
+    _aiida_type = 'node.Node'
 
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = True
@@ -66,46 +66,46 @@ class NodeTranslator(BaseTranslator):
         super(NodeTranslator, self).__init__(Class=Class, **kwargs)
 
         self._default_projections = [
-            "id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "attributes", "extras"
+            'id', 'label', 'node_type', 'ctime', 'mtime', 'uuid', 'user_id', 'attributes', 'extras'
         ]
-        self._default_user_projections = ["email"]
+        self._default_user_projections = ['email']
 
         ## node schema
         # All the values from column_order must present in additional info dict
         # Note: final schema will contain details for only the fields present in column order
         self._schema_projections = {
-            "column_order":
-            ["id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"],
-            "additional_info": {
-                "id": {
-                    "is_display": True
+            'column_order':
+            ['id', 'label', 'node_type', 'ctime', 'mtime', 'uuid', 'user_id', 'user_email', 'attributes', 'extras'],
+            'additional_info': {
+                'id': {
+                    'is_display': True
                 },
-                "label": {
-                    "is_display": False
+                'label': {
+                    'is_display': False
                 },
-                "node_type": {
-                    "is_display": True
+                'node_type': {
+                    'is_display': True
                 },
-                "ctime": {
-                    "is_display": True
+                'ctime': {
+                    'is_display': True
                 },
-                "mtime": {
-                    "is_display": True
+                'mtime': {
+                    'is_display': True
                 },
-                "uuid": {
-                    "is_display": False
+                'uuid': {
+                    'is_display': False
                 },
-                "user_id": {
-                    "is_display": False
+                'user_id': {
+                    'is_display': False
                 },
-                "user_email": {
-                    "is_display": True
+                'user_email': {
+                    'is_display': True
                 },
-                "attributes": {
-                    "is_display": False
+                'attributes': {
+                    'is_display': False
                 },
-                "extras": {
-                    "is_display": False
+                'extras': {
+                    'is_display': False
                 }
             }
         }
@@ -148,18 +148,18 @@ class NodeTranslator(BaseTranslator):
         :param query_type:(string) the value assigned to either variable.
         """
 
-        if query_type == "default":
+        if query_type == 'default':
             pass
-        elif query_type == "inputs":
+        elif query_type == 'inputs':
             self._result_type = 'with_outgoing'
-        elif query_type == "outputs":
-            self._result_type = "with_incoming"
-        elif query_type == "attributes":
-            self._content_type = "attributes"
+        elif query_type == 'outputs':
+            self._result_type = 'with_incoming'
+        elif query_type == 'attributes':
+            self._content_type = 'attributes'
             self._alist = alist
             self._nalist = nalist
-        elif query_type == "extras":
-            self._content_type = "extras"
+        elif query_type == 'extras':
+            self._content_type = 'extras'
             self._elist = elist
             self._nelist = nelist
         elif query_type == 'visualization':
@@ -168,22 +168,22 @@ class NodeTranslator(BaseTranslator):
         elif query_type == 'download':
             self._content_type = 'download'
             self._downloadformat = downloadformat
-        elif query_type == "retrieved_inputs":
+        elif query_type == 'retrieved_inputs':
             self._content_type = 'retrieved_inputs'
             self._filename = filename
             self._rtype = rtype
-        elif query_type == "retrieved_outputs":
+        elif query_type == 'retrieved_outputs':
             self._content_type = 'retrieved_outputs'
             self._filename = filename
             self._rtype = rtype
         else:
-            raise InputValidationError("invalid result/content value: {}".format(query_type))
+            raise InputValidationError('invalid result/content value: {}'.format(query_type))
 
         # Add input/output relation to the query help
         if self._result_type != self.__label__:
-            self._query_help["path"].append({
-                "entity_type": ("node.Node.", "data.Data."),
-                "tag": self._result_type,
+            self._query_help['path'].append({
+                'entity_type': ('node.Node.', 'data.Data.'),
+                'tag': self._result_type,
                 self._result_type: self.__label__
             })
 
@@ -225,10 +225,10 @@ class NodeTranslator(BaseTranslator):
         """
 
         ## Check the compatibility of query_type and id
-        if query_type != "default" and id is None:
+        if query_type != 'default' and id is None:
             raise ValidationError(
-                "non default result/content can only be "
-                "applied to a specific node (specify an id)"
+                'non default result/content can only be '
+                'applied to a specific node (specify an id)'
             )
 
         ## Set the type of query
@@ -267,7 +267,7 @@ class NodeTranslator(BaseTranslator):
         running the query
         """
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been initialized.")
+            raise InvalidOperation('query builder object has not been initialized.')
 
         # Count the total number of rows returned by the query (if not already done)
         if self._total_count is None:
@@ -281,7 +281,7 @@ class NodeTranslator(BaseTranslator):
         node = self.qbobj.first()[1]
 
         # content/attributes
-        if self._content_type == "attributes":
+        if self._content_type == 'attributes':
             # Get all attrs if nalist and alist are both None
             if self._alist is None and self._nalist is None:
                 data = {self._content_type: node.attributes}
@@ -300,9 +300,9 @@ class NodeTranslator(BaseTranslator):
                         attrs[key] = node.get_attribute(key)
                 data = {self._content_type: attrs}
             else:
-                raise RestValidationError("you cannot specify both alist and nalist")
+                raise RestValidationError('you cannot specify both alist and nalist')
         # content/extras
-        elif self._content_type == "extras":
+        elif self._content_type == 'extras':
 
             # Get all extras if nelist and elist are both None
             if self._elist is None and self._nelist is None:
@@ -325,7 +325,7 @@ class NodeTranslator(BaseTranslator):
                 data = {self._content_type: extras}
 
             else:
-                raise RestValidationError("you cannot specify both elist and nelist")
+                raise RestValidationError('you cannot specify both elist and nelist')
 
         # Data needed for visualization appropriately serialized (this
         # actually works only for data derived classes)
@@ -352,7 +352,7 @@ class NodeTranslator(BaseTranslator):
             data = {self._content_type: self.get_retrieved_outputs(node, self._filename, self._rtype)}
 
         else:
-            raise ValidationError("invalid content type")
+            raise ValidationError('invalid content type')
 
         return data
 
@@ -412,7 +412,7 @@ class NodeTranslator(BaseTranslator):
                 full_path = full_path_base + '.py'
                 # I could use load_module but it takes lots of arguments,
                 # then I use load_source
-                app_module = imp.load_source("rst" + name, full_path)
+                app_module = imp.load_source('rst' + name, full_path)
 
             # Go through the content of the module
             if not is_pkg:
@@ -566,14 +566,14 @@ class NodeTranslator(BaseTranslator):
             :return: shape of the node displayed in tree
             """
 
-            node_type = ntype.split(".")[0]
-            if node_type == "process":
-                shape = "square"
-            elif ntype.split(".")[1] == "code":
-                shape = "triangle"
+            node_type = ntype.split('.')[0]
+            if node_type == 'process':
+                shape = 'square'
+            elif ntype.split('.')[1] == 'code':
+                shape = 'triangle'
             else:
                 # default and data node shape
-                shape = "dot"
+                shape = 'dot'
 
             return shape
 
@@ -595,7 +595,7 @@ class NodeTranslator(BaseTranslator):
         self._check_id_validity(uuid_pattern)
 
         qb_obj = QueryBuilder()
-        qb_obj.append(Node, tag="main", project=["*"], filters=self._id_filter)
+        qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
 
         nodes = []
         edges = []
@@ -611,22 +611,22 @@ class NodeTranslator(BaseTranslator):
             description = get_node_description(main_node)
 
             nodes.append({
-                "id": node_count,
-                "nodeid": pk,
-                "nodeuuid": uuid,
-                "nodetype": nodetype,
-                "nodelabel": nodelabel,
-                "displaytype": display_type,
-                "group": "main_node",
-                "description": description,
-                "shape": get_node_shape(nodetype)
+                'id': node_count,
+                'nodeid': pk,
+                'nodeuuid': uuid,
+                'nodetype': nodetype,
+                'nodelabel': nodelabel,
+                'displaytype': display_type,
+                'group': 'main_node',
+                'description': description,
+                'shape': get_node_shape(nodetype)
             })
         node_count += 1
 
         # get all inputs
         qb_obj = QueryBuilder()
-        qb_obj.append(Node, tag="main", project=['*'], filters=self._id_filter)
-        qb_obj.append(Node, tag="in", project=['*'], edge_project=['label', 'type'], with_outgoing='main')
+        qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
+        qb_obj.append(Node, tag='in', project=['*'], edge_project=['label', 'type'], with_outgoing='main')
         if tree_in_limit is not None:
             qb_obj.limit(tree_in_limit)
 
@@ -650,35 +650,35 @@ class NodeTranslator(BaseTranslator):
                     description = get_node_description(node)
 
                     nodes.append({
-                        "id": node_count,
-                        "nodeid": pk,
-                        "nodeuuid": uuid,
-                        "nodetype": nodetype,
-                        "nodelabel": nodelabel,
-                        "displaytype": display_type,
-                        "group": "inputs",
-                        "description": description,
-                        "linklabel": linklabel,
-                        "linktype": linktype,
-                        "shape": get_node_shape(nodetype)
+                        'id': node_count,
+                        'nodeid': pk,
+                        'nodeuuid': uuid,
+                        'nodetype': nodetype,
+                        'nodelabel': nodelabel,
+                        'displaytype': display_type,
+                        'group': 'inputs',
+                        'description': description,
+                        'linklabel': linklabel,
+                        'linktype': linktype,
+                        'shape': get_node_shape(nodetype)
                     })
                     node_count += 1
 
                 from_edge = input_node_pks[pk]
                 edges.append({
-                    "from": from_edge,
-                    "to": 0,
-                    "arrows": "to",
-                    "color": {
-                        "inherit": 'from'
+                    'from': from_edge,
+                    'to': 0,
+                    'arrows': 'to',
+                    'color': {
+                        'inherit': 'from'
                     },
-                    "linktype": linktype,
+                    'linktype': linktype,
                 })
 
         # get all outputs
         qb_obj = QueryBuilder()
-        qb_obj.append(Node, tag="main", project=['*'], filters=self._id_filter)
-        qb_obj.append(Node, tag="out", project=['*'], edge_project=['label', 'type'], with_incoming='main')
+        qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
+        qb_obj.append(Node, tag='out', project=['*'], edge_project=['label', 'type'], with_incoming='main')
         if tree_out_limit is not None:
             qb_obj.limit(tree_out_limit)
 
@@ -702,47 +702,47 @@ class NodeTranslator(BaseTranslator):
                     description = get_node_description(node)
 
                     nodes.append({
-                        "id": node_count,
-                        "nodeid": pk,
-                        "nodeuuid": uuid,
-                        "nodetype": nodetype,
-                        "nodelabel": nodelabel,
-                        "displaytype": display_type,
-                        "group": "outputs",
-                        "description": description,
-                        "linklabel": linklabel,
-                        "linktype": linktype,
-                        "shape": get_node_shape(nodetype)
+                        'id': node_count,
+                        'nodeid': pk,
+                        'nodeuuid': uuid,
+                        'nodetype': nodetype,
+                        'nodelabel': nodelabel,
+                        'displaytype': display_type,
+                        'group': 'outputs',
+                        'description': description,
+                        'linklabel': linklabel,
+                        'linktype': linktype,
+                        'shape': get_node_shape(nodetype)
                     })
                     node_count += 1
 
                 to_edge = output_node_pks[pk]
                 edges.append({
-                    "from": 0,
-                    "to": to_edge,
-                    "arrows": "to",
-                    "color": {
-                        "inherit": 'to'
+                    'from': 0,
+                    'to': to_edge,
+                    'arrows': 'to',
+                    'color': {
+                        'inherit': 'to'
                     },
-                    "linktype": linktype
+                    'linktype': linktype
                 })
 
         # count total no of nodes
         builder = QueryBuilder()
-        builder.append(Node, tag="main", project=['id'], filters=self._id_filter)
-        builder.append(Node, tag="in", project=['id'], with_outgoing='main')
+        builder.append(Node, tag='main', project=['id'], filters=self._id_filter)
+        builder.append(Node, tag='in', project=['id'], with_outgoing='main')
         total_no_of_incomings = builder.count()
 
         builder = QueryBuilder()
-        builder.append(Node, tag="main", project=['id'], filters=self._id_filter)
-        builder.append(Node, tag="out", project=['id'], with_incoming='main')
+        builder.append(Node, tag='main', project=['id'], filters=self._id_filter)
+        builder.append(Node, tag='out', project=['id'], with_incoming='main')
         total_no_of_outgoings = builder.count()
 
         return {
-            "nodes": nodes,
-            "edges": edges,
-            "total_no_of_incomings": total_no_of_incomings,
-            "total_no_of_outgoings": total_no_of_outgoings,
-            "sent_no_of_incomings": sent_no_of_incomings,
-            "sent_no_of_outgoings": sent_no_of_outgoings
+            'nodes': nodes,
+            'edges': edges,
+            'total_no_of_incomings': total_no_of_incomings,
+            'total_no_of_outgoings': total_no_of_outgoings,
+            'sent_no_of_incomings': sent_no_of_incomings,
+            'sent_no_of_outgoings': sent_no_of_outgoings
         }

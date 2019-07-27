@@ -179,11 +179,15 @@ class PluginParamType(click.ParamType):
             matching_groups = [group for group, entry_point in self._entry_points if entry_point.name == name]
 
             if len(matching_groups) > 1:
-                raise ValueError("entry point '{}' matches more than one valid entry point group [{}], "
-                                 "please specify an explicit group prefix".format(name, ' '.join(matching_groups)))
+                raise ValueError(
+                    "entry point '{}' matches more than one valid entry point group [{}], "
+                    "please specify an explicit group prefix".format(name, ' '.join(matching_groups))
+                )
             elif not matching_groups:
-                raise ValueError("entry point '{}' is not valid for any of the allowed "
-                                 "entry point groups: {}".format(name, ' '.join(self.groups)))
+                raise ValueError(
+                    "entry point '{}' is not valid for any of the allowed "
+                    "entry point groups: {}".format(name, ' '.join(self.groups))
+                )
             else:
                 group = matching_groups[0]
 

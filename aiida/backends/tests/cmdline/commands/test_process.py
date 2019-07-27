@@ -21,8 +21,8 @@ from concurrent.futures import Future
 import six
 from click.testing import CliRunner
 from tornado import gen
-import kiwipy
 import plumpy
+import kiwipy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils import processes as test_processes
@@ -50,7 +50,8 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         profile = get_config().current_profile
         self.daemon_client = DaemonClient(profile)
         self.daemon_pid = subprocess.Popen(
-            self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout).pid
+            self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout
+        ).pid
         self.runner = get_manager().create_runner(rmq_submit=True)
         self.cli_runner = CliRunner()
 
@@ -94,7 +95,8 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         # future to True. This will be our signal that we can start testing
         waiting_future = Future()
         filters = kiwipy.BroadcastFilter(
-            lambda *args, **kwargs: waiting_future.set_result(True), sender=calc.pk, subject='state_changed.*.waiting')
+            lambda *args, **kwargs: waiting_future.set_result(True), sender=calc.pk, subject='state_changed.*.waiting'
+        )
         self.runner.communicator.add_broadcast_subscriber(filters)
 
         # The process may already have been picked up by the daemon and put in the waiting state, before the subscriber
@@ -333,8 +335,9 @@ class TestVerdiProcess(AiidaTestCase):
         # Max depth should limit nesting level
         for flag in ['-m', '--max-depth']:
             for flag_value in [1, 2]:
-                result = self.cli_runner.invoke(cmd_process.process_report,
-                                                [str(grandparent.pk), flag, str(flag_value)])
+                result = self.cli_runner.invoke(
+                    cmd_process.process_report, [str(grandparent.pk), flag, str(flag_value)]
+                )
                 self.assertIsNone(result.exception, result.output)
                 self.assertEqual(len(get_result_lines(result)), flag_value)
 

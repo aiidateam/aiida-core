@@ -43,4 +43,5 @@ class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):
         if link_type is LinkType.RETURN and not target.is_stored:
             raise ValueError(
                 'trying to return an unstored Data node from a @workfunction, however, @workfunctions cannot create '
-                'data. You probably want to use a @calcfunction instead.')
+                'data. You probably want to use a @calcfunction instead.'
+            )

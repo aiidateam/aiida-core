@@ -44,8 +44,10 @@ def write_database_integrity_violation(results, headers, reason_message, action_
         echo.echo('')
         echo.echo_warning(
             '\n{}\nFound one or multiple records that violate the integrity of the database\nViolation reason: {}\n'
-            'Performed action: {}\nViolators written to: {}\n{}\n'.format(WARNING_BORDER, reason_message,
-                                                                          action_message, handle.name, WARNING_BORDER))
+            'Performed action: {}\nViolators written to: {}\n{}\n'.format(
+                WARNING_BORDER, reason_message, action_message, handle.name, WARNING_BORDER
+            )
+        )
 
         handle.write('# {}\n'.format(datetime.utcnow().isoformat()))
         handle.write('# Violation reason: {}\n'.format(reason_message))

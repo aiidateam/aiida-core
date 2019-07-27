@@ -78,9 +78,11 @@ def group_delete(group, clear, force):
     label = group.label
 
     if group.count() > 0 and not clear:
-        echo.echo_critical(
-            ('Group<{}> contains {} nodes. Pass `--clear` if you want to empty it before deleting the group'.format(
-                label, group.count())))
+        echo.echo_critical((
+            'Group<{}> contains {} nodes. Pass `--clear` if you want to empty it before deleting the group'.format(
+                label, group.count()
+            )
+        ))
 
     if not force:
         click.confirm('Are you sure to delete Group<{}>?'.format(label), abort=True)
@@ -129,7 +131,8 @@ def group_description(group, description):
     '--uuid',
     is_flag=True,
     default=False,
-    help="Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs.")
+    help="Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs."
+)
 @arguments.GROUP()
 @with_dbenv()
 def group_show(group, raw, uuid):
@@ -191,7 +194,8 @@ def user_defined_group():
     '--user',
     'user_email',
     type=click.STRING,
-    help="Add a filter to show only groups belonging to a specific user")
+    help="Add a filter to show only groups belonging to a specific user"
+)
 @click.option('-a', '--all-types', is_flag=True, default=False, help="Show groups of all types")
 @click.option(
     '-t',
@@ -200,9 +204,11 @@ def user_defined_group():
     type=types.LazyChoice(valid_group_type_strings),
     default=user_defined_group,
     help="Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to "
-    "specify aiida-internal type")
+    "specify aiida-internal type"
+)
 @click.option(
-    '-d', '--with-description', 'with_description', is_flag=True, default=False, help="Show also the group description")
+    '-d', '--with-description', 'with_description', is_flag=True, default=False, help="Show also the group description"
+)
 @click.option('-C', '--count', is_flag=True, default=False, help="Show also the number of nodes in the group")
 @options.PAST_DAYS(help="add a filter to show only groups created in the past N days", default=None)
 @click.option(
@@ -210,23 +216,28 @@ def user_defined_group():
     '--startswith',
     type=click.STRING,
     default=None,
-    help="add a filter to show only groups for which the name begins with STRING")
+    help="add a filter to show only groups for which the name begins with STRING"
+)
 @click.option(
     '-e',
     '--endswith',
     type=click.STRING,
     default=None,
-    help="add a filter to show only groups for which the name ends with STRING")
+    help="add a filter to show only groups for which the name ends with STRING"
+)
 @click.option(
     '-c',
     '--contains',
     type=click.STRING,
     default=None,
-    help="add a filter to show only groups for which the name contains STRING")
+    help="add a filter to show only groups for which the name contains STRING"
+)
 @options.NODE(help="Show only the groups that contain the node")
 @with_dbenv()
-def group_list(all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith,
-               contains, node):
+def group_list(
+    all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith, contains,
+    node
+):
     """Show a list of groups."""
     # pylint: disable=too-many-branches,too-many-arguments, too-many-locals
     import datetime

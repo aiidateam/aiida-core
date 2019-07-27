@@ -43,7 +43,8 @@ def verify_uuid_uniqueness(table):
     if duplicates:
         raise exceptions.IntegrityError(
             'Table {table:} contains rows with duplicate UUIDS: run '
-            '`verdi database integrity detect-duplicate-uuid -t {table:}` to address the problem'.format(table=table))
+            '`verdi database integrity detect-duplicate-uuid -t {table:}` to address the problem'.format(table=table)
+        )
 
 
 def apply_new_uuid_mapping(table, mapping):

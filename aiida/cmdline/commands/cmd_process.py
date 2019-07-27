@@ -32,7 +32,8 @@ def verdi_process():
 
 @verdi_process.command('list')
 @options.PROJECT(
-    type=click.Choice(CalculationQueryBuilder.valid_projections), default=CalculationQueryBuilder.default_projections)
+    type=click.Choice(CalculationQueryBuilder.valid_projections), default=CalculationQueryBuilder.default_projections
+)
 @options.ORDER_BY()
 @options.ORDER_DIRECTION()
 @options.GROUP(help='Only include entries that are a member of this group.')
@@ -45,8 +46,10 @@ def verdi_process():
 @options.LIMIT()
 @options.RAW()
 @decorators.with_dbenv()
-def process_list(all_entries, group, process_state, process_label, exit_status, failed, past_days, limit, project, raw,
-                 order_by, order_dir):
+def process_list(
+    all_entries, group, process_state, process_label, exit_status, failed, past_days, limit, project, raw, order_by,
+    order_dir
+):
     """Show a list of processes that are still running."""
     # pylint: disable=too-many-locals
     from tabulate import tabulate
@@ -60,7 +63,8 @@ def process_list(all_entries, group, process_state, process_label, exit_status, 
     builder = CalculationQueryBuilder()
     filters = builder.get_filters(all_entries, process_state, process_label, exit_status, failed)
     query_set = builder.get_query_set(
-        relationships=relationships, filters=filters, order_by={order_by: order_dir}, past_days=past_days, limit=limit)
+        relationships=relationships, filters=filters, order_by={order_by: order_dir}, past_days=past_days, limit=limit
+    )
     projected = builder.get_projected(query_set, projections=project)
 
     headers = projected.pop(0)
@@ -127,9 +131,11 @@ def process_call_root(processes):
     '--levelname',
     type=click.Choice(LOG_LEVELS.keys()),
     default='REPORT',
-    help='Filter the results by name of the log level.')
+    help='Filter the results by name of the log level.'
+)
 @click.option(
-    '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.')
+    '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
+)
 @decorators.with_dbenv()
 def process_report(processes, levelname, indent_size, max_depth):
     """Show the log report for one or multiple processes."""
@@ -164,7 +170,8 @@ def process_status(processes):
 @click.option(
     '--wait/--no-wait',
     default=False,
-    help="Wait for the action to be completed otherwise return as soon as it's scheduled.")
+    help="Wait for the action to be completed otherwise return as soon as it's scheduled."
+)
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout, wait):
@@ -195,7 +202,8 @@ def process_kill(processes, timeout, wait):
 @click.option(
     '--wait/--no-wait',
     default=False,
-    help="Wait for the action to be completed otherwise return as soon as it's scheduled.")
+    help="Wait for the action to be completed otherwise return as soon as it's scheduled."
+)
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, timeout, wait):
@@ -226,7 +234,8 @@ def process_pause(processes, timeout, wait):
 @click.option(
     '--wait/--no-wait',
     default=False,
-    help="Wait for the action to be completed otherwise return as soon as it's scheduled.")
+    help="Wait for the action to be completed otherwise return as soon as it's scheduled."
+)
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, timeout, wait):
@@ -334,8 +343,9 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
                     echo.echo_success('scheduled {} Process<{}>'.format(infinitive, process.pk))
                     scheduled[result] = process
                 else:
-                    echo.echo_error('got unexpected response when {} Process<{}>: {}'.format(
-                        present, process.pk, result))
+                    echo.echo_error(
+                        'got unexpected response when {} Process<{}>: {}'.format(present, process.pk, result)
+                    )
 
         if wait and scheduled:
             echo.echo_info('waiting for process(es) {}'.format(','.join([str(proc.pk) for proc in scheduled.values()])))
@@ -353,8 +363,9 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
                     elif result is False:
                         echo.echo_error('problem {} Process<{}>'.format(present, process.pk))
                     else:
-                        echo.echo_error('got unexpected response when {} Process<{}>: {}'.format(
-                            present, process.pk, result))
+                        echo.echo_error(
+                            'got unexpected response when {} Process<{}>: {}'.format(present, process.pk, result)
+                        )
 
     except futures.TimeoutError:
         echo.echo_error('timed out trying to {} processes {}'.format(infinitive, futures_map.values()))

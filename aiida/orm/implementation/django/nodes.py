@@ -37,16 +37,18 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
     MODEL_CLASS = models.DbNode
     LINK_CLASS = models.DbLink
 
-    def __init__(self,
-                 backend,
-                 node_type,
-                 user,
-                 computer=None,
-                 process_type=None,
-                 label='',
-                 description='',
-                 ctime=None,
-                 mtime=None):
+    def __init__(
+        self,
+        backend,
+        node_type,
+        user,
+        computer=None,
+        process_type=None,
+        label='',
+        description='',
+        ctime=None,
+        mtime=None
+    ):
         """Construct a new `BackendNode` instance wrapping a new `DbNode` instance.
 
         :param backend: the backend

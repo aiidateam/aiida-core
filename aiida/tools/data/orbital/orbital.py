@@ -135,7 +135,8 @@ class Orbital(object):  # pylint: disable=useless-object-inheritance
         if entry_point is None:
             raise ValidationError(
                 "Unable to detect entry point for current class {}, maybe you did not register an entry point for it?".
-                format(self.__class__))
+                format(self.__class__)
+            )
 
         validated_dict['_orbital_type'] = entry_point.name
 

@@ -124,7 +124,8 @@ def build_tree(node, node_label=None, show_pk=True, max_depth=1, follow_links_of
 
         for child in sorted(outputs, key=lambda node: node.ctime):
             relatives.append(
-                build_tree(child, node_label, show_pk, max_depth, follow_links_of_type, descend, depth + 1))
+                build_tree(child, node_label, show_pk, max_depth, follow_links_of_type, descend, depth + 1)
+            )
 
         if relatives:
             out_values.append('({})'.format(', '.join(relatives)))

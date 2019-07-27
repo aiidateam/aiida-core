@@ -78,16 +78,20 @@ def validate_list_of_string_tuples(val, tuple_length):
     """
     from aiida.common.exceptions import ValidationError
 
-    err_msg = ("the value must be a list (or tuple) "
-               "of length-N list (or tuples), whose elements are strings; "
-               "N={}".format(tuple_length))
+    err_msg = (
+        "the value must be a list (or tuple) "
+        "of length-N list (or tuples), whose elements are strings; "
+        "N={}".format(tuple_length)
+    )
 
     if not isinstance(val, (list, tuple)):
         raise ValidationError(err_msg)
 
     for element in val:
-        if (not isinstance(element, (list, tuple)) or (len(element) != tuple_length) or
-                not all(isinstance(s, six.string_types) for s in element)):
+        if (
+            not isinstance(element, (list, tuple)) or (len(element) != tuple_length) or
+            not all(isinstance(s, six.string_types) for s in element)
+        ):
             raise ValidationError(err_msg)
 
     return True
@@ -274,19 +278,26 @@ def are_dir_trees_equal(dir1, dir2):
     # Directory comparison
     dirs_cmp = filecmp.dircmp(dir1, dir2)
     if dirs_cmp.left_only or dirs_cmp.right_only or dirs_cmp.funny_files:
-        return (False, "Left directory: {}, right directory: {}, files only "
-                "in left directory: {}, files only in right directory: "
-                "{}, not comparable files: {}".format(dir1, dir2, dirs_cmp.left_only, dirs_cmp.right_only,
-                                                      dirs_cmp.funny_files))
+        return (
+            False, "Left directory: {}, right directory: {}, files only "
+            "in left directory: {}, files only in right directory: "
+            "{}, not comparable files: {}".format(
+                dir1, dir2, dirs_cmp.left_only, dirs_cmp.right_only, dirs_cmp.funny_files
+            )
+        )
 
     # If the directories contain the same files, compare the common files
     (_, mismatch, errors) = filecmp.cmpfiles(dir1, dir2, dirs_cmp.common_files, shallow=False)
     if mismatch:
-        return (False, "The following files in the directories {} and {} "
-                "don't match: {}".format(dir1, dir2, mismatch))
+        return (
+            False, "The following files in the directories {} and {} "
+            "don't match: {}".format(dir1, dir2, mismatch)
+        )
     if errors:
-        return (False, "The following files in the directories {} and {} "
-                "aren't regular: {}".format(dir1, dir2, errors))
+        return (
+            False, "The following files in the directories {} and {} "
+            "aren't regular: {}".format(dir1, dir2, errors)
+        )
 
     for common_dir in dirs_cmp.common_dirs:
         new_dir1 = os.path.join(dir1, common_dir)
@@ -450,8 +461,9 @@ class Prettifier(object):  # pylint: disable=useless-object-inheritance
         try:
             self._prettifier_f = self.prettifiers[format]  # pylint: disable=unsubscriptable-object
         except KeyError:
-            raise ValueError("Unknown prettifier format {}; valid formats: {}".format(
-                format, ", ".join(self.get_prettifiers())))
+            raise ValueError(
+                "Unknown prettifier format {}; valid formats: {}".format(format, ", ".join(self.get_prettifiers()))
+            )
 
     def prettify(self, label):
         """

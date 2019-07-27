@@ -54,12 +54,14 @@ class Transport(object):
     _valid_auth_params = None
     _MAGIC_CHECK = re.compile('[*?[]')
     _valid_auth_options = []
-    _common_auth_options = [('safe_interval', {
-        'type': float,
-        'prompt': 'Connection cooldown time (s)',
-        'help': 'Minimum time interval in seconds between consecutive connection openings',
-        'callback': validate_positive_number
-    })]
+    _common_auth_options = [(
+        'safe_interval', {
+            'type': float,
+            'prompt': 'Connection cooldown time (s)',
+            'help': 'Minimum time interval in seconds between consecutive connection openings',
+            'callback': validate_positive_number
+        }
+    )]
 
     def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
         """
@@ -675,8 +677,10 @@ class Transport(object):
                 self.logger.warning("There was nonempty stderr in the whoami command: {}".format(stderr))
             return username.strip()
 
-        self.logger.error("Problem executing whoami. Exit code: {}, stdout: '{}', "
-                          "stderr: '{}'".format(retval, username, stderr))
+        self.logger.error(
+            "Problem executing whoami. Exit code: {}, stdout: '{}', "
+            "stderr: '{}'".format(retval, username, stderr)
+        )
         raise IOError("Error while executing whoami. Exit code: {}".format(retval))
 
     def path_exists(self, path):

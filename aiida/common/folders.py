@@ -60,8 +60,10 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
 
             # check that it is a subfolder
             if not os.path.commonprefix([abspath, folder_limit]) == folder_limit:
-                raise ValueError("The absolute path for this folder is not within the "
-                                 "folder_limit. abspath={}, folder_limit={}.".format(abspath, folder_limit))
+                raise ValueError(
+                    "The absolute path for this folder is not within the "
+                    "folder_limit. abspath={}, folder_limit={}.".format(abspath, folder_limit)
+                )
 
         self._abspath = abspath
         self._folder_limit = folder_limit
@@ -532,8 +534,10 @@ class RepositoryFolder(Folder):
         Pass the uuid as a string.
         """
         if section not in VALID_SECTIONS:
-            retstr = ("Repository section '{}' not allowed. "
-                      "Valid sections are: {}".format(section, ",".join(VALID_SECTIONS)))
+            retstr = (
+                "Repository section '{}' not allowed. "
+                "Valid sections are: {}".format(section, ",".join(VALID_SECTIONS))
+            )
             raise ValueError(retstr)
         self._section = section
         self._uuid = uuid
@@ -552,7 +556,8 @@ class RepositoryFolder(Folder):
             get_repository_folder('repository'), six.text_type(section),
             six.text_type(uuid)[:2],
             six.text_type(uuid)[2:4],
-            six.text_type(uuid)[4:])
+            six.text_type(uuid)[4:]
+        )
         dest = os.path.join(entity_dir, six.text_type(subfolder))
 
         # Internal variable of this class

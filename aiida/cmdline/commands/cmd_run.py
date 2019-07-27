@@ -43,19 +43,22 @@ def update_environment(new_argv):
 @click.option('-n', '--group-name', type=click.STRING, required=False, help='Specify the name of the auto group')
 @click.option('-e', '--exclude', cls=MultipleValueOption, default=[], help='Exclude these classes from auto grouping')
 @click.option(
-    '-i', '--include', cls=MultipleValueOption, default=['all'], help='Include these classes from auto grouping')
+    '-i', '--include', cls=MultipleValueOption, default=['all'], help='Include these classes from auto grouping'
+)
 @click.option(
     '-E',
     '--excludesubclasses',
     cls=MultipleValueOption,
     default=[],
-    help='Exclude these classes and their sub classes from auto grouping')
+    help='Exclude these classes and their sub classes from auto grouping'
+)
 @click.option(
     '-I',
     '--includesubclasses',
     cls=MultipleValueOption,
     default=[],
-    help='Include these classes and their sub classes from auto grouping')
+    help='Include these classes and their sub classes from auto grouping'
+)
 @decorators.with_dbenv()
 def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, include, includesubclasses):
     # pylint: disable=too-many-arguments,exec-used

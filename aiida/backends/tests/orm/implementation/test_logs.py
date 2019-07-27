@@ -36,7 +36,8 @@ class TestBackendLog(AiidaTestCase):
     def setUp(self):
         super(TestBackendLog, self).setUp()
         self.node = self.backend.nodes.create(
-            node_type='', user=self.user, computer=self.computer, label='label', description='description').store()
+            node_type='', user=self.user, computer=self.computer, label='label', description='description'
+        ).store()
         self.log_message = 'log message'
 
     def create_log(self, **kwargs):
@@ -50,7 +51,8 @@ class TestBackendLog(AiidaTestCase):
             levelname=logging.getLevelName(LOG_LEVEL_REPORT),
             dbnode_id=dbnode_id,
             message=self.log_message,
-            metadata={'content': 'test'})
+            metadata={'content': 'test'}
+        )
 
     def test_creation(self):
         """Test creation of a BackendLog and all its properties."""
@@ -150,7 +152,8 @@ class TestBackendLog(AiidaTestCase):
             len(orm.Log.objects.all()),
             count,
             msg="No Logs should have been deleted. There should still be {} Log(s), "
-            "however {} Log(s) was/were found.".format(count, len(orm.Log.objects.all())))
+            "however {} Log(s) was/were found.".format(count, len(orm.Log.objects.all()))
+        )
 
     def test_delete_many_ids(self):
         """Test `delete_many` method filtering on both `id` and `uuid`"""
@@ -168,7 +171,8 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(
             count_logs_found,
             len(log_uuids),
-            msg="There should be {} Logs, instead {} Log(s) was/were found".format(len(log_uuids), count_logs_found))
+            msg="There should be {} Logs, instead {} Log(s) was/were found".format(len(log_uuids), count_logs_found)
+        )
 
         # Delete last two logs (log2, log3)
         filters = {'or': [{'id': log2.id}, {'uuid': str(log3.uuid)}]}
@@ -183,7 +187,8 @@ class TestBackendLog(AiidaTestCase):
         """Test `delete_many` method filtering on `dbnode_id`"""
         # Create logs and separate node
         calc = self.backend.nodes.create(
-            node_type='', user=self.user, computer=self.computer, label='label', description='description').store()
+            node_type='', user=self.user, computer=self.computer, label='label', description='description'
+        ).store()
         log1 = self.create_log(dbnode_id=calc.id)
         log2 = self.create_log()
         log3 = self.create_log()
@@ -197,7 +202,8 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(
             count_logs_found,
             len(log_uuids),
-            msg="There should be {} Logs, instead {} Log(s) was/were found".format(len(log_uuids), count_logs_found))
+            msg="There should be {} Logs, instead {} Log(s) was/were found".format(len(log_uuids), count_logs_found)
+        )
 
         # Delete logs for self.node
         filters = {'dbnode_id': self.node.id}
@@ -278,7 +284,8 @@ class TestBackendLog(AiidaTestCase):
         deleted_entities = self.backend.logs.delete_many(filters={'id': id_})
         self.assertEqual(
             deleted_entities, [],
-            msg="No entities should have been deleted, since Log id {} does not exist".format(id_))
+            msg="No entities should have been deleted, since Log id {} does not exist".format(id_)
+        )
 
         # Try to delete non-existing Log - using delete
         # NotExistent should be raised, since no entities are found
@@ -317,7 +324,8 @@ class TestBackendLog(AiidaTestCase):
             log_count_after,
             log_count_before,
             msg="The number of logs changed after performing `delete_many`, "
-            "while filtering for a non-existing 'dbnode_id'")
+            "while filtering for a non-existing 'dbnode_id'"
+        )
 
     def test_delete_many_same_twice(self):
         """Test no exception is raised when entity is filtered by both `id` and `uuid`"""

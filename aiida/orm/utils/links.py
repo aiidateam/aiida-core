@@ -114,6 +114,7 @@ def validate_link(source, target, link_type, link_label):
     :raise TypeError: if `source` or `target` is not a Node instance, or `link_type` is not a `LinkType` enum
     :raise ValueError: if the proposed link is invalid
     """
+    # yapf: disable
     from aiida.common.links import LinkType, validate_link_label
     from aiida.orm import Node, Data, CalculationNode, WorkflowNode
 
@@ -300,7 +301,8 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
                     matching_entry = entry.node
                 else:
                     raise exceptions.MultipleObjectsError(
-                        'more than one neighbor with the label {} found'.format(label))
+                        'more than one neighbor with the label {} found'.format(label)
+                    )
 
         if matching_entry is None:
             raise exceptions.NotExistent('no neighbor with the label {} found'.format(label))

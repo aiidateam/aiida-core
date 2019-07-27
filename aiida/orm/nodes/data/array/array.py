@@ -158,8 +158,10 @@ class ArrayData(Data):
 
         # Check if the name is valid
         if not name or re.sub('[0-9a-zA-Z_]', '', name):
-            raise ValueError("The name assigned to the array ({}) is not valid,"
-                             "it can only contain digits, letters and underscores")
+            raise ValueError(
+                "The name assigned to the array ({}) is not valid,"
+                "it can only contain digits, letters and underscores"
+            )
 
         # Write the array to a temporary file, and then add it to the repository of the node
         with tempfile.NamedTemporaryFile() as handle:
@@ -188,6 +190,8 @@ class ArrayData(Data):
         properties = self._arraynames_from_properties()
 
         if set(files) != set(properties):
-            raise ValidationError("Mismatch of files and properties for ArrayData"
-                                  " node (pk= {}): {} vs. {}".format(self.pk, files, properties))
+            raise ValidationError(
+                "Mismatch of files and properties for ArrayData"
+                " node (pk= {}): {} vs. {}".format(self.pk, files, properties)
+            )
         super(ArrayData, self)._validate()

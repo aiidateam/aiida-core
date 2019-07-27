@@ -45,7 +45,8 @@ class TestMigrateV01toV02(AiidaTestCase):
         self.assertEqual(
             metadata_v1.pop('conversion_info')[-1],
             conversion_message,
-            msg="The conversion message after migration is wrong")
+            msg="The conversion message after migration is wrong"
+        )
         metadata_v2.pop('conversion_info')
 
         # Assert changes were performed correctly
@@ -53,6 +54,8 @@ class TestMigrateV01toV02(AiidaTestCase):
         self.assertDictEqual(
             metadata_v1,
             metadata_v2,
-            msg="After migration, metadata.json should equal intended metadata.json from archives")
+            msg="After migration, metadata.json should equal intended metadata.json from archives"
+        )
         self.assertDictEqual(
-            data_v1, data_v2, msg="After migration, data.json should equal intended data.json from archives")
+            data_v1, data_v2, msg="After migration, data.json should equal intended data.json from archives"
+        )

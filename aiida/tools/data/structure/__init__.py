@@ -138,8 +138,10 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # p
             # For each site
             symbols = [elements[num]['symbol'] for num in numbers]
         except KeyError as exc:
-            raise ValueError("You did not pass kind_info, but at least one number "
-                             "is not a valid Z number: {}".format(exc.args[0]))
+            raise ValueError(
+                "You did not pass kind_info, but at least one number "
+                "is not a valid Z number: {}".format(exc.args[0])
+            )
 
         _kind_info = {elements[num]['symbol']: num for num in set(numbers)}
         # Get the default kinds
@@ -208,14 +210,20 @@ def xyz_parser_iterator(xyz_string):
                     raise
                 else:
                     # otherwise we got too less entries
-                    raise TypeError("Number of atom entries ({}) is smaller than the number of atoms ({})".format(
-                        self._catom, self._natoms))
+                    raise TypeError(
+                        "Number of atom entries ({}) is smaller than the number of atoms ({})".format(
+                            self._catom, self._natoms
+                        )
+                    )
 
             self._catom += 1
 
             if self._catom > self._natoms:
-                raise TypeError("Number of atom entries ({}) is larger than the number of atoms ({})".format(
-                    self._catom, self._natoms))
+                raise TypeError(
+                    "Number of atom entries ({}) is larger than the number of atoms ({})".format(
+                        self._catom, self._natoms
+                    )
+                )
 
             return (match.group('sym'), (float(match.group('x')), float(match.group('y')), float(match.group('z'))))
 
@@ -234,7 +242,8 @@ def xyz_parser_iterator(xyz_string):
 (?P<x> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get x
 (?P<y> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get y
 (?P<z> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? )            # Get z
-""", re.X | re.M)
+""", re.X | re.M
+    )
     pos_block_regex = re.compile(
         r"""
                                                             # First line contains an integer
@@ -275,7 +284,8 @@ def xyz_parser_iterator(xyz_string):
         [\n]                                                # line break at the end
     )+
 )                                                           # A positions block should be one or more lines
-                    """, re.X | re.M)
+                    """, re.X | re.M
+    )
 
     for block in pos_block_regex.finditer(xyz_string):
         natoms = int(block.group('natoms'))
@@ -306,8 +316,10 @@ def get_structuredata_from_qetools(qetools_instance):
     try:
         import qe_tools  # pylint: disable=unused-variable,unused-import
     except ImportError:
-        raise ValueError("You have not installed the package qe-tools. "
-                         "You can install it with: pip install qe-tools")
+        raise ValueError(
+            "You have not installed the package qe-tools. "
+            "You can install it with: pip install qe-tools"
+        )
 
     valid_elements_regex = re.compile(
         """
@@ -324,7 +336,8 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     )
     [^a-z]  # Any specification of an element is followed by some number
             # or capital letter or special character.
-""", re.X | re.I)
+""", re.X | re.I
+    )
 
     structure_dict = qetools_instance.get_structure_from_qeinput()
     # instance and set the cell
@@ -333,8 +346,10 @@ Ac | Th | Pa | U  | Np | Pu | Am | Cm | Bk | Cf | Es | Fm | Md | No | Lr | # Act
     structuredata.set_cell(structure_dict['cell'])
 
     #################  KINDS ##########################
-    for mass, name, pseudo in zip(structure_dict['species']['masses'], structure_dict['species']['names'],
-                                  structure_dict['species']['pseudo_file_names']):
+    for mass, name, pseudo in zip(
+        structure_dict['species']['masses'], structure_dict['species']['names'],
+        structure_dict['species']['pseudo_file_names']
+    ):
         try:
             # IMPORTANT: The symbols is parsed from the Pseudo file name
             # Is this the best way??

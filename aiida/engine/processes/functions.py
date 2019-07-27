@@ -301,7 +301,8 @@ class FunctionProcess(Process):
                 Process.define.__name__: classmethod(_define),
                 '_func_args': args,
                 '_node_class': node_class
-            })
+            }
+        )
 
     @classmethod
     def validate_inputs(cls, *args, **kwargs):  # pylint: disable=unused-argument
@@ -434,7 +435,9 @@ class FunctionProcess(Process):
             for name, value in result.items():
                 self.out(name, value)
         else:
-            raise TypeError("Function process returned an output with unsupported type '{}'\n"
-                            "Must be a Data type or a mapping of {{string: Data}}".format(result.__class__))
+            raise TypeError(
+                "Function process returned an output with unsupported type '{}'\n"
+                "Must be a Data type or a mapping of {{string: Data}}".format(result.__class__)
+            )
 
         return ExitCode()

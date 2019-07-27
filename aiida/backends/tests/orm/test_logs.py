@@ -308,12 +308,14 @@ class TestBackendLog(AiidaTestCase):
 
         # Check an error is raised when creating a Log with wrong metadata
         with self.assertRaises(TypeError):
-            Log(now(),
+            Log(
+                now(),
                 'loggername',
                 logging.getLevelName(LOG_LEVEL_REPORT),
                 calc.id,
                 'To keep your balance, you must keep moving',
-                metadata=wrong_metadata_format)
+                metadata=wrong_metadata_format
+            )
 
         # Check no error is raised when creating a Log with dict metadata
         correct_metadata_log = Log(
@@ -322,7 +324,8 @@ class TestBackendLog(AiidaTestCase):
             logging.getLevelName(LOG_LEVEL_REPORT),
             calc.id,
             'To keep your balance, you must keep moving',
-            metadata=correct_metadata_format)
+            metadata=correct_metadata_format
+        )
 
         # Check metadata is correctly created
         self.assertEqual(correct_metadata_log.metadata, correct_metadata_format)
@@ -334,7 +337,8 @@ class TestBackendLog(AiidaTestCase):
             logging.getLevelName(LOG_LEVEL_REPORT),
             calc.id,
             'To keep your balance, you must keep moving',
-            metadata=json_metadata_format)
+            metadata=json_metadata_format
+        )
 
         # Check metadata is correctly created
         self.assertEqual(json_metadata_log.metadata, json_metadata_format)
@@ -346,7 +350,8 @@ class TestBackendLog(AiidaTestCase):
             logging.getLevelName(LOG_LEVEL_REPORT),
             calc.id,
             'To keep your balance, you must keep moving',
-            metadata=None)
+            metadata=None
+        )
 
         # Check metadata is an empty dict for no_metadata_log
         self.assertEqual(no_metadata_log.metadata, {})

@@ -23,5 +23,7 @@ from .nodes import *
 from .querybuilder import *
 from .users import *
 
-__all__ = (authinfos.__all__ + backends.__all__ + comments.__all__ + computers.__all__ + groups.__all__ + logs.__all__ +
-           nodes.__all__ + querybuilder.__all__ + users.__all__)
+__all__ = (
+    authinfos.__all__ + backends.__all__ + comments.__all__ + computers.__all__ + groups.__all__ + logs.__all__ +
+    nodes.__all__ + querybuilder.__all__ + users.__all__
+)

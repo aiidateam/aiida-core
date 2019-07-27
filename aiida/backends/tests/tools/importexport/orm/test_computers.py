@@ -115,8 +115,10 @@ class TestComputer(AiidaTestCase):
         # did not change.
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['name', 'uuid', 'id'])
-        self.assertEqual(builder.count(), 1, "Found {} computers"
-                         "but only one computer should be found.".format(builder.count()))
+        self.assertEqual(
+            builder.count(), 1, "Found {} computers"
+            "but only one computer should be found.".format(builder.count())
+        )
         self.assertEqual(six.text_type(builder.first()[0]), comp_name, "The computer name is not correct.")
         self.assertEqual(six.text_type(builder.first()[1]), comp_uuid, "The computer uuid is not correct.")
         self.assertEqual(builder.first()[2], comp_id, "The computer id is not correct.")
@@ -209,8 +211,10 @@ class TestComputer(AiidaTestCase):
         # did not change.
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['name'])
-        self.assertEqual(builder.count(), 1, "Found {} computers"
-                         "but only one computer should be found.".format(builder.count()))
+        self.assertEqual(
+            builder.count(), 1, "Found {} computers"
+            "but only one computer should be found.".format(builder.count())
+        )
         self.assertEqual(six.text_type(builder.first()[0]), comp1_name, "The computer name is not correct.")
 
     @with_temp_dir
@@ -290,9 +294,11 @@ class TestComputer(AiidaTestCase):
         # Check that there are no calculations
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['*'])
-        self.assertEqual(builder.count(), 0, "There should not be any "
-                         "calculations in the database at "
-                         "this point.")
+        self.assertEqual(
+            builder.count(), 0, "There should not be any "
+            "calculations in the database at "
+            "this point."
+        )
 
         # Import all the calculations
         import_data(filename1, silent=True)
@@ -367,7 +373,8 @@ class TestComputer(AiidaTestCase):
             builder.append(
                 orm.Computer, project=['metadata'], tag="comp", filters={'name': {
                     '!==': self.computer.name
-                }})
+                }}
+            )
             self.assertEqual(builder.count(), 1, "Expected only one computer")
 
             res = builder.dict()[0]

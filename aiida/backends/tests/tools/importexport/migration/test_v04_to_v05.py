@@ -84,16 +84,19 @@ class TestMigrateV04toV05(AiidaTestCase):
         self.assertEqual(
             metadata_v4.pop('conversion_info')[-1],
             conversion_message,
-            msg="The conversion message after migration is wrong")
+            msg="The conversion message after migration is wrong"
+        )
         metadata_v5.pop('conversion_info')
 
         # Assert changes were performed correctly
         self.assertDictEqual(
             metadata_v4,
             metadata_v5,
-            msg="After migration, metadata.json should equal intended metadata.json from archives")
+            msg="After migration, metadata.json should equal intended metadata.json from archives"
+        )
         self.assertDictEqual(
-            data_v4, data_v5, msg="After migration, data.json should equal intended data.json from archives")
+            data_v4, data_v5, msg="After migration, data.json should equal intended data.json from archives"
+        )
 
     def test_migrate_v4_to_v5_complete(self):
         """Test migration for file containing complete v0.4 era possibilities"""
@@ -118,7 +121,8 @@ class TestMigrateV04toV05(AiidaTestCase):
             self.assertNotIn(
                 change,
                 metadata['all_fields_info']['Computer'],
-                msg="'{}' unexpectedly found in metadata.json for Computer".format(change))
+                msg="'{}' unexpectedly found in metadata.json for Computer".format(change)
+            )
         for change in removed_node_attrs:
             # data.json
             for node in data['export_data']['Node'].values():
@@ -127,4 +131,5 @@ class TestMigrateV04toV05(AiidaTestCase):
             self.assertNotIn(
                 change,
                 metadata['all_fields_info']['Node'],
-                msg="'{}' unexpectedly found in metadata.json for Node".format(change))
+                msg="'{}' unexpectedly found in metadata.json for Node".format(change)
+            )

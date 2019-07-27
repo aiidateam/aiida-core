@@ -129,16 +129,18 @@ class NodeTranslator(BaseTranslator):
         self._subclasses = self._get_subclasses()
         self._backend = get_manager().get_backend()
 
-    def set_query_type(self,
-                       query_type,
-                       alist=None,
-                       nalist=None,
-                       elist=None,
-                       nelist=None,
-                       downloadformat=None,
-                       visformat=None,
-                       filename=None,
-                       rtype=None):
+    def set_query_type(
+        self,
+        query_type,
+        alist=None,
+        nalist=None,
+        elist=None,
+        nelist=None,
+        downloadformat=None,
+        visformat=None,
+        filename=None,
+        rtype=None
+    ):
         """
         sets one of the mutually exclusive values for self._result_type and
         self._content_type.
@@ -185,20 +187,22 @@ class NodeTranslator(BaseTranslator):
                 self._result_type: self.__label__
             })
 
-    def set_query(self,
-                  filters=None,
-                  orders=None,
-                  projections=None,
-                  query_type=None,
-                  node_id=None,
-                  alist=None,
-                  nalist=None,
-                  elist=None,
-                  nelist=None,
-                  downloadformat=None,
-                  visformat=None,
-                  filename=None,
-                  rtype=None):
+    def set_query(
+        self,
+        filters=None,
+        orders=None,
+        projections=None,
+        query_type=None,
+        node_id=None,
+        alist=None,
+        nalist=None,
+        elist=None,
+        nelist=None,
+        downloadformat=None,
+        visformat=None,
+        filename=None,
+        rtype=None
+    ):
         """
         Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
@@ -222,8 +226,10 @@ class NodeTranslator(BaseTranslator):
 
         ## Check the compatibility of query_type and id
         if query_type != "default" and id is None:
-            raise ValidationError("non default result/content can only be "
-                                  "applied to a specific node (specify an id)")
+            raise ValidationError(
+                "non default result/content can only be "
+                "applied to a specific node (specify an id)"
+            )
 
         ## Set the type of query
         self.set_query_type(
@@ -235,7 +241,8 @@ class NodeTranslator(BaseTranslator):
             downloadformat=downloadformat,
             visformat=visformat,
             filename=filename,
-            rtype=rtype)
+            rtype=rtype
+        )
 
         ## Define projections
         if self._content_type is not None:

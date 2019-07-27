@@ -113,8 +113,11 @@ class IdentifierParamType(click.ParamType):
                     raise RuntimeError('failed to load the entry point {}: {}'.format(entry_point, exception))
 
                 if not issubclass(sub_class, loader.orm_base_class):
-                    raise RuntimeError('the class {} of entry point {} is not a sub class of {}'.format(
-                        sub_class, entry_point, loader.orm_base_class))
+                    raise RuntimeError(
+                        'the class {} of entry point {} is not a sub class of {}'.format(
+                            sub_class, entry_point, loader.orm_base_class
+                        )
+                    )
                 else:
                     sub_classes.append(sub_class)
 

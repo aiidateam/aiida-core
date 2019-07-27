@@ -47,8 +47,9 @@ class KpointsData(ArrayData):
         """
         try:
             mesh = self.get_kpoints_mesh()
-            return "Kpoints mesh: {}x{}x{} (+{:.1f},{:.1f},{:.1f})".format(mesh[0][0], mesh[0][1], mesh[0][2],
-                                                                           mesh[1][0], mesh[1][1], mesh[1][2])
+            return "Kpoints mesh: {}x{}x{} (+{:.1f},{:.1f},{:.1f})".format(
+                mesh[0][0], mesh[0][1], mesh[0][2], mesh[1][0], mesh[1][1], mesh[1][2]
+            )
         except AttributeError:
             try:
                 return '(Path of {} kpts)'.format(len(self.get_kpoints()))
@@ -196,8 +197,10 @@ class KpointsData(ArrayData):
         from aiida.orm import StructureData
 
         if not isinstance(structuredata, StructureData):
-            raise ValueError("An instance of StructureData should be passed to "
-                             "the KpointsData, found instead {}".format(structuredata.__class__))
+            raise ValueError(
+                "An instance of StructureData should be passed to "
+                "the KpointsData, found instead {}".format(structuredata.__class__)
+            )
         cell = structuredata.cell
         self.set_cell(cell, structuredata.pbc)
 
@@ -357,9 +360,11 @@ class KpointsData(ArrayData):
                 # replace empty list by Gamma point
                 kpoints = numpy.array([[0., 0., 0.]])
             else:
-                raise ValueError("empty kpoints list is valid only in zero dimension"
-                                 "; instead here with have {} dimensions"
-                                 "".format(self._dimension))
+                raise ValueError(
+                    "empty kpoints list is valid only in zero dimension"
+                    "; instead here with have {} dimensions"
+                    "".format(self._dimension)
+                )
 
         if len(kpoints.shape) <= 1:
             # list of scalars is accepted only in the 0D and 1D cases
@@ -373,8 +378,10 @@ class KpointsData(ArrayData):
             raise ValueError("kpoints must be an array of type floats. Found instead {}".format(kpoints.dtype))
 
         if kpoints.shape[1] < self._dimension:
-            raise ValueError("In a system which has {0} dimensions, kpoint need"
-                             "more than {0} coordinates (found instead {1})".format(self._dimension, kpoints.shape[1]))
+            raise ValueError(
+                "In a system which has {0} dimensions, kpoint need"
+                "more than {0} coordinates (found instead {1})".format(self._dimension, kpoints.shape[1])
+            )
 
         if weights is not None:
             weights = numpy.array(weights)
@@ -431,8 +438,10 @@ class KpointsData(ArrayData):
                 fill_values = [fill_values] * (3 - the_kpoints.shape[1])
 
             if len(fill_values) < 3 - the_kpoints.shape[1]:
-                raise ValueError("fill_values should be either a scalar or a "
-                                 "length-{} list".format(3 - the_kpoints.shape[1]))
+                raise ValueError(
+                    "fill_values should be either a scalar or a "
+                    "length-{} list".format(3 - the_kpoints.shape[1])
+                )
             else:
                 tmp_kpoints = numpy.zeros((the_kpoints.shape[0], 0))
                 i_kpts = 0
@@ -444,12 +453,14 @@ class KpointsData(ArrayData):
                     # - if it's non-periodic, fill with one of the values in
                     # fill_values
                     if self.pbc[idim]:
-                        tmp_kpoints = numpy.hstack((tmp_kpoints, the_kpoints[:, i_kpts].reshape((the_kpoints.shape[0],
-                                                                                                 1))))
+                        tmp_kpoints = numpy.hstack(
+                            (tmp_kpoints, the_kpoints[:, i_kpts].reshape((the_kpoints.shape[0], 1)))
+                        )
                         i_kpts += 1
                     else:
-                        tmp_kpoints = numpy.hstack((tmp_kpoints, numpy.ones(
-                            (the_kpoints.shape[0], 1)) * fill_values[i_fill]))
+                        tmp_kpoints = numpy.hstack(
+                            (tmp_kpoints, numpy.ones((the_kpoints.shape[0], 1)) * fill_values[i_fill])
+                        )
                         i_fill += 1
                 the_kpoints = tmp_kpoints
 

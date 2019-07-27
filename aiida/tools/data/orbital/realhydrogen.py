@@ -281,7 +281,8 @@ class RealhydrogenOrbital(Orbital):
     """
     _base_fields_required = tuple(
         list(Orbital._base_fields_required) +
-        [('angular_momentum', validate_l), ('magnetic_number', validate_m), ('radial_nodes', validate_n)])
+        [('angular_momentum', validate_l), ('magnetic_number', validate_m), ('radial_nodes', validate_n)]
+    )
 
     _base_fields_optional = tuple(
         list(Orbital._base_fields_optional) + [
@@ -291,18 +292,22 @@ class RealhydrogenOrbital(Orbital):
             ('z_orientation', validate_len3_list_or_none, None),
             ('spin_orientation', validate_len3_list_or_none, None),
             ('diffusivity', validate_float_or_none, None),
-        ])
+        ]
+    )
 
     def __str__(self):
         orb_dict = self.get_orbital_dict()
         try:
             orb_name = self.get_name_from_quantum_numbers(
-                orb_dict['angular_momentum'], magnetic_number=orb_dict['magnetic_number'])
-            position_string = "{:.4f},{:.4f},{:.4f}".format(orb_dict['position'][0], orb_dict['position'][1],
-                                                            orb_dict['position'][2])
+                orb_dict['angular_momentum'], magnetic_number=orb_dict['magnetic_number']
+            )
+            position_string = "{:.4f},{:.4f},{:.4f}".format(
+                orb_dict['position'][0], orb_dict['position'][1], orb_dict['position'][2]
+            )
             out_string = "r{} {} orbital {} @ {}".format(
                 orb_dict['radial_nodes'], orb_name,
-                "for kind '{}'".format(orb_dict['kind_name']) if orb_dict['kind_name'] else "", position_string)
+                "for kind '{}'".format(orb_dict['kind_name']) if orb_dict['kind_name'] else "", position_string
+            )
         except KeyError:
             # Should not happen, but we want it not to crash in __str__
             out_string = "(not all parameters properly set)"
@@ -328,13 +333,15 @@ class RealhydrogenOrbital(Orbital):
         else:
             accepted_range = [0, -angular_momentum]
         if magnetic_number < min(accepted_range) or magnetic_number > max(accepted_range):
-            raise ValidationError("the magnetic number must be in the range [{}, {}]".format(
-                min(accepted_range), max(accepted_range)))
+            raise ValidationError(
+                "the magnetic number must be in the range [{}, {}]".format(min(accepted_range), max(accepted_range))
+            )
 
         # Check if it is a known combination
         try:
             self.get_name_from_quantum_numbers(
-                validated_dict['angular_momentum'], magnetic_number=validated_dict['magnetic_number'])
+                validated_dict['angular_momentum'], magnetic_number=validated_dict['magnetic_number']
+            )
         except ValidationError:
             raise ValidationError("Invalid angular momentum magnetic number combination")
 
@@ -352,8 +359,10 @@ class RealhydrogenOrbital(Orbital):
             if any([CONVERSION_DICT[x][y]['angular_momentum'] == angular_momentum for y in CONVERSION_DICT[x]])
         ]
         if not orbital_name:
-            raise InputValidationError("No orbital name corresponding to the "
-                                       "angular_momentum {} could be found".format(angular_momentum))
+            raise InputValidationError(
+                "No orbital name corresponding to the "
+                "angular_momentum {} could be found".format(angular_momentum)
+            )
         if magnetic_number is not None:
             # finds angular momentum
             orbital_name = orbital_name[0]
@@ -363,9 +372,11 @@ class RealhydrogenOrbital(Orbital):
             ]
 
             if not orbital_name:
-                raise InputValidationError("No orbital name corresponding to "
-                                           "the magnetic_number {} could be "
-                                           "found".format(magnetic_number))
+                raise InputValidationError(
+                    "No orbital name corresponding to "
+                    "the magnetic_number {} could be "
+                    "found".format(magnetic_number)
+                )
         return orbital_name[0]
 
     @classmethod

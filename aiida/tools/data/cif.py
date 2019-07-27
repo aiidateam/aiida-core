@@ -150,7 +150,8 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
         else:
             # If it now succeeds, non-unity occupancies were the culprit
             raise InvalidOccupationsError(
-                'detected atomic sites with an occupation number larger than the occupation tolerance')
+                'detected atomic sites with an occupation number larger than the occupation tolerance'
+            )
 
     return {'structure': StructureData(pymatgen_structure=structures[0])}
 
@@ -169,17 +170,21 @@ def refine_inline(node):
     from aiida.orm.nodes.data.structure import StructureData, ase_refine_cell
 
     if len(node.values.keys()) > 1:
-        raise ValueError("CifData seems to contain more than one data "
-                         "block -- multiblock CIF files are not "
-                         "supported yet")
+        raise ValueError(
+            "CifData seems to contain more than one data "
+            "block -- multiblock CIF files are not "
+            "supported yet"
+        )
 
     name = list(node.values.keys())[0]
 
     original_atoms = node.get_ase(index=None)
     if len(original_atoms) > 1:
-        raise ValueError("CifData seems to contain more than one crystal "
-                         "structure -- such refinement is not supported "
-                         "yet")
+        raise ValueError(
+            "CifData seems to contain more than one crystal "
+            "structure -- such refinement is not supported "
+            "yet"
+        )
 
     original_atoms = original_atoms[0]
 

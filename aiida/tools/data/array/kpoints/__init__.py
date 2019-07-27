@@ -56,8 +56,10 @@ def get_kpoints_path(structure, method='seekpath', **kwargs):
         try:
             seekpath.check_seekpath_is_installed()
         except ImportError:
-            raise ValueError("selected method is 'seekpath' but the package is not installed\n"
-                             "Either install it or pass method='legacy' as input to the function call")
+            raise ValueError(
+                "selected method is 'seekpath' but the package is not installed\n"
+                "Either install it or pass method='legacy' as input to the function call"
+            )
 
     method = _GET_KPOINTS_PATH_METHODS[method]
 
@@ -99,8 +101,10 @@ def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
         try:
             seekpath.check_seekpath_is_installed()
         except ImportError:
-            raise ValueError("selected method is 'seekpath' but the package is not installed\n"
-                             "Either install it or pass method='legacy' as input to the function call")
+            raise ValueError(
+                "selected method is 'seekpath' but the package is not installed\n"
+                "Either install it or pass method='legacy' as input to the function call"
+            )
 
     method = _GET_EXPLICIT_KPOINTS_PATH_METHODS[method]
 
@@ -225,7 +229,8 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
         raise ValueError("unknown arguments {}".format(args_unknown))
 
     point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(
-        cell=structure.cell, pbc=structure.pbc, **kwargs)
+        cell=structure.cell, pbc=structure.pbc, **kwargs
+    )
 
     kpoints = KpointsData()
     kpoints.set_cell(structure.cell)
@@ -277,8 +282,10 @@ def get_kpointsdata_from_qetools(qetools_instance):
     try:
         import qe_tools  # pylint: disable=unused-variable,unused-import
     except ImportError:
-        raise ValueError("You have not installed the package qe-tools. "
-                         "You can install it with: pip install qe-tools")
+        raise ValueError(
+            "You have not installed the package qe-tools. "
+            "You can install it with: pip install qe-tools"
+        )
     from aiida.tools.data.structure import get_structuredata_from_qetools
 
     # Initialize the KpointsData node
@@ -296,13 +303,16 @@ def get_kpointsdata_from_qetools(qetools_instance):
         kpointsdata.set_kpoints(
             np.array(qetools_instance.k_points['points']) * (2. * np.pi / alat),
             weights=qetools_instance.k_points['weights'],
-            cartesian=True)
+            cartesian=True
+        )
     elif qetools_instance.k_points['type'] == 'automatic':
         kpointsdata.set_kpoints_mesh(qetools_instance.k_points['points'], offset=qetools_instance.k_points['offset'])
     elif qetools_instance.k_points['type'] == 'gamma':
         kpointsdata.set_kpoints_mesh([1, 1, 1])
     else:
-        raise NotImplementedError('Support for creating KpointsData from input units of {} is'
-                                  'not yet implemented'.format(qetools_instance.k_points['type']))
+        raise NotImplementedError(
+            'Support for creating KpointsData from input units of {} is'
+            'not yet implemented'.format(qetools_instance.k_points['type'])
+        )
 
     return kpointsdata

@@ -17,13 +17,9 @@ import six
 __all__ = ('load_code', 'load_computer', 'load_group', 'load_node')
 
 
-def load_entity(entity_loader=None,
-                identifier=None,
-                pk=None,
-                uuid=None,
-                label=None,
-                sub_classes=None,
-                query_with_dashes=True):
+def load_entity(
+    entity_loader=None, identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True
+):
     # pylint: disable=too-many-arguments
     """
     Load an entity instance by one of its identifiers: pk, uuid or label
@@ -84,7 +80,8 @@ def load_entity(entity_loader=None,
         identifier_type = None
 
     return entity_loader.load_entity(
-        identifier, identifier_type, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+        identifier, identifier_type, sub_classes=sub_classes, query_with_dashes=query_with_dashes
+    )
 
 
 def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -115,7 +112,8 @@ def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
         uuid=uuid,
         label=label,
         sub_classes=sub_classes,
-        query_with_dashes=query_with_dashes)
+        query_with_dashes=query_with_dashes
+    )
 
 
 def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -146,7 +144,8 @@ def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=N
         uuid=uuid,
         label=label,
         sub_classes=sub_classes,
-        query_with_dashes=query_with_dashes)
+        query_with_dashes=query_with_dashes
+    )
 
 
 def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -177,7 +176,8 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None
         uuid=uuid,
         label=label,
         sub_classes=sub_classes,
-        query_with_dashes=query_with_dashes)
+        query_with_dashes=query_with_dashes
+    )
 
 
 def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -206,4 +206,5 @@ def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
         uuid=uuid,
         label=label,
         sub_classes=sub_classes,
-        query_with_dashes=query_with_dashes)
+        query_with_dashes=query_with_dashes
+    )

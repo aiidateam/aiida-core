@@ -78,34 +78,39 @@ def user_list():
     prompt='User email',
     help='Email address that serves as the user name and a way to identify data created by it.',
     type=types.UserParamType(create=True),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 @click.option(
     '--first-name',
     prompt='First name',
     help='First name of the user.',
     type=click.STRING,
     contextual_default=partial(get_user_attribute_default, 'first_name'),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 @click.option(
     '--last-name',
     prompt='Last name',
     help='Last name of the user.',
     type=click.STRING,
     contextual_default=partial(get_user_attribute_default, 'last_name'),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 @click.option(
     '--institution',
     prompt='Institution',
     help='Institution of the user.',
     type=click.STRING,
     contextual_default=partial(get_user_attribute_default, 'institution'),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 @click.option(
     '--set-default',
     prompt='Set as default?',
     help='Set the user as the default user for the current profile.',
     is_flag=True,
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 @click.pass_context
 @decorators.with_dbenv()
 def user_configure(ctx, user, first_name, last_name, institution, set_default):

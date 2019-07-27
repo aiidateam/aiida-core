@@ -30,8 +30,9 @@ def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument
 
     :param dbmodel: the db model instance
     """
-    raise TypeError('No corresponding AiiDA backend class exists for the DbModel instance {}'.format(
-        dbmodel.__class__.__name__))
+    raise TypeError(
+        'No corresponding AiiDA backend class exists for the DbModel instance {}'.format(dbmodel.__class__.__name__)
+    )
 
 
 @get_backend_entity.register(djmodels.DbUser)
@@ -104,7 +105,8 @@ def _(dbmodel, backend):
         email=dbmodel.email,
         first_name=dbmodel.first_name,
         last_name=dbmodel.last_name,
-        institution=dbmodel.institution)
+        institution=dbmodel.institution
+    )
     return users.DjangoUser.from_dbmodel(djuser_instance, backend)
 
 
@@ -142,7 +144,8 @@ def _(dbmodel, backend):
         description=dbmodel.description,
         transport_type=dbmodel.transport_type,
         scheduler_type=dbmodel.scheduler_type,
-        metadata=dbmodel.metadata)
+        metadata=dbmodel.metadata
+    )
     return computers.DjangoComputer.from_dbmodel(djcomputer_instance, backend)
 
 
@@ -164,7 +167,8 @@ def _(dbmodel, backend):
         dbcomputer_id=dbmodel.dbcomputer_id,
         user_id=dbmodel.user_id,
         attributes=dbmodel.attributes,
-        extras=dbmodel.extras)
+        extras=dbmodel.extras
+    )
 
     from . import nodes
     return nodes.DjangoNode.from_dbmodel(djnode_instance, backend)
@@ -201,7 +205,8 @@ def _(dbmodel, backend):
         ctime=dbmodel.ctime,
         mtime=dbmodel.mtime,
         user_id=dbmodel.user_id,
-        content=dbmodel.content)
+        content=dbmodel.content
+    )
     return comments.DjangoComment.from_dbmodel(djcomment, backend)
 
 

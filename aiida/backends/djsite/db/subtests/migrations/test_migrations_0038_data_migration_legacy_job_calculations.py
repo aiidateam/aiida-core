@@ -35,7 +35,8 @@ class TestLegacyJobCalcStateDataMigration(TestMigrations):
             node = self.DbNode(
                 node_type='process.calculation.calcjob.CalcJobNode.',
                 user_id=self.default_user.id,
-                attributes={'state': state})
+                attributes={'state': state}
+            )
             node.save()
 
             self.nodes[state] = node.id
@@ -47,8 +48,9 @@ class TestLegacyJobCalcStateDataMigration(TestMigrations):
             self.assertEqual(node.attributes.get('process_state', None), STATE_MAPPING[state].process_state)
             self.assertEqual(node.attributes.get('process_status', None), STATE_MAPPING[state].process_status)
             self.assertEqual(node.attributes.get('exit_status', None), STATE_MAPPING[state].exit_status)
-            self.assertEqual(node.attributes.get('process_label'),
-                             'Legacy JobCalculation')  # All nodes should have this label
+            self.assertEqual(
+                node.attributes.get('process_label'), 'Legacy JobCalculation'
+            )  # All nodes should have this label
             self.assertIsNone(node.attributes.get('state', None))  # The old state should have been removed
 
             exit_status = node.attributes.get('exit_status', None)

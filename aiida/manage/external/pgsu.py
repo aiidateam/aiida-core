@@ -197,7 +197,8 @@ def prompt_db_info(interactive, dbinfo):
             access = True
         else:
             dbinfo_new['password'] = click.prompt(
-                'postgres password of {}'.format(dbinfo_new['user']), hide_input=True, type=str, default='')
+                'postgres password of {}'.format(dbinfo_new['user']), hide_input=True, type=str, default=''
+            )
             if not dbinfo_new.get('password'):
                 dbinfo_new.pop('password')
     return dbinfo_new
@@ -305,8 +306,10 @@ def _execute_psql(command, user='postgres', quiet=True, interactive=False, **kwa
     if host and host != 'localhost':
         option_str += ' -h {}'.format(host)
     elif not quiet:
-        click.echo("Warning: Found host 'localhost' but dropping '-h localhost' option for psql " +
-                   "since this may cause psql to switch to password-based authentication.")
+        click.echo(
+            "Warning: Found host 'localhost' but dropping '-h localhost' option for psql " +
+            "since this may cause psql to switch to password-based authentication."
+        )
 
     port = kwargs.pop('port', None)
     if port:

@@ -19,8 +19,10 @@ from plumpy import ports
 
 from aiida.common.lang import type_check
 
-__all__ = ('PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize',
-           'PORT_NAMESPACE_SEPARATOR')
+__all__ = (
+    'PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize',
+    'PORT_NAMESPACE_SEPARATOR'
+)
 
 PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1  # pylint: disable=invalid-name
 PORT_NAMESPACE_SEPARATOR = '__'  # The character sequence to represent a nested port namespace in a flat link label

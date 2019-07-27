@@ -24,7 +24,8 @@ EXPORT_OPTIONS = [
         'reduce_symmetry',
         is_flag=True,
         default=None,
-        help='Do (default) or do not perform symmetry reduction.'),
+        help='Do (default) or do not perform symmetry reduction.'
+    ),
     click.option(
         '--parameter-data',
         type=click.INT,
@@ -35,26 +36,30 @@ EXPORT_OPTIONS = [
         " Dict in the output, aforementioned"
         " Dict is picked automatically. Instead, the"
         " option is used in the case the calculation produces"
-        " more than a single instance of Dict."),
+        " more than a single instance of Dict."
+    ),
     click.option(
         '--dump-aiida-database/--no-dump-aiida-database',
         'dump_aiida_database',
         is_flag=True,
         default=None,
-        help='Export (default) or do not export AiiDA database to the CIF file.'),
+        help='Export (default) or do not export AiiDA database to the CIF file.'
+    ),
     click.option(
         '--exclude-external-contents/--no-exclude-external-contents',
         'exclude_external_contents',
         is_flag=True,
         default=None,
-        help='Do not (default) or do save the contents for external resources even if URIs are provided'),
+        help='Do not (default) or do save the contents for external resources even if URIs are provided'
+    ),
     click.option('--gzip/--no-gzip', is_flag=True, default=None, help='Do or do not (default) gzip large files.'),
     click.option(
         '--gzip-threshold',
         type=click.INT,
         default=None,
         help="Specify the minimum size of exported file which should"
-        " be gzipped."),
+        " be gzipped."
+    ),
     click.option(
         '-o',
         '--output',
@@ -62,7 +67,8 @@ EXPORT_OPTIONS = [
         default=None,
         help="If present, store the output directly on a file "
         "with the given name. It is essential to use this option "
-        "if more than one file needs to be created."),
+        "if more than one file needs to be created."
+    ),
     options.FORCE(help="Overwrite files without checking."),
 ]
 
@@ -102,13 +108,17 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
         else:
             filetext, extra_files = node._exportcontent(fileformat, main_file_name=output_fname, **other_args)
             if extra_files:
-                echo.echo_critical("This format requires to write more than one file.\n"
-                                   "You need to pass the -o option to specify a file name.")
+                echo.echo_critical(
+                    "This format requires to write more than one file.\n"
+                    "You need to pass the -o option to specify a file name."
+                )
             else:
                 echo.echo(filetext.decode('utf-8'))
     except TypeError as err:
         # This typically occurs for parameters that are passed down to the
         # methods in, e.g., BandsData, but they are not accepted
-        echo.echo_critical("TypeError, perhaps a parameter is not "
-                           "supported by the specific format?\nError "
-                           "message: {}".format(err))
+        echo.echo_critical(
+            "TypeError, perhaps a parameter is not "
+            "supported by the specific format?\nError "
+            "message: {}".format(err)
+        )

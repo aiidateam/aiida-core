@@ -78,7 +78,8 @@ def _get_config(config_file):
             config[key] = [get_object_from_string(c) for c in config[key]]
     except (ValueError) as err:
         six.raise_from(
-            exceptions.ConfigurationError("Unknown class given in 'cache_config.yml': '{}'".format(err)), err)
+            exceptions.ConfigurationError("Unknown class given in 'cache_config.yml': '{}'".format(err)), err
+        )
     return config
 
 

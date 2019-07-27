@@ -22,9 +22,10 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
     # have to be manually projected from composing its individual projection constituents
     _compound_projections = ('state',)
     _default_projections = ('pk', 'ctime', 'process_label', 'state', 'process_status')
-    _valid_projections = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status',
-                          'sealed', 'process_label', 'label', 'description', 'node_type', 'paused', 'process_type',
-                          'job_state', 'scheduler_state')
+    _valid_projections = (
+        'pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status', 'sealed',
+        'process_label', 'label', 'description', 'node_type', 'paused', 'process_type', 'job_state', 'scheduler_state'
+    )
 
     def __init__(self, mapper=None):
         if mapper is None:
@@ -44,13 +45,15 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
     def valid_projections(self):
         return self._valid_projections
 
-    def get_filters(self,
-                    all_entries=False,
-                    process_state=None,
-                    process_label=None,
-                    exit_status=None,
-                    failed=False,
-                    node_types=None):
+    def get_filters(
+        self,
+        all_entries=False,
+        process_state=None,
+        process_label=None,
+        exit_status=None,
+        failed=False,
+        node_types=None
+    ):
         """
         Return a set of QueryBuilder filters based on typical command line options.
 

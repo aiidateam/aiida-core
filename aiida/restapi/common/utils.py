@@ -239,13 +239,9 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
 
         return (resource_type, page, node_id, query_type)
 
-    def validate_request(self,
-                         limit=None,
-                         offset=None,
-                         perpage=None,
-                         page=None,
-                         query_type=None,
-                         is_querystring_defined=False):
+    def validate_request(
+        self, limit=None, offset=None, perpage=None, page=None, query_type=None, is_querystring_defined=False
+    ):
         # pylint: disable=fixme,no-self-use,too-many-arguments,too-many-branches
         """
         Performs various checks on the consistency of the request.
@@ -263,9 +259,11 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
             raise RestValidationError("requesting a specific page is incompatible with limit and offset")
         # 3. perpage requires that the path contains a page request
         if perpage is not None and page is None:
-            raise RestValidationError("perpage key requires that a page is "
-                                      "requested (i.e. the path must contain "
-                                      "/page/)")
+            raise RestValidationError(
+                "perpage key requires that a page is "
+                "requested (i.e. the path must contain "
+                "/page/)"
+            )
         # 4. No querystring if query type = schema'
         if query_type in ('schema') and is_querystring_defined:
             raise RestInputValidationError("schema requests do not allow specifying a query string")
@@ -317,8 +315,10 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         # previous,
         #  and next page
         if page > last_page or page < 1:
-            raise RestInputValidationError("Non existent page requested. The "
-                                           "page range is [{} : {}]".format(first_page, last_page))
+            raise RestInputValidationError(
+                "Non existent page requested. The "
+                "page range is [{} : {}]".format(first_page, last_page)
+            )
 
         limit = perpage
         offset = (page - 1) * perpage
@@ -680,8 +680,10 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         # if limit is None:
         #     limit = self.limit_default
 
-        return (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
-                filename, rtype, tree_in_limit, tree_out_limit)
+        return (
+            limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat, filename,
+            rtype, tree_in_limit, tree_out_limit
+        )
 
     def parse_query_string(self, query_string):
         # pylint: disable=too-many-locals
@@ -707,8 +709,10 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         # key types
         key = Word(alphas + '_', alphanums + '_')
         # operators
-        operator = (Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |
-                    Literal('!=') | Literal('>=') | Literal('>') | Literal('<=') | Literal('<'))
+        operator = (
+            Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |
+            Literal('!=') | Literal('>=') | Literal('>') | Literal('<=') | Literal('<')
+        )
         # Value types
         value_num = ppc.number
         value_bool = (Literal('true') | Literal('false')).addParseAction(lambda toks: bool(toks[0]))
@@ -720,11 +724,13 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         #  them and convert them to datetime objects
         # Date
         value_date = Combine(
-            Word(nums, exact=4) + Literal('-') + Word(nums, exact=2) + Literal('-') + Word(nums, exact=2))
+            Word(nums, exact=4) + Literal('-') + Word(nums, exact=2) + Literal('-') + Word(nums, exact=2)
+        )
         # Time
         value_time = Combine(
             Literal('T') + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)) +
-            Optional(Literal(':') + Word(nums, exact=2)))
+            Optional(Literal(':') + Word(nums, exact=2))
+        )
         # Shift
         value_shift = Combine(Word('+-', exact=1) + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)))
         # Combine atomic values
@@ -757,21 +763,24 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
             try:
                 dtobj = dtparser.parse(datetime_string)
             except ValueError:
-                raise RestInputValidationError("time value has wrong format. The "
-                                               "right format is "
-                                               "<date>T<time><offset>, "
-                                               "where <date> is expressed as "
-                                               "[YYYY]-[MM]-[DD], "
-                                               "<time> is expressed as [HH]:[MM]:["
-                                               "SS], "
-                                               "<offset> is expressed as +/-[HH]:["
-                                               "MM] "
-                                               "given with "
-                                               "respect to UTC")
+                raise RestInputValidationError(
+                    "time value has wrong format. The "
+                    "right format is "
+                    "<date>T<time><offset>, "
+                    "where <date> is expressed as "
+                    "[YYYY]-[MM]-[DD], "
+                    "<time> is expressed as [HH]:[MM]:["
+                    "SS], "
+                    "<offset> is expressed as +/-[HH]:["
+                    "MM] "
+                    "given with "
+                    "respect to UTC"
+                )
             if dtobj.tzinfo is not None and dtobj.utcoffset() is not None:
                 tzoffset_minutes = int(dtobj.utcoffset().total_seconds() // 60)
                 return DatetimePrecision(
-                    dtobj.replace(tzinfo=FixedOffsetTimezone(offset=tzoffset_minutes, name=None)), precision)
+                    dtobj.replace(tzinfo=FixedOffsetTimezone(offset=tzoffset_minutes, name=None)), precision
+                )
 
             return DatetimePrecision(dtobj.replace(tzinfo=FixedOffsetTimezone(offset=0, name=None)), precision)
 
@@ -811,13 +820,15 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
             field_list = [entry for entry in fields.asList() if entry[0] != "_"]
 
         except ParseException as err:
-            raise RestInputValidationError("The query string format is invalid. "
-                                           "Parser returned this massage: \"{"
-                                           "}.\" Please notice that the column "
-                                           "number "
-                                           "is counted from "
-                                           "the first character of the query "
-                                           "string.".format(err))
+            raise RestInputValidationError(
+                "The query string format is invalid. "
+                "Parser returned this massage: \"{"
+                "}.\" Please notice that the column "
+                "number "
+                "is counted from "
+                "the first character of the query "
+                "string.".format(err)
+            )
 
         ## return the translator instructions elaborated from the field_list
         return self.build_translator_parameters(field_list)

@@ -55,7 +55,8 @@ class TestMigrateV02toV03(AiidaTestCase):
         self.assertEqual(
             metadata_v2.pop('conversion_info')[-1],
             conversion_message,
-            msg="The conversion message after migration is wrong")
+            msg="The conversion message after migration is wrong"
+        )
         metadata_v3.pop('conversion_info')
 
         # Assert changes were performed correctly
@@ -63,9 +64,11 @@ class TestMigrateV02toV03(AiidaTestCase):
         self.assertDictEqual(
             metadata_v2,
             metadata_v3,
-            msg="After migration, metadata.json should equal intended metadata.json from archives")
+            msg="After migration, metadata.json should equal intended metadata.json from archives"
+        )
         self.assertDictEqual(
-            data_v2, data_v3, msg="After migration, data.json should equal intended data.json from archives")
+            data_v2, data_v3, msg="After migration, data.json should equal intended data.json from archives"
+        )
 
     def test_migrate_v2_to_v3_complete(self):
         """Test migration for file containing complete v0.2 era possibilities"""
@@ -93,7 +96,9 @@ class TestMigrateV02toV03(AiidaTestCase):
                     entity,
                     legal_entity_names,
                     msg="'{}' should now be equal to anyone of these: {}, but is not".format(
-                        entity, legal_entity_names))
+                        entity, legal_entity_names
+                    )
+                )
 
                 if field == "all_fields_info":
                     for value in prop.values():
@@ -102,13 +107,16 @@ class TestMigrateV02toV03(AiidaTestCase):
                                 value['requires'],
                                 legal_entity_names,
                                 msg="'{}' should now be equal to anyone of these: {}, but is not".format(
-                                    value, legal_entity_names))
+                                    value, legal_entity_names
+                                )
+                            )
 
         for entity in data['export_data']:
             self.assertIn(
                 entity,
                 legal_entity_names,
-                msg="'{}' should now be equal to anyone of these: {}, but is not".format(entity, legal_entity_names))
+                msg="'{}' should now be equal to anyone of these: {}, but is not".format(entity, legal_entity_names)
+            )
 
     def test_compare_migration_with_aiida_made(self):
         """
@@ -177,14 +185,16 @@ class TestMigrateV02toV03(AiidaTestCase):
             self.assertListEqual(
                 sorted(details['migrated']),
                 sorted(details['made']),
-                msg="Number of {}-entities differ, see diff for details".format(entity))
+                msg="Number of {}-entities differ, see diff for details".format(entity)
+            )
 
         fields = {'export_data', 'groups_uuid', 'node_attributes_conversion', 'node_attributes'}
         for field in fields:
             self.assertEqual(
                 len(data_v2[field]),
                 len(data_v3[field]),
-                msg="Number of entities in {} differs for the export files".format(field))
+                msg="Number of entities in {} differs for the export files".format(field)
+            )
 
         number_of_links_v2 = {
             'unspecified': 0,
@@ -203,7 +213,8 @@ class TestMigrateV02toV03(AiidaTestCase):
         self.assertDictEqual(
             number_of_links_v2,
             number_of_links_v3,
-            msg="There are a different number of specific links in the migrated export file than the AiiDA made one.")
+            msg="There are a different number of specific links in the migrated export file than the AiiDA made one."
+        )
 
         self.assertEqual(number_of_links_v2['unspecified'], 0)
         self.assertEqual(number_of_links_v3['unspecified'], 0)

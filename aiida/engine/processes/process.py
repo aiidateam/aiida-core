@@ -23,9 +23,9 @@ import six
 from six.moves import filter, range
 from pika.exceptions import ConnectionClosed
 
-from kiwipy.communications import UnroutableError
 import plumpy
 from plumpy import ProcessState
+from kiwipy.communications import UnroutableError
 
 from aiida import orm
 from aiida.common import exceptions

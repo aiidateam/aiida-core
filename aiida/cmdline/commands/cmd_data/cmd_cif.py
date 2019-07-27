@@ -44,8 +44,9 @@ def cif_list(raw, formula_mode, past_days, groups, all_users):
     elements = None
     elements_only = False
 
-    entry_list = data_list(CifData, LIST_PROJECT_HEADERS, elements, elements_only, formula_mode, past_days, groups,
-                           all_users)
+    entry_list = data_list(
+        CifData, LIST_PROJECT_HEADERS, elements, elements_only, formula_mode, past_days, groups, all_users
+    )
 
     counter = 0
     cif_list_data = list()

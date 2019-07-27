@@ -51,7 +51,8 @@ def database_migrate(force):
 
     expected_answer = 'MIGRATE NOW'
     confirm_message = 'If you have completed the steps above and want to migrate profile "{}", type {}'.format(
-        profile.name, expected_answer)
+        profile.name, expected_answer
+    )
 
     try:
         response = click.prompt(confirm_message)
@@ -76,9 +77,11 @@ def verdi_database_integrity():
     '--table',
     type=click.Choice(TABLES_UUID_DEDUPLICATION),
     default='db_dbnode',
-    help='The database table to operate on.')
+    help='The database table to operate on.'
+)
 @click.option(
-    '-a', '--apply-patch', is_flag=True, help='Actually apply the proposed changes instead of performing a dry run.')
+    '-a', '--apply-patch', is_flag=True, help='Actually apply the proposed changes instead of performing a dry run.'
+)
 def detect_duplicate_uuid(table, apply_patch):
     """Detect and solve entities with duplicate UUIDs in a given database table.
 

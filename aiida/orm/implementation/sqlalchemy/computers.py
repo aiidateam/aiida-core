@@ -146,4 +146,5 @@ class SqlaComputerCollection(BackendComputerCollection):
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(
                 "Unable to delete the requested computer: it is possible that there "
-                "is at least one node using this computer (original message: {})".format(exc))
+                "is at least one node using this computer (original message: {})".format(exc)
+            )

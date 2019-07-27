@@ -56,7 +56,8 @@ class TestSpecificImport(AiidaTestCase):
                     'dual': 4,
                     'cutoff_units': 'Ry'
                 },
-            }).store()
+            }
+        ).store()
 
         with tempfile.NamedTemporaryFile() as handle:
             nodes = [parameters]

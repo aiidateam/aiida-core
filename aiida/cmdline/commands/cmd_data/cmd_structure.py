@@ -40,12 +40,16 @@ def _store_structure(new_structure, dry_run):
     :param dry_run: if True, do not store but print a different message
     """
     if dry_run:
-        echo.echo('  Successfully imported structure {} (not storing it, dry-run requested)'.format(
-            new_structure.get_formula()))
+        echo.echo(
+            '  Successfully imported structure {} (not storing it, dry-run requested)'.format(
+                new_structure.get_formula()
+            )
+        )
     else:
         new_structure.store()
-        echo.echo('  Successfully imported structure {} (PK = {})'.format(new_structure.get_formula(),
-                                                                          new_structure.pk))
+        echo.echo(
+            '  Successfully imported structure {} (PK = {})'.format(new_structure.get_formula(), new_structure.pk)
+        )
 
 
 @verdi_data.group('structure')
@@ -65,8 +69,9 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
     from tabulate import tabulate
 
     elements_only = False
-    lst = data_list(StructureData, LIST_PROJECT_HEADERS, elements, elements_only, formula_mode, past_days, groups,
-                    all_users)
+    lst = data_list(
+        StructureData, LIST_PROJECT_HEADERS, elements, elements_only, formula_mode, past_days, groups, all_users
+    )
 
     entry_list = []
     for [pid, label, akinds, asites] in lst:
@@ -168,20 +173,23 @@ def structure_import():
     type=click.FLOAT,
     show_default=True,
     default=1.0,
-    help="The factor by which the cell accomodating the structure should be increased (angstrom).")
+    help="The factor by which the cell accomodating the structure should be increased (angstrom)."
+)
 @click.option(
     '--vacuum-addition',
     type=click.FLOAT,
     show_default=True,
     default=10.0,
-    help='The distance to add to the unit cell after vacuum factor was applied to expand in each dimension (angstrom).')
+    help='The distance to add to the unit cell after vacuum factor was applied to expand in each dimension (angstrom).'
+)
 @click.option(
     '--pbc',
     type=click.INT,
     nargs=3,
     show_default=True,
     default=[0, 0, 0],
-    help='Set periodic boundary conditions for each lattice direction, where 0 means periodic and 1 means periodic')
+    help='Set periodic boundary conditions for each lattice direction, where 0 means periodic and 1 means periodic.'
+)
 @options.DRY_RUN()
 @decorators.with_dbenv()
 def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, dry_run):
@@ -227,8 +235,10 @@ def import_qetools_pwinput(filename, dry_run):
     try:
         import qe_tools
     except ImportError:
-        echo.echo_critical("You have not installed the package qe-tools. \n"
-                           "You can install it with: pip install qe-tools")
+        echo.echo_critical(
+            "You have not installed the package qe-tools. \n"
+            "You can install it with: pip install qe-tools"
+        )
     from aiida.tools.data.structure import get_structuredata_from_qetools
 
     try:

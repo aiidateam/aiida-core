@@ -166,12 +166,17 @@ class Data(Node):
             func = exporters[fileformat]
         except KeyError:
             if exporters.keys():
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(fileformat, self.__class__.__name__,
-                                                                         ",".join(exporters.keys())))
+                raise ValueError(
+                    "The format {} is not implemented for {}. "
+                    "Currently implemented are: {}.".format(
+                        fileformat, self.__class__.__name__, ",".join(exporters.keys())
+                    )
+                )
             else:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(fileformat, self.__class__.__name__))
+                raise ValueError(
+                    "The format {} is not implemented for {}. "
+                    "No formats are implemented yet.".format(fileformat, self.__class__.__name__)
+                )
 
         return func(main_file_name=main_file_name, **kwargs)
 
@@ -252,8 +257,9 @@ class Data(Node):
         """
         exporter_prefix = '_prepare_'
         method_names = dir(cls)  # get list of class methods names
-        valid_format_names = [i[len(exporter_prefix):] for i in method_names if i.startswith(exporter_prefix)
-                             ]  # filter them
+        valid_format_names = [
+            i[len(exporter_prefix):] for i in method_names if i.startswith(exporter_prefix)
+        ]  # filter them
         return sorted(valid_format_names)
 
     def importstring(self, inputstring, fileformat, **kwargs):
@@ -269,12 +275,17 @@ class Data(Node):
             func = importers[fileformat]
         except KeyError:
             if importers.keys():
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(fileformat, self.__class__.__name__,
-                                                                         ",".join(importers.keys())))
+                raise ValueError(
+                    "The format {} is not implemented for {}. "
+                    "Currently implemented are: {}.".format(
+                        fileformat, self.__class__.__name__, ",".join(importers.keys())
+                    )
+                )
             else:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(fileformat, self.__class__.__name__))
+                raise ValueError(
+                    "The format {} is not implemented for {}. "
+                    "No formats are implemented yet.".format(fileformat, self.__class__.__name__)
+                )
 
         # func is bound to self by getattr in _get_importers()
         func(inputstring, **kwargs)
@@ -327,12 +338,17 @@ class Data(Node):
             func = converters[object_format]
         except KeyError:
             if converters.keys():
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(object_format, self.__class__.__name__,
-                                                                         ",".join(converters.keys())))
+                raise ValueError(
+                    "The format {} is not implemented for {}. "
+                    "Currently implemented are: {}.".format(
+                        object_format, self.__class__.__name__, ",".join(converters.keys())
+                    )
+                )
             else:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(object_format, self.__class__.__name__))
+                raise ValueError(
+                    "The format {} is not implemented for {}. "
+                    "No formats are implemented yet.".format(object_format, self.__class__.__name__)
+                )
 
         return func(*args)
 

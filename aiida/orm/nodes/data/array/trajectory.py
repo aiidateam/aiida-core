@@ -69,16 +69,20 @@ class TrajectoryData(ArrayData):
                 raise ValueError("TrajectoryData.cells must have shape (s,3,3), with s=number of steps")
         numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
-            raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
-                             "with s=number of steps and n=number of symbols")
+            raise ValueError(
+                "TrajectoryData.positions must have shape (s,n,3), "
+                "with s=number of steps and n=number of symbols"
+            )
         if times is not None:
             if times.shape != (numsteps,):
                 raise ValueError("TrajectoryData.times must have shape (s,), with s=number of steps")
         if velocities is not None:
             if velocities.shape != (numsteps, numatoms, 3):
-                raise ValueError("TrajectoryData.velocities, if not None, must "
-                                 "have shape (s,n,3), "
-                                 "with s=number of steps and n=number of symbols")
+                raise ValueError(
+                    "TrajectoryData.velocities, if not None, must "
+                    "have shape (s,n,3), "
+                    "with s=number of steps and n=number of symbols"
+                )
 
     def set_trajectory(self, symbols, positions, stepids=None, cells=None, times=None, velocities=None):  # pylint: disable=too-many-arguments
         r"""
@@ -200,12 +204,16 @@ class TrajectoryData(ArrayData):
         from aiida.common.exceptions import ValidationError
 
         try:
-            self._internal_validate(self.get_stepids(), self.get_cells(), self.symbols, self.get_positions(),
-                                    self.get_times(), self.get_velocities())
+            self._internal_validate(
+                self.get_stepids(), self.get_cells(), self.symbols, self.get_positions(), self.get_times(),
+                self.get_velocities()
+            )
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as exception:
-            raise ValidationError("The TrajectoryData did not validate. "
-                                  "Error: {} with message {}".format(type(exception).__name__, exception))
+            raise ValidationError(
+                "The TrajectoryData did not validate. "
+                "Error: {} with message {}".format(type(exception).__name__, exception)
+            )
 
     @property
     def numsteps(self):
@@ -337,8 +345,10 @@ class TrajectoryData(ArrayData):
         :raises KeyError: if you did not store the trajectory yet.
         """
         if index >= self.numsteps:
-            raise IndexError("You have only {} steps, but you are looking beyond"
-                             " (index={})".format(self.numsteps, index))
+            raise IndexError(
+                "You have only {} steps, but you are looking beyond"
+                " (index={})".format(self.numsteps, index)
+            )
 
         vel = self.get_velocities()
         if vel is not None:
@@ -383,16 +393,20 @@ class TrajectoryData(ArrayData):
             kind_names = []
             for k in custom_kinds:
                 if not isinstance(k, Kind):
-                    raise TypeError("Each element of the custom_kinds list must "
-                                    "be a aiida.orm.nodes.data.structure.Kind object")
+                    raise TypeError(
+                        "Each element of the custom_kinds list must "
+                        "be a aiida.orm.nodes.data.structure.Kind object"
+                    )
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):
                 raise ValueError("Multiple kinds with the same name passed as custom_kinds")
             if set(kind_names) != set(symbols):
-                raise ValueError("If you pass custom_kinds, you have to "
-                                 "pass one Kind object for each symbol "
-                                 "that is present in the trajectory. You "
-                                 "passed {}, but the symbols are {}".format(sorted(kind_names), sorted(symbols)))
+                raise ValueError(
+                    "If you pass custom_kinds, you have to "
+                    "pass one Kind object for each symbol "
+                    "that is present in the trajectory. You "
+                    "passed {}, but the symbols are {}".format(sorted(kind_names), sorted(symbols))
+                )
 
         struc = StructureData(cell=cell)
         if custom_kinds is not None:
@@ -531,12 +545,15 @@ class TrajectoryData(ArrayData):
             raise ValidationError("symbols must be set before importing positional data")
 
         positions = array(
-            [[list(position) for _, position in atoms] for _, _, atoms in xyz_parser_iterator(inputstring)])
+            [[list(position) for _, position in atoms] for _, _, atoms in xyz_parser_iterator(inputstring)]
+        )
 
         if positions.shape != (numsteps, numsites, 3):
-            raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
-                             "with s=number of steps={} and "
-                             "n=number of symbols={}".format(numsteps, numsites))
+            raise ValueError(
+                "TrajectoryData.positions must have shape (s,n,3), "
+                "with s=number of steps={} and "
+                "n=number of symbols={}".format(numsteps, numsites)
+            )
 
         self.set_array('positions', positions)
 
@@ -562,12 +579,15 @@ class TrajectoryData(ArrayData):
             raise ValidationError("symbols must be set before importing positional data")
 
         velocities = array(
-            [[list(velocity) for _, velocity in atoms] for _, _, atoms in xyz_parser_iterator(inputstring)])
+            [[list(velocity) for _, velocity in atoms] for _, _, atoms in xyz_parser_iterator(inputstring)]
+        )
 
         if velocities.shape != (numsteps, numsites, 3):
-            raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
-                             "with s=number of steps={} and "
-                             "n=number of symbols={}".format(numsteps, numsites))
+            raise ValueError(
+                "TrajectoryData.positions must have shape (s,n,3), "
+                "with s=number of steps={} and "
+                "n=number of symbols={}".format(numsteps, numsites)
+            )
 
         self.set_array('velocities', velocities)
 
@@ -672,12 +692,14 @@ class TrajectoryData(ArrayData):
         try:
             from mayavi import mlab
         except ImportError:
-            raise ImportError("Unable to import the mayavi package, that is required to"
-                              "use the plotting feature you requested. "
-                              "Please install it first and then call this command again "
-                              "(note that the installation of mayavi is quite complicated "
-                              "and requires that you already installed the python numpy "
-                              "package, as well as the vtk package")
+            raise ImportError(
+                "Unable to import the mayavi package, that is required to"
+                "use the plotting feature you requested. "
+                "Please install it first and then call this command again "
+                "(note that the installation of mayavi is quite complicated "
+                "and requires that you already installed the python numpy "
+                "package, as well as the vtk package"
+            )
         from ase.data.colors import jmol_colors
         from ase.data import atomic_numbers
 
@@ -737,8 +759,9 @@ class TrajectoryData(ArrayData):
         for iat, ele in enumerate(symbols):
             if ele in elements:
                 for idim in range(3):
-                    storage_dict[ele][idim] = np.concatenate((storage_dict[ele][idim],
-                                                              positions[:, iat, idim].flatten()))
+                    storage_dict[ele][idim] = np.concatenate(
+                        (storage_dict[ele][idim], positions[:, iat, idim].flatten())
+                    )
 
         for ele in elements:
             storage_dict[ele] = np.array(storage_dict[ele]).T
@@ -796,7 +819,8 @@ class TrajectoryData(ArrayData):
                     color=tuple(jmol_colors[atomic_numbers[ele]].tolist()),
                     scale_mode='none',
                     scale_factor=0.3,
-                    opacity=0.3)
+                    opacity=0.3
+                )
 
         mlab.view(azimuth=155, elevation=70, distance='auto')
         mlab.show()

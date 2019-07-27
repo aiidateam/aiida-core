@@ -122,8 +122,9 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         if not res:
             raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, filters))
         if len(res) > 1:
-            raise exceptions.MultipleObjectsError("Multiple {}s found with the same id '{}'".format(
-                self.entity_type.__name__, id))
+            raise exceptions.MultipleObjectsError(
+                "Multiple {}s found with the same id '{}'".format(self.entity_type.__name__, id)
+            )
 
         return res[0]
 

@@ -19,5 +19,7 @@ from .params.types import *
 from .utils.decorators import *
 from .utils.echo import *
 
-__all__ = (params.arguments.__all__ + params.options.__all__ + params.types.__all__ + utils.decorators.__all__ +
-           utils.echo.__all__)
+__all__ = (
+    params.arguments.__all__ + params.options.__all__ + params.types.__all__ + utils.decorators.__all__ +
+    utils.echo.__all__
+)

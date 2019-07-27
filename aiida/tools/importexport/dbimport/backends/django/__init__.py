@@ -29,21 +29,24 @@ from aiida.common.utils import grouper, export_shard_uuid, get_object_from_strin
 from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group
 from aiida.tools.importexport.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION
-from aiida.tools.importexport.config import (NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME,
-                                             USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME)
+from aiida.tools.importexport.config import (
+    NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
+)
 from aiida.tools.importexport.config import entity_names_to_signatures
 from aiida.tools.importexport.dbimport.backends.utils import deserialize_field, merge_comment, merge_extras
 
 __all__ = ('import_data_dj',)
 
 
-def import_data_dj(in_path,
-                   group=None,
-                   ignore_unknown_nodes=False,
-                   extras_mode_existing='kcl',
-                   extras_mode_new='import',
-                   comment_mode='newest',
-                   silent=False):
+def import_data_dj(
+    in_path,
+    group=None,
+    ignore_unknown_nodes=False,
+    extras_mode_existing='kcl',
+    extras_mode_new='import',
+    comment_mode='newest',
+    silent=False
+):
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
@@ -107,9 +110,11 @@ def import_data_dj(in_path,
                     print("The following problem occured while processing the provided file: {}".format(exc))
                     return
             else:
-                raise ValueError("Unable to detect the input file format, it "
-                                 "is neither a (possibly compressed) tar file, "
-                                 "nor a zip file.")
+                raise ValueError(
+                    "Unable to detect the input file format, it "
+                    "is neither a (possibly compressed) tar file, "
+                    "nor a zip file."
+                )
 
         if not folder.get_content_list():
             from aiida.common.exceptions import ContentNotExistent
@@ -164,19 +169,22 @@ def import_data_dj(in_path,
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(import_nodes_uuid)
 
         if unknown_nodes and not ignore_unknown_nodes:
-            raise ValueError("The import file refers to {} nodes with unknown UUID, therefore "
-                             "it cannot be imported. Either first import the unknown nodes, "
-                             "or export also the parents when exporting. The unknown UUIDs "
-                             "are:\n".format(len(unknown_nodes)) + "\n".join(
-                                 '* {}'.format(uuid) for uuid in unknown_nodes))
+            raise ValueError(
+                "The import file refers to {} nodes with unknown UUID, therefore "
+                "it cannot be imported. Either first import the unknown nodes, "
+                "or export also the parents when exporting. The unknown UUIDs "
+                "are:\n".format(len(unknown_nodes)) + "\n".join('* {}'.format(uuid) for uuid in unknown_nodes)
+            )
 
         ###################################
         # DOUBLE-CHECK MODEL DEPENDENCIES #
         ###################################
         # The entity import order. It is defined by the database model relationships.
 
-        model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
-                       COMMENT_ENTITY_NAME)
+        model_order = (
+            USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
+            COMMENT_ENTITY_NAME
+        )
 
         for import_field_name in metadata['all_fields_info']:
             if import_field_name not in model_order:
@@ -192,8 +200,10 @@ def import_data_dj(in_path,
                     pass
             for dependency in dependencies:
                 if dependency not in model_order[:idx]:
-                    raise ValueError("Model {} requires {} but would be loaded "
-                                     "first; stopping...".format(model_name, dependency))
+                    raise ValueError(
+                        "Model {} requires {} but would be loaded "
+                        "first; stopping...".format(model_name, dependency)
+                    )
 
         ###################################################
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
@@ -235,7 +245,8 @@ def import_data_dj(in_path,
                         import_unique_ids = set(v[unique_identifier] for v in data['export_data'][model_name].values())
 
                         relevant_db_entries_result = model.objects.filter(
-                            **{'{}__in'.format(unique_identifier): import_unique_ids})
+                            **{'{}__in'.format(unique_identifier): import_unique_ids}
+                        )
                         # Note: uuids need to be converted to strings
                         relevant_db_entries = {
                             str(getattr(n, unique_identifier)): n for n in relevant_db_entries_result
@@ -274,7 +285,9 @@ def import_data_dj(in_path,
                             v,
                             fields_info=fields_info,
                             import_unique_ids_mappings=import_unique_ids_mappings,
-                            foreign_ids_reverse_mappings=foreign_ids_reverse_mappings) for k, v in entry_data.items())
+                            foreign_ids_reverse_mappings=foreign_ids_reverse_mappings
+                        ) for k, v in entry_data.items()
+                    )
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
 
                     if model is models.DbComment:
@@ -306,7 +319,9 @@ def import_data_dj(in_path,
                             v,
                             fields_info=fields_info,
                             import_unique_ids_mappings=import_unique_ids_mappings,
-                            foreign_ids_reverse_mappings=foreign_ids_reverse_mappings) for k, v in entry_data.items())
+                            foreign_ids_reverse_mappings=foreign_ids_reverse_mappings
+                        ) for k, v in entry_data.items()
+                    )
 
                     if model is models.DbGroup:
                         # Check if there is already a group with the same name
@@ -316,24 +331,31 @@ def import_data_dj(in_path,
                             import_data['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
                             dupl_counter += 1
                             if dupl_counter == 100:
-                                raise exceptions.UniquenessError("A group of that label ( {} ) already exists"
-                                                                 " and I could not create a new one".format(orig_label))
+                                raise exceptions.UniquenessError(
+                                    "A group of that label ( {} ) already exists"
+                                    " and I could not create a new one".format(orig_label)
+                                )
 
                     elif model is models.DbComputer:
                         # Check if there is already a computer with the same name in the database
-                        dupl = (model.objects.filter(name=import_data['name']) or
-                                import_data['name'] in imported_comp_names)
+                        dupl = (
+                            model.objects.filter(name=import_data['name']) or import_data['name'] in imported_comp_names
+                        )
                         orig_name = import_data['name']
                         dupl_counter = 0
                         while dupl:
                             # Rename the new computer
                             import_data['name'] = (orig_name + DUPL_SUFFIX.format(dupl_counter))
-                            dupl = (model.objects.filter(name=import_data['name']) or
-                                    import_data['name'] in imported_comp_names)
+                            dupl = (
+                                model.objects.filter(name=import_data['name']) or
+                                import_data['name'] in imported_comp_names
+                            )
                             dupl_counter += 1
                             if dupl_counter == 100:
-                                raise exceptions.UniquenessError("A computer of that name ( {} ) already exists"
-                                                                 " and I could not create a new one".format(orig_name))
+                                raise exceptions.UniquenessError(
+                                    "A computer of that name ( {} ) already exists"
+                                    " and I could not create a new one".format(orig_name)
+                                )
 
                         imported_comp_names.add(import_data['name'])
 
@@ -352,11 +374,13 @@ def import_data_dj(in_path,
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
                         subfolder = folder.get_subfolder(
-                            os.path.join(nodes_export_subfolder, export_shard_uuid(import_entry_uuid)))
+                            os.path.join(nodes_export_subfolder, export_shard_uuid(import_entry_uuid))
+                        )
                         if not subfolder.exists():
                             raise exceptions.ArchiveIntegrityError(
                                 "Unable to find the repository folder for Node with UUID={} in the exported "
-                                "file".format(import_entry_uuid))
+                                "file".format(import_entry_uuid)
+                            )
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing
                         # previous folders, and move the files (faster if we
@@ -373,7 +397,8 @@ def import_data_dj(in_path,
                             object_.attributes = data['node_attributes'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.ArchiveIntegrityError(
-                                "Unable to find attribute info for Node with UUID={}".format(import_entry_uuid))
+                                "Unable to find attribute info for Node with UUID={}".format(import_entry_uuid)
+                            )
 
                         # For DbNodes, we also have to store its extras
                         if extras_mode_new == 'import':
@@ -385,7 +410,8 @@ def import_data_dj(in_path,
                                 extras = data['node_extras'][str(import_entry_pk)]
                             except KeyError:
                                 raise exceptions.ArchiveIntegrityError(
-                                    "Unable to find extra info for Node with UUID={}".format(import_entry_uuid))
+                                    "Unable to find extra info for Node with UUID={}".format(import_entry_uuid)
+                                )
                             # TODO: remove when aiida extras will be moved somewhere else
                             # from here
                             extras = {key: value for key, value in extras.items() if not key.startswith('_aiida_')}
@@ -398,8 +424,9 @@ def import_data_dj(in_path,
                                 print("SKIPPING NEW NODE EXTRAS...")
                         else:
                             raise ValueError(
-                                "Unknown extras_mode_new value: {}, should be either 'import' or 'none'".format(
-                                    extras_mode_new))
+                                "Unknown extras_mode_new value: {}, should be either 'import' or 'none'".
+                                format(extras_mode_new)
+                            )
 
                     # EXISTING NODES (Extras)
                     # For the existing nodes that are also in the imported list we also update their extras if necessary
@@ -419,7 +446,8 @@ def import_data_dj(in_path,
                             extras = data['node_extras'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.ArchiveIntegrityError(
-                                "Unable to find extra info for ode with UUID={}".format(import_entry_uuid))
+                                "Unable to find extra info for ode with UUID={}".format(import_entry_uuid)
+                            )
 
                         # TODO: remove when aiida extras will be moved somewhere else
                         # from here
@@ -445,7 +473,8 @@ def import_data_dj(in_path,
                 just_saved_queryset = model.objects.filter(
                     **{
                         "{}__in".format(unique_identifier): import_new_entry_pks.keys()
-                    }).values_list(unique_identifier, 'pk')
+                    }
+                ).values_list(unique_identifier, 'pk')
                 # note: convert uuids from type UUID to strings
                 just_saved = {str(key): value for key, value in just_saved_queryset}
 
@@ -483,18 +512,21 @@ def import_data_dj(in_path,
                     if ignore_unknown_nodes:
                         continue
                     else:
-                        raise ValueError("Trying to create a link with one "
-                                         "or both unknown nodes, stopping "
-                                         "(in_uuid={}, out_uuid={}, "
-                                         "label={})".format(link['input'], link['output'], link['label']))
+                        raise ValueError(
+                            "Trying to create a link with one "
+                            "or both unknown nodes, stopping "
+                            "(in_uuid={}, out_uuid={}, "
+                            "label={})".format(link['input'], link['output'], link['label'])
+                        )
 
                 try:
                     existing_label = existing_links_labels[in_id, out_id]
                     if existing_label != link['label']:
-                        raise ValueError("Trying to rename an existing link "
-                                         "name, stopping (in={}, out={}, "
-                                         "old_label={}, new_label={})".format(in_id, out_id, existing_label,
-                                                                              link['label']))
+                        raise ValueError(
+                            "Trying to rename an existing link "
+                            "name, stopping (in={}, out={}, "
+                            "old_label={}, new_label={})".format(in_id, out_id, existing_label, link['label'])
+                        )
                         # Do nothing, the link is already in place and has
                         # the correct name
                 except KeyError:
@@ -511,11 +543,14 @@ def import_data_dj(in_path,
                         existing_input = existing_input_links[out_id, link['label']]
 
                         if link['type'] != LinkType.RETURN:
-                            raise ValueError("There exists already an input link to node "
-                                             "with UUID {} with label {} but it does not "
-                                             "come from the expected input with UUID {} "
-                                             "but from a node with UUID {}.".format(link['output'], link['label'],
-                                                                                    link['input'], existing_input))
+                            raise ValueError(
+                                "There exists already an input link to node "
+                                "with UUID {} with label {} but it does not "
+                                "come from the expected input with UUID {} "
+                                "but from a node with UUID {}.".format(
+                                    link['output'], link['label'], link['input'], existing_input
+                                )
+                            )
                     except KeyError:
                         # New link
                         links_to_store.append(
@@ -523,7 +558,9 @@ def import_data_dj(in_path,
                                 input_id=in_id,
                                 output_id=out_id,
                                 label=link['label'],
-                                type=LinkType(link['type']).value))
+                                type=LinkType(link['type']).value
+                            )
+                        )
                         if "Link" not in ret_dict:
                             ret_dict["Link"] = {'new': []}
                         ret_dict["Link"]['new'].append((in_id, out_id))

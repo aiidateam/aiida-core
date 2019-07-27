@@ -84,7 +84,8 @@ class TestAttributesExtrasToJSONMigrationSimple(TestMigrations):
             hostname='localhost',
             transport_type='local',
             scheduler_type='pbspro',
-            metadata={"workdir": "/tmp/aiida"})
+            metadata={"workdir": "/tmp/aiida"}
+        )
         computer.save()
 
         node = db_node_model(node_type='data.Data.', dbcomputer_id=computer.id, user_id=self.default_user.id)
@@ -139,7 +140,8 @@ class TestAttributesExtrasToJSONMigrationManyNodes(TestMigrations):
             hostname='localhost',
             transport_type='local',
             scheduler_type='pbspro',
-            metadata={"workdir": "/tmp/aiida"})
+            metadata={"workdir": "/tmp/aiida"}
+        )
         computer.save()
 
         with transaction.atomic():
@@ -196,29 +198,34 @@ class TestSettingsToJSONMigration(TestMigrations):
             datatype='date',
             dval=timezone.datetime_to_isoformat(timezone.now()),
             description='The last time the daemon finished to run '
-            'the task \'updater\' (updater)')
+            'the task \'updater\' (updater)'
+        )
         self.settings_info['2daemon|task_start|updater2'] = dict(
             key='2daemon|task_start|updater2',
             datatype='date',
             dval=timezone.datetime_to_isoformat(timezone.now()),
             description='The last time the daemon started to run '
-            'the task \'updater\' (updater)')
+            'the task \'updater\' (updater)'
+        )
         self.settings_info['2db|backend2'] = dict(
             key='2db|backend2',
             datatype='txt',
             tval='django',
-            description='The backend used to communicate with the database.')
+            description='The backend used to communicate with the database.'
+        )
         self.settings_info['2daemon|user2'] = dict(
             key='2daemon|user2',
             datatype='txt',
             tval='aiida@theossrv5.epfl.ch',
             description='The only user that is allowed to run the AiiDA daemon on '
-            'this DB instance')
+            'this DB instance'
+        )
         self.settings_info['2db|schemaversion2'] = dict(
             key='2db|schemaversion2',
             datatype='txt',
             tval=' 1.0.8',
-            description='The version of the schema used in this database.')
+            description='The version of the schema used in this database.'
+        )
 
         with transaction.atomic():
             for setting_info in self.settings_info.values():
@@ -289,13 +296,9 @@ class DbMultipleValueAttributeBaseClass():
         return validate_attribute_key(key)
 
     @classmethod
-    def set_value(cls,
-                  key,
-                  value,
-                  with_transaction=True,
-                  subspecifier_value=None,
-                  other_attribs={},
-                  stop_if_existing=False):
+    def set_value(
+        cls, key, value, with_transaction=True, subspecifier_value=None, other_attribs={}, stop_if_existing=False
+    ):
         """
         Set a new value in the DB, possibly associated to the given subspecifier.
 
@@ -364,12 +367,14 @@ class DbMultipleValueAttributeBaseClass():
             if with_transaction:
                 transaction.savepoint_rollback(sid)
             if isinstance(exc, IntegrityError) and stop_if_existing:
-                raise UniquenessError("Impossible to create the required "
-                                      "entry "
-                                      "in table '{}', "
-                                      "another entry already exists and the creation would "
-                                      "violate an uniqueness constraint.\nFurther details: "
-                                      "{}".format(cls.__name__, exc))
+                raise UniquenessError(
+                    "Impossible to create the required "
+                    "entry "
+                    "in table '{}', "
+                    "another entry already exists and the creation would "
+                    "violate an uniqueness constraint.\nFurther details: "
+                    "{}".format(cls.__name__, exc)
+                )
             raise
 
     @classmethod
@@ -404,17 +409,21 @@ class DbMultipleValueAttributeBaseClass():
 
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:
-                raise ValueError("You cannot specify a subspecifier value for "
-                                 "class {} because it has no subspecifiers"
-                                 "".format(cls.__name__))
+                raise ValueError(
+                    "You cannot specify a subspecifier value for "
+                    "class {} because it has no subspecifiers"
+                    "".format(cls.__name__)
+                )
             if issubclass(cls, DbAttributeFunctionality):
                 new_entry = db_attribute_base_model(key=key, **other_attribs)
             else:
                 new_entry = db_extra_base_model(key=key, **other_attribs)
         else:
             if subspecifier_value is None:
-                raise ValueError("You also have to specify a subspecifier value "
-                                 "for class {} (the {})".format(cls.__name__, cls._subspecifier_field_name))
+                raise ValueError(
+                    "You also have to specify a subspecifier value "
+                    "for class {} (the {})".format(cls.__name__, cls._subspecifier_field_name)
+                )
             further_params = other_attribs.copy()
             further_params.update({cls._subspecifier_field_name: subspecifier_value})
             # new_entry = cls(key=key, **further_params)
@@ -498,7 +507,9 @@ class DbMultipleValueAttributeBaseClass():
                 # NOTE: I do not pass other_attribs
                 list_to_return.extend(
                     cls.create_value(
-                        key=("{}{}{:d}".format(key, cls._sep, i)), value=subv, subspecifier_value=subspecifier_value))
+                        key=("{}{}{:d}".format(key, cls._sep, i)), value=subv, subspecifier_value=subspecifier_value
+                    )
+                )
 
         elif isinstance(value, dict):
 
@@ -518,14 +529,17 @@ class DbMultipleValueAttributeBaseClass():
                 # NOTE: I do not pass other_attribs
                 list_to_return.extend(
                     cls.create_value(
-                        key="{}{}{}".format(key, cls._sep, subk), value=subv, subspecifier_value=subspecifier_value))
+                        key="{}{}{}".format(key, cls._sep, subk), value=subv, subspecifier_value=subspecifier_value
+                    )
+                )
         else:
             try:
                 jsondata = json.dumps(value)
             except TypeError:
                 raise ValueError(
-                    "Unable to store the value: it must be either a basic datatype, or json-serializable: {}".format(
-                        value))
+                    "Unable to store the value: it must be either a basic datatype, or json-serializable: {}".
+                    format(value)
+                )
 
             new_entry.datatype = 'json'
             new_entry.tval = jsondata
@@ -601,7 +615,8 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             value,
             with_transaction=with_transaction,
             subspecifier_value=dbnode_node,
-            stop_if_existing=stop_if_existing)
+            stop_if_existing=stop_if_existing
+        )
 
     def __str__(self):
         # pylint: disable=no-member

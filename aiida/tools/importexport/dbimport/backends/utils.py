@@ -73,8 +73,10 @@ def merge_comment(incoming_comment, comment_mode):
 
     # Invalid comment_mode
     else:
-        raise ValueError("Unknown comment_mode value: {}. Should be "
-                         "either 'newest' or 'overwrite'".format(comment_mode))
+        raise ValueError(
+            "Unknown comment_mode value: {}. Should be "
+            "either 'newest' or 'overwrite'".format(comment_mode)
+        )
 
 
 def merge_extras(old_extras, new_extras, mode):
@@ -128,9 +130,12 @@ def merge_extras(old_extras, new_extras, mode):
             final_extras[key] = new_extras[key]
         for key in collided_keys:
             if old_extras[key] != new_extras[key]:
-                if click.confirm('The extra {} collided, would you'
-                                 ' like to overwrite its value?\nOld value: {}\nNew value: {}\n'.format(
-                                     key, old_extras[key], new_extras[key])):
+                if click.confirm(
+                    'The extra {} collided, would you'
+                    ' like to overwrite its value?\nOld value: {}\nNew value: {}\n'.format(
+                        key, old_extras[key], new_extras[key]
+                    )
+                ):
                     final_extras[key] = new_extras[key]
 
     # Slow, but more general implementation
@@ -158,9 +163,12 @@ def merge_extras(old_extras, new_extras, mode):
         elif mode[2] == 'a':
             for key in collided_keys:
                 if old_extras[key] != new_extras[key]:
-                    if click.confirm('The extra {} collided, would you'
-                                     ' like to overwrite its value?\nOld value: {}\nNew value: {}\n'.format(
-                                         key, old_extras[key], new_extras[key])):
+                    if click.confirm(
+                        'The extra {} collided, would you'
+                        ' like to overwrite its value?\nOld value: {}\nNew value: {}\n'.format(
+                            key, old_extras[key], new_extras[key]
+                        )
+                    ):
                         final_extras[key] = new_extras[key]
                     else:
                         final_extras[key] = old_extras[key]

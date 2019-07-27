@@ -75,8 +75,9 @@ class CalcJobNode(CalculationNode):
                     self._tools = tools_class(self)
                 except exceptions.EntryPointError as exception:
                     self._tools = CalculationTools(self)
-                    self.logger.warning('could not load the calculation tools entry point {}: {}'.format(
-                        entry_point.name, exception))
+                    self.logger.warning(
+                        'could not load the calculation tools entry point {}: {}'.format(entry_point.name, exception)
+                    )
 
         return self._tools
 
@@ -132,8 +133,8 @@ class CalcJobNode(CalculationNode):
         return objects
 
     def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):  # pylint: disable=arguments-differ
-        return super(CalcJobNode, self).get_hash(
-            ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
+        return super(CalcJobNode, self
+                    ).get_hash(ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
 
     def get_builder_restart(self):
         """Return a `ProcessBuilder` that is ready to relaunch the same `CalcJob` that created this node.
@@ -186,7 +187,8 @@ class CalcJobNode(CalculationNode):
             scheduler.create_job_resource(**resources)
         except (TypeError, ValueError) as exc:
             raise exceptions.ValidationError(
-                "Invalid resources for the scheduler of the specified computer: {}".format(exc))
+                "Invalid resources for the scheduler of the specified computer: {}".format(exc)
+            )
 
     @property
     def _raw_input_folder(self):

@@ -200,6 +200,7 @@ class Migration(migrations.Migration):
             UPDATE db_dblink SET type = 'returnlink'
             WHERE type = 'return';
 
-            """),
+            """
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

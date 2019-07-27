@@ -54,11 +54,13 @@ SELECT_NODES_WITH_INVALID_TYPE = """
     WHERE node.node_type NOT SIMILAR TO %(valid_node_types)s;
     """
 
-INVALID_NODE_SELECT_STATEMENTS = (AttributeDict({
-    'sql': SELECT_NODES_WITH_INVALID_TYPE,
-    'parameters': {
-        'valid_node_types': VALID_NODE_TYPE_STRING
-    },
-    'headers': ['ID', 'UUID', 'Type'],
-    'message': 'detected nodes with invalid type'
-}),)
+INVALID_NODE_SELECT_STATEMENTS = (
+    AttributeDict({
+        'sql': SELECT_NODES_WITH_INVALID_TYPE,
+        'parameters': {
+            'valid_node_types': VALID_NODE_TYPE_STRING
+        },
+        'headers': ['ID', 'UUID', 'Type'],
+        'message': 'detected nodes with invalid type'
+    }),
+)

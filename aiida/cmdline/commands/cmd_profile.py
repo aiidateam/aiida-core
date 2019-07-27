@@ -82,14 +82,17 @@ def profile_setdefault(profile):
     '--include-config/--skip-config',
     default=True,
     show_default=True,
-    help='Include deletion of entry in configuration file.')
+    help='Include deletion of entry in configuration file.'
+)
 @click.option(
-    '--include-db/--skip-db', default=True, show_default=True, help='Include deletion of associated database.')
+    '--include-db/--skip-db', default=True, show_default=True, help='Include deletion of associated database.'
+)
 @click.option(
     '--include-repository/--skip-repository',
     default=True,
     show_default=True,
-    help='Include deletion of associated file repository.')
+    help='Include deletion of associated file repository.'
+)
 @arguments.PROFILES(required=True)
 def profile_delete(force, include_config, include_db, include_repository, profiles):
     """
@@ -105,4 +108,5 @@ def profile_delete(force, include_config, include_db, include_repository, profil
             non_interactive=force,
             include_db=include_db,
             include_repository=include_repository,
-            include_config=include_config)
+            include_config=include_config
+        )

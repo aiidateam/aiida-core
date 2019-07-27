@@ -36,14 +36,17 @@ def remote_ls(ls_long, path, datum):
     try:
         content = datum.listdir_withattributes(path=path)
     except (IOError, OSError) as err:
-        echo.echo_critical('Unable to access the remote folde or file, check if it exists.\n'
-                           'Original error: {}'.format(str(err)))
+        echo.echo_critical(
+            'Unable to access the remote folde or file, check if it exists.\n'
+            'Original error: {}'.format(str(err))
+        )
     for metadata in content:
         if ls_long:
             mtime = datetime.datetime.fromtimestamp(metadata['attributes'].st_mtime)
             pre_line = '{} {:10}  {}  '.format(
                 get_mode_string(metadata['attributes'].st_mode), metadata['attributes'].st_size,
-                mtime.strftime("%d %b %Y %H:%M"))
+                mtime.strftime("%d %b %Y %H:%M")
+            )
             click.echo(pre_line, nl=False)
         if metadata['isdir']:
             click.echo(click.style(metadata['name'], fg='blue'))

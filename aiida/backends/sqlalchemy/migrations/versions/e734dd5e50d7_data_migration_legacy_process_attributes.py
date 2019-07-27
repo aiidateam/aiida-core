@@ -50,7 +50,8 @@ def upgrade():
     """Migrations for the upgrade."""
     conn = op.get_bind()
 
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dbnode
         SET attributes = jsonb_set(attributes, '{"sealed"}', attributes->'_sealed')
         WHERE attributes ? '_sealed' AND node_type LIKE 'process.%';
@@ -83,7 +84,8 @@ def upgrade():
             NOT (attributes ? 'sealed') AND
             attributes->>'process_state' NOT IN ('created', 'running', 'waiting');
         -- Set `sealed=True` for process nodes that do not yet have a `sealed` attribute AND are not in an active state
-        """)
+        """
+    )
     conn.execute(statement)
 
 

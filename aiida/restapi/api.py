@@ -66,9 +66,11 @@ class App(Flask):
                 # Generic server-side error (not to make the api crash if an
                 # unhandled exception is raised. Caution is never enough!!)
                 else:
-                    response = jsonify(
-                        {'message': 'Internal server error. The original '
-                         'message was: \"{}\"'.format(error)})
+                    response = jsonify({
+                        'message':
+                        'Internal server error. The original '
+                        'message was: \"{}\"'.format(error)
+                    })
                     response.status_code = 500
 
                 return response
@@ -105,7 +107,8 @@ class AiidaApi(Api):
             "/server/endpoints/",
             endpoint='server',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         ## Add resources and endpoints to the api
         self.add_resource(
@@ -118,7 +121,8 @@ class AiidaApi(Api):
             '/computers/schema/',
             endpoint='computers',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             Node,
@@ -140,7 +144,8 @@ class AiidaApi(Api):
             '/nodes/<id>/content/visualization/',
             endpoint='nodes',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             Calculation,
@@ -162,7 +167,8 @@ class AiidaApi(Api):
             '/calculations/<id>/content/extras/',
             endpoint='calculations',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             Data,
@@ -184,7 +190,8 @@ class AiidaApi(Api):
             '/data/<id>/content/download/',
             endpoint='data',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             Code,
@@ -206,7 +213,8 @@ class AiidaApi(Api):
             '/codes/<id>/content/download/',
             endpoint='codes',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             StructureData,
@@ -228,7 +236,8 @@ class AiidaApi(Api):
             '/structures/<id>/content/download/',
             endpoint='structures',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             KpointsData,
@@ -249,7 +258,8 @@ class AiidaApi(Api):
             '/kpoints/<id>/content/visualization/',
             endpoint='kpoints',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             BandsData,
@@ -270,7 +280,8 @@ class AiidaApi(Api):
             '/bands/<id>/content/visualization/',
             endpoint='bands',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             UpfData,
@@ -292,7 +303,8 @@ class AiidaApi(Api):
             '/upfs/<id>/content/download/',
             endpoint='upfs',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             CifData,
@@ -314,7 +326,8 @@ class AiidaApi(Api):
             '/cifs/<id>/content/download/',
             endpoint='cifs',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             User,
@@ -325,7 +338,8 @@ class AiidaApi(Api):
             '/users/<id>/',
             endpoint='users',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
         self.add_resource(
             Group,
@@ -336,7 +350,8 @@ class AiidaApi(Api):
             '/groups/<id>/',
             endpoint='groups',
             strict_slashes=False,
-            resource_class_kwargs=kwargs)
+            resource_class_kwargs=kwargs
+        )
 
     def handle_error(self, e):
         """

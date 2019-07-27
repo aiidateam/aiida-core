@@ -134,10 +134,12 @@ def infer_calculation_entry_point(type_strings):
 
         if inferred_entry_point_name in entry_point_names:
             entry_point_string = '{entry_point_group}:{entry_point_name}'.format(
-                entry_point_group=entry_point_group, entry_point_name=inferred_entry_point_name)
+                entry_point_group=entry_point_group, entry_point_name=inferred_entry_point_name
+            )
         elif inferred_entry_point_name:
             entry_point_string = '{plugin_name}.{plugin_class}'.format(
-                plugin_name=inferred_entry_point_name, plugin_class=plugin_class)
+                plugin_name=inferred_entry_point_name, plugin_class=plugin_class
+            )
         else:
             # If there is no inferred entry point name, i.e. there is no module name, use an empty string as fall back
             # This should only be the case for the type string `calculation.job.JobCalculation.`

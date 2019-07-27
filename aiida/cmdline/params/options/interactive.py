@@ -76,7 +76,9 @@ class InteractiveOption(ConditionalOption):
         if not self._prompt:
             raise TypeError(
                 "Interactive options need to have a prompt specified, but '{}' does not have a prompt defined".format(
-                    self.name))
+                    self.name
+                )
+            )
 
         # other kwargs
         self.switch = switch
@@ -140,7 +142,8 @@ class InteractiveOption(ConditionalOption):
             prompt_suffix=click.style(': ', fg=self.PROMPT_COLOR),
             default=self._get_default(ctx),
             hide_input=self.hide_input,
-            confirmation_prompt=self.confirmation_prompt)
+            confirmation_prompt=self.confirmation_prompt
+        )
 
     def ctrl_help(self):
         """control behaviour when help is requested from the prompt"""

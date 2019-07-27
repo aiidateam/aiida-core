@@ -36,7 +36,7 @@ When running AiiDA in multiple virtual environments (using ``virtualenv`` or ``c
 you can ask AiiDA to use a separate ``.aiida`` configuration directory per environment.
 
 1. Create your virtual environment ``aiida2``
-2. Edit the activation script ``~/.virtualenvs/aiida2/bin/activate`` 
+2. Edit the activation script ``~/.virtualenvs/aiida2/bin/activate``
    and append a line to set the ``AIIDA_PATH`` environment variable::
 
     export AIIDA_PATH='~/.virtualenvs/aiida2'  # use .aiida configuration in this folder

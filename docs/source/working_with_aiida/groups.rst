@@ -20,7 +20,7 @@ be performed with Groups:
       > verdi group create test_group
 
     From python interface::
-      
+
       In [1]: group = Group(label="test_group")
 
       In [2]: group.store()
@@ -43,7 +43,7 @@ be performed with Groups:
       Out[2]: <aiida.orm.querybuilder.QueryBuilder at 0x7f20db413ef0>
 
       In [3]: query.all()
-      Out[3]: 
+      Out[3]:
       [[<Group: "another_group" [type user], of user ya@epfl.ch>],
        [<Group: "old_group" [type user], of user ya@epfl.ch>],
        [<Group: "new_group" [type user], of user ya@epfl.ch>]]
@@ -82,18 +82,18 @@ be performed with Groups:
 
 6. **Rename Group.**
     From command line interface::
-    
+
       > verdi group rename test_group old_group
 
     From python interface::
-      
+
       In [1]: group = Group.get(label='test_group')
 
       In [2]: group.label = "another_group"
 
 7. **Delete Group.**
     From command line interface::
-    
+
       > verdi group delete old_group
 
 8. **Copy one group into anohter.**
@@ -102,16 +102,16 @@ be performed with Groups:
     automatically.
 
     From command line interface::
-    
+
       > verdi group copy source_group destination_group
 
     From python interface::
-      
+
       In [1]: src_group = Group.objects.get(label='source_group')
 
       In [2]: dest_group = Group.get_or_create(label='destination_group')[0]
 
       In [3]: dest_group.add_nodes(src_group.nodes)
 
-    
+
 

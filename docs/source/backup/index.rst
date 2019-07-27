@@ -70,7 +70,7 @@ Finally make sure your database folder (``/home/USERNAME/.aiida/``) containing t
 and the ``repository`` directory, is properly backed up by
 your backup software (under Ubuntu, Backup -> check the "Folders" tab).
 
-.. note:: If your database is very large (more than a few hundreds of thousands 
+.. note:: If your database is very large (more than a few hundreds of thousands
   of nodes), a standard backup of your repository folder will be
   very slow (up to days), thus slowing down your computer dramatically. To fix
   this problem you can set up an incremental backup of your repository by following
@@ -212,7 +212,7 @@ where PROFILENAME is the name of the profile you want to use (if you don't speci
 .. note:: You should backup the repository on a different disk than the one in
   which you have the AiiDA repository! If you just use the same disk, you don't
   have any security against the most common data loss cause: disk failure.
-  The best option is to use a destination folder mounted over ssh. For this 
+  The best option is to use a destination folder mounted over ssh. For this
   you need to install ``sshfs`` (under ubuntu: ``sudo apt-get install sshfs``).
 
   E.g. Imagine that you run your calculations on server_1 and you would like to
@@ -221,13 +221,13 @@ where PROFILENAME is the name of the profile you want to use (if you don't speci
 
   ``sshfs -o idmap=user -o rw backup_user@server_2:/home/backup_user/backup_destination_dir/``
   ``/home/aiida_user/remote_backup_dir/``
-  
-  You should put this line into the actions performed at start-up (under gnome you 
-  can access them by typing ``gnome-session-properties`` in a terminal), so that the 
+
+  You should put this line into the actions performed at start-up (under gnome you
+  can access them by typing ``gnome-session-properties`` in a terminal), so that the
   remote directory is mounted automatically after a reboot.
   Do **not** put it in your shell's startup file (e.g. ``.bashrc``) -
   otherwise each time you open a new terminal, your computer will complain that
-  the mount point is not empty... 
+  the mount point is not empty...
 
 
 A template backup configuration file (``backup_info.json.tmpl``) will be copied
@@ -292,9 +292,9 @@ day) to backup new changes.
 .. note:: You can set up a cron job using the following command::
 
     sudo crontab -u aiida_user -e
-  
+
   It will open an editor where you can add a line of the form::
-  
+
     00 03 * * * /home/aiida_user/.aiida/backup/start_backup.py 2>&1 | mail -s "Incremental backup of the repository" aiida_user_email@domain.net
 
   or (if you need to backup a different profile than the default one)::
@@ -304,6 +304,6 @@ day) to backup new changes.
   This will launch the backup of the database every day at 3 AM, and send the output
   (or any error message) to the email address of the user (provided the ``mail``
   command -- from ``mailutils`` -- is configured appropriately).
-  
-Finally, do not forget to exclude the repository folder from the normal backup 
+
+Finally, do not forget to exclude the repository folder from the normal backup
 of your home directory!

@@ -68,11 +68,11 @@ Use ``verdi run`` to execute it::
 
   verdi run file_with_script.py
 
-.. note:: Every time you call the function, an ssh connection 
-  is executed! So be careful and run this function 
-  sparsely, or your supercomputer centre might block your account. 
+.. note:: Every time you call the function, an ssh connection
+  is executed! So be careful and run this function
+  sparsely, or your supercomputer centre might block your account.
 
-  Another alternative if you want to call many times the function 
+  Another alternative if you want to call many times the function
   is to pass the transport as a parameter, and keep it open from the outside.
 
 An example output would be::

@@ -65,7 +65,7 @@ Direct execution (bypassing schedulers)
 
 The direct scheduler, to be used mainly for debugging, is an implementation of a scheduler plugin that does not require a real scheduler installed, but instead directly executes a command, puts it in the background, and checks for its process ID (PID) to discover if the execution is completed.
 
-.. warning:: 
+.. warning::
     The direct execution mode is very fragile. Currently, it spawns a separate Bash shell to execute a job and track each shell by process ID (PID). This poses following problems:
 
     * PID numeration is reset during reboots;
@@ -87,24 +87,24 @@ Job resources
 
 When asking a scheduler to allocate some nodes/machines for a given job, we have to specify some job resources, such as the number of required nodes or the numbers of MPI processes per node.
 
-Unfortunately, the way of specifying this information is different on different clusters. In AiiDA, this is implemented in different subclasses of the :py:class:`aiida.schedulers.datastructures.JobResource` class. The subclass that should be used is given by the scheduler, as described in the previous section. 
+Unfortunately, the way of specifying this information is different on different clusters. In AiiDA, this is implemented in different subclasses of the :py:class:`aiida.schedulers.datastructures.JobResource` class. The subclass that should be used is given by the scheduler, as described in the previous section.
 
-The interfaces of these subclasses are not all exactly the same. Instead, specifying the resources is similar to writing a scheduler script.  All classes define at least one method, :meth:`get_tot_num_mpiprocs <aiida.schedulers.datastructures.JobResource.get_tot_num_mpiprocs>`, that returns the total number of MPI processes requested. 
+The interfaces of these subclasses are not all exactly the same. Instead, specifying the resources is similar to writing a scheduler script.  All classes define at least one method, :meth:`get_tot_num_mpiprocs <aiida.schedulers.datastructures.JobResource.get_tot_num_mpiprocs>`, that returns the total number of MPI processes requested.
 
 In the following, the different :class:`JobResource <aiida.schedulers.datastructures.JobResource>` subclasses are described:
 
 .. contents ::
     :local:
 
-.. note:: 
+.. note::
     you can manually load a `specific` :class:`JobResource <aiida.schedulers.datastructures.JobResource>` subclass by directly importing it, e..g.
     ::
 
         from aiida.schedulers.datastructures import NodeNumberJobResource
-    
+
     However, in general, you will pass the fields to set directly in the ``metadata.options`` input dictionary of the :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`.
     For instance::
-  
+
         from aiida.orm import load_code
 
         # This example assumes that the computer is configured to use a scheduler with job resources of type :py:class:`~aiida.schedulers.datastructures.NodeNumberJobResource`
@@ -131,38 +131,38 @@ Once an instance of the class is obtained, you have the following fields that yo
 * ``res.tot_num_mpiprocs``: the total number of MPI processes that this job is requesting
 * ``res.num_cores_per_machine``: specify the number of cores to use on each machine
 * ``res.num_cores_per_mpiproc``: specify the number of cores to run each MPI process
-  
+
 Note that you need to specify only two among the first three fields above, but they have to be defined upon construction, for instance::
 
     res = NodeNumberJobResource(num_machines=4, num_mpiprocs_per_machine=16)
 
 asks the scheduler to allocate 4 machines, with 16 MPI processes on each machine. This will automatically ask for a total of ``4*16=64`` total number of MPI processes.
 
-.. note:: 
+.. note::
     If you specify res.num_machines, res.num_mpiprocs_per_machine, and res.tot_num_mpiprocs fields (not recommended), make sure that they satisfy::
 
         res.num_machines * res.num_mpiprocs_per_machine = res.tot_num_mpiprocs
-    
-    Moreover, if you specify ``res.tot_num_mpiprocs``, make sure that this is a multiple of ``res.num_machines`` and/or ``res.num_mpiprocs_per_machine``. 
 
-.. note:: 
+    Moreover, if you specify ``res.tot_num_mpiprocs``, make sure that this is a multiple of ``res.num_machines`` and/or ``res.num_mpiprocs_per_machine``.
+
+.. note::
     When creating a new computer, you will be asked for a ``default_mpiprocs_per_machine``. If you specify it, then you can avoid to specify ``num_mpiprocs_per_machine`` when creating the resources for that computer, and the default number will be used.
-  
+
     Of course, all the requirements between ``num_machines``, ``num_mpiprocs_per_machine`` and ``tot_num_mpiprocs`` still apply.
 
     Moreover, you can explicitly specify ``num_mpiprocs_per_machine`` if you want to use a value different from the default one.
 
 
 The num_cores_per_machine and num_cores_per_mpiproc fields are optional. If you specify num_mpiprocs_per_machine and num_cores_per_machine fields, make sure that::
-   
+
     res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
 
 If you want to specifiy single value in num_mpiprocs_per_machine and  num_cores_per_machine, please make sure that res.num_cores_per_machine is multiple of res.num_cores_per_mpiproc and/or res.num_mpiprocs_per_machine.
 
-.. note:: 
+.. note::
     In PBSPro, the num_mpiprocs_per_machine and num_cores_per_machine fields are used for mpiprocs and ppn respectively.
 
-.. note:: 
+.. note::
     In Torque, the num_mpiprocs_per_machine field is used for ppn unless the num_mpiprocs_per_machine is specified.
 
 .. _ParEnvJobResource:
@@ -177,9 +177,9 @@ Once an instance of the class is obtained, you have the following fields that yo
 * ``res.tot_num_mpiprocs``: the total number of MPI processes that this job is requesting
 
 Remember to always specify both fields. No checks are done on the consistency between the specified parallel environment and the total number of MPI processes requested (for instance, some parallel environments may have been configured by your cluster administrator to run on a single machine). It is your responsibility to make sure that the information is valid, otherwise the  submission will fail.
-  
+
 Some examples:
-  
+
 * setting the fields directly in the class constructor::
 
     res = ParEnvJobResource(parallel_env='mpi', tot_num_mpiprocs=64)

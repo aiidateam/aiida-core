@@ -32,9 +32,9 @@ def get_all_custom_transports():
     """
     Autodiscover all custom transports defined in the variable
     plugin_transpors inside each test_* file in this folder.
-    
+
     Therefore, do not move this function out of this file.
-    
+
     :return: a dictionary of objects as defined in the various plugin_transport
       variables of the different files (the key is the module in which
       it was found)
@@ -72,7 +72,7 @@ def get_all_custom_transports():
 
 def run_for_all_plugins(actual_test_method):
     """
-    Decorator method that actually run the methods with an additional 
+    Decorator method that actually run the methods with an additional
     parameter (custom_transport), once for every custom_transport defined
     in the test_* files [except this one].
     """

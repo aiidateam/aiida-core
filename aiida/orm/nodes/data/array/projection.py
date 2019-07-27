@@ -66,7 +66,7 @@ class ProjectionData(OrbitalData, ArrayData):
         from aiida.orm import load_node
 
         if isinstance(value, BandsData):
-            uuid = value.uuid 
+            uuid = value.uuid
         else:
             try:
                 pk = int(value)
@@ -81,7 +81,7 @@ class ProjectionData(OrbitalData, ArrayData):
                     raise exceptions.NotExistent("The value passed to "
                                       "set_reference_bandsdata was not "
                                       "associated to any bandsdata")
-                    
+
         self.set_attribute('reference_bandsdata_uuid', uuid)
 
     def get_reference_bandsdata(self):
@@ -146,7 +146,7 @@ class ProjectionData(OrbitalData, ArrayData):
                     self._from_index_to_arrayname(i))) )
                     for i in retrieve_indices]
         return out_list
-    
+
     def get_projections(self, **kwargs):
         """
         Retrieves all the pdos arrays corresponding to the input kwargs
@@ -169,7 +169,7 @@ class ProjectionData(OrbitalData, ArrayData):
         Used internally to determine the array names.
         """
         return "array_{}".format(index)
-    
+
     def set_projectiondata(self,list_of_orbitals, list_of_projections=None,
                              list_of_energy=None, list_of_pdos=None,
                              tags = None, bands_check=True):
@@ -214,7 +214,7 @@ class ProjectionData(OrbitalData, ArrayData):
                 return item
             else:
                 return [item]
-            
+
         def array_list_checker(array_list, array_name, orb_length):
             """
             Does basic checks over everything in the array_list. Makes sure that
@@ -228,7 +228,7 @@ class ProjectionData(OrbitalData, ArrayData):
             if len(array_list) != orb_length:
                 raise exceptions.ValidationError("{} did not have the same length as the "
                                       "list of orbitals".format(array_name))
-        
+
         ##############
         list_of_orbitals = single_to_list(list_of_orbitals)
         list_of_orbitals = copy.deepcopy(list_of_orbitals)
@@ -241,7 +241,7 @@ class ProjectionData(OrbitalData, ArrayData):
                                   "be set together")
 
         orb_length = len(list_of_orbitals)
-        
+
         # verifies and sets the orbital dicts
         list_of_orbital_dicts = []
         for i in range(len(list_of_orbitals)):

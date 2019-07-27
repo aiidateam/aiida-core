@@ -295,7 +295,7 @@ For example, if the code will generate a number of XML files in the folder ``rel
     calc_info.retrieve_list = [('relative/path/output/file_*[0-9].xml', '.', 1)]
 
 The second item when using globbing *has* to be ``'.'`` and the depth works just as before.
-In this example, all files matching the globbing pattern will be copied in the directory ``output`` in the retrieved folder data node. 
+In this example, all files matching the globbing pattern will be copied in the directory ``output`` in the retrieved folder data node.
 
 
 Retrieve temporary list

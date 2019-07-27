@@ -45,7 +45,7 @@ pipeline {
         stage('Pre-build') {
             steps {
                 // Clean work dir (often runs reshare the same folder, and it might
-                // contain old data from previous runs - this is particularly 
+                // contain old data from previous runs - this is particularly
                 // problematic when a folder is deleted from git but .pyc files
                 // are left in)
                 sh 'git clean -fdx'

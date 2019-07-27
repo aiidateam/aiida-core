@@ -16,6 +16,6 @@ in html format.
 
 .. note:: for a nicer html format, install the Read The Docs theme,
   using::
-  
-    sudo pip install sphinx_rtd_theme 
+
+    sudo pip install sphinx_rtd_theme
 

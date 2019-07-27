@@ -1,3 +1,8 @@
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.2.3
+  hooks:
+  - id: trailing-whitespace
+
 - repo: local
   hooks:
   - id: yapf

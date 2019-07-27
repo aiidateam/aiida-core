@@ -17,7 +17,7 @@ For example this can be a Quantum ESPRESSO ``pw.x`` calculation.
 You can load such a calculation -- we'll call it ``calc`` -- with the command
 
 .. code :: python
-    
+
     from aiida.orm import load_node
     calc = load_node(YOURPK)
 
@@ -27,7 +27,7 @@ either in ``verdi shell``, or in a python script (as described :doc:`here <../wo
 Using the CalcJobResultManager instance
 -------------------------------------------
 
-Each :class:`CalcJobNode<aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>` has a ``res`` attribute that is a 
+Each :class:`CalcJobNode<aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>` has a ``res`` attribute that is a
 :class:`~aiida.orm.utils.calcjob.CalcJobResultManager` instance and
 gives direct access to parsed data. You can access it as
 ::
@@ -61,7 +61,7 @@ that will print the total energy in units of eV, as also stated in the ``energy_
 Similarly, you can get any other parsed value, for any code that
 provides a parser.
 
-.. hint:: 
+.. hint::
     The :class:`~aiida.orm.utils.calcjob.CalcJobResultManager` is also integrated with the iPython/verdi shell completion mechanism: if ``calc`` is a valid :class:`CalcJobNode<aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>`, you can type
     ::
 
@@ -76,35 +76,35 @@ Calculations and workflows inputs and outputs
 
 In the following, we will show the methods to access the input and output nodes of a given calculation or workflow.
 
-Again, we start by loading a node from the database. Unlike before, this can be any type of node. 
+Again, we start by loading a node from the database. Unlike before, this can be any type of node.
 For example, if we have a the node with ``PK`` 17::
 
     from aiida.orm import load_node
     calc = load_node(17)
 
-Now, we want to find the nodes which have a direct input or output link to this node. 
-The node has several methods to extract this information: :meth:`get_outgoing() <aiida.orm.nodes.Node.get_outgoing>`, 
-:meth:`get_incoming() <aiida.orm.nodes.Node.get_incoming>`. 
+Now, we want to find the nodes which have a direct input or output link to this node.
+The node has several methods to extract this information: :meth:`get_outgoing() <aiida.orm.nodes.Node.get_outgoing>`,
+:meth:`get_incoming() <aiida.orm.nodes.Node.get_incoming>`.
 
-The most practical way to access this information for a calculation (or workflow), when limiting solely to 
-``INPUT_CALC`` and ``CREATE`` (or ``INPUT_WORK`` and ``RETURN``, respectively), especially when working on the ``verdi shell``, 
+The most practical way to access this information for a calculation (or workflow), when limiting solely to
+``INPUT_CALC`` and ``CREATE`` (or ``INPUT_WORK`` and ``RETURN``, respectively), especially when working on the ``verdi shell``,
 is by means of the ``.inputs`` and ``.outputs`` attributes.
 
-The ``.inputs`` attribute can be used to list and access the input nodes. 
-The names of the input links can be printed by ``list(calc.inputs)`` 
-or interactively by ``calc.inputs. + TAB``. 
+The ``.inputs`` attribute can be used to list and access the input nodes.
+The names of the input links can be printed by ``list(calc.inputs)``
+or interactively by ``calc.inputs. + TAB``.
 As an example, suppose that ``calc`` has an input ``KpointsData`` object under the linkname ``kpoints``. The command
 ::
 
     calc.inputs.kpoints
-  
+
 returns the ``KpointsData`` object.
 
-Similarly the ``.outputs`` attribute can be used to display the outputs of ``calc``. 
+Similarly the ``.outputs`` attribute can be used to display the outputs of ``calc``.
 Suppose that ``calc`` has an output ``FolderData`` with linkname ``retrieved``, then the command
 ::
 
   calc.outputs.retrieved
-  
-returns the ``FolderData`` object. 
+
+returns the ``FolderData`` object.
 

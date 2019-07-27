@@ -8,12 +8,12 @@ What is an Entry Point?
 -----------------------
 
 The ``setuptools`` package to which ``pip`` is a frontend has a feature called
-`entry points`_. 
+`entry points`_.
 When a distribution which registers entry points is installed,
 the entry point specifications are written to a file inside the distribution's
 ``.egg-info`` folder. ``setuptools`` provides a package ``pkg_resources`` which
 can find these entry points by distribution, group and/or name and load the
-data structure to which it points. 
+data structure to which it points.
 
 This is the way AiiDA finds and loads classes provided by plugins.
 
@@ -22,10 +22,10 @@ This is the way AiiDA finds and loads classes provided by plugins.
 AiiDA Entry Points
 -------------------
 
-.. _aiida plugin template: https://github.com/aiidateam/aiida-plugin-template 
+.. _aiida plugin template: https://github.com/aiidateam/aiida-plugin-template
 
 This document contains a list of entry point groups AiiDA uses, with an example
-usage for each. 
+usage for each.
 In the following, we assume the following folder structure::
 
    aiida-mycode/           - distribution folder
@@ -80,11 +80,11 @@ of the ``entry_points`` keyword::
 It is given as a dictionary containing entry point group names as keywords. The list for each entry point group contains entry point specifications.
 
 A specification in turn is given as a string and consists of two parts, a name and an import path describing where the class is to be imported from. The two parts are sparated by an `=` sign::
-   
+
    "mycode.mydat = aiida_mycode.data.mydat:MyData"
 
 We *strongly* suggest to start the name of each entry point with the name of
-the plugin, ommitting the leading 'aiida-'. 
+the plugin, ommitting the leading 'aiida-'.
 In our example this leads to entry specifications like ``"mycode.<any.you.want> = <module.path:class>"``, just like the above example.
 Exceptions to this rule are schedulers, transports and potentially data ones. Further exceptions can be tolerated in order to provide backwards compatibility if the plugin was in use before aiida-0.9 and its modules were installed in locations which does not make it possible to follow this rule.
 
@@ -96,7 +96,7 @@ Below, a list of valid entry points recognized by AiiDA follows.
 Entry points in this group are expected to be subclasses of :py:class:`aiida.orm.JobCalculation <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>`. This replaces the previous method of placing a python module with the class in question inside the ``aiida/orm/calculation/job`` subpackage.
 
 Example entry point specification::
-   
+
    entry_points={
       "aiida.calculations": [
          "mycode.mycode = aiida_mycode.calcs.mycode:MycodeCalculation"
@@ -134,7 +134,7 @@ Example spec::
       ...
 
 Usage::
-   
+
    from aiida.plugins import ParserFactory
    parser = ParserFactory('mycode.mycode')
 
@@ -152,7 +152,7 @@ Spec::
    }
 
 ``aiida_mycode/data/mydat.py``::
-   
+
    from aiida.orm import Data
    class MyData(Data):
       ...
@@ -176,17 +176,17 @@ Spec::
    }
 
 ``aiida_mycode/workflows/mywf.py``::
-   
+
    from aiida.engine.workchain import WorkChain
    class MyWorkflow(WorkChain):
       ...
-   
+
 Usage::
 
    from aiida.plugins import WorkflowFactory
    wf = WorkflowFactory('mycode.mywf')
 
-.. note:: For old-style workflows the entry point mechanism of the plugin system is not supported. 
+.. note:: For old-style workflows the entry point mechanism of the plugin system is not supported.
    Therefore one cannot load these workflows with the ``WorkflowFactory``.
    The only way to run these, is to store their source code in the ``aiida/workflows/user`` directory and use normal python imports to load the classes.
 
@@ -235,7 +235,7 @@ If your plugin adds support for exporting to an external database, use this entr
 
 .. Not sure how dbexporters work
 .. .. Spec::
-.. 
+..
 ..    entry_points={
 ..       "aiida.tools.dbexporters": [
 ..          "mymatdb = aiida_mymatdb.mymatdb
@@ -248,7 +248,7 @@ If your plugin adds support for exporting to an external database, use this entr
 If your plugin adds support for importing from an external database, use this entry point to have aiida find the module where you define the necessary functions.
 
 .. .. Spec::
-.. 
+..
 ..    entry_points={
 ..        "aiida.tools.dbimporters": [
 ..          "mymatdb = aiida_mymatdb.mymatdb

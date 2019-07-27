@@ -86,9 +86,9 @@ class AbstractQueryManager(object):
             count_dict = {}
 
             types = Counter([r[2] for r in dataset])
-            count_dict["types"] = get_statistics_dict(types)
+            count_dict['types'] = get_statistics_dict(types)
 
-            ctimelist = [r[1].strftime("%Y-%m-%d") for r in dataset]
+            ctimelist = [r[1].strftime('%Y-%m-%d') for r in dataset]
             ctime = Counter(ctimelist)
 
             if len(ctimelist) > 0:
@@ -104,10 +104,10 @@ class AbstractQueryManager(object):
                     curdatestring = curdate.strftime('%Y-%m-%d')
                     outdata[curdatestring] = ctime.get(curdatestring, 0)
                     curdate += datetime.timedelta(days=1)
-                count_dict["ctime_by_day"] = outdata
+                count_dict['ctime_by_day'] = outdata
 
             else:
-                count_dict["ctime_by_day"] = {}
+                count_dict['ctime_by_day'] = {}
 
             return count_dict
 
@@ -121,7 +121,7 @@ class AbstractQueryManager(object):
         qb_res = q.all()
 
         # total count
-        statistics["total"] = len(qb_res)
+        statistics['total'] = len(qb_res)
         statistics.update(count_statistics(qb_res))
 
         return statistics
@@ -144,33 +144,33 @@ class AbstractQueryManager(object):
         qb = orm.QueryBuilder()
         if args.all_users is False:
             user = orm.User.objects.get_default()
-            qb.append(orm.User, tag="creator", filters={"email": user.email})
+            qb.append(orm.User, tag='creator', filters={'email': user.email})
         else:
-            qb.append(orm.User, tag="creator")
+            qb.append(orm.User, tag='creator')
 
         bdata_filters = {}
         if args.past_days is not None:
             now = timezone.now()
             n_days_ago = now - datetime.timedelta(days=args.past_days)
-            bdata_filters.update({"ctime": {'>=': n_days_ago}})
+            bdata_filters.update({'ctime': {'>=': n_days_ago}})
 
-        qb.append(orm.BandsData, tag="bdata", with_user="creator",
+        qb.append(orm.BandsData, tag='bdata', with_user='creator',
                   filters=bdata_filters,
-                  project=["id", "label", "ctime"]
+                  project=['id', 'label', 'ctime']
                   )
 
         group_filters = {}
 
         if args.group_name is not None:
-            group_filters.update({"name": {"in": args.group_name}})
+            group_filters.update({'name': {'in': args.group_name}})
         if args.group_pk is not None:
-            group_filters.update({"id": {"in": args.group_pk}})
+            group_filters.update({'id': {'in': args.group_pk}})
         if group_filters:
-            qb.append(orm.Group, tag="group", filters=group_filters, with_node="bdata")
+            qb.append(orm.Group, tag='group', filters=group_filters, with_node='bdata')
 
-        qb.append(orm.StructureData, tag="sdata", with_descendants="bdata",
+        qb.append(orm.StructureData, tag='sdata', with_descendants='bdata',
                   # We don't care about the creator of StructureData
-                  project=["id", "attributes.kinds", "attributes.sites"])
+                  project=['id', 'attributes.kinds', 'attributes.sites'])
 
         qb.order_by({orm.StructureData: {'ctime': 'desc'}})
 
@@ -193,13 +193,13 @@ class AbstractQueryManager(object):
             already_visited_bdata.add(bid)
 
             if args.element is not None:
-                all_symbols = [_["symbols"][0] for _ in akinds]
+                all_symbols = [_['symbols'][0] for _ in akinds]
                 if not any([s in args.element for s in all_symbols]
                            ):
                     continue
 
             if args.element_only is not None:
-                all_symbols = [_["symbols"][0] for _ in akinds]
+                all_symbols = [_['symbols'][0] for _ in akinds]
                 if not all(
                         [s in all_symbols for s in args.element_only]
                 ):
@@ -225,7 +225,7 @@ class AbstractQueryManager(object):
             # If for some reason there is no kind with the name
             # referenced by the site
             except KeyError:
-                formula = "<<UNKNOWN>>"
+                formula = '<<UNKNOWN>>'
             entry_list.append([str(bid), str(formula),
                                bdate.strftime('%d %b %Y'), blabel])
 

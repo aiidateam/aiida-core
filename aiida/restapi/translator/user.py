@@ -22,11 +22,11 @@ class UserTranslator(BaseTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "users"
+    __label__ = 'users'
     # The AiiDA class one-to-one associated to the present class
     _aiida_class = orm.User
     # The string name of the AiiDA class
-    _aiida_type = "User"
+    _aiida_type = 'User'
 
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = False

@@ -27,10 +27,10 @@ def validate_l(value):
     Validate the value of the angular momentum
     """
     if not isinstance(value, six.integer_types):
-        raise ValidationError("angular momentum (l) must be integer")
+        raise ValidationError('angular momentum (l) must be integer')
 
     if value < -5 or value > 3:
-        raise ValidationError("angular momentum (l) must be between -5 and 3")
+        raise ValidationError('angular momentum (l) must be between -5 and 3')
 
     return value
 
@@ -40,7 +40,7 @@ def validate_m(value):
     Validate the value of the magnetic number
     """
     if not isinstance(value, six.integer_types):
-        raise ValidationError("magnetic number (m) must be integer")
+        raise ValidationError('magnetic number (m) must be integer')
 
     # without knowing l we cannot validate the value of m. We will call an additional function
     # in the validate function
@@ -53,7 +53,7 @@ def validate_kind_name(value):
     Validate the value of the kind_name
     """
     if value is not None and not isinstance(value, six.string_types):
-        raise ValidationError("kind_name must be a string")
+        raise ValidationError('kind_name must be a string')
 
     return value
 
@@ -63,10 +63,10 @@ def validate_n(value):
     Validate the value of the number of radial nodes
     """
     if not isinstance(value, six.integer_types):
-        raise ValidationError("number of radial nodes (n) must be integer")
+        raise ValidationError('number of radial nodes (n) must be integer')
 
     if value < 0 or value > 2:
-        raise ValidationError("number of radial nodes (n) must be between 0 and 2")
+        raise ValidationError('number of radial nodes (n) must be between 0 and 2')
 
     return value
 
@@ -76,10 +76,10 @@ def validate_spin(value):
     Validate the value of the spin
     """
     if not isinstance(value, six.integer_types):
-        raise ValidationError("spin must be integer")
+        raise ValidationError('spin must be integer')
 
     if value < -1 or value > 1:
-        raise ValidationError("spin must be among -1, 1 or 0 (undefined)")
+        raise ValidationError('spin must be among -1, 1 or 0 (undefined)')
 
     return value
 
@@ -301,16 +301,16 @@ class RealhydrogenOrbital(Orbital):
             orb_name = self.get_name_from_quantum_numbers(
                 orb_dict['angular_momentum'], magnetic_number=orb_dict['magnetic_number']
             )
-            position_string = "{:.4f},{:.4f},{:.4f}".format(
+            position_string = '{:.4f},{:.4f},{:.4f}'.format(
                 orb_dict['position'][0], orb_dict['position'][1], orb_dict['position'][2]
             )
-            out_string = "r{} {} orbital {} @ {}".format(
+            out_string = 'r{} {} orbital {} @ {}'.format(
                 orb_dict['radial_nodes'], orb_name,
-                "for kind '{}'".format(orb_dict['kind_name']) if orb_dict['kind_name'] else "", position_string
+                "for kind '{}'".format(orb_dict['kind_name']) if orb_dict['kind_name'] else '', position_string
             )
         except KeyError:
             # Should not happen, but we want it not to crash in __str__
-            out_string = "(not all parameters properly set)"
+            out_string = '(not all parameters properly set)'
         return out_string
 
     def _validate_keys(self, input_dict):
@@ -326,15 +326,15 @@ class RealhydrogenOrbital(Orbital):
         validated_dict = super(RealhydrogenOrbital, self)._validate_keys(input_dict)
 
         # Validate m knowing the value of l
-        angular_momentum = validated_dict["angular_momentum"]  # l quantum number, must be there
-        magnetic_number = validated_dict["magnetic_number"]  # m quantum number, must be there
+        angular_momentum = validated_dict['angular_momentum']  # l quantum number, must be there
+        magnetic_number = validated_dict['magnetic_number']  # m quantum number, must be there
         if angular_momentum >= 0:
             accepted_range = [0, 2 * angular_momentum]
         else:
             accepted_range = [0, -angular_momentum]
         if magnetic_number < min(accepted_range) or magnetic_number > max(accepted_range):
             raise ValidationError(
-                "the magnetic number must be in the range [{}, {}]".format(min(accepted_range), max(accepted_range))
+                'the magnetic number must be in the range [{}, {}]'.format(min(accepted_range), max(accepted_range))
             )
 
         # Check if it is a known combination
@@ -343,7 +343,7 @@ class RealhydrogenOrbital(Orbital):
                 validated_dict['angular_momentum'], magnetic_number=validated_dict['magnetic_number']
             )
         except ValidationError:
-            raise ValidationError("Invalid angular momentum magnetic number combination")
+            raise ValidationError('Invalid angular momentum magnetic number combination')
 
         return validated_dict
 
@@ -360,8 +360,8 @@ class RealhydrogenOrbital(Orbital):
         ]
         if not orbital_name:
             raise InputValidationError(
-                "No orbital name corresponding to the "
-                "angular_momentum {} could be found".format(angular_momentum)
+                'No orbital name corresponding to the '
+                'angular_momentum {} could be found'.format(angular_momentum)
             )
         if magnetic_number is not None:
             # finds angular momentum
@@ -373,9 +373,9 @@ class RealhydrogenOrbital(Orbital):
 
             if not orbital_name:
                 raise InputValidationError(
-                    "No orbital name corresponding to "
-                    "the magnetic_number {} could be "
-                    "found".format(magnetic_number)
+                    'No orbital name corresponding to '
+                    'the magnetic_number {} could be '
+                    'found'.format(magnetic_number)
                 )
         return orbital_name[0]
 
@@ -390,7 +390,7 @@ class RealhydrogenOrbital(Orbital):
         name = name.upper()
         list_of_dicts = [CONVERSION_DICT[x][y] for x in CONVERSION_DICT for y in CONVERSION_DICT[x] if name in (y, x)]
         if not list_of_dicts:
-            raise InputValidationError("Invalid choice of projection name")
+            raise InputValidationError('Invalid choice of projection name')
         return list_of_dicts
 
 

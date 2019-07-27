@@ -28,7 +28,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm import CalcJobNode
         from aiida.common.exceptions import InvalidOperation
 
-        newcomputer = orm.Computer(name="testdeletioncomputer", hostname='localhost',
+        newcomputer = orm.Computer(name='testdeletioncomputer', hostname='localhost',
                                    transport_type='local', scheduler_type='pbspro',
                                    workdir='/tmp/aiida').store()
 
@@ -59,7 +59,7 @@ class TestGroupsDjango(AiidaTestCase):
 
         backend = self.backend
 
-        default_user = backend.users.create("{}@aiida.net".format(self.id())).store()
+        default_user = backend.users.create('{}@aiida.net'.format(self.id())).store()
 
         g1 = backend.groups.create(label='testquery1', user=default_user).store()
         self.addCleanup(lambda: backend.groups.delete(g1.id))
@@ -120,7 +120,7 @@ class TestGroupsDjango(AiidaTestCase):
 
         n = Data().store()
 
-        default_user = backend.users.create("{}@aiida.net".format(self.id())).store()
+        default_user = backend.users.create('{}@aiida.net'.format(self.id())).store()
 
         g = backend.groups.create(label='testgroup_from_dbgroup', user=default_user).store()
         self.addCleanup(lambda: backend.groups.delete(g.id))

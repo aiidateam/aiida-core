@@ -51,16 +51,16 @@ class XyData(ArrayData):
         of type basestring. Raises InputValidationError if this not the case.
         """
         if not isinstance(name, six.string_types):
-            raise InputValidationError("The name must always be an instance of basestring.")
+            raise InputValidationError('The name must always be an instance of basestring.')
 
         if not isinstance(array, np.ndarray):
-            raise InputValidationError("The input array must always be a numpy array")
+            raise InputValidationError('The input array must always be a numpy array')
         try:
             array.astype(float)
         except ValueError:
-            raise InputValidationError("The input array must only contain floats")
+            raise InputValidationError('The input array must only contain floats')
         if not isinstance(units, six.string_types):
-            raise InputValidationError("The units must always be an instance of basestring.")
+            raise InputValidationError('The units must always be an instance of basestring.')
 
     def set_x(self, x_array, x_name, x_units):
         """
@@ -71,9 +71,9 @@ class XyData(ArrayData):
         :param x_units: the units of x
         """
         self._arrayandname_validator(x_array, x_name, x_units)
-        self.set_attribute("x_name", x_name)
-        self.set_attribute("x_units", x_units)
-        self.set_array("x_array", x_array)
+        self.set_attribute('x_name', x_name)
+        self.set_attribute('x_units', x_units)
+        self.set_array('x_array', x_array)
 
     def set_y(self, y_arrays, y_names, y_units):
         """
@@ -91,28 +91,28 @@ class XyData(ArrayData):
 
         # checks that the input lengths match
         if len(y_arrays) != len(y_names):
-            raise InputValidationError("Length of arrays and names do not "
-                                       "match!")
+            raise InputValidationError('Length of arrays and names do not '
+                                       'match!')
         if len(y_units) != len(y_names):
-            raise InputValidationError("Length of units does not match!")
+            raise InputValidationError('Length of units does not match!')
 
         # Try to get the x_array
         try:
             x_array = self.get_x()[1]
         except NotExistent:
-            raise InputValidationError("X array has not been set yet")
+            raise InputValidationError('X array has not been set yet')
         # validate each of the y_arrays
         for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
             self._arrayandname_validator(y_array, y_name, y_unit)
             if np.shape(y_array) != np.shape(x_array):
-                raise InputValidationError("y_array {} did not have the "
-                                           "same shape has the x_array!"
-                                           "".format(y_name))
-            self.set_array("y_array_{}".format(num), y_array)
+                raise InputValidationError('y_array {} did not have the '
+                                           'same shape has the x_array!'
+                                           ''.format(y_name))
+            self.set_array('y_array_{}'.format(num), y_array)
 
         # if the y_arrays pass the initial validation, sets each
-        self.set_attribute("y_names", y_names)
-        self.set_attribute("y_units", y_units)
+        self.set_attribute('y_names', y_names)
+        self.set_attribute('y_units', y_units)
 
     def get_x(self):
         """
@@ -123,11 +123,11 @@ class XyData(ArrayData):
         :return x_units: the x units set earlier
         """
         try:
-            x_name = self.get_attribute("x_name")
-            x_array = self.get_array("x_array")
-            x_units = self.get_attribute("x_units")
+            x_name = self.get_attribute('x_name')
+            x_array = self.get_array('x_array')
+            x_units = self.get_attribute('x_units')
         except (KeyError, AttributeError):
-            raise NotExistent("No x array has been set yet!")
+            raise NotExistent('No x array has been set yet!')
         return x_name, x_array, x_units
 
     def get_y(self):
@@ -140,18 +140,18 @@ class XyData(ArrayData):
         :return y_units: list of strings giving the units for the y_arrays
         """
         try:
-            y_names = self.get_attribute("y_names")
+            y_names = self.get_attribute('y_names')
         except (KeyError, AttributeError):
-            raise NotExistent("No y names has been set yet!")
+            raise NotExistent('No y names has been set yet!')
         try:
-            y_units = self.get_attribute("y_units")
+            y_units = self.get_attribute('y_units')
         except (KeyError, AttributeError):
-            raise NotExistent("No y units has been set yet!")
+            raise NotExistent('No y units has been set yet!')
         y_arrays = []
         try:
             for i in range(len(y_names)):
-                y_arrays += [self.get_array("y_array_{}".format(i))]
+                y_arrays += [self.get_array('y_array_{}'.format(i))]
         except (KeyError, AttributeError):
-            raise NotExistent("Could not retrieve array associated with y array"
-                              " {}".format(y_names[i]))
+            raise NotExistent('Could not retrieve array associated with y array'
+                              ' {}'.format(y_names[i]))
         return list(zip(y_names, y_arrays, y_units))

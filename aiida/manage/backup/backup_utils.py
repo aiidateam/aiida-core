@@ -33,7 +33,7 @@ def ask_question(question, reply_type, allow_none_as_answer=True):
     final_answer = None
 
     while True:
-        answer = query_string(question, "")
+        answer = query_string(question, '')
 
         # If the reply is empty
         if not answer:
@@ -52,17 +52,17 @@ def ask_question(question, reply_type, allow_none_as_answer=True):
                     raise ValueError
             # If it is not parsable...
             except ValueError:
-                sys.stdout.write("The given value could not be parsed. Type expected: {}\n".format(reply_type))
+                sys.stdout.write('The given value could not be parsed. Type expected: {}\n'.format(reply_type))
                 # If the timestamp could not have been parsed,
                 # ask again the same question.
                 continue
 
-        if query_yes_no("{} was parsed. Is it correct?".format(final_answer), default="yes"):
+        if query_yes_no('{} was parsed. Is it correct?'.format(final_answer), default='yes'):
             break
     return final_answer
 
 
-def query_yes_no(question, default="yes"):
+def query_yes_no(question, default='yes'):
     """Ask a yes/no question via input() and return their answer.
 
     "question" is a string that is presented to the user.
@@ -72,13 +72,13 @@ def query_yes_no(question, default="yes"):
 
     The "answer" return value is True for "yes" or False for "no".
     """
-    valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
+    valid = {'yes': True, 'y': True, 'ye': True, 'no': False, 'n': False}
     if default is None:
-        prompt = " [y/n] "
-    elif default == "yes":
-        prompt = " [Y/n] "
-    elif default == "no":
-        prompt = " [y/N] "
+        prompt = ' [y/n] '
+    elif default == 'yes':
+        prompt = ' [Y/n] '
+    elif default == 'no':
+        prompt = ' [y/N] '
     else:
         raise ValueError("invalid default answer: '%s'" % default)
 
@@ -111,9 +111,9 @@ def query_string(question, default):
     """
 
     if default is None or not default:
-        prompt = ""
+        prompt = ''
     else:
-        prompt = " [{}]".format(default)
+        prompt = ' [{}]'.format(default)
 
     while True:
         reply = input(question + prompt)
@@ -127,4 +127,4 @@ def query_string(question, default):
         if reply:
             return reply
 
-        sys.stdout.write("Please provide a non empty answer.\n")
+        sys.stdout.write('Please provide a non empty answer.\n')

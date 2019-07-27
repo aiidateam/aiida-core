@@ -43,10 +43,10 @@ class BaseTranslator(object):
 
     _result_type = __label__
 
-    _default = _default_projections = ["**"]
+    _default = _default_projections = ['**']
     _default_user_projections = None
 
-    _schema_projections = {"column_order": [], "additional_info": {}}
+    _schema_projections = {'column_order': [], 'additional_info': {}}
 
     _is_qb_initialized = False
     _is_id_query = None
@@ -89,13 +89,13 @@ class BaseTranslator(object):
 
         # basic query_help object
         self._query_help = {
-            "path": [{
-                "cls": self._aiida_class,
-                "tag": self.__label__
+            'path': [{
+                'cls': self._aiida_class,
+                'tag': self.__label__
             }],
-            "filters": {},
-            "project": {},
-            "order_by": {}
+            'filters': {},
+            'project': {},
+            'order_by': {}
         }
         # query_builder object (No initialization)
         self.qbobj = QueryBuilder()
@@ -112,7 +112,7 @@ class BaseTranslator(object):
             because the inputs of self.get_nodes are sufficient to determine the
             identity of two queries.
         """
-        return ""
+        return ''
 
     def get_schema(self):
         # pylint: disable=fixme,too-many-branches
@@ -138,8 +138,8 @@ class BaseTranslator(object):
 
         # get addional info and column order from translator class
         # and combine it with basic schema
-        if self._schema_projections["column_order"]:
-            for field in self._schema_projections["column_order"]:
+        if self._schema_projections['column_order']:
+            for field in self._schema_projections['column_order']:
 
                 # basic schema
                 if field in basic_schema.keys():
@@ -148,28 +148,28 @@ class BaseTranslator(object):
                     ## Note: if column name starts with user_* get the schema information from
                     # user class. It is added mainly to handle user_email case.
                     # TODO need to improve
-                    field_parts = field.split("_")
-                    if field_parts[0] == "user" and field != "user_id" and len(field_parts) > 1:
+                    field_parts = field.split('_')
+                    if field_parts[0] == 'user' and field != 'user_id' and len(field_parts) > 1:
                         from aiida.orm.users import User
                         user_schema = User.get_schema()
                         if field_parts[1] in user_schema.keys():
                             schema[field] = user_schema[field_parts[1]]
                         else:
-                            raise KeyError("{} is not present in user schema".format(field))
+                            raise KeyError('{} is not present in user schema'.format(field))
                     else:
-                        raise KeyError("{} is not present in ORM basic schema".format(field))
+                        raise KeyError('{} is not present in ORM basic schema'.format(field))
 
                 # additional info defined in translator class
-                if field in self._schema_projections["additional_info"]:
-                    schema[field].update(self._schema_projections["additional_info"][field])
+                if field in self._schema_projections['additional_info']:
+                    schema[field].update(self._schema_projections['additional_info'][field])
                 else:
-                    raise KeyError("{} is not present in default projection additional info".format(field))
+                    raise KeyError('{} is not present in default projection additional info'.format(field))
 
             # order
-            ordering = self._schema_projections["column_order"]
+            ordering = self._schema_projections['column_order']
 
         else:
-            raise ConfigurationError("Define column order to get schema for {}".format(self._aiida_type))
+            raise ConfigurationError('Define column order to get schema for {}'.format(self._aiida_type))
 
         return dict(fields=schema, ordering=ordering)
 
@@ -187,7 +187,7 @@ class BaseTranslator(object):
         if self._is_qb_initialized:
             self._total_count = self.qbobj.count()
         else:
-            raise InvalidOperation("query builder object has not been initialized.")
+            raise InvalidOperation('query builder object has not been initialized.')
 
             # def caching_method(self):
             #     """
@@ -237,19 +237,19 @@ class BaseTranslator(object):
             if filters:
                 for tag, tag_filters in filters.items():
                     if tag_filters and isinstance(tag_filters, dict):
-                        self._query_help["filters"][tag] = {}
+                        self._query_help['filters'][tag] = {}
                         for filter_key, filter_value in tag_filters.items():
-                            if filter_key == "pk":
+                            if filter_key == 'pk':
                                 filter_key = PK_DBSYNONYM
-                            self._query_help["filters"][tag][filter_key] \
+                            self._query_help['filters'][tag][filter_key] \
                                 = filter_value
         else:
             raise InputValidationError(
-                "Pass data in dictionary format where "
-                "keys are the tag names given in the "
-                "path in query_help and and their values"
-                " are the dictionary of filters want "
-                "to add for that tag name."
+                'Pass data in dictionary format where '
+                'keys are the tag names given in the '
+                'path in query_help and and their values'
+                ' are the dictionary of filters want '
+                'to add for that tag name.'
             )
 
     def get_default_projections(self):
@@ -280,19 +280,19 @@ class BaseTranslator(object):
         if isinstance(projections, dict):
             if projections:
                 for project_key, project_list in projections.items():
-                    self._query_help["project"][project_key] = project_list
+                    self._query_help['project'][project_key] = project_list
                 if self._default_user_projections:
                     from aiida.orm import User
-                    self._query_help["path"].insert(0, {"cls": User, "tag": "user"})
-                    self._query_help["path"][1]["with_user"] = "user"
-                    self._query_help["project"]["user"] = self._default_user_projections
+                    self._query_help['path'].insert(0, {'cls': User, 'tag': 'user'})
+                    self._query_help['path'][1]['with_user'] = 'user'
+                    self._query_help['project']['user'] = self._default_user_projections
         else:
             raise InputValidationError(
-                "Pass data in dictionary format where "
-                "keys are the tag names given in the "
-                "path in query_help and values are the "
-                "list of the names you want to project "
-                "in the final output"
+                'Pass data in dictionary format where '
+                'keys are the tag names given in the '
+                'path in query_help and values are the '
+                'list of the names you want to project '
+                'in the final output'
             )
 
     def set_order(self, orders):
@@ -305,9 +305,9 @@ class BaseTranslator(object):
         ## Validate input
         if not isinstance(orders, dict):
             raise InputValidationError(
-                "orders has to be a dictionary"
+                'orders has to be a dictionary'
                 "compatible with the 'order_by' section"
-                "of the query_help"
+                'of the query_help'
             )
 
         ## Auxiliary_function to get the ordering cryterion
@@ -381,7 +381,7 @@ class BaseTranslator(object):
         if node_id is not None:
             self._is_id_query = True
             if self._result_type == self.__label__ and filters:
-                raise RestInputValidationError("selecting a specific id does not allow to specify filters")
+                raise RestInputValidationError('selecting a specific id does not allow to specify filters')
 
             try:
                 self._check_id_validity(node_id)
@@ -435,9 +435,9 @@ class BaseTranslator(object):
             try:
                 limit = int(limit)
             except ValueError:
-                raise InputValidationError("Limit value must be an integer")
+                raise InputValidationError('Limit value must be an integer')
             if limit > self.limit_default:
-                raise RestValidationError("Limit and perpage cannot be bigger than {}".format(self.limit_default))
+                raise RestValidationError('Limit and perpage cannot be bigger than {}'.format(self.limit_default))
         else:
             limit = self.limit_default
 
@@ -445,7 +445,7 @@ class BaseTranslator(object):
             try:
                 offset = int(offset)
             except ValueError:
-                raise InputValidationError("Offset value must be an integer")
+                raise InputValidationError('Offset value must be an integer')
 
         if self._is_qb_initialized:
             if limit is not None:
@@ -457,7 +457,7 @@ class BaseTranslator(object):
             else:
                 pass
         else:
-            raise InvalidOperation("query builder object has not been initialized.")
+            raise InvalidOperation('query builder object has not been initialized.')
 
     def get_formatted_result(self, label):
         """
@@ -470,14 +470,14 @@ class BaseTranslator(object):
         """
 
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been initialized.")
+            raise InvalidOperation('query builder object has not been initialized.')
 
         results = []
         if self._total_count > 0:
             for res in self.qbobj.dict():
                 tmp = res[label]
                 if self._default_user_projections:
-                    tmp["user_email"] = res["user"]["email"]
+                    tmp['user_email'] = res['user']['email']
                 results.append(tmp)
 
         # TODO think how to make it less hardcoded
@@ -499,7 +499,7 @@ class BaseTranslator(object):
 
         ## Check whether the querybuilder object has been initialized
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been initialized.")
+            raise InvalidOperation('query builder object has not been initialized.')
 
         ## Count the total number of rows returned by the query (if not
         # already done)
@@ -552,12 +552,12 @@ class BaseTranslator(object):
         try:
             pk = qbobj.one()[0].pk
         except MultipleObjectsError:
-            raise RestValidationError("More than one node found. Provide longer starting pattern for id.")
+            raise RestValidationError('More than one node found. Provide longer starting pattern for id.')
         except NotExistent:
             raise RestValidationError(
                 "either no object's id starts"
                 " with '{}' or the corresponding object"
-                " is not of type aiida.orm.{}".format(node_id, self._aiida_type)
+                ' is not of type aiida.orm.{}'.format(node_id, self._aiida_type)
             )
         else:
             # create a permanent filter

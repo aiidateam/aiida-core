@@ -61,8 +61,8 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
             # check that it is a subfolder
             if not os.path.commonprefix([abspath, folder_limit]) == folder_limit:
                 raise ValueError(
-                    "The absolute path for this folder is not within the "
-                    "folder_limit. abspath={}, folder_limit={}.".format(abspath, folder_limit)
+                    'The absolute path for this folder is not within the '
+                    'folder_limit. abspath={}, folder_limit={}.'.format(abspath, folder_limit)
                 )
 
         self._abspath = abspath
@@ -182,7 +182,7 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
         dest_abs_path = self.get_abs_path(filename)
 
         if not os.path.isabs(src):
-            raise ValueError("src must be an absolute path in insert_file")
+            raise ValueError('src must be an absolute path in insert_file')
 
         # In this way, the destination is always correct (i.e., if I copy to a
         # folder, I point to the correct location inside it)
@@ -199,7 +199,7 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
                     # This automatically overwrites files
                     shutil.copyfile(src, dest_abs_path)
                 else:
-                    raise IOError("destination already exists: {}".format(os.path.join(dest_abs_path)))
+                    raise IOError('destination already exists: {}'.format(os.path.join(dest_abs_path)))
             else:
                 shutil.copyfile(src, dest_abs_path)
         elif os.path.isdir(src):
@@ -212,11 +212,11 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
                     # This automatically overwrites files
                     shutil.copytree(src, dest_abs_path)
                 else:
-                    raise IOError("destination already exists: {}".format(os.path.join(dest_abs_path)))
+                    raise IOError('destination already exists: {}'.format(os.path.join(dest_abs_path)))
             else:
                 shutil.copytree(src, dest_abs_path)
         else:
-            raise ValueError("insert_path can only insert files or paths, not symlinks or the like")
+            raise ValueError('insert_path can only insert files or paths, not symlinks or the like')
 
         return dest_abs_path
 
@@ -286,7 +286,7 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
             Raise OSError if it does not.
         """
         if os.path.isabs(relpath):
-            raise ValueError("relpath must be a relative path")
+            raise ValueError('relpath must be a relative path')
         dest_abs_path = os.path.join(self.abspath, relpath)
 
         if not os.path.commonprefix([dest_abs_path, self.folder_limit]) == self.folder_limit:
@@ -295,7 +295,7 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
 
         if check_existence:
             if not os.path.exists(dest_abs_path):
-                raise OSError("{} does not exist within the folder {}".format(relpath, self.abspath))
+                raise OSError('{} does not exist within the folder {}'.format(relpath, self.abspath))
 
         return dest_abs_path
 
@@ -398,7 +398,7 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
         if overwrite:
             self.erase()
         elif self.exists():
-            raise IOError("Location {} already exists, and overwrite is set to False".format(self.abspath))
+            raise IOError('Location {} already exists, and overwrite is set to False'.format(self.abspath))
 
         # Create parent dir, if needed, with the right mode
         pardir = os.path.dirname(self.abspath)
@@ -536,7 +536,7 @@ class RepositoryFolder(Folder):
         if section not in VALID_SECTIONS:
             retstr = (
                 "Repository section '{}' not allowed. "
-                "Valid sections are: {}".format(section, ",".join(VALID_SECTIONS))
+                'Valid sections are: {}'.format(section, ','.join(VALID_SECTIONS))
             )
             raise ValueError(retstr)
         self._section = section

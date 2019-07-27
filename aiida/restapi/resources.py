@@ -46,29 +46,29 @@ class ServerInfo(Resource):
         if len(pathlist) > 1:
             resource_type = pathlist.pop(1)
         else:
-            resource_type = "info"
+            resource_type = 'info'
 
         response = {}
 
         import aiida.restapi.common.config as conf
         from aiida import __version__
 
-        if resource_type == "info":
+        if resource_type == 'info':
             response = []
 
             # Add Rest API version
-            response.append("REST API version: " + conf.PREFIX.split("/")[-1])
+            response.append('REST API version: ' + conf.PREFIX.split('/')[-1])
 
             # Add Rest API prefix
-            response.append("REST API Prefix: " + conf.PREFIX)
+            response.append('REST API Prefix: ' + conf.PREFIX)
 
             # Add AiiDA version
-            response.append("AiiDA==" + __version__)
+            response.append('AiiDA==' + __version__)
 
-        elif resource_type == "endpoints":
+        elif resource_type == 'endpoints':
 
             from aiida.restapi.common.utils import list_routes
-            response["available_endpoints"] = list_routes()
+            response['available_endpoints'] = list_routes()
 
         headers = self.utils.build_headers(url=request.url, total_count=1)
 
@@ -79,7 +79,7 @@ class ServerInfo(Resource):
             url_root=url_root,
             path=path,
             query_string=request.query_string.decode('utf-8'),
-            resource_type="Info",
+            resource_type='Info',
             data=response
         )
         return self.utils.build_response(status=200, headers=headers, data=data)
@@ -251,21 +251,21 @@ class Node(Resource):
             headers = self.utils.build_headers(url=request.url, total_count=1)
 
         ## Treat the statistics
-        elif query_type == "statistics":
+        elif query_type == 'statistics':
             (
                 limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
                 filename, rtype, tree_in_limit, tree_out_limit
             ) = self.utils.parse_query_string(query_string)
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if filters:
-                usr = filters["user"]["=="]
+                usr = filters['user']['==']
             else:
                 usr = None
             results = self.trans.get_statistics(usr)
 
         # TODO improve the performance of tree endpoint by getting the data from database faster
         # TODO add pagination for this endpoint (add default max limit)
-        elif query_type == "tree":
+        elif query_type == 'tree':
             headers = self.utils.build_headers(url=request.url, total_count=0)
             results = self.trans.get_io_tree(node_id, tree_in_limit, tree_out_limit)
         else:
@@ -303,32 +303,32 @@ class Node(Resource):
                 ## Retrieve results
                 results = self.trans.get_results()
 
-                if query_type == "download" and results:
-                    if results["download"]["status"] == 200:
-                        data = results["download"]["data"]
+                if query_type == 'download' and results:
+                    if results['download']['status'] == 200:
+                        data = results['download']['data']
                         response = make_response(data)
                         response.headers['content-type'] = 'application/octet-stream'
                         response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(
-                            results["download"]["filename"]
+                            results['download']['filename']
                         )
                         return response
 
-                    results = results["download"]["data"]
+                    results = results['download']['data']
 
-                if query_type in ["retrieved_inputs", "retrieved_outputs"] and results:
+                if query_type in ['retrieved_inputs', 'retrieved_outputs'] and results:
                     try:
-                        status = results[query_type]["status"]
+                        status = results[query_type]['status']
                     except KeyError:
-                        status = ""
+                        status = ''
                     except TypeError:
-                        status = ""
+                        status = ''
 
                     if status == 200:
-                        data = results[query_type]["data"]
+                        data = results[query_type]['data']
                         response = make_response(data)
                         response.headers['content-type'] = 'application/octet-stream'
                         response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(
-                            results[query_type]["filename"]
+                            results[query_type]['filename']
                         )
                         return response
 
@@ -361,7 +361,7 @@ class Computer(BaseResource):
 
         # Set wheteher to expect a pk (integer) or a uuid pattern (string) in
         # the URL path
-        self.parse_pk_uuid = "uuid"
+        self.parse_pk_uuid = 'uuid'
 
 
 class Group(BaseResource):

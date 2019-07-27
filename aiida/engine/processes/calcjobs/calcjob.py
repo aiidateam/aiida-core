@@ -266,8 +266,8 @@ class CalcJob(Process):
         for code in codes:
             if code.is_local():
                 if code.get_local_executable() in folder.get_content_list():
-                    raise PluginInternalError("The plugin created a file {} that is also "
-                                              "the executable name!".format(code.get_local_executable()))
+                    raise PluginInternalError('The plugin created a file {} that is also '
+                                              'the executable name!'.format(code.get_local_executable()))
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
@@ -300,8 +300,8 @@ class CalcJob(Process):
             file_sub_class = DataFactory(subclassname)
             if not issubclass(file_sub_class, orm.SinglefileData):
                 raise PluginInternalError(
-                    "[presubmission of calc {}] retrieve_singlefile_list subclass problem: {} is "
-                    "not subclass of SinglefileData".format(self.node.pk, file_sub_class.__name__))
+                    '[presubmission of calc {}] retrieve_singlefile_list subclass problem: {} is '
+                    'not subclass of SinglefileData'.format(self.node.pk, file_sub_class.__name__))
         if retrieve_singlefile_list:
             self.node.set_retrieve_singlefile_list(retrieve_singlefile_list)
 
@@ -342,26 +342,26 @@ class CalcJob(Process):
 
         # set the codes_info
         if not isinstance(calcinfo.codes_info, (list, tuple)):
-            raise PluginInternalError("codes_info passed to CalcInfo must be a list of CalcInfo objects")
+            raise PluginInternalError('codes_info passed to CalcInfo must be a list of CalcInfo objects')
 
         codes_info = []
         for code_info in calcinfo.codes_info:
 
             if not isinstance(code_info, CodeInfo):
-                raise PluginInternalError("Invalid codes_info, must be a list of CodeInfo objects")
+                raise PluginInternalError('Invalid codes_info, must be a list of CodeInfo objects')
 
             if code_info.code_uuid is None:
-                raise PluginInternalError("CalcInfo should have "
-                                          "the information of the code "
-                                          "to be launched")
+                raise PluginInternalError('CalcInfo should have '
+                                          'the information of the code '
+                                          'to be launched')
             this_code = load_node(code_info.code_uuid, sub_classes=(Code,))
 
             this_withmpi = code_info.withmpi  # to decide better how to set the default
             if this_withmpi is None:
                 if len(calcinfo.codes_info) > 1:
-                    raise PluginInternalError("For more than one code, it is "
-                                              "necessary to set withmpi in "
-                                              "codes_info")
+                    raise PluginInternalError('For more than one code, it is '
+                                              'necessary to set withmpi in '
+                                              'codes_info')
                 else:
                     this_withmpi = self.node.get_option('withmpi')
 
@@ -384,7 +384,7 @@ class CalcJob(Process):
             try:
                 job_tmpl.codes_run_mode = calcinfo.codes_run_mode
             except KeyError:
-                raise PluginInternalError("Need to set the order of the code execution (parallel or serial?)")
+                raise PluginInternalError('Need to set the order of the code execution (parallel or serial?)')
         else:
             job_tmpl.codes_run_mode = CodeRunMode.SERIAL
         ########################################################################
@@ -434,32 +434,32 @@ class CalcJob(Process):
             calcinfo.remote_copy_list = []
 
         # Some validation
-        this_pk = self.node.pk if self.node.pk is not None else "[UNSTORED]"
+        this_pk = self.node.pk if self.node.pk is not None else '[UNSTORED]'
         local_copy_list = calcinfo.local_copy_list
         try:
             validate_list_of_string_tuples(local_copy_list, tuple_length=3)
         except ValidationError as exc:
-            raise PluginInternalError("[presubmission of calc {}] "
-                                      "local_copy_list format problem: {}".format(this_pk, exc))
+            raise PluginInternalError('[presubmission of calc {}] '
+                                      'local_copy_list format problem: {}'.format(this_pk, exc))
 
         remote_copy_list = calcinfo.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list, tuple_length=3)
         except ValidationError as exc:
-            raise PluginInternalError("[presubmission of calc {}] "
-                                      "remote_copy_list format problem: {}".format(this_pk, exc))
+            raise PluginInternalError('[presubmission of calc {}] '
+                                      'remote_copy_list format problem: {}'.format(this_pk, exc))
 
         for (remote_computer_uuid, _, dest_rel_path) in remote_copy_list:
             try:
                 Computer.objects.get(uuid=remote_computer_uuid)  # pylint: disable=unused-variable
             except exceptions.NotExistent:
-                raise PluginInternalError("[presubmission of calc {}] "
-                                          "The remote copy requires a computer with UUID={}"
-                                          "but no such computer was found in the "
-                                          "database".format(this_pk, remote_computer_uuid))
+                raise PluginInternalError('[presubmission of calc {}] '
+                                          'The remote copy requires a computer with UUID={}'
+                                          'but no such computer was found in the '
+                                          'database'.format(this_pk, remote_computer_uuid))
             if os.path.isabs(dest_rel_path):
-                raise PluginInternalError("[presubmission of calc {}] "
-                                          "The destination path of the remote copy "
-                                          "is absolute! ({})".format(this_pk, dest_rel_path))
+                raise PluginInternalError('[presubmission of calc {}] '
+                                          'The destination path of the remote copy '
+                                          'is absolute! ({})'.format(this_pk, dest_rel_path))
 
         return calcinfo, script_filename

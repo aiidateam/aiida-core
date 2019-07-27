@@ -65,16 +65,16 @@ class DjangoQueryManager(AbstractQueryManager):
             stat_query = stat_query.filter(djmodels.DbNode.sa.user_id == user_pk)
 
         # Total number of nodes
-        retdict["total"] = total_query.count()
+        retdict['total'] = total_query.count()
 
         # Nodes per type
-        retdict["types"] = dict(types_query.group_by('typestring').all())
+        retdict['types'] = dict(types_query.group_by('typestring').all())
 
         # Nodes created per day
         stat = stat_query.group_by('cday').order_by('cday').all()
 
         ctime_by_day = {_[0].strftime('%Y-%m-%d'): _[1] for _ in stat}
-        retdict["ctime_by_day"] = ctime_by_day
+        retdict['ctime_by_day'] = ctime_by_day
 
         return retdict
         # Still not containing all dates
@@ -186,12 +186,12 @@ class DjangoQueryManager(AbstractQueryManager):
                     # If for some reason there is no kind with the name
                     # referenced by the site
                     except KeyError:
-                        formula = "<<UNKNOWN>>"
+                        formula = '<<UNKNOWN>>'
                         # cycle if we imposed the filter on elements
                         if args.element is not None or args.element_only is not None:
                             continue
                 else:
-                    formula = "<<UNKNOWN>>"
+                    formula = '<<UNKNOWN>>'
                 entry_list.append([str(bid), str(formula),
                                    bdate.strftime('%d %b %Y'), blabel])
 
@@ -235,11 +235,11 @@ def get_closest_parents(pks, *args, **kwargs):
     result_dict = {}
     all_chunk_pks = grouper(chunk_size, the_pks)
     if print_progress:
-        print("Chunk size:", chunk_size)
+        print('Chunk size:', chunk_size)
 
     for i, chunk_pks in enumerate(all_chunk_pks):
         if print_progress:
-            print("Dealing with chunk #", i)
+            print('Dealing with chunk #', i)
         result_chunk_dict = {}
 
         q_pks = models.DbNode.objects.filter(pk__in=chunk_pks).values_list('pk', flat=True)

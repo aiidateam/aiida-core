@@ -226,7 +226,7 @@ def build_call_graph(calc_node, info_fn=calc_info):
     return info_string
 
 
-def format_tree_descending(tree, prefix=u"", pos=-1):
+def format_tree_descending(tree, prefix=u'', pos=-1):
     """Format a descending tree."""
     # pylint: disable=too-many-branches
     text = []

@@ -317,10 +317,10 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         DbLog = self.apps.get_model('db', 'DbLog')
 
         # Creating the needed nodes & workflows
-        calc_1 = DbNode(type="node.process.calculation.CalculationNode.", user_id=self.default_user.id)
-        param = DbNode(type="data.dict.Dict.", user_id=self.default_user.id)
-        leg_workf = DbWorkflow(label="Legacy WorkflowNode", user_id=self.default_user.id)
-        calc_2 = DbNode(type="node.process.calculation.CalculationNode.", user_id=self.default_user.id)
+        calc_1 = DbNode(type='node.process.calculation.CalculationNode.', user_id=self.default_user.id)
+        param = DbNode(type='data.dict.Dict.', user_id=self.default_user.id)
+        leg_workf = DbWorkflow(label='Legacy WorkflowNode', user_id=self.default_user.id)
+        calc_2 = DbNode(type='node.process.calculation.CalculationNode.', user_id=self.default_user.id)
 
         # Storing them
         calc_1.save()
@@ -335,15 +335,15 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
             objname='node.calculation.job.quantumespresso.pw.',
             message='calculation node 1',
             metadata=json.dumps({
-                "msecs": 719.0849781036377,
-                "objpk": calc_1.pk,
-                "lineno": 350,
-                "thread": 140011612940032,
-                "asctime": "10/21/2018 12:39:51 PM",
-                "created": 1540118391.719085,
-                "levelno": 23,
-                "message": "calculation node 1",
-                "objname": "node.calculation.job.quantumespresso.pw.",
+                'msecs': 719.0849781036377,
+                'objpk': calc_1.pk,
+                'lineno': 350,
+                'thread': 140011612940032,
+                'asctime': '10/21/2018 12:39:51 PM',
+                'created': 1540118391.719085,
+                'levelno': 23,
+                'message': 'calculation node 1',
+                'objname': 'node.calculation.job.quantumespresso.pw.',
             })
         )
         log_2 = DbLog(
@@ -364,12 +364,12 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
             objname='node.calculation.job.quantumespresso.pw.',
             message='calculation node 2',
             metadata=json.dumps({
-                "msecs": 719.0849781036377,
-                "objpk": calc_2.pk,
-                "lineno": 360,
-                "levelno": 23,
-                "message": "calculation node 1",
-                "objname": "node.calculation.job.quantumespresso.pw.",
+                'msecs': 719.0849781036377,
+                'objpk': calc_2.pk,
+                'lineno': 360,
+                'levelno': 23,
+                'message': 'calculation node 1',
+                'objname': 'node.calculation.job.quantumespresso.pw.',
             })
         )
         # Creating two more log records that don't correspond to a node
@@ -379,12 +379,12 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
             objname='node.calculation.job.quantumespresso.pw.',
             message='calculation node 1000',
             metadata=json.dumps({
-                "msecs": 718,
-                "objpk": (calc_2.pk + 1000),
-                "lineno": 361,
-                "levelno": 25,
-                "message": "calculation node 1000",
-                "objname": "node.calculation.job.quantumespresso.pw.",
+                'msecs': 718,
+                'objpk': (calc_2.pk + 1000),
+                'lineno': 361,
+                'levelno': 25,
+                'message': 'calculation node 1000',
+                'objname': 'node.calculation.job.quantumespresso.pw.',
             })
         )
         log_6 = DbLog(
@@ -393,12 +393,12 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
             objname='node.calculation.job.quantumespresso.pw.',
             message='calculation node 10001',
             metadata=json.dumps({
-                "msecs": 722,
-                "objpk": (calc_2.pk + 1001),
-                "lineno": 362,
-                "levelno": 24,
-                "message": "calculation node 1001",
-                "objname": "node.calculation.job.quantumespresso.pw.",
+                'msecs': 722,
+                'objpk': (calc_2.pk + 1001),
+                'lineno': 362,
+                'levelno': 24,
+                'message': 'calculation node 1001',
+                'objname': 'node.calculation.job.quantumespresso.pw.',
             })
         )
 
@@ -473,7 +473,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         DbLog = self.apps.get_model('db', 'DbLog')
 
         # Check that only two log records exist
-        self.assertEqual(DbLog.objects.count(), 2, "There should be two log records left")
+        self.assertEqual(DbLog.objects.count(), 2, 'There should be two log records left')
 
         # Get the node id of the log record referencing the node and verify that it is the correct one
         dbnode_id_1 = DbLog.objects.filter(pk=self.to_check['CalculationNode'][1]
@@ -510,7 +510,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
 
         l_uuids = list(_['uuid'] for _ in DbLog.objects.values('uuid'))
         s_uuids = set(l_uuids)
-        self.assertEqual(len(l_uuids), len(s_uuids), "The UUIDs are not all unique.")
+        self.assertEqual(len(l_uuids), len(s_uuids), 'The UUIDs are not all unique.')
 
     def test_metadata_correctness(self):
         """
@@ -523,8 +523,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         metadata = list(json.loads(_['metadata']) for _ in DbLog.objects.values('metadata'))
         # Verify that the objpk and objname are no longer part of the metadata
         for m_res in metadata:
-            self.assertNotIn('objpk', m_res.keys(), "objpk should not exist any more in metadata")
-            self.assertNotIn('objname', m_res.keys(), "objname should not exist any more in metadata")
+            self.assertNotIn('objpk', m_res.keys(), 'objpk should not exist any more in metadata')
+            self.assertNotIn('objname', m_res.keys(), 'objname should not exist any more in metadata')
 
 
 class TestDbLogMigrationBackward(TestMigrations):
@@ -542,8 +542,8 @@ class TestDbLogMigrationBackward(TestMigrations):
         DbLog = self.apps.get_model('db', 'DbLog')
 
         # Creating the needed nodes & workflows
-        calc_1 = DbNode(type="node.process.calculation.CalculationNode.1", user_id=self.default_user.id)
-        calc_2 = DbNode(type="node.process.calculation.CalculationNode.2", user_id=self.default_user.id)
+        calc_1 = DbNode(type='node.process.calculation.CalculationNode.1', user_id=self.default_user.id)
+        calc_2 = DbNode(type='node.process.calculation.CalculationNode.2', user_id=self.default_user.id)
 
         # Storing them
         calc_1.save()
@@ -555,13 +555,13 @@ class TestDbLogMigrationBackward(TestMigrations):
             dbnode_id=calc_1.pk,
             message='calculation node 1',
             metadata=json.dumps({
-                "msecs": 719.0849781036377,
-                "lineno": 350,
-                "thread": 140011612940032,
-                "asctime": "10/21/2018 12:39:51 PM",
-                "created": 1540118391.719085,
-                "levelno": 23,
-                "message": "calculation node 1",
+                'msecs': 719.0849781036377,
+                'lineno': 350,
+                'thread': 140011612940032,
+                'asctime': '10/21/2018 12:39:51 PM',
+                'created': 1540118391.719085,
+                'levelno': 23,
+                'message': 'calculation node 1',
             })
         )
         log_2 = DbLog(
@@ -569,10 +569,10 @@ class TestDbLogMigrationBackward(TestMigrations):
             dbnode_id=calc_2.pk,
             message='calculation node 2',
             metadata=json.dumps({
-                "msecs": 719.0849781036377,
-                "lineno": 360,
-                "levelno": 23,
-                "message": "calculation node 1",
+                'msecs': 719.0849781036377,
+                'lineno': 360,
+                'levelno': 23,
+                'message': 'calculation node 1',
             })
         )
 
@@ -599,19 +599,19 @@ class TestDbLogMigrationBackward(TestMigrations):
             log_dbnode_id, node_type = to_check_value
             self.assertEqual(
                 log_dbnode_id, log_entry.objpk,
-                "The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of "
-                "the 0023 schema version.".format(log_dbnode_id, log_entry.objpk)
+                'The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of '
+                'the 0023 schema version.'.format(log_dbnode_id, log_entry.objpk)
             )
             self.assertEqual(
                 node_type, log_entry.objname,
-                "The type ({}) of the linked node of the 0024 schema version should be identical to the "
-                "objname ({}) of the 0023 schema version.".format(node_type, log_entry.objname)
+                'The type ({}) of the linked node of the 0024 schema version should be identical to the '
+                'objname ({}) of the 0023 schema version.'.format(node_type, log_entry.objname)
             )
             self.assertEqual(
                 log_dbnode_id,
                 json.loads(log_entry.metadata)['objpk'],
-                "The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of "
-                "the 0023 schema version stored in the metadata.".format(
+                'The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of '
+                'the 0023 schema version stored in the metadata.'.format(
                     log_dbnode_id,
                     json.loads(log_entry.metadata)['objpk']
                 )
@@ -619,8 +619,8 @@ class TestDbLogMigrationBackward(TestMigrations):
             self.assertEqual(
                 node_type,
                 json.loads(log_entry.metadata)['objname'],
-                "The type ({}) of the linked node of the 0024 schema version should be identical to the "
-                "objname ({}) of the 0023 schema version stored in the metadata.".format(
+                'The type ({}) of the linked node of the 0024 schema version should be identical to the '
+                'objname ({}) of the 0023 schema version stored in the metadata.'.format(
                     node_type,
                     json.loads(log_entry.metadata)['objname']
                 )
@@ -754,7 +754,7 @@ class TestTextFieldToJSONFieldMigration(TestMigrations):  # pylint: disable=too-
         self.DbAuthInfo = self.apps.get_model('db', 'DbAuthInfo')
         self.DbLog = self.apps.get_model('db', 'DbLog')
 
-        self.node = self.DbNode(node_type="node.process.calculation.CalculationNode.", user_id=self.default_user.id)
+        self.node = self.DbNode(node_type='node.process.calculation.CalculationNode.', user_id=self.default_user.id)
         self.node.save()
 
         self.computer_metadata = {

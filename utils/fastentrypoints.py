@@ -76,7 +76,7 @@ def get_args(cls, dist, header=None):
         for name, epoint in dist.get_entry_map(group).items():
             # ensure_safe_name
             if re.search(r'[\\/]', name):
-                raise ValueError("Path separators not allowed in script names")
+                raise ValueError('Path separators not allowed in script names')
             script_text = TEMPLATE.format(epoint.module_name, epoint.attrs[0], '.'.join(epoint.attrs))
             args = cls._get_script_args(type_, name, header, script_text)
             for res in args:

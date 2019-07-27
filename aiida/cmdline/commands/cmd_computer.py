@@ -61,9 +61,9 @@ def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
     :return: True if the test succeeds, False if it fails.
     """
-    echo.echo("> Getting job list...")
+    echo.echo('> Getting job list...')
     found_jobs = scheduler.get_jobs(as_dict=True)
-    echo.echo("  `-> OK, {} jobs found in the queue.".format(len(found_jobs)))
+    echo.echo('  `-> OK, {} jobs found in the queue.'.format(len(found_jobs)))
     return True
 
 
@@ -81,7 +81,7 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pyli
     :return: True if the test succeeds, False if it fails.
     """
     # Execute a command that should not return any error
-    echo.echo("> Checking that no spurious output is present...")
+    echo.echo('> Checking that no spurious output is present...')
     retval, stdout, stderr = transport.exec_command_wait('echo -n')
     if retval != 0:
         echo.echo_error("* ERROR! The command 'echo -n' returned a non-zero return code ({})!".format(retval))
@@ -119,7 +119,7 @@ https://github.com/aiidateam/aiida-core/issues/1890
         )
         return False
 
-    echo.echo("      [OK]")
+    echo.echo('      [OK]')
     return True
 
 
@@ -140,12 +140,12 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     import os
 
     file_content = "Test from 'verdi computer test' on {}".format(datetime.datetime.now().isoformat())
-    echo.echo("> Creating a temporary file in the work directory...")
-    echo.echo("  `-> Getting the remote user name...")
+    echo.echo('> Creating a temporary file in the work directory...')
+    echo.echo('  `-> Getting the remote user name...')
     remote_user = transport.whoami()
-    echo.echo("      [remote username: {}]".format(remote_user))
+    echo.echo('      [remote username: {}]'.format(remote_user))
     workdir = authinfo.get_workdir().format(username=remote_user)
-    echo.echo("      [Checking/creating work directory: {}]".format(workdir))
+    echo.echo('      [Checking/creating work directory: {}]'.format(workdir))
 
     try:
         transport.chdir(workdir)
@@ -155,18 +155,18 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
 
     with tempfile.NamedTemporaryFile(mode='w+') as tempf:
         fname = os.path.split(tempf.name)[1]
-        echo.echo("  `-> Creating the file {}...".format(fname))
+        echo.echo('  `-> Creating the file {}...'.format(fname))
         remote_file_path = os.path.join(workdir, fname)
         tempf.write(file_content)
         tempf.flush()
         transport.putfile(tempf.name, remote_file_path)
-    echo.echo("  `-> Checking if the file has been created...")
+    echo.echo('  `-> Checking if the file has been created...')
     if not transport.path_exists(remote_file_path):
-        echo.echo_error("* ERROR! The file was not found!")
+        echo.echo_error('* ERROR! The file was not found!')
         return False
 
-    echo.echo("      [OK]")
-    echo.echo("  `-> Retrieving the file and checking its content...")
+    echo.echo('      [OK]')
+    echo.echo('  `-> Retrieving the file and checking its content...')
 
     handle, destfile = tempfile.mkstemp()
     os.close(handle)
@@ -174,22 +174,22 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
         transport.getfile(remote_file_path, destfile)
         with io.open(destfile, encoding='utf8') as dfile:
             read_string = dfile.read()
-        echo.echo("      [Retrieved]")
+        echo.echo('      [Retrieved]')
         if read_string != file_content:
-            echo.echo_error("* ERROR! The file content is different from what was expected!")
-            echo.echo("** Expected:")
+            echo.echo_error('* ERROR! The file content is different from what was expected!')
+            echo.echo('** Expected:')
             echo.echo(file_content)
-            echo.echo("** Found:")
+            echo.echo('** Found:')
             echo.echo(read_string)
             return False
 
-        echo.echo("      [Content OK]")
+        echo.echo('      [Content OK]')
     finally:
         os.remove(destfile)
 
-    echo.echo("  `-> Removing the file...")
+    echo.echo('  `-> Removing the file...')
     transport.remove(remote_file_path)
-    echo.echo("  [Deleted successfully]")
+    echo.echo('  [Deleted successfully]')
     return True
 
 
@@ -436,20 +436,20 @@ def computer_rename(computer, new_name):
     old_name = computer.get_name()
 
     if old_name == new_name:
-        echo.echo_critical("The old and new names are the same.")
+        echo.echo_critical('The old and new names are the same.')
 
     try:
         computer.set_name(new_name)
         computer.store()
     except ValidationError as error:
-        echo.echo_critical("Invalid input! {}".format(error))
+        echo.echo_critical('Invalid input! {}'.format(error))
     except UniquenessError as error:
         echo.echo_critical(
-            "Uniqueness error encountered! Probably a "
+            'Uniqueness error encountered! Probably a '
             "computer with name '{}' already exists"
-            "".format(new_name)
+            ''.format(new_name)
         )
-        echo.echo_critical("(Message was: {})".format(error))
+        echo.echo_critical('(Message was: {})'.format(error))
 
     echo.echo_success("Computer '{}' renamed to '{}'".format(old_name, new_name))
 
@@ -457,14 +457,14 @@ def computer_rename(computer, new_name):
 @verdi_computer.command('test')
 @options.USER(
     required=False,
-    help="Test the connection for a given AiiDA user, specified by"
-    "their email address. If not specified, uses the current default user.",
+    help='Test the connection for a given AiiDA user, specified by'
+    'their email address. If not specified, uses the current default user.',
 )
 @click.option(
     '-t',
     '--print-traceback',
     is_flag=True,
-    help="Print the full traceback in case an exception is raised",
+    help='Print the full traceback in case an exception is raised',
 )
 @arguments.COMPUTER()
 @with_dbenv()

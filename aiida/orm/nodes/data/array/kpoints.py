@@ -47,7 +47,7 @@ class KpointsData(ArrayData):
         """
         try:
             mesh = self.get_kpoints_mesh()
-            return "Kpoints mesh: {}x{}x{} (+{:.1f},{:.1f},{:.1f})".format(
+            return 'Kpoints mesh: {}x{}x{} (+{:.1f},{:.1f},{:.1f})'.format(
                 mesh[0][0], mesh[0][1], mesh[0][2], mesh[1][0], mesh[1][1], mesh[1][2]
             )
         except AttributeError:
@@ -81,7 +81,7 @@ class KpointsData(ArrayData):
         from aiida.orm.nodes.data.structure import _get_valid_cell
 
         if self.is_stored:
-            raise ModificationNotAllowed("KpointsData cannot be modified, it has already been stored")
+            raise ModificationNotAllowed('KpointsData cannot be modified, it has already been stored')
 
         the_cell = _get_valid_cell(value)
 
@@ -114,7 +114,7 @@ class KpointsData(ArrayData):
         from aiida.orm.nodes.data.structure import get_valid_pbc
 
         if self.is_stored:
-            raise ModificationNotAllowed("The KpointsData object cannot be modified, it has already been stored")
+            raise ModificationNotAllowed('The KpointsData object cannot be modified, it has already been stored')
         the_pbc = get_valid_pbc(value)
         self.set_attribute('pbc1', the_pbc[0])
         self.set_attribute('pbc2', the_pbc[1])
@@ -144,7 +144,7 @@ class KpointsData(ArrayData):
         try:
             self.get_kpoints()
         except AttributeError:
-            raise AttributeError("Kpoints must be set before the labels")
+            raise AttributeError('Kpoints must be set before the labels')
 
         if value is None:
             value = []
@@ -152,11 +152,11 @@ class KpointsData(ArrayData):
         try:
             label_numbers = [int(i[0]) for i in value]
         except ValueError:
-            raise ValueError("The input must contain an integer index, to map the labels into the kpoint list")
+            raise ValueError('The input must contain an integer index, to map the labels into the kpoint list')
         labels = [str(i[1]) for i in value]
 
         if any([i > len(self.get_kpoints()) - 1 for i in label_numbers]):
-            raise ValueError("Index of label exceeding the list of kpoints")
+            raise ValueError('Index of label exceeding the list of kpoints')
 
         self.set_attribute('label_numbers', label_numbers)
         self.set_attribute('labels', labels)
@@ -168,13 +168,13 @@ class KpointsData(ArrayData):
         :return kpoints: a list of (3) point coordinates in the new reference
         """
         if not isinstance(kpoints, numpy.ndarray):
-            raise ValueError("kpoints must be a numpy.array for method change_reference()")
+            raise ValueError('kpoints must be a numpy.array for method change_reference()')
 
         try:
             rec_cell = self.reciprocal_cell
         except AttributeError:
             # rec_cell = numpy.eye(3)
-            raise AttributeError("Cannot use cartesian coordinates without having defined a cell")
+            raise AttributeError('Cannot use cartesian coordinates without having defined a cell')
 
         trec_cell = numpy.transpose(numpy.array(rec_cell))
         if to_cartesian:
@@ -198,8 +198,8 @@ class KpointsData(ArrayData):
 
         if not isinstance(structuredata, StructureData):
             raise ValueError(
-                "An instance of StructureData should be passed to "
-                "the KpointsData, found instead {}".format(structuredata.__class__)
+                'An instance of StructureData should be passed to '
+                'the KpointsData, found instead {}'.format(structuredata.__class__)
             )
         cell = structuredata.cell
         self.set_cell(cell, structuredata.pbc)
@@ -248,7 +248,7 @@ class KpointsData(ArrayData):
             if len(the_mesh) != 3:
                 raise ValueError
         except (IndexError, ValueError, TypeError):
-            raise ValueError("The kpoint mesh must be a list of three integers")
+            raise ValueError('The kpoint mesh must be a list of three integers')
         if offset is None:
             offset = [0., 0., 0.]
         try:
@@ -256,12 +256,12 @@ class KpointsData(ArrayData):
             if len(the_offset) != 3:
                 raise ValueError
         except (IndexError, ValueError, TypeError):
-            raise ValueError("The offset must be a list of three floats")
+            raise ValueError('The offset must be a list of three floats')
         # check that there is no list of kpoints saved already
         # I cannot have both of them at the same time
         try:
             _ = self.get_array('kpoints')
-            raise ModificationNotAllowed("KpointsData has already a kpoint-list stored")
+            raise ModificationNotAllowed('KpointsData has already a kpoint-list stored')
         except KeyError:
             pass
 
@@ -321,7 +321,7 @@ class KpointsData(ArrayData):
             rec_cell = self.reciprocal_cell
         except AttributeError:
             # rec_cell = numpy.eye(3)
-            raise AttributeError("Cannot define a mesh from a density without having defined a cell")
+            raise AttributeError('Cannot define a mesh from a density without having defined a cell')
         # I first round to the fifth digit |b|/distance (to avoid that e.g.
         # 3.00000001 becomes 4)
         kpointsmesh = [
@@ -361,9 +361,9 @@ class KpointsData(ArrayData):
                 kpoints = numpy.array([[0., 0., 0.]])
             else:
                 raise ValueError(
-                    "empty kpoints list is valid only in zero dimension"
-                    "; instead here with have {} dimensions"
-                    "".format(self._dimension)
+                    'empty kpoints list is valid only in zero dimension'
+                    '; instead here with have {} dimensions'
+                    ''.format(self._dimension)
                 )
 
         if len(kpoints.shape) <= 1:
@@ -372,23 +372,23 @@ class KpointsData(ArrayData):
                 # replace by singletons
                 kpoints = kpoints.reshape(kpoints.shape[0], 1)
             else:
-                raise ValueError("kpoints must be a list of lists in {}D case".format(self._dimension))
+                raise ValueError('kpoints must be a list of lists in {}D case'.format(self._dimension))
 
         if kpoints.dtype != numpy.dtype(numpy.float):
-            raise ValueError("kpoints must be an array of type floats. Found instead {}".format(kpoints.dtype))
+            raise ValueError('kpoints must be an array of type floats. Found instead {}'.format(kpoints.dtype))
 
         if kpoints.shape[1] < self._dimension:
             raise ValueError(
-                "In a system which has {0} dimensions, kpoint need"
-                "more than {0} coordinates (found instead {1})".format(self._dimension, kpoints.shape[1])
+                'In a system which has {0} dimensions, kpoint need'
+                'more than {0} coordinates (found instead {1})'.format(self._dimension, kpoints.shape[1])
             )
 
         if weights is not None:
             weights = numpy.array(weights)
             if weights.shape[0] != kpoints.shape[0]:
-                raise ValueError("Found {} weights but {} kpoints".format(weights.shape[0], kpoints.shape[0]))
+                raise ValueError('Found {} weights but {} kpoints'.format(weights.shape[0], kpoints.shape[0]))
             if weights.dtype != numpy.dtype(numpy.float):
-                raise ValueError("weights must be an array of type floats. Found instead {}".format(weights.dtype))
+                raise ValueError('weights must be an array of type floats. Found instead {}'.format(weights.dtype))
 
         return kpoints, weights
 
@@ -439,8 +439,8 @@ class KpointsData(ArrayData):
 
             if len(fill_values) < 3 - the_kpoints.shape[1]:
                 raise ValueError(
-                    "fill_values should be either a scalar or a "
-                    "length-{} list".format(3 - the_kpoints.shape[1])
+                    'fill_values should be either a scalar or a '
+                    'length-{} list'.format(3 - the_kpoints.shape[1])
                 )
             else:
                 tmp_kpoints = numpy.zeros((the_kpoints.shape[0], 0))
@@ -470,7 +470,7 @@ class KpointsData(ArrayData):
 
         # check that we did not saved a mesh already
         if self.get_attribute('mesh', None) is not None:
-            raise ModificationNotAllowed("KpointsData has already a mesh stored")
+            raise ModificationNotAllowed('KpointsData has already a mesh stored')
 
         # store
         self.set_array('kpoints', the_kpoints)
@@ -491,7 +491,7 @@ class KpointsData(ArrayData):
         try:
             kpoints = numpy.array(self.get_array('kpoints'))
         except KeyError:
-            raise AttributeError("Before the get, first set a list of kpoints")
+            raise AttributeError('Before the get, first set a list of kpoints')
 
         if cartesian:
             kpoints = self._change_reference(kpoints, to_cartesian=True)

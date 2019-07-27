@@ -53,11 +53,11 @@ class TestMigrateV06toV07(AiidaTestCase):
 
         # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
         self.maxDiff = None  # pylint: disable=invalid-name
-        conversion_message = "Converted from version 0.6 to 0.7 with AiiDA v{}".format(get_version())
+        conversion_message = 'Converted from version 0.6 to 0.7 with AiiDA v{}'.format(get_version())
         self.assertEqual(
             metadata_v6.pop('conversion_info')[-1],
             conversion_message,
-            msg="The conversion message after migration is wrong"
+            msg='The conversion message after migration is wrong'
         )
         metadata_v7.pop('conversion_info')
 
@@ -65,10 +65,10 @@ class TestMigrateV06toV07(AiidaTestCase):
         self.assertDictEqual(
             metadata_v6,
             metadata_v7,
-            msg="After migration, metadata.json should equal intended metadata.json from archives"
+            msg='After migration, metadata.json should equal intended metadata.json from archives'
         )
         self.assertDictEqual(
-            data_v6, data_v7, msg="After migration, data.json should equal intended data.json from archives"
+            data_v6, data_v7, msg='After migration, data.json should equal intended data.json from archives'
         )
 
     def test_migrate_v6_to_v7_complete(self):
@@ -148,7 +148,7 @@ class TestMigrateV06toV07(AiidaTestCase):
         with self.assertRaises(IntegrityError) as exc:
             migration_data_migration_legacy_process_attributes(data)
 
-        self.assertIn("Your export archive is corrupt! Org. exception:", exc.exception.__repr__())
+        self.assertIn('Your export archive is corrupt! Org. exception:', exc.exception.__repr__())
 
         # data has one "valid" entry, in the form of Node <PK=52>.
         # data also has one "invalid" entry, in form of Node <PK=42>.
@@ -178,7 +178,7 @@ class TestMigrateV06toV07(AiidaTestCase):
         with self.assertRaises(IntegrityError) as exc:
             migration_data_migration_legacy_process_attributes(data)
 
-        self.assertIn("Your export archive is corrupt! Please see the log-file", exc.exception.__repr__())
+        self.assertIn('Your export archive is corrupt! Please see the log-file', exc.exception.__repr__())
 
     def test_migration_0040_no_process_state(self):
         """Check old ProcessNodes without a `process_state` can be migrated"""

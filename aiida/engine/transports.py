@@ -108,11 +108,11 @@ class TransportQueue(object):  # pylint: disable=useless-object-inheritance
             # Have to have this special case so tornado returns are propagated up to the loop
             raise
         except Exception:
-            _LOGGER.error("Exception whilst using transport:\n%s", traceback.format_exc())
+            _LOGGER.error('Exception whilst using transport:\n%s', traceback.format_exc())
             raise
         finally:
             transport_request.count -= 1
-            assert transport_request.count >= 0, "Transport request count dropped below 0!"
+            assert transport_request.count >= 0, 'Transport request count dropped below 0!'
             # Check if there are no longer any users that want the transport
             if transport_request.count == 0:
                 if transport_request.future.done():

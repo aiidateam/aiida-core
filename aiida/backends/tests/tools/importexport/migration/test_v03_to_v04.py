@@ -43,13 +43,13 @@ class TestMigrateV03toV04(AiidaTestCase):
         from aiida import get_version
 
         # Get metadata.json and data.json as dicts from v0.4 file archive
-        metadata_v4, data_v4 = get_json_files("export_v0.4_simple.aiida", **self.core_archive)
+        metadata_v4, data_v4 = get_json_files('export_v0.4_simple.aiida', **self.core_archive)
         verify_metadata_version(metadata_v4, version='0.4')
 
         # Get metadata.json and data.json as dicts from v0.3 file archive
         # Cannot use 'get_json_files' for 'export_v0.3_simple.aiida',
         # because we need to pass the SandboxFolder to 'migrate_v3_to_v4'
-        dirpath_archive = get_archive_file("export_v0.3_simple.aiida", **self.core_archive)
+        dirpath_archive = get_archive_file('export_v0.3_simple.aiida', **self.core_archive)
 
         with SandboxFolder(sandbox_in_repo=False) as folder:
             if zipfile.is_zipfile(dirpath_archive):
@@ -79,11 +79,11 @@ class TestMigrateV03toV04(AiidaTestCase):
 
         # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
         self.maxDiff = None  # pylint: disable=invalid-name
-        conversion_message = "Converted from version 0.3 to 0.4 with AiiDA v{}".format(get_version())
+        conversion_message = 'Converted from version 0.3 to 0.4 with AiiDA v{}'.format(get_version())
         self.assertEqual(
             metadata_v3.pop('conversion_info')[-1],
             conversion_message,
-            msg="The conversion message after migration is wrong"
+            msg='The conversion message after migration is wrong'
         )
         metadata_v4.pop('conversion_info')
 
@@ -91,17 +91,17 @@ class TestMigrateV03toV04(AiidaTestCase):
         self.assertDictEqual(
             metadata_v3,
             metadata_v4,
-            msg="After migration, metadata.json should equal intended metadata.json from archives"
+            msg='After migration, metadata.json should equal intended metadata.json from archives'
         )
         self.assertDictEqual(
-            data_v3, data_v4, msg="After migration, data.json should equal intended data.json from archives"
+            data_v3, data_v4, msg='After migration, data.json should equal intended data.json from archives'
         )
 
     def test_migrate_v3_to_v4_complete(self):
         """Test migration for file containing complete v0.3 era possibilities"""
 
         # Get metadata.json and data.json as dicts from v0.3 file archive
-        dirpath_archive = get_archive_file("export_v0.3.aiida", **self.external_archive)
+        dirpath_archive = get_archive_file('export_v0.3.aiida', **self.external_archive)
 
         # Migrate
         with SandboxFolder(sandbox_in_repo=False) as folder:
@@ -167,12 +167,12 @@ class TestMigrateV03toV04(AiidaTestCase):
             self.assertIn(
                 node['node_type'],
                 legal_node_types,
-                msg="{} is not a legal node_type. Legal node types: {}".format(node['node_type'], legal_node_types)
+                msg='{} is not a legal node_type. Legal node types: {}'.format(node['node_type'], legal_node_types)
             )
             self.assertIn(
                 node['process_type'],
                 legal_process_types,
-                msg="{} is not a legal process_type. Legal process types: {}".format(
+                msg='{} is not a legal process_type. Legal process types: {}'.format(
                     node['process_type'], legal_node_types
                 )
             )
@@ -182,14 +182,14 @@ class TestMigrateV03toV04(AiidaTestCase):
         self.assertEqual(
             len(data['links_uuid']),
             links_count_org - 2,
-            msg="Two of the org. {} links should have been removed during the migration, "
-            "instead there are now {} links".format(links_count_org, len(data['links_uuid']))
+            msg='Two of the org. {} links should have been removed during the migration, '
+            'instead there are now {} links'.format(links_count_org, len(data['links_uuid']))
         )
-        legal_link_types = {"unspecified", "create", "return", "input_calc", "input_work", "call_calc", "call_work"}
+        legal_link_types = {'unspecified', 'create', 'return', 'input_calc', 'input_work', 'call_calc', 'call_work'}
         for link in data['links_uuid']:
             self.assertIn(link['type'], legal_link_types)
         for link in illegal_links:
-            self.assertNotIn(link, data['links_uuid'], msg="{} should not be in the migrated export file".format(link))
+            self.assertNotIn(link, data['links_uuid'], msg='{} should not be in the migrated export file'.format(link))
 
         # Check Groups
         # There is one Group in the export file, it is a user group
@@ -198,14 +198,14 @@ class TestMigrateV03toV04(AiidaTestCase):
         for attr in updated_attrs:
             # data.json
             for group in data['export_data']['Group'].values():
-                self.assertIn(attr, group, msg="{} not found in Group {}".format(attr, group))
+                self.assertIn(attr, group, msg='{} not found in Group {}'.format(attr, group))
                 self.assertIn(
                     group['type_string'],
                     legal_group_type,
-                    msg="{} is not a legal Group type_string".format(group['type_string'])
+                    msg='{} is not a legal Group type_string'.format(group['type_string'])
                 )
             # metadata.json
-            self.assertIn(attr, metadata['all_fields_info']['Group'], msg="{} not found in metadata.json".format(attr))
+            self.assertIn(attr, metadata['all_fields_info']['Group'], msg='{} not found in metadata.json'.format(attr))
 
         # Check node_attributes*
         calcjob_nodes = []
@@ -283,7 +283,7 @@ class TestMigrateV03toV04(AiidaTestCase):
         fields = {'all_fields_info', 'unique_identifiers'}
         for entity in new_entities:
             for field in fields:
-                self.assertIn(entity, metadata[field], msg="{} not found in {} in metadata.json".format(entity, field))
+                self.assertIn(entity, metadata[field], msg='{} not found in {} in metadata.json'.format(entity, field))
 
         # Check extras
         # Dicts with key, vales equal to node_id, {} should be present
@@ -308,7 +308,7 @@ class TestMigrateV03toV04(AiidaTestCase):
         NB: Since PKs and UUIDs will have changed, comparisons between 'data.json'-files will be made indirectly
         """
         # Get metadata.json and data.json as dicts from v0.3 file archive and migrate
-        dirpath_archive = get_archive_file("export_v0.3.aiida", **self.external_archive)
+        dirpath_archive = get_archive_file('export_v0.3.aiida', **self.external_archive)
 
         # Migrate
         with SandboxFolder(sandbox_in_repo=False) as folder:
@@ -331,7 +331,7 @@ class TestMigrateV03toV04(AiidaTestCase):
             migrate_v3_to_v4(metadata_v3, data_v3, folder)
 
         # Get metadata.json and data.json as dicts from v0.4 file archive
-        metadata_v4, data_v4 = get_json_files("export_v0.4.aiida", **self.external_archive)
+        metadata_v4, data_v4 = get_json_files('export_v0.4.aiida', **self.external_archive)
 
         # Compare 'metadata.json'
         self.maxDiff = None
@@ -383,7 +383,7 @@ class TestMigrateV03toV04(AiidaTestCase):
             self.assertListEqual(
                 sorted(details['migrated']),
                 sorted(details['made']),
-                msg="Number of {}-entities differ, see diff for details".format(entity)
+                msg='Number of {}-entities differ, see diff for details'.format(entity)
             )
 
         fields = {
@@ -398,7 +398,7 @@ class TestMigrateV03toV04(AiidaTestCase):
             self.assertEqual(
                 len(data_v3[field]),
                 len(data_v4[field]) - correction,
-                msg="Number of entities in {} differs for the export files".format(field)
+                msg='Number of entities in {} differs for the export files'.format(field)
             )
 
         number_of_links_v3 = {
@@ -428,7 +428,7 @@ class TestMigrateV03toV04(AiidaTestCase):
         self.assertDictEqual(
             number_of_links_v3,
             number_of_links_v4,
-            msg="There are a different number of specific links in the migrated export file than the AiiDA made one."
+            msg='There are a different number of specific links in the migrated export file than the AiiDA made one.'
         )
 
         self.assertEqual(number_of_links_v3['unspecified'], 0)
@@ -445,7 +445,7 @@ class TestMigrateV03toV04(AiidaTestCase):
     def test_illegal_create_links(self):
         """Test illegal create links from workchain are detected and removed from exports using v0.3"""
         # Initialization
-        dirpath_archive = get_archive_file("export_v0.3.aiida", **self.external_archive)
+        dirpath_archive = get_archive_file('export_v0.3.aiida', **self.external_archive)
         known_illegal_links = 2
 
         # Unpack archive, check data.json, and migrate to v0.4
@@ -481,7 +481,7 @@ class TestMigrateV03toV04(AiidaTestCase):
             self.assertEqual(
                 len(violations),
                 known_illegal_links,
-                msg="{} illegal create links were expected, instead {} was/were found".format(
+                msg='{} illegal create links were expected, instead {} was/were found'.format(
                     known_illegal_links, len(violations)
                 )
             )
@@ -493,7 +493,7 @@ class TestMigrateV03toV04(AiidaTestCase):
         self.assertEqual(
             len(data['links_uuid']),
             links_count_migrated,
-            msg="{} links were expected, instead {} was/were found".format(
+            msg='{} links were expected, instead {} was/were found'.format(
                 links_count_migrated, len(data['links_uuid'])
             )
         )
@@ -508,5 +508,5 @@ class TestMigrateV03toV04(AiidaTestCase):
             if link['input'] in workfunc_uuids and link['type'] == 'create':
                 violations.append(link)
         self.assertEqual(
-            len(violations), 0, msg="0 illegal links were expected, instead {} was/were found".format(len(violations))
+            len(violations), 0, msg='0 illegal links were expected, instead {} was/were found'.format(len(violations))
         )

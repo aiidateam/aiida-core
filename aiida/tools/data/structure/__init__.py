@@ -124,9 +124,9 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # p
     :param kinds: a list of the kinds of the structure.
     """
     if kind_info is None and kinds is not None:
-        raise ValueError("If you pass kind_info, you should also pass kinds")
+        raise ValueError('If you pass kind_info, you should also pass kinds')
     if kinds is None and kind_info is not None:
-        raise ValueError("If you pass kinds, you should also pass kind_info")
+        raise ValueError('If you pass kinds, you should also pass kind_info')
 
     #Z = {v['symbol']: k for k, v in elements.items()}
     cell, rel_pos, numbers = structure_tuple
@@ -139,8 +139,8 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # p
             symbols = [elements[num]['symbol'] for num in numbers]
         except KeyError as exc:
             raise ValueError(
-                "You did not pass kind_info, but at least one number "
-                "is not a valid Z number: {}".format(exc.args[0])
+                'You did not pass kind_info, but at least one number '
+                'is not a valid Z number: {}'.format(exc.args[0])
             )
 
         _kind_info = {elements[num]['symbol']: num for num in set(numbers)}
@@ -150,7 +150,7 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # p
     _kinds_dict = {k.name: k for k in _kinds}
     # Now I will use in any case _kinds and _kind_info
     if len(_kind_info) != len(set(_kind_info.values())):
-        raise ValueError("There is at least a number repeated twice in kind_info!")
+        raise ValueError('There is at least a number repeated twice in kind_info!')
     # Invert the mapping
     mapping_num_kindname = {v: k for k, v in _kind_info.items()}
     # Create the actual mapping
@@ -162,14 +162,14 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # p
     try:
         site_kinds = [mapping_to_kinds[num] for num in numbers]
     except KeyError as exc:
-        raise ValueError("Unable to find kind in kind_info for number {}".format(exc.args[0]))
+        raise ValueError('Unable to find kind in kind_info for number {}'.format(exc.args[0]))
 
     structure = StructureData(cell=cell)
     for k in _kinds:
         structure.append_kind(k)
     abs_pos = np.dot(rel_pos, cell)
     if len(abs_pos) != len(site_kinds):
-        raise ValueError("The length of the positions array is different from the " "length of the element numbers")
+        raise ValueError('The length of the positions array is different from the ' 'length of the element numbers')
 
     for kind, pos in zip(site_kinds, abs_pos):
         structure.append_site(Site(kind_name=kind.name, position=pos))
@@ -211,7 +211,7 @@ def xyz_parser_iterator(xyz_string):
                 else:
                     # otherwise we got too less entries
                     raise TypeError(
-                        "Number of atom entries ({}) is smaller than the number of atoms ({})".format(
+                        'Number of atom entries ({}) is smaller than the number of atoms ({})'.format(
                             self._catom, self._natoms
                         )
                     )
@@ -220,7 +220,7 @@ def xyz_parser_iterator(xyz_string):
 
             if self._catom > self._natoms:
                 raise TypeError(
-                    "Number of atom entries ({}) is larger than the number of atoms ({})".format(
+                    'Number of atom entries ({}) is larger than the number of atoms ({})'.format(
                         self._catom, self._natoms
                     )
                 )
@@ -317,8 +317,8 @@ def get_structuredata_from_qetools(qetools_instance):
         import qe_tools  # pylint: disable=unused-variable,unused-import
     except ImportError:
         raise ValueError(
-            "You have not installed the package qe-tools. "
-            "You can install it with: pip install qe-tools"
+            'You have not installed the package qe-tools. '
+            'You can install it with: pip install qe-tools'
         )
 
     valid_elements_regex = re.compile(

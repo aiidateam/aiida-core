@@ -64,7 +64,7 @@ class OrbitalData(Data):
             try:
                 orbital_type = orbital_dict.pop('_orbital_type')
             except KeyError:
-                raise ValidationError("No _orbital_type found in: {}".format(orbital_dict))
+                raise ValidationError('No _orbital_type found in: {}'.format(orbital_dict))
 
             OrbitalClass = OrbitalFactory(orbital_type)
             orbital = OrbitalClass(**orbital_dict)
@@ -87,7 +87,7 @@ class OrbitalData(Data):
             try:
                 _orbital_type = orbital_dict['_orbital_type']
             except KeyError:
-                raise InputValidationError("No _orbital_type found in: {}".format(orbital_dict))
+                raise InputValidationError('No _orbital_type found in: {}'.format(orbital_dict))
             orbital_dicts.append(orbital_dict)
         self.set_attribute('orbital_dicts', orbital_dicts)
 

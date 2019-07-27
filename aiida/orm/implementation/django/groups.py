@@ -84,7 +84,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     @user.setter
     def user(self, new_user):
         type_check(new_user, users.DjangoUser)
-        assert new_user.backend == self.backend, "User from a different backend"
+        assert new_user.backend == self.backend, 'User from a different backend'
         self._dbmodel.user = new_user.dbmodel
 
     @property
@@ -248,9 +248,9 @@ class DjangoGroupCollection(BackendGroupCollection):
             for node in nodes:
                 if not isinstance(node, (DjangoNode, models.DbNode)):
                     raise TypeError(
-                        "At least one of the elements passed as "
-                        "nodes for the query on Group is neither "
-                        "a Node nor a DbNode"
+                        'At least one of the elements passed as '
+                        'nodes for the query on Group is neither '
+                        'a Node nor a DbNode'
                     )
                 pk_list.append(node.pk)
 
@@ -263,7 +263,7 @@ class DjangoGroupCollection(BackendGroupCollection):
                 queryobject &= Q(user=user.id)
 
         if label_filters is not None:
-            label_filters_list = {"name__" + key: value for (key, value) in label_filters.items() if value}
+            label_filters_list = {'name__' + key: value for (key, value) in label_filters.items() if value}
             queryobject &= Q(**label_filters_list)
 
         groups_pk = set(models.DbGroup.objects.filter(queryobject, **kwargs).values_list('pk', flat=True))

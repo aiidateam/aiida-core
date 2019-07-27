@@ -63,8 +63,8 @@ class TestQueryBuilder(AiidaTestCase):
 
         for _cls, classifiers in (
             qb._get_ormclass(orm.User, None),
-            qb._get_ormclass(None, "user"),
-            qb._get_ormclass(None, "User"),
+            qb._get_ormclass(None, 'user'),
+            qb._get_ormclass(None, 'User'),
         ):
             self.assertEqual(classifiers['ormclass_type_string'], 'user')
 
@@ -166,7 +166,7 @@ class TestQueryBuilder(AiidaTestCase):
 
         with warnings.catch_warnings(record=True) as w:  # pylint: disable=no-member
             # Cause all warnings to always be triggered.
-            warnings.simplefilter("always")  # pylint: disable=no-member
+            warnings.simplefilter('always')  # pylint: disable=no-member
 
             qb.append(PotentialFailureWorkChain)
 
@@ -183,7 +183,7 @@ class TestQueryBuilder(AiidaTestCase):
 
         with warnings.catch_warnings(record=True) as w:  # pylint: disable=no-member
             # Cause all warnings to always be triggered.
-            warnings.simplefilter("always")  # pylint: disable=no-member
+            warnings.simplefilter('always')  # pylint: disable=no-member
 
             qb.append(DummyWorkChain)
 
@@ -633,8 +633,8 @@ class TestAttributes(AiidaTestCase):
         val = 1.
         res_uuids = set()
         n1 = orm.Data()
-        n1.set_attribute("whatever", 3.)
-        n1.set_attribute("test_case", "test_attribute_existence")
+        n1.set_attribute('whatever', 3.)
+        n1.set_attribute('test_case', 'test_attribute_existence')
         n1.store()
 
         # I want all the nodes where whatever is smaller than 1. or there is no such value:
@@ -871,11 +871,11 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
     def test_joins3_user_group(self):
         # Create another user
-        new_email = "newuser@new.n"
+        new_email = 'newuser@new.n'
         user = orm.User(email=new_email).store()
 
         # Create a group that belongs to that user
-        group = orm.Group(label="node_group")
+        group = orm.Group(label='node_group')
         group.user = user
         group.store()
 
@@ -883,14 +883,14 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         qb = orm.QueryBuilder()
         qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
         qb.append(orm.Group, with_user='user', filters={'id': {'==': group.id}})
-        self.assertEqual(qb.count(), 1, "The expected group that belongs to " "the selected user was not found.")
+        self.assertEqual(qb.count(), 1, 'The expected group that belongs to ' 'the selected user was not found.')
 
         # Search for the user that owns a group
         qb = orm.QueryBuilder()
         qb.append(orm.Group, tag='group', filters={'id': {'==': group.id}})
         qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
 
-        self.assertEqual(qb.count(), 1, "The expected user that owns the " "selected group was not found.")
+        self.assertEqual(qb.count(), 1, 'The expected user that owns the ' 'selected group was not found.')
 
     def test_joins_group_node(self):
         """
@@ -899,11 +899,11 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         Since this is not backend specific test (even if it is mainly used to test the querying of Django backend
         with QueryBuilder), we keep it at the general tests (ran by both backends).
         """
-        new_email = "newuser@new.n2"
+        new_email = 'newuser@new.n2'
         user = orm.User(email=new_email).store()
 
         # Create a group that belongs to that user
-        group = orm.Group(label="node_group_2")
+        group = orm.Group(label='node_group_2')
         group.user = user
         group.store()
 
@@ -934,7 +934,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         qb = orm.QueryBuilder()
         qb.append(orm.Node, tag='node', project=['id'])
         qb.append(orm.Group, with_node='node', filters={'id': {'==': group.id}})
-        self.assertEqual(qb.count(), 4, "There should be 4 nodes in the group")
+        self.assertEqual(qb.count(), 4, 'There should be 4 nodes in the group')
         id_res = [_ for [_] in qb.all()]
         for curr_id in [n1.id, n2.id, n3.id, n4.id]:
             self.assertIn(curr_id, id_res)

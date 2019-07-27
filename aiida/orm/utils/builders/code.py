@@ -74,7 +74,7 @@ class CodeBuilder(object):  # pylint: disable=useless-object-inheritance
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
             raise self.CodeValidationError(
-                'Unknown parameters passed to the CodeBuilder: {}'.format(", ".join(sorted(passed_keys - used)))
+                'Unknown parameters passed to the CodeBuilder: {}'.format(', '.join(sorted(passed_keys - used)))
             )
 
         return code

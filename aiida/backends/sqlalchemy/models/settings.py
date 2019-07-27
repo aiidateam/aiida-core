@@ -25,7 +25,7 @@ from aiida.common import timezone
 
 
 class DbSetting(Base):
-    __tablename__ = "db_dbsetting"
+    __tablename__ = 'db_dbsetting'
     __table_args__ = (UniqueConstraint('key'),)
     id = Column(Integer, primary_key=True)
 
@@ -53,10 +53,10 @@ class DbSetting(Base):
 
         setting.key = key
         setting.val = value
-        flag_modified(setting, "val")
+        flag_modified(setting, 'val')
         setting.time = timezone.datetime.now(tz=UTC)
-        if "description" in other_attribs.keys():
-            setting.description = other_attribs["description"]
+        if 'description' in other_attribs.keys():
+            setting.description = other_attribs['description']
         setting.save()
 
     def getvalue(self):
@@ -77,5 +77,5 @@ class DbSetting(Base):
         setting = sa.get_scoped_session().query(DbSetting).filter(key=key)
         setting.val = None
         setting.time = timezone.datetime.utcnow()
-        flag_modified(setting, "val")
+        flag_modified(setting, 'val')
         setting.save()

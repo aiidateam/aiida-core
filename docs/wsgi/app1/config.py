@@ -18,7 +18,7 @@ LIMIT_DEFAULT = 400
 PERPAGE_DEFAULT = 20
 
 ##Version prefix for all the URLs
-PREFIX="/api/v3"
+PREFIX='/api/v3'
 
 
 """

@@ -108,7 +108,7 @@ class NodeNumberJobResource(JobResource):
         """
         Return a list of valid keys to be passed to the __init__
         """
-        return super(NodeNumberJobResource, cls).get_valid_keys() + ["tot_num_mpiprocs", "default_mpiprocs_per_machine"]
+        return super(NodeNumberJobResource, cls).get_valid_keys() + ['tot_num_mpiprocs', 'default_mpiprocs_per_machine']
 
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
@@ -132,7 +132,7 @@ class NodeNumberJobResource(JobResource):
         except KeyError:
             num_machines = None
         except ValueError:
-            raise ValueError("num_machines must an integer")
+            raise ValueError('num_machines must an integer')
 
         try:
             default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine')
@@ -141,39 +141,39 @@ class NodeNumberJobResource(JobResource):
         except KeyError:
             default_mpiprocs_per_machine = None
         except ValueError:
-            raise ValueError("default_mpiprocs_per_machine must an integer")
+            raise ValueError('default_mpiprocs_per_machine must an integer')
 
         try:
             num_mpiprocs_per_machine = int(kwargs.pop('num_mpiprocs_per_machine'))
         except KeyError:
             num_mpiprocs_per_machine = None
         except ValueError:
-            raise ValueError("num_mpiprocs_per_machine must an integer")
+            raise ValueError('num_mpiprocs_per_machine must an integer')
 
         try:
             tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
         except KeyError:
             tot_num_mpiprocs = None
         except ValueError:
-            raise ValueError("tot_num_mpiprocs must an integer")
+            raise ValueError('tot_num_mpiprocs must an integer')
 
         try:
             self.num_cores_per_machine = int(kwargs.pop('num_cores_per_machine'))
         except KeyError:
             self.num_cores_per_machine = None
         except ValueError:
-            raise ValueError("num_cores_per_machine must an integer")
+            raise ValueError('num_cores_per_machine must an integer')
 
         try:
             self.num_cores_per_mpiproc = int(kwargs.pop('num_cores_per_mpiproc'))
         except KeyError:
             self.num_cores_per_mpiproc = None
         except ValueError:
-            raise ValueError("num_cores_per_mpiproc must an integer")
+            raise ValueError('num_cores_per_mpiproc must an integer')
 
         if kwargs:
-            raise TypeError("The following parameters were not recognized for "
-                            "the JobResource: {}".format(kwargs.keys()))
+            raise TypeError('The following parameters were not recognized for '
+                            'the JobResource: {}'.format(kwargs.keys()))
 
         if num_machines is None:
             # Use default value, if not provided
@@ -181,12 +181,12 @@ class NodeNumberJobResource(JobResource):
                 num_mpiprocs_per_machine = default_mpiprocs_per_machine
 
             if num_mpiprocs_per_machine is None or tot_num_mpiprocs is None:
-                raise TypeError("At least two among num_machines, "
-                                "num_mpiprocs_per_machine or tot_num_mpiprocs must be specified")
+                raise TypeError('At least two among num_machines, '
+                                'num_mpiprocs_per_machine or tot_num_mpiprocs must be specified')
             else:
                 # To avoid divisions by zero
                 if num_mpiprocs_per_machine <= 0:
-                    raise ValueError("num_mpiprocs_per_machine must be >= 1")
+                    raise ValueError('num_mpiprocs_per_machine must be >= 1')
                 num_machines = tot_num_mpiprocs // num_mpiprocs_per_machine
         else:
             if tot_num_mpiprocs is None:
@@ -199,12 +199,12 @@ class NodeNumberJobResource(JobResource):
 
             if num_mpiprocs_per_machine is None:
                 if tot_num_mpiprocs is None:
-                    raise TypeError("At least two among num_machines, "
-                                    "num_mpiprocs_per_machine or tot_num_mpiprocs must be specified")
+                    raise TypeError('At least two among num_machines, '
+                                    'num_mpiprocs_per_machine or tot_num_mpiprocs must be specified')
                 else:
                     # To avoid divisions by zero
                     if num_machines <= 0:
-                        raise ValueError("num_machines must be >= 1")
+                        raise ValueError('num_machines must be >= 1')
                     num_mpiprocs_per_machine = tot_num_mpiprocs // num_machines
 
         self.num_machines = num_machines
@@ -212,15 +212,15 @@ class NodeNumberJobResource(JobResource):
 
         if tot_num_mpiprocs is not None:
             if tot_num_mpiprocs != self.num_mpiprocs_per_machine * self.num_machines:
-                raise ValueError("tot_num_mpiprocs must be equal to "
-                                 "num_mpiprocs_per_machine * num_machines, and in particular it "
-                                 "should be a multiple of num_mpiprocs_per_machine and/or "
-                                 "num_machines")
+                raise ValueError('tot_num_mpiprocs must be equal to '
+                                 'num_mpiprocs_per_machine * num_machines, and in particular it '
+                                 'should be a multiple of num_mpiprocs_per_machine and/or '
+                                 'num_machines')
 
         if self.num_mpiprocs_per_machine <= 0:
-            raise ValueError("num_mpiprocs_per_machine must be >= 1")
+            raise ValueError('num_mpiprocs_per_machine must be >= 1')
         if self.num_machines <= 0:
-            raise ValueError("num_machine must be >= 1")
+            raise ValueError('num_machine must be >= 1')
 
     def get_tot_num_mpiprocs(self):
         """
@@ -261,15 +261,15 @@ class ParEnvJobResource(JobResource):
         try:
             self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
         except (KeyError, ValueError):
-            raise TypeError("tot_num_mpiprocs must be specified and must be an integer")
+            raise TypeError('tot_num_mpiprocs must be specified and must be an integer')
 
         default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
         if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError("default_mpiprocs_per_machine cannot be set "
-                                     "for schedulers that use ParEnvJobResource")
+            raise ConfigurationError('default_mpiprocs_per_machine cannot be set '
+                                     'for schedulers that use ParEnvJobResource')
 
         if self.tot_num_mpiprocs <= 0:
-            raise ValueError("tot_num_mpiprocs must be >= 1")
+            raise ValueError('tot_num_mpiprocs must be >= 1')
 
     def get_tot_num_mpiprocs(self):
         """
@@ -521,12 +521,12 @@ class JobInfo(DefaultFieldsAttributeDict):
             return value
 
         if not isinstance(value, datetime.datetime):
-            raise TypeError("Invalid type for the date, should be a datetime")
+            raise TypeError('Invalid type for the date, should be a datetime')
 
         # is_naive check from django.utils.timezone
         if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
             # TODO: FIX TIMEZONE
-            SCHEDULER_LOGGER.debug("Datetime to serialize in JobInfo is naive, this should be fixed!")
+            SCHEDULER_LOGGER.debug('Datetime to serialize in JobInfo is naive, this should be fixed!')
             # v = v.replace(tzinfo = pytz.utc)
             return {'date': value.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'timezone': None}
 
@@ -567,7 +567,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         if field_type is None:
             return value
 
-        serializer_method = getattr(self, "_serialize_{}".format(field_type))
+        serializer_method = getattr(self, '_serialize_{}'.format(field_type))
 
         return serializer_method(value)
 
@@ -581,7 +581,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         if field_type is None:
             return value
 
-        deserializer_method = getattr(self, "_deserialize_{}".format(field_type))
+        deserializer_method = getattr(self, '_deserialize_{}'.format(field_type))
 
         return deserializer_method(value)
 

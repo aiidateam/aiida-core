@@ -74,19 +74,19 @@ class Scheduler(object):
         # Remove empty lines
         docstring = cls.__doc__
         if not docstring:
-            return "No documentation available"
+            return 'No documentation available'
 
         doclines = [i for i in docstring.splitlines() if i.strip()]
         if doclines:
             return doclines[0].strip()
 
-        return "No documentation available"
+        return 'No documentation available'
 
     def get_feature(self, feature_name):
         try:
             return self._features[feature_name]
         except KeyError:
-            raise NotImplementedError("Feature {} not implemented for this scheduler".format(feature_name))
+            raise NotImplementedError('Feature {} not implemented for this scheduler'.format(feature_name))
 
     @property
     def logger(self):
@@ -98,7 +98,7 @@ class Scheduler(object):
         except AttributeError:
             from aiida.common.exceptions import InternalError
 
-            raise InternalError("No self._logger configured for {}!")
+            raise InternalError('No self._logger configured for {}!')
 
     @classproperty
     def job_resource_class(self):
@@ -135,9 +135,9 @@ class Scheduler(object):
         from aiida.common.exceptions import InternalError
 
         if not isinstance(job_tmpl, JobTemplate):
-            raise InternalError("job_tmpl should be of type JobTemplate")
+            raise InternalError('job_tmpl should be of type JobTemplate')
 
-        empty_line = ""
+        empty_line = ''
 
         # I fill the list with the lines, and finally join them and return
         script_lines = []
@@ -151,7 +151,7 @@ class Scheduler(object):
         elif job_tmpl.shebang is None:
             script_lines.append('#!/bin/bash')
         else:
-            raise ValueError("Invalid shebang set: {}".format(job_tmpl.shebang))
+            raise ValueError('Invalid shebang set: {}'.format(job_tmpl.shebang))
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 
@@ -171,7 +171,7 @@ class Scheduler(object):
             script_lines.append(footer)
             script_lines.append(empty_line)
 
-        return "\n".join(script_lines)
+        return '\n'.join(script_lines)
 
     @abstractmethod
     def _get_submit_script_header(self, job_tmpl):
@@ -233,16 +233,16 @@ class Scheduler(object):
                 command_to_exec_list.append(escape_for_bash(arg))
             command_to_exec = ' '.join(command_to_exec_list)
 
-            stdin_str = "< {}".format(escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ""
-            stdout_str = "> {}".format(escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ""
+            stdin_str = '< {}'.format(escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ''
+            stdout_str = '> {}'.format(escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ''
 
             join_files = code_info.join_files
             if join_files:
-                stderr_str = "2>&1"
+                stderr_str = '2>&1'
             else:
-                stderr_str = "2> {}".format(escape_for_bash(code_info.stderr_name)) if code_info.stderr_name else ""
+                stderr_str = '2> {}'.format(escape_for_bash(code_info.stderr_name)) if code_info.stderr_name else ''
 
-            output_string = ("{} {} {} {}".format(command_to_exec, stdin_str, stdout_str, stderr_str))
+            output_string = ('{} {} {} {}'.format(command_to_exec, stdin_str, stdout_str, stderr_str))
 
             list_of_runlines.append(output_string)
 
@@ -250,10 +250,10 @@ class Scheduler(object):
 
         if codes_run_mode == CodeRunMode.PARALLEL:
             list_of_runlines.append('wait\n')
-            return " &\n\n".join(list_of_runlines)
+            return ' &\n\n'.join(list_of_runlines)
 
         if codes_run_mode == CodeRunMode.SERIAL:
-            return "\n\n".join(list_of_runlines)
+            return '\n\n'.join(list_of_runlines)
 
         raise NotImplementedError('Unrecognized code run mode')
 
@@ -290,7 +290,7 @@ class Scheduler(object):
         :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
         """
         # pylint: disable=no-self-use, not-callable, unused-argument
-        raise FeatureNotAvailable("Cannot get detailed job info")
+        raise FeatureNotAvailable('Cannot get detailed job info')
 
     def get_detailed_jobinfo(self, jobid):
         """
@@ -350,7 +350,7 @@ stderr:
         if as_dict:
             jobdict = {job.job_id: job for job in joblist}
             if None in jobdict:
-                raise SchedulerError("Found at least one job without jobid")
+                raise SchedulerError('Found at least one job without jobid')
             return jobdict
 
         return joblist
@@ -361,7 +361,7 @@ stderr:
         Return the transport set for this scheduler.
         """
         if self._transport is None:
-            raise SchedulerError("Use the set_transport function to set the transport for the scheduler first.")
+            raise SchedulerError('Use the set_transport function to set the transport for the scheduler first.')
 
         return self._transport
 

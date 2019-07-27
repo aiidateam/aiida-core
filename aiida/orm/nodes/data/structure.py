@@ -54,10 +54,10 @@ def _get_valid_cell(inputcell):
         if any(len(i) != 3 for i in the_cell):
             raise ValueError
     except (IndexError, ValueError, TypeError):
-        raise ValueError("Cell must be a list of three vectors, each defined as a list of three coordinates.")
+        raise ValueError('Cell must be a list of three vectors, each defined as a list of three coordinates.')
 
     if abs(calc_cell_volume(the_cell)) < _volume_threshold:
-        raise ValueError("The cell volume is zero. Invalid cell.")
+        raise ValueError('The cell volume is zero. Invalid cell.')
 
     return the_cell
 
@@ -84,11 +84,11 @@ def get_valid_pbc(inputpbc):
             elif len(the_value) == 1:
                 the_pbc = (the_value[0], the_value[0], the_value[0])
             else:
-                raise ValueError("pbc length must be either one or three.")
+                raise ValueError('pbc length must be either one or three.')
         else:
-            raise ValueError("pbc elements are not booleans.")
+            raise ValueError('pbc elements are not booleans.')
     else:
-        raise ValueError("pbc must be a boolean or a list of three booleans.", inputpbc)
+        raise ValueError('pbc must be a boolean or a list of three booleans.', inputpbc)
 
     return the_pbc
 
@@ -205,9 +205,9 @@ def create_automatic_kind_name(symbols, weights):
     """
     sorted_symbol_list = list(set(symbols))
     sorted_symbol_list.sort()  # In-place sort
-    name_string = "".join(sorted_symbol_list)
+    name_string = ''.join(sorted_symbol_list)
     if has_vacancies(weights):
-        name_string += "X"
+        name_string += 'X'
     return name_string
 
 
@@ -227,7 +227,7 @@ def validate_weights_tuple(weights_tuple, threshold):
     """
     w_sum = sum(weights_tuple)
     if (any(i < 0. for i in weights_tuple) or (w_sum - 1. > threshold)):
-        raise ValueError("The weight list is not valid (each element must be positive, and the sum must be <= 1).")
+        raise ValueError('The weight list is not valid (each element must be positive, and the sum must be <= 1).')
 
 
 def is_valid_symbol(symbol):
@@ -258,8 +258,8 @@ def validate_symbols_tuple(symbols_tuple):
     else:
         valid = all(is_valid_symbol(sym) for sym in symbols_tuple)
     if not valid:
-        raise UnsupportedSpeciesError("At least one element of the symbol list {} has "
-                                      "not been recognized.".format(symbols_tuple))
+        raise UnsupportedSpeciesError('At least one element of the symbol list {} has '
+                                      'not been recognized.'.format(symbols_tuple))
 
 
 def is_ase_atoms(ase_atoms):
@@ -309,7 +309,7 @@ def group_symbols(_list):
     return grouped_list
 
 
-def get_formula_from_symbol_list(_list, separator=""):
+def get_formula_from_symbol_list(_list, separator=''):
     """
     Return a string with the formula obtained from the list of symbols.
     Examples:
@@ -331,17 +331,17 @@ def get_formula_from_symbol_list(_list, separator=""):
             multiplicity_str = str(elem[0])
 
         if isinstance(elem[1], six.string_types):
-            list_str.append("{}{}".format(elem[1], multiplicity_str))
+            list_str.append('{}{}'.format(elem[1], multiplicity_str))
         elif elem[0] > 1:
-            list_str.append("({}){}".format(
+            list_str.append('({}){}'.format(
                 get_formula_from_symbol_list(elem[1], separator=separator), multiplicity_str))
         else:
-            list_str.append("{}{}".format(get_formula_from_symbol_list(elem[1], separator=separator), multiplicity_str))
+            list_str.append('{}{}'.format(get_formula_from_symbol_list(elem[1], separator=separator), multiplicity_str))
 
     return separator.join(list_str)
 
 
-def get_formula_group(symbol_list, separator=""):
+def get_formula_group(symbol_list, separator=''):
     """
     Return a string with the chemical formula from a list of chemical symbols.
     The formula is written in a compact" way, i.e. trying to group as much as
@@ -464,7 +464,7 @@ def get_formula_group(symbol_list, separator=""):
     return get_formula_from_symbol_list(new_symbol_list, separator=separator)
 
 
-def get_formula(symbol_list, mode='hill', separator=""):
+def get_formula(symbol_list, mode='hill', separator=''):
     """
     Return a string with the chemical formula.
 
@@ -573,10 +573,10 @@ def get_symbols_string(symbols, weights):
     else:
         pieces = []
         for s, w in zip(symbols, weights):
-            pieces.append("{}{:4.2f}".format(s, w))
+            pieces.append('{}{:4.2f}'.format(s, w))
         if has_vacancies(weights):
             pieces.append('X{:4.2f}'.format(1. - sum(weights)))
-        return "{{{}}}".format("".join(sorted(pieces)))
+        return '{{{}}}'.format(''.join(sorted(pieces)))
 
 
 def has_vacancies(weights):
@@ -724,13 +724,13 @@ class StructureData(Data):
     boundary conditions (whether they are periodic or not) and other
     related useful information.
     """
-    _set_incompatibilities = [("ase", "cell"), ("ase", "pbc"), ("ase", "pymatgen"), ("ase", "pymatgen_molecule"),
-                              ("ase", "pymatgen_structure"), ("cell", "pymatgen"), ("cell", "pymatgen_molecule"),
-                              ("cell", "pymatgen_structure"), ("pbc", "pymatgen"), ("pbc", "pymatgen_molecule"),
-                              ("pbc", "pymatgen_structure"), ("pymatgen", "pymatgen_molecule"),
-                              ("pymatgen", "pymatgen_structure"), ("pymatgen_molecule", "pymatgen_structure")]
+    _set_incompatibilities = [('ase', 'cell'), ('ase', 'pbc'), ('ase', 'pymatgen'), ('ase', 'pymatgen_molecule'),
+                              ('ase', 'pymatgen_structure'), ('cell', 'pymatgen'), ('cell', 'pymatgen_molecule'),
+                              ('cell', 'pymatgen_structure'), ('pbc', 'pymatgen'), ('pbc', 'pymatgen_molecule'),
+                              ('pbc', 'pymatgen_structure'), ('pymatgen', 'pymatgen_molecule'),
+                              ('pymatgen', 'pymatgen_structure'), ('pymatgen_molecule', 'pymatgen_structure')]
 
-    _dimensionality_label = {0: "", 1: "length", 2: "surface", 3: "volume"}
+    _dimensionality_label = {0: '', 1: 'length', 2: 'surface', 3: 'volume'}
 
     def __init__(self, cell=None, pbc=None, ase=None, pymatgen=None, pymatgen_structure=None, pymatgen_molecule=None, **kwargs):
 
@@ -802,7 +802,7 @@ class StructureData(Data):
         elif dim == 3:
             retdict['value'] = np.dot(cell[0], np.cross(cell[1], cell[2]))
         else:
-            raise ValueError("Dimensionality {} must be <= 3".format(dim))
+            raise ValueError('Dimensionality {} must be <= 3'.format(dim))
 
         return retdict
 
@@ -818,7 +818,7 @@ class StructureData(Data):
             for atom in aseatoms:
                 self.append_atom(ase=atom)
         else:
-            raise TypeError("The value is not an ase.Atoms object")
+            raise TypeError('The value is not an ase.Atoms object')
 
     def set_pymatgen(self, obj, **kwargs):
         """
@@ -829,7 +829,7 @@ class StructureData(Data):
         """
         typestr = type(obj).__name__
         try:
-            func = getattr(self, "set_pymatgen_{}".format(typestr.lower()))
+            func = getattr(self, 'set_pymatgen_{}'.format(typestr.lower()))
         except AttributeError:
             raise AttributeError("Converter for '{}' to AiiDA structure does not exist".format(typestr))
         func(obj, **kwargs)
@@ -936,18 +936,18 @@ class StructureData(Data):
         try:
             _get_valid_cell(self.cell)
         except ValueError as exc:
-            raise ValidationError("Invalid cell: {}".format(exc))
+            raise ValidationError('Invalid cell: {}'.format(exc))
 
         try:
             get_valid_pbc(self.pbc)
         except ValueError as exc:
-            raise ValidationError("Invalid periodic boundary conditions: {}".format(exc))
+            raise ValidationError('Invalid periodic boundary conditions: {}'.format(exc))
 
         try:
             # This will try to create the kinds objects
             kinds = self.kinds
         except ValueError as exc:
-            raise ValidationError("Unable to validate the kinds: {}".format(exc))
+            raise ValidationError('Unable to validate the kinds: {}'.format(exc))
 
         from collections import Counter
 
@@ -955,47 +955,47 @@ class StructureData(Data):
         for c in counts:
             if counts[c] != 1:
                 raise ValidationError("Kind with name '{}' appears {} times "
-                                      "instead of only one".format(c, counts[c]))
+                                      'instead of only one'.format(c, counts[c]))
 
         try:
             # This will try to create the sites objects
             sites = self.sites
         except ValueError as exc:
-            raise ValidationError("Unable to validate the sites: {}".format(exc))
+            raise ValidationError('Unable to validate the sites: {}'.format(exc))
 
         for site in sites:
             if site.kind_name not in [k.name for k in kinds]:
-                raise ValidationError("A site has kind {}, but no specie with that name exists"
-                                      "".format(site.kind_name))
+                raise ValidationError('A site has kind {}, but no specie with that name exists'
+                                      ''.format(site.kind_name))
 
         kinds_without_sites = (set(k.name for k in kinds) - set(s.kind_name for s in sites))
         if kinds_without_sites:
-            raise ValidationError("The following kinds are defined, but there "
-                                  "are no sites with that kind: {}".format(list(kinds_without_sites)))
+            raise ValidationError('The following kinds are defined, but there '
+                                  'are no sites with that kind: {}'.format(list(kinds_without_sites)))
 
-    def _prepare_xsf(self, main_file_name=""):
+    def _prepare_xsf(self, main_file_name=''):
         """
         Write the given structure to a string of format XSF (for XCrySDen).
         """
         if self.is_alloy or self.has_vacancies:
-            raise NotImplementedError("XSF for alloys or systems with vacancies not implemented.")
+            raise NotImplementedError('XSF for alloys or systems with vacancies not implemented.')
 
         sites = self.sites
 
-        return_string = "CRYSTAL\nPRIMVEC 1\n"
+        return_string = 'CRYSTAL\nPRIMVEC 1\n'
         for cell_vector in self.cell:
-            return_string += ' '.join(["%18.10f" % i for i in cell_vector])
-            return_string += "\n"
-        return_string += "PRIMCOORD 1\n"
-        return_string += "%d 1\n" % len(sites)
+            return_string += ' '.join(['%18.10f' % i for i in cell_vector])
+            return_string += '\n'
+        return_string += 'PRIMCOORD 1\n'
+        return_string += '%d 1\n' % len(sites)
         for site in sites:
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
-            return_string += "%s " % _atomic_numbers[self.get_kind(site.kind_name).symbols[0]]
-            return_string += "%18.10f %18.10f %18.10f\n" % tuple(site.position)
+            return_string += '%s ' % _atomic_numbers[self.get_kind(site.kind_name).symbols[0]]
+            return_string += '%18.10f %18.10f %18.10f\n' % tuple(site.position)
         return return_string.encode('utf-8'), {}
 
-    def _prepare_cif(self, main_file_name=""):
+    def _prepare_cif(self, main_file_name=''):
         """
         Write the given structure to a string of format CIF.
         """
@@ -1004,7 +1004,7 @@ class StructureData(Data):
         cif = CifData(ase=self.get_ase())
         return cif._prepare_cif()
 
-    def _prepare_chemdoodle(self, main_file_name=""):
+    def _prepare_chemdoodle(self, main_file_name=''):
         """
         Write the given structure to a string of format required by ChemDoodle.
         """
@@ -1054,43 +1054,43 @@ class StructureData(Data):
                 })
 
         cell_json = {
-            "t": "UnitCell",
-            "i": "s0",
-            "o": (-center).tolist(),
-            "x": (lattice_vectors[0] - center).tolist(),
-            "y": (lattice_vectors[1] - center).tolist(),
-            "z": (lattice_vectors[2] - center).tolist(),
-            "xy": (lattice_vectors[0] + lattice_vectors[1] - center).tolist(),
-            "xz": (lattice_vectors[0] + lattice_vectors[2] - center).tolist(),
-            "yz": (lattice_vectors[1] + lattice_vectors[2] - center).tolist(),
-            "xyz": (lattice_vectors[0] + lattice_vectors[1] + lattice_vectors[2] - center).tolist(),
+            't': 'UnitCell',
+            'i': 's0',
+            'o': (-center).tolist(),
+            'x': (lattice_vectors[0] - center).tolist(),
+            'y': (lattice_vectors[1] - center).tolist(),
+            'z': (lattice_vectors[2] - center).tolist(),
+            'xy': (lattice_vectors[0] + lattice_vectors[1] - center).tolist(),
+            'xz': (lattice_vectors[0] + lattice_vectors[2] - center).tolist(),
+            'yz': (lattice_vectors[1] + lattice_vectors[2] - center).tolist(),
+            'xyz': (lattice_vectors[0] + lattice_vectors[1] + lattice_vectors[2] - center).tolist(),
         }
 
-        return_dict = {"s": [cell_json], "m": [{"a": atoms_json}], "units": '&Aring;'}
+        return_dict = {'s': [cell_json], 'm': [{'a': atoms_json}], 'units': '&Aring;'}
 
         return json.dumps(return_dict), {}
 
-    def _prepare_xyz(self, main_file_name=""):
+    def _prepare_xyz(self, main_file_name=''):
         """
         Write the given structure to a string of format XYZ.
         """
         if self.is_alloy or self.has_vacancies:
-            raise NotImplementedError("XYZ for alloys or systems with vacancies not implemented.")
+            raise NotImplementedError('XYZ for alloys or systems with vacancies not implemented.')
 
         sites = self.sites
         cell = self.cell
 
-        return_list = ["{}".format(len(sites))]
+        return_list = ['{}'.format(len(sites))]
         return_list.append('Lattice="{} {} {} {} {} {} {} {} {}" pbc="{} {} {}"'.format(
             cell[0][0], cell[0][1], cell[0][2], cell[1][0], cell[1][1], cell[1][2], cell[2][0], cell[2][1], cell[2][2],
             self.pbc[0], self.pbc[1], self.pbc[2]))
         for site in sites:
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
-            return_list.append("{:6s} {:18.10f} {:18.10f} {:18.10f}".format(
+            return_list.append('{:6s} {:18.10f} {:18.10f} {:18.10f}'.format(
                 self.get_kind(site.kind_name).symbols[0], site.position[0], site.position[1], site.position[2]))
 
-        return_string = "\n".join(return_list)
+        return_string = '\n'.join(return_list)
         return return_string.encode('utf-8'), {}
 
     def _parse_xyz(self, inputstring):
@@ -1105,7 +1105,7 @@ class StructureData(Data):
             pass
 
         if atoms is None:
-            raise TypeError("The data does not contain any XYZ data")
+            raise TypeError('The data does not contain any XYZ data')
 
         self.clear_kinds()
         self.pbc = (False, False, False)
@@ -1172,7 +1172,7 @@ class StructureData(Data):
         """
         return set(itertools.chain.from_iterable(kind.symbols for kind in self.kinds))
 
-    def get_formula(self, mode='hill', separator=""):
+    def get_formula(self, mode='hill', separator=''):
         """
         Return a string with the chemical formula.
 
@@ -1332,12 +1332,12 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
+            raise ModificationNotAllowed('The StructureData object cannot be modified, it has already been stored')
 
         new_kind = Kind(kind=kind)  # So we make a copy
 
         if kind.name in [k.name for k in self.kinds]:
-            raise ValueError("A kind with the same name ({}) already exists.".format(kind.name))
+            raise ValueError('A kind with the same name ({}) already exists.'.format(kind.name))
 
         # If here, no exceptions have been raised, so I add the site.
         self.attributes.setdefault('kinds', []).append(new_kind.get_raw())
@@ -1358,13 +1358,13 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
+            raise ModificationNotAllowed('The StructureData object cannot be modified, it has already been stored')
 
         new_site = Site(site=site)  # So we make a copy
 
         if site.kind_name not in [k.name for k in self.kinds]:
             raise ValueError("No kind with name '{}', available kinds are: "
-                             "{}".format(site.kind_name, [k.name for k in self.kinds]))
+                             '{}'.format(site.kind_name, [k.name for k in self.kinds]))
 
         # If here, no exceptions have been raised, so I add the site.
         self.attributes.setdefault('sites', []).append(new_site.get_raw())
@@ -1405,14 +1405,14 @@ class StructureData(Data):
         if aseatom is not None:
             if kwargs:
                 raise ValueError("If you pass 'ase' as a parameter to "
-                                 "append_atom, you cannot pass any further"
-                                 "parameter")
+                                 'append_atom, you cannot pass any further'
+                                 'parameter')
             position = aseatom.position
             kind = Kind(ase=aseatom)
         else:
             position = kwargs.pop('position', None)
             if position is None:
-                raise ValueError("You have to specify the position of the new atom")
+                raise ValueError('You have to specify the position of the new atom')
             # all remaining parameters
             kind = Kind(**kwargs)
 
@@ -1445,7 +1445,7 @@ class StructureData(Data):
                 simplename = kind.name
                 counter = 1
                 while kind.name in existing_names:
-                    kind.name = "{}{}".format(simplename, counter)
+                    kind.name = '{}{}'.format(simplename, counter)
                     counter += 1
                 self.append_kind(kind)
         else:  # 'name' was specified
@@ -1461,10 +1461,10 @@ class StructureData(Data):
                 if is_the_same:
                     kind = old_kind
                 else:
-                    raise ValueError("You are explicitly setting the name "
+                    raise ValueError('You are explicitly setting the name '
                                      "of the kind to '{}', that already "
-                                     "exists, but the two kinds are different!"
-                                     " (first difference: {})".format(kind.name, firstdiff))
+                                     'exists, but the two kinds are different!'
+                                     ' (first difference: {})'.format(kind.name, firstdiff))
 
         site = Site(kind_name=kind.name, position=position)
         self.append_site(site)
@@ -1478,7 +1478,7 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
+            raise ModificationNotAllowed('The StructureData object cannot be modified, it has already been stored')
 
         self.set_attribute('kinds', [])
         self._internal_kind_tags = {}
@@ -1491,7 +1491,7 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
+            raise ModificationNotAllowed('The StructureData object cannot be modified, it has already been stored')
 
         self.set_attribute('sites', [])
 
@@ -1573,7 +1573,7 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
+            raise ModificationNotAllowed('The StructureData object cannot be modified, it has already been stored')
 
         the_cell = _get_valid_cell(value)
         self.set_attribute('cell', the_cell)
@@ -1623,17 +1623,17 @@ class StructureData(Data):
             # test consistency of th enew input
             n_sites = len(self.sites)
             if n_sites != len(new_positions) and conserve_particle:
-                raise ValueError("the new positions should be as many as the previous structure.")
+                raise ValueError('the new positions should be as many as the previous structure.')
 
             new_sites = []
             for i in range(n_sites):
                 try:
                     this_pos = [float(j) for j in new_positions[i]]
                 except ValueError:
-                    raise ValueError("Expecting a list of floats. Found instead {}".format(new_positions[i]))
+                    raise ValueError('Expecting a list of floats. Found instead {}'.format(new_positions[i]))
 
                 if len(this_pos) != 3:
-                    raise ValueError("Expecting a list of lists of length 3. found instead {}".format(len(this_pos)))
+                    raise ValueError('Expecting a list of lists of length 3. found instead {}'.format(len(this_pos)))
 
                 # now append this Site to the new_site list.
                 new_site = Site(site=self.sites[i])  # So we make a copy
@@ -1664,7 +1664,7 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
+            raise ModificationNotAllowed('The StructureData object cannot be modified, it has already been stored')
         the_pbc = get_valid_pbc(value)
 
         # self._pbc = the_pbc
@@ -1691,7 +1691,7 @@ class StructureData(Data):
         self.set_cell_lengths(value)
 
     def set_cell_lengths(self, value):
-        raise NotImplementedError("Modification is not implemented yet")
+        raise NotImplementedError('Modification is not implemented yet')
 
     @property
     def cell_angles(self):
@@ -1715,7 +1715,7 @@ class StructureData(Data):
         self.set_cell_angles(value)
 
     def set_cell_angles(self, value):
-        raise NotImplementedError("Modification is not implemented yet")
+        raise NotImplementedError('Modification is not implemented yet')
 
     @property
     def is_alloy(self):
@@ -1840,7 +1840,7 @@ class StructureData(Data):
         from pymatgen.core.structure import Structure
 
         if self.pbc != (True, True, True):
-            raise ValueError("Periodic boundary conditions must apply in all three dimensions of real space")
+            raise ValueError('Periodic boundary conditions must apply in all three dimensions of real space')
 
         species = []
         additional_kwargs = {}
@@ -1852,7 +1852,7 @@ class StructureData(Data):
             for s in self.sites:
                 k = self.get_kind(s.kind_name)
                 if len(k.symbols) != 1 or (len(k.weights) != 1 or sum(k.weights) < 1.):
-                    raise ValueError("Cannot set partial occupancies and spins at the same time")
+                    raise ValueError('Cannot set partial occupancies and spins at the same time')
                 species.append(
                     Specie(
                         k.symbols[0],
@@ -1873,7 +1873,7 @@ class StructureData(Data):
                 additional_kwargs['site_properties'] = {'kind_name': self.get_site_kindnames()}
 
         if kwargs:
-            raise ValueError("Unrecognized parameters passed to pymatgen converter: {}".format(kwargs.keys()))
+            raise ValueError('Unrecognized parameters passed to pymatgen converter: {}'.format(kwargs.keys()))
 
         positions = [list(x.position) for x in self.sites]
         return Structure(self.cell, species, positions, coords_are_cartesian=True, **additional_kwargs)
@@ -1894,7 +1894,7 @@ class StructureData(Data):
         from pymatgen.core.structure import Molecule
 
         if kwargs:
-            raise ValueError("Unrecognized parameters passed to pymatgen converter: {}".format(kwargs.keys()))
+            raise ValueError('Unrecognized parameters passed to pymatgen converter: {}'.format(kwargs.keys()))
 
         species = []
         for s in self.sites:
@@ -1981,9 +1981,9 @@ class Kind(object):
                 self.name = oldkind.name
                 self._internal_tag = oldkind._internal_tag
             except AttributeError:
-                raise ValueError("Error using the Kind object. Are you sure "
-                                 "it is a Kind object? [Introspection says it is "
-                                 "{}]".format(str(type(oldkind))))
+                raise ValueError('Error using the Kind object. Are you sure '
+                                 'it is a Kind object? [Introspection says it is '
+                                 '{}]'.format(str(type(oldkind))))
 
         elif 'ase' in kwargs:
             aseatom = kwargs['ase']
@@ -1999,9 +1999,9 @@ class Kind(object):
                 else:
                     self.reset_mass()
             except AttributeError:
-                raise ValueError("Error using the aseatom object. Are you sure "
-                                 "it is a ase.atom.Atom object? [Introspection says it is "
-                                 "{}]".format(str(type(aseatom))))
+                raise ValueError('Error using the aseatom object. Are you sure '
+                                 'it is a ase.atom.Atom object? [Introspection says it is '
+                                 '{}]'.format(str(type(aseatom))))
             if aseatom.tag != 0:
                 self.set_automatic_kind_name(tag=aseatom.tag)
                 self._internal_tag = aseatom.tag
@@ -2010,7 +2010,7 @@ class Kind(object):
         else:
             if 'symbols' not in kwargs:
                 raise ValueError("'symbols' need to be "
-                                 "specified (at least) to create a Site object. Otherwise, "
+                                 'specified (at least) to create a Site object. Otherwise, '
                                  "pass a raw site using the 'raw' parameter.")
             weights = kwargs.pop('weights', None)
             self.set_symbols_and_weights(kwargs.pop('symbols'), weights)
@@ -2023,7 +2023,7 @@ class Kind(object):
             except KeyError:
                 self.set_automatic_kind_name()
             if kwargs:
-                raise ValueError("Unrecognized parameters passed to Kind constructor: {}".format(kwargs.keys()))
+                raise ValueError('Unrecognized parameters passed to Kind constructor: {}'.format(kwargs.keys()))
 
     def get_raw(self):
         """
@@ -2092,7 +2092,7 @@ class Kind(object):
         if tag is None:
             self.name = name_string
         else:
-            self.name = "{}{}".format(name_string, tag)
+            self.name = '{}{}'.format(name_string, tag)
 
     def compare_with(self, other_kind):
         """
@@ -2115,30 +2115,30 @@ class Kind(object):
         """
         # Check length of symbols
         if len(self.symbols) != len(other_kind.symbols):
-            return (False, "Different length of symbols list")
+            return (False, 'Different length of symbols list')
 
         # Check list of symbols
         for i in range(len(self.symbols)):
             if self.symbols[i] != other_kind.symbols[i]:
-                return (False, "Symbol at position {:d} are different "
-                        "({} vs. {})".format(i + 1, self.symbols[i], other_kind.symbols[i]))
+                return (False, 'Symbol at position {:d} are different '
+                        '({} vs. {})'.format(i + 1, self.symbols[i], other_kind.symbols[i]))
         # Check weights (assuming length of weights and of symbols have same
         # length, which should be always true
         for i in range(len(self.weights)):
             if self.weights[i] != other_kind.weights[i]:
-                return (False, "Weight at position {:d} are different "
-                        "({} vs. {})".format(i + 1, self.weights[i], other_kind.weights[i]))
+                return (False, 'Weight at position {:d} are different '
+                        '({} vs. {})'.format(i + 1, self.weights[i], other_kind.weights[i]))
         # Check masses
         if abs(self.mass - other_kind.mass) > _mass_threshold:
-            return (False, "Masses are different ({} vs. {})".format(self.mass, other_kind.mass))
+            return (False, 'Masses are different ({} vs. {})'.format(self.mass, other_kind.mass))
 
         if self._internal_tag != other_kind._internal_tag:
-            return (False, "Internal tags are different ({} vs. {})"
-                    "".format(self._internal_tag, other_kind._internal_tag))
+            return (False, 'Internal tags are different ({} vs. {})'
+                    ''.format(self._internal_tag, other_kind._internal_tag))
 
         # If we got here, the two Site objects are similar enough
         # to be considered of the same kind
-        return (True, "")
+        return (True, '')
 
     @property
     def mass(self):
@@ -2153,7 +2153,7 @@ class Kind(object):
     def mass(self, value):
         the_mass = float(value)
         if the_mass <= 0:
-            raise ValueError("The mass must be positive.")
+            raise ValueError('The mass must be positive.')
         self._mass = the_mass
 
     @property
@@ -2174,8 +2174,8 @@ class Kind(object):
         weights_tuple = _create_weights_tuple(value)
 
         if len(weights_tuple) != len(self._symbols):
-            raise ValueError("Cannot change the number of weights. Use the "
-                             "set_symbols_and_weights function instead.")
+            raise ValueError('Cannot change the number of weights. Use the '
+                             'set_symbols_and_weights function instead.')
         validate_weights_tuple(weights_tuple, _sum_threshold)
 
         self._weights = weights_tuple
@@ -2206,7 +2206,7 @@ class Kind(object):
         if len(self._symbols) == 1:
             return self._symbols[0]
         else:
-            raise ValueError("This kind has more than one symbol (it is an alloy): {}".format(self._symbols))
+            raise ValueError('This kind has more than one symbol (it is an alloy): {}'.format(self._symbols))
 
     @property
     def symbols(self):
@@ -2232,8 +2232,8 @@ class Kind(object):
         symbols_tuple = _create_symbols_tuple(value)
 
         if len(symbols_tuple) != len(self._weights):
-            raise ValueError("Cannot change the number of symbols. Use the "
-                             "set_symbols_and_weights function instead.")
+            raise ValueError('Cannot change the number of symbols. Use the '
+                             'set_symbols_and_weights function instead.')
         validate_symbols_tuple(symbols_tuple)
 
         self._symbols = symbols_tuple
@@ -2247,7 +2247,7 @@ class Kind(object):
         symbols_tuple = _create_symbols_tuple(symbols)
         weights_tuple = _create_weights_tuple(weights)
         if len(symbols_tuple) != len(weights_tuple):
-            raise ValueError("The number of symbols and weights must coincide.")
+            raise ValueError('The number of symbols and weights must coincide.')
         validate_symbols_tuple(symbols_tuple)
         validate_weights_tuple(weights_tuple, _sum_threshold)
         self._symbols = symbols_tuple
@@ -2315,18 +2315,18 @@ class Site(object):
                 self.kind_name = raw['kind_name']
                 self.position = raw['position']
             except KeyError as exc:
-                raise ValueError("Invalid raw object, it does not contain any key {}".format(exc.args[0]))
+                raise ValueError('Invalid raw object, it does not contain any key {}'.format(exc.args[0]))
             except TypeError:
-                raise ValueError("Invalid raw object, it is not a dictionary")
+                raise ValueError('Invalid raw object, it is not a dictionary')
 
         else:
             try:
                 self.kind_name = kwargs.pop('kind_name')
                 self.position = kwargs.pop('position')
             except KeyError as exc:
-                raise ValueError("You need to specify {}".format(exc.args[0]))
+                raise ValueError('You need to specify {}'.format(exc.args[0]))
             if kwargs:
-                raise ValueError("Unrecognized parameters: {}".format(kwargs.keys))
+                raise ValueError('Unrecognized parameters: {}'.format(kwargs.keys))
 
     def get_raw(self):
         """
@@ -2403,7 +2403,7 @@ class Site(object):
             raise ValueError("No kind '{}' has been found in the list of kinds".format(self.kind_name))
 
         if kind.is_alloy or kind.has_vacancies:
-            raise ValueError("Cannot convert to ASE if the kind represents an alloy or it has vacancies.")
+            raise ValueError('Cannot convert to ASE if the kind represents an alloy or it has vacancies.')
         aseatom = ase.Atom(position=self.position, symbol=str(kind.symbols[0]), mass=kind.mass)
         if tag is not None:
             aseatom.tag = tag
@@ -2446,7 +2446,7 @@ class Site(object):
                 raise ValueError
         # value is not iterable or elements are not floats or len != 3
         except (ValueError, TypeError):
-            raise ValueError("Wrong format for position, must be a list of three float numbers.")
+            raise ValueError('Wrong format for position, must be a list of three float numbers.')
         self._position = internal_pos
 
     def __repr__(self):

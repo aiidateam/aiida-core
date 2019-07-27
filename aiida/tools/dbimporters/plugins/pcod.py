@@ -81,18 +81,18 @@ class PcodDbImporter(CodDbImporter):
                 if not isinstance(values, list):
                     values = [values]
                 sql_parts.append( \
-                    "(" + self._keywords[key][1](self, \
+                    '(' + self._keywords[key][1](self, \
                                                  self._keywords[key][0], \
                                                  key, \
                                                  values) + \
-                    ")")
+                    ')')
         if len(kwargs.keys()) > 0:
             raise NotImplementedError( \
                 "search keyword(s) '" + \
                 "', '".join(kwargs.keys()) + "' " + \
-                "is(are) not implemented for PCOD")
-        return "SELECT file FROM data WHERE " + \
-               " AND ".join(sql_parts)
+                'is(are) not implemented for PCOD')
+        return 'SELECT file FROM data WHERE ' + \
+               ' AND '.join(sql_parts)
 
     def query(self, **kwargs):
         """
@@ -120,7 +120,7 @@ class PcodSearchResults(CodSearchResults):
     """
     Results of the search, performed on PCOD.
     """
-    _base_url = "http://www.crystallography.net/pcod/cif/"
+    _base_url = 'http://www.crystallography.net/pcod/cif/'
 
     def __init__(self, results):
         super(PcodSearchResults, self).__init__(results)
@@ -133,9 +133,9 @@ class PcodSearchResults(CodSearchResults):
         :param result_dict: dictionary, describing an entry in the results.
         """
         return self._base_url + \
-               result_dict['id'][0] + "/" + \
-               result_dict['id'][0:3] + "/" + \
-               result_dict['id'] + ".cif"
+               result_dict['id'][0] + '/' + \
+               result_dict['id'][0:3] + '/' + \
+               result_dict['id'] + '.cif'
 
 
 class PcodEntry(CodEntry):

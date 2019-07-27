@@ -27,7 +27,7 @@ class DjangoLog(entities.DjangoModelEntity[models.DbLog], BackendLog):
 
     MODEL_CLASS = models.DbLog
 
-    def __init__(self, backend, time, loggername, levelname, dbnode_id, message="", metadata=None):
+    def __init__(self, backend, time, loggername, levelname, dbnode_id, message='', metadata=None):
         # pylint: disable=too-many-arguments
         super(DjangoLog, self).__init__(backend)
         self._dbmodel = models.DbLog(
@@ -105,7 +105,7 @@ class DjangoLogCollection(BackendLogCollection):
         :raises `~aiida.common.exceptions.NotExistent`: if Log with ID ``log_id`` is not found
         """
         if not isinstance(log_id, int):
-            raise TypeError("log_id must be an int")
+            raise TypeError('log_id must be an int')
 
         try:
             models.DbLog.objects.get(id=log_id).delete()
@@ -123,7 +123,7 @@ class DjangoLogCollection(BackendLogCollection):
             with transaction.atomic():
                 models.DbLog.objects.all().delete()
         except Exception as exc:
-            raise exceptions.IntegrityError("Could not delete all Logs. Full exception: {}".format(exc))
+            raise exceptions.IntegrityError('Could not delete all Logs. Full exception: {}'.format(exc))
 
     def delete_many(self, filters):
         """
@@ -142,9 +142,9 @@ class DjangoLogCollection(BackendLogCollection):
 
         # Checks
         if not isinstance(filters, dict):
-            raise TypeError("filters must be a dictionary")
+            raise TypeError('filters must be a dictionary')
         if not filters:
-            raise exceptions.ValidationError("filters must not be empty")
+            raise exceptions.ValidationError('filters must not be empty')
 
         # Apply filter and delete found entities
         builder = QueryBuilder().append(Log, filters=filters, project='id').all()

@@ -68,7 +68,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
     except exceptions.IncompatibleArchiveVersionError as exception:
         if migration_performed:
             # Migration has been performed, something is still wrong
-            crit_message = "{} has been migrated, but it still cannot be imported.\n{}".format(archive, exception)
+            crit_message = '{} has been migrated, but it still cannot be imported.\n{}'.format(archive, exception)
             echo.echo_critical(crit_message)
         else:
             # Migration has not yet been tried.
@@ -79,8 +79,8 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
                     migrate_archive = True
                 else:
                     migrate_archive = click.confirm(
-                        "Do you want to try and migrate {} to the newest export file version?\n"
-                        "Note: This will not change your current file.".format(archive),
+                        'Do you want to try and migrate {} to the newest export file version?\n'
+                        'Note: This will not change your current file.'.format(archive),
                         default=True,
                         abort=True
                     )
@@ -114,7 +114,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     from aiida.cmdline.commands.cmd_export import migrate
 
     # Echo start
-    echo.echo_info("migrating archive {}".format(archive))
+    echo.echo_info('migrating archive {}'.format(archive))
 
     # Initialization
     temp_out_file = 'migrated_importfile.aiida'
@@ -126,14 +126,14 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
         )
     except Exception:
         echo.echo_error(
-            "an exception occurred while migrating the archive {}.\n"
+            'an exception occurred while migrating the archive {}.\n'
             "Use 'verdi export migrate' to update this export file.".format(archive)
         )
         echo.echo(traceback.format_exc())
         if not non_interactive:
             click.confirm('do you want to continue?', abort=True)
     else:
-        echo.echo_success("archive migrated, proceeding with import")
+        echo.echo_success('archive migrated, proceeding with import')
 
         return temp_folder.get_abs_path(temp_out_file)
 
@@ -145,8 +145,8 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     '--webpages',
     type=click.STRING,
     cls=options.MultipleValueOption,
-    help="Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. "
-    "Automatically discovered archive URLs will be downloadeded and added to ARCHIVES for importing"
+    help='Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. '
+    'Automatically discovered archive URLs will be downloadeded and added to ARCHIVES for importing'
 )
 @options.GROUP(
     type=GroupParamType(create_if_not_exist=True),
@@ -158,36 +158,36 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     '--extras-mode-existing',
     type=click.Choice(EXTRAS_MODE_EXISTING),
     default='keep_existing',
-    help="Specify which extras from the export archive should be imported for nodes that are already contained in the "
-    "database: "
-    "ask: import all extras and prompt what to do for existing extras. "
-    "keep_existing: import all extras and keep original value of existing extras. "
-    "update_existing: import all extras and overwrite value of existing extras. "
-    "mirror: import all extras and remove any existing extras that are not present in the archive. "
-    "none: do not import any extras."
+    help='Specify which extras from the export archive should be imported for nodes that are already contained in the '
+    'database: '
+    'ask: import all extras and prompt what to do for existing extras. '
+    'keep_existing: import all extras and keep original value of existing extras. '
+    'update_existing: import all extras and overwrite value of existing extras. '
+    'mirror: import all extras and remove any existing extras that are not present in the archive. '
+    'none: do not import any extras.'
 )
 @click.option(
     '-n',
     '--extras-mode-new',
     type=click.Choice(EXTRAS_MODE_NEW),
     default='import',
-    help="Specify whether to import extras of new nodes: "
-    "import: import extras. "
-    "none: do not import extras."
+    help='Specify whether to import extras of new nodes: '
+    'import: import extras. '
+    'none: do not import extras.'
 )
 @click.option(
     '--comment-mode',
     type=click.Choice(COMMENT_MODE),
     default='newest',
-    help="Specify the way to import Comments with identical UUIDs: "
-    "newest: Only the newest Comments (based on mtime) (default)."
-    "overwrite: Replace existing Comments with those from the import file."
+    help='Specify the way to import Comments with identical UUIDs: '
+    'newest: Only the newest Comments (based on mtime) (default).'
+    'overwrite: Replace existing Comments with those from the import file.'
 )
 @click.option(
     '--migration/--no-migration',
     default=True,
     show_default=True,
-    help="Force migration of export file archives, if needed."
+    help='Force migration of export file archives, if needed.'
 )
 @options.NON_INTERACTIVE()
 @decorators.with_dbenv()
@@ -235,14 +235,14 @@ def cmd_import(
 
     # Import initialization
     import_opts = {
-        "file_to_import": '',
-        "archive": '',
-        "group": group,
-        "migration": migration,
-        "extras_mode_existing": ExtrasImportCode[extras_mode_existing].value,
-        "extras_mode_new": extras_mode_new,
-        "comment_mode": comment_mode,
-        "non_interactive": non_interactive
+        'file_to_import': '',
+        'archive': '',
+        'group': group,
+        'migration': migration,
+        'extras_mode_existing': ExtrasImportCode[extras_mode_existing].value,
+        'extras_mode_new': extras_mode_new,
+        'comment_mode': comment_mode,
+        'non_interactive': non_interactive
     }
 
     # Import local archives

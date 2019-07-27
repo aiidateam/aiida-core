@@ -88,15 +88,15 @@ class IcsdDbImporter(DbImporter):
 
     def __init__(self, **kwargs):
 
-        self.db_parameters = {"server": "",
-                              "urladd": "index.php?",
-                              "querydb": True,
-                              "dl_db": "icsd",
-                              "host": "",
-                              "user": "dba",
-                              "passwd": "sql",
-                              "db": "icsd",
-                              "port": "3306",
+        self.db_parameters = {'server': '',
+                              'urladd': 'index.php?',
+                              'querydb': True,
+                              'dl_db': 'icsd',
+                              'host': '',
+                              'user': 'dba',
+                              'passwd': 'sql',
+                              'db': 'icsd',
+                              'port': '3306',
         }
         self.setup_db(**kwargs)
 
@@ -113,7 +113,7 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return "{} IN ({})".format(key, ", ".join(str(int(i)) for i in values))
+        return '{} IN ({})'.format(key, ', '.join(str(int(i)) for i in values))
 
     def _str_exact_clause(self, key, alias, values):
         """
@@ -123,7 +123,7 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return "{} IN ({})".format(key, ", ".join("'{}'".format(f) for f in values))
+        return '{} IN ({})'.format(key, ', '.join("'{}'".format(f) for f in values))
 
     def _formula_clause(self, key, alias, values):
         """
@@ -145,7 +145,7 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return " OR ".join("{} LIKE '%{}%'".format(key, s) for s in values)
+        return ' OR '.join("{} LIKE '%{}%'".format(key, s) for s in values)
 
     def _composition_clause(self, key, alias, values):
         """
@@ -161,7 +161,7 @@ class IcsdDbImporter(DbImporter):
         # or at the end of the formula expression (no space after).
         # Be aware that one needs to check that space/beginning of line before and ideally also space/end of line
         # after, because I found that capitalization of the element name is not enforced in these queries.
-        return " AND ".join("SUM_FORM REGEXP '(^|\ ){}[0-9\.]+($|\ )'".format(e) for e in values)
+        return ' AND '.join("SUM_FORM REGEXP '(^|\ ){}[0-9\.]+($|\ )'".format(e) for e in values)
 
     def _double_clause(self, key, alias, values, precision):
         """
@@ -171,27 +171,27 @@ class IcsdDbImporter(DbImporter):
             if not isinstance(e, six.integer_types) and not isinstance(e, float):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and floats are accepted")
-        return " OR ".join("{} BETWEEN {} AND {}".format(key, d-precision, d+precision) for d in values)
+        return ' OR '.join('{} BETWEEN {} AND {}'.format(key, d-precision, d+precision) for d in values)
 
     def _crystal_system_clause(self, key, alias, values):
         """
         Return SQL query predicate for querying crystal_system.
         """
         valid_systems = {
-            "cubic": "CU",
-            "hexagonal": "HE",
-            "monoclinic": "MO",
-            "orthorhombic": "OR",
-            "tetragonal": "TE",
-            "trigonal": "TG",
-            "triclinic": "TC"
+            'cubic': 'CU',
+            'hexagonal': 'HE',
+            'monoclinic': 'MO',
+            'orthorhombic': 'OR',
+            'tetragonal': 'TE',
+            'trigonal': 'TG',
+            'triclinic': 'TC'
         }  # from icsd accepted crystal systems
 
         for e in values:
             if not isinstance(e, six.integer_types) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return key + " IN (" + ", ".join("'" + valid_systems[f.lower()] + "'" for f in values) + ")"
+        return key + ' IN (' + ', '.join("'" + valid_systems[f.lower()] + "'" for f in values) + ')'
 
     def _length_clause(self, key, alias, values):
         """
@@ -265,10 +265,10 @@ class IcsdDbImporter(DbImporter):
         :param v: corresponding values
         :return retval: string
         """
-        if k == "mineral_name":
-            retval = "M=" + v
-        elif k == "chemical_name":
-            retval = "C=" + v
+        if k == 'mineral_name':
+            retval = 'M=' + v
+        elif k == 'chemical_name':
+            retval = 'C=' + v
         return retval
 
     def _parse_volume(k, v):
@@ -278,20 +278,20 @@ class IcsdDbImporter(DbImporter):
         :param v: corresponding values
         :return retval: string
         """
-        if k == "volume":
-            return "v=" + v
-        elif k == "a":
-            return "a=" + v
-        elif k == "b":
-            return "b=" + v
-        elif k == "c":
-            return "c=" + v
-        elif k == "alpha":
-            return "al=" + v
-        elif k == "beta":
-            return "be=" + v
-        elif k == "gamma":
-            return "ga=" + v
+        if k == 'volume':
+            return 'v=' + v
+        elif k == 'a':
+            return 'a=' + v
+        elif k == 'b':
+            return 'b=' + v
+        elif k == 'c':
+            return 'c=' + v
+        elif k == 'alpha':
+            return 'al=' + v
+        elif k == 'beta':
+            return 'be=' + v
+        elif k == 'gamma':
+            return 'ga=' + v
 
     def _parse_system(k, v):
         """
@@ -301,13 +301,13 @@ class IcsdDbImporter(DbImporter):
         :return retval: string
         """
         valid_systems = {
-            "cubic": "CU",
-            "hexagonal": "HE",
-            "monoclinic": "MO",
-            "orthorhombic": "OR",
-            "tetragonal": "TE",
-            "trigonal": "TG",
-            "triclinic": "TC"
+            'cubic': 'CU',
+            'hexagonal': 'HE',
+            'monoclinic': 'MO',
+            'orthorhombic': 'OR',
+            'tetragonal': 'TE',
+            'trigonal': 'TG',
+            'triclinic': 'TC'
         }
 
         return valid_systems[v.lower()]
@@ -339,25 +339,25 @@ class IcsdDbImporter(DbImporter):
                    'crystal_system': ['CRYST_SYS_CODE', _crystal_system_clause],
     }
     # keywords accepted for the web page query
-    keywords = {"id": ("authors", _parse_all),
-                "authors": ("authors", _parse_all),
-                "element": ("elements", _parse_all),
-                "number_of_elements": ("elementc", _parse_all),
-                "mineral_name": ("mineral", _parse_mineral),
-                "chemical_name": ("mineral", _parse_mineral),
-                "formula": ("formula", _parse_all),
-                "volume": ("volume", _parse_volume),
-                "a": ("volume", _parse_volume),
-                "b": ("volume", _parse_volume),
-                "c": ("volume", _parse_volume),
-                "alpha": ("volume", _parse_volume),
-                "beta": ("volume", _parse_volume),
-                "gamma": ("volume", _parse_volume),
-                "spacegroup": ("spaceg", _parse_all),
-                "journal": ("journal", _parse_all),
-                "title": ("title", _parse_all),
-                "year": ("year", _parse_all),
-                "crystal_system": ("system", _parse_system),
+    keywords = {'id': ('authors', _parse_all),
+                'authors': ('authors', _parse_all),
+                'element': ('elements', _parse_all),
+                'number_of_elements': ('elementc', _parse_all),
+                'mineral_name': ('mineral', _parse_mineral),
+                'chemical_name': ('mineral', _parse_mineral),
+                'formula': ('formula', _parse_all),
+                'volume': ('volume', _parse_volume),
+                'a': ('volume', _parse_volume),
+                'b': ('volume', _parse_volume),
+                'c': ('volume', _parse_volume),
+                'alpha': ('volume', _parse_volume),
+                'beta': ('volume', _parse_volume),
+                'gamma': ('volume', _parse_volume),
+                'spacegroup': ('spaceg', _parse_all),
+                'journal': ('journal', _parse_all),
+                'title': ('title', _parse_all),
+                'year': ('year', _parse_all),
+                'crystal_system': ('system', _parse_system),
     }
 
     def query(self, **kwargs):
@@ -368,7 +368,7 @@ class IcsdDbImporter(DbImporter):
         :param kwargs: A list of ''keyword = [values]'' pairs.
         """
 
-        if self.db_parameters["querydb"]:
+        if self.db_parameters['querydb']:
             return self._query_sql_db(**kwargs)
         else:
             return self._queryweb(**kwargs)
@@ -386,18 +386,18 @@ class IcsdDbImporter(DbImporter):
         for k, v in kwargs.items():
             if not isinstance(v, list):
                 v = [v]
-            sql_where_query.append("({})".format(self.keywords_db[k][1](self,
+            sql_where_query.append('({})'.format(self.keywords_db[k][1](self,
                                                         self.keywords_db[k][0],
                                                         k, v)))
-        if "crystal_system" in kwargs.keys():  # to query another table than the main one, add LEFT JOIN in front of WHERE
-            sql_query = "LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT "\
-                        "JOIN space_group_number ON "\
-                        "space_group_number.sgr_num=space_group.sgr_num "\
-                        + "WHERE" + " AND ".join(sql_where_query)
+        if 'crystal_system' in kwargs.keys():  # to query another table than the main one, add LEFT JOIN in front of WHERE
+            sql_query = 'LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT '\
+                        'JOIN space_group_number ON '\
+                        'space_group_number.sgr_num=space_group.sgr_num '\
+                        + 'WHERE' + ' AND '.join(sql_where_query)
         elif sql_where_query:
-            sql_query = "WHERE" + " AND ".join(sql_where_query)
+            sql_query = 'WHERE' + ' AND '.join(sql_where_query)
         else:
-            sql_query = ""
+            sql_query = ''
 
         return IcsdSearchResults(query=sql_query, db_parameters=self.db_parameters)
 
@@ -413,12 +413,12 @@ class IcsdDbImporter(DbImporter):
         from six.moves import urllib
 
         self.actual_args = {
-            "action": "Search",
-            "nb_rows": "100",  # max is 100
-            "order_by": "yearDesc",
-            "authors": "",
-            "volume": "",
-            "mineral": ""
+            'action': 'Search',
+            'nb_rows': '100',  # max is 100
+            'order_by': 'yearDesc',
+            'authors': '',
+            'volume': '',
+            'mineral': ''
         }
 
         for k, v in kwargs.items():
@@ -426,7 +426,7 @@ class IcsdDbImporter(DbImporter):
                 realname = self.keywords[k][0]
                 newv = self.keywords[k][1](k, v)
                 # Because different keys correspond to the same search field.
-                if realname in ["authors", "volume", "mineral"]:
+                if realname in ['authors', 'volume', 'mineral']:
                     self.actual_args[realname] = self.actual_args[realname] + newv + ' '
                 else:
                     self.actual_args[realname] = newv
@@ -434,7 +434,7 @@ class IcsdDbImporter(DbImporter):
                 raise TypeError("ICSDImporter got an unexpected keyword argument '{}'".format(exc.args[0]))
 
         url_values = urllib.parse.urlencode(self.actual_args)
-        query_url = self.db_parameters["urladd"] + url_values
+        query_url = self.db_parameters['urladd'] + url_values
 
         return IcsdSearchResults(query=query_url, db_parameters=self.db_parameters)
 
@@ -454,7 +454,7 @@ class IcsdDbImporter(DbImporter):
         """
         :return: List of all supported query keywords.
         """
-        if self.db_parameters["querydb"]:
+        if self.db_parameters['querydb']:
             return self.keywords_db.keys()
         else:
             return self.keywords.keys()
@@ -468,8 +468,8 @@ class IcsdSearchResults(DbSearchResults):
     :param db_parameters: database parameter setup during the
       initialisation of the IcsdDbImporter.
     """
-    cif_url = "/index.php?format=cif&action=Export&id%5B%5D={}"
-    db_name = "Icsd"
+    cif_url = '/index.php?format=cif&action=Export&id%5B%5D={}'
+    db_name = 'Icsd'
 
     def __init__(self, query, db_parameters):
 
@@ -484,10 +484,10 @@ class IcsdSearchResults(DbSearchResults):
         self.page = 1
         self.position = 0
         self.db_version = None
-        self.sql_select_query = "SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM "
-        self.sql_from_query = "FROM icsd "
+        self.sql_select_query = 'SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM '
+        self.sql_from_query = 'FROM icsd '
 
-        if self.db_parameters["querydb"]:
+        if self.db_parameters['querydb']:
             self.query_db_version()
         self.query_page()
 
@@ -515,22 +515,22 @@ class IcsdSearchResults(DbSearchResults):
         """
 
         if position < 0 or position >= self.number_of_results:
-            raise IndexError("index out of bounds")
+            raise IndexError('index out of bounds')
         while position + 1 >= len(self._results) and len(self._results) < self.number_of_results:
             self.page = self.page + 1
             self.query_page()
 
         if position not in self.entries:
-            if self.db_parameters["querydb"]:
-                self.entries[position] = IcsdEntry(self.db_parameters["server"] +
-                        self.db_parameters["dl_db"] + self.cif_url.format(
+            if self.db_parameters['querydb']:
+                self.entries[position] = IcsdEntry(self.db_parameters['server'] +
+                        self.db_parameters['dl_db'] + self.cif_url.format(
                         self._results[position]),
                     db_name=self.db_name, id=self.cif_numbers[position],
                     version = self.db_version,
                     extras={'idnum': self._results[position]})
             else:
-                self.entries[position] = IcsdEntry(self.db_parameters["server"] +
-                        self.db_parameters["dl_db"] + self.cif_url.format(
+                self.entries[position] = IcsdEntry(self.db_parameters['server'] +
+                        self.db_parameters['dl_db'] + self.cif_url.format(
                         self._results[position]),
                     db_name=self.db_name, extras={'idnum': self._results[position]})
         return self.entries[position]
@@ -541,13 +541,13 @@ class IcsdSearchResults(DbSearchResults):
         Query the version of the icsd database (last row of RELEASE_TAGS).
         """
         results = []
-        if self.db_parameters["querydb"]:
+        if self.db_parameters['querydb']:
 
-            sql_select_query = "SELECT RELEASE_TAG "
-            sql_from_query = "FROM icsd.icsd_database_information "
+            sql_select_query = 'SELECT RELEASE_TAG '
+            sql_from_query = 'FROM icsd.icsd_database_information '
 
             self._connect_db()
-            query_statement = "{}{}".format(sql_select_query, sql_from_query)
+            query_statement = '{}{}'.format(sql_select_query, sql_from_query)
             self.cursor.execute(query_statement)
             self.db.commit()
 
@@ -558,11 +558,11 @@ class IcsdSearchResults(DbSearchResults):
             try:
                 self.db_version = results[-1]
             except IndexError:
-                raise IcsdImporterExp("Database version not found")
+                raise IcsdImporterExp('Database version not found')
 
         else:
-            raise NotImplementedError("Cannot query the database version with "
-                                      "a web query.")
+            raise NotImplementedError('Cannot query the database version with '
+                                      'a web query.')
 
     def query_page(self):
         """
@@ -572,10 +572,10 @@ class IcsdSearchResults(DbSearchResults):
         :note: Icsd uses its own number system, different from the CIF
                 file numbers.
         """
-        if self.db_parameters["querydb"]:
+        if self.db_parameters['querydb']:
 
             self._connect_db()
-            query_statement = "{}{}{} LIMIT {}, 100".format(self.sql_select_query,
+            query_statement = '{}{}{} LIMIT {}, 100'.format(self.sql_select_query,
                                                             self.sql_from_query,
                                                             self.query,
                                                             (self.page-1)*100)
@@ -587,7 +587,7 @@ class IcsdSearchResults(DbSearchResults):
                 self.cif_numbers.append(str(row[1]))
 
             if self.number_of_results is None:
-                self.cursor.execute("SELECT FOUND_ROWS()")
+                self.cursor.execute('SELECT FOUND_ROWS()')
                 self.number_of_results = int(self.cursor.fetchone()[0])
 
             self._disconnect_db()
@@ -598,8 +598,8 @@ class IcsdSearchResults(DbSearchResults):
             from bs4 import BeautifulSoup
             import re
 
-            self.html = urllib.request.urlopen(self.db_parameters["server"] +
-                                               self.db_parameters["db"] + "/" +
+            self.html = urllib.request.urlopen(self.db_parameters['server'] +
+                                               self.db_parameters['db'] + '/' +
                                                self.query.format(str(self.page))).read()
 
             self.soup = BeautifulSoup(self.html)
@@ -608,11 +608,11 @@ class IcsdSearchResults(DbSearchResults):
 
                 if self.number_of_results is None:
                     self.number_of_results = int(re.findall(r'\d+',
-                                                    str(self.soup.find_all("i")[-1]))[0])
+                                                    str(self.soup.find_all('i')[-1]))[0])
             except IndexError:
                 raise NoResultsWebExp
 
-            for i in self.soup.find_all('input', type="checkbox"):
+            for i in self.soup.find_all('input', type='checkbox'):
                 self._results.append(i['id'])
 
     def _connect_db(self):
@@ -720,7 +720,7 @@ def correct_cif(cif):
             words = lines[author_index + inc].split()
             #in case loop is finished -> return cif lines.
             #use regular expressions ?
-            if len(words) == 0 or words[0] == "loop_" or words[0][0] == '_':
+            if len(words) == 0 or words[0] == 'loop_' or words[0][0] == '_':
                 return '\n'.join(lines)
             elif ((words[0][0] == "'" and words[-1][-1] == "'")
                   or (words[0][0] == '"' and words[-1][-1] == '"')):

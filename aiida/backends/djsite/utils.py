@@ -20,7 +20,7 @@ from aiida.backends.utils import validate_attribute_key, SettingsManager, Settin
 from aiida.common import NotExistent
 
 SCHEMA_VERSION_DB_KEY = 'db|schemaversion'
-SCHEMA_VERSION_DB_DESCRIPTION = "The version of the schema used in this database."
+SCHEMA_VERSION_DB_DESCRIPTION = 'The version of the schema used in this database.'
 
 
 class DjangoSettingsManager(SettingsManager):

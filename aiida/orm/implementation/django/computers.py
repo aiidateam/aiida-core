@@ -136,6 +136,6 @@ class DjangoComputerCollection(BackendComputerCollection):
             models.DbComputer.objects.filter(pk=pk).delete()
         except ProtectedError:
             raise exceptions.InvalidOperation(
-                "Unable to delete the requested computer: there"
-                "is at least one node using this computer"
+                'Unable to delete the requested computer: there'
+                'is at least one node using this computer'
             )

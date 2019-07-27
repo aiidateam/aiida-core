@@ -24,12 +24,12 @@ class UpfDataTranslator(DataTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "upfs"
+    __label__ = 'upfs'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import UpfData
     _aiida_class = UpfData
     # The string name of the AiiDA class
-    _aiida_type = "data.upf.UpfData"
+    _aiida_type = 'data.upf.UpfData'
 
     _result_type = __label__
 
@@ -66,11 +66,11 @@ class UpfDataTranslator(DataTranslator):
         try:
             content = node.get_content()
         except IOError:
-            error = "Error in getting {} content".format(filename)
+            error = 'Error in getting {} content'.format(filename)
             raise RestInputValidationError(error)
 
-        response["status"] = 200
-        response["data"] = content
-        response["filename"] = filename
+        response['status'] = 200
+        response['data'] = content
+        response['filename'] = filename
 
         return response

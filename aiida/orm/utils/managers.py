@@ -40,10 +40,10 @@ class NodeLinksManager(object):  # pylint: disable=too-few-public-methods,useles
         from aiida.orm import Node
 
         if not isinstance(node, Node):
-            raise TypeError("node must be a valid AiiDA Node")
+            raise TypeError('node must be a valid AiiDA Node')
         self._node = node
         if not isinstance(link_type, LinkType):
-            raise TypeError("link_type must be a valid LinkType")
+            raise TypeError('link_type must be a valid LinkType')
         self._link_type = link_type
         self._incoming = incoming
 
@@ -99,8 +99,8 @@ class NodeLinksManager(object):  # pylint: disable=too-few-public-methods,useles
 
     def __str__(self):
         """Return a string representation of the manager"""
-        return "Manager for {} {} links for node pk={}".format(
-            "incoming" if self._incoming else "outgoing", self._link_type.value.upper(), self._node.pk
+        return 'Manager for {} {} links for node pk={}'.format(
+            'incoming' if self._incoming else 'outgoing', self._link_type.value.upper(), self._node.pk
         )
 
     def __repr__(self):

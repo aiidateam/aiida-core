@@ -53,7 +53,7 @@ class TcodSearchResults(CodSearchResults):
 
     # pylint: disable=abstract-method
 
-    _base_url = "http://www.crystallography.net/tcod/"
+    _base_url = 'http://www.crystallography.net/tcod/'
 
     def __init__(self, results):
         super(TcodSearchResults, self).__init__(results)

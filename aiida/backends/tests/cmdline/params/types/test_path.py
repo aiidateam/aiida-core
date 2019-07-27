@@ -30,7 +30,7 @@ class TestImportPath(AiidaTestCase):
     def test_valid_timeout(self):
         """Test a valid timeout_seconds value"""
 
-        valid_values = [42, "42"]
+        valid_values = [42, '42']
 
         for value in valid_values:
             import_path = ImportPath(timeout_seconds=value)
@@ -47,7 +47,7 @@ class TestImportPath(AiidaTestCase):
         """Test a TypeError is raised when wrong type is given for timeout_seconds"""
 
         with self.assertRaises(TypeError):
-            ImportPath(timeout_seconds="test")
+            ImportPath(timeout_seconds='test')
 
     def test_range_timeout(self):
         """Test timeout_seconds defines extrema when out of range

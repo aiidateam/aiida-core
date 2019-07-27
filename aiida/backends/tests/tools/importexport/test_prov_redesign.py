@@ -38,9 +38,9 @@ class TestProvenanceRedesign(AiidaTestCase):
         Example: Bool: “data.base.Bool.” → “data.bool.Bool.”
         """
         # Test content
-        test_content = ("Hello", 6, -1.2399834e12, False)
+        test_content = ('Hello', 6, -1.2399834e12, False)
         test_types = ()
-        for node_type in ["str", "int", "float", "bool"]:
+        for node_type in ['str', 'int', 'float', 'bool']:
             add_type = ('data.{}.{}.'.format(node_type, node_type.capitalize()),)
             test_types = test_types.__add__(add_type)
 
@@ -62,7 +62,7 @@ class TestProvenanceRedesign(AiidaTestCase):
         export_nodes.append(list_node)
 
         # Export nodes
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
         export(export_nodes, outfile=filename, silent=True)
 
         # Clean the database
@@ -96,8 +96,8 @@ class TestProvenanceRedesign(AiidaTestCase):
         from aiida.backends.tests.utils.processes import AddProcess
         from aiida.engine import run_get_node
         # Node types
-        node_type = "process.workflow.WorkflowNode."
-        node_process_type = "aiida.backends.tests.utils.processes.AddProcess"
+        node_type = 'process.workflow.WorkflowNode.'
+        node_process_type = 'aiida.backends.tests.utils.processes.AddProcess'
 
         # Run workflow
         inputs = {'a': orm.Int(2), 'b': orm.Int(3)}
@@ -111,7 +111,7 @@ class TestProvenanceRedesign(AiidaTestCase):
         self.assertEqual(node.process_type, node_process_type)
 
         # Export nodes
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
         export([node], outfile=filename, silent=True)
 
         # Clean the database and reimport data
@@ -151,10 +151,10 @@ class TestProvenanceRedesign(AiidaTestCase):
         code_type = code.node_type
 
         # Assert correct type exists prior to export
-        self.assertEqual(code_type, "data.code.Code.")
+        self.assertEqual(code_type, 'data.code.Code.')
 
         # Export node
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
         export([code], outfile=filename, silent=True)
 
         # Clean the database and reimport
@@ -201,17 +201,17 @@ class TestProvenanceRedesign(AiidaTestCase):
         """
         from aiida.orm.nodes.data.upf import upload_upf_family
         # To be saved
-        groups_label = ["Users", "UpfData"]
-        upf_filename = "Al.test_file.UPF"
+        groups_label = ['Users', 'UpfData']
+        upf_filename = 'Al.test_file.UPF'
         # regular upf file version 2 header
-        upf_contents = u"\n".join([
+        upf_contents = u'\n'.join([
             "<UPF version=\"2.0.1\">",
-            "Human readable section is completely irrelevant for parsing!",
-            "<PP_HEADER",
-            "contents before element tag",
+            'Human readable section is completely irrelevant for parsing!',
+            '<PP_HEADER',
+            'contents before element tag',
             "element=\"Al\"",
-            "contents following element tag",
-            ">",
+            'contents following element tag',
+            '>',
         ])
         path_to_upf = os.path.join(temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
@@ -225,7 +225,7 @@ class TestProvenanceRedesign(AiidaTestCase):
         group_user = orm.Group(label=groups_label[0]).store()
         group_user.add_nodes([node1, node2])
 
-        upload_upf_family(temp_dir, groups_label[1], "")
+        upload_upf_family(temp_dir, groups_label[1], '')
         group_upf = orm.load_group(groups_label[1])
 
         # Save uuids and type
@@ -233,10 +233,10 @@ class TestProvenanceRedesign(AiidaTestCase):
         groups_type_string = [g.type_string for g in [group_user, group_upf]]
 
         # Assert correct type strings exists prior to export
-        self.assertListEqual(groups_type_string, ["user", "data.upf"])
+        self.assertListEqual(groups_type_string, ['user', 'data.upf'])
 
         # Export node
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
         export([group_user, group_upf], outfile=filename, silent=True)
 
         # Clean the database and reimport
@@ -272,4 +272,4 @@ class TestProvenanceRedesign(AiidaTestCase):
 
         # Check type_string content of "import group"
         import_group = orm.load_group(imported_groups_uuid[0])
-        self.assertEqual(import_group.type_string, "auto.import")
+        self.assertEqual(import_group.type_string, 'auto.import')

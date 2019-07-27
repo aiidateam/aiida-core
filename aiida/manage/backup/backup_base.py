@@ -37,12 +37,12 @@ class AbstractBackup(object):
     """
 
     # Keys in the dictionary loaded by the JSON file
-    OLDEST_OBJECT_BK_KEY = "oldest_object_backedup"
-    BACKUP_DIR_KEY = "backup_dir"
-    DAYS_TO_BACKUP_KEY = "days_to_backup"
-    END_DATE_OF_BACKUP_KEY = "end_date_of_backup"
-    PERIODICITY_KEY = "periodicity"
-    BACKUP_LENGTH_THRESHOLD_KEY = "backup_length_threshold"
+    OLDEST_OBJECT_BK_KEY = 'oldest_object_backedup'
+    BACKUP_DIR_KEY = 'backup_dir'
+    DAYS_TO_BACKUP_KEY = 'days_to_backup'
+    END_DATE_OF_BACKUP_KEY = 'end_date_of_backup'
+    PERIODICITY_KEY = 'periodicity'
+    BACKUP_LENGTH_THRESHOLD_KEY = 'backup_length_threshold'
 
     # Backup parameters that will be populated by the JSON file
 
@@ -97,8 +97,8 @@ class AbstractBackup(object):
             try:
                 backup_variables = json.load(backup_info_file)
             except ValueError:
-                self._logger.error("Could not parse file " + backup_info_file_name)
-                raise BackupError("Could not parse file " + backup_info_file_name)
+                self._logger.error('Could not parse file ' + backup_info_file_name)
+                raise BackupError('Could not parse file ' + backup_info_file_name)
 
         self._read_backup_info_from_dict(backup_variables)
 
@@ -124,17 +124,17 @@ class AbstractBackup(object):
             query_node_res = self._query_first_node()
 
             if (not query_node_res):
-                self._logger.error("The oldest modification date was not found.")
-                raise BackupError("The oldest modification date was not found.")
+                self._logger.error('The oldest modification date was not found.')
+                raise BackupError('The oldest modification date was not found.')
 
             oldest_timestamps = []
             if query_node_res:
                 oldest_timestamps.append(query_node_res[0].ctime)
 
             self._oldest_object_bk = min(oldest_timestamps)
-            self._logger.info("Setting the oldest modification date to the "
-                              "creation date of the oldest object "
-                              "({})".format(self._oldest_object_bk))
+            self._logger.info('Setting the oldest modification date to the '
+                              'creation date of the oldest object '
+                              '({})'.format(self._oldest_object_bk))
 
         # If the oldest backup date is not None then try to parse it
         else:
@@ -143,12 +143,12 @@ class AbstractBackup(object):
                 if self._oldest_object_bk.tzinfo is None:
                     curr_timezone = str(dtimezone.get_current_timezone())
                     self._oldest_object_bk = ptimezone(str(curr_timezone)).localize(self._oldest_object_bk)
-                    self._logger.info("No timezone defined in the oldest "
-                                      "modification date timestamp. Setting "
-                                      "current timezone ({}).".format(curr_timezone))
+                    self._logger.info('No timezone defined in the oldest '
+                                      'modification date timestamp. Setting '
+                                      'current timezone ({}).'.format(curr_timezone))
             # If it is not parsable...
             except ValueError:
-                self._logger.error("We did not manage to parse the start timestamp of the last backup.")
+                self._logger.error('We did not manage to parse the start timestamp of the last backup.')
                 raise
 
         # Setting the backup directory & normalizing it
@@ -161,8 +161,8 @@ class AbstractBackup(object):
         # that you should stop.
         if (backup_variables.get(self.DAYS_TO_BACKUP_KEY) is not None and
                 backup_variables.get(self.END_DATE_OF_BACKUP_KEY) is not None):
-            self._logger.error("Only one end of backup date can be set.")
-            raise BackupError("Only one backup end can be set (date or days from backup start.")
+            self._logger.error('Only one end of backup date can be set.')
+            raise BackupError('Only one backup end can be set (date or days from backup start.')
 
         # Check if there is an end-of-backup date
         elif backup_variables.get(self.END_DATE_OF_BACKUP_KEY) is not None:
@@ -174,13 +174,13 @@ class AbstractBackup(object):
                     self._end_date_of_backup = \
                         ptimezone(str(curr_timezone)).localize(
                             self._end_date_of_backup)
-                    self._logger.info("No timezone defined in the end date of "
-                                      "backup timestamp. Setting current "
-                                      "timezone ({}).".format(curr_timezone))
+                    self._logger.info('No timezone defined in the end date of '
+                                      'backup timestamp. Setting current '
+                                      'timezone ({}).'.format(curr_timezone))
 
                 self._internal_end_date_of_backup = self._end_date_of_backup
             except ValueError:
-                self._logger.error("The end date of the backup could not be parsed correctly")
+                self._logger.error('The end date of the backup could not be parsed correctly')
                 raise
 
         # Check if there is defined a days to backup
@@ -190,7 +190,7 @@ class AbstractBackup(object):
                 self._internal_end_date_of_backup = (
                     self._oldest_object_bk + datetime.timedelta(days=self._days_to_backup))
             except ValueError:
-                self._logger.error("The days to backup should be an integer")
+                self._logger.error('The days to backup should be an integer')
                 raise
         # If the backup end is not set, then the ending date remains open
 
@@ -198,7 +198,7 @@ class AbstractBackup(object):
         try:
             self._periodicity = int(backup_variables.get(self.PERIODICITY_KEY))
         except ValueError:
-            self._logger.error("The backup _periodicity should be an integer")
+            self._logger.error('The backup _periodicity should be an integer')
             raise
 
         # Parse the backup length threshold
@@ -206,7 +206,7 @@ class AbstractBackup(object):
             hours_th = int(backup_variables.get(self.BACKUP_LENGTH_THRESHOLD_KEY))
             self._backup_length_threshold = datetime.timedelta(hours=hours_th)
         except ValueError:
-            self._logger.error("The backup length threshold should be an integer")
+            self._logger.error('The backup length threshold should be an integer')
             raise
 
     def _dictionarize_backup_info(self):
@@ -255,14 +255,14 @@ class AbstractBackup(object):
         # adapt the end accordingly
         now_timestamp = datetime.datetime.now(dtimezone.get_current_timezone())
         if backup_end_for_this_round > now_timestamp:
-            self._logger.info("We can not backup until {}. ".format(backup_end_for_this_round) +
-                              "We will backup until now ({}).".format(now_timestamp))
+            self._logger.info('We can not backup until {}. '.format(backup_end_for_this_round) +
+                              'We will backup until now ({}).'.format(now_timestamp))
             backup_end_for_this_round = now_timestamp
 
         # Check if the backup length is below the backup length threshold
         if backup_end_for_this_round - start_of_backup < \
                 self._backup_length_threshold:
-            self._logger.info("Backup (timestamp) length is below the given threshold. Backup finished")
+            self._logger.info('Backup (timestamp) length is below the given threshold. Backup finished')
             return -1, None
 
         # Construct the queries & query sets
@@ -292,7 +292,7 @@ class AbstractBackup(object):
         for query_set in query_sets:
             dir_no_to_copy += self._get_query_set_length(query_set)
 
-        self._logger.info("Start copying {} directories".format(dir_no_to_copy))
+        self._logger.info('Start copying {} directories'.format(dir_no_to_copy))
 
         last_progress_print = datetime.datetime.now()
         percent_progress = 0
@@ -316,9 +316,9 @@ class AbstractBackup(object):
                 try:
                     shutil.copytree(source_dir, destination_dir, True, None)
                 except EnvironmentError as e:
-                    self._logger.warning("Problem copying directory {} ".format(source_dir) +
-                                         "to {}. ".format(destination_dir) +
-                                         "More information: {} (Error no: {})".format(e.strerror, e.errno))
+                    self._logger.warning('Problem copying directory {} '.format(source_dir) +
+                                         'to {}. '.format(destination_dir) +
+                                         'More information: {} (Error no: {})'.format(e.strerror, e.errno))
                     # Raise envEr
 
                 # Extract the needed parent directories
@@ -329,37 +329,37 @@ class AbstractBackup(object):
                     (datetime.datetime.now() - last_progress_print).seconds > 60):
                     last_progress_print = datetime.datetime.now()
                     percent_progress = copy_counter * 100 / dir_no_to_copy
-                    self._logger.info("Copied {} ".format(copy_counter) +
-                                      "directories [{}]".format(item.__class__.__name__,) +
-                                      " ({}/100)".format(percent_progress))
+                    self._logger.info('Copied {} '.format(copy_counter) +
+                                      'directories [{}]'.format(item.__class__.__name__,) +
+                                      ' ({}/100)'.format(percent_progress))
 
                 if (self._logger.getEffectiveLevel() <= logging.INFO and
                         percent_progress < (copy_counter * 100 / dir_no_to_copy)):
                     percent_progress = (copy_counter * 100 / dir_no_to_copy)
                     last_progress_print = datetime.datetime.now()
-                    self._logger.info("Copied {} ".format(copy_counter) +
-                                      "directories [{}]".format(item.__class__.__name__,) +
-                                      " ({}/100)".format(percent_progress))
+                    self._logger.info('Copied {} '.format(copy_counter) +
+                                      'directories [{}]'.format(item.__class__.__name__,) +
+                                      ' ({}/100)'.format(percent_progress))
 
-        self._logger.info("{} directories copied".format(copy_counter))
+        self._logger.info('{} directories copied'.format(copy_counter))
 
-        self._logger.info("Start setting permissions")
+        self._logger.info('Start setting permissions')
         perm_counter = 0
         for tempRelPath in parent_dir_set:
             try:
                 shutil.copystat(os.path.join(repository_path, tempRelPath), os.path.join(self._backup_dir, tempRelPath))
             except OSError as e:
-                self._logger.warning("Problem setting permissions to directory " +
-                                     "{}.".format(os.path.join(self._backup_dir, tempRelPath)))
+                self._logger.warning('Problem setting permissions to directory ' +
+                                     '{}.'.format(os.path.join(self._backup_dir, tempRelPath)))
                 self._logger.warning(os.path.join(repository_path, tempRelPath))
-                self._logger.warning("More information: " + "{} (Error no: {})".format(e.strerror, e.errno))
+                self._logger.warning('More information: ' + '{} (Error no: {})'.format(e.strerror, e.errno))
             perm_counter += 1
 
-        self._logger.info("Set correct permissions to {} directories.".format(perm_counter))
+        self._logger.info('Set correct permissions to {} directories.'.format(perm_counter))
 
-        self._logger.info("End of backup")
-        self._logger.info("Backed up objects with modification timestamp "
-                          "less or equal to {}".format(self._oldest_object_bk))
+        self._logger.info('End of backup')
+        self._logger.info('Backed up objects with modification timestamp '
+                          'less or equal to {}'.format(self._oldest_object_bk))
 
     @staticmethod
     def _extract_parent_dirs(given_rel_dir, parent_dir_set):
@@ -367,11 +367,11 @@ class AbstractBackup(object):
         This method extracts the parent directories of the givenDir
         and populates the parent_dir_set.
         """
-        sub_paths = given_rel_dir.split("/")
+        sub_paths = given_rel_dir.split('/')
 
-        temp_path = ""
+        temp_path = ''
         for sub_path in sub_paths:
-            temp_path += sub_path + "/"
+            temp_path += sub_path + '/'
             parent_dir_set.add(temp_path)
 
         return parent_dir_set
@@ -385,7 +385,7 @@ class AbstractBackup(object):
             self._backup_needed_files(item_sets_to_backup[1])
             self._store_backup_info(self._backup_info_filepath)
             if item_sets_to_backup[0] == -2:
-                self._logger.info("Threshold is 0. Backed up one round and exiting.")
+                self._logger.info('Threshold is 0. Backed up one round and exiting.')
                 break
 
     @abstractmethod

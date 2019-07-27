@@ -125,7 +125,7 @@ class TemplatereplacerCalculation(CalcJob):
         try:
             validate_list_of_string_tuples(files_to_copy, tuple_length=2)
         except ValidationError as exc:
-            raise exceptions.InputValidationError("invalid file_to_copy format: {}".format(exc))
+            raise exceptions.InputValidationError('invalid file_to_copy format: {}'.format(exc))
 
         local_copy_list = []
         remote_copy_list = []
@@ -134,32 +134,32 @@ class TemplatereplacerCalculation(CalcJob):
             try:
                 fileobj = self.inputs.files[link_name]
             except AttributeError:
-                raise exceptions.InputValidationError("You are asking to copy a file link {}, "
-                                                      "but there is no input link with such a name".format(link_name))
+                raise exceptions.InputValidationError('You are asking to copy a file link {}, '
+                                                      'but there is no input link with such a name'.format(link_name))
             if isinstance(fileobj, orm.SinglefileData):
                 local_copy_list.append((fileobj.uuid, fileobj.filename, dest_rel_path))
             elif isinstance(fileobj, orm.RemoteData):  # can be a folder
                 remote_copy_list.append((fileobj.computer.uuid, fileobj.get_remote_path(), dest_rel_path))
             else:
                 raise exceptions.InputValidationError(
-                    "If you ask to copy a file link {}, "
-                    "it must be either a SinglefileData or a RemoteData; it is instead of type {}".format(
+                    'If you ask to copy a file link {}, '
+                    'it must be either a SinglefileData or a RemoteData; it is instead of type {}'.format(
                         link_name, fileobj.__class__.__name__))
 
         if input_file_name is not None and not input_file_template:
             raise exceptions.InputValidationError(
-                "If you give an input_file_name, you must also specify a input_file_template")
+                'If you give an input_file_name, you must also specify a input_file_template')
 
         if input_through_stdin and input_file_name is None:
             raise exceptions.InputValidationError(
-                "If you ask for input_through_stdin you have to specify a input_file_name")
+                'If you ask for input_through_stdin you have to specify a input_file_name')
 
         input_content = input_file_template.format(**parameters)
         if input_file_name:
             folder.create_file_from_filelike(StringIO(input_content), input_file_name, 'w', encoding='utf8')
         else:
             if input_file_template:
-                self.logger.warning("No input file name passed, but a input file template is present")
+                self.logger.warning('No input file name passed, but a input file template is present')
 
         cmdline_params = [i.format(**parameters) for i in cmdline_params_tmpl]
 

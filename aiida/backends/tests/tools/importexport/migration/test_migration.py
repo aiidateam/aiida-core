@@ -79,7 +79,7 @@ class TestExportFileMigration(AiidaTestCase):
         # Get metadata.json and data.json as dicts from v0.1 file archive
         # Cannot use 'get_json_files' for 'export_v0.1_simple.aiida',
         # because we need to pass the SandboxFolder to 'migrate_recursively'
-        dirpath_archive = get_archive_file("export_v0.1_simple.aiida", **self.core_archive)
+        dirpath_archive = get_archive_file('export_v0.1_simple.aiida', **self.core_archive)
 
         with SandboxFolder(sandbox_in_repo=False) as folder:
             if zipfile.is_zipfile(dirpath_archive):
@@ -167,11 +167,11 @@ class TestExportFileMigration(AiidaTestCase):
                     'Critical: Cannot migrate from version {}'.format(metadata['export_version']),
                     exception.exception,
                     msg="Expected a critical statement for the wrong export version '{}', "
-                    "instead got {}".format(metadata['export_version'], exception.exception)
+                    'instead got {}'.format(metadata['export_version'], exception.exception)
                 )
                 self.assertIsNone(
                     new_version,
-                    msg="migrate_recursively should not return anything, "
+                    msg='migrate_recursively should not return anything, '
                     "hence the 'return' should be None, but instead it is {}".format(new_version)
                 )
 
@@ -192,11 +192,11 @@ class TestExportFileMigration(AiidaTestCase):
                 ),
                 exception.exception,
                 msg="Expected a critical statement that the export version '{}' is the newest export version '{}', "
-                "instead got {}".format(metadata['export_version'], newest_version, exception.exception)
+                'instead got {}'.format(metadata['export_version'], newest_version, exception.exception)
             )
             self.assertIsNone(
                 new_version,
-                msg="migrate_recursively should not return anything, "
+                msg='migrate_recursively should not return anything, '
                 "hence the 'return' should be None, but instead it is {}".format(new_version)
             )
 
@@ -229,7 +229,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg="There should be {} StructureData, instead {} were/was found".format(
+            msg='There should be {} StructureData, instead {} were/was found'.format(
                 self.struct_count, builder.count()
             )
         )
@@ -284,7 +284,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg="There should be {} StructureData, instead {} were/was found".format(
+            msg='There should be {} StructureData, instead {} were/was found'.format(
                 self.struct_count, builder.count()
             )
         )
@@ -339,7 +339,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg="There should be {} StructureData, instead {} were/was found".format(
+            msg='There should be {} StructureData, instead {} were/was found'.format(
                 self.struct_count, builder.count()
             )
         )
@@ -394,7 +394,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg="There should be {} StructureData, instead {} were/was found".format(
+            msg='There should be {} StructureData, instead {} were/was found'.format(
                 self.struct_count, builder.count()
             )
         )
@@ -449,7 +449,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg="There should be {} StructureData, instead {} were/was found".format(
+            msg='There should be {} StructureData, instead {} were/was found'.format(
                 self.struct_count, builder.count()
             )
         )

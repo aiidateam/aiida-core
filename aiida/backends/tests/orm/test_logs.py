@@ -244,7 +244,7 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(logs[0].message, message)
 
         # Launching a second log message ensuring that both messages are correctly stored
-        message2 = message + " - Second message"
+        message2 = message + ' - Second message'
         node.logger.critical(message2)
 
         order_by = [OrderSpecifier('time', ASCENDING)]

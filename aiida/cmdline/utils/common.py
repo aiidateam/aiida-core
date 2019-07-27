@@ -478,12 +478,12 @@ def check_worker_load(active_slots):
     try:
         active_workers = get_num_workers()
     except CircusCallError:
-        echo.echo_critical("Could not contact Circus to get the number of active workers")
+        echo.echo_critical('Could not contact Circus to get the number of active workers')
 
     if active_workers is not None:
         available_slots = active_workers * slots_per_worker
         percent_load = (active_slots / available_slots)
         if percent_load > warning_threshold:
             echo.echo('')  # New line
-            echo.echo_warning("{:.0f}% of the available daemon worker slots have been used!".format(percent_load * 100))
+            echo.echo_warning('{:.0f}% of the available daemon worker slots have been used!'.format(percent_load * 100))
             echo.echo_warning("Increase the number of workers with 'verdi daemon incr'.\n")

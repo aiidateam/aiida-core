@@ -21,14 +21,14 @@ from .base import Base
 
 
 class DbAuthInfo(Base):
-    __tablename__ = "db_dbauthinfo"
+    __tablename__ = 'db_dbauthinfo'
 
     id = Column(Integer, primary_key=True)
 
     aiidauser_id = Column(Integer,
-                          ForeignKey('db_dbuser.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+                          ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
     dbcomputer_id = Column(Integer,
-                           ForeignKey('db_dbcomputer.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+                           ForeignKey('db_dbcomputer.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
 
     aiidauser = relationship('DbUser', backref='authinfos')
     dbcomputer = relationship('DbComputer', backref='authinfos')
@@ -39,7 +39,7 @@ class DbAuthInfo(Base):
     enabled = Column(Boolean, default=True)
 
     __table_args__ = (
-        UniqueConstraint("aiidauser_id", "dbcomputer_id"),
+        UniqueConstraint('aiidauser_id', 'dbcomputer_id'),
     )
 
     def __init__(self, *args, **kwargs):
@@ -49,6 +49,6 @@ class DbAuthInfo(Base):
 
     def __str__(self):
         if self.enabled:
-            return "DB authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
+            return 'DB authorization info for {} on {}'.format(self.aiidauser.email, self.dbcomputer.name)
         else:
-            return "DB authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
+            return 'DB authorization info for {} on {} [DISABLED]'.format(self.aiidauser.email, self.dbcomputer.name)

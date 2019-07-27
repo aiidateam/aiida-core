@@ -47,18 +47,18 @@ class TestComputer(AiidaTestCase):
         comp = self.computer
 
         # Store two job calculation related to the same computer
-        calc1_label = "calc1"
+        calc1_label = 'calc1'
         calc1 = orm.CalcJobNode()
         calc1.computer = comp
-        calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc1.label = calc1_label
         calc1.store()
         calc1.seal()
 
-        calc2_label = "calc2"
+        calc2_label = 'calc2'
         calc2 = orm.CalcJobNode()
         calc2.computer = comp
-        calc2.set_option('resources', {"num_machines": 2, "num_mpiprocs_per_machine": 2})
+        calc2.set_option('resources', {'num_machines': 2, 'num_mpiprocs_per_machine': 2})
         calc2.label = calc2_label
         calc2.store()
         calc2.seal()
@@ -68,11 +68,11 @@ class TestComputer(AiidaTestCase):
         comp_uuid = six.text_type(comp.uuid)
 
         # Export the first job calculation
-        filename1 = os.path.join(temp_dir, "export1.tar.gz")
+        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
         export([calc1], outfile=filename1, silent=True)
 
         # Export the second job calculation
-        filename2 = os.path.join(temp_dir, "export2.tar.gz")
+        filename2 = os.path.join(temp_dir, 'export2.tar.gz')
         export([calc2], outfile=filename2, silent=True)
 
         # Clean the local database
@@ -82,12 +82,12 @@ class TestComputer(AiidaTestCase):
         # Check that there are no computers
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['*'])
-        self.assertEqual(builder.count(), 0, "There should not be any computers in the database at this point.")
+        self.assertEqual(builder.count(), 0, 'There should not be any computers in the database at this point.')
 
         # Check that there are no calculations
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['*'])
-        self.assertEqual(builder.count(), 0, "There should not be any calculations in the database at this point.")
+        self.assertEqual(builder.count(), 0, 'There should not be any calculations in the database at this point.')
 
         # Import the first calculation
         import_data(filename1, silent=True)
@@ -95,15 +95,15 @@ class TestComputer(AiidaTestCase):
         # Check that the calculation computer is imported correctly.
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['label'])
-        self.assertEqual(builder.count(), 1, "Only one calculation should be found.")
-        self.assertEqual(six.text_type(builder.first()[0]), calc1_label, "The calculation label is not correct.")
+        self.assertEqual(builder.count(), 1, 'Only one calculation should be found.')
+        self.assertEqual(six.text_type(builder.first()[0]), calc1_label, 'The calculation label is not correct.')
 
         # Check that the referenced computer is imported correctly.
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['name', 'uuid', 'id'])
-        self.assertEqual(builder.count(), 1, "Only one computer should be found.")
-        self.assertEqual(six.text_type(builder.first()[0]), comp_name, "The computer name is not correct.")
-        self.assertEqual(six.text_type(builder.first()[1]), comp_uuid, "The computer uuid is not correct.")
+        self.assertEqual(builder.count(), 1, 'Only one computer should be found.')
+        self.assertEqual(six.text_type(builder.first()[0]), comp_name, 'The computer name is not correct.')
+        self.assertEqual(six.text_type(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
 
         # Store the id of the computer
         comp_id = builder.first()[2]
@@ -116,21 +116,21 @@ class TestComputer(AiidaTestCase):
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['name', 'uuid', 'id'])
         self.assertEqual(
-            builder.count(), 1, "Found {} computers"
-            "but only one computer should be found.".format(builder.count())
+            builder.count(), 1, 'Found {} computers'
+            'but only one computer should be found.'.format(builder.count())
         )
-        self.assertEqual(six.text_type(builder.first()[0]), comp_name, "The computer name is not correct.")
-        self.assertEqual(six.text_type(builder.first()[1]), comp_uuid, "The computer uuid is not correct.")
-        self.assertEqual(builder.first()[2], comp_id, "The computer id is not correct.")
+        self.assertEqual(six.text_type(builder.first()[0]), comp_name, 'The computer name is not correct.')
+        self.assertEqual(six.text_type(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
+        self.assertEqual(builder.first()[2], comp_id, 'The computer id is not correct.')
 
         # Check that now you have two calculations attached to the same
         # computer.
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, tag='comp')
         builder.append(orm.CalcJobNode, with_computer='comp', project=['label'])
-        self.assertEqual(builder.count(), 2, "Two calculations should be found.")
+        self.assertEqual(builder.count(), 2, 'Two calculations should be found.')
         ret_labels = set(_ for [_] in builder.all())
-        self.assertEqual(ret_labels, set([calc1_label, calc2_label]), "The labels of the calculations are not correct.")
+        self.assertEqual(ret_labels, set([calc1_label, calc2_label]), 'The labels of the calculations are not correct.')
 
     @with_temp_dir
     def test_same_computer_different_name_import(self, temp_dir):
@@ -144,10 +144,10 @@ class TestComputer(AiidaTestCase):
         comp1 = self.computer
 
         # Store a calculation
-        calc1_label = "calc1"
+        calc1_label = 'calc1'
         calc1 = orm.CalcJobNode()
         calc1.computer = self.computer
-        calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc1.label = calc1_label
         calc1.store()
         calc1.seal()
@@ -156,23 +156,23 @@ class TestComputer(AiidaTestCase):
         comp1_name = six.text_type(comp1.name)
 
         # Export the first job calculation
-        filename1 = os.path.join(temp_dir, "export1.tar.gz")
+        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
         export([calc1], outfile=filename1, silent=True)
 
         # Rename the computer
-        comp1.set_name(comp1_name + "_updated")
+        comp1.set_name(comp1_name + '_updated')
 
         # Store a second calculation
-        calc2_label = "calc2"
+        calc2_label = 'calc2'
         calc2 = orm.CalcJobNode()
         calc2.computer = self.computer
-        calc2.set_option('resources', {"num_machines": 2, "num_mpiprocs_per_machine": 2})
+        calc2.set_option('resources', {'num_machines': 2, 'num_mpiprocs_per_machine': 2})
         calc2.label = calc2_label
         calc2.store()
         calc2.seal()
 
         # Export the second job calculation
-        filename2 = os.path.join(temp_dir, "export2.tar.gz")
+        filename2 = os.path.join(temp_dir, 'export2.tar.gz')
         export([calc2], outfile=filename2, silent=True)
 
         # Clean the local database
@@ -182,12 +182,12 @@ class TestComputer(AiidaTestCase):
         # Check that there are no computers
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['*'])
-        self.assertEqual(builder.count(), 0, "There should not be any computers in the database at this point.")
+        self.assertEqual(builder.count(), 0, 'There should not be any computers in the database at this point.')
 
         # Check that there are no calculations
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['*'])
-        self.assertEqual(builder.count(), 0, "There should not be any calculations in the database at this point.")
+        self.assertEqual(builder.count(), 0, 'There should not be any calculations in the database at this point.')
 
         # Import the first calculation
         import_data(filename1, silent=True)
@@ -195,14 +195,14 @@ class TestComputer(AiidaTestCase):
         # Check that the calculation computer is imported correctly.
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['label'])
-        self.assertEqual(builder.count(), 1, "Only one calculation should be found.")
-        self.assertEqual(six.text_type(builder.first()[0]), calc1_label, "The calculation label is not correct.")
+        self.assertEqual(builder.count(), 1, 'Only one calculation should be found.')
+        self.assertEqual(six.text_type(builder.first()[0]), calc1_label, 'The calculation label is not correct.')
 
         # Check that the referenced computer is imported correctly.
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['name', 'uuid', 'id'])
-        self.assertEqual(builder.count(), 1, "Only one computer should be found.")
-        self.assertEqual(six.text_type(builder.first()[0]), comp1_name, "The computer name is not correct.")
+        self.assertEqual(builder.count(), 1, 'Only one computer should be found.')
+        self.assertEqual(six.text_type(builder.first()[0]), comp1_name, 'The computer name is not correct.')
 
         # Import the second calculation
         import_data(filename2, silent=True)
@@ -212,10 +212,10 @@ class TestComputer(AiidaTestCase):
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['name'])
         self.assertEqual(
-            builder.count(), 1, "Found {} computers"
-            "but only one computer should be found.".format(builder.count())
+            builder.count(), 1, 'Found {} computers'
+            'but only one computer should be found.'.format(builder.count())
         )
-        self.assertEqual(six.text_type(builder.first()[0]), comp1_name, "The computer name is not correct.")
+        self.assertEqual(six.text_type(builder.first()[0]), comp1_name, 'The computer name is not correct.')
 
     @with_temp_dir
     def test_different_computer_same_name_import(self, temp_dir):
@@ -226,20 +226,20 @@ class TestComputer(AiidaTestCase):
         from aiida.tools.importexport.config import DUPL_SUFFIX
 
         # Set the computer name
-        comp1_name = "localhost_1"
+        comp1_name = 'localhost_1'
         self.computer.set_name(comp1_name)
 
         # Store a calculation
-        calc1_label = "calc1"
+        calc1_label = 'calc1'
         calc1 = orm.CalcJobNode()
         calc1.computer = self.computer
-        calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc1.label = calc1_label
         calc1.store()
         calc1.seal()
 
         # Export the first job calculation
-        filename1 = os.path.join(temp_dir, "export1.tar.gz")
+        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
         export([calc1], outfile=filename1, silent=True)
 
         # Reset the database
@@ -250,16 +250,16 @@ class TestComputer(AiidaTestCase):
         self.computer.set_name(comp1_name)
 
         # Store a second calculation
-        calc2_label = "calc2"
+        calc2_label = 'calc2'
         calc2 = orm.CalcJobNode()
         calc2.computer = self.computer
-        calc2.set_option('resources', {"num_machines": 2, "num_mpiprocs_per_machine": 2})
+        calc2.set_option('resources', {'num_machines': 2, 'num_mpiprocs_per_machine': 2})
         calc2.label = calc2_label
         calc2.store()
         calc2.seal()
 
         # Export the second job calculation
-        filename2 = os.path.join(temp_dir, "export2.tar.gz")
+        filename2 = os.path.join(temp_dir, 'export2.tar.gz')
         export([calc2], outfile=filename2, silent=True)
 
         # Reset the database
@@ -270,16 +270,16 @@ class TestComputer(AiidaTestCase):
         self.computer.set_name(comp1_name)
 
         # Store a third calculation
-        calc3_label = "calc3"
+        calc3_label = 'calc3'
         calc3 = orm.CalcJobNode()
         calc3.computer = self.computer
-        calc3.set_option('resources', {"num_machines": 2, "num_mpiprocs_per_machine": 2})
+        calc3.set_option('resources', {'num_machines': 2, 'num_mpiprocs_per_machine': 2})
         calc3.label = calc3_label
         calc3.store()
         calc3.seal()
 
         # Export the third job calculation
-        filename3 = os.path.join(temp_dir, "export3.tar.gz")
+        filename3 = os.path.join(temp_dir, 'export3.tar.gz')
         export([calc3], outfile=filename3, silent=True)
 
         # Clean the local database
@@ -289,15 +289,15 @@ class TestComputer(AiidaTestCase):
         # Check that there are no computers
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['*'])
-        self.assertEqual(builder.count(), 0, "There should not be any computers in the database at this point.")
+        self.assertEqual(builder.count(), 0, 'There should not be any computers in the database at this point.')
 
         # Check that there are no calculations
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['*'])
         self.assertEqual(
-            builder.count(), 0, "There should not be any "
-            "calculations in the database at "
-            "this point."
+            builder.count(), 0, 'There should not be any '
+            'calculations in the database at '
+            'this point.'
         )
 
         # Import all the calculations
@@ -309,11 +309,11 @@ class TestComputer(AiidaTestCase):
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['label'], tag='jcalc')
         builder.append(orm.Computer, project=['name'], with_node='jcalc')
-        self.assertEqual(builder.count(), 3, "Three combinations expected.")
+        self.assertEqual(builder.count(), 3, 'Three combinations expected.')
         res = builder.all()
-        self.assertIn([calc1_label, comp1_name], res, "Calc-Computer combination not found.")
-        self.assertIn([calc2_label, comp1_name + DUPL_SUFFIX.format(0)], res, "Calc-Computer combination not found.")
-        self.assertIn([calc3_label, comp1_name + DUPL_SUFFIX.format(1)], res, "Calc-Computer combination not found.")
+        self.assertIn([calc1_label, comp1_name], res, 'Calc-Computer combination not found.')
+        self.assertIn([calc2_label, comp1_name + DUPL_SUFFIX.format(0)], res, 'Calc-Computer combination not found.')
+        self.assertIn([calc3_label, comp1_name + DUPL_SUFFIX.format(1)], res, 'Calc-Computer combination not found.')
 
     @with_temp_dir
     def test_import_of_computer_json_params(self, temp_dir):
@@ -321,22 +321,22 @@ class TestComputer(AiidaTestCase):
         This test checks that the metadata and transport params are exported and imported correctly in both backends.
         """
         # Set the computer name
-        comp1_name = "localhost_1"
+        comp1_name = 'localhost_1'
         comp1_metadata = {u'workdir': u'/tmp/aiida'}
         self.computer.set_name(comp1_name)
         self.computer.set_metadata(comp1_metadata)
 
         # Store a calculation
-        calc1_label = "calc1"
+        calc1_label = 'calc1'
         calc1 = orm.CalcJobNode()
         calc1.computer = self.computer
-        calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc1.label = calc1_label
         calc1.store()
         calc1.seal()
 
         # Export the first job calculation
-        filename1 = os.path.join(temp_dir, "export1.tar.gz")
+        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
         export([calc1], outfile=filename1, silent=True)
 
         # Clean the local database
@@ -347,11 +347,11 @@ class TestComputer(AiidaTestCase):
         import_data(filename1, silent=True)
 
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['metadata'], tag="comp")
-        self.assertEqual(builder.count(), 1, "Expected only one computer")
+        builder.append(orm.Computer, project=['metadata'], tag='comp')
+        self.assertEqual(builder.count(), 1, 'Expected only one computer')
 
         res = builder.dict()[0]
-        self.assertEqual(res['comp']['metadata'], comp1_metadata, "Not the expected metadata were found")
+        self.assertEqual(res['comp']['metadata'], comp1_metadata, 'Not the expected metadata were found')
 
     def test_import_of_django_sqla_export_file(self):
         """Check that sqla import manages to import the django export file correctly"""
@@ -371,11 +371,11 @@ class TestComputer(AiidaTestCase):
             # Make sure to exclude the default computer
             builder = orm.QueryBuilder()
             builder.append(
-                orm.Computer, project=['metadata'], tag="comp", filters={'name': {
+                orm.Computer, project=['metadata'], tag='comp', filters={'name': {
                     '!==': self.computer.name
                 }}
             )
-            self.assertEqual(builder.count(), 1, "Expected only one computer")
+            self.assertEqual(builder.count(), 1, 'Expected only one computer')
 
             res = builder.dict()[0]
 

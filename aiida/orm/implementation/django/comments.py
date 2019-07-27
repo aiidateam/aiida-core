@@ -130,7 +130,7 @@ class DjangoCommentCollection(BackendCommentCollection):
         :raises `~aiida.common.exceptions.NotExistent`: if Comment with ID ``comment_id`` is not found
         """
         if not isinstance(comment_id, int):
-            raise TypeError("comment_id must be an int")
+            raise TypeError('comment_id must be an int')
 
         try:
             models.DbComment.objects.get(id=comment_id).delete()
@@ -148,7 +148,7 @@ class DjangoCommentCollection(BackendCommentCollection):
             with transaction.atomic():
                 models.DbComment.objects.all().delete()
         except Exception as exc:
-            raise exceptions.IntegrityError("Could not delete all Comments. Full exception: {}".format(exc))
+            raise exceptions.IntegrityError('Could not delete all Comments. Full exception: {}'.format(exc))
 
     def delete_many(self, filters):
         """
@@ -167,9 +167,9 @@ class DjangoCommentCollection(BackendCommentCollection):
 
         # Checks
         if not isinstance(filters, dict):
-            raise TypeError("filters must be a dictionary")
+            raise TypeError('filters must be a dictionary')
         if not filters:
-            raise exceptions.ValidationError("filters must not be empty")
+            raise exceptions.ValidationError('filters must not be empty')
 
         # Apply filter and delete found entities
         builder = QueryBuilder().append(Comment, filters=filters, project='id').all()

@@ -105,7 +105,7 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
 
             kwargs = {'as_dict': True}
             if scheduler.get_feature('can_query_by_user'):
-                kwargs['user'] = "$USER"
+                kwargs['user'] = '$USER'
             else:
                 kwargs['jobs'] = self._get_jobs_with_scheduler()
 

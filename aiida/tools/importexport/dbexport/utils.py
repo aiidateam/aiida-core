@@ -16,7 +16,7 @@ from __future__ import print_function
 from aiida.tools.importexport.config import file_fields_to_model_fields, entity_names_to_entities, get_all_fields_info
 
 
-def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag_suffixes=None, entity_separator="_"):
+def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag_suffixes=None, entity_separator='_'):
     """
     This function recursively constructs QueryBuilder queries that are needed
     for the SQLA export function. To manage to construct such queries, the
@@ -30,30 +30,30 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag
         tag_suffixes = []
 
     relationship_dic = {
-        "Node": {
-            "Computer": "with_computer",
-            "Group": "with_group",
-            "User": "with_user",
-            "Log": "with_log",
-            "Comment": "with_comment"
+        'Node': {
+            'Computer': 'with_computer',
+            'Group': 'with_group',
+            'User': 'with_user',
+            'Log': 'with_log',
+            'Comment': 'with_comment'
         },
-        "Group": {
-            "Node": "with_node"
+        'Group': {
+            'Node': 'with_node'
         },
-        "Computer": {
-            "Node": "with_node"
+        'Computer': {
+            'Node': 'with_node'
         },
-        "User": {
-            "Node": "with_node",
-            "Group": "with_group",
-            "Comment": "with_comment",
+        'User': {
+            'Node': 'with_node',
+            'Group': 'with_group',
+            'Comment': 'with_comment',
         },
-        "Log": {
-            "Node": "with_node"
+        'Log': {
+            'Node': 'with_node'
         },
-        "Comment": {
-            "Node": "with_node",
-            "User": "with_user"
+        'Comment': {
+            'Node': 'with_node',
+            'User': 'with_user'
         }
     }
 
@@ -61,7 +61,7 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag
 
     entity_prop = all_fields_info[current_entity_str].keys()
 
-    project_cols = ["id"]
+    project_cols = ['id']
     for prop in entity_prop:
         nprop = prop
         if current_entity_str in file_fields_to_model_fields:
@@ -117,10 +117,10 @@ def check_licences(node_licenses, allowed_licenses, forbidden_licenses):
                         raise LicensingException
             except LicensingException:
                 raise LicensingException(
-                    "Node {} is licensed "
-                    "under {} license, which "
-                    "is not in the list of "
-                    "allowed licenses".format(pk, license_)
+                    'Node {} is licensed '
+                    'under {} license, which '
+                    'is not in the list of '
+                    'allowed licenses'.format(pk, license_)
                 )
         if forbidden_licenses is not None:
             try:
@@ -135,10 +135,10 @@ def check_licences(node_licenses, allowed_licenses, forbidden_licenses):
                         raise LicensingException
             except LicensingException:
                 raise LicensingException(
-                    "Node {} is licensed "
-                    "under {} license, which "
-                    "is in the list of "
-                    "forbidden licenses".format(pk, license_)
+                    'Node {} is licensed '
+                    'under {} license, which '
+                    'is in the list of '
+                    'forbidden licenses'.format(pk, license_)
                 )
 
 
@@ -264,7 +264,7 @@ def check_process_nodes_sealed(nodes):
     elif isinstance(nodes, int):
         nodes = set([nodes])
     else:
-        raise TypeError("nodes must be either an int or set/list of ints")
+        raise TypeError('nodes must be either an int or set/list of ints')
 
     filters = {'id': {'in': nodes}, 'attributes.sealed': True}
     sealed_nodes = QueryBuilder().append(ProcessNode, filters=filters, project=['id']).all()
@@ -272,6 +272,6 @@ def check_process_nodes_sealed(nodes):
 
     if sealed_nodes != nodes:
         raise InvalidOperation(
-            "All ProcessNodes must be sealed before they can be exported. "
-            "Node(s) with PK(s): {} is/are not sealed.".format(', '.join(str(pk) for pk in nodes - sealed_nodes))
+            'All ProcessNodes must be sealed before they can be exported. '
+            'Node(s) with PK(s): {} is/are not sealed.'.format(', '.join(str(pk) for pk in nodes - sealed_nodes))
         )

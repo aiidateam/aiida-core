@@ -87,7 +87,7 @@ class TestBackendLog(AiidaTestCase):
 
         # Raise AttributeError when trying to change column
         with self.assertRaises(AttributeError):
-            log.message = "change message"
+            log.message = 'change message'
 
     def test_creation_with_static_time(self):
         """
@@ -134,10 +134,10 @@ class TestBackendLog(AiidaTestCase):
     def test_delete_all(self):
         """Test `delete_all` method"""
         self.create_log().store()
-        self.assertGreater(len(orm.Log.objects.all()), 0, msg="There should be Logs in the database")
+        self.assertGreater(len(orm.Log.objects.all()), 0, msg='There should be Logs in the database')
 
         self.backend.logs.delete_all()
-        self.assertEqual(len(orm.Log.objects.all()), 0, msg="All Logs should have been deleted")
+        self.assertEqual(len(orm.Log.objects.all()), 0, msg='All Logs should have been deleted')
 
     def test_delete_many_no_filters(self):
         """Test `delete_many` method with empty filters"""
@@ -151,8 +151,8 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(
             len(orm.Log.objects.all()),
             count,
-            msg="No Logs should have been deleted. There should still be {} Log(s), "
-            "however {} Log(s) was/were found.".format(count, len(orm.Log.objects.all()))
+            msg='No Logs should have been deleted. There should still be {} Log(s), '
+            'however {} Log(s) was/were found.'.format(count, len(orm.Log.objects.all()))
         )
 
     def test_delete_many_ids(self):
@@ -171,7 +171,7 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(
             count_logs_found,
             len(log_uuids),
-            msg="There should be {} Logs, instead {} Log(s) was/were found".format(len(log_uuids), count_logs_found)
+            msg='There should be {} Logs, instead {} Log(s) was/were found'.format(len(log_uuids), count_logs_found)
         )
 
         # Delete last two logs (log2, log3)
@@ -202,7 +202,7 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(
             count_logs_found,
             len(log_uuids),
-            msg="There should be {} Logs, instead {} Log(s) was/were found".format(len(log_uuids), count_logs_found)
+            msg='There should be {} Logs, instead {} Log(s) was/were found'.format(len(log_uuids), count_logs_found)
         )
 
         # Delete logs for self.node
@@ -284,7 +284,7 @@ class TestBackendLog(AiidaTestCase):
         deleted_entities = self.backend.logs.delete_many(filters={'id': id_})
         self.assertEqual(
             deleted_entities, [],
-            msg="No entities should have been deleted, since Log id {} does not exist".format(id_)
+            msg='No entities should have been deleted, since Log id {} does not exist'.format(id_)
         )
 
         # Try to delete non-existing Log - using delete
@@ -299,7 +299,7 @@ class TestBackendLog(AiidaTestCase):
         deleted_entities = self.backend.logs.delete_many(filters=filters)
         self.assertEqual([log_id],
                          deleted_entities,
-                         msg="Only Log id {} should be returned from delete_many".format(log_id))
+                         msg='Only Log id {} should be returned from delete_many'.format(log_id))
 
         # Make sure the existing Log was deleted
         builder = orm.QueryBuilder().append(orm.Log, filters={'uuid': log_uuid})
@@ -323,7 +323,7 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(
             log_count_after,
             log_count_before,
-            msg="The number of logs changed after performing `delete_many`, "
+            msg='The number of logs changed after performing `delete_many`, '
             "while filtering for a non-existing 'dbnode_id'"
         )
 

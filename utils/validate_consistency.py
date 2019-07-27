@@ -193,7 +193,7 @@ def validate_version():
 
     setup_content = get_setup_json()
     if version != setup_content['version']:
-        click.echo("Version number mismatch detected:")
+        click.echo('Version number mismatch detected:')
         click.echo("Version number in '{}': {}".format(FILENAME_SETUP_JSON, setup_content['version']))
         click.echo("Version number in '{}/__init__.py': {}".format('aiida', version))
         click.echo("Updating version in '{}' to: {}".format(FILENAME_SETUP_JSON, version))
@@ -274,7 +274,7 @@ def update_environment_yml():
     for req in install_requires:
         # skip packages required for specific python versions
         # (environment.yml aims at the latest python version)
-        if req.find("python_version") != -1:
+        if req.find('python_version') != -1:
             continue
 
         for (regex, replacement) in iter(replacements.items()):

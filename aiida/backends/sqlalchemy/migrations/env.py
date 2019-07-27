@@ -41,7 +41,7 @@ def run_migrations_offline():
     script output.
 
     """
-    raise NotImplementedError("This feature is not currently supported.")
+    raise NotImplementedError('This feature is not currently supported.')
 
 
 def run_migrations_online():
@@ -61,8 +61,8 @@ def run_migrations_online():
 
     if connectable is None:
         from aiida.common.exceptions import ConfigurationError
-        raise ConfigurationError("An initialized connection is expected "
-                                 "for the AiiDA online migrations.")
+        raise ConfigurationError('An initialized connection is expected '
+                                 'for the AiiDA online migrations.')
 
     with connectable.connect() as connection:
         context.configure(

@@ -188,7 +188,7 @@ def get_db_test_names():
         if '.' in k:
             parts = k.split('.')
             for last_idx in range(1, len(parts)):
-                parentkey = ".".join(parts[:last_idx])
+                parentkey = '.'.join(parts[:last_idx])
                 final_list.append(parentkey)
 
     # return the list of possible names, without duplicates
@@ -210,11 +210,11 @@ def get_db_test_list():
     try:
         be_tests = DB_TEST_LIST[configuration.PROFILE.database_backend]
     except KeyError:
-        raise ConfigurationError("No backend configured yet")
+        raise ConfigurationError('No backend configured yet')
 
     # Could be undefined, so put to empty dict by default
     try:
-        common_tests = DB_TEST_LIST["common"]
+        common_tests = DB_TEST_LIST['common']
     except KeyError:
         raise ConfigurationError("A 'common' key must always be defined!")
 
@@ -235,7 +235,7 @@ def get_db_test_list():
         if '.' in key:
             parts = key.split('.')
             for last_idx in range(1, len(parts)):
-                parentkey = ".".join(parts[:last_idx])
+                parentkey = '.'.join(parts[:last_idx])
                 final_retdict[parentkey].extend(val)
 
     return dict(final_retdict)

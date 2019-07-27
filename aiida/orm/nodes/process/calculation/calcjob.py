@@ -187,7 +187,7 @@ class CalcJobNode(CalculationNode):
             scheduler.create_job_resource(**resources)
         except (TypeError, ValueError) as exc:
             raise exceptions.ValidationError(
-                "Invalid resources for the scheduler of the specified computer: {}".format(exc)
+                'Invalid resources for the scheduler of the specified computer: {}'.format(exc)
             )
 
     @property
@@ -497,7 +497,7 @@ class CalcJobNode(CalculationNode):
         computer = self.computer
 
         if computer is None:
-            raise exceptions.NotExistent("No computer has been set for this calculation")
+            raise exceptions.NotExistent('No computer has been set for this calculation')
 
         return AuthInfo.from_backend_entity(self.backend.authinfos.get(computer=computer, user=self.user))
 

@@ -437,7 +437,7 @@ class FunctionProcess(Process):
         else:
             raise TypeError(
                 "Function process returned an output with unsupported type '{}'\n"
-                "Must be a Data type or a mapping of {{string: Data}}".format(result.__class__)
+                'Must be a Data type or a mapping of {{string: Data}}'.format(result.__class__)
             )
 
         return ExitCode()

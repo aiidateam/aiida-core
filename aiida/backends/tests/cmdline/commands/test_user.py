@@ -19,16 +19,16 @@ from aiida.cmdline.commands import cmd_user
 from aiida import orm
 
 user_1 = {
-    'email': "testuser1@localhost",
-    'first_name': "Max",
-    'last_name': "Mueller",
-    'institution': "Testing Instiute"
+    'email': 'testuser1@localhost',
+    'first_name': 'Max',
+    'last_name': 'Mueller',
+    'institution': 'Testing Instiute'
 }
 user_2 = {
-    'email': "testuser2@localhost",
-    'first_name': "Sabine",
-    'last_name': "Garching",
-    'institution': "Second testing instiute"
+    'email': 'testuser2@localhost',
+    'first_name': 'Sabine',
+    'last_name': 'Garching',
+    'institution': 'Second testing instiute'
 }
 
 

@@ -23,12 +23,12 @@ class CodeTranslator(DataTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "codes"
+    __label__ = 'codes'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import Code
     _aiida_class = Code
     # The string name of the AiiDA class
-    _aiida_type = "data.code.Code"
+    _aiida_type = 'data.code.Code'
 
     _result_type = __label__
 
@@ -52,7 +52,7 @@ class CodeTranslator(DataTranslator):
 
         from aiida.restapi.common.exceptions import RestFeatureNotAvailable
 
-        raise RestFeatureNotAvailable("This endpoint is not available for Codes.")
+        raise RestFeatureNotAvailable('This endpoint is not available for Codes.')
 
     @staticmethod
     def get_downloadable_data(node, download_format=None):
@@ -67,4 +67,4 @@ class CodeTranslator(DataTranslator):
 
         from aiida.restapi.common.exceptions import RestFeatureNotAvailable
 
-        raise RestFeatureNotAvailable("This endpoint is not available for Codes.")
+        raise RestFeatureNotAvailable('This endpoint is not available for Codes.')

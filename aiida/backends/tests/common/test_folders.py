@@ -41,8 +41,8 @@ class FoldersTest(unittest.TestCase):
 
     @classmethod
     @unittest.skipUnless(
-        fs_encoding_is_utf8(), ("Testing for unicode folders "
-                                "requires UTF-8 to be set for filesystem encoding")
+        fs_encoding_is_utf8(), ('Testing for unicode folders '
+                                'requires UTF-8 to be set for filesystem encoding')
     )
     def test_unicode(cls):
         """
@@ -51,17 +51,17 @@ class FoldersTest(unittest.TestCase):
         """
         tmpsource = tempfile.mkdtemp()
         tmpdest = tempfile.mkdtemp()
-        with io.open(os.path.join(tmpsource, "sąžininga"), 'w', encoding='utf8') as fhandle:
-            fhandle.write(u"test")
-        with io.open(os.path.join(tmpsource, "žąsis"), 'w', encoding='utf8') as fhandle:
-            fhandle.write(u"test")
+        with io.open(os.path.join(tmpsource, 'sąžininga'), 'w', encoding='utf8') as fhandle:
+            fhandle.write(u'test')
+        with io.open(os.path.join(tmpsource, 'žąsis'), 'w', encoding='utf8') as fhandle:
+            fhandle.write(u'test')
         folder = Folder(tmpdest)
-        folder.insert_path(tmpsource, "destination")
-        folder.insert_path(tmpsource, u"šaltinis")
+        folder.insert_path(tmpsource, 'destination')
+        folder.insert_path(tmpsource, u'šaltinis')
 
-        folder = Folder(os.path.join(tmpsource, u"šaltinis"))
-        folder.insert_path(tmpsource, "destination")
-        folder.insert_path(tmpdest, u"kitas-šaltinis")
+        folder = Folder(os.path.join(tmpsource, u'šaltinis'))
+        folder.insert_path(tmpsource, 'destination')
+        folder.insert_path(tmpdest, u'kitas-šaltinis')
 
     def test_get_abs_path_without_limit(self):
         """

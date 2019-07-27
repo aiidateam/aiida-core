@@ -45,10 +45,10 @@ def edit_pre_post(pre=None, post=None, summary=None):
 
     # Define a separator that will be splitting pre- and post- execution
     # parts of the submission script
-    separator = "#====================================================#\n" \
-                "#=               Post execution script              =#\n" \
-                "#=  I am acting as a separator, do not modify me!!! =#\n" \
-                "#====================================================#\n"
+    separator = '#====================================================#\n' \
+                '#=               Post execution script              =#\n' \
+                '#=  I am acting as a separator, do not modify me!!! =#\n' \
+                '#====================================================#\n'
 
     content = template.render(default_pre=pre or '', separator=separator, default_post=post or '', summary=summary)
     mlinput = click.edit(content, extension='.bash')
@@ -59,17 +59,17 @@ def edit_pre_post(pre=None, post=None, summary=None):
         try:
             pre, post = mlinput.split(separator)
         except ValueError as err:
-            if str(err) == "need more than 1 value to unpack":
+            if str(err) == 'need more than 1 value to unpack':
                 raise InputValidationError(
-                    "Looks like you modified the "
-                    "separator that should NOT be modified. Please be "
-                    "careful!"
+                    'Looks like you modified the '
+                    'separator that should NOT be modified. Please be '
+                    'careful!'
                 )
-            elif str(err) == "too many values to unpack":
+            elif str(err) == 'too many values to unpack':
                 raise InputValidationError(
-                    "Looks like you have more than one "
-                    "separator, while only one is needed "
-                    "(and allowed). Please be careful!"
+                    'Looks like you have more than one '
+                    'separator, while only one is needed '
+                    '(and allowed). Please be careful!'
                 )
             else:
                 raise err

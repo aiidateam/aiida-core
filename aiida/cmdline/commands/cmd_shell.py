@@ -65,12 +65,12 @@ def shell(plain, no_startup, interface):
             import rlcompleter
 
             readline.set_completer(rlcompleter.Completer(imported_objects).complete)
-            readline.parse_and_bind("tab:complete")
+            readline.parse_and_bind('tab:complete')
 
         # We want to honor both $PYTHONSTARTUP and .pythonrc.py, so follow system
         # conventions and get $PYTHONSTARTUP first then .pythonrc.py.
         if not no_startup:
-            for pythonrc in (os.environ.get("PYTHONSTARTUP"), '~/.pythonrc.py'):
+            for pythonrc in (os.environ.get('PYTHONSTARTUP'), '~/.pythonrc.py'):
                 if not pythonrc:
                     continue
                 pythonrc = os.path.expanduser(pythonrc)

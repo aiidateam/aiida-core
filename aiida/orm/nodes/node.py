@@ -1088,7 +1088,7 @@ class Node(Entity):
     def get_hash(self, ignore_errors=True, **kwargs):
         """Return the hash for this node based on its attributes."""
         if not self.is_stored:
-            raise exceptions.InvalidOperation("You can get the hash only after having stored the node")
+            raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
 
         return self._get_hash(ignore_errors=ignore_errors, **kwargs)
 
@@ -1176,7 +1176,7 @@ class Node(Entity):
         clean_value() on the attributes to normalise them.
         """
         if not allow_before_store and not self.is_stored:
-            raise exceptions.InvalidOperation("You can get the hash only after having stored the node")
+            raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
         node_hash = self._get_hash()
 
         if not node_hash or not self._cachable:
@@ -1215,72 +1215,72 @@ class Node(Entity):
         :return: get schema of the node
         """
         return {
-            "attributes": {
-                "display_name": "Attributes",
-                "help_text": "Attributes of the node",
-                "is_foreign_key": False,
-                "type": "dict"
+            'attributes': {
+                'display_name': 'Attributes',
+                'help_text': 'Attributes of the node',
+                'is_foreign_key': False,
+                'type': 'dict'
             },
-            "attributes.state": {
-                "display_name": "State",
-                "help_text": "AiiDA state of the calculation",
-                "is_foreign_key": False,
-                "type": ""
+            'attributes.state': {
+                'display_name': 'State',
+                'help_text': 'AiiDA state of the calculation',
+                'is_foreign_key': False,
+                'type': ''
             },
-            "ctime": {
-                "display_name": "Creation time",
-                "help_text": "Creation time of the node",
-                "is_foreign_key": False,
-                "type": "datetime.datetime"
+            'ctime': {
+                'display_name': 'Creation time',
+                'help_text': 'Creation time of the node',
+                'is_foreign_key': False,
+                'type': 'datetime.datetime'
             },
-            "extras": {
-                "display_name": "Extras",
-                "help_text": "Extras of the node",
-                "is_foreign_key": False,
-                "type": "dict"
+            'extras': {
+                'display_name': 'Extras',
+                'help_text': 'Extras of the node',
+                'is_foreign_key': False,
+                'type': 'dict'
             },
-            "id": {
-                "display_name": "Id",
-                "help_text": "Id of the object",
-                "is_foreign_key": False,
-                "type": "int"
+            'id': {
+                'display_name': 'Id',
+                'help_text': 'Id of the object',
+                'is_foreign_key': False,
+                'type': 'int'
             },
-            "label": {
-                "display_name": "Label",
-                "help_text": "User-assigned label",
-                "is_foreign_key": False,
-                "type": "str"
+            'label': {
+                'display_name': 'Label',
+                'help_text': 'User-assigned label',
+                'is_foreign_key': False,
+                'type': 'str'
             },
-            "mtime": {
-                "display_name": "Last Modification time",
-                "help_text": "Last modification time",
-                "is_foreign_key": False,
-                "type": "datetime.datetime"
+            'mtime': {
+                'display_name': 'Last Modification time',
+                'help_text': 'Last modification time',
+                'is_foreign_key': False,
+                'type': 'datetime.datetime'
             },
-            "node_type": {
-                "display_name": "Type",
-                "help_text": "Node type",
-                "is_foreign_key": False,
-                "type": "str"
+            'node_type': {
+                'display_name': 'Type',
+                'help_text': 'Node type',
+                'is_foreign_key': False,
+                'type': 'str'
             },
-            "user_id": {
-                "display_name": "Id of creator",
-                "help_text": "Id of the user that created the node",
-                "is_foreign_key": True,
-                "related_column": "id",
-                "related_resource": "_dbusers",
-                "type": "int"
+            'user_id': {
+                'display_name': 'Id of creator',
+                'help_text': 'Id of the user that created the node',
+                'is_foreign_key': True,
+                'related_column': 'id',
+                'related_resource': '_dbusers',
+                'type': 'int'
             },
-            "uuid": {
-                "display_name": "Unique ID",
-                "help_text": "Universally Unique Identifier",
-                "is_foreign_key": False,
-                "type": "unicode"
+            'uuid': {
+                'display_name': 'Unique ID',
+                'help_text': 'Universally Unique Identifier',
+                'is_foreign_key': False,
+                'type': 'unicode'
             },
-            "process_type": {
-                "display_name": "Process type",
-                "help_text": "Process type",
-                "is_foreign_key": False,
-                "type": "str"
+            'process_type': {
+                'display_name': 'Process type',
+                'help_text': 'Process type',
+                'is_foreign_key': False,
+                'type': 'str'
             }
         }

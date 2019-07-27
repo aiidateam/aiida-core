@@ -49,7 +49,7 @@ class AttributeDict(dict):
 
     def __repr__(self):
         """Representation of the object."""
-        return "%s(%s)" % (self.__class__.__name__, dict.__repr__(self))
+        return '%s(%s)' % (self.__class__.__name__, dict.__repr__(self))
 
     def __getattr__(self, attr):
         """Read a key as an attribute.

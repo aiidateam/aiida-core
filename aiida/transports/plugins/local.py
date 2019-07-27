@@ -80,9 +80,9 @@ class LocalTransport(Transport):
         from aiida.common.exceptions import InvalidOperation
 
         if self._is_open:
-            raise InvalidOperation("Cannot open the transport twice")
+            raise InvalidOperation('Cannot open the transport twice')
 
-        self._internal_dir = os.path.expanduser("~")
+        self._internal_dir = os.path.expanduser('~')
         self._is_open = True
         return self
 
@@ -95,14 +95,14 @@ class LocalTransport(Transport):
         from aiida.common.exceptions import InvalidOperation
 
         if not self._is_open:
-            raise InvalidOperation("Cannot close the transport: it is already closed")
+            raise InvalidOperation('Cannot close the transport: it is already closed')
         self._is_open = False
 
     def __str__(self):
         """
         Return a description as a string.
         """
-        return "local [{}]".format("OPEN" if self._is_open else "CLOSED")
+        return 'local [{}]'.format('OPEN' if self._is_open else 'CLOSED')
 
     @property
     def curdir(self):
@@ -113,7 +113,7 @@ class LocalTransport(Transport):
         if self._is_open:
             return os.path.realpath(self._internal_dir)
 
-        raise TransportInternalError("Error, local method called for LocalTransport without opening the channel first")
+        raise TransportInternalError('Error, local method called for LocalTransport without opening the channel first')
 
     def chdir(self, path):
         """
@@ -229,10 +229,10 @@ class LocalTransport(Transport):
         :raise IOError: if path does not exist.
         """
         if not path:
-            raise IOError("Directory not given in input")
+            raise IOError('Directory not given in input')
         real_path = os.path.join(self.curdir, path)
         if not os.path.exists(real_path):
-            raise IOError("Directory not given in input")
+            raise IOError('Directory not given in input')
         else:
             os.chmod(real_path, mode)
 
@@ -257,16 +257,16 @@ class LocalTransport(Transport):
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
         if not remotepath:
-            raise IOError("Input remotepath to put function must be a non empty string")
+            raise IOError('Input remotepath to put function must be a non empty string')
         if not localpath:
-            raise ValueError("Input localpath to put function must be a non empty string")
+            raise ValueError('Input localpath to put function must be a non empty string')
 
         if not os.path.isabs(localpath):
-            raise ValueError("Source must be an absolute path")
+            raise ValueError('Source must be an absolute path')
 
         if self.has_magic(localpath):
             if self.has_magic(remotepath):
-                raise ValueError("Pathname patterns are not allowed in the remotepath")
+                raise ValueError('Pathname patterns are not allowed in the remotepath')
 
             to_copy_list = glob.glob(localpath)  # using local glob here
 
@@ -274,10 +274,10 @@ class LocalTransport(Transport):
             if len(to_copy_list) > 1:
                 # I can't scp more than one file on a single file
                 if self.isfile(remotepath):
-                    raise OSError("Remote remotepath is not a directory")
+                    raise OSError('Remote remotepath is not a directory')
                 # I can't scp more than one file in a non existing directory
                 elif not self.path_exists(remotepath):  # questo dovrebbe valere solo per file
-                    raise OSError("Remote directory does not exist")
+                    raise OSError('Remote directory does not exist')
                 else:  # the remote path is a directory
                     rename_remote = True
 
@@ -310,7 +310,7 @@ class LocalTransport(Transport):
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise OSError("The local path {} does not exist".format(localpath))
+                    raise OSError('The local path {} does not exist'.format(localpath))
 
     def putfile(self, localpath, remotepath, *args, **kwargs):
         """
@@ -328,15 +328,15 @@ class LocalTransport(Transport):
         """
         overwrite = kwargs.get('overwrite', args[0] if args else True)
         if not remotepath:
-            raise IOError("Input remotepath to putfile must be a non empty string")
+            raise IOError('Input remotepath to putfile must be a non empty string')
         if not localpath:
-            raise ValueError("Input localpath to putfile must be a non empty string")
+            raise ValueError('Input localpath to putfile must be a non empty string')
 
         if not os.path.isabs(localpath):
-            raise ValueError("Source must be an absolute path")
+            raise ValueError('Source must be an absolute path')
 
         if not os.path.exists(localpath):
-            raise OSError("Source does not exists")
+            raise OSError('Source does not exists')
 
         the_destination = os.path.join(self.curdir, remotepath)
         if os.path.exists(the_destination) and not overwrite:
@@ -363,20 +363,20 @@ class LocalTransport(Transport):
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         if not remotepath:
-            raise IOError("Input remotepath to putfile must be a non empty string")
+            raise IOError('Input remotepath to putfile must be a non empty string')
         if not localpath:
-            raise ValueError("Input localpath to putfile must be a non empty string")
+            raise ValueError('Input localpath to putfile must be a non empty string')
 
         if not os.path.isabs(localpath):
-            raise ValueError("Source must be an absolute path")
+            raise ValueError('Source must be an absolute path')
 
         if not os.path.exists(localpath):
-            raise OSError("Source does not exists")
+            raise OSError('Source does not exists')
 
         if self.path_exists(remotepath) and not overwrite:
             raise OSError("Can't overwrite existing files")
         if self.isfile(remotepath):
-            raise OSError("Cannot copy a directory into a file")
+            raise OSError('Cannot copy a directory into a file')
 
         if self.isdir(remotepath):
             remotepath = os.path.join(remotepath, os.path.split(localpath)[1])
@@ -424,26 +424,26 @@ class LocalTransport(Transport):
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         ignore_nonexisting = kwargs.get('ignore_nonexisting', args[2] if len(args) > 2 else False)
         if not localpath:
-            raise ValueError("Input localpath to get function must be a non empty string")
+            raise ValueError('Input localpath to get function must be a non empty string')
         if not remotepath:
-            raise IOError("Input remotepath to get function must be a non empty string")
+            raise IOError('Input remotepath to get function must be a non empty string')
 
         if not os.path.isabs(localpath):
-            raise ValueError("Destination must be an absolute path")
+            raise ValueError('Destination must be an absolute path')
 
         if self.has_magic(remotepath):
             if self.has_magic(localpath):
-                raise ValueError("Pathname patterns are not allowed in the localpath")
+                raise ValueError('Pathname patterns are not allowed in the localpath')
             to_copy_list = self.glob(remotepath)
 
             rename_local = False
             if len(to_copy_list) > 1:
                 # I can't scp more than one file on a single file
                 if os.path.isfile(localpath):
-                    raise IOError("Remote localpath is not a directory")
+                    raise IOError('Remote localpath is not a directory')
                 # I can't scp more than one file in a non existing directory
                 elif not os.path.exists(localpath):  # this should hold only for files
-                    raise OSError("Remote directory does not exist")
+                    raise OSError('Remote directory does not exist')
                 else:  # the remote path is a directory
                     rename_local = True
 
@@ -471,7 +471,7 @@ class LocalTransport(Transport):
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise IOError("The remote path {} does not exist".format(remotepath))
+                    raise IOError('The remote path {} does not exist'.format(remotepath))
 
     def getfile(self, remotepath, localpath, *args, **kwargs):
         """
@@ -489,14 +489,14 @@ class LocalTransport(Transport):
         """
         overwrite = kwargs.get('overwrite', args[0] if args else True)
         if not localpath:
-            raise ValueError("Input localpath to get function must be a non empty string")
+            raise ValueError('Input localpath to get function must be a non empty string')
         if not remotepath:
-            raise IOError("Input remotepath to get function must be a non empty string")
+            raise IOError('Input remotepath to get function must be a non empty string')
         the_source = os.path.join(self.curdir, remotepath)
         if not os.path.exists(the_source):
-            raise IOError("Source not found")
+            raise IOError('Source not found')
         if not os.path.isabs(localpath):
-            raise ValueError("Destination must be an absolute path")
+            raise ValueError('Destination must be an absolute path')
         if os.path.exists(localpath) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
@@ -519,20 +519,20 @@ class LocalTransport(Transport):
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         if not remotepath:
-            raise IOError("Remotepath must be a non empty string")
+            raise IOError('Remotepath must be a non empty string')
         if not localpath:
-            raise ValueError("Localpaths must be a non empty string")
+            raise ValueError('Localpaths must be a non empty string')
 
         if not os.path.isabs(localpath):
-            raise ValueError("Localpaths must be an absolute path")
+            raise ValueError('Localpaths must be an absolute path')
 
         if not self.isdir(remotepath):
-            raise IOError("Input remotepath is not a folder: {}".format(remotepath))
+            raise IOError('Input remotepath is not a folder: {}'.format(remotepath))
 
         if os.path.exists(localpath) and not overwrite:
             raise OSError("Can't overwrite existing files")
         if os.path.isfile(localpath):
-            raise OSError("Cannot copy a directory into a file")
+            raise OSError('Cannot copy a directory into a file')
 
         if os.path.isdir(localpath):
             localpath = os.path.join(localpath, os.path.split(remotepath)[1])
@@ -557,14 +557,14 @@ class LocalTransport(Transport):
         :raise OSError: if remotesource does not exist
         """
         if not remotesource:
-            raise ValueError("Input remotesource to copy must be a non empty object")
+            raise ValueError('Input remotesource to copy must be a non empty object')
         if not remotedestination:
-            raise ValueError("Input remotedestination to copy must be a non empty object")
+            raise ValueError('Input remotedestination to copy must be a non empty object')
         if not self.has_magic(remotesource):
             if not os.path.exists(os.path.join(self.curdir, remotesource)):
-                raise OSError("Source not found")
+                raise OSError('Source not found')
         if self.normalize(remotesource) == self.normalize(remotedestination):
-            raise ValueError("Cannot copy from itself to itself")
+            raise ValueError('Cannot copy from itself to itself')
 
             # # by default, overwrite old files
         #        if not remotedestination .startswith('.'):
@@ -575,7 +575,7 @@ class LocalTransport(Transport):
 
         if self.has_magic(remotesource):
             if self.has_magic(remotedestination):
-                raise ValueError("Pathname patterns are not allowed in the remotedestination")
+                raise ValueError('Pathname patterns are not allowed in the remotedestination')
 
             to_copy_list = self.glob(remotesource)
 
@@ -616,13 +616,13 @@ class LocalTransport(Transport):
         :raise OSError: if remotesource does not exist
         """
         if not remotesource:
-            raise ValueError("Input remotesource to copyfile must be a non empty object")
+            raise ValueError('Input remotesource to copyfile must be a non empty object')
         if not remotedestination:
-            raise ValueError("Input remotedestination to copyfile must be a non empty object")
+            raise ValueError('Input remotedestination to copyfile must be a non empty object')
         the_source = os.path.join(self.curdir, remotesource)
         the_destination = os.path.join(self.curdir, remotedestination)
         if not os.path.exists(the_source):
-            raise OSError("Source not found")
+            raise OSError('Source not found')
 
         if not dereference and os.path.islink(remotesource):
             linkto = os.readlink(the_source)
@@ -643,13 +643,13 @@ class LocalTransport(Transport):
         :raise OSError: if remotesource does not exist
         """
         if not remotesource:
-            raise ValueError("Input remotesource to copytree must be a non empty object")
+            raise ValueError('Input remotesource to copytree must be a non empty object')
         if not remotedestination:
-            raise ValueError("Input remotedestination to copytree must be a non empty object")
+            raise ValueError('Input remotedestination to copytree must be a non empty object')
         the_source = os.path.join(self.curdir, remotesource)
         the_destination = os.path.join(self.curdir, remotedestination)
         if not os.path.exists(the_source):
-            raise OSError("Source not found")
+            raise OSError('Source not found')
 
         # Using the Ubuntu default behavior (different from Mac)
         if self.isdir(remotedestination):
@@ -791,7 +791,7 @@ class LocalTransport(Transport):
                 for line in filelike_stdin.readlines():
                     local_stdin.write(line.encode('utf-8'))  # the Popen.stdin/out/err are byte streams
             except AttributeError:
-                raise ValueError("stdin can only be either a string or a file-like object!")
+                raise ValueError('stdin can only be either a string or a file-like object!')
         else:
             filelike_stdin = None
 
@@ -832,13 +832,13 @@ class LocalTransport(Transport):
         :raises ValueError: if src/dst is not a valid string
         """
         if not oldpath:
-            raise ValueError("Source {} is not a valid string".format(oldpath))
+            raise ValueError('Source {} is not a valid string'.format(oldpath))
         if not newpath:
-            raise ValueError("Destination {} is not a valid string".format(newpath))
+            raise ValueError('Destination {} is not a valid string'.format(newpath))
         if not os.path.exists(oldpath):
-            raise IOError("Source {} does not exist".format(oldpath))
+            raise IOError('Source {} does not exist'.format(oldpath))
         if not os.path.exists(newpath):
-            raise IOError("Destination {} does not exist".format(newpath))
+            raise IOError('Destination {} does not exist'.format(newpath))
 
         shutil.move(oldpath, newpath)
 
@@ -856,7 +856,7 @@ class LocalTransport(Transport):
         if self.has_magic(remotesource):
             if self.has_magic(remotedestination):
                 # if there are patterns in dest, I don't know which name to assign
-                raise ValueError("Remotedestination cannot have patterns")
+                raise ValueError('Remotedestination cannot have patterns')
 
             # find all files matching pattern
             for this_file in self.glob(remotesource):
@@ -868,7 +868,7 @@ class LocalTransport(Transport):
             try:
                 os.symlink(remotesource, os.path.join(self.curdir, remotedestination))
             except OSError:
-                raise OSError("!!: {}, {}, {}".format(remotesource, self.curdir, remotedestination))
+                raise OSError('!!: {}, {}, {}'.format(remotesource, self.curdir, remotedestination))
 
     def path_exists(self, path):
         """

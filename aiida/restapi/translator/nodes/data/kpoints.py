@@ -23,12 +23,12 @@ class KpointsDataTranslator(DataTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "kpoints"
+    __label__ = 'kpoints'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import KpointsData
     _aiida_class = KpointsData
     # The string name of the AiiDA class
-    _aiida_type = "data.array.kpoints.KpointsData"
+    _aiida_type = 'data.array.kpoints.KpointsData'
 
     _result_type = __label__
 
@@ -179,4 +179,4 @@ class KpointsDataTranslator(DataTranslator):
 
         from aiida.restapi.common.exceptions import RestFeatureNotAvailable
 
-        raise RestFeatureNotAvailable("This endpoint is not available for Kpoints.")
+        raise RestFeatureNotAvailable('This endpoint is not available for Kpoints.')

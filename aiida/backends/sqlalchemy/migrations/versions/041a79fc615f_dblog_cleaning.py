@@ -263,8 +263,8 @@ def upgrade():
 
     op.create_foreign_key(
         None,
-        "db_dblog",
-        "db_dbnode", ['dbnode_id'], ['id'],
+        'db_dblog',
+        'db_dbnode', ['dbnode_id'], ['id'],
         ondelete=u'CASCADE',
         initially=u'DEFERRED',
         deferrable=True

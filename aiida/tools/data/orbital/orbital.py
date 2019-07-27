@@ -28,7 +28,7 @@ def validate_int(value):
     try:
         conv_value = int(value)
     except ValueError:
-        raise ValidationError("must be an int number")
+        raise ValidationError('must be an int number')
     return conv_value
 
 
@@ -48,7 +48,7 @@ def validate_float(value):
     try:
         conv_value = float(value)
     except ValueError:
-        raise ValidationError("must be a float number")
+        raise ValidationError('must be a float number')
     return conv_value
 
 
@@ -70,7 +70,7 @@ def validate_len3_list(value):
         if len(conv_value) != 3:
             raise ValueError
     except (ValueError, TypeError):
-        raise ValidationError("must be a list of three float number")
+        raise ValidationError('must be a list of three float number')
     return conv_value
 
 
@@ -130,11 +130,11 @@ class Orbital(object):  # pylint: disable=useless-object-inheritance
 
         validated_dict = {}
         if '_orbital_type' in input_dict:
-            raise ValidationError("You cannot manually set the _orbital_type")
+            raise ValidationError('You cannot manually set the _orbital_type')
         entry_point = get_entry_point_from_class(self.__class__.__module__, self.__class__.__name__)[1]
         if entry_point is None:
             raise ValidationError(
-                "Unable to detect entry point for current class {}, maybe you did not register an entry point for it?".
+                'Unable to detect entry point for current class {}, maybe you did not register an entry point for it?'.
                 format(self.__class__)
             )
 

@@ -281,9 +281,9 @@ class BackendQueryBuilder(object):
             return getattr(alias, colname)
         except AttributeError:
             raise exceptions.InputValidationError(
-                "{} is not a column of {}\n"
-                "Valid columns are:\n"
-                "{}".format(
+                '{} is not a column of {}\n'
+                'Valid columns are:\n'
+                '{}'.format(
                     colname,
                     alias,
                     '\n'.join(alias._sa_class_manager.mapper.c.keys())  # pylint: disable=protected-access

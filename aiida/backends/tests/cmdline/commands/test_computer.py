@@ -43,14 +43,14 @@ def generate_setup_options_dict(replace_args={}, non_interactive=True):
     if non_interactive:
         valid_noninteractive_options['non-interactive'] = None
     valid_noninteractive_options['label'] = 'noninteractive_computer'
-    valid_noninteractive_options['hostname'] = "localhost"
-    valid_noninteractive_options['description'] = "my description"
-    valid_noninteractive_options['transport'] = "local"
-    valid_noninteractive_options['scheduler'] = "direct"
-    valid_noninteractive_options['shebang'] = "#!/bin/bash"
-    valid_noninteractive_options['work-dir'] = "/scratch/{username}/aiida_run"
-    valid_noninteractive_options['mpirun-command'] = "mpirun -np {tot_num_mpiprocs}"
-    valid_noninteractive_options['mpiprocs-per-machine'] = "2"
+    valid_noninteractive_options['hostname'] = 'localhost'
+    valid_noninteractive_options['description'] = 'my description'
+    valid_noninteractive_options['transport'] = 'local'
+    valid_noninteractive_options['scheduler'] = 'direct'
+    valid_noninteractive_options['shebang'] = '#!/bin/bash'
+    valid_noninteractive_options['work-dir'] = '/scratch/{username}/aiida_run'
+    valid_noninteractive_options['mpirun-command'] = 'mpirun -np {tot_num_mpiprocs}'
+    valid_noninteractive_options['mpiprocs-per-machine'] = '2'
     # Make them multiline to test also multiline options
     valid_noninteractive_options['prepend-text'] = "date\necho 'second line'"
     valid_noninteractive_options['append-text'] = "env\necho '444'\necho 'third line'"
@@ -125,10 +125,10 @@ class TestVerdiComputerSetup(AiidaTestCase):
         # In any case, these would be managed by the visual editor
         options_dict.pop('prepend-text')
         options_dict.pop('append-text')
-        user_input = "\n".join(generate_setup_options_interactive(options_dict))
+        user_input = '\n'.join(generate_setup_options_interactive(options_dict))
 
         result = self.cli_runner.invoke(computer_setup, input=user_input)
-        self.assertIsNone(result.exception, msg="There was an unexpected exception. Output: {}".format(result.output))
+        self.assertIsNone(result.exception, msg='There was an unexpected exception. Output: {}'.format(result.output))
 
         new_computer = orm.Computer.objects.get(name=label)
         self.assertIsInstance(new_computer, orm.Computer)
@@ -142,8 +142,8 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertEqual(new_computer.get_workdir(), options_dict['work-dir'])
         self.assertEqual(new_computer.get_default_mpiprocs_per_machine(), int(options_dict['mpiprocs-per-machine']))
         # For now I'm not writing anything in them
-        self.assertEqual(new_computer.get_prepend_text(), "")
-        self.assertEqual(new_computer.get_append_text(), "")
+        self.assertEqual(new_computer.get_prepend_text(), '')
+        self.assertEqual(new_computer.get_append_text(), '')
 
     def test_mixed(self):
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
@@ -162,11 +162,11 @@ class TestVerdiComputerSetup(AiidaTestCase):
         non_interactive_options_dict['scheduler'] = options_dict.pop('scheduler')
 
         # In any case, these would be managed by the visual editor
-        user_input = "\n".join(generate_setup_options_interactive(options_dict))
+        user_input = '\n'.join(generate_setup_options_interactive(options_dict))
         options = generate_setup_options(non_interactive_options_dict)
 
         result = self.cli_runner.invoke(computer_setup, options, input=user_input)
-        self.assertIsNone(result.exception, msg="There was an unexpected exception. Output: {}".format(result.output))
+        self.assertIsNone(result.exception, msg='There was an unexpected exception. Output: {}'.format(result.output))
 
         new_computer = orm.Computer.objects.get(name=label)
         self.assertIsInstance(new_computer, orm.Computer)
@@ -211,7 +211,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         # Test that I cannot generate twice a computer with the same label
         result = self.cli_runner.invoke(computer_setup, options)
         self.assertIsInstance(result.exception, SystemExit)
-        self.assertIn("already exists", result.output)
+        self.assertIn('already exists', result.output)
 
     def test_noninteractive_optional_default_mpiprocs(self):
         """
@@ -253,7 +253,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         result = self.cli_runner.invoke(computer_setup, options)
 
         self.assertIsInstance(result.exception, SystemExit)
-        self.assertIn("mpiprocs_per_machine, must be positive", result.output)
+        self.assertIn('mpiprocs_per_machine, must be positive', result.output)
 
     def test_noninteractive_wrong_transport_fail(self):
         """
@@ -288,7 +288,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         result = self.cli_runner.invoke(computer_setup, options)
 
         self.assertIsInstance(result.exception, SystemExit)
-        self.assertIn("The shebang line should start with", result.output)
+        self.assertIn('The shebang line should start with', result.output)
 
     def test_noninteractive_invalid_mpirun_fail(self):
         """
@@ -496,7 +496,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """Create a new computer> I create a new one because I want to configure it and I don't want to
         interfere with other tests"""
         super(TestVerdiComputerCommands, cls).setUpClass(*args, **kwargs)
-        cls.computer_name = "comp_cli_test_computer"
+        cls.computer_name = 'comp_cli_test_computer'
         cls.comp = orm.Computer(
             name=cls.computer_name,
             hostname='localhost',
@@ -516,7 +516,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         # there should not be any options asked here
         self.comp.configure()
 
-        assert self.comp.is_user_configured(self.user), "There was a problem configuring the test computer"
+        assert self.comp.is_user_configured(self.user), 'There was a problem configuring the test computer'
         self.cli_runner = CliRunner()
 
     def test_computer_test(self):

@@ -55,13 +55,13 @@ class TestVerdiDataExportable:
     def __init__(self):
         pass
 
-    NODE_ID_STR = "node_id"
+    NODE_ID_STR = 'node_id'
     EMPTY_GROUP_ID_STR = 'empty_group_id'
     EMPTY_GROUP_NAME_STR = 'empty_group'
     NON_EMPTY_GROUP_ID_STR = 'non_empty_group_id'
     NON_EMPTY_GROUP_NAME_STR = 'non_empty_group'
 
-    @unittest.skipUnless(has_pycifrw(), "Unable to import PyCifRW")
+    @unittest.skipUnless(has_pycifrw(), 'Unable to import PyCifRW')
     def data_export_test(self, datatype, ids, supported_formats):
         """
         This method tests that the data listing works as expected with all
@@ -79,14 +79,14 @@ class TestVerdiDataExportable:
         }
 
         if datatype is None or datatype not in datatype_mapping.keys():
-            raise Exception("The listing of the objects {} is not supported".format(datatype))
+            raise Exception('The listing of the objects {} is not supported'.format(datatype))
 
         export_cmd = datatype_mapping[datatype]
 
         # Check that the simple command works as expected
         options = [str(ids[self.NODE_ID_STR])]
         res = self.cli_runner.invoke(export_cmd, options, catch_exceptions=False)
-        self.assertEqual(res.exit_code, 0, "The command did not finish correctly")
+        self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
 
         dump_flags = ['-F', '--format']
         for flag in dump_flags:
@@ -96,8 +96,8 @@ class TestVerdiDataExportable:
                 res = self.cli_runner.invoke(export_cmd, options,
                                              catch_exceptions=False)
                 self.assertEqual(res.exit_code, 0,
-                                  "The command did not finish "
-                                  "correctly. Output:\n{}".format(res.output))
+                                  'The command did not finish '
+                                  'correctly. Output:\n{}'.format(res.output))
 
         # Check that the output to file flags work correctly:
         # -o, --output
@@ -110,13 +110,13 @@ class TestVerdiDataExportable:
                 res = self.cli_runner.invoke(export_cmd, options,
                                              catch_exceptions=False)
                 self.assertEqual(res.exit_code, 0,
-                                  "The command should finish correctly."
-                                  "Output:\n{}".format(res.output))
+                                  'The command should finish correctly.'
+                                  'Output:\n{}'.format(res.output))
 
                 # Try to export it again. It should fail because the
                 # file exists
                 res = self.cli_runner.invoke(export_cmd, options, catch_exceptions=False)
-                self.assertNotEquals(res.exit_code, 0, "The command should fail because the file already exists")
+                self.assertNotEquals(res.exit_code, 0, 'The command should fail because the file already exists')
 
                 # Now we force the export of the file and it should overwrite
                 # existing files
@@ -124,8 +124,8 @@ class TestVerdiDataExportable:
                 res = self.cli_runner.invoke(export_cmd, options,
                                              catch_exceptions=False)
                 self.assertEqual(res.exit_code, 0,
-                                  "The command should finish correctly."
-                                  "Output: {}".format(res.output))
+                                  'The command should finish correctly.'
+                                  'Output: {}'.format(res.output))
             finally:
                 shutil.rmtree(tmpd)
 
@@ -135,7 +135,7 @@ class TestVerdiDataListable:
     def __init__(self):
         pass
 
-    NODE_ID_STR = "node_id"
+    NODE_ID_STR = 'node_id'
     EMPTY_GROUP_ID_STR = 'empty_group_id'
     EMPTY_GROUP_NAME_STR = 'empty_group'
     NON_EMPTY_GROUP_ID_STR = 'non_empty_group_id'
@@ -167,7 +167,7 @@ class TestVerdiDataListable:
         }
 
         if datatype is None or datatype not in datatype_mapping.keys():
-            raise Exception("The listing of the objects {} is not supported".format(datatype))
+            raise Exception('The listing of the objects {} is not supported'.format(datatype))
 
         listing_cmd = datatype_mapping[datatype]
         project_headers = headers_mapping[datatype]
@@ -253,7 +253,7 @@ class TestVerdiData(AiidaTestCase):
         subcommands = ['array', 'bands', 'cif', 'dict', 'remote', 'structure', 'trajectory', 'upf']
         for sub_cmd in subcommands:
             output = sp.check_output(['verdi', 'data', sub_cmd, '--help'])
-            self.assertIn(b'Usage:', output, "Sub-command verdi data {} --help failed.".format(sub_cmd))
+            self.assertIn(b'Usage:', output, 'Sub-command verdi data {} --help failed.'.format(sub_cmd))
 
 
 class TestVerdiDataArray(AiidaTestCase):
@@ -274,13 +274,13 @@ class TestVerdiDataArray(AiidaTestCase):
 
     def test_arrayshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'array', 'show', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data array show --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data array show --help failed.')
 
     def test_arrayshow(self):
         # with captured_output() as (out, err):
         options = [str(self.a.id)]
         res = self.cli_runner.invoke(cmd_array.array_show, options, catch_exceptions=False)
-        self.assertEqual(res.exit_code, 0, "The command did not finish correctly")
+        self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
 
 
 class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
@@ -358,11 +358,11 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
 
     def test_bandsshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'bands', 'show', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data bands show --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data bands show --help failed.')
 
     def test_bandlistshelp(self):
         output = sp.check_output(['verdi', 'data', 'bands', 'list', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data bands show --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data bands show --help failed.')
 
     def test_bandslist(self):
         from aiida.orm import BandsData
@@ -371,13 +371,13 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
 
     def test_bandexporthelp(self):
         output = sp.check_output(['verdi', 'data', 'bands', 'export', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data bands export --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data bands export --help failed.')
 
     def test_bandsexport(self):
         options = [str(self.ids[TestVerdiDataListable.NODE_ID_STR])]
         res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
-        self.assertIn(b"[1.0, 3.0]", res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands' 'export')
+        self.assertIn(b'[1.0, 3.0]', res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands' 'export')
 
 
 class TestVerdiDataDict(AiidaTestCase):
@@ -398,14 +398,14 @@ class TestVerdiDataDict(AiidaTestCase):
 
     def test_dictshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'dict', 'show', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data dict show --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data dict show --help failed.')
 
     def test_dictshow(self):
         supported_formats = ['json_date']
         for format in supported_formats:
             options = [str(self.p.id)]
             res = self.cli_runner.invoke(cmd_dict.dictionary_show, options, catch_exceptions=False)
-            self.assertEqual(res.exit_code, 0, "The command verdi data dict show did not finish correctly")
+            self.assertEqual(res.exit_code, 0, 'The command verdi data dict show did not finish correctly')
         self.assertIn(b'"a": 1', res.stdout_bytes, 'The string "a": 1 was not found in the output'
                                                    ' of verdi data dict show')
 
@@ -427,7 +427,7 @@ class TestVerdiDataRemote(AiidaTestCase):
         p = tempfile.mkdtemp()
         self.r.set_remote_path(p)
         with io.open(p + '/file.txt', 'w', encoding='utf8') as fhandle:
-            fhandle.write(u"test string")
+            fhandle.write(u'test string')
         self.r.computer = comp
         self.r.store()
 
@@ -435,12 +435,12 @@ class TestVerdiDataRemote(AiidaTestCase):
 
     def test_remoteshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'remote', 'show', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data remote show --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data remote show --help failed.')
 
     def test_remoteshow(self):
         options = [str(self.r.id)]
         res = self.cli_runner.invoke(cmd_remote.remote_show, options, catch_exceptions=False)
-        self.assertEqual(res.exit_code, 0, "The command verdi data remote show did not finish correctly")
+        self.assertEqual(res.exit_code, 0, 'The command verdi data remote show did not finish correctly')
         self.assertIn(b'Remote computer name:', res.stdout_bytes,
                       'The string "Remote computer name:" was not found in the'
                       ' output of verdi data remote show')
@@ -450,23 +450,23 @@ class TestVerdiDataRemote(AiidaTestCase):
 
     def test_remotelshelp(self):
         output = sp.check_output(['verdi', 'data', 'remote', 'ls', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data remote ls --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data remote ls --help failed.')
 
     def test_remotels(self):
         options = ['--long', str(self.r.id)]
         res = self.cli_runner.invoke(cmd_remote.remote_ls, options, catch_exceptions=False)
-        self.assertEqual(res.exit_code, 0, "The command verdi data remote ls did not finish correctly")
+        self.assertEqual(res.exit_code, 0, 'The command verdi data remote ls did not finish correctly')
         self.assertIn(b'file.txt', res.stdout_bytes, 'The file "file.txt" was not found in the output'
                                                      ' of verdi data remote ls')
 
     def test_remotecathelp(self):
         output = sp.check_output(['verdi', 'data', 'remote', 'cat', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data remote cat --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data remote cat --help failed.')
 
     def test_remotecat(self):
         options = [str(self.r.id), 'file.txt']
         res = self.cli_runner.invoke(cmd_remote.remote_cat, options, catch_exceptions=False)
-        self.assertEqual(res.exit_code, 0, "The command verdi data remote cat did not finish correctly")
+        self.assertEqual(res.exit_code, 0, 'The command verdi data remote cat did not finish correctly')
         self.assertIn(b'test string', res.stdout_bytes, 'The string "test string" was not found in the output'
                                                         ' of verdi data remote cat file.txt')
 
@@ -561,7 +561,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
     def test_list(self):
         self.data_listing_test(TrajectoryData, str(self.ids[TestVerdiDataListable.NODE_ID_STR]), self.ids)
 
-    @unittest.skipUnless(has_pycifrw(), "Unable to import PyCifRW")
+    @unittest.skipUnless(has_pycifrw(), 'Unable to import PyCifRW')
     def test_export(self):
         from aiida.cmdline.commands.cmd_data.cmd_trajectory import EXPORT_FORMATS, trajectory_export
 
@@ -705,7 +705,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
                           'The string "dry-run" was not found in the output'
                           ' of verdi data structure import.')
 
-    @unittest.skipIf(not has_ase(), "Unable to import ase")
+    @unittest.skipIf(not has_ase(), 'Unable to import ase')
     def test_import_ase(self):
         xsfcontent = '''CRYSTAL
 PRIMVEC
@@ -731,7 +731,7 @@ PRIMVEC
                           'The string "PK" was not found in the output'
                           ' of verdi data structure import.')
 
-    @unittest.skipIf(not has_qe_tools(), "Unable to import qe-tools")
+    @unittest.skipIf(not has_qe_tools(), 'Unable to import qe-tools')
     def test_import_qetools_pwinput(self):
         qeinpcontent = '''&CONTROL
   calculation = 'nscf'
@@ -784,7 +784,7 @@ CELL_PARAMETERS angstrom
         self.data_export_test(StructureData, self.ids, EXPORT_FORMATS)
 
 
-@unittest.skipUnless(has_pycifrw(), "Unable to import PyCifRW")
+@unittest.skipUnless(has_pycifrw(), 'Unable to import PyCifRW')
 class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
     valid_sample_cif_str = u'''
         data_test
@@ -910,24 +910,24 @@ class TestVerdiDataUpf(AiidaTestCase):
         self.cli_runner = CliRunner()
 
     def upload_family(self):
-        options = [self.filepath_pseudos, "test_group", "test description"]
+        options = [self.filepath_pseudos, 'test_group', 'test description']
         res = self.cli_runner.invoke(cmd_upf.upf_uploadfamily, options, catch_exceptions=False)
         self.assertIn(b'UPF files found: 3', res.stdout_bytes, 'The string "UPF files found: 3" was not found in the'
                                                                ' output of verdi data upf uploadfamily')
 
     def test_uploadfamilyhelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'uploadfamily', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data upf uploadfamily --help failed: {}".format(output))
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data upf uploadfamily --help failed: {}'.format(output))
 
     def test_uploadfamily(self):
         self.upload_family()
-        options = [self.filepath_pseudos, "test_group", "test description", "--stop-if-existing"]
+        options = [self.filepath_pseudos, 'test_group', 'test description', '--stop-if-existing']
         with self.assertRaises(ValueError):
             self.cli_runner.invoke(cmd_upf.upf_uploadfamily, options, catch_exceptions=False)
 
     def test_exportfamilyhelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'exportfamily', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data upf exportfamily --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data upf exportfamily --help failed.')
 
     def test_exportfamily(self):
         self.upload_family()
@@ -938,15 +938,15 @@ class TestVerdiDataUpf(AiidaTestCase):
         self.assertClickResultNoException(res)
         output = sp.check_output(['ls', p])
         self.assertIn(b'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
-                      "Sub-command verdi data upf exportfamily --help failed: {}".format(output))
+                      'Sub-command verdi data upf exportfamily --help failed: {}'.format(output))
         self.assertIn(b'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF', output,
-                      "Sub-command verdi data upf exportfamily --help failed.")
+                      'Sub-command verdi data upf exportfamily --help failed.')
         self.assertIn(b'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
-                      "Sub-command verdi data upf exportfamily --help failed.")
+                      'Sub-command verdi data upf exportfamily --help failed.')
 
     def test_listfamilieshelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'listfamilies', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data upf listfamilies --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data upf listfamilies --help failed.')
 
     def test_listfamilies(self):
         self.upload_family()
@@ -968,7 +968,7 @@ class TestVerdiDataUpf(AiidaTestCase):
 
     def test_importhelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'import', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data upf listfamilies --help failed.")
+        self.assertIn(b'Usage:', output, 'Sub-command verdi data upf listfamilies --help failed.')
 
     def test_import(self):
         options = [os.path.join(self.filepath_pseudos, 'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')]

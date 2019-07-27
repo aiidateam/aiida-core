@@ -24,22 +24,22 @@ from aiida.common.exceptions import MultipleObjectsError
 SHOW_OPTIONS = [
     options.TRAJECTORY_INDEX(),
     options.WITH_ELEMENTS(),
-    click.option('-c', '--contour', type=click.FLOAT, cls=MultipleValueOption, default=None, help="Isovalues to plot"),
+    click.option('-c', '--contour', type=click.FLOAT, cls=MultipleValueOption, default=None, help='Isovalues to plot'),
     click.option(
         '--sampling-stepsize',
         type=click.INT,
         default=None,
-        help="Sample positions in plot every sampling_stepsize timestep"
+        help='Sample positions in plot every sampling_stepsize timestep'
     ),
     click.option(
         '--stepsize',
         type=click.INT,
         default=None,
-        help="The stepsize for the trajectory, set it higher to reduce number of points"
+        help='The stepsize for the trajectory, set it higher to reduce number of points'
     ),
-    click.option('--mintime', type=click.INT, default=None, help="The time to plot from"),
-    click.option('--maxtime', type=click.INT, default=None, help="The time to plot to"),
-    click.option('--indices', type=click.INT, cls=MultipleValueOption, default=None, help="Show only these indices"),
+    click.option('--mintime', type=click.INT, default=None, help='The time to plot from'),
+    click.option('--maxtime', type=click.INT, default=None, help='The time to plot to'),
+    click.option('--indices', type=click.INT, cls=MultipleValueOption, default=None, help='Show only these indices'),
     click.option(
         '--dont-block', 'block', is_flag=True, default=True, help="Don't block interpreter when showing plot."
     ),
@@ -70,12 +70,12 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
             subprocess.check_output([exec_name, tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info("the call to {} ended with an error.".format(exec_name))
+            echo.echo_info('the call to {} ended with an error.'.format(exec_name))
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
                     "No executable '{}' found. Add to the path, "
-                    "or try with an absolute path.".format(exec_name)
+                    'or try with an absolute path.'.format(exec_name)
                 )
             else:
                 raise
@@ -89,7 +89,7 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
     import subprocess
 
     if len(object_list) > 1:
-        raise MultipleObjectsError("Visualization of multiple trajectories is not implemented")
+        raise MultipleObjectsError('Visualization of multiple trajectories is not implemented')
     obj = object_list[0]
 
     # pylint: disable=protected-access
@@ -101,12 +101,12 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
             subprocess.check_output([exec_name, '--xsf', tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info("the call to {} ended with an error.".format(exec_name))
+            echo.echo_info('the call to {} ended with an error.'.format(exec_name))
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
                     "No executable '{}' found. Add to the path, "
-                    "or try with an absolute path.".format(exec_name)
+                    'or try with an absolute path.'.format(exec_name)
                 )
             else:
                 raise
@@ -163,12 +163,12 @@ def _show_vesta(exec_name, structure_list):
             subprocess.check_output([exec_name, tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info("the call to {} ended with an error.".format(exec_name))
+            echo.echo_info('the call to {} ended with an error.'.format(exec_name))
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
                     "No executable '{}' found. Add to the path, "
-                    "or try with an absolute path.".format(exec_name)
+                    'or try with an absolute path.'.format(exec_name)
                 )
             else:
                 raise
@@ -182,7 +182,7 @@ def _show_vmd(exec_name, structure_list):
     import subprocess
 
     if len(structure_list) > 1:
-        raise MultipleObjectsError("Visualization of multiple objects is not implemented")
+        raise MultipleObjectsError('Visualization of multiple objects is not implemented')
     structure = structure_list[0]
 
     # pylint: disable=protected-access
@@ -194,12 +194,12 @@ def _show_vmd(exec_name, structure_list):
             subprocess.check_output([exec_name, tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info("the call to {} ended with an error.".format(exec_name))
+            echo.echo_info('the call to {} ended with an error.'.format(exec_name))
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
                     "No executable '{}' found. Add to the path, "
-                    "or try with an absolute path.".format(exec_name)
+                    'or try with an absolute path.'.format(exec_name)
                 )
             else:
                 raise
@@ -234,7 +234,7 @@ def _show_xmgrace(exec_name, list_bands):
     try:
         subprocess.check_output([exec_name] + [f.name for f in list_files])
     except subprocess.CalledProcessError:
-        print("Note: the call to {} ended with an error.".format(exec_name))
+        print('Note: the call to {} ended with an error.'.format(exec_name))
     except OSError as err:
         if err.errno == 2:
             print("No executable '{}' found. Add to the path, or try with an absolute path.".format(exec_name))

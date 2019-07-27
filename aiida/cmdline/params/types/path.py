@@ -91,7 +91,7 @@ class ImportPath(click.Path):
         try:
             self._timeout_seconds = int(value)
         except ValueError:
-            raise TypeError("timeout_seconds should be an integer but got: {}".format(type(value)))
+            raise TypeError('timeout_seconds should be an integer but got: {}'.format(type(value)))
 
         if self._timeout_seconds < 0:
             self._timeout_seconds = 0

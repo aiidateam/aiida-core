@@ -78,9 +78,9 @@ class ProjectionData(OrbitalData, ArrayData):
                     bands = load_node(uuid=uuid, type=BandsData)
                     uuid = bands.uuid
                 except :
-                    raise exceptions.NotExistent("The value passed to "
-                                      "set_reference_bandsdata was not "
-                                      "associated to any bandsdata")
+                    raise exceptions.NotExistent('The value passed to '
+                                      'set_reference_bandsdata was not '
+                                      'associated to any bandsdata')
 
         self.set_attribute('reference_bandsdata_uuid', uuid)
 
@@ -97,14 +97,14 @@ class ProjectionData(OrbitalData, ArrayData):
         try:
             uuid = self.get_attribute('reference_bandsdata_uuid')
         except AttributeError:
-            raise AttributeError("BandsData has not been set for this instance")
+            raise AttributeError('BandsData has not been set for this instance')
         try:
             #bands = load_node(uuid=uuid, type=BandsData)
             bands = load_node(uuid=uuid) #TODO switch to above once type
                                          # has been implemented for load_node
         except exceptions.NotExistent:
-            raise exceptions.NotExistent("The bands referenced to this class have not been "
-                              "found in this database.")
+            raise exceptions.NotExistent('The bands referenced to this class have not been '
+                              'found in this database.')
         return bands
 
     def _find_orbitals_and_indices(self, **kwargs):
@@ -140,9 +140,9 @@ class ProjectionData(OrbitalData, ArrayData):
         """
         retrieve_indices, all_orbitals = self._find_orbitals_and_indices(**kwargs)
         out_list = [(all_orbitals[i],
-                    self.get_array("pdos_{}".format(
+                    self.get_array('pdos_{}'.format(
                     self._from_index_to_arrayname(i))),
-                    self.get_array("energy_{}".format(
+                    self.get_array('energy_{}'.format(
                     self._from_index_to_arrayname(i))) )
                     for i in retrieve_indices]
         return out_list
@@ -159,7 +159,7 @@ class ProjectionData(OrbitalData, ArrayData):
         """
         retrieve_indices, all_orbitals = self._find_orbitals_and_indices(**kwargs)
         out_list = [(all_orbitals[i],
-                    self.get_array("proj_{}".format(
+                    self.get_array('proj_{}'.format(
                     self._from_index_to_arrayname(i))))
                     for i in retrieve_indices]
         return out_list
@@ -168,7 +168,7 @@ class ProjectionData(OrbitalData, ArrayData):
         """
         Used internally to determine the array names.
         """
-        return "array_{}".format(index)
+        return 'array_{}'.format(index)
 
     def set_projectiondata(self,list_of_orbitals, list_of_projections=None,
                              list_of_energy=None, list_of_pdos=None,
@@ -223,11 +223,11 @@ class ProjectionData(OrbitalData, ArrayData):
             a failure
             """
             if not all([isinstance(_,np.ndarray) for _ in array_list]):
-                raise exceptions.ValidationError("{} was not composed "
-                                      "entirely of ndarrays".format(array_name))
+                raise exceptions.ValidationError('{} was not composed '
+                                      'entirely of ndarrays'.format(array_name))
             if len(array_list) != orb_length:
-                raise exceptions.ValidationError("{} did not have the same length as the "
-                                      "list of orbitals".format(array_name))
+                raise exceptions.ValidationError('{} did not have the same length as the '
+                                      'list of orbitals'.format(array_name))
 
         ##############
         list_of_orbitals = single_to_list(list_of_orbitals)
@@ -235,10 +235,10 @@ class ProjectionData(OrbitalData, ArrayData):
 
         # validates the input data
         if not list_of_pdos and not list_of_projections:
-            raise exceptions.ValidationError("Must set either pdos or projections")
+            raise exceptions.ValidationError('Must set either pdos or projections')
         if bool(list_of_energy) != bool(list_of_pdos):
-            raise exceptions.ValidationError("list_of_pdos and list_of_energy must always "
-                                  "be set together")
+            raise exceptions.ValidationError('list_of_pdos and list_of_energy must always '
+                                  'be set together')
 
         orb_length = len(list_of_orbitals)
 
@@ -250,7 +250,7 @@ class ProjectionData(OrbitalData, ArrayData):
             try:
                 orbital_type = orbital_dict.pop('_orbital_type')
             except KeyError:
-                raise ValidationError("No _orbital_type key found in dictionary: {}".format(orbital_dict))
+                raise ValidationError('No _orbital_type key found in dictionary: {}'.format(orbital_dict))
             OrbitalClass = OrbitalFactory(orbital_type)
             test_orbital = OrbitalClass(**orbital_dict)
             list_of_orbital_dicts.append(test_orbital.get_orbital_dict())
@@ -259,39 +259,39 @@ class ProjectionData(OrbitalData, ArrayData):
         # verifies and sets the projections
         if list_of_projections:
             list_of_projections = single_to_list(list_of_projections)
-            array_list_checker(list_of_projections, "projections", orb_length)
+            array_list_checker(list_of_projections, 'projections', orb_length)
             for i in range(len(list_of_projections)):
                 this_projection = list_of_projections[i]
                 array_name = self._from_index_to_arrayname(i)
                 if bands_check:
                     self._check_projections_bands(this_projection)
-                self.set_array("proj_{}".format(array_name), this_projection)
+                self.set_array('proj_{}'.format(array_name), this_projection)
 
         # verifies and sets both pdos and energy
         if list_of_pdos:
             list_of_pdos = single_to_list(list_of_pdos)
             list_of_energy = single_to_list(list_of_energy)
-            array_list_checker(list_of_pdos, "pdos", orb_length)
-            array_list_checker(list_of_energy, "energy", orb_length)
+            array_list_checker(list_of_pdos, 'pdos', orb_length)
+            array_list_checker(list_of_energy, 'energy', orb_length)
             for i in range(len(list_of_pdos)):
                 this_pdos = list_of_pdos[i]
                 this_energy = list_of_energy[i]
                 array_name = self._from_index_to_arrayname(i)
                 if bands_check:
                     self._check_projections_bands(this_projection)
-                self.set_array("pdos_{}".format(array_name), this_pdos)
-                self.set_array("energy_{}".format(array_name), this_energy)
+                self.set_array('pdos_{}'.format(array_name), this_pdos)
+                self.set_array('energy_{}'.format(array_name), this_energy)
 
         # verifies and sets the tags
         if tags is not None:
             try:
                 if len(tags) != len(list_of_orbitals):
-                    raise exceptions.ValidationError("must set as many tags as projections")
+                    raise exceptions.ValidationError('must set as many tags as projections')
             except IndexError:
-                return exceptions.ValidationError("tags must be a list")
+                return exceptions.ValidationError('tags must be a list')
 
             if not all([isinstance(_,six.string_types) for _ in tags]):
-                raise exceptions.ValidationError("Tags must set a list of strings")
+                raise exceptions.ValidationError('Tags must set a list of strings')
             self.set_attribute('tags', tags)
 
     def set_orbitals(self, **kwargs):
@@ -299,6 +299,6 @@ class ProjectionData(OrbitalData, ArrayData):
         This method is inherited from OrbitalData, but is blocked here.
         If used will raise a NotImplementedError
         """
-        raise NotImplementedError("You cannot set orbitals using this class!"
-                                  " This class is for setting orbitals and "
-                                  " projections only!")
+        raise NotImplementedError('You cannot set orbitals using this class!'
+                                  ' This class is for setting orbitals and '
+                                  ' projections only!')

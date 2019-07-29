@@ -148,7 +148,7 @@ What do you have to specify:
         queryhelp = {
             'path':[Relax],
             'project':{
-                Relax:['state', 'id'],
+                Relax:['user_id', 'id'],
             }
         }
 
@@ -176,6 +176,9 @@ What do you have to specify:
     but only the ones that were added
     after a certain time `t` and have an id higher than 50::
 
+        from aiida.common import timezone
+        from datetime import timedelta
+
         queryhelp = {
             'path':[
                 {'cls':Relax}, # Relaxation with structure as output
@@ -183,7 +186,7 @@ What do you have to specify:
             ],
             'filters':{
                 StructureData:{
-                    'time':{'>': t},
+                    'ctime':{'>':  timezone.now() - timedelta(days=4)},
                     'id':{'>': 50}
                 }
             }
@@ -317,46 +320,46 @@ Let's take an example that we had and add a few filters on the link::
         ],
         'filters':{
             'structure':{
-                'time':{'>': t},
                 'id':{'>': 50}
             },
             'relax--structure':{
-                'time':{'>': t},
                 'label':{'like':'output_%'},
             }
         },
         'project':{
             'relax--structure':['label'],
             'structure':['label'],
-            'relax':['label', 'state'],
+            'relax':['label', 'uuid'],
         }
     }
 
 Notice that the tag for the link, by default, is the tag of the two connecting
 nodes delimited by two dashes '--'.
-The order does not matter, the following queryhelp would results in the same query::
 
-    queryhelp = {
-        'path':[
-            {'cls':Relax, 'tag':'relax'},         # Relaxation with structure as output
-            {'cls':StructureData, 'tag':'structure'}
-        ],
-        'filters':{
-            'structure':{
-                'time':{'>': t},
-                'id':{'>': 50}
-            },
-            'relax--structure':{
-                'time':{'>': t},
-                'label':{'like':'output_%'},
-            }
-        },
-        'project':{
-            'relax--structure':['label'],
-            'structure':['label'],
-            'relax':['label', 'state'],
-        }
-    }
+
+.. ~The order does not matter, the following queryhelp would results in the same query::
+.. ~
+.. ~    queryhelp = {
+.. ~        'path':[
+.. ~            {'cls':Relax, 'tag':'relax'},         # Relaxation with structure as output
+.. ~            {'cls':StructureData, 'tag':'structure'}
+.. ~        ],
+.. ~        'filters':{
+.. ~            'structure':{
+.. ~                'time':{'>': t},
+.. ~                'id':{'>': 50}
+.. ~            },
+.. ~            'relax--structure':{
+.. ~                'time':{'>': t},
+.. ~                'label':{'like':'output_%'},
+.. ~            }
+.. ~        },
+.. ~        'project':{
+.. ~            'relax--structure':['label'],
+.. ~            'structure':['label'],
+.. ~            'relax':['label', 'state'],
+.. ~        }
+.. ~    }
 
 If you dislike that way to tag the link, you can choose the tag for the edge in the
 path when definining the entity to join using ``edge_tag``::
@@ -372,18 +375,16 @@ path when definining the entity to join using ``edge_tag``::
         ],
         'filters':{
             'structure':{
-                'time':{'>': t},
                 'id':{'>': 50}
             },
             'ThisIsMyLinkTag':{                  # Using this link tag
-                'time':{'>': t},
                 'label':{'like':'output_%'},
             }
         },
         'project':{
             'ThisIsMyLinkTag':['label'],
             'structure':['label'],
-            'relax':['label', 'state'],
+            'relax':['label', 'uuid'],
         }
     }
 

@@ -21,7 +21,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 @verdi.command('completioncommand')
 def verdi_completioncommand():
     """
-    Return the bash code to activate completion.
+    Return the code to activate bash completion.
 
     :note: this command is mainly for back-compatibility.
         You should rather use:;

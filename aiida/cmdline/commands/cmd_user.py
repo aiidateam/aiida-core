@@ -57,7 +57,7 @@ def verdi_user():
 @verdi_user.command('list')
 @decorators.with_dbenv()
 def user_list():
-    """Displays list of all users."""
+    """Show a list of all users."""
     from aiida.orm import User
 
     default_user = User.objects.get_default()
@@ -141,6 +141,6 @@ def user_configure(ctx, user, first_name, last_name, institution, set_default):
 @click.pass_context
 @decorators.with_dbenv()
 def user_set_default(ctx, user):
-    """Set the USER as the default user."""
+    """Set a user as the default user for the profile."""
     set_default_user(ctx.obj.profile, user)
     echo.echo_success('set `{}` as the new default user for profile `{}`'.format(user.email, ctx.obj.profile.name))

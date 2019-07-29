@@ -15,12 +15,13 @@ from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types.plugin import PluginParamType
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import decorators
 
 
 @verdi.command('rehash')
+@decorators.deprecated_command("This command has been deprecated. Please use 'verdi node rehash' instead.")
 @arguments.NODES()
 @click.option(
     '-e',
@@ -29,32 +30,15 @@ from aiida.cmdline.utils import decorators, echo
     default=None,
     help='Only include nodes that are class or sub class of the class identified by this entry point.'
 )
+@options.FORCE()
 @decorators.with_dbenv()
-def rehash(nodes, entry_point):
-    """Recompute the hash for nodes in the database
+@click.pass_context
+def rehash(ctx, nodes, entry_point, force):
+    """Recompute the hash for nodes in the database.
 
     The set of nodes that will be rehashed can be filtered by their identifier and/or based on their class.
     """
-    from aiida.orm import Data, ProcessNode, QueryBuilder
+    from aiida.cmdline.commands.cmd_node import rehash as node_rehash
 
-    # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
-    if entry_point is None:
-        entry_point = (Data, ProcessNode)
-
-    if nodes:
-        to_hash = [(node,) for node in nodes if isinstance(node, entry_point)]
-        num_nodes = len(to_hash)
-    else:
-        builder = QueryBuilder()
-        builder.append(entry_point, tag='node')
-        to_hash = builder.all()
-        num_nodes = builder.count()
-
-    if not to_hash:
-        echo.echo_critical('no matching nodes found')
-
-    with click.progressbar(to_hash, label='Rehashing Nodes:') as iter_hash:
-        for node, in iter_hash:
-            node.rehash()
-
-    echo.echo_success('{} nodes re-hashed.'.format(num_nodes))
+    result = ctx.invoke(node_rehash, nodes=nodes, entry_point=entry_point, force=force)
+    return result

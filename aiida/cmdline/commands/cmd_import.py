@@ -195,9 +195,9 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
 def cmd_import(
     ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive
 ):
-    """Import one or multiple exported AiiDA archives
+    """Import data from an AiiDA archive file.
 
-    The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.
+    The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
     from six.moves import urllib
 

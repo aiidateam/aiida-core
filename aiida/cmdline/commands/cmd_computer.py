@@ -242,7 +242,7 @@ def set_computer_builder(ctx, param, value):
 @click.pass_context
 @with_dbenv()
 def computer_setup(ctx, non_interactive, **kwargs):
-    """Add a computer."""
+    """Create a new computer."""
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
@@ -298,7 +298,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @click.pass_context
 @with_dbenv()
 def computer_duplicate(ctx, computer, non_interactive, **kwargs):
-    """Duplicate a computer."""
+    """Duplicate a computer allowing to change some parameters."""
     from aiida import orm
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
@@ -398,7 +398,7 @@ def computer_disable(computer, user):
 @options.RAW(help='Show only the computer names, one per line.')
 @with_dbenv()
 def computer_list(all_entries, raw):
-    """List available computers."""
+    """List all available computers."""
     from aiida.orm import Computer, User
 
     if not raw:
@@ -421,7 +421,7 @@ def computer_list(all_entries, raw):
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_show(computer):
-    """Show information for a computer."""
+    """Show detailed information for a computer."""
     echo.echo(computer.full_text_info)
 
 
@@ -545,10 +545,9 @@ def computer_test(user, print_traceback, computer):
 @with_dbenv()
 def computer_delete(computer):
     """
-    Configure the authentication information for a given computer
+    Delete a computer.
 
-    Does not delete the computer if there are calculations that are using
-    it.
+    Note that it is not possible to delete the computer if there are calculations that are using it.
     """
     from aiida.common.exceptions import InvalidOperation
     from aiida import orm
@@ -565,7 +564,7 @@ def computer_delete(computer):
 
 @verdi_computer.group('configure')
 def computer_configure():
-    """Configure a computer with one of the available transport types."""
+    """Configure the Authinfo details for a computer (and user)."""
 
 
 @computer_configure.command('show')
@@ -576,7 +575,7 @@ def computer_configure():
 @options.USER()
 @arguments.COMPUTER()
 def computer_config_show(computer, user, defaults, as_option_string):
-    """Show the current or default configuration for COMPUTER."""
+    """Show the current configuration for a computer."""
     import tabulate
     from aiida.common.escaping import escape_for_bash
 

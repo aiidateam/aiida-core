@@ -78,7 +78,7 @@ def set_code_builder(ctx, param, value):
 @options.CONFIG_FILE()
 @with_dbenv()
 def setup_code(non_interactive, **kwargs):
-    """Setup a new Code."""
+    """Setup a new code."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
 
@@ -125,7 +125,7 @@ def setup_code(non_interactive, **kwargs):
 @click.pass_context
 @with_dbenv()
 def code_duplicate(ctx, code, non_interactive, **kwargs):
-    """Create duplicate of existing Code."""
+    """Duplicate a code allowing to change some parameters."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
 
@@ -166,7 +166,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @options.VERBOSE()
 @with_dbenv()
 def show(code, verbose):
-    """Display detailed information for the given CODE."""
+    """Display detailed information for a code."""
     click.echo(tabulate.tabulate(code.get_full_text_info(verbose)))
 
 
@@ -174,7 +174,11 @@ def show(code, verbose):
 @arguments.CODES()
 @with_dbenv()
 def delete(codes):
-    """Delete codes that have not yet been used for calculations, i.e. if it has outgoing links."""
+    """Delete a code.
+
+    Note that it is possible to delete a code only if it has not yet been used
+    as an input of a calculation, i.e., if it does not have outgoing links.
+    """
     from aiida.common.exceptions import InvalidOperation
     from aiida.orm import Node
 
@@ -193,7 +197,7 @@ def delete(codes):
 @arguments.CODES()
 @with_dbenv()
 def hide(codes):
-    """Hide one or more codes from the `verdi code list` command."""
+    """Hide one or more codes from `verdi code list`."""
     for code in codes:
         code.hide()
         echo.echo_success('Code<{}> {} hidden'.format(code.pk, code.full_label))
@@ -203,7 +207,7 @@ def hide(codes):
 @arguments.CODES()
 @with_dbenv()
 def reveal(codes):
-    """Reveal one or more hidden codes to the `verdi code list` command."""
+    """Reveal one or more hidden codes in `verdi code list`."""
     for code in codes:
         code.reveal()
         echo.echo_success('Code<{}> {} revealed'.format(code.pk, code.full_label))
@@ -233,7 +237,7 @@ def relabel(code, label):
 @click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False, help='Show owners of codes.')
 @with_dbenv()
 def code_list(computer, input_plugin, all_entries, all_users, show_owner):
-    """List the codes in the database."""
+    """List the available codes."""
     from aiida.orm import Code  # pylint: disable=redefined-outer-name
     from aiida import orm
 
@@ -318,7 +322,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
 
 
 def print_list_res(qb_query, show_owner):
-    """Print list of codes."""
+    """Print a list of available codes."""
     # pylint: disable=invalid-name
     for tuple_ in qb_query.all():
         if len(tuple_) == 3:

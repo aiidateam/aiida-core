@@ -123,7 +123,7 @@ def quicksetup(
     ctx, non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
     db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, repository
 ):
-    """Setup a new profile where the database is automatically created and configured."""
+    """Setup a new profile in a fully automated fashion."""
     # pylint: disable=too-many-arguments,too-many-locals
     from aiida.manage.external.postgres import Postgres, manual_setup_instructions
 

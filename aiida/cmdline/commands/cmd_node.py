@@ -14,9 +14,11 @@ from __future__ import absolute_import
 import click
 import tabulate
 
+from aiida.common import exceptions
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
-from aiida.cmdline.utils import echo
+from aiida.cmdline.params.types.plugin import PluginParamType
+from aiida.cmdline.utils import decorators, echo, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
 
 
@@ -27,7 +29,7 @@ def verdi_node():
 
 @verdi_node.group('repo')
 def verdi_node_repo():
-    pass
+    """Inspect the content of a node repository folder."""
 
 
 @verdi_node_repo.command('cat')
@@ -35,7 +37,7 @@ def verdi_node_repo():
 @click.argument('relative_path', type=str)
 @with_dbenv()
 def repo_cat(node, relative_path):
-    """Output the content of a file in the repository folder."""
+    """Output the content of a file in the node repository folder."""
     try:
         content = node.get_object_content(relative_path)
     except Exception as exception:  # pylint: disable=broad-except
@@ -50,7 +52,7 @@ def repo_cat(node, relative_path):
 @click.option('-c', '--color', 'color', flag_value=True, help='Use different color for folders and files.')
 @with_dbenv()
 def repo_ls(node, relative_path, color):
-    """List files in the repository folder."""
+    """List files in the node repository folder."""
     from aiida.cmdline.utils.repository import list_repository_contents
 
     try:
@@ -66,7 +68,7 @@ def repo_ls(node, relative_path, color):
 @options.FORCE()
 @with_dbenv()
 def node_label(nodes, label, raw, force):
-    """View or set the labels of one or more nodes."""
+    """View or set the label of one or more nodes."""
     table = []
 
     if label is None:
@@ -100,7 +102,7 @@ def node_label(nodes, label, raw, force):
 @options.FORCE()
 @with_dbenv()
 def node_description(nodes, description, force, raw):
-    """View or set the descriptions of one or more nodes."""
+    """View or set the description of one or more nodes."""
     table = []
 
     if description is None:
@@ -131,8 +133,8 @@ def node_description(nodes, description, force, raw):
 @arguments.NODES()
 @click.option('--print-groups', 'print_groups', flag_value=True, help='Show groups containing the nodes.')
 @with_dbenv()
-def show(nodes, print_groups):
-    """Show generic information on node(s)."""
+def node_show(nodes, print_groups):
+    """Show generic information on one or more nodes."""
     from aiida.cmdline.utils.common import get_node_info
 
     for node in nodes:
@@ -221,7 +223,7 @@ def extras(nodes, keys, fmt, identifier, raw):
 @click.option('-d', '--depth', 'depth', default=1, help='Show children of nodes up to given depth')
 @with_dbenv()
 def tree(nodes, depth):
-    """Show tree of nodes."""
+    """Show a tree of nodes starting from a given node."""
     from aiida.common import LinkType
 
     for node in nodes:
@@ -303,3 +305,244 @@ def node_delete(nodes, follow_calls, dry_run, verbose, force):
     node_pks_to_delete = [node.pk for node in nodes]
 
     delete_nodes(node_pks_to_delete, follow_calls=follow_calls, dry_run=dry_run, verbosity=verbosity, force=force)
+
+
+@verdi_node.command('rehash')
+@arguments.NODES()
+@click.option(
+    '-e',
+    '--entry-point',
+    type=PluginParamType(group=('aiida.calculations', 'aiida.data', 'aiida.workflows'), load=True),
+    default=None,
+    help='Only include nodes that are class or sub class of the class identified by this entry point.'
+)
+@options.FORCE()
+@with_dbenv()
+def rehash(nodes, entry_point, force):
+    """Recompute the hash for nodes in the database.
+
+    The set of nodes that will be rehashed can be filtered by their identifier and/or based on their class.
+    """
+    from aiida.orm import Data, ProcessNode, QueryBuilder
+
+    if not force:
+        echo.echo_warning('This command will recompute and overwrite the hashes of all nodes.')
+        echo.echo_warning('Note that this can take a lot of time for big databases.')
+        echo.echo_warning('')
+        echo.echo_warning('', nl=False)
+
+        confirm_message = 'Do you want to continue?'
+
+        try:
+            click.confirm(text=confirm_message, abort=True)
+        except click.Abort:
+            echo.echo('\n')
+            echo.echo_critical('Migration aborted, the data has not been affected.')
+
+    # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
+    if entry_point is None:
+        entry_point = (Data, ProcessNode)
+
+    if nodes:
+        to_hash = [(node,) for node in nodes if isinstance(node, entry_point)]
+        num_nodes = len(to_hash)
+    else:
+        builder = QueryBuilder()
+        builder.append(entry_point, tag='node')
+        to_hash = builder.all()
+        num_nodes = builder.count()
+
+    if not to_hash:
+        echo.echo_critical('no matching nodes found')
+
+    with click.progressbar(to_hash, label='Rehashing Nodes:') as iter_hash:
+        for node, in iter_hash:
+            node.rehash()
+
+    echo.echo_success('{} nodes re-hashed.'.format(num_nodes))
+
+
+@verdi_node.group('graph')
+def verdi_graph():
+    """Create visual representations of the provenance graph."""
+
+
+@verdi_graph.command('generate')
+@arguments.NODE('root_node')
+@click.option(
+    '-l',
+    '--link-types',
+    help=(
+        'The link types to include: '
+        "'data' includes only 'input_calc' and 'create' links (data provenance only), "
+        "'logic' includes only 'input_work' and 'return' links (logical provenance only)."
+    ),
+    default='all',
+    type=click.Choice(['all', 'data', 'logic'])
+)
+@click.option(
+    '--identifier',
+    help='the type of identifier to use within the node text',
+    default='uuid',
+    type=click.Choice(['pk', 'uuid', 'label'])
+)
+@click.option(
+    '-a',
+    '--ancestor-depth',
+    help='The maximum depth when recursing upwards, if not set it will recurse to the end.',
+    type=click.IntRange(min=0)
+)
+@click.option(
+    '-d',
+    '--descendant-depth',
+    help='The maximum depth when recursing through the descendants. If not set it will recurse to the end.',
+    type=click.IntRange(min=0)
+)
+@click.option('-o', '--process-out', is_flag=True, help='Show outgoing links for all processes.')
+@click.option('-i', '--process-in', is_flag=True, help='Show incoming links for all processes.')
+@options.VERBOSE(help='Print verbose information of the graph traversal.')
+@click.option(
+    '-e',
+    '--engine',
+    help="The graphviz engine, e.g. 'dot', 'circo', ... "
+    '(see http://www.graphviz.org/doc/info/output.html)',
+    default='dot'
+)
+@click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
+@click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
+@decorators.with_dbenv()
+def graph_generate(
+    root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
+    output_format, show
+):
+    """
+    Generate a graph from a ROOT_NODE (specified by pk or uuid).
+    """
+    # pylint: disable=too-many-arguments
+    from aiida.tools.visualization import Graph
+    print_func = echo.echo_info if verbose else None
+    link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
+
+    echo.echo_info('Initiating graphviz engine: {}'.format(engine))
+    graph = Graph(engine=engine, node_id_type=identifier)
+    echo.echo_info('Recursing ancestors, max depth={}'.format(ancestor_depth))
+    graph.recurse_ancestors(
+        root_node,
+        depth=ancestor_depth,
+        link_types=link_types,
+        annotate_links='both',
+        include_process_outputs=process_out,
+        print_func=print_func
+    )
+    echo.echo_info('Recursing descendants, max depth={}'.format(descendant_depth))
+    graph.recurse_descendants(
+        root_node,
+        depth=descendant_depth,
+        link_types=link_types,
+        annotate_links='both',
+        include_process_inputs=process_in,
+        print_func=print_func
+    )
+    output_file_name = graph.graphviz.render(
+        filename='{}.{}'.format(root_node.pk, engine), format=output_format, view=show, cleanup=True
+    )
+
+    echo.echo_success('Output file: {}'.format(output_file_name))
+
+
+@verdi_node.group('comment')
+def verdi_comment():
+    """Inspect, create and manage node comments."""
+
+
+@verdi_comment.command('add')
+@options.NODES(required=True)
+@click.argument('content', type=click.STRING, required=False)
+@decorators.with_dbenv()
+def comment_add(nodes, content):
+    """Add a comment to one or more nodes."""
+    if not content:
+        content = multi_line_input.edit_comment()
+
+    for node in nodes:
+        node.add_comment(content)
+
+    echo.echo_success('comment added to {} nodes'.format(len(nodes)))
+
+
+@verdi_comment.command('update')
+@click.argument('comment_id', type=int, metavar='COMMENT_ID')
+@click.argument('content', type=click.STRING, required=False)
+@decorators.with_dbenv()
+def comment_update(comment_id, content):
+    """Update a comment of a node."""
+    from aiida.orm.comments import Comment
+
+    try:
+        comment = Comment.objects.get(id=comment_id)
+    except (exceptions.NotExistent, exceptions.MultipleObjectsError):
+        echo.echo_critical('comment<{}> not found'.format(comment_id))
+
+    if content is None:
+        content = multi_line_input.edit_comment(comment.content)
+
+    comment.set_content(content)
+
+    echo.echo_success('comment<{}> updated'.format(comment_id))
+
+
+@verdi_comment.command('show')
+@options.USER()
+@arguments.NODES()
+@decorators.with_dbenv()
+def comment_show(user, nodes):
+    """Show the comments of one or multiple nodes."""
+    for node in nodes:
+        msg = '* Comments for Node<{}>'.format(node.pk)
+        echo.echo('*' * len(msg))
+        echo.echo(msg)
+        echo.echo('*' * len(msg))
+
+        all_comments = node.get_comments()
+
+        if user is not None:
+            comments = [comment for comment in all_comments if comment.user.email == user.email]
+
+            if not comments:
+                valid_users = ', '.join(set(comment.user.email for comment in all_comments))
+                echo.echo_warning('no comments found for user {}'.format(user))
+                echo.echo_info('valid users found for Node<{}>: {}'.format(node.pk, valid_users))
+
+        else:
+            comments = all_comments
+
+        for comment in comments:
+            comment_msg = [
+                'Comment<{}> for Node<{}> by {}'.format(comment.id, node.pk, comment.user.email),
+                'Created on {}'.format(comment.ctime.strftime('%Y-%m-%d %H:%M')),
+                'Last modified on {}'.format(comment.mtime.strftime('%Y-%m-%d %H:%M')),
+                '\n{}\n'.format(comment.content),
+            ]
+            echo.echo('\n'.join(comment_msg))
+
+        if not comments:
+            echo.echo_info('no comments found')
+
+
+@verdi_comment.command('remove')
+@options.FORCE()
+@click.argument('comment', type=int, required=True, metavar='COMMENT_ID')
+@decorators.with_dbenv()
+def comment_remove(force, comment):
+    """Remove a comment of a node."""
+    from aiida.orm.comments import Comment
+
+    if not force:
+        click.confirm('Are you sure you want to remove comment<{}>'.format(comment), abort=True)
+
+    try:
+        Comment.objects.delete(comment)
+    except exceptions.NotExistent as exception:
+        echo.echo_critical('failed to remove comment<{}>: {}'.format(comment, exception))
+    else:
+        echo.echo_success('removed comment<{}>'.format(comment))

@@ -18,7 +18,7 @@ from aiida.cmdline.params import arguments, options, types
 
 @verdi_data.group('dict')
 def dictionary():
-    """View and manipulate Dict objects."""
+    """Manipulate Dict objects (python dictionaries)."""
 
 
 @dictionary.command('show')

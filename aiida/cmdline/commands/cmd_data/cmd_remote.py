@@ -23,7 +23,13 @@ from aiida.common.files import get_mode_string
 
 @verdi_data.group('remote')
 def remote():
-    """Managing RemoteData objects."""
+    """Manipulate RemoteData objects (reference to remote folders).
+
+    A RemoteData can be thought as a "symbolic link" to a folder on one of the
+    Computers set up in AiiDA (e.g. where a CalcJob will run).
+    This folder is called "remote" in the sense that it is on a Computer and
+    not in the AiiDA repository. Note, however, that the "remote" computer
+    could also be "localhost"."""
 
 
 @remote.command('ls')
@@ -31,7 +37,7 @@ def remote():
 @click.option('-l', '--long', 'ls_long', is_flag=True, default=False, help='Display also file metadata.')
 @click.option('-p', '--path', type=click.STRING, default='.', help='The folder to list.')
 def remote_ls(ls_long, path, datum):
-    """List directory content on remote RemoteData objects."""
+    """List content of a (sub)directory in a RemoteData object."""
     import datetime
     try:
         content = datum.listdir_withattributes(path=path)
@@ -58,7 +64,7 @@ def remote_ls(ls_long, path, datum):
 @arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:remote',)))
 @click.argument('path', type=click.STRING)
 def remote_cat(datum, path):
-    """Show the content of remote files in RemoteData objects."""
+    """Show content of a file in a RemoteData object."""
     import os
     import sys
     import tempfile
@@ -81,7 +87,7 @@ def remote_cat(datum, path):
 @remote.command('show')
 @arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:remote',)))
 def remote_show(datum):
-    """Show information on a RemoteData object."""
+    """Show information for a RemoteData object."""
     click.echo('- Remote computer name:')
     click.echo('  {}'.format(datum.get_computer_name()))
     click.echo('- Remote folder full path:')

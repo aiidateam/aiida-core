@@ -10,7 +10,7 @@ JSON or in the database and use it over and over.
 Using the queryhelp, you have to specify the path, the filter and projections beforehand and
 instantiate the QueryBuilder with that dictionary::
 
-    qb = Querybuilder(**queryhelp)
+    qb = QueryBuilder(**queryhelp)
 
 What do you have to specify:
 
@@ -18,7 +18,7 @@ What do you have to specify:
     Here, the user specifies the path along which to join tables as a list,
     each list item being a vertice in your path.
     You can define the vertice in two ways:
-    The first is to give the Aiida-class::
+    The first is to give the AiiDA-class::
 
         queryhelp = {
             'path':[Data]
@@ -31,20 +31,6 @@ What do you have to specify:
                 {'cls': Data}
             ]
         }
-
-    Another way is to give the polymorphic identity of this class, in our case stored in type::
-
-        queryhelp = {
-            'path':[
-                {'type':"data."}
-            ]
-        }
-
-    .. note::
-        In Aiida, polymorphism is not strictly enforced, but
-        done with *type* specification.
-        Type-discrimination when querying is achieved by attaching a filter on the
-        type every time a subclass of Node is given.
 
     Each node has to have a unique tag.
     If not given, the tag is chosen to be equal to the name of the class.
@@ -366,10 +352,10 @@ path when definining the entity to join using ``edge_tag``::
 
     queryhelp = {
         'path':[
-            {'cls':Relax, 'label':'relax'},         # Relaxation with structure as output
+            {'cls':Relax, 'tag':'relax'},         # Relaxation with structure as output
             {
                 'cls':StructureData,
-                'label':'structure',
+                'tag':'structure',
                 'edge_tag':'ThisIsMyLinkTag'     # Definining the link tag
             }
         ],

@@ -37,6 +37,10 @@ For an overview of options accepted by ``verdi restapi`` you can type
 
 Like all ``verdi`` commands, the AiiDA profile can be changed by putting ``-p PROFILE`` right after ``verdi``.
 
+.. code-block:: bash
+
+    verdi -p <another_profile> restapi
+
 The base URL for your REST API is::
 
         http://localhost:5000/api/v3
@@ -58,15 +62,20 @@ A generic URL to send requests to the REST API is formed by:
 
         http://localhost:5000/api/v3
 
-    2. The path. It defines the kind of resource requested by the client and the type of query.
+    2. The path. It defines the kind of resource requested by the client and the type of query. Example::
+
+        ../nodes/..
+
     3. The query string (not mandatory). It can be used for any further specification of the request, e.g. to introduce
-       query filters, to give instructions for ordering, to set how results have to be paginated, etc.
+       query filters, to give instructions for ordering, to set how results have to be paginated, etc. Example::
+
+        ?id=200
 
 The query string is introduced by the question mark character ``?``. Here are some examples::
 
   http://localhost:5000/api/v3/users/
   http://localhost:5000/api/v3/computers?scheduler_type="slurm"
-  http://localhost:5000/api/v3/nodes/?id>45&node_type=like="%data%"
+  http://localhost:5000/api/v3/nodes/?id>45&node_type=like="data%"
 
 The trailing slash at the end of the path is not mandatory.
 
@@ -91,7 +100,7 @@ query string. Note that ``(PERPAGE)`` values larger than 400 are not allowed. Ex
     http://localhost:5000/api/v3/computers/page
 
 If no page number is specified, as in the last example, the system redirects the request to page 1.
-When pagination is used the header of the response contains two more non-empty fields:
+When pagination is used the **header** of the response contains two more non-empty fields:
 
     - ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e. the sum of the results
       of all pages
@@ -152,7 +161,7 @@ AiiDA object(s) you want to request. The following resources are available:
 | :py:class:`UpfData <aiida.orm.nodes.data.upf.UpfData>`                  | ``/upfs``         |
 +-------------------------------------------------------------------------+-------------------+
 
-For a **full list** of available endpoints for each resource, simply query the base URL of the REST API.
+For a **full list** of available endpoints for each resource, simply query the base URL of the REST API (e.g. ``http://localhost:5000``).
 
 There are two types of paths: you may either request a list of objects
 or one specific object of a resource.
@@ -179,11 +188,15 @@ If you request informations of a specific object, in general you have to append 
 
 In the first URL, we have specified the full *uuid*, whereas in the second only a chunk of its first characters that is
 sufficiently long to match only one *uuid* in the database.
+
+.. note:: Using *id* in place of *uuid* is not allowed anylonger, e.g.  ``http://localhost:5000/api/v3/nodes/201`` does not work.
+    Use ``http://localhost:5000/api/v3/nodes?id=201`` instead.
+
 Il the *uuid* pattern is not long enough to identify a unique object, the API will raise an exception.
 The only exception to this rule is the resource *users* since the corresponding AiiDA``User`` class has no *uuid*
-attribute. In this case, you have to specify the *pk* (integer) of the object. Here is an example::
+attribute. In this case, you have to specify the *id* (integer) of the object. Here is an example::
 
-    http://localhost:5000/api/v3/users/2
+    http://localhost:5000/api/v3/users?id=2
 
 When you ask for a single object (and only in that case) you can construct more complex requests, namely, you can ask
 for its inputs/outputs or for its attributes/extras.
@@ -234,9 +247,9 @@ All of them must be followed by the operator ``=``. Here is the complete list:
 
         ::
 
-            http://localhost:5000/api/v3/c=+id
-            http://localhost:5000/api/v3/computers=+name
-            http://localhost:5000/api/v3/computers/orderby=-uuid
+            http://localhost:5000/api/v3/computers?orderby=+id
+            http://localhost:5000/api/v3/computers?orderby=+name
+            http://localhost:5000/api/v3/computers?orderby=-uuid
 
 
     :alist: This key is used to specify which attributes of a specific object have to be returned.
@@ -290,9 +303,9 @@ Each filter key is associated to a unique value type. The possible types are:
 
         ::
 
-            ctime>2019-04-23T05:45+03:45
-            ctime<2019-04-23T05:45
-            mtime>=2019-04-23
+            http://localhost:5000/api/v3/nodes?ctime>2019-04-23T05:45+03:45
+            http://localhost:5000/api/v3/nodes?ctime<2019-04-23T05:45
+            http://localhost:5000/api/v3/nodes?mtime>=2019-04-23
 
 
     :bool: It can be either true or false (lower case).
@@ -428,7 +441,7 @@ Examples:
     - ``node_type="data.remote.RemoteData."`` selects only objects of *RemoteData* type
 
 .. note:: If you use in your request the endpoint *io/input* (*io/outputs*) together with one or more filters, the
-    latter are applied to the input (output) nodes of the selected *pk*. For example, the request:
+    latter are applied to the input (output) nodes of the selected *id*. For example, the request:
 
         ::
 

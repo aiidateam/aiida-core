@@ -22,12 +22,9 @@ __all__ = ('CalculationNode',)
 
 class CalculationNode(ProcessNode):
     """Base class for all nodes representing the execution of a calculation process."""
-    # pylint: disable=too-few-public-methods
 
-    _cachable = True
-
-    # Calculation nodes are storable
-    _storable = True
+    _storable = True  # Calculation nodes are storable
+    _cachable = True  # Calculation nodes can be cached from
     _unstorable_message = 'storing for this node has been disabled'
 
     @property

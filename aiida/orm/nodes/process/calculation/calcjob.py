@@ -41,9 +41,6 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
     SCHEUDLER_LAST_JOB_INFO_KEY = 'last_jobinfo'
 
-    # Flag that determines whether the class can be cached.
-    _cachable = True
-
     # Base path within the repository where to put objects by default
     _repository_base_path = 'raw_input'
 

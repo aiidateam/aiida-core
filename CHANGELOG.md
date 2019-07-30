@@ -1,16 +1,16 @@
 ## v0.12.4
 ### Improvements
-- Added new endpoint in rest api to get list of distinct node types [[2745]](https://github.com/aiidateam/aiida-core/pull/2745)
-- Travis: port the deploy stage from the development branch [[2816]](https://github.com/aiidateam/aiida-core/pull/2816)
+- Added new endpoint in rest api to get list of distinct node types [[#2745]](https://github.com/aiidateam/aiida-core/pull/2745)
+- Travis: port the deploy stage from the development branch [[#2816]](https://github.com/aiidateam/aiida-core/pull/2816)
 
 ### Minor bug fixes
-- Corrected the graph export set expansion rules [[2632]](https://github.com/aiidateam/aiida-core/pull/2632)
+- Corrected the graph export set expansion rules [[#2632]](https://github.com/aiidateam/aiida-core/pull/2632)
 
 ### Miscellaneous
 - Backport streamlined quick install instructions from `provenance_redesign` [[#2555]](	https://github.com/aiidateam/aiida_core/pull/2555)
-- Remove useless chainmap dependency [[2799]](https://github.com/aiidateam/aiida-core/pull/2799)
-- Add aiida-core version to docs home page [[3058]](https://github.com/aiidateam/aiida-core/pull/3058)
-- Docs: add note on increasing work_mem [[2952]](https://github.com/aiidateam/aiida-core/pull/2952)
+- Remove useless chainmap dependency [[#2799]](https://github.com/aiidateam/aiida-core/pull/2799)
+- Add aiida-core version to docs home page [[#3058]](https://github.com/aiidateam/aiida-core/pull/3058)
+- Docs: add note on increasing work_mem [[#2952]](https://github.com/aiidateam/aiida-core/pull/2952)
 
 
 ## v0.12.3

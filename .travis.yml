@@ -37,6 +37,9 @@ install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip==18.1 wheel setuptools coveralls
     - pip install numpy==1.15.4
+    # install pymargen from sources to fix problem in init pymatgen.util.coord_cython:
+    # ValueError: numpy.ufunc has the wrong size, try recompiling. Expected 192, got 216
+    - pip install pymatgen==2018.12.12 --no-binary pymatgen
     # Install AiiDA with some optional dependencies
     - if [ "$TEST_TYPE" == "docs" ]; then pip install --no-cache-dir . && pip install --no-cache-dir -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
 

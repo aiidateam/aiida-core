@@ -2,76 +2,98 @@
 Troubleshooting and tricks
 ==========================
 
-Some tricks
-===========
+Increasing the log level
+========================
+
+By default, AiiDA logs only warnings and errors, while info and debug messages
+are discarded in order to keep log files lean.
+
+If you are experiencing a problem, you may want to change the default minimum
+logging level of AiiDA messages (and celery messages -- celery is the library
+that manages the daemon process)::
+
+  verdi devel setproperty logging.celery_loglevel DEBUG
+  verdi devel setproperty logging.aiida_loglevel DEBUG
+
+.. note:: AiiDA supports the same log levels
+  as the `standard python logging module <https://docs.python.org/2/library/logging.html#logging-levels>`_.
+
+The log file is found in the AiiDA log folder with default location ``~/.aiida/daemon/log/aiida_daemon.log``.
+After restarting the daemon (``verdi daemon restart``), the new log level will take effect and may help pinpointing the source of the problem.
+
+Once the problem is solved, we suggest you return to the default log level::
+
+    verdi devel delproperty logging.celery_loglevel
+    verdi devel delproperty logging.aiida_loglevel
+
+.. _repo_troubleshooting:
+
+Reduce hard drive load (large databases)
+========================================
+
+The following tips may be useful for AiiDA databases containing several 100k
+nodes or more, which may put significant load both on the hard drive and the
+processor.
+
+Increase PostgreSQL work memory
+-------------------------------
+
+By default, the work memory of PostgreSQL is 4 MB.
+Individual operations (such as sorting) that require more memory than this will cause postgres to write temporary files,
+which can result in a lot of overhead from disk I/O (and high CPU usage from `postgresql`).
+
+In order to check whether your PostgreSQL cluster is creating temporary files, 
+enable logging of those by setting::
+
+    log_temp_files = 0
+
+in your `postgresql.conf` configuration file.
+
+.. note::
+
+    On Ubuntu, this file is located at `/etc/postgresql/<version>/main/postgresql.conf`.
+
+If the logs show that temporary files are created, you may avoid this by increasing the PostgreSQL work memory::
+
+    sudo su postgres -c psql
+    postgres=# ALTER system SET work_mem='128MB';
+    postgres=# select * from pg_reload_conf();
+
+The settings should take effect immediately.
+
+One known issue that can cause high memory requirements unnecessarily is the kombu message table overflowing with outdated messages.
+Use the following to check the size of your ``kombu_message`` table and prune it:
+
+.. code:: sql
+
+    sudo su postgres -c psql
+    postgres=# \c my_aiida_database
+    postgres=# SELECT pg_size_pretty( pg_total_relation_size('kombu_message') );
+     792 MB
+    postgres=# DELETE FROM kombu_message WHERE timestamp < (NOW() - INTERVAL '1 DAYS');
+    postgres=# VACUUM kombu_message;
+
+
+Exclude repository from ``locate``
+----------------------------------
+
+Typical Linux distributions have a cron job ``updatedb.mlocate`` that runs once a day to update the database of files and folders on the hard drive (to be used by the ``locate`` command).
+When the file repository is large, this cron job can take a long time to complete.
+
+To avoid this issue, edit as root the file ``/etc/updatedb.conf``
+and put the name of the repository folder in ``PRUNEPATHS``.
+
+Use incremental backups
+-----------------------
+
+A full backup of the file repository using ``rsync`` or other backup software can take a long time and is not efficient.
+Use incremental backup instead, as described in the :ref:`repository backup section<repository_backup>`.
+
+Further tricks
+==============
 
 .. toctree::
   :maxdepth: 1
 
   ../setup/ssh_proxycommand
-  
-   
-Increasing the debug level
-==========================
 
-By default, the logging level of AiiDA is minimal to avoid filling logfiles.
-Only warnings and errors are logged (to the
-``~/.aiida/daemon/log/aiida_daemon.log`` file), while info and debug
-messages are discarded.
-
-If you are experiencing a problem, you can change the default minimum logging
-level of AiiDA messages (and celery messages -- celery is the library that we
-use to manage the daemon process) using, on the command line, the two
-following commands::
-
-  verdi devel setproperty logging.celery_loglevel DEBUG
-  verdi devel setproperty logging.aiida_loglevel DEBUG
-
-After rebooting the daemon (``verdi daemon restart``), the number of messages
-logged will increase significantly and may help in understanding
-the source of the problem. 
-
-.. note:: In the command above, you can use a different level than ``DEBUG``.
-  The list of the levels and their order is the same of the `standard python
-  logging module <https://docs.python.org/2/library/logging.html#logging-levels>`_.
-
-.. note:: When the problem is solved, we suggest to bring back the default
-  logging level, using the two commands::
-
-    verdi devel delproperty logging.celery_loglevel
-    verdi devel delproperty logging.aiida_loglevel
-
-  to avoid to fill the logfiles.
-  
-.. _repo_troubleshooting:
-
-Tips to ease the life of the hard drive (for large databases)
-=============================================================
-
-Those tips are useful when your database is very large, i.e. several hundreds of
-thousands of nodes and workflows or more. With such large databases the hard drive
-may be constantly working and the computer slowed down a lot. Below are some
-solutions to take care of the most typical reasons.
-
-Repository backup
------------------
-
-The backup of the repository takes an extensively long time if it is done through
-a standard rsync or backup software, since it contains as many folders as the number
-of nodes plus the number of workflows (and each folder can contain many files!).
-A solution is to use instead the incremental
-backup described in the :ref:`repository backup section<repository_backup>`.
-
-
-mlocate cron job
-----------------
-
-Under typical Linux distributions, there is a cron job (called 
-``updatedb.mlocate``) running every day to update a database of files and 
-folders -- this is to be used by the ``locate`` command. This might become 
-problematic since the repository contains many folders and 
-will be scanned everyday. The net effect is a hard drive almost constantly 
-working.
-
-To avoid this issue, edit as root the file ``/etc/updatedb.conf``
-and put in ``PRUNEPATHS`` the name of the repository folder.

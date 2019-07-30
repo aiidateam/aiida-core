@@ -36,11 +36,12 @@ before_install:
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip==18.1 wheel setuptools coveralls
-    # Need numpy version that is compatible with pymatgen, see #2420
-    # Specifying it in pyproject.toml is not sufficient for travis (unknown reason)
     - pip install numpy==1.15.4
+    # install pymargen from sources to fix problem in init pymatgen.util.coord_cython:
+    # ValueError: numpy.ufunc has the wrong size, try recompiling. Expected 192, got 216
+    - pip install pymatgen==2018.12.12 --no-binary pymatgen
     # Install AiiDA with some optional dependencies
-    - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
+    - if [ "$TEST_TYPE" == "docs" ]; then pip install --no-cache-dir . && pip install --no-cache-dir -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
 
 env:
     ## Build matrix to test both backends, and the docs
@@ -70,3 +71,31 @@ after_success:
 
 git:
   depth: 3
+
+jobs:
+    include:
+        - stage: deploy
+          if: "tag =~ ^v[0-9]+\\.[0-9]+\\.[0-9]+(a|b|rc)?[0-9]*$"
+          services: ignore
+          addons: skip
+          python: 2.7
+          before_install: skip
+          install: skip
+          before_script: skip
+          script: skip
+          env: ignore
+          before_deploy:
+            - echo "We'll deploy $TRAVIS_TAG"
+          after_deploy:
+            - echo "Deployed $TRAVIS_TAG"
+            - echo "We'll hook up some things in the future"
+          deploy: &pypi
+              provider: pypi
+              skip_existing: true
+              username: aiida-bot
+              password:
+                  secure: NhV11e1kVJaumNMb7YGENngZwa6qJjzoGWzmzqdU5BwFgpXaxbaFAk2fn+Cckrkz4MmNJaW1HaKEAhn07WsbrkjOXK7QVNK48/eagiquKbCQbyNZNjzF+C24EYQHI93y40JQcl2JaCahSqKXbYQCpLlX0Rbtob4psQH29uHRcbq4lm5t3Jmb8WckEzcDLMZX3+uPFwDJxMbbsDW+pONGF1z2/B0j+7m4beTgCepuvIEaXS97rTQj2egKYEJV+V3DbH2o2nr0+3z4lzH2FAdoAnZMlFwHfWoY3WIuYcHcwXDWyLGWQKvncaoh1sLU7gfjjup3dZ4Iq74Zp43x2eXUhbmZBp2cPN3CZpN9baE4NE6MNKeQ/erkg31qdq50OG/rjGgPKyfg5ShO3Kt1CyVbSJX5dqPxtDQblYE8TAGhHfO2O8M1kLhyWvrV5TaQuVB/IAsTkRC+t1NtdWTxaU6wdMz36O5so89oKbFljjk9744m4Ei8DCgc98WH6b96qn0VifjxGuBs6o1aqRoa8O7e29a0TwDVAwxkczgjxbXkP6okRY5IAxsr5Rsbm8urXEo874uQA8n1gGyN6+YKSbjvPbHD9RIRl9IddC6y2wKTv/1JBifNjHcLhadl7RVRPSU7vFSs2cknN+5Gkw3FgZ/jA8SoMxMLFsvHcFxchrurAkE=
+              on:
+                  repo: aiidateam/aiida_core
+                  all_branches: true
+                  tags: true

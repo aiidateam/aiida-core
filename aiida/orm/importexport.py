@@ -1621,6 +1621,7 @@ fields_to_export = {
          'ctime', 'dbcomputer', 'label', 'type'],
 }
 
+
 def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                   tag_suffixes=[], entity_separator="_"):
     """
@@ -1689,78 +1690,31 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                       new_tag_suffixes)
 
 
-def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
-                silent=False, input_forward=False, create_reversed=True,
-                return_reversed=False, call_reversed=False, **kwargs):
+def node_export_set_expansion(to_be_visited, input_forward=False, create_reversed=True, return_reversed=False,
+                           call_reversed=False):
     """
-    Export the entries passed in the 'what' list to a file tree.
-    :todo: limit the export to finished or failed calculations.
-    :param what: a list of entity instances; they can belong to
-    different models/entities.
-    :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
-    :param input_forward: Follow forward INPUT links (recursively) when
-    calculating the node set to export.
-    :param create_reversed: Follow reversed CREATE links (recursively) when
-    calculating the node set to export.
-    :param return_reversed: Follow reversed RETURN links (recursively) when
-    calculating the node set to export.
-    :param call_reversed: Follow reversed CALL links (recursively) when
-    calculating the node set to export.
-    :param allowed_licenses: a list or a function. If a list, then checks
-    whether all licenses of Data nodes are in the list. If a function,
-    then calls function for licenses of Data nodes expecting True if
-    license is allowed, False otherwise.
-    :param forbidden_licenses: a list or a function. If a list, then checks
-    whether all licenses of Data nodes are in the list. If a function,
-    then calls function for licenses of Data nodes expecting True if
-    license is allowed, False otherwise.
-    :param silent: suppress debug prints
-    :raises LicensingException: if any node is licensed under forbidden
-    license
-    """
-    import json
-    import aiida
+    This function implements the set expansion rules of the export function. Given a set of nodes, the set is
+    expanded based on the rules that are described at issue #1102
 
-    from aiida.orm import Node, Calculation, Data, Group, Code
+    Link type	Tail & head of the link	Link traversal	Export direct successor / direct predecessor
+    INPUT	(Data, Calculation)                             Forward	No	Reversed	Yes
+    CREATE	(Calculation, Data)                             Forward	Yes	Reversed	Yes
+    RETURN	(Calculation, Data)                             Forward	Yes	Reversed	No
+    CALL	(Calculation [caller], Calculation [called])    Forward	Yes Reversed	No
+
+    :param to_be_visited: The initial set of nodes that should be expanded
+    :param input_forward: Override the input forward rule
+    :param create_reversed:  Override the create reversed rule
+    :param return_reversed: Override the return reversed rule
+    :param call_reversed: Override the call reversed rule
+    :return: The enriched set of nodes
+    """
+    from aiida.orm import Calculation, Data, Code
     from aiida.common.links import LinkType
-    from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
-    if not silent:
-        print "STARTING EXPORT..."
 
-    EXPORT_VERSION = '0.3'
-
-    all_fields_info, unique_identifiers = get_all_fields_info()
-
-    # The dictionary that contains nodes ids of nodes that should be visited.
-    # The nodes ids are categorised per node type
-    to_be_visited = dict()
-    to_be_visited[Calculation] = set()
-    to_be_visited[Data] = set()
     # The set that contains the nodes ids of the nodes that should be exported
     to_be_exported = set()
-
-    given_node_entry_ids = set()
-    given_group_entry_ids = set()
-
-    # I keep the pks of the given entities
-    for entry in what:
-        if issubclass(entry.__class__, Group):
-            given_group_entry_ids.add(entry.pk)
-        elif issubclass(entry.__class__, Node):
-            # The Code node should be treated as a Data node
-            if (issubclass(entry.__class__, Data) or
-                    issubclass(entry.__class__, Code)):
-                to_be_visited[Data].add(entry.pk)
-            elif issubclass(entry.__class__, Calculation):
-                to_be_visited[Calculation].add(entry.pk)
-        else:
-            raise ValueError("I was given {}, which is not a Node nor Group "
-                             "instance. It is of type {}"
-                             .format(entry, entry.__class__))
-
-    # We will iteratively explore the AiiDA graph to find further nodes that
-    # should also be exported.
 
     # We repeat until there are no further nodes to be visited
     while to_be_visited[Calculation] or to_be_visited[Data]:
@@ -1795,30 +1749,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             res = {_[0] for _ in qb.all()}
             to_be_visited[Data].update(res - to_be_exported)
 
-
-            # INPUT(Data, Calculation) - Forward
-            if input_forward:
-                qb = QueryBuilder()
-                qb.append(Data, tag='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}})
-                qb.append(Calculation, output_of='predecessor',
-                          edge_filters={
-                              'type': {
-                                  '==': LinkType.INPUT.value}})
-                res = {_[0] for _ in qb.all()}
-                to_be_visited[Data].update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
-                qb = QueryBuilder()
-                qb.append(Code, tag='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}})
-                qb.append(Calculation, output_of='predecessor',
-                          edge_filters={
-                              'type': {
-                                  '==': LinkType.INPUT.value}})
-                res = {_[0] for _ in qb.all()}
-                to_be_visited[Data].update(res - to_be_exported)
-
-
             # CREATE/RETURN(Calculation, Data) - Forward
             qb = QueryBuilder()
             qb.append(Calculation, tag='predecessor',
@@ -1842,53 +1772,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             res = {_[0] for _ in qb.all()}
             to_be_visited[Data].update(res - to_be_exported)
 
-
-            # CREATE(Calculation, Data) - Reversed
-            if create_reversed:
-                qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor')
-                qb.append(Data, output_of='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  'in': [LinkType.CREATE.value]}})
-                res = {_[0] for _ in qb.all()}
-                to_be_visited[Data].update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
-                qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor')
-                qb.append(Code, output_of='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  'in': [LinkType.CREATE.value]}})
-                res = {_[0] for _ in qb.all()}
-                to_be_visited[Data].update(res - to_be_exported)
-
-
-            # RETURN(Calculation, Data) - Reversed
-            if return_reversed:
-                qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor')
-                qb.append(Data, output_of='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  'in': [LinkType.RETURN.value]}})
-                res = {_[0] for _ in qb.all()}
-                to_be_visited[Data].update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
-                qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor')
-                qb.append(Code, output_of='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  'in': [LinkType.RETURN.value]}})
-                res = {_[0] for _ in qb.all()}
-                to_be_visited[Data].update(res - to_be_exported)
-
-
             # CALL(Calculation, Calculation) - Forward
             qb = QueryBuilder()
             qb.append(Calculation, tag='predecessor',
@@ -1900,19 +1783,17 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             res = {_[0] for _ in qb.all()}
             to_be_visited[Calculation].update(res - to_be_exported)
 
-
             # CALL(Calculation, Calculation) - Reversed
             if call_reversed:
                 qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor')
-                qb.append(Calculation, output_of='predecessor', project=['id'],
+                qb.append(Calculation, tag='predecessor', project=['id'])
+                qb.append(Calculation, output_of='predecessor',
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
                                   '==': LinkType.CALL.value}})
                 res = {_[0] for _ in qb.all()}
                 to_be_visited[Calculation].update(res - to_be_exported)
-
 
         # If it is a Data node
         else:
@@ -1924,71 +1805,457 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             else:
                 to_be_exported.add(curr_node_id)
 
-            # Case 2:
-            # CREATE(Calculation, Data) - Reversed
-            qb = QueryBuilder()
-            qb.append(Calculation, tag='predecessor', project=['id'])
-            qb.append(Data, output_of='predecessor',
-                      filters={'id': {'==': curr_node_id}},
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.CREATE.value}})
-            res = {_[0] for _ in qb.all()}
-            to_be_visited[Calculation].update(res - to_be_exported)
-            # The same until Code becomes a subclass of Data
-            qb = QueryBuilder()
-            qb.append(Calculation, tag='predecessor', project=['id'])
-            qb.append(Code, output_of='predecessor',
-                      filters={'id': {'==': curr_node_id}},
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.CREATE.value}})
-            res = {_[0] for _ in qb.all()}
-            to_be_visited[Calculation].update(res - to_be_exported)
+            # INPUT(Data, Calculation) - Forward
+            if input_forward:
+                qb = QueryBuilder()
+                qb.append(Data, tag='predecessor',
+                          filters={'id': {'==': curr_node_id}})
+                qb.append(Calculation, output_of='predecessor',
+                          project=['id'],
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.INPUT.value}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Calculation].update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Code, tag='predecessor',
+                          filters={'id': {'==': curr_node_id}})
+                qb.append(Calculation, output_of='predecessor',
+                          project=['id'],
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.INPUT.value}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Calculation].update(res - to_be_exported)
 
-    given_node_entry_ids.update(to_be_exported)
+            # CREATE(Calculation, Data) - Reversed
+            if create_reversed:
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor', project=['id'])
+                qb.append(Data, output_of='predecessor',
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.CREATE.value}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Calculation].update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor', project=['id'])
+                qb.append(Code, output_of='predecessor',
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.CREATE.value}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Calculation].update(res - to_be_exported)
+
+            # RETURN(Calculation, Data) - Reversed
+            if return_reversed:
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor', project=['id'])
+                qb.append(Data, output_of='predecessor',
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.RETURN.value]}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Data].update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor', project=['id'])
+                qb.append(Code, output_of='predecessor',
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.RETURN.value]}})
+                res = {_[0] for _ in qb.all()}
+                to_be_visited[Calculation].update(res - to_be_exported)
+
+    return to_be_exported
+
+
+def link_extraction(all_nodes_pk, input_forward=False, create_reversed=True, return_reversed=False,
+                    call_reversed=False):
+    """
+    This function returns the links that corresponds to the node set expanded by node_export_set_expansion function.
+    set expansion rules of the export function.
+    The logic is described at issue #1102
+
+    Link type, Tail & head of the link, Link export
+    INPUT, (Data, Calculation), Backward, by the Calculation node, forward too by the Data node, if the user modifies
+    the default behaviour
+    CREATE, (Calculation, Data), Forward, by the Calculation node, backward, by the Data node
+    RETURN, (Calculation, Data), Forward, by the Calculation node
+    CALL, (Calculation [caller], Calculation [called]), Forward, by the Calculation [caller] node. Also backward too by
+    the Calculation [called] node, if the user modifies the default behaviour
+
+    :param all_nodes_pk: The nodes that will be exported
+    :param input_forward: Override the input forward rule
+    :param create_reversed:  Override the create reversed rule
+    :param return_reversed: Override the return reversed rule
+    :param call_reversed: Override the call reversed rule
+    :return: The links that should be exported
+    """
+    from aiida.orm import Calculation, Data, Code
+    from aiida.common.links import LinkType
+    from aiida.orm.querybuilder import QueryBuilder
+
+    links_uuid_dict = dict()
+
+    # INPUT (Data, Calculation) - Forward, by the Calculation node
+    if input_forward:
+        # INPUT (Data, Calculation)
+        links_qb = QueryBuilder()
+        links_qb.append(Data,
+                        project=['uuid'], tag='input',
+                        filters={'id': {'in': all_nodes_pk}})
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='output',
+                        edge_filters={'type': {'==': LinkType.INPUT.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type': str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+        # INPUT (Code, Calculation)
+        # The same as above until Code becomes a subclass of Data
+        links_qb = QueryBuilder()
+        links_qb.append(Code,
+                        project=['uuid'], tag='input',
+                        filters={'id': {'in': all_nodes_pk}})
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='output',
+                        edge_filters={'type': {'==': LinkType.INPUT.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type': str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+
+    # INPUT (Data, Calculation) - Backward, by the Calculation node
+    links_qb = QueryBuilder()
+    links_qb.append(Data,
+                    project=['uuid'], tag='input')
+    links_qb.append(Calculation,
+                    project=['uuid'], tag='output',
+                    filters={'id': {'in': all_nodes_pk}},
+                    edge_filters={'type': {'==': LinkType.INPUT.value}},
+                    edge_project=['label', 'type'], output_of='input')
+    for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+        val = {
+            'input': str(input_uuid),
+            'output': str(output_uuid),
+            'label': str(link_label),
+            'type': str(link_type)
+        }
+        links_uuid_dict[frozenset(val.items())] = val
+    # INPUT (Data, Calculation) - Backward, by the Calculation node
+    # The same as above until Code becomes a subclass of Data
+    links_qb = QueryBuilder()
+    links_qb.append(Code,
+                    project=['uuid'], tag='input')
+    links_qb.append(Calculation,
+                    project=['uuid'], tag='output',
+                    filters={'id': {'in': all_nodes_pk}},
+                    edge_filters={
+                        'type': {'==': LinkType.INPUT.value}},
+                    edge_project=['label', 'type'], output_of='input')
+    for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+        val = {
+            'input': str(input_uuid),
+            'output': str(output_uuid),
+            'label': str(link_label),
+            'type': str(link_type)
+        }
+        links_uuid_dict[frozenset(val.items())] = val
+
+    # CREATE (Calculation, Data) - Forward, by the Calculation node
+    links_qb = QueryBuilder()
+    links_qb.append(Calculation,
+                    project=['uuid'], tag='input',
+                    filters={'id': {'in': all_nodes_pk}})
+    links_qb.append(Data,
+                    project=['uuid'], tag='output',
+                    edge_filters={'type': {'==': LinkType.CREATE.value}},
+                    edge_project=['label', 'type'], output_of='input')
+    for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+        val = {
+            'input': str(input_uuid),
+            'output': str(output_uuid),
+            'label': str(link_label),
+            'type': str(link_type)
+        }
+        links_uuid_dict[frozenset(val.items())] = val
+
+    # CREATE (Calculation, Code) - Forward, by the Calculation node
+    # The same as above until Code becomes a subclass of Data
+    # This case will not happen (with the current setup - a code is not
+    # created by a calculation) but it is addded for completeness
+    links_qb = QueryBuilder()
+    links_qb.append(Calculation,
+                    project=['uuid'], tag='input',
+                    filters={'id': {'in': all_nodes_pk}})
+    links_qb.append(Code,
+                    project=['uuid'], tag='output',
+                    edge_filters={'type': {'==': LinkType.CREATE.value}},
+                    edge_project=['label', 'type'], output_of='input')
+    for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+        val = {
+            'input': str(input_uuid),
+            'output': str(output_uuid),
+            'label': str(link_label),
+            'type': str(link_type)
+        }
+        links_uuid_dict[frozenset(val.items())] = val
+
+    # CREATE (Calculation, Data) - Backward, by the Data node
+    if create_reversed:
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='input',
+                        filters={'id': {'in': all_nodes_pk}})
+        links_qb.append(Data,
+                        project=['uuid'], tag='output',
+                        edge_filters={'type': {'==': LinkType.CREATE.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type': str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+
+    # CREATE (Calculation, Code) - Backward, by the Code node
+    # The same as above until Code becomes a subclass of Data
+    # This case will not happen (with the current setup - a code is not
+    # created by a calculation) but it is addded for completeness
+    if create_reversed:
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='input',
+                        filters={'id': {'in': all_nodes_pk}})
+        links_qb.append(Data,
+                        project=['uuid'], tag='output',
+                        edge_filters={'type': {'==': LinkType.CREATE.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type': str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+
+    # RETURN (Calculation, Data) - Forward, by the Calculation node
+    links_qb = QueryBuilder()
+    links_qb.append(Calculation,
+                    project=['uuid'], tag='input',
+                    filters={'id': {'in': all_nodes_pk}})
+    links_qb.append(Data,
+                    project=['uuid'], tag='output',
+                    edge_filters={'type': {'==': LinkType.RETURN.value}},
+                    edge_project=['label', 'type'], output_of='input')
+    for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+        val = {
+            'input': str(input_uuid),
+            'output': str(output_uuid),
+            'label': str(link_label),
+            'type': str(link_type)
+        }
+        links_uuid_dict[frozenset(val.items())] = val
+
+    # RETURN (Calculation, Data) - Backward, by the Data node
+    if return_reversed:
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='input')
+        links_qb.append(Data,
+                        project=['uuid'], tag='output',
+                        filters={'id': {'in': all_nodes_pk}},
+                        edge_filters={'type': {'==': LinkType.RETURN.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type': str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+
+    # CALL (Calculation [caller], Calculation [called]) - Forward, by
+    # the Calculation node
+    links_qb = QueryBuilder()
+    links_qb.append(Calculation,
+                    project=['uuid'], tag='input',
+                    filters={'id': {'in': all_nodes_pk}})
+    links_qb.append(Calculation,
+                    project=['uuid'], tag='output',
+                    edge_filters={'type': {'==': LinkType.CALL.value}},
+                    edge_project=['label', 'type'], output_of='input')
+    for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+        val = {
+            'input': str(input_uuid),
+            'output': str(output_uuid),
+            'label': str(link_label),
+            'type': str(link_type)
+        }
+        links_uuid_dict[frozenset(val.items())] = val
+
+    # CALL (Calculation [caller], Calculation [called]) - Backward,
+    # by the Calculation [called] node
+    if call_reversed:
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='input')
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='output',
+                        filters={'id': {'in': all_nodes_pk}},
+                        edge_filters={'type': {'==': LinkType.CALL.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type': str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+
+    return links_uuid_dict.values()
+
+
+def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
+                silent=False, input_forward=False, create_reversed=True,
+                return_reversed=False, call_reversed=False, **kwargs):
+    """
+    Export the entries passed in the 'what' list to a file tree.
+    :todo: limit the export to finished or failed calculations.
+    :param what: a list of entity instances; they can belong to
+    different models/entities.
+    :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
+    :param input_forward: Follow forward INPUT links (recursively) when
+    calculating the node set to export.
+    :param create_reversed: Follow reversed CREATE links (recursively) when
+    calculating the node set to export.
+    :param return_reversed: Follow reversed RETURN links (recursively) when
+    calculating the node set to export.
+    :param call_reversed: Follow reversed CALL links (recursively) when
+    calculating the node set to export.
+    :param allowed_licenses: a list or a function. If a list, then checks
+    whether all licenses of Data nodes are in the list. If a function,
+    then calls function for licenses of Data nodes expecting True if
+    license is allowed, False otherwise.
+    :param forbidden_licenses: a list or a function. If a list, then checks
+    whether all licenses of Data nodes are in the list. If a function,
+    then calls function for licenses of Data nodes expecting True if
+    license is allowed, False otherwise.
+    :param silent: suppress debug prints
+    :raises LicensingException: if any node is licensed under forbidden
+    license
+    """
+    import json
+    import aiida
+
+    from aiida.orm import Node, Calculation, Data, Group, Code
+    from aiida.common.folders import RepositoryFolder
+    from aiida.orm.querybuilder import QueryBuilder
+    if not silent:
+        print "STARTING EXPORT..."
+        print("Current values of the export node set expansion rules")
+        print("input_forward: ", input_forward)
+        print("create_reversed: ", create_reversed)
+        print("return_reversed: ", return_reversed)
+        print("call_reversed: ", call_reversed)
+
+    EXPORT_VERSION = '0.3'
+
+    all_fields_info, unique_identifiers = get_all_fields_info()
+
+    to_be_exported_group_entry_ids = set()
+
+    # The dictionary that contains node ids/pks of given nodes. They will be enriched with the ids/pks
+    # of related nodes given a set of rules and arguments.
+    to_be_visited = dict()
+    to_be_visited[Calculation] = set()
+    to_be_visited[Data] = set()
+
+    # Getting the ids/pks of the given entities and dividing them
+    # to the right categories
+    for entry in what:
+        if issubclass(entry.__class__, Group):
+            to_be_exported_group_entry_ids.add(entry.pk)
+        elif issubclass(entry.__class__, Node):
+            # The Code node should be treated as a Data node
+            if (issubclass(entry.__class__, Data) or
+                    issubclass(entry.__class__, Code)):
+                to_be_visited[Data].add(entry.pk)
+            elif issubclass(entry.__class__, Calculation):
+                to_be_visited[Calculation].add(entry.pk)
+        else:
+            raise ValueError("I was given {}, which is not a Node nor Group "
+                             "instance. It is of type {}"
+                             .format(entry, entry.__class__))
+
+    # Search fot the node entities that should be exported based on the set of export rules
+    # and arguments.
+    to_be_exported_node_entry_ids = node_export_set_expansion(to_be_visited, input_forward, create_reversed,
+                                                           return_reversed, call_reversed)
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract
-    given_entities = list()
-    if len(given_group_entry_ids) > 0:
-        given_entities.append(GROUP_ENTITY_NAME)
-    if len(given_node_entry_ids) > 0:
-        given_entities.append(NODE_ENTITY_NAME)
+    to_be_exported_entities = list()
+    if len(to_be_exported_group_entry_ids) > 0:
+        to_be_exported_entities.append(GROUP_ENTITY_NAME)
+    if len(to_be_exported_node_entry_ids) > 0:
+        to_be_exported_entities.append(NODE_ENTITY_NAME)
 
     entries_to_add = dict()
-    for given_entity in given_entities:
+    for to_be_exported_entity in to_be_exported_entities:
         project_cols = ["id"]
         # The following gets a list of fields that we need,
         # e.g. user, mtime, uuid, computer
-        entity_prop = all_fields_info[given_entity].keys()
+        entity_prop = all_fields_info[to_be_exported_entity].keys()
 
         # Here we do the necessary renaming of properties
         for prop in entity_prop:
             # nprop contains the list of projections
-            nprop = (file_fields_to_model_fields[given_entity][prop]
-                    if file_fields_to_model_fields[given_entity].has_key(prop)
+            nprop = (file_fields_to_model_fields[to_be_exported_entity][prop]
+                    if file_fields_to_model_fields[to_be_exported_entity].has_key(prop)
                     else prop)
             project_cols.append(nprop)
 
         # Getting the ids that correspond to the right entity
-        entry_ids_to_add = (given_node_entry_ids
-                            if (given_entity == NODE_ENTITY_NAME)
-                            else given_group_entry_ids)
+        entry_ids_to_add = (to_be_exported_node_entry_ids
+                            if (to_be_exported_entity == NODE_ENTITY_NAME)
+                            else to_be_exported_group_entry_ids)
 
         qb = QueryBuilder()
-        qb.append(entity_names_to_entities[given_entity],
+        qb.append(entity_names_to_entities[to_be_exported_entity],
                   filters={"id": {"in": entry_ids_to_add}},
                   project=project_cols,
-                  tag=given_entity, outerjoin=True)
-        entries_to_add[given_entity] = qb
+                  tag=to_be_exported_entity, outerjoin=True)
+        entries_to_add[to_be_exported_entity] = qb
 
     # TODO (Spyros) To see better! Especially for functional licenses
     # Check the licenses of exported data.
     if allowed_licenses is not None or forbidden_licenses is not None:
         qb = QueryBuilder()
         qb.append(Node, project=["id", "attributes.source.license"],
-                  filters={"id": {"in": given_node_entry_ids}})
+                  filters={"id": {"in": to_be_exported_node_entry_ids}})
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
         node_licenses = list((a,b) for [a,b] in qb.all() if b is not None)
         check_licences(node_licenses, allowed_licenses, forbidden_licenses)
@@ -2073,239 +2340,12 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     if not silent:
         print "STORING NODE LINKS..."
 
-    links_uuid_dict = dict()
+    # Get alla the links that correspond to the selected nodes
     if len(all_nodes_pk) > 0:
-        # INPUT (Data, Calculation) - Forward, by the Calculation node
-        if input_forward:
-            # INPUT (Data, Calculation)
-            links_qb = QueryBuilder()
-            links_qb.append(Data,
-                            project=['uuid'], tag='input',
-                            filters = {'id': {'in': all_nodes_pk}})
-            links_qb.append(Calculation,
-                            project=['uuid'], tag='output',
-                            edge_filters={'type':{'==':LinkType.INPUT.value}},
-                            edge_project=['label', 'type'], output_of='input')
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type':str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-            # INPUT (Code, Calculation)
-            # The same as above until Code becomes a subclass of Data
-            links_qb = QueryBuilder()
-            links_qb.append(Code,
-                            project=['uuid'], tag='input',
-                            filters = {'id': {'in': all_nodes_pk}})
-            links_qb.append(Calculation,
-                            project=['uuid'], tag='output',
-                            edge_filters={'type':{'==':LinkType.INPUT.value}},
-                            edge_project=['label', 'type'], output_of='input')
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type':str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-
-        # INPUT (Data, Calculation) - Backward, by the Calculation node
-        links_qb = QueryBuilder()
-        links_qb.append(Data,
-                        project=['uuid'], tag='input')
-        links_qb.append(Calculation,
-                        project=['uuid'], tag='output',
-                        filters={'id': {'in': all_nodes_pk}},
-                        edge_filters={'type':{'==':LinkType.INPUT.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type':str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-        # INPUT (Data, Calculation) - Backward, by the Calculation node
-        # The same as above until Code becomes a subclass of Data
-        links_qb = QueryBuilder()
-        links_qb.append(Code,
-                        project=['uuid'], tag='input')
-        links_qb.append(Calculation,
-                        project=['uuid'], tag='output',
-                        filters={'id': {'in': all_nodes_pk}},
-                        edge_filters={
-                            'type': {'==': LinkType.INPUT.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type': str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-
-        # CREATE (Calculation, Data) - Forward, by the Calculation node
-        links_qb = QueryBuilder()
-        links_qb.append(Calculation,
-                        project=['uuid'], tag='input',
-                        filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(Data,
-                        project=['uuid'], tag='output',
-                        edge_filters={'type': {'==': LinkType.CREATE.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type':str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-        # CREATE (Calculation, Code) - Forward, by the Calculation node
-        # The same as above until Code becomes a subclass of Data
-        # This case will not happen (with the current setup - a code is not
-        # created by a calculation) but it is addded for completeness
-        links_qb = QueryBuilder()
-        links_qb.append(Calculation,
-                        project=['uuid'], tag='input',
-                        filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(Code,
-                        project=['uuid'], tag='output',
-                        edge_filters={'type': {'==': LinkType.CREATE.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type':str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-
-
-        # CREATE (Calculation, Data) - Backward, by the Data node
-        if create_reversed:
-            links_qb = QueryBuilder()
-            links_qb.append(Calculation,
-                            project=['uuid'], tag='input',
-                            filters={'id': {'in': all_nodes_pk}})
-            links_qb.append(Data,
-                            project=['uuid'], tag='output',
-                            edge_filters={'type': {'==': LinkType.CREATE.value}},
-                            edge_project=['label', 'type'], output_of='input')
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type':str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-        # CREATE (Calculation, Code) - Backward, by the Code node
-        # The same as above until Code becomes a subclass of Data
-        # This case will not happen (with the current setup - a code is not
-        # created by a calculation) but it is addded for completeness
-        if create_reversed:
-            links_qb = QueryBuilder()
-            links_qb.append(Calculation,
-                            project=['uuid'], tag='input',
-                            filters={'id': {'in': all_nodes_pk}})
-            links_qb.append(Data,
-                            project=['uuid'], tag='output',
-                            edge_filters={'type': {'==': LinkType.CREATE.value}},
-                            edge_project=['label', 'type'], output_of='input')
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type':str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-
-        # RETURN (Calculation, Data) - Forward, by the Calculation node
-        links_qb = QueryBuilder()
-        links_qb.append(Calculation,
-                        project=['uuid'], tag='input',
-                        filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(Data,
-                        project=['uuid'], tag='output',
-                        edge_filters={'type': {'==': LinkType.RETURN.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type':str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-
-        # RETURN (Calculation, Data) - Backward, by the Data node
-        if return_reversed:
-            links_qb = QueryBuilder()
-            links_qb.append(Calculation,
-                            project=['uuid'], tag='input')
-            links_qb.append(Data,
-                            project=['uuid'], tag='output',
-                            filters={'id': {'in': all_nodes_pk}},
-                            edge_filters={'type': {'==': LinkType.RETURN.value}},
-                            edge_project=['label', 'type'], output_of='input')
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type':str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-
-        # CALL (Calculation [caller], Calculation [called]) - Forward, by
-        # the Calculation node
-        links_qb = QueryBuilder()
-        links_qb.append(Calculation,
-                        project=['uuid'], tag='input',
-                        filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(Calculation,
-                        project=['uuid'], tag='output',
-                        edge_filters={'type': {'==': LinkType.CALL.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type':str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-
-        # CALL (Calculation [caller], Calculation [called]) - Backward,
-        # by the Calculation [called] node
-        if call_reversed:
-            links_qb = QueryBuilder()
-            links_qb.append(Calculation,
-                            project=['uuid'], tag='input')
-            links_qb.append(Calculation,
-                            project=['uuid'], tag='output',
-                            filters={'id': {'in': all_nodes_pk}},
-                            edge_filters={'type': {'==': LinkType.CALL.value}},
-                            edge_project=['label', 'type'], output_of='input')
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type':str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-
-    links_uuid = links_uuid_dict.values()
+        links_uuid = link_extraction(all_nodes_pk, input_forward=False, create_reversed=True, return_reversed=False,
+                                     call_reversed=False)
+    else:
+        links_uuid = list()
 
     if not silent:
         print "STORING GROUP ELEMENTS..."

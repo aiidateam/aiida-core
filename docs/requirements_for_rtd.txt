@@ -21,7 +21,6 @@ anyjson==0.3.3
 ase==3.12.0
 billiard==3.3.0.23
 celery==3.1.25
-chainmap
 click-plugins==1.0.3
 click-spinner==0.1.7
 click==6.7

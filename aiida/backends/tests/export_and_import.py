@@ -13,6 +13,8 @@ Tests for the export and import routines.
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
+from aiida.orm.calculation.inline import make_inline
+
 
 class TestSpecificImport(AiidaTestCase):
 
@@ -168,6 +170,7 @@ class TestSpecificImport(AiidaTestCase):
             qb.append(RemoteData, project=['uuid'], output_of='parent', tag='remote')
             qb.append(Calculation, output_of='remote')
             self.assertGreater(len(qb.all()), 0)
+
 
 class TestSimple(AiidaTestCase):
 
@@ -746,10 +749,8 @@ class TestSimple(AiidaTestCase):
         from aiida.common.links import LinkType
         from aiida.orm.importexport import export
 
-        from aiida.common.exceptions import NotExistent
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
-
 
         try:
             master = WorkCalculation().store()
@@ -777,7 +778,6 @@ class TestSimple(AiidaTestCase):
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
-
 
     def test_reexport(self):
         """
@@ -896,6 +896,7 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
+
 class TestComplex(AiidaTestCase):
 
     def test_complex_graph_import_export(self):
@@ -980,6 +981,7 @@ class TestComplex(AiidaTestCase):
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
+
 
 class TestComputer(AiidaTestCase):
 
@@ -1461,6 +1463,7 @@ class TestComputer(AiidaTestCase):
                              comp1_metadata,
                              "Not the expected metadata were found")
 
+
 class TestLinks(AiidaTestCase):
 
     def setUp(self):
@@ -1480,6 +1483,176 @@ class TestLinks(AiidaTestCase):
         qb.append(Node, project='uuid', tag='output',
                   edge_project=['label', 'type'], output_of='input')
         return qb.all()
+
+    class ComplexGraph:
+        """
+        A class responsible to create a "complex" graph with all available link types
+        (INPUT, CREATE, RETURN and CALL)
+        """
+        # Information about the size of the available scenarios (dict)
+        export_scenarios_info = None
+
+        # Information regarding the export flags that are overridden for each scenario
+        export_scenarios_flags = None
+
+        def __init__(self):
+            # Information for the size of sub scenarios of every export scenario
+            self.export_scenarios_info = dict()
+            self.export_scenarios_info['default'] = 9
+            self.export_scenarios_info['input_forward_true'] = 3
+            self.export_scenarios_info['create_reversed_false'] = 4
+            self.export_scenarios_info['return_reversed_true'] = 4
+            self.export_scenarios_info['call_reversed_true'] = 2
+
+            # The export flags of every export scenario
+            self.export_scenarios_flags = dict()
+            self.export_scenarios_flags['default'] = dict()
+            self.export_scenarios_flags['input_forward_true'] = {'input_forward': True}
+            self.export_scenarios_flags['create_reversed_false'] = {'create_reversed': False}
+            self.export_scenarios_flags['return_reversed_true'] = {'return_reversed': True}
+            self.export_scenarios_flags['call_reversed_true'] = {'call_reversed': True}
+
+        def construct_complex_graph(self, computer, scenario_name='default', sub_scenario_number=0):
+            """
+            This method creates the graph and returns its nodes.
+            It also returns various combinations of nodes that need to be extracted
+            but also the final expected set of nodes (after adding the expected
+            predecessors, successors etc) based on a set of arguments.
+            :param computer: The computer that will be used for the calculations of the
+            generated graph
+            :param scenario_name: Various scenarios that we can test. These correspond
+            to the set expansion rules that we would like to override. The available
+            options are: default, input_forward_true, create_reversed_false,
+            return_reversed_true and call_reversed_true.
+            :param sub_scenario_number: Based on the main scenario that we have chosen
+            the sub-scenario (test case) that we would like to get for testing.
+            :return: The graph nodes and the sub-scenario that corresponds to the provided
+            arguments. The sub-scenario is composes of a set of export nodes and a set
+            of nodes that should have been finally exported after applying the set
+            expansion rules.
+            """
+            from aiida.orm.data.base import Int
+            from aiida.orm.calculation.job import JobCalculation
+            from aiida.orm.calculation.work import WorkCalculation
+            from aiida.common.datastructures import calc_states
+            from aiida.common.links import LinkType
+
+            # Node creation
+            d1 = Int(1).store()
+            d2 = Int(2).store()
+            wc1 = WorkCalculation().store()
+            wc2 = WorkCalculation().store()
+
+            pw1 = JobCalculation()
+            pw1.set_computer(computer)
+            pw1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            pw1.store()
+
+            d3 = Int(3).store()
+            d4 = Int(4).store()
+
+            pw2 = JobCalculation()
+            pw2.set_computer(computer)
+            pw2.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            pw2.store()
+
+            d5 = Int(5).store()
+            d6 = Int(6).store()
+
+            # Link creation
+            wc1.add_link_from(d1, 'input1', link_type=LinkType.INPUT)
+            wc1.add_link_from(d2, 'input2', link_type=LinkType.INPUT)
+
+            wc2.add_link_from(d1, 'input', link_type=LinkType.INPUT)
+            wc2.add_link_from(wc1, 'call', link_type=LinkType.CALL)
+
+            pw1.add_link_from(d1, 'input', link_type=LinkType.INPUT)
+            pw1.add_link_from(wc2, 'call', link_type=LinkType.CALL)
+            pw1._set_state(calc_states.PARSING)
+
+            d3.add_link_from(pw1, 'create', link_type=LinkType.CREATE)
+            d3.add_link_from(wc2, 'return', link_type=LinkType.RETURN)
+
+            d4.add_link_from(pw1, 'create', link_type=LinkType.CREATE)
+            d4.add_link_from(wc2, 'return', link_type=LinkType.RETURN)
+
+            pw2.add_link_from(d4, 'input', link_type=LinkType.INPUT)
+            pw2._set_state(calc_states.PARSING)
+
+            d5.add_link_from(pw2, 'create', link_type=LinkType.CREATE)
+            d6.add_link_from(pw2, 'create', link_type=LinkType.CREATE)
+
+            # Return the generated nodes
+            graph_nodes = [d1, d2, d3, d4, d5, d6, pw1, pw2, wc1, wc2]
+
+            # Create various combinations of nodes that should be exported
+            # and the final set of nodes that are exported in each case, following
+            # predecessor/successor links.
+
+            # The export list for default values on the export flags
+            export_list_default = [
+                (wc1, [d1, d2, d3, d4, pw1, wc1, wc2]),
+                (wc2, [d1, d3, d4, pw1, wc2]),
+                (d3, [d1, d3, d4, pw1]),
+                (d4, [d1, d3, d4, pw1]),
+                (d5, [d1, d3, d4, d5, d6, pw1, pw2]),
+                (pw1, [d1, d3, d4, pw1]),
+                (pw2, [d1, d3, d4, d5, d6, pw1, pw2]),
+                (d1, [d1]),
+                (d2, [d2]),
+            ]
+
+            # The export list of selected nodes for the export flags: input_forward = True
+            export_list_input_forward_true = [
+                (d1, [d1, d2, d3, d4, d5, d6, wc1, wc2, pw1, pw2]),
+                (d2, [d1, d2, d3, d4, d5, d6, wc1, wc2, pw1, pw2]),
+                (d4, [d1, d2, d3, d4, d5, d6, wc1, wc2, pw1, pw2]),
+            ]
+
+            # The export list of selected nodes for the export flags: create_reversed = False
+            export_list_create_reversed_false = [
+                (d3, [d3]),
+                (d4, [d4]),
+                (d5, [d5]),
+                (d6, [d6]),
+            ]
+
+            # The export list of selected nodes for the export flags: return_reversed = True
+            export_list_return_reversed_true = [
+                (d3, [d1, d3, d4, pw1, wc2]),
+                (d4, [d1, d3, d4, pw1, wc2]),
+                (d5, [d1, d3, d4, d5, d6, pw1, pw2, wc2]),
+                (d6, [d1, d3, d4, d5, d6, pw1, pw2, wc2]),
+            ]
+
+            # The export list of selected nodes for the export flags: call_reversed = True
+            export_list_call_reversed_true = [
+                (pw1, [d1, d2, d3, d4, wc1, wc2, pw1]),
+                (wc2, [d1, d2, d3, d4, wc1, wc2, pw1]),
+            ]
+
+            export_scenarios = dict()
+            export_scenarios['default'] = export_list_default
+            export_scenarios['input_forward_true'] = export_list_input_forward_true
+            export_scenarios['create_reversed_false'] = export_list_create_reversed_false
+            export_scenarios['return_reversed_true'] = export_list_return_reversed_true
+            export_scenarios['call_reversed_true'] = export_list_call_reversed_true
+
+            return graph_nodes, export_scenarios[scenario_name][sub_scenario_number]
+
+        def get_scenarios_names_and_size(self):
+            """
+            The available scenarios and the number of the sub-scenarios
+            """
+            return self.export_scenarios_info
+
+        def get_scenarios_export_flags(self, scenario_name):
+            """
+            The flags that correspond to the given scenario. These flags should be passed
+            to the export method/function to override the default behaviour of the set
+            expansion rules.
+            """
+            return self.export_scenarios_flags[scenario_name]
 
     def test_input_and_create_links(self):
         """
@@ -1520,88 +1693,6 @@ class TestLinks(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
-    def construct_complex_graph(self, export_combination = 0):
-        """
-        This method creates a "complex" graph with all available link types
-        (INPUT, CREATE, RETURN and CALL) and returns the nodes of the graph. It
-        also returns various combinations of nodes that need to be extracted
-        but also the final expected set of nodes (after adding the expected
-        predecessors, desuccessors).
-        """
-        from aiida.orm.data.base import Int
-        from aiida.orm.calculation.job import JobCalculation
-        from aiida.orm.calculation.work import WorkCalculation
-        from aiida.common.datastructures import calc_states
-        from aiida.common.links import LinkType
-
-        if export_combination < 0 or export_combination > 8:
-            return None
-
-        # Node creation
-        d1 = Int(1).store()
-        d2 = Int(1).store()
-        wc1 = WorkCalculation().store()
-        wc2 = WorkCalculation().store()
-
-        pw1 = JobCalculation()
-        pw1.set_computer(self.computer)
-        pw1.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        pw1.store()
-
-        d3 = Int(1).store()
-        d4 = Int(1).store()
-
-        pw2 = JobCalculation()
-        pw2.set_computer(self.computer)
-        pw2.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        pw2.store()
-
-        d5 = Int(1).store()
-        d6 = Int(1).store()
-
-        # Link creation
-        wc1.add_link_from(d1, 'input1', link_type=LinkType.INPUT)
-        wc1.add_link_from(d2, 'input2', link_type=LinkType.INPUT)
-
-        wc2.add_link_from(d1, 'input', link_type=LinkType.INPUT)
-        wc2.add_link_from(wc1, 'call', link_type=LinkType.CALL)
-
-        pw1.add_link_from(d1, 'input', link_type=LinkType.INPUT)
-        pw1.add_link_from(wc2, 'call', link_type=LinkType.CALL)
-        pw1._set_state(calc_states.PARSING)
-
-        d3.add_link_from(pw1, 'create', link_type=LinkType.CREATE)
-        d3.add_link_from(wc2, 'return', link_type=LinkType.RETURN)
-
-        d4.add_link_from(pw1, 'create', link_type=LinkType.CREATE)
-        d4.add_link_from(wc2, 'return', link_type=LinkType.RETURN)
-
-        pw2.add_link_from(d4, 'input', link_type=LinkType.INPUT)
-        pw2._set_state(calc_states.PARSING)
-
-        d5.add_link_from(pw2, 'create', link_type=LinkType.CREATE)
-        d6.add_link_from(pw2, 'create', link_type=LinkType.CREATE)
-
-        # Return the generated nodes
-        graph_nodes = [d1, d2, d3, d4, d5, d6, pw1, pw2, wc1, wc2]
-
-        # Create various combinations of nodes that should be exported
-        # and the final set of nodes that are exported in each case, following
-        # predecessor/successor links.
-        export_list = [
-            (wc1, [d1, d2, d3, d4, pw1, wc1, wc2]),
-            (wc2, [d1, d3, d4, pw1, wc2]),
-            (d3, [d1, d3, d4, pw1]),
-            (d4, [d1, d3, d4, pw1]),
-            (d5, [d1, d3, d4, d5, d6, pw1, pw2]),
-            (d6, [d1, d3, d4, d5, d6, pw1, pw2]),
-            (pw2, [d1, d3, d4, d5, d6, pw1, pw2]),
-            (d1, [d1]),
-            (d2, [d2])
-        ]
-
-        return graph_nodes, export_list[export_combination]
-
     def test_complex_workflow_graph_links(self):
         """
         This test checks that all the needed links are correctly exported and
@@ -1618,7 +1709,7 @@ class TestLinks(AiidaTestCase):
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            graph_nodes, _ = self.construct_complex_graph()
+            graph_nodes, _ = self.ComplexGraph().construct_complex_graph(self.computer)
 
             # Getting the input, create, return and call links
             qb = QueryBuilder()
@@ -1648,49 +1739,55 @@ class TestLinks(AiidaTestCase):
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
     def test_complex_workflow_graph_export_set_expansion(self):
+        """
+        Test the various export set_expansion rules. It tests the default behaviour but also
+        all the flags that oveeride this behaviour on a manually created AiiDA graph.
+        """
         import os, shutil, tempfile
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
 
-        for export_conf in range(0,8):
+        cg = self.ComplexGraph()
+        for scenario_name, scenarios_number in cg.get_scenarios_names_and_size().iteritems():
+            for sub_scenarion_no in range(0, scenarios_number):
+                _, (export_node, export_target) = cg.construct_complex_graph(
+                    self.computer, scenario_name=scenario_name, sub_scenario_number=sub_scenarion_no)
+                tmp_folder = tempfile.mkdtemp()
 
-            graph_nodes, (export_node, export_target) = (
-                self.construct_complex_graph(export_conf))
+                try:
+                    export_file = os.path.join(tmp_folder, 'export.tar.gz')
+                    export([export_node], outfile=export_file,
+                           silent=True, **cg.get_scenarios_export_flags(scenario_name))
+                    export_node_str = str(export_node)
+                    export_node_type = str(export_node.type)
 
-            tmp_folder = tempfile.mkdtemp()
-            try:
-                export_file = os.path.join(tmp_folder, 'export.tar.gz')
-                export([export_node], outfile=export_file, silent=True)
-                export_node_str = str(export_node)
+                    self.clean_db()
+                    self.insert_data()
 
-                self.clean_db()
-                self.insert_data()
+                    import_data(export_file, silent=True)
 
-                import_data(export_file, silent=True)
+                    # Get all the nodes of the database
+                    qb = QueryBuilder()
+                    qb.append(Node, project='uuid')
+                    imported_node_uuids = set(str(_[0]) for _ in qb.all())
 
-                # Get all the nodes of the database
-                qb = QueryBuilder()
-                qb.append(Node, project='uuid')
-                imported_node_uuids = set(str(_[0]) for _ in qb.all())
+                    export_target_uuids = set(str(_.uuid) for _ in export_target)
 
-                export_target_uuids = set(str(_.uuid) for _ in export_target)
+                    from aiida.orm.utils import load_node
+                    self.assertEquals(
+                        export_target_uuids,
+                        imported_node_uuids,
+                        "Problem in comparison of export node (Export flags: {}): ".format(scenario_name) +
+                        str(export_node_str) + ". Export node type:" + export_node_type + "\n" +
+                        "Expected set: " + str(export_target_uuids) + "\n" +
+                        "Imported set: " + str(imported_node_uuids) + "\n" +
+                        "Difference: " + str(export_target_uuids.symmetric_difference(
+                                imported_node_uuids))
+                    )
 
-                from aiida.orm.utils import load_node
-                self.assertEquals(
-                    export_target_uuids,
-                    imported_node_uuids,
-                    "Problem in comparison of export node: " +
-                    str(export_node_str) + "\n" +
-                    "Expected set: " + str(export_target_uuids)  + "\n" +
-                    "Imported set: " + str(imported_node_uuids)  + "\n" +
-                    "Difference: " + str([load_node(_) for _ in
-                        export_target_uuids.symmetric_difference(
-                            imported_node_uuids)])
-                )
-
-            finally:
-                shutil.rmtree(tmp_folder, ignore_errors=True)
+                finally:
+                    shutil.rmtree(tmp_folder, ignore_errors=True)
 
     def test_recursive_export_input_and_create_links_proper(self):
         """
@@ -1763,7 +1860,6 @@ class TestLinks(AiidaTestCase):
 
             import_data(export_file, silent=True)
             import_links = self.get_all_node_links()
-
 
             export_set = [tuple(_) for _ in export_links]
             import_set = [tuple(_) for _ in import_links]
@@ -1981,3 +2077,162 @@ class TestLinks(AiidaTestCase):
                               .format(qb.count()))
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
+
+
+@make_inline
+def sum_inline(x, y):
+    from aiida.orm.data.base import Int
+    return {'result': Int(x + y)}
+
+
+class TestRealWorkChainExport(AiidaTestCase):
+    """
+    Create an AiiDA graph by executing a workchain with sub-workchains and test if all the graph is
+    exported by setting all the set expansion rules flags to True.
+    """
+    from aiida.work.workchain import WorkChain
+
+    def check_correct_export(self, uuids_of_target_export_nodes, uuids_of_target_import_nodes,
+                             starting_node_to_draw_graph=None, **export_args):
+        import os, shutil, tempfile
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.node import Node
+        from aiida.orm import load_node
+        from aiida.common.graph import draw_graph
+
+        try:
+            tmp_folder = tempfile.mkdtemp()
+
+            target_export_nodes = set()
+            for uuid in uuids_of_target_export_nodes:
+                target_export_nodes.add(load_node(uuid))
+
+            if starting_node_to_draw_graph is not None:
+                draw_graph(load_node(starting_node_to_draw_graph), filename_suffix='before_export', format='pdf')
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export(target_export_nodes, outfile=export_file, silent=True, **export_args)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True, ignore_unknown_nodes=True)
+
+            if starting_node_to_draw_graph is not None:
+                draw_graph(load_node(starting_node_to_draw_graph), filename_suffix='after_import', format='pdf')
+
+            # Check that the expected nodes are imported
+            uuids_in_db = set([str(uuid) for [uuid] in QueryBuilder().append(Node, project=['uuid']).all()])
+            self.assertTrue(uuids_of_target_import_nodes.issubset(uuids_in_db), "The expected nodes ({}) where not "
+                                                                                "found at the imported graph ({})."
+                            .format(uuids_of_target_import_nodes, uuids_in_db))
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    class SubWorkChain(WorkChain):
+        """
+        A Workchain that calls itself for various levels.
+        """
+        @classmethod
+        def define(cls, spec):
+            from aiida.orm.data.base import Int
+
+            super(TestRealWorkChainExport.SubWorkChain, cls).define(spec)
+            spec.input("wf_counter", valid_type=Int)
+            spec.input('a', valid_type=Int)
+            spec.input('b', valid_type=Int)
+            spec.outline(
+                cls.start
+            )
+            spec.output('result', valid_type=Int)
+
+        def start(self):
+            from aiida.work.run import run
+            from aiida.orm.data.base import Int
+
+            if self.inputs.wf_counter > 0:
+                inputs = {
+                    'wf_counter': Int(self.inputs.wf_counter - 1),
+                    'a': self.inputs.a,
+                    'b': self.inputs.b
+                }
+                result = run(TestRealWorkChainExport.SubWorkChain, **inputs)
+                self.out('result', result['result'])
+            else:
+                node, result = sum_inline(x=self.inputs.a, y=self.inputs.b)
+                self.out('result', result['result'])
+
+    def setUp(self):
+        import aiida.work.util as util
+        import plum
+        super(TestRealWorkChainExport, self).setUp()
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
+
+    def tearDown(self):
+        import aiida.work.util as util
+        import plum
+        super(TestRealWorkChainExport, self).tearDown()
+        self.assertEquals(len(util.ProcessStack.stack()), 0)
+        self.assertEquals(len(plum.process_monitor.MONITOR.get_pids()), 0)
+        self.clean_db()
+        self.insert_data()
+
+    def test_any_wc(self):
+        """
+        Check that all the WorkCalculations can be exported when I start the export from every WorkCalculation
+        (with the flags call_reversed=True, return_reversed=True, create_reverese=True)
+        """
+        from aiida.orm.data.base import Int
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.implementation.general.calculation.work import WorkCalculation
+        from aiida.work.run import run
+
+        _, _ = run(TestRealWorkChainExport.SubWorkChain, a=Int(1), b=Int(2),
+                   wf_counter=Int(2), _return_pid=True)
+        # All the WorkCalculation UUIDs
+        tagret_wc_uuids = set([str(uuid) for [uuid] in QueryBuilder().append(WorkCalculation, project=['uuid']).all()])
+        # For every WorkCalculation, I should export (and import correctly) all the WorkCalculations
+        for wf_uuid in tagret_wc_uuids:
+            self.check_correct_export([wf_uuid], tagret_wc_uuids, call_reversed=True, return_reversed=True,
+                                      create_reversed=True)
+
+    def test_top_wc(self):
+        """
+        Check that all the WorkCalculations are exported when the top WorkCalculation is used to start the export
+        (without providing any extra args)
+        """
+        from aiida.orm.data.base import Int
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.implementation.general.calculation.work import WorkCalculation
+        from aiida.work.run import run
+        from aiida.orm import load_node
+
+        ret_node, top_wf_pk = run(TestRealWorkChainExport.SubWorkChain, a=Int(1), b=Int(2),
+                                  wf_counter=Int(2), _return_pid=True)
+        # All the WorkCalculation UUIDs
+        tagret_wc_uuids = set([str(uuid) for [uuid] in QueryBuilder().append(WorkCalculation, project=['uuid']).all()])
+
+        # Check that if we export the top WorkCalculation, all the graph is exported
+        self.check_correct_export([load_node(top_wf_pk).uuid], tagret_wc_uuids)
+
+    def test_lower_return_node(self):
+        """
+        Check that if we export the lower return node all the WorkCalculations are exported
+        (with the flags call_reversed=True, return_reversed=True, create_reveresed=True)
+        """
+        from aiida.orm.data.base import Int
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.implementation.general.calculation.work import WorkCalculation
+        from aiida.work.run import run
+        from aiida.orm.node import Node
+
+        ret_node, _ = run(TestRealWorkChainExport.SubWorkChain, a=Int(1), b=Int(2),
+                          wf_counter=Int(2), _return_pid=True)
+
+        # All the WorkCalculation UUIDs
+        tagret_wc_uuids = set([str(uuid) for [uuid] in QueryBuilder().append(WorkCalculation, project=['uuid']).all()])
+        # Check that if we export the lower return node, all the graph is exported
+        self.check_correct_export([ret_node['result'].uuid], tagret_wc_uuids, call_reversed=True, return_reversed=True,
+                                  create_reversed=True, input_forward=True)

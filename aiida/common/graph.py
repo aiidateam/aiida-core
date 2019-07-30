@@ -9,7 +9,8 @@
 ###########################################################################
 import os, tempfile
 
-def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='dot',
+
+def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='dot', filename_suffix=None,
         include_calculation_inputs=False, include_calculation_outputs=False):
     """
     The algorithm starts from the original node and goes both input-ward and output-ward via a breadth-first algorithm.
@@ -184,8 +185,12 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
         fout.write("}\n")
 
     # Now I am producing the output file
-    output_file_name = "{0}.{format}".format(origin_node.pk, format=format)
-    exit_status = os.system('dot -T{format} {0} -o {1}'.format(fname, output_file_name, format=format))
+    output_file_name = str(origin_node.pk)
+    if filename_suffix is not None:
+        output_file_name += "_{}".format(filename_suffix)
+
+    full_output_file_name = "{0}.{format}".format(output_file_name, format=format)
+    exit_status = os.system('dot -T{format} {0} -o {1}'.format(fname, full_output_file_name, format=format))
     # cleaning up by removing the temporary file
     os.remove(fname)
-    return exit_status, output_file_name
+    return exit_status, full_output_file_name

@@ -13,10 +13,6 @@ import os
 import copy
 from functools import wraps
 from contextlib import contextmanager
-try:
-    from collections import ChainMap
-except ImportError:
-    from chainmap import ChainMap
 
 import yaml
 from plum.util import load_class

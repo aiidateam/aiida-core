@@ -13,9 +13,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from .dbexport import export
-from .dbexport.zip import *
+from .dbexport import *
 from .dbimport import *
 from .common import *
 
-__all__ = ('export',) + dbexport.zip.__all__ + dbimport.__all__ + common.__all__
+__all__ = (dbexport.__all__ + dbimport.__all__ + common.__all__)

@@ -39,7 +39,7 @@ from aiida.tools.importexport.dbexport.utils import (
 
 from .zip import ZipFolder
 
-__all__ = ('export_tree', 'export', 'export_zip')
+__all__ = ('export', 'export_zip')
 
 
 def export_zip(what, outfile='testzip', overwrite=False, silent=False, use_compression=True, **kwargs):
@@ -147,7 +147,8 @@ def export_tree(
             given_computer_entry_ids.add(entry.pk)
         else:
             raise exceptions.ArchiveExportError(
-                'I was given {} ({}), which is not a Node, Computer, or Group instance'.format(entry, type(entry)))
+                'I was given {} ({}), which is not a Node, Computer, or Group instance'.format(entry, type(entry))
+            )
 
     # Add all the nodes contained within the specified groups
     for group in given_groups:
@@ -764,7 +765,7 @@ def export_tree(
         fhandle.write(json.dumps(metadata))
 
     if silent is not True:
-        print("STORING REPOSITORY FILES...")
+        print('STORING REPOSITORY FILES...')
 
     # If there are no nodes, there are no repository files to store
     if all_nodes_pk:
@@ -782,7 +783,8 @@ def export_tree(
             src = RepositoryFolder(section=Repository._section_name, uuid=uuid)
             if not src.exists():
                 raise exceptions.ArchiveExportError(
-                    "Unable to find the repository folder for Node with UUID={} in the local repository".format(uuid))
+                    'Unable to find the repository folder for Node with UUID={} in the local repository'.format(uuid)
+                )
 
             # In this way, I copy the content of the folder, and not the folder itself
             thisnodefolder.insert_path(src=src.abspath, dest_name='.')

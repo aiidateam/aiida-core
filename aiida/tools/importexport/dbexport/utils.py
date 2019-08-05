@@ -13,8 +13,9 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from aiida.tools.importexport.common.config import (file_fields_to_model_fields, entity_names_to_entities,
-                                                    get_all_fields_info)
+from aiida.tools.importexport.common.config import (
+    file_fields_to_model_fields, entity_names_to_entities, get_all_fields_info
+)
 
 
 def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag_suffixes=None, entity_separator='_'):

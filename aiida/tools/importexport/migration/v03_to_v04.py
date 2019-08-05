@@ -351,7 +351,8 @@ def migration_trajectory_symbols_to_attribute(data, folder):
         if content.get('type', '') == 'node.data.array.trajectory.TrajectoryData.':
             uuid = content['uuid']
             symbols_path = os.path.join(
-                folder.get_abs_path(NODES_EXPORT_SUBFOLDER), uuid[0:2], uuid[2:4], uuid[4:], 'path', 'symbols.npy')
+                folder.get_abs_path(NODES_EXPORT_SUBFOLDER), uuid[0:2], uuid[2:4], uuid[4:], 'path', 'symbols.npy'
+            )
             symbols = np.load(symbols_path).tolist()
             os.remove(symbols_path)
             # Update 'node_attributes'

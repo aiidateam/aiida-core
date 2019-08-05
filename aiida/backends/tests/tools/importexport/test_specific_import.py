@@ -189,21 +189,24 @@ class TestSpecificImport(AiidaTestCase):
 
         node_repo = RepositoryFolder(section=Repository._section_name, uuid=node_uuid)  # pylint: disable=protected-access
         self.assertTrue(
-            node_repo.exists(), msg="Newly created and stored Node should have had an existing repository folder")
+            node_repo.exists(), msg='Newly created and stored Node should have had an existing repository folder'
+        )
 
         # Removing the Node's local repository folder
         shutil.rmtree(node_repo.abspath, ignore_errors=True)
         self.assertFalse(
-            node_repo.exists(), msg="Newly created and stored Node should have had its repository folder removed")
+            node_repo.exists(), msg='Newly created and stored Node should have had its repository folder removed'
+        )
 
         # Try to export, check it raises and check the raise message
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
         with self.assertRaises(exceptions.ArchiveExportError) as exc:
             export([node], outfile=filename, silent=True)
 
-        self.assertIn("Unable to find the repository folder for Node with UUID={}".format(node_uuid),
-                      str(exc.exception))
-        self.assertFalse(os.path.exists(filename), msg="The export file should not exist")
+        self.assertIn(
+            'Unable to find the repository folder for Node with UUID={}'.format(node_uuid), str(exc.exception)
+        )
+        self.assertFalse(os.path.exists(filename), msg='The export file should not exist')
 
     @with_temp_dir
     def test_missing_node_repo_folder_import(self, temp_dir):
@@ -227,10 +230,11 @@ class TestSpecificImport(AiidaTestCase):
 
         node_repo = RepositoryFolder(section=Repository._section_name, uuid=node_uuid)  # pylint: disable=protected-access
         self.assertTrue(
-            node_repo.exists(), msg="Newly created and stored Node should have had an existing repository folder")
+            node_repo.exists(), msg='Newly created and stored Node should have had an existing repository folder'
+        )
 
         # Export and reset db
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
         export([node], outfile=filename, silent=True)
         self.reset_database()
 
@@ -241,22 +245,26 @@ class TestSpecificImport(AiidaTestCase):
             extract_tar(filename, folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
             node_folder = folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_shard_uuid))
             self.assertTrue(
-                node_folder.exists(), msg="The Node's repository folder should still exist in the export file")
+                node_folder.exists(), msg="The Node's repository folder should still exist in the export file"
+            )
 
             # Removing the Node's repository folder from the export file
             shutil.rmtree(
-                folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_top_folder)).abspath, ignore_errors=True)
+                folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_top_folder)).abspath, ignore_errors=True
+            )
             self.assertFalse(
                 node_folder.exists(),
-                msg="The Node's repository folder should now have been removed in the export file")
+                msg="The Node's repository folder should now have been removed in the export file"
+            )
 
-            filename_corrupt = os.path.join(temp_dir, "export_corrupt.tar.gz")
-            with tarfile.open(filename_corrupt, "w:gz", format=tarfile.PAX_FORMAT, dereference=True) as tar:
-                tar.add(folder.abspath, arcname="")
+            filename_corrupt = os.path.join(temp_dir, 'export_corrupt.tar.gz')
+            with tarfile.open(filename_corrupt, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
+                tar.add(folder.abspath, arcname='')
 
         # Try to import, check it raises and check the raise message
         with self.assertRaises(exceptions.CorruptArchive) as exc:
             import_data(filename_corrupt, silent=True)
 
-        self.assertIn("Unable to find the repository folder for Node with UUID={}".format(node_uuid),
-                      str(exc.exception))
+        self.assertIn(
+            'Unable to find the repository folder for Node with UUID={}'.format(node_uuid), str(exc.exception)
+        )

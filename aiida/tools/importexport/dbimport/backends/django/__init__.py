@@ -114,7 +114,7 @@ def import_data_dj(
     # Initial check(s)
     if group:
         if not isinstance(group, Group):
-            raise exceptions.ImportValidationError("group must be a Group entity")
+            raise exceptions.ImportValidationError('group must be a Group entity')
         elif not group.is_stored:
             group.store()
 
@@ -135,11 +135,13 @@ def import_data_dj(
                     print('The following problem occured while processing the provided file: {}'.format(exc))
                     return
             else:
-                raise exceptions.ImportValidationError("Unable to detect the input file format, it is neither a "
-                                                       "(possibly compressed) tar file, nor a zip file.")
+                raise exceptions.ImportValidationError(
+                    'Unable to detect the input file format, it is neither a '
+                    '(possibly compressed) tar file, nor a zip file.'
+                )
 
         if not folder.get_content_list():
-            raise exceptions.CorruptArchive("The provided file/folder ({}) is empty".format(in_path))
+            raise exceptions.CorruptArchive('The provided file/folder ({}) is empty'.format(in_path))
         try:
             with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
@@ -147,8 +149,9 @@ def import_data_dj(
             with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
                 data = json.load(fhandle)
         except IOError as error:
-            raise exceptions.CorruptArchive("Unable to find the file {} in the import file or folder".format(
-                error.filename))
+            raise exceptions.CorruptArchive(
+                'Unable to find the file {} in the import file or folder'.format(error.filename)
+            )
 
         ######################
         # PRELIMINARY CHECKS #
@@ -192,9 +195,10 @@ def import_data_dj(
 
         if unknown_nodes and not ignore_unknown_nodes:
             raise exceptions.ImportValidationError(
-                "The import file refers to {} nodes with unknown UUID, therefore it cannot be imported. Either first "
-                "import the unknown nodes, or export also the parents when exporting. The unknown UUIDs are:\n".format(
-                    len(unknown_nodes)) + "\n".join('* {}'.format(uuid) for uuid in unknown_nodes))
+                'The import file refers to {} nodes with unknown UUID, therefore it cannot be imported. Either first '
+                'import the unknown nodes, or export also the parents when exporting. The unknown UUIDs are:\n'
+                ''.format(len(unknown_nodes)) + '\n'.join('* {}'.format(uuid) for uuid in unknown_nodes)
+            )
 
         ###################################
         # DOUBLE-CHECK MODEL DEPENDENCIES #
@@ -209,7 +213,8 @@ def import_data_dj(
         for import_field_name in metadata['all_fields_info']:
             if import_field_name not in model_order:
                 raise exceptions.ImportValidationError(
-                    "You are trying to import an unknown model '{}'!".format(import_field_name))
+                    "You are trying to import an unknown model '{}'!".format(import_field_name)
+                )
 
         for idx, model_name in enumerate(model_order):
             dependencies = []
@@ -222,7 +227,8 @@ def import_data_dj(
             for dependency in dependencies:
                 if dependency not in model_order[:idx]:
                     raise exceptions.ArchiveImportError(
-                        "Model {} requires {} but would be loaded first; stopping...".format(model_name, dependency))
+                        'Model {} requires {} but would be loaded first; stopping...'.format(model_name, dependency)
+                    )
 
         ###################################################
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
@@ -351,8 +357,9 @@ def import_data_dj(
                             dupl_counter += 1
                             if dupl_counter == 100:
                                 raise exceptions.ImportUniquenessError(
-                                    "A group of that label ( {} ) already exists and I could not create a new one"
-                                    "".format(orig_label))
+                                    'A group of that label ( {} ) already exists and I could not create a new one'
+                                    ''.format(orig_label)
+                                )
 
                     elif model is models.DbComputer:
                         # Check if there is already a computer with the same name in the database
@@ -371,8 +378,9 @@ def import_data_dj(
                             dupl_counter += 1
                             if dupl_counter == 100:
                                 raise exceptions.ImportUniquenessError(
-                                    "A computer of that name ( {} ) already exists and I could not create a new one"
-                                    "".format(orig_name))
+                                    'A computer of that name ( {} ) already exists and I could not create a new one'
+                                    ''.format(orig_name)
+                                )
 
                         imported_comp_names.add(import_data['name'])
 
@@ -381,7 +389,7 @@ def import_data_dj(
 
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print("STORING NEW NODE REPOSITORY FILES...")
+                        print('STORING NEW NODE REPOSITORY FILES...')
 
                     # NEW NODES
                     for object_ in objects_to_create:
@@ -391,11 +399,13 @@ def import_data_dj(
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
                         subfolder = folder.get_subfolder(
-                            os.path.join(NODES_EXPORT_SUBFOLDER, export_shard_uuid(import_entry_uuid)))
+                            os.path.join(NODES_EXPORT_SUBFOLDER, export_shard_uuid(import_entry_uuid))
+                        )
                         if not subfolder.exists():
                             raise exceptions.CorruptArchive(
-                                "Unable to find the repository folder for Node with UUID={} in the exported "
-                                "file".format(import_entry_uuid))
+                                'Unable to find the repository folder for Node with UUID={} in the exported '
+                                'file'.format(import_entry_uuid)
+                            )
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing previous folders, and move the files
                         # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
@@ -410,7 +420,8 @@ def import_data_dj(
                             object_.attributes = data['node_attributes'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
-                                "Unable to find attribute info for Node with UUID={}".format(import_entry_uuid))
+                                'Unable to find attribute info for Node with UUID={}'.format(import_entry_uuid)
+                            )
 
                         # For DbNodes, we also have to store its extras
                         if extras_mode_new == 'import':
@@ -422,7 +433,8 @@ def import_data_dj(
                                 extras = data['node_extras'][str(import_entry_pk)]
                             except KeyError:
                                 raise exceptions.CorruptArchive(
-                                    "Unable to find extra info for Node with UUID={}".format(import_entry_uuid))
+                                    'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
+                                )
                             # TODO: remove when aiida extras will be moved somewhere else
                             # from here
                             extras = {key: value for key, value in extras.items() if not key.startswith('_aiida_')}
@@ -435,8 +447,9 @@ def import_data_dj(
                                 print('SKIPPING NEW NODE EXTRAS...')
                         else:
                             raise exceptions.ImportValidationError(
-                                "Unknown extras_mode_new value: {}, should be either 'import' or 'none'".format(
-                                    extras_mode_new))
+                                "Unknown extras_mode_new value: {}, should be either 'import' or 'none'"
+                                ''.format(extras_mode_new)
+                            )
 
                     # EXISTING NODES (Extras)
                     # For the existing nodes that are also in the imported list we also update their extras if necessary
@@ -456,7 +469,8 @@ def import_data_dj(
                             extras = data['node_extras'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
-                                "Unable to find extra info for ode with UUID={}".format(import_entry_uuid))
+                                'Unable to find extra info for ode with UUID={}'.format(import_entry_uuid)
+                            )
 
                         # TODO: remove when aiida extras will be moved somewhere else
                         # from here
@@ -522,15 +536,17 @@ def import_data_dj(
                         continue
                     else:
                         raise exceptions.ImportValidationError(
-                            "Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, "
-                            "out_uuid={}, label={})".format(link['input'], link['output'], link['label']))
+                            'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, '
+                            'out_uuid={}, label={})'.format(link['input'], link['output'], link['label'])
+                        )
 
                 try:
                     existing_label = existing_links_labels[in_id, out_id]
                     if existing_label != link['label']:
                         raise exceptions.ImportValidationError(
-                            "Trying to rename an existing link name, stopping (in={}, out={}, old_label={}, "
-                            "new_label={})".format(in_id, out_id, existing_label, link['label']))
+                            'Trying to rename an existing link name, stopping (in={}, out={}, old_label={}, '
+                            'new_label={})'.format(in_id, out_id, existing_label, link['label'])
+                        )
                         # Do nothing, the link is already in place and has
                         # the correct name
                 except KeyError:
@@ -548,9 +564,11 @@ def import_data_dj(
 
                         if link['type'] != LinkType.RETURN:
                             raise exceptions.ImportValidationError(
-                                "There exists already an input link to node with UUID {} with label {} but it does not"
-                                " come from the expected input with UUID {} but from a node with UUID {}.".format(
-                                    link['output'], link['label'], link['input'], existing_input))
+                                'There exists already an input link to node with UUID {} with label {} but it does not'
+                                ' come from the expected input with UUID {} but from a node with UUID {}.'.format(
+                                    link['output'], link['label'], link['input'], existing_input
+                                )
+                            )
                     except KeyError:
                         # New link
                         links_to_store.append(
@@ -606,12 +624,13 @@ def import_data_dj(
 
                 while Group.objects.find(filters={'label': group_label}):
                     counter += 1
-                    group_label = "{}_{}".format(basename, counter)
+                    group_label = '{}_{}'.format(basename, counter)
 
                     if counter == 100:
                         raise exceptions.ImportUniquenessError(
                             "Overflow of import groups (more than 100 import groups exists with basename '{}')"
-                            "".format(basename))
+                            ''.format(basename)
+                        )
                 group = Group(label=group_label, type_string=IMPORTGROUP_TYPE).store()
 
             # Add all the nodes to the new group

@@ -33,8 +33,9 @@ def verify_metadata_version(metadata, version=None):
         return metadata_version
 
     if metadata_version != version:
-        raise exceptions.MigrationValidationError('expected export file with version {} but found version {}'.format(
-            version, metadata_version))
+        raise exceptions.MigrationValidationError(
+            'expected export file with version {} but found version {}'.format(version, metadata_version)
+        )
 
     return None
 

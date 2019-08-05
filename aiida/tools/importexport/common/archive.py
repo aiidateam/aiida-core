@@ -248,7 +248,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
 
     if nodes_export_subfolder:
         if not isinstance(nodes_export_subfolder, str):
-            raise TypeError("nodes_export_subfolder must be a string")
+            raise TypeError('nodes_export_subfolder must be a string')
     else:
         nodes_export_subfolder = NODES_EXPORT_SUBFOLDER
 
@@ -308,7 +308,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
 
     if nodes_export_subfolder:
         if not isinstance(nodes_export_subfolder, str):
-            raise TypeError("nodes_export_subfolder must be a string")
+            raise TypeError('nodes_export_subfolder must be a string')
     else:
         nodes_export_subfolder = NODES_EXPORT_SUBFOLDER
 

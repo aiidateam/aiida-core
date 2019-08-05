@@ -94,10 +94,12 @@ def merge_extras(old_extras, new_extras, mode):
     from six import string_types
     if not isinstance(mode, string_types):
         raise exceptions.ImportValidationError(
-            "Parameter 'mode' should be of string type, you provided '{}' type".format(type(mode)))
+            "Parameter 'mode' should be of string type, you provided '{}' type".format(type(mode))
+        )
     elif not len(mode) == 3:
         raise exceptions.ImportValidationError(
-            "Parameter 'mode' should be a 3-letter string, you provided: '{}'".format(mode))
+            "Parameter 'mode' should be a 3-letter string, you provided: '{}'".format(mode)
+        )
 
     old_keys = set(old_extras.keys())
     new_keys = set(new_extras.keys())
@@ -147,14 +149,16 @@ def merge_extras(old_extras, new_extras, mode):
                 final_extras[key] = old_extras[key]
         elif mode[0] != 'n':
             raise exceptions.ImportValidationError(
-                "Unknown first letter of the update extras mode: '{}'. Should be either 'k' or 'n'".format(mode))
+                "Unknown first letter of the update extras mode: '{}'. Should be either 'k' or 'n'".format(mode)
+            )
 
         if mode[1] == 'c':
             for key in new_keys_only:
                 final_extras[key] = new_extras[key]
         elif mode[1] != 'n':
             raise exceptions.ImportValidationError(
-                "Unknown second letter of the update extras mode: '{}'. Should be either 'c' or 'n'".format(mode))
+                "Unknown second letter of the update extras mode: '{}'. Should be either 'c' or 'n'".format(mode)
+            )
 
         if mode[2] == 'u':
             for key in collided_keys:
@@ -176,7 +180,8 @@ def merge_extras(old_extras, new_extras, mode):
                         final_extras[key] = old_extras[key]
         elif mode[2] != 'd':
             raise exceptions.ImportValidationError(
-                "Unknown third letter of the update extras mode: '{}'. Should be one of 'u'/'l'/'a'/'d'".format(mode))
+                "Unknown third letter of the update extras mode: '{}'. Should be one of 'u'/'l'/'a'/'d'".format(mode)
+            )
 
     return final_extras
 

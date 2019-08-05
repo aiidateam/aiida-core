@@ -10,7 +10,7 @@
 """Module that defines the exceptions thrown by AiiDA's export/import module.
 
 Note: In order to not override the built-in `ImportError`, both `ImportError` and `ExportError` are prefixed with
-    `Aiida`.
+    `Archive`.
 """
 from __future__ import division
 from __future__ import absolute_import
@@ -18,9 +18,11 @@ from __future__ import print_function
 
 from aiida.common.exceptions import AiidaException
 
-__all__ = ('ExportImportException', 'ArchiveExportError', 'ArchiveImportError', 'CorruptArchive',
-           'IncompatibleArchiveVersionError', 'ExportValidationError', 'ImportUniquenessError', 'ImportValidationError',
-           'ArchiveMigrationError', 'MigrationValidationError', 'DanglingLinkError')
+__all__ = (
+    'ExportImportException', 'ArchiveExportError', 'ArchiveImportError', 'CorruptArchive',
+    'IncompatibleArchiveVersionError', 'ExportValidationError', 'ImportUniquenessError', 'ImportValidationError',
+    'ArchiveMigrationError', 'MigrationValidationError', 'DanglingLinkError'
+)
 
 
 class ExportImportException(AiidaException):

@@ -189,7 +189,7 @@ For example::
   This is the destination folder of the files to be backed up.
   By default it is a folder inside the aforementioned ``backup`` folder (e.g. ``~/.aiida/backup/backup_dest``).
 
-.. note:: 
+.. note::
 
   You should backup the repository on a different disk than the one in which you have the AiiDA repository!
   If you just use the same disk, you do not have any security against the most common data loss cause: disk failure.

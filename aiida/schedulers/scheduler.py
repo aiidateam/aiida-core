@@ -32,7 +32,7 @@ class SchedulerParsingError(SchedulerError):
     pass
 
 
-@six.add_metaclass(ABCMeta)  # pylint: disable=useless-object-inheritance
+@six.add_metaclass(ABCMeta)
 class Scheduler(object):
     """
     Base class for all schedulers.

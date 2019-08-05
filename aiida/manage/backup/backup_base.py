@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Base abstract Backup class for all backends."""
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
@@ -26,7 +27,7 @@ from aiida.common import json
 from aiida.common import timezone as dtimezone
 
 
-@six.add_metaclass(ABCMeta)
+@six.add_metaclass(ABCMeta)  # pylint: disable=useless-object-inheritance
 class AbstractBackup(object):
     """
     This class handles the backup of the AiiDA repository that is referenced
@@ -339,8 +340,8 @@ class AbstractBackup(object):
                     self._logger.info(log_msg, copy_counter, item.__class__.__name__, percent_progress)
 
                 if (
-                    self._logger.getEffectiveLevel() <= logging.INFO and
-                    percent_progress < (copy_counter * 100 / dir_no_to_copy)
+                    self._logger.getEffectiveLevel() <= logging.INFO and percent_progress <
+                    (copy_counter * 100 / dir_no_to_copy)
                 ):
                     percent_progress = (copy_counter * 100 / dir_no_to_copy)
                     last_progress_print = datetime.datetime.now()

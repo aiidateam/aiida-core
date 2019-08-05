@@ -102,7 +102,6 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         :return: a new query builder instance
         :rtype: :class:`aiida.orm.QueryBuilder`
         """
-        # pylint: disable=no-self-use
         from . import querybuilder
 
         query = querybuilder.QueryBuilder()

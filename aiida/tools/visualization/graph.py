@@ -338,16 +338,18 @@ def _add_graphviz_edge(graph, in_node, out_node, style=None):
 class Graph(object):
     """a class to create graphviz graphs of the AiiDA node provenance"""
 
-    def __init__(self,
-                 engine=None,
-                 graph_attr=None,
-                 global_node_style=None,
-                 global_edge_style=None,
-                 include_sublabels=True,
-                 link_style_fn=None,
-                 node_style_fn=None,
-                 node_sublabel_fn=None,
-                 node_id_type="pk"):
+    def __init__(
+        self,
+        engine=None,
+        graph_attr=None,
+        global_node_style=None,
+        global_edge_style=None,
+        include_sublabels=True,
+        link_style_fn=None,
+        node_style_fn=None,
+        node_sublabel_fn=None,
+        node_id_type='pk'
+    ):
         """a class to create graphviz graphs of the AiiDA node provenance
 
         Nodes and edges, are cached, so that they are only created once

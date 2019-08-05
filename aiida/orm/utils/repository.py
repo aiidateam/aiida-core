@@ -30,7 +30,7 @@ class FileType(enum.Enum):
 File = collections.namedtuple('File', ['name', 'type'])
 
 
-class Repository(object):  # pylint: disable=useless-object-inheritance
+class Repository(object):
     """Class that represents the repository of a `Node` instance."""
 
     # Name to be used for the Repository section

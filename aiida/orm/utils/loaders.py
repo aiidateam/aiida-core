@@ -68,8 +68,6 @@ class IdentifierType(Enum):
 class OrmEntityLoader(object):
     """Base class for entity loaders."""
 
-    # pylint: disable=useless-object-inheritance
-
     label_ambiguity_breaker = '!'
 
     @classproperty

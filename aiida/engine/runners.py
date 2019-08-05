@@ -37,7 +37,7 @@ ResultAndNode = collections.namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPk = collections.namedtuple('ResultAndPk', ['result', 'pk'])
 
 
-class Runner(object):  # pylint: disable=useless-object-inheritance,too-many-public-methods
+class Runner(object):  # pylint: disable=too-many-public-methods
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
     _persister = None

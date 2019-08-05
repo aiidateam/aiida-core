@@ -233,7 +233,7 @@ def tree(nodes, depth):
             echo.echo('')
 
 
-class NodeTreePrinter(object):  # pylint: disable=useless-object-inheritance
+class NodeTreePrinter(object):
     """Utility functions for printing node trees."""
 
     @classmethod

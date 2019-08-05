@@ -229,7 +229,7 @@ load_profile(profile='{}')
 from aiida.manage.backup.backup_general import Backup
 
 # Create the backup instance
-backup_inst = Backup(backup_info_filepath="{}", additional_back_time_mins = 2)
+backup_inst = Backup(backup_info_filepath="{}", additional_back_time_mins=2)
 
 # Define the backup logging level
 backup_inst._logger.setLevel(logging.INFO)

@@ -19,7 +19,6 @@ from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments, types
 from aiida.cmdline.utils import echo
 from aiida.common.files import get_mode_string
-from aiida.common import timezone
 
 
 @verdi_data.group('remote')
@@ -44,7 +43,7 @@ def remote_ls(ls_long, path, datum):
         content = datum.listdir_withattributes(path=path)
     except (IOError, OSError) as err:
         echo.echo_critical(
-            'Unable to access the remote folde or file, check if it exists.\n'
+            'Unable to access the remote folder or file, check if it exists.\n'
             'Original error: {}'.format(str(err))
         )
     for metadata in content:
@@ -52,7 +51,7 @@ def remote_ls(ls_long, path, datum):
             mtime = datetime.datetime.fromtimestamp(metadata['attributes'].st_mtime)
             pre_line = '{} {:10}  {}  '.format(
                 get_mode_string(metadata['attributes'].st_mode), metadata['attributes'].st_size,
-                timezone.localtime(mtime).strftime('%d %b %Y %H:%M')
+                mtime.strftime('%d %b %Y %H:%M')
             )
             click.echo(pre_line, nl=False)
         if metadata['isdir']:

@@ -137,6 +137,7 @@ To assume the role of ``postgres`` run as root::
 
     su - postgres
 
+(or, equivalently, type ``sudo su - postgres``, depending on your distribution)
 and launch the postgres program::
 
     psql
@@ -167,7 +168,7 @@ To test if the database was created successfully, you can run the following comm
 and type the password you inserted before, when prompted.
 If everything worked well, you should get no error and see the prompt of the ``psql`` shell.
 
-If you uses the same names used in the example commands above, during the ``verdi setup`` phase you want to use the following parameters to use the database you just created::
+If you use the same names as in the example commands above, then during the ``verdi setup`` phase the following parameters will apply to the newly created database::
 
     Database engine: postgresql_psycopg2
     PostgreSQL host: localhost

@@ -29,7 +29,7 @@ class BaseTranslator(object):
     Generic class for translator. It contains the methods
     required to build a related QueryBuilder object
     """
-    # pylint: disable=useless-object-inheritance,too-many-instance-attributes,fixme
+    # pylint: disable=too-many-instance-attributes,fixme
 
     # A label associated to the present class
     __label__ = None

@@ -29,7 +29,7 @@ class CorruptArchive(Exception):
     """Raised when an operation is applied to a corrupt export archive, e.g. missing files or invalid formats."""
 
 
-class Archive(object):  # pylint: disable=useless-object-inheritance
+class Archive(object):
     """Utility class to operate on exported archive files or directories.
 
     The main usage should be to construct the class with the filepath of the export archive as an argument.

@@ -338,8 +338,6 @@ def _add_graphviz_edge(graph, in_node, out_node, style=None):
 class Graph(object):
     """a class to create graphviz graphs of the AiiDA node provenance"""
 
-    # pylint: disable=useless-object-inheritance
-
     def __init__(
         self,
         engine=None,

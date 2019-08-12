@@ -26,8 +26,6 @@ KEY_VERSION_PLUGIN = 'plugin'  # The version of the plugin top level module, e.g
 class PluginVersionProvider(object):
     """Utility class that determines version information about a given plugin resource."""
 
-    # pylint: disable=useless-object-inheritance
-
     def __init__(self):
         self._cache = {}
         self._logger = AIIDA_LOGGER.getChild('plugin_version_provider')

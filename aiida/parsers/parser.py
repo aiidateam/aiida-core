@@ -29,8 +29,6 @@ __all__ = ('Parser',)
 class Parser(object):
     """Base class for a Parser that can parse the outputs produced by a CalcJob process."""
 
-    # pylint: disable=useless-object-inheritance
-
     def __init__(self, node):
         """Construct the Parser instance.
 

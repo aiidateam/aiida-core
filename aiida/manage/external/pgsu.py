@@ -42,7 +42,7 @@ class PostgresConnectionMode(IntEnum):
     PSQL = 2
 
 
-class PGSU(object):  # pylint: disable=useless-object-inheritance
+class PGSU(object):
     """
     Connect to an existing PostgreSQL cluster as the `postgres` superuser and execute SQL commands.
 

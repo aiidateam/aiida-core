@@ -15,7 +15,7 @@ from __future__ import absolute_import
 
 import enum
 
-from aiida.common.exceptions import DanglingLinkError
+from aiida.tools.importexport.common.exceptions import DanglingLinkError
 from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
 
 

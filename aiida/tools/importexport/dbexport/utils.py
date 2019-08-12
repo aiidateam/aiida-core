@@ -13,7 +13,9 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from aiida.tools.importexport.config import file_fields_to_model_fields, entity_names_to_entities, get_all_fields_info
+from aiida.tools.importexport.common.config import (
+    file_fields_to_model_fields, entity_names_to_entities, get_all_fields_info
+)
 
 
 def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag_suffixes=None, entity_separator='_'):
@@ -247,11 +249,11 @@ def check_process_nodes_sealed(nodes):
     :param nodes: :py:class:`~aiida.orm.nodes.process.process.ProcessNode` s to be checked. Should be their PK(s).
     :type nodes: list, int
 
-    :raises TypeError: if nodes is not a `list`, `set`, or `int`.
-    :raises `~aiida.common.exceptions.InvalidOperation`: if a ``ProcessNode`` is not sealed.
+    :raises `~aiida.tools.importexport.common.exceptions.ExportValidationError`:
+        if a ``ProcessNode`` is not sealed or `nodes` is not a `list`, `set`, or `int`.
     """
-    from aiida.common.exceptions import InvalidOperation
     from aiida.orm import QueryBuilder, ProcessNode
+    from aiida.tools.importexport.common import exceptions
 
     if not nodes:
         return
@@ -264,14 +266,14 @@ def check_process_nodes_sealed(nodes):
     elif isinstance(nodes, int):
         nodes = set([nodes])
     else:
-        raise TypeError('nodes must be either an int or set/list of ints')
+        raise exceptions.ExportValidationError('nodes must be either an int or set/list of ints')
 
     filters = {'id': {'in': nodes}, 'attributes.sealed': True}
     sealed_nodes = QueryBuilder().append(ProcessNode, filters=filters, project=['id']).all()
     sealed_nodes = {_[0] for _ in sealed_nodes}
 
     if sealed_nodes != nodes:
-        raise InvalidOperation(
+        raise exceptions.ExportValidationError(
             'All ProcessNodes must be sealed before they can be exported. '
             'Node(s) with PK(s): {} is/are not sealed.'.format(', '.join(str(pk) for pk in nodes - sealed_nodes))
         )

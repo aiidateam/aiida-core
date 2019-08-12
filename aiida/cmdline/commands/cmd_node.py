@@ -15,6 +15,7 @@ import click
 import tabulate
 
 from aiida.common import exceptions
+from aiida.common import timezone
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.types.plugin import PluginParamType
@@ -519,8 +520,8 @@ def comment_show(user, nodes):
         for comment in comments:
             comment_msg = [
                 'Comment<{}> for Node<{}> by {}'.format(comment.id, node.pk, comment.user.email),
-                'Created on {}'.format(comment.ctime.strftime('%Y-%m-%d %H:%M')),
-                'Last modified on {}'.format(comment.mtime.strftime('%Y-%m-%d %H:%M')),
+                'Created on {}'.format(timezone.localtime(comment.ctime).strftime('%Y-%m-%d %H:%M')),
+                'Last modified on {}'.format(timezone.localtime(comment.mtime).strftime('%Y-%m-%d %H:%M')),
                 '\n{}\n'.format(comment.content),
             ]
             echo.echo('\n'.join(comment_msg))

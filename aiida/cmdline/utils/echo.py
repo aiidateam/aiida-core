@@ -171,9 +171,10 @@ def _format_dictionary_json_date(dictionary):
     def default_jsondump(data):
         """Function needed to decode datetimes, that would otherwise not be JSON-decodable."""
         import datetime
+        from aiida.common import timezone
 
         if isinstance(data, datetime.datetime):
-            return data.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+            return timezone.localtime(data).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 
         raise TypeError(repr(data) + ' is not JSON serializable')
 

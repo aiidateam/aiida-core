@@ -43,7 +43,7 @@ def remote_ls(ls_long, path, datum):
         content = datum.listdir_withattributes(path=path)
     except (IOError, OSError) as err:
         echo.echo_critical(
-            'Unable to access the remote folde or file, check if it exists.\n'
+            'Unable to access the remote folder or file, check if it exists.\n'
             'Original error: {}'.format(str(err))
         )
     for metadata in content:

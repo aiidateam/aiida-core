@@ -585,46 +585,45 @@ def import_data_dj(
                 if nodes_to_store:
                     group_.dbnodes.add(*nodes_to_store)
 
-            ######################################################
-            # Put everything in a specific group
-            dbnode_model_name = NODE_ENTITY_NAME
+        ######################################################
+        # Put everything in a specific group
+        ######################################################
+        existing = existing_entries.get(NODE_ENTITY_NAME, {})
+        existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in six.itervalues(existing)]
+        new = new_entries.get(NODE_ENTITY_NAME, {})
+        new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in six.itervalues(new)]
 
-            existing = existing_entries.get(dbnode_model_name, {})
-            existing_pk = [foreign_ids_reverse_mappings[dbnode_model_name][v['uuid']] for v in six.itervalues(existing)]
-            new = new_entries.get(dbnode_model_name, {})
-            new_pk = [foreign_ids_reverse_mappings[dbnode_model_name][v['uuid']] for v in six.itervalues(new)]
+        pks_for_group = existing_pk + new_pk
 
-            pks_for_group = existing_pk + new_pk
+        # So that we do not create empty groups
+        if pks_for_group:
+            # If user specified a group, import all things into it
+            if not group:
+                # Get an unique name for the import group, based on the current (local) time
+                basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S')
+                counter = 0
+                created = False
+                while not created:
+                    if counter == 0:
+                        group_label = basename
+                    else:
+                        group_label = '{}_{}'.format(basename, counter)
+                    try:
+                        group = Group(label=group_label, type_string=IMPORTGROUP_TYPE).store()
+                        created = True
+                    except (exceptions.UniquenessError, exceptions.IntegrityError):
+                        counter += 1
 
-            # So that we do not create empty groups
-            if pks_for_group:
-                # If user specified a group, import all things into it
-                if not group:
-                    # Get an unique name for the import group, based on the current (local) time
-                    basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S')
-                    counter = 0
-                    created = False
-                    while not created:
-                        if counter == 0:
-                            group_label = basename
-                        else:
-                            group_label = '{}_{}'.format(basename, counter)
-                        try:
-                            group = Group(label=group_label, type_string=IMPORTGROUP_TYPE).store()
-                            created = True
-                        except (exceptions.UniquenessError, exceptions.IntegrityError):
-                            counter += 1
+            # Add all the nodes to the new group
+            # TODO: decide if we want to return the group label
+            nodes = [entry[0] for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
+            group.add_nodes(nodes)
 
-                # Add all the nodes to the new group
-                # TODO: decide if we want to return the group label
-                nodes = [entry[0] for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
-                group.add_nodes(nodes)
-
-                if not silent:
-                    print("IMPORTED NODES ARE GROUPED IN THE IMPORT GROUP LABELED '{}'".format(group.label))
-            else:
-                if not silent:
-                    print('NO NODES TO IMPORT, SO NO GROUP CREATED, IF IT DID NOT ALREADY EXIST')
+            if not silent:
+                print("IMPORTED NODES ARE GROUPED IN THE IMPORT GROUP LABELED '{}'".format(group.label))
+        else:
+            if not silent:
+                print('NO NODES TO IMPORT, SO NO GROUP CREATED, IF IT DID NOT ALREADY EXIST')
 
     if not silent:
         print('*** WARNING: MISSING EXISTING UUID CHECKS!!')

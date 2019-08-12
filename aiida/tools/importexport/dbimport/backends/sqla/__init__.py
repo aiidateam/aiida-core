@@ -665,6 +665,7 @@ def import_data_sqla(
 
             ######################################################
             # Put everything in a specific group
+            ######################################################
             existing = existing_entries.get(NODE_ENTITY_NAME, {})
             existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in six.itervalues(existing)]
             new = new_entries.get(NODE_ENTITY_NAME, {})

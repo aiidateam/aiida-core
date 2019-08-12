@@ -215,5 +215,29 @@ class TestGroups(AiidaTestCase):
         )
         imported_group = load_group(builder.all()[0][0])
         self.assertEqual(imported_group.uuid, group_uuid)
+        self.assertEqual(
+            imported_group.count(),
+            len(node_uuids),
+            msg='{} Nodes were found in the automatic import group, instead there should have been exactly {} '
+            'Nodes'.format(imported_group.count(), len(node_uuids))
+        )
+        for node in imported_group.nodes:
+            self.assertIn(node.uuid, node_uuids)
+
+        # Import again, using a new Group, and make sure the automatic import Group also captures "existing" Nodes
+        group_label = 'existing_import'
+        group = orm.Group(label=group_label)
+        group_uuid = group.uuid
+
+        import_data(filename, group=group, silent=True)
+
+        imported_group = load_group(label=group_label)
+        self.assertEqual(imported_group.uuid, group_uuid)
+        self.assertEqual(
+            imported_group.count(),
+            len(node_uuids),
+            msg='{} Nodes were found in the automatic import group, instead there should have been exactly {} '
+            'Nodes'.format(imported_group.count(), len(node_uuids))
+        )
         for node in imported_group.nodes:
             self.assertIn(node.uuid, node_uuids)

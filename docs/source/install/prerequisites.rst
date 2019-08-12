@@ -225,7 +225,10 @@ The guide for Ubuntu above can be followed but there are a few things to note:
    configured correctly out-of-the-box, which may cause problem for the database.
    The following command can be used to re-configure the time zone::
 
-     dpkg-reconfigure tzdata
+     sudo dpkg-reconfigure tzdata
 
-#. The file open limit may need to be raised using ``sudo ulimit -n 2048`` (default is 1024), when running tests.
+#. The file open limit may need to be raised using ``ulimit -n 2048`` (default is 1024), when running tests.
+   You can check the limit by using ``ulimit -n``.
+
+It may be worth considering adding some of these commands to your ``~/.bashrc`` file, since some of these settings may reset upon reboot.
 

@@ -91,8 +91,7 @@
       "PyMySQL==0.9.3",
       "PyCifRW==4.2.1; python_version < '3'",
       "PyCifRW==4.4; python_version >= '3'",
-      "seekpath==1.8.4",
-      "qe-tools==1.1.2"
+      "seekpath==1.8.4"
     ],
     "notebook": [
       "jupyter==1.0.0"

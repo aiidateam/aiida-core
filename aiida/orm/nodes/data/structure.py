@@ -104,16 +104,6 @@ def has_ase():
     return True
 
 
-def has_qe_tools():
-    """
-    :return: True if the qe_tools module can be imported, False otherwise.
-    """
-    try:
-        import qe_tools
-    except ImportError:
-        return False
-    return True
-
 def has_pymatgen():
     """
     :return: True if the pymatgen module can be imported, False otherwise.

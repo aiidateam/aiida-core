@@ -100,16 +100,19 @@ def calcjob_inputcat(calcjob, path):
         if fname and fname.has_default():
             path = fname.default
 
-    try:
-        content = calcjob.get_object_content(path)
-    except Exception as exception:  # pylint: disable=broad-except
-        # No path available or is incorrect
+    if path is None:
+        # Still no path available
         echo.echo_critical(
             '"{}" and its process class "{}" do not define a default input file '
             '(option "input_filename" not found).\n'
-            'Please specify a path explicitly.\n'
-            'Exception: {}'.format(calcjob.__class__.__name__, calcjob.process_class.__name__, exception)
+            'Please specify a path explicitly.'.format(calcjob.__class__.__name__, calcjob.process_class.__name__)
         )
+
+    try:
+        content = calcjob.get_object_content(path)
+    except (IOError, OSError) as exception:
+        # Incorrect path or file not readable
+        echo.echo_critical('Could not open input path "{}". Exception: {}'.format(path, exception))
     else:
         echo.echo(content)
 
@@ -142,16 +145,19 @@ def calcjob_outputcat(calcjob, path):
         if fname and fname.has_default():
             path = fname.default
 
-    try:
-        content = retrieved.get_object_content(path)
-    except Exception as exception:  # pylint: disable=broad-except
-        # No path available or is incorrect
+    if path is None:
+        # Still no path available
         echo.echo_critical(
             '"{}" and its process class "{}" do not define a default output file '
             '(option "output_filename" not found).\n'
-            'Please specify a path explicitly.\n'
-            'Exception: {}'.format(calcjob.__class__.__name__, calcjob.process_class.__name__, exception)
+            'Please specify a path explicitly.'.format(calcjob.__class__.__name__, calcjob.process_class.__name__)
         )
+
+    try:
+        content = retrieved.get_object_content(path)
+    except (IOError, OSError) as exception:
+        # Incorrect path or file not readable
+        echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
     else:
         echo.echo(content)
 

@@ -13,7 +13,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import io
-import os
 
 from six.moves import range
 import click
@@ -221,35 +220,6 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, dry_run):
     except (ValueError, TypeError) as err:
         echo.echo_critical(str(err))
 
-    _store_structure(new_structure, dry_run)
-
-
-@structure_import.command('qetools-pwinput')
-@click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
-@options.DRY_RUN()
-@decorators.with_dbenv()
-def import_qetools_pwinput(filename, dry_run):
-    """
-    Import structure with the qetools library from a Quantum ESPRESSO pw.x input file
-    """
-    try:
-        import qe_tools
-    except ImportError:
-        echo.echo_critical(
-            'You have not installed the package qe-tools. \n'
-            'You can install it with: pip install qe-tools'
-        )
-    from aiida.tools.data.structure import get_structuredata_from_qetools
-
-    try:
-        # qetools requires an abspath here
-        inputparser = qe_tools.parsers.pwinputparser.PwInputFile(os.path.abspath(filename))
-        new_structure = get_structuredata_from_qetools(inputparser)
-
-    except (ValueError, qe_tools.utils.exceptions.ParsingError) as err:
-        echo.echo_critical(str(err))
-
-    print('new', new_structure)
     _store_structure(new_structure, dry_run)
 
 

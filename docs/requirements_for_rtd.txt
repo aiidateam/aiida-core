@@ -53,7 +53,6 @@ pytest==4.3.0
 python-dateutil==2.8.0
 python-memcached==1.59
 pytz==2018.9
-qe-tools==1.1.2
 reentry>=1.3.0
 seekpath==1.8.4
 simplejson==3.16.0

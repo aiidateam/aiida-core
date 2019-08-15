@@ -28,13 +28,23 @@ from aiida.manage.external.postgres import Postgres
 
 @unittest.skipIf(configuration.PROFILE.database_backend == BACKEND_DJANGO, 'Reenable when #2813 is addressed')
 class TestVerdiSetup(AiidaPostgresTestCase):
-    """Tests for `verdi quicksetup`."""
+    """Tests for `verdi setup` and `verdi quicksetup`."""
 
     def setUp(self):
         """Create a CLI runner to invoke the CLI commands."""
         super(TestVerdiSetup, self).setUp()
         self.backend = configuration.PROFILE.database_backend
         self.cli_runner = CliRunner()
+
+    @with_temporary_config_instance
+    def test_help(self):
+        """Check that the `--help` option is eager, is not overruled and will properly display the help message.
+
+        If this test hangs, most likely the `--help` eagerness is overruled by another option that has started the
+        prompt cycle, which by waiting for input, will block the test from continuing.
+        """
+        self.cli_runner.invoke(cmd_setup.setup, ['--help'], catch_exceptions=False)
+        self.cli_runner.invoke(cmd_setup.quicksetup, ['--help'], catch_exceptions=False)
 
     @with_temporary_config_instance
     def test_quicksetup(self):
@@ -129,8 +139,9 @@ email: 123@234.de""".format(self.backend)
         user_last_name = 'Smith'
         user_institution = 'ECMA'
 
-        # Keep the `--profile` option last as a regression test for #2897. Some of the other options depend on this
-        # value and so it needs to be eagerly parsed.
+        # Keep the `--profile` option last as a regression test for #2897 and #2907. Some of the other options have
+        # defaults, callbacks and or contextual defaults that might depend on it, but should not fail if they are parsed
+        # before the profile option is parsed.
         options = [
             '--non-interactive', '--email', user_email, '--first-name', user_first_name, '--last-name', user_last_name,
             '--institution', user_institution, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,

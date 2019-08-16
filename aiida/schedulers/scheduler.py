@@ -290,7 +290,18 @@ class Scheduler(object):
         :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
         """
         # pylint: disable=no-self-use, not-callable, unused-argument
-        raise FeatureNotAvailable('Cannot get detailed job info')
+        raise FeatureNotAvailable('Cannot get detailed job info, missing command')
+
+    def _parse_detailed_jobinfo(self, detailed_jobinfo):
+        """
+        Return a dict containing a standardized set of keys that is
+        common among the different scheduler systems. Should be
+        implemented in the respective scheduler plugins and if this is
+        not done, no detailed job information is stored, regardless of
+        the job info command executed.
+        """
+        # pylint: disable=no-self-use, not-callable, unused-argument
+        raise FeatureNotAvailable('Cannot get detailed job info, missing parser')
 
     def get_detailed_jobinfo(self, jobid):
         """
@@ -306,14 +317,15 @@ class Scheduler(object):
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(command)
 
-        return u"""Detailed jobinfo obtained with command '{}'
-Return Code: {}
--------------------------------------------------------------
-stdout:
-{}
-stderr:
-{}
-""".format(command, retval, stdout, stderr)
+        # Parse the returned information
+        detailed_info = self._parse_detailed_jobinfo(stdout)  # pylint: disable=assignment-from-no-return
+
+        # Update the dictionary with return code, and stderr, in case
+        # something nasty happened and we want to check it downstream
+        detailed_info['ReturnCode'] = retval
+        detailed_info['StdErr'] = stderr
+
+        return detailed_info
 
     @abstractmethod
     def _parse_joblist_output(self, retval, stdout, stderr):

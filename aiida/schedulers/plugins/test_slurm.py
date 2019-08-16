@@ -27,10 +27,34 @@ TEXT_SQUEUE_TO_TEST = """862540^^^PD^^^Dependency^^^n/a^^^user1^^^20^^^640^^^(De
 863553^^^R^^^None^^^rosa1^^^user5^^^1^^^32^^^nid00471^^^normal^^^30:00^^^29:29^^^2013-05-23T11:44:11^^^bash^^^2013-05-23T10:42:11
 """
 
+TEXT_DETAILED_JOB_INFO = """AllocCPUS|Account|AssocID|AveCPU|AvePages|AveRSS|AveVMSize|Cluster|Comment|CPUTime|DerivedExitCode|Elapsed|Eligible|End|ExitCode|GID|Group|JobID|JobName|MaxRSS|MaxRSSNode|MaxRSSTask|MaxVMSize|MaxVMSizeNode|MaxVMSizeTask|MinCPU|MinCPUNode|MinCPUTask|NNodes|NodeList|NTasks|Priority|Partition|QOSRAW|ReqCPUS|Reserved|ResvCPU|Start|State|Submit|Suspended|SystemCPU|Timelimit|TotalCPU|UID|User|UserCPU|
+40|mk|67|||||testcluster||00:20:00|0:0|00:00:30|2019-08-14T16:21:55|2019-08-14T16:22:26|0:0|1497800513|sintef_users|106529|aiida-9206||||||||||2|compute-1-[24,36]||5078|normal|1|40|00:00:01|00:00:40|2019-08-14T16:21:56|CANCELLED by 0|2019-08-14T16:21:55|00:00:00|00:27.710|01:00:00|19:34.376|1497872254|testuser|19:06.665|
+20|mk|67|00:09:46|179K|41542368K|52242460K|testcluster||00:10:00||00:00:30|2019-08-14T16:21:56|2019-08-14T16:22:26|0:15|||106529.batch|batch|41542368K|compute-1-24|0|52242460K|compute-1-24|0|00:09:46|compute-1-24|0|1|compute-1-24|1||||20|||2019-08-14T16:21:56|CANCELLED|2019-08-14T16:21:56|00:00:00|00:12.019||09:45.075|||09:33.055|
+1|mk|67|00:00:58|15K|4376K|61716K|testcluster||00:00:32||00:00:32|2019-08-14T16:21:56|2019-08-14T16:22:28|1:0|||106529.0|orted|4376K|compute-1-36|0|61716K|compute-1-36|0|00:00:58|compute-1-36|0|1|compute-1-36|1||||1|||2019-08-14T16:21:56|FAILED|2019-08-14T16:21:56|00:00:00|00:15.690||09:49.300|||09:33.609|"""
+
+
+class TestParserSacct(unittest.TestCase):
+    """
+    Tests to verify that the sacct parser works properly in order to
+    obtain more detailed info about the job.
+    """
+
+    def test_parse_detailed_job_info(self):
+        scheduler = SlurmScheduler()
+        job_info = scheduler._parse_detailed_jobinfo(TEXT_DETAILED_JOB_INFO)
+        # A few explicit tests
+        assert job_info['AllocatedCPUs'] == 40
+        assert job_info['NumberOfNodes'] == 2
+        assert job_info['JobName'] == 'aiida-9206'
+        assert job_info['UserName'] == 'testuser'
+        assert job_info['ClusterName'] == 'testcluster'
+        with self.assertRaises(ValueError):
+            # Invalid job id return (empty info)
+            scheduler._parse_detailed_jobinfo(TEXT_DETAILED_JOB_INFO.split('\n')[0])
 
 class TestParserSqueue(unittest.TestCase):
     """
-    Tests to verify if teh function _parse_joblist_output behave correctly
+    Tests to verify if the function _parse_joblist_output behave correctly
     The tests is done parsing a string defined above, to be used offline
     """
 

@@ -14,6 +14,7 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from collections import OrderedDict
 import re
 
 import six
@@ -59,6 +60,56 @@ _MAP_STATUS_SLURM = {
     'S': JobState.SUSPENDED,
     'TO': JobState.DONE,
 }
+
+_MAP_DETAILED_JOB_SLURM = OrderedDict({
+    'AllocatedCPUs': 'AllocCPUS',
+    'Account': 'Account',
+    'UserAssociation': 'AssocID',
+    'AverageSystemAndUserCPUTime': 'AveCPU',
+    'AveragePageFaults': 'AvePages',
+    'AverageResidentSetSize': 'AveRSS',
+    'AverageVirtualMemorySize': 'AveVMSize',
+    'ClusterName': 'Cluster',
+    'Comment': 'Comment',
+    'ElapsedTimeTimesCPUs': 'CPUTime',
+    'HighestExitCode': 'DerivedExitCode',
+    'ElapsedTime': 'Elapsed',
+    'EligibleTime': 'Eligible',
+    'EndTime': 'End',
+    'ExitCode': 'ExitCode',
+    'GroupIdentifier': 'GID',
+    'GroupName': 'Group',
+    'JobID': 'JobID',
+    'JobName': 'JobName',
+    'MaximumResidentSetSize': 'MaxRSS',
+    'MaximumResidentSetNode': 'MaxRSSNode',
+    'MaximumResidentSetTask': 'MaxRSSTask',
+    'MaximumVirtualMemorySize': 'MaxVMSize',
+    'MaximumVirtualMemoryNode': 'MaxVMSizeNode',
+    'MaximumVirtualMemoryTask': 'MaxVMSizeTask',
+    'MinimumSystemAndUserCPUTime': 'MinCPU',
+    'MinimumSystemAndUserCPUNode': 'MinCPUNode',
+    'MinimumSystemAndUserCPUTask': 'MinCPUTask',
+    'NumberOfNodes': 'NNodes',
+    'NodeList': 'NodeList',
+    'NumberOfTasks': 'NTasks',
+    'Priority': 'Priority',
+    'Partition': 'Partition',
+    'QualityOfServiceID': 'QOSRAW',
+    'RequestedCPUs': 'ReqCPUS',
+    'ReservedTime': 'Reserved',
+    'ReservedCPUTime': 'ResvCPU',
+    'StartTime': 'Start',
+    'JobStatus': 'State',
+    'SubmitTime': 'Submit',
+    'SuspendedTime': 'Suspended',
+    'ParentSystemCPUTime': 'SystemCPU',
+    'TimeLimit': 'Timelimit',
+    'ParentTotalCPUTime': 'TotalCPU',
+    'UserIdentifier': 'UID',
+    'UserName': 'User',
+    'ParentUserCPUTime': 'UserCPU'
+})
 
 # From the manual,
 # possible lines are:
@@ -229,15 +280,55 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
 
         The output text is just retrieved, and returned for logging purposes.
         --parsable split the fields with a pipe (|), adding a pipe also at
-        the end.
+        the end. Here we assume that the jobid is valid.
         """
-        return 'sacct --format=AllocCPUS,Account,AssocID,AveCPU,AvePages,' \
-               'AveRSS,AveVMSize,Cluster,Comment,CPUTime,CPUTimeRAW,DerivedExitCode,' \
-               'Elapsed,Eligible,End,ExitCode,GID,Group,JobID,JobName,MaxRSS,MaxRSSNode,' \
-               'MaxRSSTask,MaxVMSize,MaxVMSizeNode,MaxVMSizeTask,MinCPU,MinCPUNode,' \
-               'MinCPUTask,NCPUS,NNodes,NodeList,NTasks,Priority,Partition,QOSRAW,ReqCPUS,' \
-               'Reserved,ResvCPU,ResvCPURAW,Start,State,Submit,Suspended,SystemCPU,Timelimit,' \
-               'TotalCPU,UID,User,UserCPU --parsable --jobs={}'.format(jobid)
+
+        quantities = list(_MAP_DETAILED_JOB_SLURM.values())
+        formatting = ','.join(quantities)
+        return ''.join(['sacct --format=', formatting, ' --parsable --jobs={}'.format(jobid)])
+
+    def _parse_detailed_jobinfo(self, jobinfo_details):
+        """
+        Parse the output of the jobinfo command defined in _get_detailed_jobinfo_command.
+
+        """
+        # First entry contains the formatting tags, so we skip this
+        details = jobinfo_details.split('\n')[1:]
+        # When using --parsable with saact we get a string which is divided by |,
+        # however, on multinode runs we get multiple entries, typically:
+        # jobid - contains information about the job for all the nodes
+        # jobid.batch - contains information from the master node
+        # jobid.0 - contains information from the master cpu
+        # We only fetch information from the first entry
+        if details:
+            info = details[0].split('|')
+        else:
+            raise ValueError('The supplied job id for the saact command does not return '
+                             'any valid entries.')
+
+        # Compose detailed job info dictionary
+        detailed_info = dict(zip(_MAP_DETAILED_JOB_SLURM.keys(), info))
+        # Convert from string to int
+        detailed_info['AllocatedCPUs'] = int(detailed_info['AllocatedCPUs'])
+        detailed_info['UserAssociation'] = int(detailed_info['UserAssociation'])
+        detailed_info['JobID'] = int(detailed_info['JobID'])
+        detailed_info['NumberOfNodes'] = int(detailed_info['NumberOfNodes'])
+        detailed_info['RequestedCPUs'] = int(detailed_info['RequestedCPUs'])
+        detailed_info['UserIdentifier'] = int(detailed_info['UserIdentifier'])
+        detailed_info['GroupIdentifier'] = int(detailed_info['GroupIdentifier'])
+        detailed_info['QualityOfServiceID'] = int(detailed_info['QualityOfServiceID'])
+
+        # For multinode systems, we might have a FAILED status on a single node, so
+        # check this and update the scheduler exit code.
+        detailed_info['SchedulerExitCode'] = detailed_info['ExitCode'].split(':')[0]
+        if details:
+            for element in details[1:]:
+                exit_code_comp = element.split('|')[list(_MAP_DETAILED_JOB_SLURM).index('ExitCode')]
+                exit_code = exit_code_comp.split(':')[0]
+                if exit_code > detailed_info['SchedulerExitCode']:
+                    detailed_info['SchedulerExitCode'] = exit_code
+
+        return detailed_info
 
     def _get_submit_script_header(self, job_tmpl):
         """

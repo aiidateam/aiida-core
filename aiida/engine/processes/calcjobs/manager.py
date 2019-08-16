@@ -123,7 +123,11 @@ class JobsList(object):
                     try:
                         detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
                     except exceptions.FeatureNotAvailable:
-                        detailed_job_info = 'This scheduler does not implement get_detailed_jobinfo'
+                        detailed_job_info = (
+                            'This scheduler does not implement '
+                            'a command and/or parser for obtaining '
+                            'detailed job information'
+                        )
 
                 job_info.detailedJobinfo = detailed_job_info
                 jobs_cache[job_id] = job_info

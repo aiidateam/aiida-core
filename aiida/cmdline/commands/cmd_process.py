@@ -170,11 +170,7 @@ def process_status(processes):
 @verdi_process.command('kill')
 @arguments.PROCESSES()
 @options.TIMEOUT()
-@click.option(
-    '--wait/--no-wait',
-    default=False,
-    help="Wait for the action to be completed otherwise return as soon as it's scheduled."
-)
+@options.WAIT()
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout, wait):
@@ -201,18 +197,24 @@ def process_kill(processes, timeout, wait):
 
 @verdi_process.command('pause')
 @arguments.PROCESSES()
+@options.ALL(help='Pause all active processes if no specific processes are specified.')
 @options.TIMEOUT()
-@click.option(
-    '--wait/--no-wait',
-    default=False,
-    help="Wait for the action to be completed otherwise return as soon as it's scheduled."
-)
+@options.WAIT()
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
-def process_pause(processes, timeout, wait):
+def process_pause(processes, all_entries, timeout, wait):
     """Pause running processes."""
+    from aiida.orm import ProcessNode, QueryBuilder
 
     controller = get_manager().get_process_controller()
+
+    if processes and all_entries:
+        raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
+
+    if not processes and all_entries:
+        active_states = options.active_process_states()
+        builder = QueryBuilder().append(ProcessNode, filters={'attributes.process_state': {'in': active_states}})
+        processes = [entry[0] for entry in builder.all()]
 
     futures = {}
     for process in processes:
@@ -233,18 +235,23 @@ def process_pause(processes, timeout, wait):
 
 @verdi_process.command('play')
 @arguments.PROCESSES()
+@options.ALL(help='Play all paused processes if no specific processes are specified.')
 @options.TIMEOUT()
-@click.option(
-    '--wait/--no-wait',
-    default=False,
-    help="Wait for the action to be completed otherwise return as soon as it's scheduled."
-)
+@options.WAIT()
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
-def process_play(processes, timeout, wait):
+def process_play(processes, all_entries, timeout, wait):
     """Play (unpause) paused processes."""
+    from aiida.orm import ProcessNode, QueryBuilder
 
     controller = get_manager().get_process_controller()
+
+    if processes and all_entries:
+        raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
+
+    if not processes and all_entries:
+        builder = QueryBuilder().append(ProcessNode, filters={'attributes.paused': True})
+        processes = [entry[0] for entry in builder.all()]
 
     futures = {}
     for process in processes:

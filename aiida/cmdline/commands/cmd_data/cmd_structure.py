@@ -13,7 +13,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import io
-import os
 
 from six.moves import range
 import click
@@ -54,7 +53,7 @@ def _store_structure(new_structure, dry_run):
 
 @verdi_data.group('structure')
 def structure():
-    """Manipulation of StructureData objects."""
+    """Manipulate StructureData objects (crystal structures)."""
 
 
 # pylint: disable=too-many-locals,too-many-branches
@@ -64,7 +63,7 @@ def structure():
 @list_options
 @decorators.with_dbenv()
 def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
-    """List stored StructureData objects."""
+    """List StructureData objects."""
     from aiida.orm.nodes.data.structure import StructureData, get_formula, get_symbols_string
     from tabulate import tabulate
 
@@ -150,7 +149,7 @@ def structure_show(data, fmt):
 @export_options
 @decorators.with_dbenv()
 def structure_export(**kwargs):
-    """Export StructureData object."""
+    """Export StructureData object to file."""
     node = kwargs.pop('datum')
     output = kwargs.pop('output')
     fmt = kwargs.pop('fmt')
@@ -163,7 +162,7 @@ def structure_export(**kwargs):
 
 @structure.group('import')
 def structure_import():
-    """Import crystal structures from a file."""
+    """Import a crystal structure from file into a StructureData object."""
 
 
 @structure_import.command('aiida-xyz')
@@ -221,35 +220,6 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, dry_run):
     except (ValueError, TypeError) as err:
         echo.echo_critical(str(err))
 
-    _store_structure(new_structure, dry_run)
-
-
-@structure_import.command('qetools-pwinput')
-@click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
-@options.DRY_RUN()
-@decorators.with_dbenv()
-def import_qetools_pwinput(filename, dry_run):
-    """
-    Import structure with the qetools library from a Quantum ESPRESSO pw.x input file
-    """
-    try:
-        import qe_tools
-    except ImportError:
-        echo.echo_critical(
-            'You have not installed the package qe-tools. \n'
-            'You can install it with: pip install qe-tools'
-        )
-    from aiida.tools.data.structure import get_structuredata_from_qetools
-
-    try:
-        # qetools requires an abspath here
-        inputparser = qe_tools.parsers.pwinputparser.PwInputFile(os.path.abspath(filename))
-        new_structure = get_structuredata_from_qetools(inputparser)
-
-    except (ValueError, qe_tools.utils.exceptions.ParsingError) as err:
-        echo.echo_critical(str(err))
-
-    print('new', new_structure)
     _store_structure(new_structure, dry_run)
 
 

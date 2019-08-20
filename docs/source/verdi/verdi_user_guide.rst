@@ -199,12 +199,12 @@ Below is a list with all available subcommands.
 
     Commands:
       cleanworkdir  Clean all content of all output remote folders of calcjobs.
-      gotocomputer  Open a shell and go to the calcjob folder on the computer...
-      inputcat      Show the contents of a file with relative PATH in the raw...
-      inputls       Show the list of files in the directory with relative PATH...
-      outputcat     Show the contents of a file with relative PATH in the...
-      outputls      Show the list of files in the directory with relative PATH...
-      res           Print data from the result output node of a calcjob.
+      gotocomputer  Open a shell in the remote folder on the calcjob.
+      inputcat      Show the contents of one of the calcjob input files.
+      inputls       Show the list of the generated calcjob input files.
+      outputcat     Show the contents of one of the calcjob retrieved outputs.
+      outputls      Show the list of the retrieved calcjob output files.
+      res           Print data from the result output Dict node of a calcjob.
 
 
 .. _verdi_code:
@@ -222,14 +222,14 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      delete     Delete codes that have not yet been used for calculations, i.e.
-      duplicate  Create duplicate of existing Code.
-      hide       Hide one or more codes from the `verdi code list` command.
-      list       List the codes in the database.
+      delete     Delete a code.
+      duplicate  Duplicate a code allowing to change some parameters.
+      hide       Hide one or more codes from `verdi code list`.
+      list       List the available codes.
       relabel    Relabel a code.
-      reveal     Reveal one or more hidden codes to the `verdi code list`...
-      setup      Setup a new Code.
-      show       Display detailed information for the given CODE.
+      reveal     Reveal one or more hidden codes in `verdi code list`.
+      setup      Setup a new code.
+      show       Display detailed information for a code.
 
 
 .. _verdi_comment:
@@ -247,10 +247,10 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      add     Add a comment to one or multiple nodes.
-      remove  Remove a comment.
-      show    Show the comments for one or multiple nodes.
-      update  Update a comment.
+      add     Add a comment to one or more nodes.
+      remove  Remove a comment of a node.
+      show    Show the comments of one or multiple nodes.
+      update  Update a comment of a node.
 
 
 .. _verdi_completioncommand:
@@ -262,7 +262,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Return the bash code to activate completion.
+      Return the code to activate bash completion.
 
       :note: this command is mainly for back-compatibility.     You should
       rather use:;
@@ -288,15 +288,15 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure  Configure a computer with one of the available transport types.
-      delete     Configure the authentication information for a given computer...
+      configure  Configure the Authinfo details for a computer (and user).
+      delete     Delete a computer.
       disable    Disable the computer for the given user.
-      duplicate  Duplicate a computer.
+      duplicate  Duplicate a computer allowing to change some parameters.
       enable     Enable the computer for the given user.
-      list       List available computers.
+      list       List all available computers.
       rename     Rename a computer.
-      setup      Add a computer.
-      show       Show information for a computer.
+      setup      Create a new computer.
+      show       Show detailed information for a computer.
       test       Test the connection to a computer.
 
 
@@ -309,7 +309,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] OPTION_NAME OPTION_VALUE
 
-      Set, unset and get profile specific or global configuration options.
+      Configure profile-specific or global AiiDA options.
 
     Options:
       --global  Apply the option configuration wide.
@@ -355,16 +355,6 @@ Below is a list with all available subcommands.
     Options:
       --help  Show this message and exit.
 
-    Commands:
-      array       Manipulate ArrayData objects.
-      bands       Manipulate BandsData objects.
-      cif         Manipulation of CIF data objects.
-      dict        View and manipulate Dict objects.
-      remote      Managing RemoteData objects.
-      structure   Manipulation of StructureData objects.
-      trajectory  View and manipulate TrajectoryData instances.
-      upf         Manipulation of the upf families.
-
 
 .. _verdi_database:
 
@@ -381,7 +371,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      integrity  Various commands that will check the integrity of the database...
+      integrity  Check the integrity of the database and fix potential issues.
       migrate    Migrate the database to the latest schema version.
 
 
@@ -400,7 +390,6 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      play        Open a browser and play the Aida triumphal march by Giuseppe...
       run_daemon  Run a daemon instance in the current interpreter.
       tests       Run the unittest suite or parts of it.
 
@@ -420,10 +409,9 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      create   Export various entities, such as Codes, Computers, Groups and...
-      inspect  Inspect the contents of an exported archive without importing
-               the...
-      migrate  Migrate an existing export archive file to the most recent...
+      create   Export parts of the AiiDA database to file for sharing.
+      inspect  Inspect contents of an exported archive without importing it.
+      migrate  Migrate an old export archive file to the most recent format.
 
 
 .. _verdi_graph:
@@ -435,7 +423,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Create visual representations of part of the provenance graph.
+      Create visual representations of the provenance graph.
 
     Options:
       --help  Show this message and exit.
@@ -453,22 +441,21 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Create, inspect and manage groups.
+      Create, inspect and manage groups of nodes.
 
     Options:
       --help  Show this message and exit.
 
     Commands:
-      add-nodes     Add NODES to the given GROUP.
-      copy          Add all nodes that belong to source group to the
-                    destination...
-      create        Create a new empty group with the name GROUP_NAME.
-      delete        Delete a GROUP.
-      description   Change the description of the given GROUP to DESCRIPTION.
-      list          Show a list of groups.
-      relabel       Change the label of the given GROUP to LABEL.
-      remove-nodes  Remove NODES from the given GROUP.
-      show          Show information on a given group.
+      add-nodes     Add nodes to the a group.
+      copy          Duplicate a group.
+      create        Create an empty group with a given name.
+      delete        Delete a group.
+      description   Change the description of a group.
+      list          Show a list of existing groups.
+      relabel       Change the label of a group.
+      remove-nodes  Remove nodes from a group.
+      show          Show information for a given group.
 
 
 .. _verdi_import:
@@ -480,10 +467,10 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] [--] [ARCHIVES]...
 
-      Import one or multiple exported AiiDA archives
+      Import data from an AiiDA archive file.
 
-      The ARCHIVES can be specified by their relative or absolute file path, or
-      their HTTP URL.
+      The archive can be specified by its relative or absolute file path, or its
+      HTTP URL.
 
     Options:
       -w, --webpages TEXT...          Discover all URL targets pointing to files
@@ -539,13 +526,16 @@ Below is a list with all available subcommands.
 
     Commands:
       attributes   Show the attributes of one or more nodes.
+      comment      Inspect, create and manage node comments.
       delete       Delete nodes and everything that originates from them.
-      description  View or set the descriptions of one or more nodes.
+      description  View or set the description of one or more nodes.
       extras       Show the extras of one or more nodes.
-      label        View or set the labels of one or more nodes.
-      repo
-      show         Show generic information on node(s).
-      tree         Show tree of nodes.
+      graph        Create visual representations of the provenance graph.
+      label        View or set the label of one or more nodes.
+      rehash       Recompute the hash for nodes in the database.
+      repo         Inspect the content of a node repository folder.
+      show         Show generic information on one or more nodes.
+      tree         Show a tree of nodes starting from a given node.
 
 
 .. _verdi_plugin:
@@ -557,7 +547,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Inspect installed plugins for various entry point categories.
+      Inspect AiiDA plugins.
 
     Options:
       --help  Show this message and exit.
@@ -581,14 +571,14 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      call-root  Show the root process of the call stack for the given...
+      call-root  Show root process of the call stack for the given processes.
       kill       Kill running processes.
-      list       Show a list of processes that are still running.
+      list       Show a list of running or terminated processes.
       pause      Pause running processes.
-      play       Play paused processes.
+      play       Play (unpause) paused processes.
       report     Show the log report for one or multiple processes.
-      show       Show a summary for one or multiple processes.
-      status     Print the status of the process.
+      show       Show details for one or multiple processes.
+      status     Print the status of one or multiple processes.
       watch      Watch the state transitions for a process.
 
 
@@ -607,10 +597,10 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      delete      Delete PROFILES (names, separated by spaces) from the aiida...
-      list        Displays list of all available profiles.
-      setdefault  Set PROFILE as the default profile.
-      show        Show details for PROFILE or, when not specified, the default...
+      delete      Delete one or more profiles.
+      list        Display a list of all available profiles.
+      setdefault  Set a profile as the default one.
+      show        Show details for a profile.
 
 
 .. _verdi_quicksetup:
@@ -622,8 +612,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Setup a new profile where the database is automatically created and
-      configured.
+      Setup a new profile in a fully automated fashion.
 
     Options:
       -n, --non-interactive           Non-interactive mode: never prompt for
@@ -665,7 +654,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] [NODES]...
 
-      Recompute the hash for nodes in the database
+      Recompute the hash for nodes in the database.
 
       The set of nodes that will be rehashed can be filtered by their identifier
       and/or based on their class.
@@ -673,6 +662,7 @@ Below is a list with all available subcommands.
     Options:
       -e, --entry-point PLUGIN  Only include nodes that are class or sub class of
                                 the class identified by this entry point.
+      -f, --force               Do not ask for confirmation.
       --help                    Show this message and exit.
 
 
@@ -685,7 +675,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Run the AiiDA REST API server
+      Run the AiiDA REST API server.
 
       Example Usage:
 
@@ -712,7 +702,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] [--] SCRIPTNAME [VARARGS]...
 
-      Execute an AiiDA script.
+      Execute scripts with preloaded AiiDA environment.
 
     Options:
       -g, --group                   Enables the autogrouping  [default: True]
@@ -818,8 +808,8 @@ Below is a list with all available subcommands.
 
     Commands:
       configure    Configure a new or existing user.
-      list         Displays list of all users.
-      set-default  Set the USER as the default user.
+      list         Show a list of all users.
+      set-default  Set a user as the default user for the profile.
 
 
 

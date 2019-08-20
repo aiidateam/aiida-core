@@ -178,7 +178,7 @@ class MakeHashTest(unittest.TestCase):
 
     def test_unhashable_type(self):
 
-        class MadeupClass(object):  # pylint: disable=useless-object-inheritance
+        class MadeupClass(object):
             pass
 
         with self.assertRaises(ValueError):

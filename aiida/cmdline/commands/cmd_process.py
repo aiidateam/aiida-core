@@ -50,7 +50,10 @@ def process_list(
     all_entries, group, process_state, process_label, exit_status, failed, past_days, limit, project, raw, order_by,
     order_dir
 ):
-    """Show a list of processes that are still running."""
+    """Show a list of running or terminated processes.
+
+    By default, only those that are still running are shown, but there are options
+    to show also the finished ones."""
     # pylint: disable=too-many-locals
     from tabulate import tabulate
     from aiida.cmdline.utils.common import print_last_process_state_change, check_worker_load
@@ -92,7 +95,7 @@ def process_list(
 @arguments.PROCESSES()
 @decorators.with_dbenv()
 def process_show(processes):
-    """Show a summary for one or multiple processes."""
+    """Show details for one or multiple processes."""
     from aiida.cmdline.utils.common import get_node_info
 
     for process in processes:
@@ -103,7 +106,7 @@ def process_show(processes):
 @arguments.PROCESSES()
 @decorators.with_dbenv()
 def process_call_root(processes):
-    """Show the root process of the call stack for the given processes."""
+    """Show root process of the call stack for the given processes."""
     for process in processes:
 
         caller = process.caller
@@ -156,7 +159,7 @@ def process_report(processes, levelname, indent_size, max_depth):
 @verdi_process.command('status')
 @arguments.PROCESSES()
 def process_status(processes):
-    """Print the status of the process."""
+    """Print the status of one or multiple processes."""
     from aiida.cmdline.utils.ascii_vis import format_call_graph
 
     for process in processes:
@@ -239,7 +242,7 @@ def process_pause(processes, timeout, wait):
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, timeout, wait):
-    """Play paused processes."""
+    """Play (unpause) paused processes."""
 
     controller = get_manager().get_process_controller()
 
@@ -266,13 +269,21 @@ def process_play(processes, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_watch(processes):
     """Watch the state transitions for a process."""
+    from time import sleep
     from kiwipy import BroadcastFilter
-    import concurrent.futures
 
-    def _print(body, sender, subject, correlation_id):
-        echo.echo('pk={}, subject={}, body={}, correlation_id={}'.format(sender, subject, body, correlation_id))
+    def _print(communicator, body, sender, subject, correlation_id):  # pylint: disable=unused-argument
+        """Format the incoming broadcast data into a message and echo it to stdout."""
+        if body is None:
+            body = 'No message specified'
+
+        if correlation_id is None:
+            correlation_id = '--'
+
+        echo.echo('Process<{}> [{}|{}]: {}'.format(sender, subject, correlation_id, body))
 
     communicator = get_manager().get_communicator()
+    echo.echo_info('watching for broadcasted messages, press CTRL+C to stop...')
 
     for process in processes:
 
@@ -283,9 +294,12 @@ def process_watch(processes):
         communicator.add_broadcast_subscriber(BroadcastFilter(_print, sender=process.pk))
 
     try:
-        # Block this thread indefinitely
-        concurrent.futures.Future().result()
+        # Block this thread indefinitely until interrupt
+        while True:
+            sleep(2)
     except (SystemExit, KeyboardInterrupt):
+        echo.echo('')  # add a new line after the interrupt character
+        echo.echo_info('received interrupt, exiting...')
         try:
             communicator.stop()
         except RuntimeError:

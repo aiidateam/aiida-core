@@ -60,7 +60,7 @@ class FixtureError(Exception):
         return repr(self.msg)
 
 
-class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless-object-inheritance
+class FixtureManager(object):  # pylint: disable=too-many-public-methods
     """
     Manage the life cycle of a completely separated and temporary AiiDA environment
 

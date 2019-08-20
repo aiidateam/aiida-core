@@ -20,7 +20,7 @@ from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.common.utils import ErrorAccumulator
 
 
-class CodeBuilder(object):  # pylint: disable=useless-object-inheritance
+class CodeBuilder(object):
     """Build a code with validation of attribute combinations"""
 
     def __init__(self, **kwargs):

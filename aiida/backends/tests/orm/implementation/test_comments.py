@@ -341,7 +341,7 @@ class TestBackendComment(AiidaTestCase):
         # NotExistent should be raised, since no entities are found
         with self.assertRaises(exceptions.NotExistent) as exc:
             self.backend.comments.delete(comment_id=id_)
-        self.assertIn("Comment with id '{}' not found".format(id_), exc.exception.__repr__())
+        self.assertIn("Comment with id '{}' not found".format(id_), str(exc.exception))
 
         # Try to delete existing and non-existing Comment - using delete_many
         # delete_many should return a list that *only* includes the existing Comment

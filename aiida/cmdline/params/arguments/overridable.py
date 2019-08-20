@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import click
 
 
-class OverridableArgument(object):  # pylint: disable=useless-object-inheritance
+class OverridableArgument(object):
     """
     Wrapper around click.argument that increases reusability
 

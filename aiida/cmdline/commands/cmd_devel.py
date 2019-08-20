@@ -160,9 +160,9 @@ def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-sta
         sys.exit(len(test_failures) + len(test_errors))
 
 
-@verdi_devel.command('play')
+@verdi_devel.command('play', hidden=True)
 def devel_play():
-    """Open a browser and play the Aida triumphal march by Giuseppe Verdi."""
+    """Play the Aida triumphal march by Giuseppe Verdi."""
     import webbrowser
 
     webbrowser.open_new('http://upload.wikimedia.org/wikipedia/commons/3/32/Triumphal_March_from_Aida.ogg')

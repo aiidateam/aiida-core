@@ -64,7 +64,7 @@ class CustomJSONEncoder(JSONEncoder):
 
 
 class DatetimePrecision(object):
-    # pylint: disable=too-few-public-methods,useless-object-inheritance
+    # pylint: disable=too-few-public-methods
     """
     A simple class which stores a datetime object with its precision. No
     internal check is done (cause itis not possible).
@@ -88,7 +88,7 @@ class DatetimePrecision(object):
         self.precision = precision
 
 
-class Utils(object):  # pylint: disable=useless-object-inheritance
+class Utils(object):
     """
     A class that gathers all the utility functions for parsing URI,
     validating request, pass it to the translator, and building HTTP response

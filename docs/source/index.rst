@@ -112,7 +112,6 @@ For developers
 
     developer_guide/core/internals
     developer_guide/core/transport
-    developer_guide/core/database_schema
     developer_guide/core/modifying_the_schema
     developer_guide/core/extend_restapi
     developer_guide/core/caching

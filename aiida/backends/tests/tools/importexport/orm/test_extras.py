@@ -160,16 +160,18 @@ class TestExtras(AiidaTestCase):
 
     def test_extras_import_mode_wrong(self):
         """Check a mode that is wrong"""
+        from aiida.tools.importexport.common.exceptions import ImportValidationError
+
         self.import_extras()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing='xnd')  # first letter is wrong
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing='nxd')  # second letter is wrong
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing='nnx')  # third letter is wrong
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing='n')  # too short
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing='nndnn')  # too long
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing=5)  # wrong type

@@ -37,12 +37,12 @@ def verdi_export():
 @click.option('-d', '--data', is_flag=True, help='Print the data contents and exit.')
 @click.option('-m', '--meta-data', is_flag=True, help='Print the meta data contents and exit.')
 def inspect(archive, version, data, meta_data):
-    """Inspect the contents of an exported archive without importing the content.
+    """Inspect contents of an exported archive without importing it.
 
     By default a summary of the archive contents will be printed. The various options can be used to change exactly what
     information is displayed.
     """
-    from aiida.common.archive import Archive, CorruptArchive
+    from aiida.tools.importexport import Archive, CorruptArchive
 
     with Archive(archive) as archive_object:
         try:
@@ -111,8 +111,10 @@ def create(
     return_reversed, call_reversed, include_comments, include_logs
 ):
     """
-    Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
-    sharing purposes.
+    Export parts of the AiiDA database to file for sharing.
+
+    Various entities can be exported, such as Codes, Computers, Groups, Nodes,
+    Comments, Logs, ...
     """
     from aiida.tools.importexport import export, export_zip
 
@@ -167,15 +169,14 @@ def create(
 def migrate(input_file, output_file, force, silent, archive_format):
     # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """
-    Migrate an existing export archive file to the most recent version of the export format
+    Migrate an old export archive file to the most recent format.
     """
     import tarfile
     import zipfile
 
     from aiida.common import json
     from aiida.common.folders import SandboxFolder
-    from aiida.common.archive import extract_zip, extract_tar
-    from aiida.tools.importexport import migration
+    from aiida.tools.importexport import migration, extract_zip, extract_tar
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')

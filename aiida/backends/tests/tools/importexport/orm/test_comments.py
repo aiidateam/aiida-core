@@ -343,6 +343,8 @@ class TestComments(AiidaTestCase):
         It may be `'newest'` or `'overwrite'`.
         Test import of 'old' comment that has since been changed in DB.
         """
+        from aiida.tools.importexport.common.exceptions import ImportValidationError
+
         # Get user
         # Will have to do this again after resetting the DB
         user = orm.User.objects.get_default()
@@ -408,7 +410,7 @@ class TestComments(AiidaTestCase):
         self.assertEqual(import_comments.all()[0][2], self.comments[0])
 
         ## Test ValueError is raised when using a wrong comment_mode:
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(export_file, silent=True, comment_mode='invalid')
 
     @with_temp_dir

@@ -62,7 +62,7 @@ def update_environment(new_argv):
 @decorators.with_dbenv()
 def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, include, includesubclasses):
     # pylint: disable=too-many-arguments,exec-used
-    """Execute an AiiDA script."""
+    """Execute scripts with preloaded AiiDA environment."""
     from aiida.cmdline.utils.shell import DEFAULT_MODULES_LIST
     from aiida.orm import autogroup
 

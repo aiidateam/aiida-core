@@ -18,7 +18,7 @@ from aiida.cmdline.params import arguments, options, types
 
 @verdi_data.group('array')
 def array():
-    """Manipulate ArrayData objects."""
+    """Manipulate ArrayData objects (numpy arrays)."""
 
 
 @array.command('show')

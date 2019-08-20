@@ -30,14 +30,14 @@ VISUALIZATION_FORMATS = ['jmol', 'xcrysden', 'mpl_heatmap', 'mpl_pos']
 
 @verdi_data.group('trajectory')
 def trajectory():
-    """View and manipulate TrajectoryData instances."""
+    """Manipulate TrajectoryData objects (molecular trajectories)."""
 
 
 @trajectory.command('list')
 @list_options
 @decorators.with_dbenv()
 def trajectory_list(raw, past_days, groups, all_users):
-    """List trajectories stored in database."""
+    """List TrajectoryData objects stored in the database."""
     from aiida.orm import TrajectoryData
     from tabulate import tabulate
 
@@ -73,7 +73,7 @@ def trajectory_list(raw, past_days, groups, all_users):
 @show_options
 @decorators.with_dbenv()
 def trajectory_show(data, fmt):
-    """Visualize trajectory."""
+    """Visualize a trajectory."""
     try:
         show_function = getattr(cmd_show, '_show_{}'.format(fmt))
     except AttributeError:
@@ -89,7 +89,7 @@ def trajectory_show(data, fmt):
 @export_options
 @decorators.with_dbenv()
 def trajectory_export(**kwargs):
-    """Export trajectory."""
+    """Export trajectory to file."""
     node = kwargs.pop('datum')
     output = kwargs.pop('output')
     fmt = kwargs.pop('fmt')

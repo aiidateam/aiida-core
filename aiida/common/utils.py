@@ -220,13 +220,6 @@ def get_object_from_string(class_string):
     return getattr(importlib.import_module(the_module), the_name)
 
 
-def export_shard_uuid(uuid):
-    """
-    Sharding of the UUID for the import/export
-    """
-    return os.path.join(uuid[:2], uuid[2:4], uuid[4:])
-
-
 def grouper(n, iterable):  # pylint: disable=invalid-name
     """
     Given an iterable, returns an iterable that returns tuples of groups of
@@ -247,7 +240,7 @@ def grouper(n, iterable):  # pylint: disable=invalid-name
         yield chunk
 
 
-class ArrayCounter(object):  # pylint: disable=useless-object-inheritance
+class ArrayCounter(object):
     """
     A counter & a method that increments it and returns its value.
     It is used in various tests.
@@ -309,7 +302,7 @@ def are_dir_trees_equal(dir1, dir2):
     return True, 'The given directories ({} and {}) are equal'.format(dir1, dir2)
 
 
-class Prettifier(object):  # pylint: disable=useless-object-inheritance
+class Prettifier(object):
     """
     Class to manage prettifiers (typically for labels of kpoints
     in band plots)
@@ -532,7 +525,7 @@ def strip_prefix(full_string, prefix):
     return full_string
 
 
-class Capturing(object):  # pylint: disable=useless-object-inheritance
+class Capturing(object):
     """
     This class captures stdout and returns it
     (as a list, split by lines).
@@ -593,7 +586,7 @@ class Capturing(object):  # pylint: disable=useless-object-inheritance
         return iter(self.stdout_lines)
 
 
-class ErrorAccumulator(object):  # pylint: disable=useless-object-inheritance
+class ErrorAccumulator(object):
     """
     Allows to run a number of functions and collect all the errors they raise
 

@@ -25,7 +25,7 @@ __all__ = ('BackendQueryBuilder',)
 class BackendQueryBuilder(object):
     """Backend query builder interface"""
 
-    # pylint: disable=invalid-name,too-many-public-methods,useless-object-inheritance
+    # pylint: disable=invalid-name,too-many-public-methods
 
     outer_to_inner_schema = None
     inner_to_outer_schema = None

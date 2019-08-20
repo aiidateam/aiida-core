@@ -23,7 +23,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 
 @verdi.group('group')
 def verdi_group():
-    """Create, inspect and manage groups."""
+    """Create, inspect and manage groups of nodes."""
 
 
 @verdi_group.command('add-nodes')
@@ -32,7 +32,7 @@ def verdi_group():
 @arguments.NODES()
 @with_dbenv()
 def group_add_nodes(group, force, nodes):
-    """Add NODES to the given GROUP."""
+    """Add nodes to the a group."""
     if not force:
         click.confirm('Do you really want to add {} nodes to Group<{}>?'.format(len(nodes), group.label), abort=True)
 
@@ -46,7 +46,7 @@ def group_add_nodes(group, force, nodes):
 @options.FORCE()
 @with_dbenv()
 def group_remove_nodes(group, nodes, clear, force):
-    """Remove NODES from the given GROUP."""
+    """Remove nodes from a group."""
     if clear:
         message = 'Do you really want to remove ALL the nodes from Group<{}>?'.format(group.label)
     else:
@@ -67,7 +67,7 @@ def group_remove_nodes(group, nodes, clear, force):
 @options.FORCE()
 @with_dbenv()
 def group_delete(group, clear, force):
-    """Delete a GROUP.
+    """Delete a group.
 
     Note that a group that contains nodes cannot be deleted if it contains any nodes. If you still want to delete the
     group, use the `-c/--clear` flag to remove the contents before deletion. Note that in any case, the nodes themselves
@@ -99,7 +99,7 @@ def group_delete(group, clear, force):
 @click.argument('label', type=click.STRING)
 @with_dbenv()
 def group_relabel(group, label):
-    """Change the label of the given GROUP to LABEL."""
+    """Change the label of a group."""
     try:
         group.label = label
     except UniquenessError as exception:
@@ -113,7 +113,7 @@ def group_relabel(group, label):
 @click.argument('description', type=click.STRING, required=False)
 @with_dbenv()
 def group_description(group, description):
-    """Change the description of the given GROUP to DESCRIPTION.
+    """Change the description of a group.
 
     If no DESCRIPTION is defined, the current description will simply be echoed.
     """
@@ -136,7 +136,7 @@ def group_description(group, description):
 @arguments.GROUP()
 @with_dbenv()
 def group_show(group, raw, uuid):
-    """Show information on a given group. Pass the GROUP as a parameter."""
+    """Show information for a given group."""
     from tabulate import tabulate
 
     from aiida.common.utils import str_timedelta
@@ -238,7 +238,7 @@ def group_list(
     all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith, contains,
     node
 ):
-    """Show a list of groups."""
+    """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments, too-many-locals
     import datetime
     from aiida.common.escaping import escape_for_sql_like
@@ -323,7 +323,7 @@ def group_list(
 @click.argument('group_label', nargs=1, type=click.STRING)
 @with_dbenv()
 def group_create(group_label):
-    """Create a new empty group with the name GROUP_NAME."""
+    """Create an empty group with a given name."""
     from aiida import orm
     from aiida.orm import GroupTypeString
 
@@ -340,7 +340,10 @@ def group_create(group_label):
 @click.argument('destination_group', nargs=1, type=click.STRING)
 @with_dbenv()
 def group_copy(source_group, destination_group):
-    """Add all nodes that belong to source group to the destination group (which may or may not exist)."""
+    """Duplicate a group.
+
+    More in detail, add all nodes from the source group to the destination group.
+    Note that the destination group may not exist."""
     from aiida import orm
 
     dest_group, created = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)

@@ -310,6 +310,8 @@ class RESTApiTestCase(AiidaTestCase):
 
                 expected_node_uuids = [node['uuid'] for node in expected_data]
                 result_node_uuids = [node['uuid'] for node in response['data'][result_name]]
+                expected_node_uuids.sort()
+                result_node_uuids.sort()
                 self.assertEqual(expected_node_uuids, result_node_uuids)
 
                 self.compare_extra_response_data(entity_type, url, response, uuid)

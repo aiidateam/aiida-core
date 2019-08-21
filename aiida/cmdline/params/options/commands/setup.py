@@ -57,11 +57,11 @@ def get_profile_attribute_default(attribute_tuple, ctx):
             return default
 
 
-def get_repository_path_default(ctx):
-    """Return the default value for the repository URI for the current profile in the context.
+def get_repository_uri_default(ctx):
+    """Return the default value for the repository URI for the current profile in the click context.
 
     :param ctx: click context which should contain the selected profile
-    :return: default absolute path for the repository
+    :return: default repository URI
     """
     import os
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
@@ -72,12 +72,12 @@ def get_repository_path_default(ctx):
 
 
 def get_quicksetup_repository_uri(ctx, param, value):  # pylint: disable=unused-argument
-    """Determine the repository URI to be used as default in `verdi quicksetup`
+    """Return the repository URI to be used as default in `verdi quicksetup`
 
     :param ctx: click context which should contain the contextual parameters
     :return: the repository URI
     """
-    return get_repository_path_default(ctx)
+    return get_repository_uri_default(ctx)
 
 
 def get_quicksetup_database_name(ctx, param, value):  # pylint: disable=unused-argument
@@ -331,6 +331,6 @@ SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
 SETUP_REPOSITORY_URI = QUICKSETUP_REPOSITORY_URI.clone(
     prompt='Repository directory',
     callback=None,  # Unset the `callback` to define the default, which is instead done by the `contextual_default`
-    contextual_default=get_repository_path_default,
+    contextual_default=get_repository_uri_default,
     cls=options.interactive.InteractiveOption
 )

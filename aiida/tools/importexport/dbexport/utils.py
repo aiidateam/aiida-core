@@ -13,6 +13,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+from aiida.orm import QueryBuilder, ProcessNode
+from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.config import (
     file_fields_to_model_fields, entity_names_to_entities, get_all_fields_info
 )
@@ -252,9 +254,6 @@ def check_process_nodes_sealed(nodes):
     :raises `~aiida.tools.importexport.common.exceptions.ExportValidationError`:
         if a ``ProcessNode`` is not sealed or `nodes` is not a `list`, `set`, or `int`.
     """
-    from aiida.orm import QueryBuilder, ProcessNode
-    from aiida.tools.importexport.common import exceptions
-
     if not nodes:
         return
 
@@ -277,3 +276,244 @@ def check_process_nodes_sealed(nodes):
             'All ProcessNodes must be sealed before they can be exported. '
             'Node(s) with PK(s): {} is/are not sealed.'.format(', '.join(str(pk) for pk in nodes - sealed_nodes))
         )
+
+
+def _retrieve_linked_nodes_query(current_node, input_type, output_type, direction, link_types):
+    """Helper function for :py:func:`~aiida.tools.importexport.dbexport.utils.retrieve_linked_nodes`
+
+    A general :py:class:`~aiida.orm.querybuilder.QueryBuilder` query, retrieving linked Nodes and returning link
+    information and the found Nodes.
+
+    :param current_node: The current Node's PK.
+    :type current_node: int
+
+    :param input_type: ORM Node class
+    :type input_type: :py:class:`~aiida.orm.nodes.data.data.Data`,
+        :py:class:`~aiida.orm.nodes.process.process.ProcessNode`.
+
+    :param output_type: ORM Node class
+    :type output_type: :py:class:`~aiida.orm.nodes.data.data.Data`,
+        :py:class:`~aiida.orm.nodes.process.process.ProcessNode`.
+
+    :param direction: Link direction, must be either ``'forward'`` or ``'reverse'``.
+    :type direction: str
+
+    :param link_types: List of :py:class:`~aiida.common.links.LinkType` values, e.g. ``LinkType.RETURN.value``.
+    :type link_types: list
+
+    :return: Dictionary of link information to be used for the export archive and set of found Nodes.
+    :rtype: dict
+    """
+    found_nodes = set()
+    links_uuid_dict = {}
+
+    get_current_node = {'id': current_node}
+    filters_input = get_current_node if direction == 'forward' else {}
+    filters_output = get_current_node if direction == 'reverse' else {}
+    if filters_input == filters_output:
+        raise exceptions.ExportValidationError("direction must be either 'forward' or 'reverse'")
+
+    builder = QueryBuilder()
+    builder.append(input_type, project=['uuid', 'id'], tag='input', filters=filters_input)
+    builder.append(
+        output_type,
+        project=['uuid', 'id'],
+        with_incoming='input',
+        filters=filters_output,
+        edge_filters={'type': {
+            'in': link_types
+        }},
+        edge_project=['label', 'type']
+    )
+
+    for input_uuid, input_pk, output_uuid, output_pk, link_label, link_type in builder.iterall():
+        links_uuid_entry = {
+            'input': str(input_uuid),
+            'output': str(output_uuid),
+            'label': str(link_label),
+            'type': str(link_type)
+        }
+        links_uuid_dict[frozenset(links_uuid_entry.items())] = links_uuid_entry
+
+        node_pk = output_pk if direction == 'forward' else input_pk
+        found_nodes.add(node_pk)
+
+    return links_uuid_dict, found_nodes
+
+
+def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):
+    """Recursively retrieve linked Nodes and the links
+
+    The rules for recursively following links/edges in the provenance graph are as follows,
+    where the Node types in bold symbolize the Node that is currently being exported, i.e.,
+    it is this Node onto which the Link in question has been found.
+
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    |**LinkType**| **From**            | **To**              |Follow (default)| Togglable                  |
+    +============+=====================+=====================+================+============================+
+    | INPUT_CALC | **Data**            | CalculationNode     | False          | True (``input_forward``)   |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | INPUT_CALC | Data                | **CalculationNode** | True           | False                      |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | CREATE     | **CalculationNode** | Data                | True           | False                      |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | CREATE     | CalculationNode     | **Data**            | True           | True (``create_reversed``) |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | RETURN     | **WorkflowNode**    | Data                | True           | False                      |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | RETURN     | WorkflowNode        | **Data**            | False          | True (``return_reversed``) |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | INPUT_WORK | **Data**            | WorkflowNode        | False          | True (``input_forward``)   |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | INPUT_WORK | Data                | **WorkflowNode**    | True           | False                      |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | CALL_CALC  | **WorkflowNode**    | CalculationNode     | True           | False                      |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | CALL_CALC  | WorkflowNode        | **CalculationNode** | False          | True (``call_reversed``)   |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | CALL_WORK  | **WorkflowNode**    | WorkflowNode        | True           | False                      |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+    | CALL_WORK  | WorkflowNode        | **WorkflowNode**    | False          | True (``call_reversed``)   |
+    +------------+---------------------+---------------------+----------------+----------------------------+
+
+    :param process_nodes: Set of :py:class:`~aiida.orm.nodes.process.process.ProcessNode` nodes.
+    :param data_nodes: Set of :py:class:`~aiida.orm.nodes.data.data.Data` nodes.
+
+    :param input_forward: Follow forward INPUT links (recursively) when calculating the node set to export.
+    :type input_forward: bool
+
+    :param create_reversed: Follow reversed CREATE links (recursively) when calculating the node set to export.
+    :type create_reversed: bool
+
+    :param return_reversed: Follow reversed RETURN links (recursively) when calculating the node set to export.
+    :type return_reversed: bool
+
+    :param call_reversed: Follow reversed CALL links (recursively) when calculating the node set to export.
+    :type call_reversed: bool
+
+    :return: Set of retrieved Nodes and list of links information.
+
+    :raises `~aiida.tools.importexport.common.exceptions.ExportValidationError`: if wrong or too many kwargs are given.
+    """
+    from aiida.common.links import LinkType
+    from aiida.orm import Data
+
+    # Initialization and set flags according to rules
+    retrieved_nodes = set()
+    links_uuid_dict = {}
+    input_forward = kwargs.pop('input_forward', False)
+    create_reversed = kwargs.pop('create_reversed', True)
+    return_reversed = kwargs.pop('return_reversed', False)
+    call_reversed = kwargs.pop('call_reversed', False)
+
+    if kwargs:
+        raise exceptions.ExportValidationError(
+            'retrieve_linked_nodes received too many keyword arguments: {}. '.format(kwargs) +
+            "Only 'input_forward', 'create_reversed', 'return_reversed', 'call_reversed' are accepted."
+        )
+
+    # We repeat until there are no further nodes to be visited
+    while process_nodes or data_nodes:
+
+        # If is is a ProcessNode
+        if process_nodes:
+            current_node_pk = process_nodes.pop()
+            # If it is already visited continue to the next node
+            if current_node_pk in retrieved_nodes:
+                continue
+            # Otherwise say that it is a node to be exported
+            else:
+                retrieved_nodes.add(current_node_pk)
+
+            # INPUT(Data, ProcessNode) - Reversed
+            links_uuids, found_nodes = _retrieve_linked_nodes_query(
+                current_node_pk,
+                input_type=Data,
+                output_type=ProcessNode,
+                direction='reverse',
+                link_types=[LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]
+            )
+            data_nodes.update(found_nodes - retrieved_nodes)
+            links_uuid_dict.update(links_uuids)
+
+            # CREATE/RETURN(ProcessNode, Data) - Forward
+            links_uuids, found_nodes = _retrieve_linked_nodes_query(
+                current_node_pk,
+                input_type=ProcessNode,
+                output_type=Data,
+                direction='forward',
+                link_types=[LinkType.CREATE.value, LinkType.RETURN.value]
+            )
+            data_nodes.update(found_nodes - retrieved_nodes)
+            links_uuid_dict.update(links_uuids)
+
+            # CALL(WorkflowNode, ProcessNode) - Forward
+            links_uuids, found_nodes = _retrieve_linked_nodes_query(
+                current_node_pk,
+                input_type=ProcessNode,
+                output_type=ProcessNode,
+                direction='forward',
+                link_types=[LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]
+            )
+            process_nodes.update(found_nodes - retrieved_nodes)
+            links_uuid_dict.update(links_uuids)
+
+            # CALL(WorkflowNode, ProcessNode) - Reversed
+            if call_reversed:
+                links_uuids, found_nodes = _retrieve_linked_nodes_query(
+                    current_node_pk,
+                    input_type=ProcessNode,
+                    output_type=ProcessNode,
+                    direction='reverse',
+                    link_types=[LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]
+                )
+                process_nodes.update(found_nodes - retrieved_nodes)
+                links_uuid_dict.update(links_uuids)
+
+        # If it is a Data
+        else:
+            current_node_pk = data_nodes.pop()
+            # If it is already visited continue to the next node
+            if current_node_pk in retrieved_nodes:
+                continue
+            # Otherwise say that it is a node to be exported
+            else:
+                retrieved_nodes.add(current_node_pk)
+
+            # INPUT(Data, ProcessNode) - Forward
+            if input_forward:
+                links_uuids, found_nodes = _retrieve_linked_nodes_query(
+                    current_node_pk,
+                    input_type=Data,
+                    output_type=ProcessNode,
+                    direction='forward',
+                    link_types=[LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]
+                )
+                process_nodes.update(found_nodes - retrieved_nodes)
+                links_uuid_dict.update(links_uuids)
+
+            # CREATE(CalculationNode, Data) - Reversed
+            if create_reversed:
+                links_uuids, found_nodes = _retrieve_linked_nodes_query(
+                    current_node_pk,
+                    input_type=ProcessNode,
+                    output_type=Data,
+                    direction='reverse',
+                    link_types=[LinkType.CREATE.value]
+                )
+                process_nodes.update(found_nodes - retrieved_nodes)
+                links_uuid_dict.update(links_uuids)
+
+            # RETURN(WorkflowNode, Data) - Reversed
+            if return_reversed:
+                links_uuids, found_nodes = _retrieve_linked_nodes_query(
+                    current_node_pk,
+                    input_type=ProcessNode,
+                    output_type=Data,
+                    direction='reverse',
+                    link_types=[LinkType.RETURN.value]
+                )
+                process_nodes.update(found_nodes - retrieved_nodes)
+                links_uuid_dict.update(links_uuids)
+
+    return retrieved_nodes, list(links_uuid_dict.values())

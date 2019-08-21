@@ -27,6 +27,7 @@ from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
 from aiida.tools.importexport import import_data, export
+from aiida.tools.importexport.common.exceptions import DanglingLinkError
 
 
 class TestLinks(AiidaTestCase):
@@ -41,8 +42,6 @@ class TestLinks(AiidaTestCase):
     @with_temp_dir
     def test_links_to_unknown_nodes(self, temp_dir):
         """Test importing of nodes, that have links to unknown nodes."""
-        from aiida.tools.importexport.common.exceptions import ImportValidationError
-
         node_label = 'Test structure data'
         struct = orm.StructureData()
         struct.label = str(node_label)
@@ -57,24 +56,24 @@ class TestLinks(AiidaTestCase):
             tar.extractall(unpack.abspath)
 
         with io.open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-            metadata = json.load(fhandle)
-        metadata['links_uuid'].append({
+            data = json.load(fhandle)
+        data['links_uuid'].append({
             'output': struct.uuid,
-            # note: this uuid is supposed to not be in the DB
+            # note: this uuid is supposed to not be in the DB:
             'input': get_new_uuid(),
-            'label': 'parent'
+            'label': 'parent',
+            'type': LinkType.CREATE.value
         })
 
         with io.open(unpack.get_abs_path('data.json'), 'wb') as fhandle:
-            json.dump(metadata, fhandle)
+            json.dump(data, fhandle)
 
         with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT) as tar:
             tar.add(unpack.abspath, arcname='')
 
-        self.clean_db()
-        self.create_user()
+        self.reset_database()
 
-        with self.assertRaises(ImportValidationError):
+        with self.assertRaises(DanglingLinkError):
             import_data(filename, silent=True)
 
         import_data(filename, ignore_unknown_nodes=True, silent=True)
@@ -223,8 +222,8 @@ class TestLinks(AiidaTestCase):
         return graph_nodes, export_list[export_combination]
 
     @with_temp_dir
-    def test_data_create_reversed_false(self, temp_dir):
-        """Verify that create_reversed = False is respected when only exporting Data nodes."""
+    def test_data_create_reversed(self, temp_dir):
+        """Verify that create_reversed is respected when only exporting Data nodes."""
         data_input = orm.Int(1).store()
         data_output = orm.Int(2).store()
 
@@ -235,27 +234,46 @@ class TestLinks(AiidaTestCase):
         calc.add_incoming(data_input, LinkType.INPUT_CALC, 'input')
         calc.store()
         data_output.add_incoming(calc, LinkType.CREATE, 'create')
-        data_output_uuid = data_output.uuid
         calc.seal()
 
-        group = orm.Group(label='test_group').store()
-        group.add_nodes(data_output)
+        data_input_uuid = data_input.uuid
+        data_output_uuid = data_output.uuid
+        calc_uuid = calc.uuid
 
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([group], outfile=export_file, silent=True, create_reversed=False)
+        # Export with create_reversed True and False
+        export_file_false = os.path.join(temp_dir, 'export_false.tar.gz')
+        export_file_true = os.path.join(temp_dir, 'export_true.tar.gz')
 
+        export([data_output], outfile=export_file_false, silent=True, create_reversed=False)
+        export([data_output], outfile=export_file_true, silent=True, create_reversed=True)
+
+        # Check create_reversed = False
+        # Expected outcome: Only data_output is exported
         self.reset_database()
 
-        import_data(export_file, silent=True)
+        import_data(export_file_false, silent=True)
 
-        builder = orm.QueryBuilder()
-        builder.append(orm.Data)
-        self.assertEqual(builder.count(), 1, 'Expected a single Data node but got {}'.format(builder.count()))
-        self.assertEqual(builder.all()[0][0].uuid, data_output_uuid)
+        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
+        self.assertEqual(builder.count(), 1, 'Expected a single Data node, but got {}'.format(builder.count()))
+        self.assertEqual(builder.all()[0][0], data_output_uuid)
 
-        builder = orm.QueryBuilder()
-        builder.append(orm.CalcJobNode)
-        self.assertEqual(builder.count(), 0, 'Expected no Calculation nodes')
+        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
+        self.assertEqual(builder.count(), 0, 'Expected no Calculation nodes, but got {}'.format(builder.count()))
+
+        # Check create_reversed = True (default)
+        # Expected outcome: All three Nodes are exported: data_input, calc, data_output
+        self.reset_database()
+
+        import_data(export_file_true, silent=True)
+
+        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
+        self.assertEqual(builder.count(), 2, 'Expected exactly two Data nodes, but got {}'.format(builder.count()))
+        for node_uuid in builder.iterall():
+            self.assertIn(node_uuid[0], [data_input_uuid, data_output_uuid])
+
+        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
+        self.assertEqual(builder.count(), 1, 'Expected a single Calculation node, but got {}'.format(builder.count()))
+        self.assertEqual(builder.all()[0][0], calc_uuid)
 
     @with_temp_dir
     def test_complex_workflow_graph_links(self, temp_dir):
@@ -395,16 +413,16 @@ class TestLinks(AiidaTestCase):
         Check that CALL links are not followed in the export procedure,
         and the only creation is followed for data::
 
-            ____       ____        ____
-           |    | INP |    | CALL |    |
-           | i1 | --> | w1 | <--- | w2 |
-           |____|     |____|      |____|
-                        |
-                        v RETURN
-                       ____
-                      |    |
-                      | o1 |
-                      |____|
+            _________       _______        _______
+           |         | INP |       | CALL |       |
+           | data_in | --> | work1 | <--- | work2 |
+           |_________|     |_______|      |_______|
+                               |
+                               v RETURN
+                           __________
+                          |          |
+                          | data_out |
+                          |__________|
 
         """
         work1 = orm.WorkflowNode()
@@ -486,3 +504,201 @@ class TestLinks(AiidaTestCase):
         # Assert number of links, checking both RETURN links are included
         self.assertEqual(len(links_wanted), links_count)  # Before export
         self.assertEqual(len(links_in_db), links_count)  # After import
+
+    @with_temp_dir
+    def test_input_forward_flag(self, temp_dir):
+        """Test the 'input_forward' flag for export
+
+        Graph::
+
+            data_input* --INPUT_CALC--> calc --CREATE--> data_output
+
+        The starred Node will be exported.
+        """
+        data_input = orm.Int(1).store()
+        data_output = orm.Int(2).store()
+
+        calc = orm.CalcJobNode()
+        calc.computer = self.computer
+        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+
+        calc.add_incoming(data_input, LinkType.INPUT_CALC, 'input')
+        calc.store()
+        data_output.add_incoming(calc, LinkType.CREATE, 'create')
+        calc.seal()
+
+        data_input_uuid = data_input.uuid
+        data_output_uuid = data_output.uuid
+        calc_uuid = calc.uuid
+
+        # Export with input_forward True and False
+        export_file_true = os.path.join(temp_dir, 'export_true.tar.gz')
+        export_file_false = os.path.join(temp_dir, 'export_false.tar.gz')
+
+        export([data_input], outfile=export_file_true, silent=True, input_forward=True)
+        export([data_input], outfile=export_file_false, silent=True, input_forward=False)
+
+        # Check input_forward = True
+        # Expected outcome: All three Nodes are exported: data_input, calc, data_output
+        self.reset_database()
+
+        import_data(export_file_true, silent=True)
+
+        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
+        self.assertEqual(builder.count(), 2, 'Expected exactly two Data nodes, but got {}'.format(builder.count()))
+        for node_uuid in builder.iterall():
+            self.assertIn(node_uuid[0], [data_input_uuid, data_output_uuid])
+
+        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
+        self.assertEqual(builder.count(), 1, 'Expected a single Calculation node, but got {}'.format(builder.count()))
+        self.assertEqual(builder.all()[0][0], calc_uuid)
+
+        # Check input_forward = False (default)
+        # Expected outcome: Only data_input is exported
+        self.reset_database()
+
+        import_data(export_file_false, silent=True)
+
+        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
+        self.assertEqual(builder.count(), 1, 'Expected a single Data node, but got {}'.format(builder.count()))
+        self.assertEqual(builder.all()[0][0], data_input_uuid)
+
+        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
+        self.assertEqual(builder.count(), 0, 'Expected no Calculation nodes, but got {}'.format(builder.count()))
+
+    @with_temp_dir
+    def test_call_reversed_flag(self, temp_dir):
+        """Test the 'call_reversed' flag for export
+
+        Graph::
+
+            work --CALL_WORK--> work_called --CALL_CALC--> calc_called* --CREATE--> data_output
+              |                                                                          ^
+              |_________________________________RETURN___________________________________|
+
+        The starred Node will be exported.
+        """
+        work = orm.WorkFunctionNode().store()
+        work_called = orm.WorkFunctionNode()
+
+        calc_called = orm.CalcJobNode()
+        calc_called.computer = self.computer
+        calc_called.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+
+        data_output = orm.Int(1).store()
+
+        work_called.add_incoming(work, LinkType.CALL_WORK, 'call_work')
+        work_called.store()
+        calc_called.add_incoming(work_called, LinkType.CALL_CALC, 'call_calc')
+        calc_called.store()
+        data_output.add_incoming(calc_called, LinkType.CREATE, 'create_data')
+        data_output.add_incoming(work, LinkType.RETURN, 'return_data')
+
+        work.seal()
+        work_called.seal()
+        calc_called.seal()
+
+        work_uuid = work.uuid
+        work_called_uuid = work_called.uuid
+        calc_called_uuid = calc_called.uuid
+        data_output_uuid = data_output.uuid
+
+        # Export with call_reversed True and False
+        export_file_true = os.path.join(temp_dir, 'export_true.tar.gz')
+        export_file_false = os.path.join(temp_dir, 'export_false.tar.gz')
+
+        export([calc_called], outfile=export_file_true, silent=True, call_reversed=True)
+        export([calc_called], outfile=export_file_false, silent=True, call_reversed=False)
+
+        # Check call_reversed = True
+        # Expected outcome: All four Nodes are exported: work, work_called, calc_called, data_output
+        self.reset_database()
+
+        import_data(export_file_true, silent=True)
+
+        builder = orm.QueryBuilder().append(orm.WorkflowNode, project='uuid')
+        self.assertEqual(builder.count(), 2, 'Expected exactly two Workflow nodes, but got {}'.format(builder.count()))
+        for node_uuid in builder.iterall():
+            self.assertIn(node_uuid[0], [work_uuid, work_called_uuid])
+
+        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
+        self.assertEqual(builder.count(), 1, 'Expected a single Calculation node, but got {}'.format(builder.count()))
+        self.assertEqual(builder.all()[0][0], calc_called_uuid)
+
+        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
+        self.assertEqual(builder.count(), 1, 'Expected a single Data node, but got {}'.format(builder.count()))
+        self.assertEqual(builder.all()[0][0], data_output_uuid)
+
+        # Check call_reversed = False (default)
+        # Expected outcome: Only calc_called and data_output are exported
+        self.reset_database()
+
+        import_data(export_file_false, silent=True)
+
+        builder = orm.QueryBuilder().append(orm.WorkflowNode, project='uuid')
+        self.assertEqual(builder.count(), 0, 'Expected no Workflow nodes, but got {}'.format(builder.count()))
+
+        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
+        self.assertEqual(builder.count(), 1, 'Expected a single Calculation node, but got {}'.format(builder.count()))
+        self.assertEqual(builder.all()[0][0], calc_called_uuid)
+
+        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
+        self.assertEqual(builder.count(), 1, 'Expected a single Data node, but got {}'.format(builder.count()))
+        self.assertEqual(builder.all()[0][0], data_output_uuid)
+
+    @with_temp_dir
+    def test_dangling_link_to_existing_db_node(self, temp_dir):
+        """A dangling link that references a Node that is not included in the archive should `not` be importable"""
+        struct = orm.StructureData()
+        struct.store()
+        struct_uuid = struct.uuid
+
+        calc = orm.CalculationNode()
+        calc.add_incoming(struct, LinkType.INPUT_CALC, 'input')
+        calc.store()
+        calc.seal()
+        calc_uuid = calc.uuid
+
+        filename = os.path.join(temp_dir, 'export.tar.gz')
+        export([struct], outfile=filename, silent=True)
+
+        unpack = SandboxFolder()
+        with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
+            tar.extractall(unpack.abspath)
+
+        with io.open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+            data = json.load(fhandle)
+        data['links_uuid'].append({
+            'output': calc.uuid,
+            'input': struct.uuid,
+            'label': 'input',
+            'type': LinkType.INPUT_CALC.value
+        })
+
+        with io.open(unpack.get_abs_path('data.json'), 'wb') as fhandle:
+            json.dump(data, fhandle)
+
+        with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT) as tar:
+            tar.add(unpack.abspath, arcname='')
+
+        # Make sure the CalculationNode is still in the database
+        builder = orm.QueryBuilder().append(orm.CalculationNode, project='uuid')
+        self.assertEqual(
+            builder.count(),
+            1,
+            msg='There should be a single CalculationNode, instead {} has been found'.format(builder.count())
+        )
+        self.assertEqual(builder.all()[0][0], calc_uuid)
+
+        with self.assertRaises(DanglingLinkError):
+            import_data(filename, silent=True)
+
+        # Using the flag `ignore_unknown_nodes` should import it without problems
+        import_data(filename, ignore_unknown_nodes=True, silent=True)
+        builder = orm.QueryBuilder().append(orm.StructureData, project='uuid')
+        self.assertEqual(
+            builder.count(),
+            1,
+            msg='There should be a single StructureData, instead {} has been found'.format(builder.count())
+        )
+        self.assertEqual(builder.all()[0][0], struct_uuid)

@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities dealing with plugins and entry points."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 
 from importlib import import_module
@@ -23,8 +25,6 @@ KEY_VERSION_PLUGIN = 'plugin'  # The version of the plugin top level module, e.g
 
 class PluginVersionProvider(object):
     """Utility class that determines version information about a given plugin resource."""
-
-    # pylint: disable=useless-object-inheritance
 
     def __init__(self):
         self._cache = {}

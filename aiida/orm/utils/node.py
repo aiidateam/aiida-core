@@ -32,8 +32,10 @@ from aiida.common.constants import AIIDA_FLOAT_PRECISION  # pylint: disable=wron
 # therefore is not allowed in individual attribute or extra keys.
 FIELD_SEPARATOR = '.'
 
-__all__ = ('load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string', 'AbstractNodeMeta',
-           'validate_attribute_extra_key', 'clean_value')
+__all__ = (
+    'load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string', 'AbstractNodeMeta',
+    'validate_attribute_extra_key', 'clean_value'
+)
 
 
 def load_node_class(type_string):
@@ -170,7 +172,8 @@ def validate_attribute_extra_key(key):
 
     if FIELD_SEPARATOR in key:
         raise exceptions.ValidationError(
-            'key for attributes or extras cannot contain the character `{}`'.format(FIELD_SEPARATOR))
+            'key for attributes or extras cannot contain the character `{}`'.format(FIELD_SEPARATOR)
+        )
 
 
 def clean_value(value):
@@ -209,12 +212,12 @@ def clean_value(value):
 
         if isinstance(val, numbers.Real) and (math.isnan(val) or math.isinf(val)):
             # see https://www.postgresql.org/docs/current/static/datatype-json.html#JSON-TYPE-MAPPING-TABLE
-            raise exceptions.ValidationError("nan and inf/-inf can not be serialized to the database")
+            raise exceptions.ValidationError('nan and inf/-inf can not be serialized to the database')
 
         # This is for float-like types, like ``numpy.float128`` that are not json-serializable
         # Note that `numbers.Real` also match booleans but they are already returned above
         if isinstance(val, numbers.Real):
-            string_representation = "{{:.{}g}}".format(AIIDA_FLOAT_PRECISION).format(val)
+            string_representation = '{{:.{}g}}'.format(AIIDA_FLOAT_PRECISION).format(val)
             new_val = float(string_representation)
             if 'e' in string_representation and new_val.is_integer():
                 # This is indeed often quite unexpected, because it is going to change the type of the data

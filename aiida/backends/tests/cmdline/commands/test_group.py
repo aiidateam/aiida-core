@@ -213,8 +213,8 @@ class TestVerdiGroup(AiidaTestCase):
 
     def test_copy_existing_group(self):
         """Test user is prompted to continue if destination group exists and is not empty"""
-        source_label = "source_copy_existing_group"
-        dest_label = "dest_copy_existing_group"
+        source_label = 'source_copy_existing_group'
+        dest_label = 'dest_copy_existing_group'
 
         # Create source group with nodes
         calc_s1 = orm.CalculationNode().store()
@@ -228,7 +228,7 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(group_copy, options)
         self.assertClickResultNoException(result)
         self.assertIn(
-            "Success: Nodes copied from group<{}> to group<{}>".format(source_label, dest_label),
+            'Success: Nodes copied from group<{}> to group<{}>'.format(source_label, dest_label),
             result.output,
             result.exception)
 
@@ -242,7 +242,7 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(group_copy, options)
         self.assertIsNotNone(result.exception, result.output)
         self.assertIn(
-            "Warning: Destination group<{}> already exists and is not empty.".format(dest_label),
+            'Warning: Destination group<{}> already exists and is not empty.'.format(dest_label),
             result.output,
             result.exception)
 

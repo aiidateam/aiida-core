@@ -86,7 +86,7 @@ class AiiDALoaderMagics(magic.Magics):
 
         self.is_warning = False
         load_profile()
-        self.current_state = "Loaded AiiDA DB environment."
+        self.current_state = 'Loaded AiiDA DB environment.'
 
         user_ns = get_start_namespace()
         for key, value in six.iteritems(user_ns):
@@ -108,13 +108,13 @@ class AiiDALoaderMagics(magic.Magics):
         """
         Output in HTML format.
         """
-        html = "<p>"
+        html = '<p>'
         if self.is_warning:
-            html += "<strong>"
+            html += '<strong>'
         html += self.current_state
         if self.is_warning:
-            html += "</strong>"
-        html += "</p>"
+            html += '</strong>'
+        html += '</p>'
 
         return html
 
@@ -123,9 +123,9 @@ class AiiDALoaderMagics(magic.Magics):
         Output in LaTeX format.
         """
         if self.is_warning:
-            latex = "\\emph{%s}\n" % self.current_state
+            latex = '\\emph{%s}\n' % self.current_state
         else:
-            latex = "%s\n" % self.current_state
+            latex = '%s\n' % self.current_state
 
         return latex
 
@@ -135,10 +135,10 @@ class AiiDALoaderMagics(magic.Magics):
         """
         # pylint: disable=unused-argument
         if self.is_warning:
-            warning_str = "** "
+            warning_str = '** '
         else:
-            warning_str = ""
-        text = "%s%s\n" % (warning_str, self.current_state)
+            warning_str = ''
+        text = '%s%s\n' % (warning_str, self.current_state)
 
         pretty_print.text(text)
 

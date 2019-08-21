@@ -69,4 +69,5 @@ class WorkflowNode(ProcessNode):
             raise ValueError(
                 'Workflow<{}> tried returning an unstored `Data` node. This likely means new `Data` is being created '
                 'inside the workflow. In order to preserve data provenance, use a `calcfunction` to create this node '
-                'and return its output from the workflow'.format(self.process_label))
+                'and return its output from the workflow'.format(self.process_label)
+            )

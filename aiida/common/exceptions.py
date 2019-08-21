@@ -12,14 +12,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-__all__ = ('AiidaException', 'NotExistent', 'MultipleObjectsError', 'RemoteOperationError', 'ContentNotExistent',
-           'FailedError', 'StoringNotAllowed', 'ModificationNotAllowed', 'IntegrityError', 'UniquenessError',
-           'EntryPointError', 'MissingEntryPointError', 'MultipleEntryPointError', 'LoadingEntryPointError',
-           'InvalidOperation', 'ParsingError', 'InternalError', 'PluginInternalError', 'ValidationError',
-           'ConfigurationError', 'ProfileConfigurationError', 'MissingConfigurationError', 'ConfigurationVersionError',
-           'DbContentError', 'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException',
-           'TestsNotAllowedError', 'UnsupportedSpeciesError', 'DanglingLinkError', 'TransportTaskException',
-           'IncompatibleArchiveVersionError', 'OutputParsingError')
+__all__ = (
+    'AiidaException', 'NotExistent', 'MultipleObjectsError', 'RemoteOperationError', 'ContentNotExistent',
+    'FailedError', 'StoringNotAllowed', 'ModificationNotAllowed', 'IntegrityError', 'UniquenessError',
+    'EntryPointError', 'MissingEntryPointError', 'MultipleEntryPointError', 'LoadingEntryPointError',
+    'InvalidOperation', 'ParsingError', 'InternalError', 'PluginInternalError', 'ValidationError', 'ConfigurationError',
+    'ProfileConfigurationError', 'MissingConfigurationError', 'ConfigurationVersionError', 'DbContentError',
+    'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError',
+    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError'
+)
 
 
 class AiidaException(Exception):
@@ -215,21 +216,9 @@ class UnsupportedSpeciesError(ValueError):
     """
 
 
-class DanglingLinkError(Exception):
-    """
-    Raised when an export archive is detected to contain dangling links when importing
-    """
-
-
-class TransportTaskException(Exception):
+class TransportTaskException(AiidaException):
     """
     Raised when a TransportTask, an task to be completed by the engine that requires transport, fails
-    """
-
-
-class IncompatibleArchiveVersionError(Exception):
-    """
-    Raised when trying to import an export archive with an incompatible schema version.
     """
 
 

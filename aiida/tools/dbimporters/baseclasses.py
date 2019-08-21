@@ -63,14 +63,14 @@ class DbImporter(object):
         :raises NotImplementedError: if search using given keyword is not
             implemented.
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
     def setup_db(self, **kwargs):
         """
         Sets the database parameters. The method should reconnect to the
         database using updated parameters, if already connected.
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
     def get_supported_keywords(self):
         """
@@ -78,7 +78,7 @@ class DbImporter(object):
 
         :return: list of strings
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
 
 class DbSearchResults(object):
@@ -150,7 +150,7 @@ class DbSearchResults(object):
 
         :raise StopIteration: when the end of result array is reached.
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
     def at(self, position):
         """
@@ -162,7 +162,7 @@ class DbSearchResults(object):
         :raise IndexError: if ``position`` is out of bounds.
         """
         if position < 0 | position >= len(self._results):
-            raise IndexError("index out of bounds")
+            raise IndexError('index out of bounds')
         if position not in self._entries:
             source_dict = self._get_source_dict(self._results[position])
             url = self._get_url(self._results[position])
@@ -176,7 +176,7 @@ class DbSearchResults(object):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
     def _get_url(self, result_dict):
         """
@@ -184,7 +184,7 @@ class DbSearchResults(object):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
 
 class DbEntry(object):
@@ -219,8 +219,8 @@ class DbEntry(object):
         self._contents = None
 
     def __repr__(self):
-        return "{}({})".format(self.__class__.__name__,
-                               ",".join(["{}={}".format(k, '"{}"'.format(self.source[k])
+        return '{}({})'.format(self.__class__.__name__,
+                               ','.join(['{}={}'.format(k, '"{}"'.format(self.source[k])
                                if issubclass(self.source[k].__class__, six.string_types)
                                else self.source[k])
                                          for k in sorted(self.source.keys())]))
@@ -234,8 +234,8 @@ class DbEntry(object):
             from six.moves import urllib
             from hashlib import md5
 
-            self._contents = urllib.request.urlopen(self.source['uri']).read().decode("utf-8")
-            self.source['source_md5'] = md5(self._contents.encode("utf-8")).hexdigest()
+            self._contents = urllib.request.urlopen(self.source['uri']).read().decode('utf-8')
+            self.source['source_md5'] = md5(self._contents.encode('utf-8')).hexdigest()
         return self._contents
 
     @contents.setter
@@ -245,7 +245,7 @@ class DbEntry(object):
         """
         from hashlib import md5
         self._contents = contents
-        self.source['source_md5'] = md5(self._contents.encode("utf-8")).hexdigest()
+        self.source['source_md5'] = md5(self._contents.encode('utf-8')).hexdigest()
 
 
 class CifEntry(DbEntry):
@@ -310,7 +310,7 @@ class CifEntry(DbEntry):
 
         return cifnode
 
-    def get_aiida_structure(self, converter="pymatgen", store=False, **kwargs):
+    def get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
         """
         :return: AiiDA structure corresponding to the CIF file.
         """
@@ -324,7 +324,7 @@ class CifEntry(DbEntry):
 
         :return: list of lists
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
 
 class UpfEntry(DbEntry):

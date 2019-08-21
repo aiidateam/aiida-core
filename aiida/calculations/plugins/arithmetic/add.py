@@ -32,9 +32,11 @@ class ArithmeticAddCalculation(CalcJob):
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
         spec.exit_code(
-            100, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved folder data node could not be accessed.')
+            100, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved folder data node could not be accessed.'
+        )
         spec.exit_code(
-            110, 'ERROR_READING_OUTPUT_FILE', message='The output file could not be read from the retrieved folder.')
+            110, 'ERROR_READING_OUTPUT_FILE', message='The output file could not be read from the retrieved folder.'
+        )
         spec.exit_code(120, 'ERROR_INVALID_OUTPUT', message='The output file contains invalid output.')
 
     def prepare_for_submission(self, folder):

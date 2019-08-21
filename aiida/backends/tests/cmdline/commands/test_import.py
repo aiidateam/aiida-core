@@ -32,10 +32,10 @@ class TestVerdiImport(AiidaTestCase):
         super(TestVerdiImport, cls).setUpClass(*args, **kwargs)
 
         # Helper variables
-        cls.url_path = "https://raw.githubusercontent.com/aiidateam/aiida-core/" \
-            "0599dabf0887bee172a04f308307e99e3c3f3ff2/aiida/backends/tests/fixtures/export/migrate/"
-        cls.archive_path = "export/migrate"
-        cls.newest_archive = "export_v{}_simple.aiida".format(EXPORT_VERSION)
+        cls.url_path = 'https://raw.githubusercontent.com/aiidateam/aiida-core/' \
+            '0599dabf0887bee172a04f308307e99e3c3f3ff2/aiida/backends/tests/fixtures/export/migrate/'
+        cls.archive_path = 'export/migrate'
+        cls.newest_archive = 'export_v{}_simple.aiida'.format(EXPORT_VERSION)
 
     def setUp(self):
         self.cli_runner = CliRunner()
@@ -82,10 +82,10 @@ class TestVerdiImport(AiidaTestCase):
             get_archive_file(self.newest_archive, filepath=self.archive_path)
         ]
 
-        group_label = "import_madness"
+        group_label = 'import_madness'
         group = Group(group_label).store()
 
-        self.assertTrue(group.is_empty, msg="The Group should be empty.")
+        self.assertTrue(group.is_empty, msg='The Group should be empty.')
 
         # Invoke `verdi import`, making sure there are no exceptions
         options = ['-G', group.label] + [archives[0]]
@@ -93,7 +93,7 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
 
-        self.assertFalse(group.is_empty, msg="The Group should no longer be empty.")
+        self.assertFalse(group.is_empty, msg='The Group should no longer be empty.')
 
         nodes_in_group = group.count()
 
@@ -106,8 +106,10 @@ class TestVerdiImport(AiidaTestCase):
         self.assertEqual(
             group.count(),
             nodes_in_group,
-            msg="The Group count should not have changed from {}. Instead it is now {}".format(
-                nodes_in_group, group.count()))
+            msg='The Group count should not have changed from {}. Instead it is now {}'.format(
+                nodes_in_group, group.count()
+            )
+        )
 
         # Invoke `verdi import` again with new archive, making sure Group count is upped
         options = ['-G', group.label] + [archives[1]]
@@ -118,19 +120,22 @@ class TestVerdiImport(AiidaTestCase):
         self.assertGreater(
             group.count(),
             nodes_in_group,
-            msg="There should now be more than {} nodes in group {} , instead there are {}".format(
-                nodes_in_group, group_label, group.count()))
+            msg='There should now be more than {} nodes in group {} , instead there are {}'.format(
+                nodes_in_group, group_label, group.count()
+            )
+        )
 
     def test_import_make_new_group(self):
         """Make sure imported entities are saved in new Group"""
         # Initialization
-        group_label = "new_group_for_verdi_import"
+        group_label = 'new_group_for_verdi_import'
         archives = [get_archive_file(self.newest_archive, filepath=self.archive_path)]
 
         # Check Group does not already exist
         group_search = Group.objects.find(filters={'label': group_label})
         self.assertEqual(
-            len(group_search), 0, msg="A Group with label '{}' already exists, this shouldn't be.".format(group_label))
+            len(group_search), 0, msg="A Group with label '{}' already exists, this shouldn't be.".format(group_label)
+        )
 
         # Invoke `verdi import`, making sure there are no exceptions
         options = ['-G', group_label] + archives
@@ -140,8 +145,8 @@ class TestVerdiImport(AiidaTestCase):
 
         # Make sure new Group was created
         (group, new_group) = Group.objects.get_or_create(group_label)
-        self.assertFalse(new_group, msg="The Group should not have been created now, but instead when it was imported.")
-        self.assertFalse(group.is_empty, msg="The Group should not be empty.")
+        self.assertFalse(new_group, msg='The Group should not have been created now, but instead when it was imported.')
+        self.assertFalse(group.is_empty, msg='The Group should not be empty.')
 
     def test_comment_mode(self):
         """Test comment mode flag works as intended"""
@@ -165,7 +170,7 @@ class TestVerdiImport(AiidaTestCase):
         """
         archives = []
         for version in range(1, int(EXPORT_VERSION.split('.')[-1]) - 1):
-            archives.append(("export_v0.{}_simple.aiida".format(version), "0.{}".format(version)))
+            archives.append(('export_v0.{}_simple.aiida'.format(version), '0.{}'.format(version)))
 
         for archive, version in archives:
             options = [get_archive_file(archive, filepath=self.archive_path)]
@@ -174,7 +179,7 @@ class TestVerdiImport(AiidaTestCase):
             self.assertIsNone(result.exception, msg=result.output)
             self.assertEqual(result.exit_code, 0, msg=result.output)
             self.assertIn(version, result.output, msg=result.exception)
-            self.assertIn("Success: imported archive {}".format(options[0]), result.output, msg=result.exception)
+            self.assertIn('Success: imported archive {}'.format(options[0]), result.output, msg=result.exception)
 
     def test_import_old_url_archives(self):
         """ Test import of old URL archives
@@ -189,11 +194,11 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
         self.assertIn(version, result.output, msg=result.exception)
-        self.assertIn("Success: imported archive {}".format(options[0]), result.output, msg=result.exception)
+        self.assertIn('Success: imported archive {}'.format(options[0]), result.output, msg=result.exception)
 
     def test_import_url_and_local_archives(self):
         """Test import of both a remote and local archive"""
-        url_archive = "export_v0.4_no_UPF.aiida"
+        url_archive = 'export_v0.4_no_UPF.aiida'
         local_archive = self.newest_archive
 
         options = [
@@ -209,7 +214,7 @@ class TestVerdiImport(AiidaTestCase):
         """Test a timeout to valid URL is correctly errored"""
         from aiida.cmdline.params.types import ImportPath
 
-        timeout_url = "http://www.google.com:81"
+        timeout_url = 'http://www.google.com:81'
 
         test_timeout_path = ImportPath(exists=True, readable=True, timeout_seconds=0)
         with self.assertRaises(BadParameter) as cmd_exc:
@@ -220,7 +225,7 @@ class TestVerdiImport(AiidaTestCase):
 
     def test_raise_malformed_url(self):
         """Test the correct error is raised when supplying a malformed URL"""
-        malformed_url = "htp://www.aiida.net"
+        malformed_url = 'htp://www.aiida.net'
 
         result = self.cli_runner.invoke(cmd_import.cmd_import, [malformed_url])
 
@@ -238,8 +243,8 @@ class TestVerdiImport(AiidaTestCase):
         `migration` = False, `non_interactive` = True, Expected: No query, no migrate
         """
         archive = get_archive_file('export_v0.1_simple.aiida', filepath=self.archive_path)
-        confirm_message = "Do you want to try and migrate {} to the newest export file version?".format(archive)
-        success_message = "Success: imported archive {}".format(archive)
+        confirm_message = 'Do you want to try and migrate {} to the newest export file version?'.format(archive)
+        success_message = 'Success: imported archive {}'.format(archive)
 
         # Import "normally", but explicitly specifying `--migration`, make sure confirm message is present
         # `migration` = True (default), `non_interactive` = False (default), Expected: Query user, migrate

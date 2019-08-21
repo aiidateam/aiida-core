@@ -13,13 +13,13 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.archive import Archive, CorruptArchive
 from aiida.common.exceptions import InvalidOperation
 from aiida.backends.tests.utils.archives import get_archive_file
+from aiida.tools.importexport import Archive, CorruptArchive
 
 
 class TestCommonArchive(AiidaTestCase):
-    """Tests for the :py:class:`~aiida.common.archive.Archive` class."""
+    """Tests for the :py:class:`~aiida.tools.importexport.common.archive.Archive` class."""
 
     def test_context_required(self):
         """Verify that accessing a property of an Archive outside of a context manager raises."""

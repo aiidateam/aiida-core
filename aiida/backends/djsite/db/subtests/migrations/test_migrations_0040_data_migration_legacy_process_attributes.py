@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -33,7 +33,8 @@ class TestLegacyProcessAttributeDataMigration(TestMigrations):
                 '_failed': False,
                 '_aborted': False,
                 '_do_abort': False,
-            })
+            }
+        )
         node_process.save()
         self.node_process_id = node_process.id
 
@@ -47,7 +48,8 @@ class TestLegacyProcessAttributeDataMigration(TestMigrations):
                 '_failed': False,
                 '_aborted': False,
                 '_do_abort': False,
-            })
+            }
+        )
         node_process_active.save()
         self.node_process_active_id = node_process_active.id
 
@@ -62,7 +64,8 @@ class TestLegacyProcessAttributeDataMigration(TestMigrations):
                 '_failed': False,
                 '_aborted': False,
                 '_do_abort': False,
-            })
+            }
+        )
         node_data.save()
         self.node_data_id = node_data.id
 

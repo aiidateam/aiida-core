@@ -33,8 +33,8 @@ depends_on = None
 def upgrade():
     op.drop_table('db_dbpath')
     conn = op.get_bind()
-    conn.execute("DROP TRIGGER IF EXISTS autoupdate_tc ON db_dblink")
-    conn.execute("DROP FUNCTION IF EXISTS update_tc()")
+    conn.execute('DROP TRIGGER IF EXISTS autoupdate_tc ON db_dblink')
+    conn.execute('DROP FUNCTION IF EXISTS update_tc()')
 
 
 def downgrade():

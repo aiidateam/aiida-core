@@ -295,7 +295,7 @@ For example, if the code will generate a number of XML files in the folder ``rel
     calc_info.retrieve_list = [('relative/path/output/file_*[0-9].xml', '.', 1)]
 
 The second item when using globbing *has* to be ``'.'`` and the depth works just as before.
-In this example, all files matching the globbing pattern will be copied in the directory ``output`` in the retrieved folder data node. 
+In this example, all files matching the globbing pattern will be copied in the directory ``output`` in the retrieved folder data node.
 
 
 Retrieve temporary list
@@ -475,6 +475,28 @@ When you now launch the process builder, the engine will perform the entire proc
 However, the ``prepare_for_submission`` method will be called.
 The inputs that it writes to the input folder will be stored in temporary folder called ``submit_test`` that will be created in the current working directory.
 Each time you perform a dry-run, a new sub folder will be created in the ``submit_test`` folder, which you allows you to perform multiple dry-runs without overwriting the previous results.
+
+Moreover, the following applies:
+
+- when calling :py:func:`~aiida.engine.launch.run` for a calculation with the
+  ``dry_run`` flag set, you will get back its results, being always an empty dictionary ``{}``;
+
+- if you call :py:func:`~aiida.engine.launch.run_get_node`, you will get back as a node
+  an unstored ``CalcJobNode``. In this case, the unstored ``CalcJobNode`` (let's call it
+  ``node``) will have an additional property ``node.dry_run_info``. This is a dictionary
+  that contains additional information on the dry-run output. In particular, it will have
+  the following keys:
+
+  - ``folder``: the absolute path to the folder within the ``submit_test`` folder
+    where the files have been created, e.g.: ``/home/user/submit_test/20190726-00019``
+
+  - ``script_filename``: the filename of the submission script that AiiDA generated
+    in the folder, e.g.: ``_aiidasubmit.sh``
+
+- if you send a dry-run to the :py:func:`~aiida.engine.launch.submit` function,
+  this will be just forwarded to run and you will get back the unstored node
+  (with the same properties as above).
+
 
 .. warning::
 

@@ -45,7 +45,7 @@ class Migration(migrations.Migration):
             DELETE FROM db_dbattribute
             WHERE id in (
                 SELECT db_dbattribute.id
-                FROM db_dbattribute 
+                FROM db_dbattribute
                 JOIN db_dbnode ON db_dbnode.id = db_dbattribute.dbnode_id
                 WHERE db_dbattribute.key = 'hidden' AND db_dbnode.type = 'code.Code.'
             );

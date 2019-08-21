@@ -30,7 +30,7 @@ _HASH_EXTRA_KEY = '_aiida_hash'
 
 
 def notify_user(apps, schema_editor):  # pylint: disable=unused-argument
-    echo_warning("Invalidating all the hashes of all the nodes. Please run verdi rehash", bold=True)
+    echo_warning('Invalidating all the hashes of all the nodes. Please run verdi rehash', bold=True)
 
 
 class Migration(migrations.Migration):
@@ -44,6 +44,7 @@ class Migration(migrations.Migration):
         migrations.RunPython(notify_user, reverse_code=notify_user),
         migrations.RunSQL(
             """UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""",
-            reverse_sql="""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];"""),
+            reverse_sql="""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];"""
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

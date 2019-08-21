@@ -89,8 +89,10 @@ def get_daemon_status(client):
         'workers': workers_info
     }
 
-    template = ('Daemon is running as PID {pid} since {time}\nActive workers [{nworkers}]:\n{workers}\n'
-                'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers')
+    template = (
+        'Daemon is running as PID {pid} since {time}\nActive workers [{nworkers}]:\n{workers}\n'
+        'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers'
+    )
 
     return template.format(**info)
 
@@ -122,7 +124,8 @@ def delete_stale_pid_file(client):
                 raise StartCircusNotFound()  # Also this is a case in which the process is not there anymore
         except (psutil.AccessDenied, psutil.NoSuchProcess, StartCircusNotFound):
             echo.echo_warning(
-                'Deleted apparently stale daemon PID file as its associated process<{}> does not exist anymore'.format(
-                    pid))
+                'Deleted apparently stale daemon PID file as its associated process<{}> does not exist anymore'.
+                format(pid)
+            )
             if os.path.isfile(client.circus_pid_file):
                 os.remove(client.circus_pid_file)

@@ -114,9 +114,8 @@ def get_regex_pattern_from_sql(sql_pattern):
                 # with ALL tokens passed (there could be more occurrences of tokens_to_apply[0])
                 # Instead, for the first part, we know that we found the FIRST occurrence of tokens_to_apply[0]
                 # so I pass the list without the first element
-                return tokenizer(
-                    first, tokens_to_apply=tokens_to_apply[1:]) + dict(SQL_TO_REGEX_TOKENS)[sep] + tokenizer(
-                        rest, tokens_to_apply=tokens_to_apply)
+                return tokenizer(first, tokens_to_apply=tokens_to_apply[1:]
+                                ) + dict(SQL_TO_REGEX_TOKENS)[sep] + tokenizer(rest, tokens_to_apply=tokens_to_apply)
             # Here sep is empty: it means also rest is empty, and we just
             # return (recursively) the tokenizer on the first part, avoiding
             # infinite loops
@@ -128,7 +127,7 @@ def get_regex_pattern_from_sql(sql_pattern):
         # regex symbols like $ ^ [ ] etc
         return re.escape(string)
 
-    return "^{}$".format(tokenizer(sql_pattern, tokens_to_apply=[token_pair[0] for token_pair in SQL_TO_REGEX_TOKENS]))
+    return '^{}$'.format(tokenizer(sql_pattern, tokens_to_apply=[token_pair[0] for token_pair in SQL_TO_REGEX_TOKENS]))
 
 
 def sql_string_match(string, pattern):

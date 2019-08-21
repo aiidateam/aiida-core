@@ -16,100 +16,58 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
-from aiida.cmdline.utils import decorators, echo, multi_line_input
-from aiida.common import exceptions
+from aiida.cmdline.utils import decorators
 
 
 @verdi.group('comment')
+@decorators.deprecated_command("This command has been deprecated. Please use 'verdi node comment' instead.")
 def verdi_comment():
     """Inspect, create and manage node comments."""
 
 
 @verdi_comment.command()
-@options.NODES()
+@decorators.deprecated_command("This command has been deprecated. Please use 'verdi node comment add' instead.")
+@options.NODES(required=True)
 @click.argument('content', type=click.STRING, required=False)
+@click.pass_context
 @decorators.with_dbenv()
-def add(nodes, content):
-    """Add a comment to one or multiple nodes."""
-    if not content:
-        content = multi_line_input.edit_comment()
-
-    for node in nodes:
-        node.add_comment(content)
-
-    echo.echo_success('comment added to {} nodes'.format(len(nodes)))
+def add(ctx, nodes, content):  # pylint: disable=too-many-arguments, unused-argument
+    """Add a comment to one or more nodes."""
+    from aiida.cmdline.commands.cmd_node import comment_add
+    ctx.forward(comment_add)
 
 
 @verdi_comment.command()
+@decorators.deprecated_command("This command has been deprecated. Please use 'verdi node comment update' instead.")
 @click.argument('comment_id', type=int, metavar='COMMENT_ID')
 @click.argument('content', type=click.STRING, required=False)
+@click.pass_context
 @decorators.with_dbenv()
-def update(comment_id, content):
-    """Update a comment."""
-    from aiida.orm.comments import Comment
-
-    try:
-        comment = Comment.objects.get(comment_id)
-    except (exceptions.NotExistent, exceptions.MultipleObjectsError):
-        echo.echo_critical('comment<{}> not found'.format(comment_id))
-
-    if content is None:
-        content = multi_line_input.edit_comment(comment.content)
-
-    comment.set_content(content)
-
-    echo.echo_success('comment<{}> updated'.format(comment_id))
+def update(ctx, comment_id, content):  # pylint: disable=too-many-arguments, unused-argument
+    """Update a comment of a node."""
+    from aiida.cmdline.commands.cmd_node import comment_update
+    ctx.forward(comment_update)
 
 
 @verdi_comment.command()
+@decorators.deprecated_command("This command has been deprecated. Please use 'verdi node comment show' instead.")
 @options.USER()
 @arguments.NODES()
+@click.pass_context
 @decorators.with_dbenv()
-def show(user, nodes):
-    """Show the comments for one or multiple nodes."""
-    for node in nodes:
-
-        all_comments = node.get_comments()
-
-        if user is not None:
-            comments = [comment for comment in all_comments if comment.user.email == user.email]
-
-            if not comments:
-                valid_users = ', '.join(set(comment.user.email for comment in all_comments))
-                echo.echo_warning('no comments found for user {}'.format(user))
-                echo.echo_info('valid users found for Node<{}>: {}'.format(node.pk, valid_users))
-
-        else:
-            comments = all_comments
-
-        for comment in comments:
-            comment_msg = [
-                '***********************************************************',
-                'Comment<{}> for Node<{}> by {}'.format(comment.id, node.pk, comment.user.email),
-                'Created on {}'.format(comment.ctime.strftime('%Y-%m-%d %H:%M')),
-                'Last modified on {}'.format(comment.mtime.strftime('%Y-%m-%d %H:%M')),
-                '\n{}\n'.format(comment.content),
-            ]
-            echo.echo('\n'.join(comment_msg))
-
-        if not comments:
-            echo.echo_info('no comments found')
+def show(ctx, user, nodes):  # pylint: disable=too-many-arguments, unused-argument
+    """Show the comments of one or multiple nodes."""
+    from aiida.cmdline.commands.cmd_node import comment_show
+    ctx.forward(comment_show)
 
 
 @verdi_comment.command()
+@decorators.deprecated_command("This command has been deprecated. Please use 'verdi node comment remove' instead.")
 @options.FORCE()
-@click.argument('comment', type=int, required=False, metavar='COMMENT_ID')
+@click.argument('comment', type=int, required=True, metavar='COMMENT_ID')
+@click.pass_context
 @decorators.with_dbenv()
-def remove(force, comment):
-    """Remove a comment."""
-    from aiida.orm.comments import Comment
-
-    if not force:
-        click.confirm('Are you sure you want to remove comment<{}>'.format(comment), abort=True)
-
-    try:
-        Comment.objects.delete(comment)
-    except exceptions.NotExistent as exception:
-        echo.echo_critical('failed to remove comment<{}>: {}'.format(comment, exception))
-    else:
-        echo.echo_success('removed comment<{}>'.format(comment))
+def remove(ctx, force, comment):  # pylint: disable=too-many-arguments, unused-argument
+    """Remove a comment of a node."""
+    from aiida.cmdline.commands.cmd_node import comment_remove
+    ctx.forward(comment_remove)

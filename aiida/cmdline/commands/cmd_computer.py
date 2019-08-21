@@ -61,9 +61,9 @@ def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
     :return: True if the test succeeds, False if it fails.
     """
-    echo.echo("> Getting job list...")
+    echo.echo('> Getting job list...')
     found_jobs = scheduler.get_jobs(as_dict=True)
-    echo.echo("  `-> OK, {} jobs found in the queue.".format(len(found_jobs)))
+    echo.echo('  `-> OK, {} jobs found in the queue.'.format(len(found_jobs)))
     return True
 
 
@@ -81,13 +81,14 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pyli
     :return: True if the test succeeds, False if it fails.
     """
     # Execute a command that should not return any error
-    echo.echo("> Checking that no spurious output is present...")
+    echo.echo('> Checking that no spurious output is present...')
     retval, stdout, stderr = transport.exec_command_wait('echo -n')
     if retval != 0:
         echo.echo_error("* ERROR! The command 'echo -n' returned a non-zero return code ({})!".format(retval))
         return False
     if stdout:
-        echo.echo_error(u"""* ERROR! There is some spurious output in the standard output,
+        echo.echo_error(
+            u"""* ERROR! There is some spurious output in the standard output,
 that we report below between the === signs:
 =========================================================
 {}
@@ -98,10 +99,12 @@ remove the code, but just to disable it for non-interactive
 shells, see comments in issue #1980 on GitHub:
 https://github.com/aiidateam/aiida-core/issues/1890
 (and in the AiiDA documentation, linked from that issue)
-""".format(stdout))
+""".format(stdout)
+        )
         return False
     if stderr:
-        echo.echo_error(u"""* ERROR! There is some spurious output in the stderr,
+        echo.echo_error(
+            u"""* ERROR! There is some spurious output in the stderr,
 that we report below between the === signs:
 =========================================================
 {}
@@ -112,10 +115,11 @@ remove the code, but just to disable it for non-interactive
 shells, see comments in issue #1980 on GitHub:
 https://github.com/aiidateam/aiida-core/issues/1890
 (and in the AiiDA documentation, linked from that issue)
-""".format(stderr))
+""".format(stderr)
+        )
         return False
 
-    echo.echo("      [OK]")
+    echo.echo('      [OK]')
     return True
 
 
@@ -136,12 +140,12 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     import os
 
     file_content = "Test from 'verdi computer test' on {}".format(datetime.datetime.now().isoformat())
-    echo.echo("> Creating a temporary file in the work directory...")
-    echo.echo("  `-> Getting the remote user name...")
+    echo.echo('> Creating a temporary file in the work directory...')
+    echo.echo('  `-> Getting the remote user name...')
     remote_user = transport.whoami()
-    echo.echo("      [remote username: {}]".format(remote_user))
+    echo.echo('      [remote username: {}]'.format(remote_user))
     workdir = authinfo.get_workdir().format(username=remote_user)
-    echo.echo("      [Checking/creating work directory: {}]".format(workdir))
+    echo.echo('      [Checking/creating work directory: {}]'.format(workdir))
 
     try:
         transport.chdir(workdir)
@@ -151,18 +155,18 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
 
     with tempfile.NamedTemporaryFile(mode='w+') as tempf:
         fname = os.path.split(tempf.name)[1]
-        echo.echo("  `-> Creating the file {}...".format(fname))
+        echo.echo('  `-> Creating the file {}...'.format(fname))
         remote_file_path = os.path.join(workdir, fname)
         tempf.write(file_content)
         tempf.flush()
         transport.putfile(tempf.name, remote_file_path)
-    echo.echo("  `-> Checking if the file has been created...")
+    echo.echo('  `-> Checking if the file has been created...')
     if not transport.path_exists(remote_file_path):
-        echo.echo_error("* ERROR! The file was not found!")
+        echo.echo_error('* ERROR! The file was not found!')
         return False
 
-    echo.echo("      [OK]")
-    echo.echo("  `-> Retrieving the file and checking its content...")
+    echo.echo('      [OK]')
+    echo.echo('  `-> Retrieving the file and checking its content...')
 
     handle, destfile = tempfile.mkstemp()
     os.close(handle)
@@ -170,22 +174,22 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
         transport.getfile(remote_file_path, destfile)
         with io.open(destfile, encoding='utf8') as dfile:
             read_string = dfile.read()
-        echo.echo("      [Retrieved]")
+        echo.echo('      [Retrieved]')
         if read_string != file_content:
-            echo.echo_error("* ERROR! The file content is different from what was expected!")
-            echo.echo("** Expected:")
+            echo.echo_error('* ERROR! The file content is different from what was expected!')
+            echo.echo('** Expected:')
             echo.echo(file_content)
-            echo.echo("** Found:")
+            echo.echo('** Found:')
             echo.echo(read_string)
             return False
 
-        echo.echo("      [Content OK]")
+        echo.echo('      [Content OK]')
     finally:
         os.remove(destfile)
 
-    echo.echo("  `-> Removing the file...")
+    echo.echo('  `-> Removing the file...')
     transport.remove(remote_file_path)
-    echo.echo("  [Deleted successfully]")
+    echo.echo('  [Deleted successfully]')
     return True
 
 
@@ -238,13 +242,15 @@ def set_computer_builder(ctx, param, value):
 @click.pass_context
 @with_dbenv()
 def computer_setup(ctx, non_interactive, **kwargs):
-    """Add a computer."""
+    """Create a new computer."""
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
-        echo.echo_critical('A computer called {c} already exists. '
-                           'Use "verdi computer duplicate {c}" to set up a new '
-                           'computer starting from the settings of {c}.'.format(c=kwargs['label']))
+        echo.echo_critical(
+            'A computer called {c} already exists. '
+            'Use "verdi computer duplicate {c}" to set up a new '
+            'computer starting from the settings of {c}.'.format(c=kwargs['label'])
+        )
 
     if not non_interactive:
         try:
@@ -292,7 +298,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @click.pass_context
 @with_dbenv()
 def computer_duplicate(ctx, computer, non_interactive, **kwargs):
-    """Duplicate a computer."""
+    """Duplicate a computer allowing to change some parameters."""
     from aiida import orm
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
@@ -348,15 +354,17 @@ def computer_enable(computer, user):
     try:
         authinfo = computer.get_authinfo(user)
     except NotExistent:
-        echo.echo_critical("User with email '{}' is not configured for computer '{}' yet.".format(
-            user.email, computer.name))
+        echo.echo_critical(
+            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.name)
+        )
 
     if not authinfo.enabled:
         authinfo.enabled = True
         echo.echo_info("Computer '{}' enabled for user {}.".format(computer.name, user.get_full_name()))
     else:
-        echo.echo_info("Computer '{}' was already enabled for user {} {}.".format(computer.name, user.first_name,
-                                                                                  user.last_name))
+        echo.echo_info(
+            "Computer '{}' was already enabled for user {} {}.".format(computer.name, user.first_name, user.last_name)
+        )
 
 
 @verdi_computer.command('disable')
@@ -372,15 +380,17 @@ def computer_disable(computer, user):
     try:
         authinfo = computer.get_authinfo(user)
     except NotExistent:
-        echo.echo_critical("User with email '{}' is not configured for computer '{}' yet.".format(
-            user.email, computer.name))
+        echo.echo_critical(
+            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.name)
+        )
 
     if authinfo.enabled:
         authinfo.enabled = False
         echo.echo_info("Computer '{}' disabled for user {}.".format(computer.name, user.get_full_name()))
     else:
-        echo.echo_info("Computer '{}' was already disabled for user {} {}.".format(computer.name, user.first_name,
-                                                                                   user.last_name))
+        echo.echo_info(
+            "Computer '{}' was already disabled for user {} {}.".format(computer.name, user.first_name, user.last_name)
+        )
 
 
 @verdi_computer.command('list')
@@ -388,7 +398,7 @@ def computer_disable(computer, user):
 @options.RAW(help='Show only the computer names, one per line.')
 @with_dbenv()
 def computer_list(all_entries, raw):
-    """List available computers."""
+    """List all available computers."""
     from aiida.orm import Computer, User
 
     if not raw:
@@ -411,7 +421,7 @@ def computer_list(all_entries, raw):
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_show(computer):
-    """Show information for a computer."""
+    """Show detailed information for a computer."""
     echo.echo(computer.full_text_info)
 
 
@@ -426,18 +436,20 @@ def computer_rename(computer, new_name):
     old_name = computer.get_name()
 
     if old_name == new_name:
-        echo.echo_critical("The old and new names are the same.")
+        echo.echo_critical('The old and new names are the same.')
 
     try:
         computer.set_name(new_name)
         computer.store()
     except ValidationError as error:
-        echo.echo_critical("Invalid input! {}".format(error))
+        echo.echo_critical('Invalid input! {}'.format(error))
     except UniquenessError as error:
-        echo.echo_critical("Uniqueness error encountered! Probably a "
-                           "computer with name '{}' already exists"
-                           "".format(new_name))
-        echo.echo_critical("(Message was: {})".format(error))
+        echo.echo_critical(
+            'Uniqueness error encountered! Probably a '
+            "computer with name '{}' already exists"
+            ''.format(new_name)
+        )
+        echo.echo_critical('(Message was: {})'.format(error))
 
     echo.echo_success("Computer '{}' renamed to '{}'".format(old_name, new_name))
 
@@ -445,14 +457,14 @@ def computer_rename(computer, new_name):
 @verdi_computer.command('test')
 @options.USER(
     required=False,
-    help="Test the connection for a given AiiDA user, specified by"
-    "their email address. If not specified, uses the current default user.",
+    help='Test the connection for a given AiiDA user, specified by'
+    'their email address. If not specified, uses the current default user.',
 )
 @click.option(
     '-t',
     '--print-traceback',
     is_flag=True,
-    help="Print the full traceback in case an exception is raised",
+    help='Print the full traceback in case an exception is raised',
 )
 @arguments.COMPUTER()
 @with_dbenv()
@@ -533,10 +545,9 @@ def computer_test(user, print_traceback, computer):
 @with_dbenv()
 def computer_delete(computer):
     """
-    Configure the authentication information for a given computer
+    Delete a computer.
 
-    Does not delete the computer if there are calculations that are using
-    it.
+    Note that it is not possible to delete the computer if there are calculations that are using it.
     """
     from aiida.common.exceptions import InvalidOperation
     from aiida import orm
@@ -553,17 +564,18 @@ def computer_delete(computer):
 
 @verdi_computer.group('configure')
 def computer_configure():
-    """Configure a computer with one of the available transport types."""
+    """Configure the Authinfo details for a computer (and user)."""
 
 
 @computer_configure.command('show')
 @click.option(
-    '--defaults', is_flag=True, default=False, help='Show the default configuration settings for this computer.')
+    '--defaults', is_flag=True, default=False, help='Show the default configuration settings for this computer.'
+)
 @click.option('--as-option-string', is_flag=True)
 @options.USER()
 @arguments.COMPUTER()
 def computer_config_show(computer, user, defaults, as_option_string):
-    """Show the current or default configuration for COMPUTER."""
+    """Show the current configuration for a computer."""
     import tabulate
     from aiida.common.escaping import escape_for_bash
 
@@ -585,11 +597,11 @@ def computer_config_show(computer, user, defaults, as_option_string):
             t_opt = transport_cls.auth_options[option.name]
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
-                    option_value = option.opts[-1] if config.get(option.name) else '--no-{}'.format(
-                        option.name.replace('_', '-'))
+                    option_value = option.opts[-1] if config.get(option.name
+                                                                ) else '--no-{}'.format(option.name.replace('_', '-'))
                 elif t_opt.get('is_flag'):
-                    is_default = config.get(option.name) == transport_cli.transport_option_default(
-                        option.name, computer)
+                    is_default = config.get(option.name
+                                           ) == transport_cli.transport_option_default(option.name, computer)
                     option_value = option.opts[-1] if is_default else ''
                 else:
                     option_value = '{}={}'.format(option.opts[-1], option.type(config[option.name]))

@@ -55,6 +55,7 @@ DB_TEST_LIST = {
         'cmdline.commands.graph': ['aiida.backends.tests.cmdline.commands.test_graph'],
         'cmdline.commands.group': ['aiida.backends.tests.cmdline.commands.test_group'],
         'cmdline.commands.import': ['aiida.backends.tests.cmdline.commands.test_import'],
+        'cmdline.commands.node': ['aiida.backends.tests.cmdline.commands.test_node'],
         'cmdline.commands.process': ['aiida.backends.tests.cmdline.commands.test_process'],
         'cmdline.commands.profile': ['aiida.backends.tests.cmdline.commands.test_profile'],
         'cmdline.commands.rehash': ['aiida.backends.tests.cmdline.commands.test_rehash'],
@@ -74,7 +75,6 @@ DB_TEST_LIST = {
         'cmdline.params.types.path': ['aiida.backends.tests.cmdline.params.types.test_path'],
         'cmdline.params.types.plugin': ['aiida.backends.tests.cmdline.params.types.test_plugin'],
         'cmdline.utils.common': ['aiida.backends.tests.cmdline.utils.test_common'],
-        'common.archive': ['aiida.backends.tests.common.test_archive'],
         'common.extendeddicts': ['aiida.backends.tests.common.test_extendeddicts'],
         'common.folders': ['aiida.backends.tests.common.test_folders'],
         'common.hashing': ['aiida.backends.tests.common.test_hashing'],
@@ -145,6 +145,7 @@ DB_TEST_LIST = {
         'query': ['aiida.backends.tests.test_query'],
         'restapi': ['aiida.backends.tests.test_restapi'],
         'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals'],
+        'tools.importexport.common.archive': ['aiida.backends.tests.tools.importexport.common.test_archive'],
         'tools.importexport.complex': ['aiida.backends.tests.tools.importexport.test_complex'],
         'tools.importexport.prov_redesign': ['aiida.backends.tests.tools.importexport.test_prov_redesign'],
         'tools.importexport.simple': ['aiida.backends.tests.tools.importexport.test_simple'],
@@ -187,7 +188,7 @@ def get_db_test_names():
         if '.' in k:
             parts = k.split('.')
             for last_idx in range(1, len(parts)):
-                parentkey = ".".join(parts[:last_idx])
+                parentkey = '.'.join(parts[:last_idx])
                 final_list.append(parentkey)
 
     # return the list of possible names, without duplicates
@@ -209,11 +210,11 @@ def get_db_test_list():
     try:
         be_tests = DB_TEST_LIST[configuration.PROFILE.database_backend]
     except KeyError:
-        raise ConfigurationError("No backend configured yet")
+        raise ConfigurationError('No backend configured yet')
 
     # Could be undefined, so put to empty dict by default
     try:
-        common_tests = DB_TEST_LIST["common"]
+        common_tests = DB_TEST_LIST['common']
     except KeyError:
         raise ConfigurationError("A 'common' key must always be defined!")
 
@@ -234,7 +235,7 @@ def get_db_test_list():
         if '.' in key:
             parts = key.split('.')
             for last_idx in range(1, len(parts)):
-                parentkey = ".".join(parts[:last_idx])
+                parentkey = '.'.join(parts[:last_idx])
                 final_retdict[parentkey].extend(val)
 
     return dict(final_retdict)

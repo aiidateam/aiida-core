@@ -15,8 +15,9 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.archives import get_json_files
 from aiida.tools.importexport.migration.utils import verify_metadata_version
-from aiida.tools.importexport.migration.v06_to_v07 import (migrate_v6_to_v7,
-                                                           migration_data_migration_legacy_process_attributes)
+from aiida.tools.importexport.migration.v06_to_v07 import (
+    migrate_v6_to_v7, migration_data_migration_legacy_process_attributes
+)
 
 
 class TestMigrateV06toV07(AiidaTestCase):
@@ -52,20 +53,23 @@ class TestMigrateV06toV07(AiidaTestCase):
 
         # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
         self.maxDiff = None  # pylint: disable=invalid-name
-        conversion_message = "Converted from version 0.6 to 0.7 with AiiDA v{}".format(get_version())
+        conversion_message = 'Converted from version 0.6 to 0.7 with AiiDA v{}'.format(get_version())
         self.assertEqual(
             metadata_v6.pop('conversion_info')[-1],
             conversion_message,
-            msg="The conversion message after migration is wrong")
+            msg='The conversion message after migration is wrong'
+        )
         metadata_v7.pop('conversion_info')
 
         # Assert changes were performed correctly
         self.assertDictEqual(
             metadata_v6,
             metadata_v7,
-            msg="After migration, metadata.json should equal intended metadata.json from archives")
+            msg='After migration, metadata.json should equal intended metadata.json from archives'
+        )
         self.assertDictEqual(
-            data_v6, data_v7, msg="After migration, data.json should equal intended data.json from archives")
+            data_v6, data_v7, msg='After migration, data.json should equal intended data.json from archives'
+        )
 
     def test_migrate_v6_to_v7_complete(self):
         """Test migration for file containing complete v0.6 era possibilities"""
@@ -88,17 +92,21 @@ class TestMigrateV06toV07(AiidaTestCase):
                     self.assertNotIn(
                         attr,
                         attrs,
-                        msg="key '{}' should have been removed from attributes for Node <pk={}>".format(attr, node_pk))
+                        msg="key '{}' should have been removed from attributes for Node <pk={}>".format(attr, node_pk)
+                    )
 
                 # Check new attributes were added successfully
                 for attr in new_attrs:
                     self.assertIn(
-                        attr, attrs, msg="key '{}' was not added to attributes for Node <pk={}>".format(attr, node_pk))
+                        attr, attrs, msg="key '{}' was not added to attributes for Node <pk={}>".format(attr, node_pk)
+                    )
                     self.assertEqual(
                         attrs[attr],
                         new_attrs[attr],
                         msg="key '{}' should have had the value {}, but did instead have {}".format(
-                            attr, new_attrs[attr], attrs[attr]))
+                            attr, new_attrs[attr], attrs[attr]
+                        )
+                    )
 
         # Check Attribute and Link have been removed
         illegal_entities = {'Attribute', 'Link'}
@@ -107,11 +115,12 @@ class TestMigrateV06toV07(AiidaTestCase):
                 self.assertNotIn(
                     entity,
                     metadata[dict_],
-                    msg="key '{}' should have been removed from '{}' in metadata.json".format(entity, dict_))
+                    msg="key '{}' should have been removed from '{}' in metadata.json".format(entity, dict_)
+                )
 
-    def test_migration_0040_integrity_error(self):
-        """Check IntegrityError is raised for different cases during migration 0040"""
-        from aiida.common.exceptions import IntegrityError
+    def test_migration_0040_corrupt_archive(self):
+        """Check CorruptArchive is raised for different cases during migration 0040"""
+        from aiida.tools.importexport.common.exceptions import CorruptArchive
 
         # data has one "valid" entry, in the form of Node <PK=42>.
         # At least it has the needed key `node_type`.
@@ -136,10 +145,10 @@ class TestMigrateV06toV07(AiidaTestCase):
             }
         }
 
-        with self.assertRaises(IntegrityError) as exc:
+        with self.assertRaises(CorruptArchive) as exc:
             migration_data_migration_legacy_process_attributes(data)
 
-        self.assertIn("Your export archive is corrupt! Org. exception:", exc.exception.__repr__())
+        self.assertIn('Your export archive is corrupt! Org. exception:', str(exc.exception))
 
         # data has one "valid" entry, in the form of Node <PK=52>.
         # data also has one "invalid" entry, in form of Node <PK=42>.
@@ -166,10 +175,10 @@ class TestMigrateV06toV07(AiidaTestCase):
             }
         }
 
-        with self.assertRaises(IntegrityError) as exc:
+        with self.assertRaises(CorruptArchive) as exc:
             migration_data_migration_legacy_process_attributes(data)
 
-        self.assertIn("Your export archive is corrupt! Please see the log-file", exc.exception.__repr__())
+        self.assertIn('Your export archive is corrupt! Please see the log-file', str(exc.exception))
 
     def test_migration_0040_no_process_state(self):
         """Check old ProcessNodes without a `process_state` can be migrated"""

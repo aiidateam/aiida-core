@@ -26,12 +26,12 @@ class StructureDataTranslator(DataTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "structures"
+    __label__ = 'structures'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import StructureData
     _aiida_class = StructureData
     # The string name of the AiiDA class
-    _aiida_type = "data.structure.StructureData"
+    _aiida_type = 'data.structure.StructureData'
 
     _result_type = __label__
 
@@ -49,7 +49,7 @@ class StructureDataTranslator(DataTranslator):
         in xsf format in order to visualize the structure with JSmol.
         """
         response = {}
-        response["str_viz_info"] = {}
+        response['str_viz_info'] = {}
 
         # This check is explicitly added here because sometimes
         # None is passed here as an value for visformat.
@@ -58,23 +58,23 @@ class StructureDataTranslator(DataTranslator):
 
         if visformat in node.get_export_formats():
             try:
-                response["str_viz_info"]["data"] = node._exportcontent(visformat)[0].decode('utf-8')  # pylint: disable=protected-access
-                response["str_viz_info"]["format"] = visformat
+                response['str_viz_info']['data'] = node._exportcontent(visformat)[0].decode('utf-8')  # pylint: disable=protected-access
+                response['str_viz_info']['format'] = visformat
             except LicensingException as exc:
                 response = str(exc)
 
         else:
-            raise RestInputValidationError("The format {} is not supported.".format(visformat))
+            raise RestInputValidationError('The format {} is not supported.'.format(visformat))
 
         # Add extra information
-        response["dimensionality"] = node.get_dimensionality()
-        response["pbc"] = node.pbc
-        response["formula"] = node.get_formula()
+        response['dimensionality'] = node.get_dimensionality()
+        response['pbc'] = node.pbc
+        response['formula'] = node.get_formula()
 
         return response
 
     @staticmethod
-    def get_downloadable_data(node, download_format="cif"):
+    def get_downloadable_data(node, download_format='cif'):
         """
         Generic function extented for structure data
 
@@ -92,11 +92,11 @@ class StructureDataTranslator(DataTranslator):
 
         if download_format in node.get_export_formats():
             try:
-                response["data"] = node._exportcontent(download_format)[0]  # pylint: disable=protected-access
-                response["status"] = 200
-                response["filename"] = node.uuid + "_structure." + download_format
+                response['data'] = node._exportcontent(download_format)[0]  # pylint: disable=protected-access
+                response['status'] = 200
+                response['filename'] = node.uuid + '_structure.' + download_format
             except LicensingException as exc:
-                response["status"] = 500
-                response["data"] = str(exc)
+                response['status'] = 500
+                response['data'] = str(exc)
 
         return response

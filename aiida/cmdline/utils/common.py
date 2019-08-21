@@ -241,8 +241,9 @@ def get_calcjob_report(calcjob):
     report = []
 
     if calcjob_state == CalcJobState.WITHSCHEDULER:
-        state_string = '{}, scheduler state: {}'.format(calcjob_state,
-                                                        scheduler_state if scheduler_state else '(unknown)')
+        state_string = '{}, scheduler state: {}'.format(
+            calcjob_state, scheduler_state if scheduler_state else '(unknown)'
+        )
     else:
         state_string = '{}'.format(calcjob_state)
 
@@ -329,7 +330,8 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
             # for now, CALL links are the only ones allowing calc-calc
             # (we here really want instead to follow CALL links)
             with_incoming='workcalculation',
-            tag='subworkchains')
+            tag='subworkchains'
+        )
         result = list(itertools.chain(*builder.distinct().all()))
 
         # This will return a single flat list of tuples, where the first element
@@ -366,7 +368,8 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
             time=entry.time,
             width_id=width_id,
             width_levelname=width_levelname,
-            indent=' ' * (depth * indent_size))
+            indent=' ' * (depth * indent_size)
+        )
         report.append(line)
 
     return '\n'.join(report)
@@ -475,12 +478,12 @@ def check_worker_load(active_slots):
     try:
         active_workers = get_num_workers()
     except CircusCallError:
-        echo.echo_critical("Could not contact Circus to get the number of active workers")
+        echo.echo_critical('Could not contact Circus to get the number of active workers')
 
     if active_workers is not None:
         available_slots = active_workers * slots_per_worker
         percent_load = (active_slots / available_slots)
         if percent_load > warning_threshold:
             echo.echo('')  # New line
-            echo.echo_warning("{:.0f}% of the available daemon worker slots have been used!".format(percent_load * 100))
+            echo.echo_warning('{:.0f}% of the available daemon worker slots have been used!'.format(percent_load * 100))
             echo.echo_warning("Increase the number of workers with 'verdi daemon incr'.\n")

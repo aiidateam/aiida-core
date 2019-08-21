@@ -35,7 +35,7 @@ CIRCUS_PUBSUB_SOCKET_TEMPLATE = 'circus.p.sock'
 CIRCUS_STATS_SOCKET_TEMPLATE = 'circus.s.sock'
 
 
-class Profile(object):  # pylint: disable=useless-object-inheritance,too-many-public-methods
+class Profile(object):  # pylint: disable=too-many-public-methods
     """Class that models a profile as it is stored in the configuration file of an AiiDA instance."""
 
     RMQ_PREFIX = 'aiida-{uuid}'
@@ -88,8 +88,11 @@ class Profile(object):  # pylint: disable=useless-object-inheritance,too-many-pu
                     internal_key = self._map_config_to_internal[internal_key]
                 except KeyError:
                     from aiida.cmdline.utils import echo
-                    echo.echo_warning('removed unsupported key `{}` with value `{}` from profile `{}`'.format(
-                        internal_key, value, name))
+                    echo.echo_warning(
+                        'removed unsupported key `{}` with value `{}` from profile `{}`'.format(
+                            internal_key, value, name
+                        )
+                    )
                     continue
             setattr(self, internal_key, value)
 
@@ -280,8 +283,9 @@ class Profile(object):  # pylint: disable=useless-object-inheritance,too-many-pu
             os.makedirs(self.repository_path)
         except OSError as exception:
             if exception.errno != errno.EEXIST:
-                raise exceptions.ConfigurationError('could not create the configured repository `{}`: {}'.format(
-                    self.repository_path, str(exception)))
+                raise exceptions.ConfigurationError(
+                    'could not create the configured repository `{}`: {}'.format(self.repository_path, str(exception))
+                )
 
     @property
     def filepaths(self):

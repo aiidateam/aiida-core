@@ -29,7 +29,7 @@ def verdi_profile():
 
 @verdi_profile.command('list')
 def profile_list():
-    """Displays list of all available profiles."""
+    """Display a list of all available profiles."""
 
     try:
         config = get_config()
@@ -54,7 +54,7 @@ def profile_list():
 @verdi_profile.command('show')
 @arguments.PROFILE(default=defaults.get_default_profile)
 def profile_show(profile):
-    """Show details for PROFILE or, when not specified, the default profile."""
+    """Show details for a profile."""
     if profile is None:
         echo.echo_critical('no profile to show')
 
@@ -66,7 +66,7 @@ def profile_show(profile):
 @verdi_profile.command('setdefault')
 @arguments.PROFILE(required=True, default=None)
 def profile_setdefault(profile):
-    """Set PROFILE as the default profile."""
+    """Set a profile as the default one."""
     try:
         config = get_config()
     except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:
@@ -82,19 +82,25 @@ def profile_setdefault(profile):
     '--include-config/--skip-config',
     default=True,
     show_default=True,
-    help='Include deletion of entry in configuration file.')
+    help='Include deletion of entry in configuration file.'
+)
 @click.option(
-    '--include-db/--skip-db', default=True, show_default=True, help='Include deletion of associated database.')
+    '--include-db/--skip-db', default=True, show_default=True, help='Include deletion of associated database.'
+)
 @click.option(
     '--include-repository/--skip-repository',
     default=True,
     show_default=True,
-    help='Include deletion of associated file repository.')
+    help='Include deletion of associated file repository.'
+)
 @arguments.PROFILES(required=True)
 def profile_delete(force, include_config, include_db, include_repository, profiles):
     """
-    Delete PROFILES (names, separated by spaces) from the aiida config file,
-    including the associated databases and file repositories.
+    Delete one or more profiles.
+
+    You can specify more profile names (separated by spaces).
+    These will be removed from the aiida config file,
+    and the associated databases and file repositories will also be removed.
     """
     from aiida.manage.configuration.setup import delete_profile
 
@@ -105,4 +111,5 @@ def profile_delete(force, include_config, include_db, include_repository, profil
             non_interactive=force,
             include_db=include_db,
             include_repository=include_repository,
-            include_config=include_config)
+            include_config=include_config
+        )

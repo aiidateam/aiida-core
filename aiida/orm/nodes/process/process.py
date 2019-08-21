@@ -117,8 +117,11 @@ class ProcessNode(Sealable, Node):
         try:
             process_class = load_entry_point_from_string(self.process_type)
         except exceptions.EntryPointError as exception:
-            raise ValueError('could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
-                self.pk, self.process_type, exception))
+            raise ValueError(
+                'could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
+                    self.pk, self.process_type, exception
+                )
+            )
         except ValueError:
             try:
                 import importlib
@@ -126,8 +129,11 @@ class ProcessNode(Sealable, Node):
                 module = importlib.import_module(module_name)
                 process_class = getattr(module, class_name)
             except (ValueError, ImportError):
-                raise ValueError('could not load process class CalcJobNode<{}> given its `process_type`: {}'.format(
-                    self.pk, self.process_type))
+                raise ValueError(
+                    'could not load process class CalcJobNode<{}> given its `process_type`: {}'.format(
+                        self.pk, self.process_type
+                    )
+                )
 
         return process_class
 

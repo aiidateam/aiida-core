@@ -1,3 +1,9 @@
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.2.3
+  hooks:
+  - id: trailing-whitespace
+  - id: double-quote-string-fixer
+
 - repo: local
   hooks:
   - id: yapf
@@ -145,11 +151,9 @@
         aiida/sphinxext/tests/workchain_source/conf.py|
         aiida/sphinxext/tests/workchain_source/demo_workchain.py|
         aiida/sphinxext/workchain.py|
-        aiida/tools/data/array/kpoints/__init__.py|
         aiida/tools/data/array/kpoints/legacy.py|
         aiida/tools/data/array/kpoints/seekpath.py|
         aiida/tools/data/__init__.py|
-        aiida/tools/data/structure/__init__.py|
         aiida/tools/dbexporters/__init__.py|
         aiida/tools/dbimporters/baseclasses.py|
         aiida/tools/dbimporters/__init__.py|

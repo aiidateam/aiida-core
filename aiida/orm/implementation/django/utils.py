@@ -31,7 +31,7 @@ class ModelWrapper(object):
     * `setattr`: if the item corresponds to a mutable model field, changes are flushed after performing the change
     """
 
-    # pylint: disable=too-many-instance-attributes,useless-object-inheritance
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(self, model, auto_flush=()):
         """Construct the ModelWrapper.

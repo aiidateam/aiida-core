@@ -23,7 +23,7 @@ from aiida.cmdline.utils import decorators, echo
 
 @verdi_data.group('upf')
 def upf():
-    """Manipulation of the upf families."""
+    """Manipulate UpfData objects (UPF-format pseudopotentials)."""
 
 
 @upf.command('uploadfamily')
@@ -34,11 +34,12 @@ def upf():
     '--stop-if-existing',
     is_flag=True,
     default=False,
-    help='Interrupt pseudos import if a pseudo was already present in the AiiDA database')
+    help='Interrupt pseudos import if a pseudo was already present in the AiiDA database'
+)
 @decorators.with_dbenv()
 def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
     """
-    Upload a new pseudopotential family.
+    Create a new UPF family from a folder of UPF files.
 
     Returns the numbers of files found and the number of nodes uploaded.
 
@@ -46,7 +47,7 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
     """
     from aiida.orm.nodes.data.upf import upload_upf_family
     files_found, files_uploaded = upload_upf_family(folder, group_label, group_description, stop_if_existing)
-    echo.echo_success("UPF files found: {}. New files uploaded: {}".format(files_found, files_uploaded))
+    echo.echo_success('UPF files found: {}. New files uploaded: {}'.format(files_found, files_uploaded))
 
 
 @upf.command('listfamilies')
@@ -56,12 +57,13 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
     'with_description',
     is_flag=True,
     default=False,
-    help="Show also the description for the UPF family")
+    help='Show also the description for the UPF family'
+)
 @options.WITH_ELEMENTS()
 @decorators.with_dbenv()
 def upf_listfamilies(elements, with_description):
     """
-    Print on screen the list of upf families installed
+    List all UPF families that exist in the database.
     """
     from aiida import orm
     from aiida.plugins import DataFactory
@@ -76,29 +78,30 @@ def upf_listfamilies(elements, with_description):
         orm.Group,
         with_node='upfdata',
         tag='group',
-        project=["label", "description"],
-        filters={"type_string": {
+        project=['label', 'description'],
+        filters={'type_string': {
             '==': UPFGROUP_TYPE
-        }})
+        }}
+    )
 
     query.distinct()
     if query.count() > 0:
         for res in query.dict():
-            group_label = res.get("group").get("label")
-            group_desc = res.get("group").get("description")
+            group_label = res.get('group').get('label')
+            group_desc = res.get('group').get('description')
             query = orm.QueryBuilder()
-            query.append(orm.Group, tag='thisgroup', filters={"label": {'like': group_label}})
-            query.append(UpfData, project=["id"], with_group='thisgroup')
+            query.append(orm.Group, tag='thisgroup', filters={'label': {'like': group_label}})
+            query.append(UpfData, project=['id'], with_group='thisgroup')
 
             if with_description:
-                description_string = ": {}".format(group_desc)
+                description_string = ': {}'.format(group_desc)
             else:
-                description_string = ""
+                description_string = ''
 
-            echo.echo_success("* {} [{} pseudos]{}".format(group_label, query.count(), description_string))
+            echo.echo_success('* {} [{} pseudos]{}'.format(group_label, query.count(), description_string))
 
     else:
-        echo.echo_warning("No valid UPF pseudopotential family found.")
+        echo.echo_warning('No valid UPF pseudopotential family found.')
 
 
 @upf.command('exportfamily')
@@ -127,7 +130,7 @@ def upf_exportfamily(folder, group):
 @decorators.with_dbenv()
 def upf_import(filename):
     """
-    Import upf data object
+    Import a UPF pseudopotential from a file.
     """
     from aiida.orm import UpfData
 

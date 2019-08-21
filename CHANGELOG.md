@@ -1,3 +1,42 @@
+## v1.0.0b5
+
+### Major bug fixes
+- Fix bug where content of nested dictionaries in work chain contexts could be lost, causing work chains to fail on daemon restart [[#3093]](https://github.com/aiidateam/aiida-core/pull/3093)
+- Fix bug where the minimum polling interval for scheduler updates was not being respected [[#3096]](https://github.com/aiidateam/aiida-core/pull/3096)
+- Fix bug with never resolving calculation job update futures causing daemon to not continue calculation jobs that have finished on the remote cluster [[#3155]](https://github.com/aiidateam/aiida-core/pull/3155)
+- Make the `execmanager.retrieve_calculation` idempotent'ish [[#3142]](https://github.com/aiidateam/aiida-core/pull/3142)
+- Make the `execmanager.upload_calculation` idempotent'ish [[#3146]](https://github.com/aiidateam/aiida-core/pull/3146)
+- Ensure immutability of `CalcJobNode` hash before and after storing [[#3130]](https://github.com/aiidateam/aiida-core/pull/3130)
+- Short circuit execution of calculation functions when caching [[#3121]](https://github.com/aiidateam/aiida-core/pull/3121)
+
+### Minor bug fixes
+- Added data migration to "seal" legacy calculations [[#3134]](https://github.com/aiidateam/aiida-core/pull/3134)
+- Properly overload function module and name to `FunctionProcess` to ensure `process_type` is correctly set [[#3116]](https://github.com/aiidateam/aiida-core/pull/3116)
+- Fix potential inefficiency in `aiida.tools.data.cif` converters [[#3098]](https://github.com/aiidateam/aiida-core/pull/3098)
+- Fix `UpfData.get_upf_groups` [[#3080]](https://github.com/aiidateam/aiida-core/pull/3080)
+
+### Improvements
+- Implement a `PluginVersionProvider` for processes to automatically add versions of `aiida-core` and plugin to process nodes [[#3131]](https://github.com/aiidateam/aiida-core/pull/3131)
+- Add support to filter by process label for `verdi process list` [[#3140]](https://github.com/aiidateam/aiida-core/pull/3140)
+- Add a `click.progress_bar` to rehash cli [[#3122]](https://github.com/aiidateam/aiida-core/pull/3122)
+- Allow to ignore or unset default values in interactive `verdi` commands [[#3102]](https://github.com/aiidateam/aiida-core/pull/3102)
+- Add the `verdi process call-root` command [[#3091]](https://github.com/aiidateam/aiida-core/pull/3091)
+- [Django]: migrate the node attribute and extra schema to use JSONB just like SqlAlchemy, greatly improving storage and querying efficiency [[#3090]](https://github.com/aiidateam/aiida-core/pull/3090)
+- [SqlAlchemy]: Improved the speed of node attribute and extra deserialization [[#3090]](https://github.com/aiidateam/aiida-core/pull/3090)
+- Simplify the data format of export archives, greatly reducing file size [[#3090]](https://github.com/aiidateam/aiida-core/pull/3090)
+- Move responsibility of loading profile to `ProfileParamType` [[#3138]](https://github.com/aiidateam/aiida-core/pull/3138)
+- Remove stale daemon pid in status checks [[#3118]](https://github.com/aiidateam/aiida-core/pull/3118)
+- Addressed various deprecation warnings [[#3081]](https://github.com/aiidateam/aiida-core/pull/3081)[[#3084]](https://github.com/aiidateam/aiida-core/pull/3084)
+
+### Changes
+- Version of export archives has been upped to `v0.7` [[#3134]](https://github.com/aiidateam/aiida-core/pull/3134)
+- Update dependency `paramiko==2.6.0` [[#3113]](https://github.com/aiidateam/aiida-core/pull/3113)
+- Improve and simplify the guard of `verdi database migrate` [[#3110]](https://github.com/aiidateam/aiida-core/pull/3110)
+- Enforce specific precision in `clean_value` for floats when computing a node's hash [[#3108]](https://github.com/aiidateam/aiida-core/pull/3108)
+- [Django]: Support for datetime objects removed from node attributes and extras [[#3090]](https://github.com/aiidateam/aiida-core/pull/3090)
+- Make `Process.exposed_inputs/exposed_outputs` return `AttributeDict` [[#3079]](https://github.com/aiidateam/aiida-core/pull/3079)
+
+
 ## v1.0.0b4
 
 ### Major bug fixes
@@ -33,7 +72,6 @@
 - Improve the `SchedulerError` message in `PbsBaseClass._parse_joblist_output` to contain more information [[#2995]](https://github.com/aiidateam/aiida-core/pull/2995)
 - Set the `process_status` for `WorkChains` when waiting for sub processes [[#3000]](https://github.com/aiidateam/aiida-core/pull/3000)
 - Number of workers can now be specified directly in `verdi daemon start` [[#3001]](https://github.com/aiidateam/aiida-core/pull/3001)
-
 
 ### Changes
 - The docstring of a process function is no longer used as the default for the process node description [[#3071]](https://github.com/aiidateam/aiida-core/pull/3071)

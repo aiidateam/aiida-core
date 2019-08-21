@@ -34,11 +34,11 @@ class TestVisGraph(AiidaTestCase):
         """create an example provenance graph
         """
         pd0 = orm.Dict()
-        pd0.label = "pd0"
+        pd0.label = 'pd0'
         pd0.store()
 
         pd1 = orm.Dict()
-        pd1.label = "pd1"
+        pd1.label = 'pd1'
         pd1.store()
 
         wc1 = orm.WorkChainNode()
@@ -49,8 +49,8 @@ class TestVisGraph(AiidaTestCase):
 
         calc1 = orm.CalcJobNode()
         calc1.computer = self.computer
-        calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        calc1.label = "calc1"
+        calc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc1.label = 'calc1'
         calc1.set_process_state(ProcessState.FINISHED)
         calc1.set_exit_status(0)
         calc1.add_incoming(pd0, link_type=LinkType.INPUT_CALC, link_label='input1')
@@ -59,18 +59,18 @@ class TestVisGraph(AiidaTestCase):
         calc1.store()
 
         rd1 = orm.RemoteData()
-        rd1.label = "rd1"
-        rd1.set_remote_path("/x/y.py")
+        rd1.label = 'rd1'
+        rd1.set_remote_path('/x/y.py')
         rd1.computer = self.computer
         rd1.store()
         rd1.add_incoming(calc1, link_type=LinkType.CREATE, link_label='output')
 
         pd2 = orm.Dict()
-        pd2.label = "pd2"
+        pd2.label = 'pd2'
         pd2.store()
 
         calcf1 = orm.CalcFunctionNode()
-        calcf1.label = "calcf1"
+        calcf1.label = 'calcf1'
         calcf1.set_process_state(ProcessState.FINISHED)
         calcf1.set_exit_status(200)
         calcf1.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='input1')
@@ -79,10 +79,10 @@ class TestVisGraph(AiidaTestCase):
         calcf1.store()
 
         pd3 = orm.Dict()
-        pd3.label = "pd3"
+        pd3.label = 'pd3'
 
         fd1 = orm.FolderData()
-        fd1.label = "fd1"
+        fd1.label = 'fd1'
 
         pd3.add_incoming(calcf1, link_type=LinkType.CREATE, link_label='output1')
         pd3.store()
@@ -93,15 +93,15 @@ class TestVisGraph(AiidaTestCase):
         fd1.add_incoming(wc1, link_type=LinkType.RETURN, link_label='output2')
 
         return AttributeDict({
-            "pd0": pd0,
-            "pd1": pd1,
-            "calc1": calc1,
-            "rd1": rd1,
-            "pd2": pd2,
-            "calcf1": calcf1,
-            "pd3": pd3,
-            "fd1": fd1,
-            "wc1": wc1
+            'pd0': pd0,
+            'pd1': pd1,
+            'calc1': calc1,
+            'rd1': rd1,
+            'pd2': pd2,
+            'calcf1': calcf1,
+            'pd3': pd3,
+            'fd1': fd1,
+            'wc1': wc1
         })
 
     def test_graph_init(self):
@@ -149,7 +149,8 @@ class TestVisGraph(AiidaTestCase):
             graph.edges,
             set([(nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
                  (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
-                 (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1'))]))
+                 (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1'))])
+        )
 
     def test_graph_add_outgoing(self):
         """ test adding a node and all its outgoing nodes to a graph"""
@@ -162,7 +163,8 @@ class TestVisGraph(AiidaTestCase):
         self.assertEqual(
             graph.edges,
             set([(nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
-                 (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2'))]))
+                 (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2'))])
+        )
 
     def test_graph_recurse_ancestors(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph"""
@@ -179,21 +181,23 @@ class TestVisGraph(AiidaTestCase):
                  (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
                  (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1')),
                  (nodes.pd0.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input1')),
-                 (nodes.pd1.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input2'))]))
+                 (nodes.pd1.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input2'))])
+        )
 
     def test_graph_recurse_ancestors_filter_links(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph, but filter link types"""
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
-        graph.recurse_ancestors(nodes.rd1, link_types=["create", "input_calc"])
+        graph.recurse_ancestors(nodes.rd1, link_types=['create', 'input_calc'])
 
         self.assertEqual(graph.nodes, set([nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk]))
         self.assertEqual(
             graph.edges,
             set([(nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
                  (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
-                 (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2'))]))
+                 (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2'))])
+        )
 
     def test_graph_recurse_descendants(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph"""
@@ -209,7 +213,8 @@ class TestVisGraph(AiidaTestCase):
                 (nodes.rd1.pk, nodes.calcf1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
                 (nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
                 (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2')),
-            ]))
+            ])
+        )
 
     def test_graph_graphviz_source(self):
         """ test the output of graphviz source """
@@ -252,7 +257,8 @@ class TestVisGraph(AiidaTestCase):
         # dedent before comparison
         self.assertEqual(
             sorted([l.strip() for l in graph.graphviz.source.splitlines()]),
-            sorted([l.strip() for l in expected.splitlines()]))
+            sorted([l.strip() for l in expected.splitlines()])
+        )
 
     def test_graph_graphviz_source_pstate(self):
         """ test the output of graphviz source, with the `pstate_node_styles` function """
@@ -295,4 +301,5 @@ class TestVisGraph(AiidaTestCase):
         # dedent before comparison
         self.assertEqual(
             sorted([l.strip() for l in graph.graphviz.source.splitlines()]),
-            sorted([l.strip() for l in expected.splitlines()]))
+            sorted([l.strip() for l in expected.splitlines()])
+        )

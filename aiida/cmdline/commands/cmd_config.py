@@ -26,7 +26,7 @@ from aiida.cmdline.utils import echo
 @click.option('--unset', is_flag=True, help='Remove the line matching the option name from the config file.')
 @click.pass_context
 def verdi_config(ctx, option, value, globally, unset):
-    """Set, unset and get profile specific or global configuration options."""
+    """Configure profile-specific or global AiiDA options."""
     config = ctx.obj.config
     profile = ctx.obj.profile
 

@@ -19,10 +19,10 @@ import zipfile
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.archives import get_archive_file, get_json_files
-from aiida.common.archive import extract_tar, extract_zip
 from aiida.common.exceptions import NotExistent
 from aiida.common.folders import SandboxFolder
 from aiida.common.json import load as jsonload
+from aiida.tools.importexport.common.archive import extract_tar, extract_zip
 from aiida.tools.importexport.migration.utils import verify_metadata_version
 from aiida.tools.importexport.migration.v04_to_v05 import migrate_v4_to_v5
 
@@ -43,13 +43,13 @@ class TestMigrateV04toV05(AiidaTestCase):
         from aiida import get_version
 
         # Get metadata.json and data.json as dicts from v0.5 file archive
-        metadata_v5, data_v5 = get_json_files("export_v0.5_simple.aiida", **self.core_archive)
+        metadata_v5, data_v5 = get_json_files('export_v0.5_simple.aiida', **self.core_archive)
         verify_metadata_version(metadata_v5, version='0.5')
 
         # Get metadata.json and data.json as dicts from v0.4 file archive
         # Cannot use 'get_json_files' for 'export_v0.4_simple.aiida',
         # because we need to pass the SandboxFolder to 'migrate_v4_to_v5'
-        dirpath_archive = get_archive_file("export_v0.4_simple.aiida", **self.core_archive)
+        dirpath_archive = get_archive_file('export_v0.4_simple.aiida', **self.core_archive)
 
         with SandboxFolder(sandbox_in_repo=False) as folder:
             if zipfile.is_zipfile(dirpath_archive):
@@ -80,26 +80,29 @@ class TestMigrateV04toV05(AiidaTestCase):
         # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
         # Remove also 'conversion_info' from `metadata.json` of v0.5 file archive
         self.maxDiff = None  # pylint: disable=invalid-name
-        conversion_message = "Converted from version 0.4 to 0.5 with AiiDA v{}".format(get_version())
+        conversion_message = 'Converted from version 0.4 to 0.5 with AiiDA v{}'.format(get_version())
         self.assertEqual(
             metadata_v4.pop('conversion_info')[-1],
             conversion_message,
-            msg="The conversion message after migration is wrong")
+            msg='The conversion message after migration is wrong'
+        )
         metadata_v5.pop('conversion_info')
 
         # Assert changes were performed correctly
         self.assertDictEqual(
             metadata_v4,
             metadata_v5,
-            msg="After migration, metadata.json should equal intended metadata.json from archives")
+            msg='After migration, metadata.json should equal intended metadata.json from archives'
+        )
         self.assertDictEqual(
-            data_v4, data_v5, msg="After migration, data.json should equal intended data.json from archives")
+            data_v4, data_v5, msg='After migration, data.json should equal intended data.json from archives'
+        )
 
     def test_migrate_v4_to_v5_complete(self):
         """Test migration for file containing complete v0.4 era possibilities"""
 
         # Get metadata.json and data.json as dicts from v0.4 file archive
-        metadata, data = get_json_files("export_v0.4.aiida", **self.external_archive)
+        metadata, data = get_json_files('export_v0.4.aiida', **self.external_archive)
         verify_metadata_version(metadata, version='0.4')
 
         # Migrate to v0.5
@@ -118,7 +121,8 @@ class TestMigrateV04toV05(AiidaTestCase):
             self.assertNotIn(
                 change,
                 metadata['all_fields_info']['Computer'],
-                msg="'{}' unexpectedly found in metadata.json for Computer".format(change))
+                msg="'{}' unexpectedly found in metadata.json for Computer".format(change)
+            )
         for change in removed_node_attrs:
             # data.json
             for node in data['export_data']['Node'].values():
@@ -127,4 +131,5 @@ class TestMigrateV04toV05(AiidaTestCase):
             self.assertNotIn(
                 change,
                 metadata['all_fields_info']['Node'],
-                msg="'{}' unexpectedly found in metadata.json for Node".format(change))
+                msg="'{}' unexpectedly found in metadata.json for Node".format(change)
+            )

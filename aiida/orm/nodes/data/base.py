@@ -30,7 +30,7 @@ def to_aiida_type(value):
     """
     Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types.
     """
-    raise TypeError("Cannot convert value of type {} to AiiDA type.".format(type(value)))
+    raise TypeError('Cannot convert value of type {} to AiiDA type.'.format(type(value)))
 
 
 @six.add_metaclass(abc.ABCMeta)

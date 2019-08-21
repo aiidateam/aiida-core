@@ -20,7 +20,7 @@ from aiida.backends.utils import validate_attribute_key, SettingsManager, Settin
 from aiida.common import NotExistent
 
 SCHEMA_VERSION_DB_KEY = 'db|schemaversion'
-SCHEMA_VERSION_DB_DESCRIPTION = "The version of the schema used in this database."
+SCHEMA_VERSION_DB_DESCRIPTION = 'The version of the schema used in this database.'
 
 
 class DjangoSettingsManager(SettingsManager):
@@ -165,8 +165,10 @@ def check_schema_version(profile_name):
             'Before you upgrade, make sure all calculations and workflows have finished running.\n'
             'If this is not the case, revert the code to the previous version and finish them first.\n'
             'To migrate the database to the current version, run the following commands:'
-            '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(db_schema_version, code_schema_version,
-                                                                                 profile_name, profile_name))
+            '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(
+                db_schema_version, code_schema_version, profile_name, profile_name
+            )
+        )
 
 
 def set_db_schema_version(version):

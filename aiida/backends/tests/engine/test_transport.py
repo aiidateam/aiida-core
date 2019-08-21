@@ -100,7 +100,7 @@ class TestTransportQueue(AiidaTestCase):
                 yield request
 
         def broken_open(trans):
-            raise RuntimeError("Could not open transport")
+            raise RuntimeError('Could not open transport')
 
         original = None
         try:

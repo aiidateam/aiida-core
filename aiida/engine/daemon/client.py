@@ -60,7 +60,7 @@ def get_daemon_client(profile_name=None):
     return DaemonClient(profile)
 
 
-class DaemonClient(object):  # pylint: disable=too-many-public-methods,useless-object-inheritance
+class DaemonClient(object):  # pylint: disable=too-many-public-methods
     """
     Extension of the Profile which also provides handles to retrieve profile specific
     properties related to the daemon client
@@ -102,8 +102,10 @@ class DaemonClient(object):  # pylint: disable=too-many-public-methods,useless-o
         """
         from aiida.common.exceptions import ConfigurationError
         if VERDI_BIN is None:
-            raise ConfigurationError("Unable to find 'verdi' in the path. Make sure that you are working "
-                                     "in a virtual environment, or that at least the 'verdi' executable is on the PATH")
+            raise ConfigurationError(
+                "Unable to find 'verdi' in the path. Make sure that you are working "
+                "in a virtual environment, or that at least the 'verdi' executable is on the PATH"
+            )
         return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile.name)
 
     @property

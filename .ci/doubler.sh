@@ -2,9 +2,9 @@
 # Read cmdline parameter and sleep that number of seconds (or zero if not present)
 # Then read integer from file 'value_to_double.txt`, multiply by two and echo that value
 
-set -e 
+set -e
 
-if [ "$1" != "" ] 
+if [ "$1" != "" ]
 then
     sleep $1
 fi

@@ -53,7 +53,7 @@ class TcodSearchResults(CodSearchResults):
 
     # pylint: disable=abstract-method
 
-    _base_url = "http://www.crystallography.net/tcod/"
+    _base_url = 'http://www.crystallography.net/tcod/'
 
     def __init__(self, results):
         super(TcodSearchResults, self).__init__(results)
@@ -69,11 +69,13 @@ class TcodEntry(CodEntry):
 
     _license = 'CC0'
 
-    def __init__(self,
-                 uri,
-                 db_name='Theoretical Crystallography Open Database',
-                 db_uri='http://www.crystallography.net/tcod',
-                 **kwargs):
+    def __init__(
+        self,
+        uri,
+        db_name='Theoretical Crystallography Open Database',
+        db_uri='http://www.crystallography.net/tcod',
+        **kwargs
+    ):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.tcod.TcodEntry`, related

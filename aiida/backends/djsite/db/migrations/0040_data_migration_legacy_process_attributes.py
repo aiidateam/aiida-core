@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -83,6 +83,7 @@ class Migration(migrations.Migration):
                     attributes->>'process_state' NOT IN ('created', 'running', 'waiting');
                 -- Set `sealed=True` for process nodes that do not yet have a `sealed` attribute AND are not in an active state
                 """,
-            reverse_sql=""),
+            reverse_sql=''
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

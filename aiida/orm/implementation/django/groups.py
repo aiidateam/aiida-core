@@ -46,7 +46,8 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
         super(DjangoGroup, self).__init__(backend)
 
         self._dbmodel = utils.ModelWrapper(
-            models.DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string))
+            models.DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string)
+        )
 
     @property
     def label(self):
@@ -83,7 +84,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     @user.setter
     def user(self, new_user):
         type_check(new_user, users.DjangoUser)
-        assert new_user.backend == self.backend, "User from a different backend"
+        assert new_user.backend == self.backend, 'User from a different backend'
         self._dbmodel.user = new_user.dbmodel
 
     @property
@@ -205,17 +206,19 @@ class DjangoGroupCollection(BackendGroupCollection):
 
     ENTITY_CLASS = DjangoGroup
 
-    def query(self,
-              label=None,
-              type_string=None,
-              pk=None,
-              uuid=None,
-              nodes=None,
-              user=None,
-              node_attributes=None,
-              past_days=None,
-              label_filters=None,
-              **kwargs):  # pylint: disable=too-many-arguments
+    def query(
+        self,
+        label=None,
+        type_string=None,
+        pk=None,
+        uuid=None,
+        nodes=None,
+        user=None,
+        node_attributes=None,
+        past_days=None,
+        label_filters=None,
+        **kwargs
+    ):  # pylint: disable=too-many-arguments
         # pylint: disable=too-many-branches,too-many-locals
         from .nodes import DjangoNode
 
@@ -244,9 +247,11 @@ class DjangoGroupCollection(BackendGroupCollection):
 
             for node in nodes:
                 if not isinstance(node, (DjangoNode, models.DbNode)):
-                    raise TypeError("At least one of the elements passed as "
-                                    "nodes for the query on Group is neither "
-                                    "a Node nor a DbNode")
+                    raise TypeError(
+                        'At least one of the elements passed as '
+                        'nodes for the query on Group is neither '
+                        'a Node nor a DbNode'
+                    )
                 pk_list.append(node.pk)
 
             queryobject &= Q(dbnodes__in=pk_list)
@@ -258,7 +263,7 @@ class DjangoGroupCollection(BackendGroupCollection):
                 queryobject &= Q(user=user.id)
 
         if label_filters is not None:
-            label_filters_list = {"name__" + key: value for (key, value) in label_filters.items() if value}
+            label_filters_list = {'name__' + key: value for (key, value) in label_filters.items() if value}
             queryobject &= Q(**label_filters_list)
 
         groups_pk = set(models.DbGroup.objects.filter(queryobject, **kwargs).values_list('pk', flat=True))
@@ -285,7 +290,8 @@ class DjangoGroupCollection(BackendGroupCollection):
                     # this should be ok.
                     groups_pk = groups_pk.intersection(
                         models.DbGroup.objects.filter(pk__in=groups_pk, dbnodes__dbattributes__key=k,
-                                                      **query_dict).values_list('pk', flat=True))
+                                                      **query_dict).values_list('pk', flat=True)
+                    )
 
         retlist = []
         # Return sorted by pk

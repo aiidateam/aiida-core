@@ -13,19 +13,20 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.params import arguments, types
+from aiida.cmdline.params import arguments, options, types
 
 
 @verdi_data.group('dict')
 def dictionary():
-    """View and manipulate Dict objects."""
+    """Manipulate Dict objects (python dictionaries)."""
 
 
 @dictionary.command('show')
 @arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:dict',)))
-def dictionary_show(data):
+@options.DICT_FORMAT()
+def dictionary_show(data, fmt):
     """Show contents of Dict nodes."""
     from aiida.cmdline.utils.echo import echo_dictionary
 
     for node in data:
-        echo_dictionary(node.get_dict(), 'json+date')
+        echo_dictionary(node.get_dict(), fmt)

@@ -23,7 +23,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 
 @verdi.group('group')
 def verdi_group():
-    """Create, inspect and manage groups."""
+    """Create, inspect and manage groups of nodes."""
 
 
 @verdi_group.command('add-nodes')
@@ -32,7 +32,7 @@ def verdi_group():
 @arguments.NODES()
 @with_dbenv()
 def group_add_nodes(group, force, nodes):
-    """Add NODES to the given GROUP."""
+    """Add nodes to the a group."""
     if not force:
         click.confirm('Do you really want to add {} nodes to Group<{}>?'.format(len(nodes), group.label), abort=True)
 
@@ -46,7 +46,7 @@ def group_add_nodes(group, force, nodes):
 @options.FORCE()
 @with_dbenv()
 def group_remove_nodes(group, nodes, clear, force):
-    """Remove NODES from the given GROUP."""
+    """Remove nodes from a group."""
     if clear:
         message = 'Do you really want to remove ALL the nodes from Group<{}>?'.format(group.label)
     else:
@@ -67,7 +67,7 @@ def group_remove_nodes(group, nodes, clear, force):
 @options.FORCE()
 @with_dbenv()
 def group_delete(group, clear, force):
-    """Delete a GROUP.
+    """Delete a group.
 
     Note that a group that contains nodes cannot be deleted if it contains any nodes. If you still want to delete the
     group, use the `-c/--clear` flag to remove the contents before deletion. Note that in any case, the nodes themselves
@@ -78,9 +78,11 @@ def group_delete(group, clear, force):
     label = group.label
 
     if group.count() > 0 and not clear:
-        echo.echo_critical(
-            ('Group<{}> contains {} nodes. Pass `--clear` if you want to empty it before deleting the group'.format(
-                label, group.count())))
+        echo.echo_critical((
+            'Group<{}> contains {} nodes. Pass `--clear` if you want to empty it before deleting the group'.format(
+                label, group.count()
+            )
+        ))
 
     if not force:
         click.confirm('Are you sure to delete Group<{}>?'.format(label), abort=True)
@@ -97,7 +99,7 @@ def group_delete(group, clear, force):
 @click.argument('label', type=click.STRING)
 @with_dbenv()
 def group_relabel(group, label):
-    """Change the label of the given GROUP to LABEL."""
+    """Change the label of a group."""
     try:
         group.label = label
     except UniquenessError as exception:
@@ -111,7 +113,7 @@ def group_relabel(group, label):
 @click.argument('description', type=click.STRING, required=False)
 @with_dbenv()
 def group_description(group, description):
-    """Change the description of the given GROUP to DESCRIPTION.
+    """Change the description of a group.
 
     If no DESCRIPTION is defined, the current description will simply be echoed.
     """
@@ -123,17 +125,18 @@ def group_description(group, description):
 
 
 @verdi_group.command('show')
-@options.RAW(help="Show only a space-separated list of PKs of the calculations in the group")
+@options.RAW(help='Show only a space-separated list of PKs of the calculations in the group')
 @click.option(
     '-u',
     '--uuid',
     is_flag=True,
     default=False,
-    help="Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs.")
+    help='Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs.'
+)
 @arguments.GROUP()
 @with_dbenv()
 def group_show(group, raw, uuid):
-    """Show information on a given group. Pass the GROUP as a parameter."""
+    """Show information for a given group."""
     from tabulate import tabulate
 
     from aiida.common.utils import str_timedelta
@@ -191,43 +194,51 @@ def user_defined_group():
     '--user',
     'user_email',
     type=click.STRING,
-    help="Add a filter to show only groups belonging to a specific user")
-@click.option('-a', '--all-types', is_flag=True, default=False, help="Show groups of all types")
+    help='Add a filter to show only groups belonging to a specific user'
+)
+@click.option('-a', '--all-types', is_flag=True, default=False, help='Show groups of all types')
 @click.option(
     '-t',
     '--type',
     'group_type',
     type=types.LazyChoice(valid_group_type_strings),
     default=user_defined_group,
-    help="Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to "
-    "specify aiida-internal type")
+    help='Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to '
+    'specify aiida-internal type'
+)
 @click.option(
-    '-d', '--with-description', 'with_description', is_flag=True, default=False, help="Show also the group description")
-@click.option('-C', '--count', is_flag=True, default=False, help="Show also the number of nodes in the group")
-@options.PAST_DAYS(help="add a filter to show only groups created in the past N days", default=None)
+    '-d', '--with-description', 'with_description', is_flag=True, default=False, help='Show also the group description'
+)
+@click.option('-C', '--count', is_flag=True, default=False, help='Show also the number of nodes in the group')
+@options.PAST_DAYS(help='add a filter to show only groups created in the past N days', default=None)
 @click.option(
     '-s',
     '--startswith',
     type=click.STRING,
     default=None,
-    help="add a filter to show only groups for which the name begins with STRING")
+    help='add a filter to show only groups for which the name begins with STRING'
+)
 @click.option(
     '-e',
     '--endswith',
     type=click.STRING,
     default=None,
-    help="add a filter to show only groups for which the name ends with STRING")
+    help='add a filter to show only groups for which the name ends with STRING'
+)
 @click.option(
     '-c',
     '--contains',
     type=click.STRING,
     default=None,
-    help="add a filter to show only groups for which the name contains STRING")
-@options.NODE(help="Show only the groups that contain the node")
+    help='add a filter to show only groups for which the name contains STRING'
+)
+@options.NODE(help='Show only the groups that contain the node')
 @with_dbenv()
-def group_list(all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith,
-               contains, node):
-    """Show a list of groups."""
+def group_list(
+    all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith, contains,
+    node
+):
+    """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments, too-many-locals
     import datetime
     from aiida.common.escaping import escape_for_sql_like
@@ -304,7 +315,7 @@ def group_list(all_users, user_email, all_types, group_type, with_description, c
         table.append([projection_lambdas[field](group[0]) for field in projection_fields])
 
     if not all_types:
-        echo.echo_info("If you want to see the groups of all types, please add -a/--all-types option")
+        echo.echo_info('If you want to see the groups of all types, please add -a/--all-types option')
     echo.echo(tabulate(table, headers=projection_header))
 
 
@@ -312,7 +323,7 @@ def group_list(all_users, user_email, all_types, group_type, with_description, c
 @click.argument('group_label', nargs=1, type=click.STRING)
 @with_dbenv()
 def group_create(group_label):
-    """Create a new empty group with the name GROUP_NAME."""
+    """Create an empty group with a given name."""
     from aiida import orm
     from aiida.orm import GroupTypeString
 
@@ -329,7 +340,10 @@ def group_create(group_label):
 @click.argument('destination_group', nargs=1, type=click.STRING)
 @with_dbenv()
 def group_copy(source_group, destination_group):
-    """Add all nodes that belong to source group to the destination group (which may or may not exist)."""
+    """Duplicate a group.
+
+    More in detail, add all nodes from the source group to the destination group.
+    Note that the destination group may not exist."""
     from aiida import orm
 
     dest_group, created = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)

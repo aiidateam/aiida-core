@@ -22,7 +22,7 @@ __all__ = ('CalculationTools',)
 class CalculationTools(object):
     """Base class for CalculationTools."""
 
-    # pylint: disable=too-few-public-methods,useless-object-inheritance
+    # pylint: disable=too-few-public-methods
 
     def __init__(self, node):
         self._node = node

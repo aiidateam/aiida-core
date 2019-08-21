@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -50,7 +50,8 @@ def upgrade():
     """Migrations for the upgrade."""
     conn = op.get_bind()
 
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dbnode
         SET attributes = jsonb_set(attributes, '{"sealed"}', attributes->'_sealed')
         WHERE attributes ? '_sealed' AND node_type LIKE 'process.%';
@@ -83,7 +84,8 @@ def upgrade():
             NOT (attributes ? 'sealed') AND
             attributes->>'process_state' NOT IN ('created', 'running', 'waiting');
         -- Set `sealed=True` for process nodes that do not yet have a `sealed` attribute AND are not in an active state
-        """)
+        """
+    )
     conn.execute(statement)
 
 

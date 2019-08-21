@@ -60,10 +60,10 @@ def verdi_status():
     # getting the profile
     try:
         profile = manager.get_profile()
-        print_status(ServiceStatus.UP, 'profile', "On profile {}".format(profile.name))
+        print_status(ServiceStatus.UP, 'profile', 'On profile {}'.format(profile.name))
 
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'profile', "Unable to read AiiDA profile")
+        print_status(ServiceStatus.ERROR, 'profile', 'Unable to read AiiDA profile')
         sys.exit(ExitCode.CRITICAL)  # stop here - without a profile we cannot access anything
 
     # getting the repository
@@ -71,7 +71,7 @@ def verdi_status():
     try:
         repo_folder = get_repository_folder()
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'repository', "Error with repo folder", exception=exc)
+        print_status(ServiceStatus.ERROR, 'repository', 'Error with repo folder', exception=exc)
         exit_code = ExitCode.CRITICAL
     else:
         print_status(ServiceStatus.UP, 'repository', repo_folder)
@@ -82,10 +82,10 @@ def verdi_status():
         backend = manager.get_backend()
         backend.cursor()
     except Exception:
-        print_status(ServiceStatus.DOWN, 'postgres', "Unable to connect as {}@{}:{}".format(*database_data))
+        print_status(ServiceStatus.DOWN, 'postgres', 'Unable to connect as {}@{}:{}'.format(*database_data))
         exit_code = ExitCode.CRITICAL
     else:
-        print_status(ServiceStatus.UP, 'postgres', "Connected as {}@{}:{}".format(*database_data))
+        print_status(ServiceStatus.UP, 'postgres', 'Connected as {}@{}:{}'.format(*database_data))
 
     # getting the rmq status
     try:
@@ -93,10 +93,10 @@ def verdi_status():
             comm = manager.create_communicator(with_orm=False)
             comm.stop()
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'rabbitmq', "Unable to connect to rabbitmq", exception=exc)
+        print_status(ServiceStatus.ERROR, 'rabbitmq', 'Unable to connect to rabbitmq', exception=exc)
         exit_code = ExitCode.CRITICAL
     else:
-        print_status(ServiceStatus.UP, 'rabbitmq', "Connected to {}".format(get_rmq_url()))
+        print_status(ServiceStatus.UP, 'rabbitmq', 'Connected to {}'.format(get_rmq_url()))
 
     # getting the daemon status
     try:
@@ -112,7 +112,7 @@ def verdi_status():
             exit_code = ExitCode.CRITICAL
 
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'daemon', "Error getting daemon status", exception=exc)
+        print_status(ServiceStatus.ERROR, 'daemon', 'Error getting daemon status', exception=exc)
         exit_code = ExitCode.CRITICAL
 
     # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747

@@ -60,7 +60,7 @@ class FixtureError(Exception):
         return repr(self.msg)
 
 
-class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless-object-inheritance
+class FixtureManager(object):  # pylint: disable=too-many-public-methods
     """
     Manage the life cycle of a completely separated and temporary AiiDA environment
 
@@ -503,7 +503,8 @@ class PluginTestCase(unittest.TestCase):
         cls.fixture_manager = _GLOBAL_FIXTURE_MANAGER
         if not cls.fixture_manager.has_profile_open():
             raise ValueError(
-                "Fixture mananger has no open profile. Please use aiida.manage.fixtures.TestRunner to run these tests.")
+                'Fixture mananger has no open profile. Please use aiida.manage.fixtures.TestRunner to run these tests.'
+            )
 
         cls.backend = get_manager().get_backend()
 

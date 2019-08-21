@@ -32,18 +32,18 @@ class TestCodDbImporter(AiidaTestCase):
         import re
 
         codi = CodDbImporter()
-        q = codi.query_sql(id=["1000000", 3000000],
-                           element=["C", "H", "Cl"],
+        q = codi.query_sql(id=['1000000', 3000000],
+                           element=['C', 'H', 'Cl'],
                            number_of_elements=5,
-                           chemical_name=["caffeine", "serotonine"],
-                           formula=["C6 H6"],
+                           chemical_name=['caffeine', 'serotonine'],
+                           formula=['C6 H6'],
                            volume=[100, 120.005],
-                           spacegroup="P -1",
+                           spacegroup='P -1',
                            a=[10.0 / 3, 1],
                            alpha=[10.0 / 6, 0],
                            measurement_temp=[0, 10.5],
                            measurement_pressure=[1000, 1001],
-                           determination_method=["single crystal", None])
+                           determination_method=['single crystal', None])
 
         # Rounding errors occurr in Python 2 and Python 3 thus they are averted using
         # the following precision stripping regular expressions.
@@ -51,12 +51,12 @@ class TestCodDbImporter(AiidaTestCase):
         q = re.sub(r'(120.00)39+', r'\g<1>4', q)
 
         self.assertEquals(q, \
-                          "SELECT file, svnrevision FROM data WHERE "
+                          'SELECT file, svnrevision FROM data WHERE '
                           "(status IS NULL OR status != 'retracted') AND "
-                          "(a BETWEEN 3.332333 AND 3.334333 OR "
-                          "a BETWEEN 0.999 AND 1.001) AND "
-                          "(alpha BETWEEN 1.665666 AND 1.667666 OR "
-                          "alpha BETWEEN -0.001 AND 0.001) AND "
+                          '(a BETWEEN 3.332333 AND 3.334333 OR '
+                          'a BETWEEN 0.999 AND 1.001) AND '
+                          '(alpha BETWEEN 1.665666 AND 1.667666 OR '
+                          'alpha BETWEEN -0.001 AND 0.001) AND '
                           "(chemname LIKE '%caffeine%' OR "
                           "chemname LIKE '%serotonine%') AND "
                           "(method IN ('single crystal') OR method IS NULL) AND "
@@ -64,14 +64,14 @@ class TestCodDbImporter(AiidaTestCase):
                           "formula REGEXP ' H[0-9 ]' AND "
                           "formula REGEXP ' Cl[0-9 ]') AND "
                           "(formula IN ('- C6 H6 -')) AND "
-                          "(file IN (1000000, 3000000)) AND "
-                          "(cellpressure BETWEEN 999 AND 1001 OR "
-                          "cellpressure BETWEEN 1000 AND 1002) AND "
-                          "(celltemp BETWEEN -0.001 AND 0.001 OR "
-                          "celltemp BETWEEN 10.499 AND 10.501) AND "
+                          '(file IN (1000000, 3000000)) AND '
+                          '(cellpressure BETWEEN 999 AND 1001 OR '
+                          'cellpressure BETWEEN 1000 AND 1002) AND '
+                          '(celltemp BETWEEN -0.001 AND 0.001 OR '
+                          'celltemp BETWEEN 10.499 AND 10.501) AND '
                           "(nel IN (5)) AND (sg IN ('P -1')) AND "
-                          "(vol BETWEEN 99.999 AND 100.001 OR "
-                          "vol BETWEEN 120.004 AND 120.006)")
+                          '(vol BETWEEN 99.999 AND 100.001 OR '
+                          'vol BETWEEN 120.004 AND 120.006)')
 
     def test_datatype_checks(self):
         """
@@ -81,13 +81,13 @@ class TestCodDbImporter(AiidaTestCase):
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
         codi = CodDbImporter()
-        messages = ["",
+        messages = ['',
                     "incorrect value for keyword 'test' -- " + \
-                    "only integers and strings are accepted",
+                    'only integers and strings are accepted',
                     "incorrect value for keyword 'test' -- " + \
-                    "only strings are accepted",
+                    'only strings are accepted',
                     "incorrect value for keyword 'test' -- " + \
-                    "only integers and floats are accepted",
+                    'only integers and floats are accepted',
                     "invalid literal for int() with base 10: 'text'"]
         values = [10, 'text', u'text', '10', 1.0 / 3, [1, 2, 3]]
         methods = [codi._int_clause,
@@ -107,7 +107,7 @@ class TestCodDbImporter(AiidaTestCase):
             for j in range(len(values)):
                 message = messages[0]
                 try:
-                    methods[i]("test", "test", [values[j]])
+                    methods[i]('test', 'test', [values[j]])
                 except ValueError as exc:
                     message = str(exc)
                 self.assertEquals(message, messages[results[i][j]])
@@ -134,11 +134,11 @@ class TestCodDbImporter(AiidaTestCase):
             'version': '1234',
         })
         self.assertEquals([x.source['uri'] for x in results],
-                          ["http://www.crystallography.net/cod/1000000.cif",
-                           "http://www.crystallography.net/cod/1000001.cif@1234",
-                           "http://www.crystallography.net/cod/2000000.cif@1234"])
+                          ['http://www.crystallography.net/cod/1000000.cif',
+                           'http://www.crystallography.net/cod/1000001.cif@1234',
+                           'http://www.crystallography.net/cod/2000000.cif@1234'])
 
-    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_dbentry_to_cif_node(self):
         """
         Tests the creation of CifData node from CodEntry.
@@ -146,7 +146,7 @@ class TestCodDbImporter(AiidaTestCase):
         from aiida.orm import CifData
         from aiida.tools.dbimporters.plugins.cod import CodEntry
 
-        entry = CodEntry("http://www.crystallography.net/cod/1000000.cif")
+        entry = CodEntry('http://www.crystallography.net/cod/1000000.cif')
         entry.cif = "data_test _publ_section_title 'Test structure'"
 
         cif = entry.get_cif_node()
@@ -191,9 +191,9 @@ class TestTcodDbImporter(AiidaTestCase):
             'version': '1234',
         })
         self.assertEquals([x.source['uri'] for x in results],
-                          ["http://www.crystallography.net/tcod/10000000.cif",
-                           "http://www.crystallography.net/tcod/10000001.cif@1234",
-                           "http://www.crystallography.net/tcod/20000000.cif@1234"])
+                          ['http://www.crystallography.net/tcod/10000000.cif',
+                           'http://www.crystallography.net/tcod/10000001.cif@1234',
+                           'http://www.crystallography.net/tcod/20000000.cif@1234'])
 
 
 class TestPcodDbImporter(AiidaTestCase):

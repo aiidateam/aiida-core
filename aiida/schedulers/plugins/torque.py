@@ -46,21 +46,22 @@ class TorqueScheduler(PbsBaseClass):
     ## for the time being, but I can redefine it if needed.
     # _map_status = _map_status_pbs_common
 
-    def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb,
-                            max_wallclock_seconds):
+    def _get_resource_lines(
+        self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb, max_wallclock_seconds
+    ):
         """
         Return the lines for machines, memory and wallclock relative
         to pbspro.
         """
         return_lines = []
 
-        select_string = "nodes={}".format(num_machines)
+        select_string = 'nodes={}'.format(num_machines)
         if num_cores_per_machine:
-            select_string += ":ppn={}".format(num_cores_per_machine)
+            select_string += ':ppn={}'.format(num_cores_per_machine)
         elif num_mpiprocs_per_machine:
             # if num_cores_per_machine is not defined then use
             # num_mpiprocs_per_machine
-            select_string += ":ppn={}".format(num_mpiprocs_per_machine)
+            select_string += ':ppn={}'.format(num_mpiprocs_per_machine)
 
         if max_wallclock_seconds is not None:
             try:
@@ -68,16 +69,18 @@ class TorqueScheduler(PbsBaseClass):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError("max_wallclock_seconds must be "
-                                 "a positive integer (in seconds)! It is instead '{}'"
-                                 "".format(max_wallclock_seconds))
+                raise ValueError(
+                    'max_wallclock_seconds must be '
+                    "a positive integer (in seconds)! It is instead '{}'"
+                    ''.format(max_wallclock_seconds)
+                )
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
             minutes = tot_minutes // 60
             seconds = tot_minutes % 60
             # There is always something before, at least the total #
             # of nodes
-            select_string += (",walltime={:02d}:{:02d}:{:02d}".format(hours, minutes, seconds))
+            select_string += (',walltime={:02d}:{:02d}:{:02d}'.format(hours, minutes, seconds))
 
         if max_memory_kb:
             try:
@@ -85,12 +88,14 @@ class TorqueScheduler(PbsBaseClass):
                 if virtual_memory_kb <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError("max_memory_kb must be "
-                                 "a positive integer (in kB)! It is instead '{}'"
-                                 "".format((max_memory_kb)))
+                raise ValueError(
+                    'max_memory_kb must be '
+                    "a positive integer (in kB)! It is instead '{}'"
+                    ''.format((max_memory_kb))
+                )
             # There is always something before, at least the total #
             # of nodes
-            select_string += ",mem={}kb".format(virtual_memory_kb)
+            select_string += ',mem={}kb'.format(virtual_memory_kb)
 
-        return_lines.append("#PBS -l {}".format(select_string))
+        return_lines.append('#PBS -l {}'.format(select_string))
         return return_lines

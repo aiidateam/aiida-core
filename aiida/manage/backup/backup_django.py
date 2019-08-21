@@ -69,6 +69,6 @@ class Backup(AbstractBackup):
             source_dir = os.path.normpath(RepositoryFolder(section=Repository._section_name, uuid=item.uuid).abspath)
         else:
             # Raise exception
-            self._logger.error("Unexpected item type to backup: %s", type(item))
-            raise BackupError("Unexpected item type to backup: {}".format(type(item)))
+            self._logger.error('Unexpected item type to backup: %s', type(item))
+            raise BackupError('Unexpected item type to backup: {}'.format(type(item)))
         return source_dir

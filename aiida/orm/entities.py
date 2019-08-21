@@ -59,7 +59,7 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         :type entity_class: :class:`aiida.orm.Entity`
 
         """
-        assert issubclass(entity_class, Entity), "Must provide an entity type"
+        assert issubclass(entity_class, Entity), 'Must provide an entity type'
         self._backend = backend or get_manager().get_backend()
         self._entity_type = entity_class
 
@@ -102,7 +102,6 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         :return: a new query builder instance
         :rtype: :class:`aiida.orm.QueryBuilder`
         """
-        # pylint: disable=no-self-use
         from . import querybuilder
 
         query = querybuilder.QueryBuilder()
@@ -122,8 +121,9 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         if not res:
             raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, filters))
         if len(res) > 1:
-            raise exceptions.MultipleObjectsError("Multiple {}s found with the same id '{}'".format(
-                self.entity_type.__name__, id))
+            raise exceptions.MultipleObjectsError(
+                "Multiple {}s found with the same id '{}'".format(self.entity_type.__name__, id)
+            )
 
         return res[0]
 
@@ -163,7 +163,7 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         return [_[0] for _ in self.query().all()]
 
 
-class Entity(object):  # pylint: disable=useless-object-inheritance
+class Entity(object):
     """An AiiDA entity"""
 
     _objects = None

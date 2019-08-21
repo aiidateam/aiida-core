@@ -17,18 +17,18 @@ import uuid
 
 from aiida.schedulers.plugins.lsf import *
 
-BJOBS_STDOUT_TO_TEST = "764213236|EXIT|TERM_RUNLIMIT: job killed after reaching LSF run time limit" \
-                       "|b681e480bd|inewton|1|-|b681e480bd|test|Feb  2 00:46|Feb  2 00:45|-|Feb  2 00:44|aiida-1033269\n" \
-                       "764220165|PEND|-|-|inewton|-|-|-|8nm|-|-|-|Feb  2 01:46|aiida-1033444\n" \
-                       "764220167|PEND|-|-|fchopin|-|-|-|test|-|-|-|Feb  2 01:53 L|aiida-1033449\n" \
-                       "764254593|RUN|-|lxbsu2710|inewton|1|-|lxbsu2710|test|Feb  2 07:40|Feb  2 07:39|-|Feb  2 07:39|test\n" \
-                       "764255172|RUN|-|b68ac74822|inewton|1|-|b68ac74822|test|Feb  2 07:48 L|Feb  2 07:47|15.00% L|Feb  2 07:47|test\n" \
-                       "764245175|RUN|-|b68ac74822|dbowie|1|-|b68ac74822|test|Jan  1 05:07|Dec  31 23:48 L|25.00%|Dec  31 23:40|test\n" \
-                       "764399747|DONE|-|p05496706j68144|inewton|1|-|p05496706j68144|test|Feb  2 14:56 L|Feb  2 14:54|38.33% L|Feb  2 14:54|test"
-BJOBS_STDERR_TO_TEST = "Job <864220165> is not found"
+BJOBS_STDOUT_TO_TEST = '764213236|EXIT|TERM_RUNLIMIT: job killed after reaching LSF run time limit' \
+                       '|b681e480bd|inewton|1|-|b681e480bd|test|Feb  2 00:46|Feb  2 00:45|-|Feb  2 00:44|aiida-1033269\n' \
+                       '764220165|PEND|-|-|inewton|-|-|-|8nm|-|-|-|Feb  2 01:46|aiida-1033444\n' \
+                       '764220167|PEND|-|-|fchopin|-|-|-|test|-|-|-|Feb  2 01:53 L|aiida-1033449\n' \
+                       '764254593|RUN|-|lxbsu2710|inewton|1|-|lxbsu2710|test|Feb  2 07:40|Feb  2 07:39|-|Feb  2 07:39|test\n' \
+                       '764255172|RUN|-|b68ac74822|inewton|1|-|b68ac74822|test|Feb  2 07:48 L|Feb  2 07:47|15.00% L|Feb  2 07:47|test\n' \
+                       '764245175|RUN|-|b68ac74822|dbowie|1|-|b68ac74822|test|Jan  1 05:07|Dec  31 23:48 L|25.00%|Dec  31 23:40|test\n' \
+                       '764399747|DONE|-|p05496706j68144|inewton|1|-|p05496706j68144|test|Feb  2 14:56 L|Feb  2 14:54|38.33% L|Feb  2 14:54|test'
+BJOBS_STDERR_TO_TEST = 'Job <864220165> is not found'
 
-SUBMIT_STDOUT_TO_TEST = "Job <764254593> is submitted to queue <test>."
-BKILL_STDOUT_TO_TEST = "Job <764254593> is being terminated"
+SUBMIT_STDOUT_TO_TEST = 'Job <764254593> is submitted to queue <test>.'
+BKILL_STDOUT_TO_TEST = 'Job <764254593> is being terminated'
 
 
 class TestParserBjobs(unittest.TestCase):
@@ -56,7 +56,7 @@ class TestParserBjobs(unittest.TestCase):
 
         retval = 0
         stdout = BJOBS_STDOUT_TO_TEST
-        stderr = ""
+        stderr = ''
         job_list = scheduler._parse_joblist_output(retval, stdout, stderr)
 
         # The parameters are hard coded in the text to parse
@@ -130,7 +130,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=2, parallel_env='b681e480bd.cern.ch')
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "2", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '2', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL

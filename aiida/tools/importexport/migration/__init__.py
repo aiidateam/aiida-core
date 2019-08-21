@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.cmdline.utils import echo
-from aiida.common.exceptions import DanglingLinkError
+from aiida.tools.importexport.common.exceptions import DanglingLinkError
 
 from .utils import verify_metadata_version, update_metadata
 from .v01_to_v02 import migrate_v1_to_v2

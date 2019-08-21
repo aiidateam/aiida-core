@@ -38,8 +38,8 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.engine import ProcessState
 
         cls.computer = orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct',
-            workdir='/tmp/aiida').store()
+            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+        ).store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = orm.Group(label='test_group').store()
@@ -233,10 +233,12 @@ class TestVerdiCalculation(AiidaTestCase):
 
         # Make sure add_job does not specify options 'input_filename' and 'output_filename'
         self.assertIsNone(
-            add_job.get_option('input_filename'), msg="'input_filename' should not be an option for {}".format(add_job))
+            add_job.get_option('input_filename'), msg="'input_filename' should not be an option for {}".format(add_job)
+        )
         self.assertIsNone(
             add_job.get_option('output_filename'),
-            msg="'output_filename' should not be an option for {}".format(add_job))
+            msg="'output_filename' should not be an option for {}".format(add_job)
+        )
 
         # Run `verdi calcjob inputcat add_job`
         options = [add_job.uuid]

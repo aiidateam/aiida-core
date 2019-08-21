@@ -33,7 +33,7 @@ VISUALIZATION_FORMATS = ['xmgrace']
 
 @verdi_data.group('bands')
 def bands():
-    """Manipulate BandsData objects."""
+    """Manipulate BandsData objects (band structures)."""
 
 
 # pylint: disable=too-many-arguments
@@ -73,7 +73,7 @@ def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, group
     for entry in entry_list:
         for i, value in enumerate(entry):
             if isinstance(value, list):
-                entry[i] = ",".join(value)
+                entry[i] = ','.join(value)
         for i in range(len(entry), len(LIST_PROJECT_HEADERS)):
             entry.append(None)
         counter += 1
@@ -107,27 +107,31 @@ def bands_show(data, fmt):
     type=click.FLOAT,
     default=None,
     help='The minimum value for the y axis.'
-    ' Default: minimum of all bands')
+    ' Default: minimum of all bands'
+)
 @click.option(
     '--y-max-lim',
     type=click.FLOAT,
     default=None,
     help='The maximum value for the y axis.'
-    ' Default: maximum of all bands')
+    ' Default: maximum of all bands'
+)
 @click.option(
     '-o',
     '--output',
     type=click.STRING,
     default=None,
-    help="If present, store the output directly on a file "
-    "with the given name. It is essential to use this option "
-    "if more than one file needs to be created.")
-@options.FORCE(help="If passed, overwrite files without checking.")
+    help='If present, store the output directly on a file '
+    'with the given name. It is essential to use this option '
+    'if more than one file needs to be created.'
+)
+@options.FORCE(help='If passed, overwrite files without checking.')
 @click.option(
     '--prettify-format',
     default=None,
     type=click.Choice(Prettifier.get_prettifiers()),
-    help='The style of labels for the prettifier')
+    help='The style of labels for the prettifier'
+)
 @decorators.with_dbenv()
 def bands_export(fmt, y_min_lim, y_max_lim, output, force, prettify_format, datum):
     """Export BandsData objects."""

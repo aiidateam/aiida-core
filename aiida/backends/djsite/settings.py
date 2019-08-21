@@ -39,8 +39,9 @@ if PROFILE is None:
     raise exceptions.ProfileConfigurationError('no profile has been loaded')
 
 if PROFILE.database_backend != 'django':
-    raise exceptions.ProfileConfigurationError('incommensurate database backend `{}` for profile `{}`'.format(
-        PROFILE.database_backend, PROFILE.name))
+    raise exceptions.ProfileConfigurationError(
+        'incommensurate database backend `{}` for profile `{}`'.format(PROFILE.database_backend, PROFILE.name)
+    )
 
 PROFILE_CONF = PROFILE.dictionary
 

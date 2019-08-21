@@ -45,25 +45,25 @@ from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from .folders import Folder
 
 # The prefix of the hashed using pbkdf2_sha256 algorithm in Django
-HASHING_PREFIX_DJANGO = "pbkdf2_sha256"
+HASHING_PREFIX_DJANGO = 'pbkdf2_sha256'
 # The prefix of the hashed using pbkdf2_sha256 algorithm in Passlib
-HASHING_PREFIX_PBKDF2_SHA256 = "$pbkdf2-sha256"
+HASHING_PREFIX_PBKDF2_SHA256 = '$pbkdf2-sha256'
 
 # This will never be a valid encoded hash
 UNUSABLE_PASSWORD_PREFIX = '!'  # noqa
 # Number of random chars to add after UNUSABLE_PASSWORD_PREFIX
 UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
 
-HASHING_KEY = "HashingKey"
+HASHING_KEY = 'HashingKey'
 
 # The key that is used to store the hash in the node extras
 _HASH_EXTRA_KEY = '_aiida_hash'
 
 pwd_context = CryptContext(  # pylint: disable=invalid-name
     # The list of hashes that we support
-    schemes=["argon2", "pbkdf2_sha256", "des_crypt"],
+    schemes=['argon2', 'pbkdf2_sha256', 'des_crypt'],
     # The default hashing mechanism
-    default="pbkdf2_sha256",
+    default='pbkdf2_sha256',
 
     # We set the number of rounds that should be used...
     pbkdf2_sha256__default_rounds=8000,
@@ -80,8 +80,7 @@ try:
     using_sysrandom = True
 except NotImplementedError:
     import warnings
-    warnings.warn('A secure pseudo-random number generator is not available '  # pylint: disable=no-member
-                  'on your system. Falling back to Mersenne Twister.')
+    warnings.warn('A secure pseudo-random number generator is not available. Falling back to Mersenne Twister.')  # pylint: disable=no-member
     using_sysrandom = False  # pylint: disable=invalid-name
 
 
@@ -99,7 +98,7 @@ def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyz' 'ABC
         # time a random string is required. This may change the
         # properties of the chosen random sequence slightly, but this
         # is better than absolute predictability.
-        random.seed(hashlib.sha256(("%s%s%s" % (random.getstate(), time.time(), HASHING_KEY)).encode('utf-8')).digest())
+        random.seed(hashlib.sha256(('%s%s%s' % (random.getstate(), time.time(), HASHING_KEY)).encode('utf-8')).digest())
     return u''.join(random.choice(allowed_chars) for i in range(length))
 
 
@@ -154,7 +153,7 @@ def _make_hash(object_to_hash, **_):
     Implementation of the ``make_hash`` function. The hash is created as a
     28 byte integer, and only later converted to a string.
     """
-    raise ValueError("Value of type {} cannot be hashed".format(type(object_to_hash)))
+    raise ValueError('Value of type {} cannot be hashed'.format(type(object_to_hash)))
 
 
 def _single_digest(obj_type, obj_bytes=b''):
@@ -185,16 +184,16 @@ def _(val, **kwargs):
 @_make_hash.register(abc.Sequence)
 def _(sequence_obj, **kwargs):
     # unpack the list and use the elements
-    return [_single_digest('list(')] + list(chain.from_iterable(
-        _make_hash(i, **kwargs) for i in sequence_obj)) + [_END_DIGEST]
+    return [_single_digest('list(')] + list(chain.from_iterable(_make_hash(i, **kwargs) for i in sequence_obj)
+                                           ) + [_END_DIGEST]
 
 
 @_make_hash.register(abc.Set)
 def _(set_obj, **kwargs):
     # turn the set objects into a list of hashes which are always sortable,
     # then return a flattened list of the hashes
-    return [_single_digest('set(')] + list(chain.from_iterable(sorted(
-        _make_hash(i, **kwargs) for i in set_obj))) + [_END_DIGEST]
+    return [_single_digest('set(')] + list(chain.from_iterable(sorted(_make_hash(i, **kwargs) for i in set_obj))
+                                          ) + [_END_DIGEST]
 
 
 @_make_hash.register(abc.Mapping)
@@ -206,8 +205,10 @@ def _(mapping, **kwargs):
             yield (_make_hash(key, **kwargs), value)
 
     return [_single_digest('dict(')] + list(
-        chain.from_iterable((k_digest + _make_hash(val, **kwargs))
-                            for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0)))) + [_END_DIGEST]
+        chain.from_iterable(
+            (k_digest + _make_hash(val, **kwargs)) for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0))
+        )
+    ) + [_END_DIGEST]
 
 
 @_make_hash.register(OrderedDict)
@@ -222,8 +223,8 @@ def _(mapping, **kwargs):
         return _make_hash.registry[abc.Mapping](mapping)
 
     return ([_single_digest('odict(')] + list(
-        chain.from_iterable(
-            (_make_hash(key, **kwargs) + _make_hash(val, **kwargs)) for key, val in mapping.items())) + [_END_DIGEST])
+        chain.from_iterable((_make_hash(key, **kwargs) + _make_hash(val, **kwargs)) for key, val in mapping.items())
+    ) + [_END_DIGEST])
 
 
 @_make_hash.register(numbers.Real)
@@ -242,16 +243,17 @@ def _(val, **kwargs):
     """
     return [
         _single_digest(
-            'complex', u"{}!{}".format(
-                float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION),
-                float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)).encode('utf-8'))
+            'complex', u'{}!{}'.format(
+                float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION), float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)
+            ).encode('utf-8')
+        )
     ]
 
 
 @_make_hash.register(numbers.Integral)
 def _(val, **kwargs):
     """get the hash of the little-endian signed long long representation of the integer"""
-    return [_single_digest('int', u"{}".format(val).encode('utf-8'))]
+    return [_single_digest('int', u'{}'.format(val).encode('utf-8'))]
 
 
 @_make_hash.register(bool)

@@ -4,7 +4,7 @@ BandsData
 =========
 
 ``BandsData`` object is dedicated to store bands object of different types
-(electronic bands, phonons). In this section we describe the usage of the 
+(electronic bands, phonons). In this section we describe the usage of the
 ``BandsData`` to store the  electronic band structure of silicon
 and some logic behind its methods.
 
@@ -49,7 +49,7 @@ of states is 5. So the kpoints and the bands array will look as follows::
        [-1.42050683, -1.12604118,  2.48497007,  3.69389815,  7.07537154],
        [-1.52788845, -0.95900776,  2.09104321,  3.82330632,  7.20537566],
        [-1.71354964, -0.74425095,  1.82242466,  3.98697455,  7.37979746]])
-    
+
 To insert kpoints and bands in the ``bs`` object we should employ
 ``set_kpoints()`` and ``set_bands()`` methods::
 

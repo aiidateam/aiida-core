@@ -62,7 +62,7 @@ class TestParserGetJobList(unittest.TestCase):
         scheduler = DirectScheduler()
 
         with self.assertRaises(SchedulerError):
-            scheduler._parse_joblist_output(retval=0, stdout=wrong_output, stderr="")
+            scheduler._parse_joblist_output(retval=0, stdout=wrong_output, stderr='')
 
     def test_parse_mac_joblist_output(self):
         """
@@ -70,11 +70,11 @@ class TestParserGetJobList(unittest.TestCase):
         """
         s = DirectScheduler()
 
-        result = s._parse_joblist_output(retval=0, stdout=mac_ps_output_str, stderr="")
+        result = s._parse_joblist_output(retval=0, stdout=mac_ps_output_str, stderr='')
         self.assertEqual(len(result), 24)
 
         job_ids = [job.job_id for job in result]
-        self.assertIn("87849", job_ids)
+        self.assertIn('87849', job_ids)
 
     def test_parse_linux_joblist_output(self):
         """
@@ -82,11 +82,11 @@ class TestParserGetJobList(unittest.TestCase):
         """
         scheduler = DirectScheduler()
 
-        result = scheduler._parse_joblist_output(retval=0, stdout=linux_ps_output_str, stderr="")
+        result = scheduler._parse_joblist_output(retval=0, stdout=linux_ps_output_str, stderr='')
         self.assertEqual(len(result), 3)
 
         job_ids = [job.job_id for job in result]
-        self.assertIn("11383", job_ids)
+        self.assertIn('11383', job_ids)
 
 
 if __name__ == '__main__':

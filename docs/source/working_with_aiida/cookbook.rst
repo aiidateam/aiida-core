@@ -68,11 +68,11 @@ Use ``verdi run`` to execute it::
 
   verdi run file_with_script.py
 
-.. note:: Every time you call the function, an ssh connection 
-  is executed! So be careful and run this function 
-  sparsely, or your supercomputer centre might block your account. 
+.. note:: Every time you call the function, an ssh connection
+  is executed! So be careful and run this function
+  sparsely, or your supercomputer centre might block your account.
 
-  Another alternative if you want to call many times the function 
+  Another alternative if you want to call many times the function
   is to pass the transport as a parameter, and keep it open from the outside.
 
 An example output would be::
@@ -95,3 +95,32 @@ An example output would be::
       requested_wallclock_time_seconds: 82800
 
     (...)
+
+Getting an AuthInfo knowing the computer and the user
+-----------------------------------------------------
+
+If you have an ORM ``Computer`` and and ORM ``User``, the way to get
+an ``AuthInfo`` object is the following::
+
+    AuthInfo.objects.get(dbcomputer_id=computer.id, aiidauser_id=user.id)
+
+This might be useful, for instance, to then get a transport to connect to the
+computer.
+
+Here is, as an example, an useful utility function::
+
+    def get_authinfo_from_computername(computername):
+        from aiida.orm import AuthInfo, User, Computer
+        from aiida.manage.manager import get_manager
+        manager = get_manager()
+        profile = manager.get_profile()
+        return AuthInfo.objects.get(
+            dbcomputer_id=Computer.get(name=computername).id,
+            aiidauser_id=User.get(email=profile.default_user).id
+        )
+
+that you can then use, for instance, as follows::
+
+    authinfo = get_authinfo_from_computername('localhost')
+    with authinfo.get_transport() as transport:
+        print(transport.listdir())

@@ -25,7 +25,7 @@ from aiida.common import exceptions, lang
 __all__ = ('JobsList', 'JobManager')
 
 
-class JobsList(object):  # pylint: disable=useless-object-inheritance
+class JobsList(object):
     """Manager of calculation jobs submitted with a specific ``AuthInfo``, i.e. computer configured for a specific user.
 
     This container of active calculation jobs is used to update their status periodically in batches, ensuring that
@@ -105,7 +105,7 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
 
             kwargs = {'as_dict': True}
             if scheduler.get_feature('can_query_by_user'):
-                kwargs['user'] = "$USER"
+                kwargs['user'] = '$USER'
             else:
                 kwargs['jobs'] = self._get_jobs_with_scheduler()
 
@@ -266,8 +266,6 @@ class JobManager(object):
     will be maintained. Note, however, that since each ``Runner`` will create its own job manager, these guarantees
     only hold per runner.
     """
-
-    # pylint: disable=useless-object-inheritance
 
     def __init__(self, transport_queue):
         self._transport_queue = transport_queue

@@ -40,20 +40,20 @@ class TestLinks(AiidaTestCase):
 
     @with_temp_dir
     def test_links_to_unknown_nodes(self, temp_dir):
-        """
-        Test importing of nodes, that have links to unknown nodes.
-        """
-        node_label = "Test structure data"
+        """Test importing of nodes, that have links to unknown nodes."""
+        from aiida.tools.importexport.common.exceptions import ImportValidationError
+
+        node_label = 'Test structure data'
         struct = orm.StructureData()
         struct.label = str(node_label)
         struct.store()
         struct_uuid = struct.uuid
 
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
         export([struct], outfile=filename, silent=True)
 
         unpack = SandboxFolder()
-        with tarfile.open(filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
+        with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
             tar.extractall(unpack.abspath)
 
         with io.open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
@@ -68,13 +68,13 @@ class TestLinks(AiidaTestCase):
         with io.open(unpack.get_abs_path('data.json'), 'wb') as fhandle:
             json.dump(metadata, fhandle)
 
-        with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
-            tar.add(unpack.abspath, arcname="")
+        with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT) as tar:
+            tar.add(unpack.abspath, arcname='')
 
         self.clean_db()
         self.create_user()
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(filename, silent=True)
 
         import_data(filename, ignore_unknown_nodes=True, silent=True)
@@ -122,19 +122,19 @@ class TestLinks(AiidaTestCase):
             return None
 
         if work_nodes is None:
-            work_nodes = ["WorkflowNode", "WorkflowNode"]
+            work_nodes = ['WorkflowNode', 'WorkflowNode']
 
         if calc_nodes is None:
-            calc_nodes = ["orm.CalculationNode", "orm.CalculationNode"]
+            calc_nodes = ['orm.CalculationNode', 'orm.CalculationNode']
 
         # Class mapping
         # "CalcJobNode" is left out, since it is special.
         string_to_class = {
-            "WorkflowNode": orm.WorkflowNode,
-            "WorkChainNode": orm.WorkChainNode,
-            "WorkFunctionNode": orm.WorkFunctionNode,
-            "orm.CalculationNode": orm.CalculationNode,
-            "CalcFunctionNode": orm.CalcFunctionNode
+            'WorkflowNode': orm.WorkflowNode,
+            'WorkChainNode': orm.WorkChainNode,
+            'WorkFunctionNode': orm.WorkFunctionNode,
+            'orm.CalculationNode': orm.CalculationNode,
+            'CalcFunctionNode': orm.CalcFunctionNode
         }
 
         # Node creation
@@ -143,7 +143,7 @@ class TestLinks(AiidaTestCase):
         work1 = string_to_class[work_nodes[0]]()
         work2 = string_to_class[work_nodes[1]]()
 
-        if calc_nodes[0] == "CalcJobNode":
+        if calc_nodes[0] == 'CalcJobNode':
             calc1 = orm.CalcJobNode()
             calc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         else:
@@ -155,7 +155,7 @@ class TestLinks(AiidaTestCase):
         data3 = orm.Int(1)
         data4 = orm.Int(1)
 
-        if calc_nodes[1] == "CalcJobNode":
+        if calc_nodes[1] == 'CalcJobNode':
             calc2 = orm.CalcJobNode()
             calc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         else:
@@ -214,10 +214,10 @@ class TestLinks(AiidaTestCase):
         # predecessor(INPUT, CREATE)/successor(CALL, RETURN, CREATE) links.
         export_list = [(work1, [data1, data2, data3, data4, calc1, work1, work2]),
                        (work2, [data1, data3, data4, calc1, work2]), (data3, [data1, data3, data4, calc1]),
-                       (data4, [data1, data3, data4, calc1]), (data5, [data1, data3, data4, data5, data6, calc1,
-                                                                       calc2]),
-                       (data6, [data1, data3, data4, data5, data6, calc1, calc2]), (calc1, [data1, data3, data4,
-                                                                                            calc1]),
+                       (data4, [data1, data3, data4, calc1]),
+                       (data5, [data1, data3, data4, data5, data6, calc1, calc2]),
+                       (data6, [data1, data3, data4, data5, data6, calc1,
+                                calc2]), (calc1, [data1, data3, data4, calc1]),
                        (calc2, [data1, data3, data4, data5, data6, calc1, calc2]), (data1, [data1]), (data2, [data2])]
 
         return graph_nodes, export_list[export_combination]
@@ -230,7 +230,7 @@ class TestLinks(AiidaTestCase):
 
         calc = orm.CalcJobNode()
         calc.computer = self.computer
-        calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
         calc.add_incoming(data_input, LinkType.INPUT_CALC, 'input')
         calc.store()
@@ -276,10 +276,13 @@ class TestLinks(AiidaTestCase):
             edge_project=['label', 'type'],
             edge_filters={
                 'type': {
-                    'in': (LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value, LinkType.CREATE.value,
-                           LinkType.RETURN.value, LinkType.CALL_CALC.value, LinkType.CALL_WORK.value)
+                    'in': (
+                        LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value, LinkType.CREATE.value,
+                        LinkType.RETURN.value, LinkType.CALL_CALC.value, LinkType.CALL_WORK.value
+                    )
                 }
-            })
+            }
+        )
         export_links = builder.all()
 
         export_file = os.path.join(temp_dir, 'export.tar.gz')
@@ -318,9 +321,10 @@ class TestLinks(AiidaTestCase):
 
             self.assertSetEqual(
                 export_target_uuids, imported_node_uuids,
-                "Problem in comparison of export node: " + str(export_node_str) + "\n" + "Expected set: " +
-                str(export_target_uuids) + "\n" + "Imported set: " + str(imported_node_uuids) + "\n" + "Difference: " +
-                str([_ for _ in export_target_uuids.symmetric_difference(imported_node_uuids)]))
+                'Problem in comparison of export node: ' + str(export_node_str) + '\n' + 'Expected set: ' +
+                str(export_target_uuids) + '\n' + 'Imported set: ' + str(imported_node_uuids) + '\n' + 'Difference: ' +
+                str([_ for _ in export_target_uuids.symmetric_difference(imported_node_uuids)])
+            )
 
     @with_temp_dir
     def test_high_level_workflow_links(self, temp_dir):
@@ -330,11 +334,11 @@ class TestLinks(AiidaTestCase):
         links connecting Data nodes and high-level Calculation and Workflow nodes:
         CalcJobNode, CalcFunctionNode, WorkChainNode, WorkFunctionNode
         """
-        high_level_calc_nodes = [["CalcJobNode", "CalcJobNode"], ["CalcJobNode", "CalcFunctionNode"],
-                                 ["CalcFunctionNode", "CalcJobNode"], ["CalcFunctionNode", "CalcFunctionNode"]]
+        high_level_calc_nodes = [['CalcJobNode', 'CalcJobNode'], ['CalcJobNode', 'CalcFunctionNode'],
+                                 ['CalcFunctionNode', 'CalcJobNode'], ['CalcFunctionNode', 'CalcFunctionNode']]
 
-        high_level_work_nodes = [["WorkChainNode", "WorkChainNode"], ["WorkChainNode", "WorkFunctionNode"],
-                                 ["WorkFunctionNode", "WorkChainNode"], ["WorkFunctionNode", "WorkFunctionNode"]]
+        high_level_work_nodes = [['WorkChainNode', 'WorkChainNode'], ['WorkChainNode', 'WorkFunctionNode'],
+                                 ['WorkFunctionNode', 'WorkChainNode'], ['WorkFunctionNode', 'WorkFunctionNode']]
 
         for calcs in high_level_calc_nodes:
             for works in high_level_work_nodes:
@@ -351,15 +355,19 @@ class TestLinks(AiidaTestCase):
                     edge_project=['label', 'type'],
                     edge_filters={
                         'type': {
-                            'in': (LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value, LinkType.CREATE.value,
-                                   LinkType.RETURN.value, LinkType.CALL_CALC.value, LinkType.CALL_WORK.value)
+                            'in': (
+                                LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value, LinkType.CREATE.value,
+                                LinkType.RETURN.value, LinkType.CALL_CALC.value, LinkType.CALL_WORK.value
+                            )
                         }
-                    })
+                    }
+                )
 
                 self.assertEqual(
                     builder.count(),
                     13,
-                    msg="Failed with c1={}, c2={}, w1={}, w2={}".format(calcs[0], calcs[1], works[0], works[1]))
+                    msg='Failed with c1={}, c2={}, w1={}, w2={}'.format(calcs[0], calcs[1], works[0], works[1])
+                )
 
                 export_links = builder.all()
 
@@ -377,7 +385,8 @@ class TestLinks(AiidaTestCase):
                 self.assertSetEqual(
                     set(export_set),
                     set(import_set),
-                    msg="Failed with c1={}, c2={}, w1={}, w2={}".format(calcs[0], calcs[1], works[0], works[1]))
+                    msg='Failed with c1={}, c2={}, w1={}, w2={}'.format(calcs[0], calcs[1], works[0], works[1])
+                )
 
     @with_temp_dir
     def test_links_for_workflows(self, temp_dir):

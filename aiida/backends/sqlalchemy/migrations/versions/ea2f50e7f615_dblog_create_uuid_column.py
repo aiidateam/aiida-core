@@ -53,7 +53,7 @@ def set_new_uuid(connection):
         uuids.add(get_new_uuid())
 
     # Create the key/value pairs
-    key_values = ",".join("({}, '{}')".format(curr_id, curr_uuid) for curr_id, curr_uuid in zip(ids, uuids))
+    key_values = ','.join("({}, '{}')".format(curr_id, curr_uuid) for curr_id, curr_uuid in zip(ids, uuids))
 
     update_stm = """
         UPDATE db_dblog as t SET
@@ -68,8 +68,9 @@ def upgrade():
     connection = op.get_bind()
 
     # Create the UUID column
-    op.add_column('db_dblog',
-                  sa.Column('uuid', postgresql.UUID(), autoincrement=False, nullable=True, default=get_new_uuid))
+    op.add_column(
+        'db_dblog', sa.Column('uuid', postgresql.UUID(), autoincrement=False, nullable=True, default=get_new_uuid)
+    )
 
     # Populate the uuid column
     set_new_uuid(connection)

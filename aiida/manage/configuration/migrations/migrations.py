@@ -22,7 +22,7 @@ CURRENT_CONFIG_VERSION = 3
 OLDEST_COMPATIBLE_CONFIG_VERSION = 3
 
 
-class ConfigMigration(object):  # pylint: disable=useless-object-inheritance
+class ConfigMigration(object):
     """Defines a config migration."""
 
     def __init__(self, migrate_function, version, version_oldest_compatible):

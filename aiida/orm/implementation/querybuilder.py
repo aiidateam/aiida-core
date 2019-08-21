@@ -25,7 +25,7 @@ __all__ = ('BackendQueryBuilder',)
 class BackendQueryBuilder(object):
     """Backend query builder interface"""
 
-    # pylint: disable=invalid-name,too-many-public-methods,useless-object-inheritance
+    # pylint: disable=invalid-name,too-many-public-methods
 
     outer_to_inner_schema = None
     inner_to_outer_schema = None
@@ -280,10 +280,12 @@ class BackendQueryBuilder(object):
         try:
             return getattr(alias, colname)
         except AttributeError:
-            raise exceptions.InputValidationError("{} is not a column of {}\n"
-                                                  "Valid columns are:\n"
-                                                  "{}".format(
-                                                      colname,
-                                                      alias,
-                                                      '\n'.join(alias._sa_class_manager.mapper.c.keys())  # pylint: disable=protected-access
-                                                  ))
+            raise exceptions.InputValidationError(
+                '{} is not a column of {}\n'
+                'Valid columns are:\n'
+                '{}'.format(
+                    colname,
+                    alias,
+                    '\n'.join(alias._sa_class_manager.mapper.c.keys())  # pylint: disable=protected-access
+                )
+            )

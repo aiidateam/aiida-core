@@ -7,7 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Various utilities to deal with StructureData instances or create new ones
+(e.g. convert format to/from SPGLIB, create a StructureData from a different
+format, ...)
 
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -60,6 +65,7 @@ def structure_to_spglib_tuple(structure):
         the Z number of the element, otherwise it uses numbers > 1000;
         kinds is a list of the kinds of the structure.
     """
+
     def get_new_number(the_list, start_from):
         """
         Get the first integer >= start_from not yet in the list
@@ -79,20 +85,19 @@ def structure_to_spglib_tuple(structure):
                 found = True
                 return retval
 
-    Z = {v['symbol']: k for k, v in elements.items()}
+    z_numbers = {v['symbol']: k for k, v in elements.items()}
 
     cell = np.array(structure.cell)
     abs_pos = np.array([_.position for _ in structure.sites])
     rel_pos = np.dot(abs_pos, np.linalg.inv(cell))
-    kinds = {k.name: k for k in structure.kinds}
+    # kinds = {k.name: k for k in structure.kinds}
 
     kind_numbers = {}
     for kind in structure.kinds:
         if len(kind.symbols) == 1:
-            realnumber = Z[kind.symbols[0]]
+            realnumber = z_numbers[kind.symbols[0]]
             if realnumber in kind_numbers.values():
-                number = get_new_number(
-                    list(kind_numbers.values()), start_from=realnumber * 1000)
+                number = get_new_number(list(kind_numbers.values()), start_from=realnumber * 1000)
             else:
                 number = realnumber
             kind_numbers[kind.name] = number
@@ -105,7 +110,7 @@ def structure_to_spglib_tuple(structure):
     return ((cell, rel_pos, numbers), kind_numbers, list(structure.kinds))
 
 
-def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
+def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # pylint: disable=too-many-locals
     """
     Convert a tuple of the format (cell, scaled_positions, element_numbers) to an AiiDA structure.
 
@@ -119,11 +124,11 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
     :param kinds: a list of the kinds of the structure.
     """
     if kind_info is None and kinds is not None:
-        raise ValueError("If you pass kind_info, you should also pass kinds")
+        raise ValueError('If you pass kind_info, you should also pass kinds')
     if kinds is None and kind_info is not None:
-        raise ValueError("If you pass kinds, you should also pass kind_info")
+        raise ValueError('If you pass kinds, you should also pass kind_info')
 
-    Z = {v['symbol']: k for k, v in elements.items()}
+    #Z = {v['symbol']: k for k, v in elements.items()}
     cell, rel_pos, numbers = structure_tuple
     if kind_info:
         _kind_info = copy.copy(kind_info)
@@ -133,8 +138,10 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
             # For each site
             symbols = [elements[num]['symbol'] for num in numbers]
         except KeyError as exc:
-            raise ValueError("You did not pass kind_info, but at least one number "
-                             "is not a valid Z number: {}".format(exc.args[0]))
+            raise ValueError(
+                'You did not pass kind_info, but at least one number '
+                'is not a valid Z number: {}'.format(exc.args[0])
+            )
 
         _kind_info = {elements[num]['symbol']: num for num in set(numbers)}
         # Get the default kinds
@@ -143,30 +150,26 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
     _kinds_dict = {k.name: k for k in _kinds}
     # Now I will use in any case _kinds and _kind_info
     if len(_kind_info) != len(set(_kind_info.values())):
-        raise ValueError(
-            "There is at least a number repeated twice in kind_info!")
+        raise ValueError('There is at least a number repeated twice in kind_info!')
     # Invert the mapping
     mapping_num_kindname = {v: k for k, v in _kind_info.items()}
     # Create the actual mapping
     try:
-        mapping_to_kinds = {num: _kinds_dict[kindname] for num, kindname
-                            in mapping_num_kindname.items()}
+        mapping_to_kinds = {num: _kinds_dict[kindname] for num, kindname in mapping_num_kindname.items()}
     except KeyError as exc:
-        raise ValueError(
-            "Unable to find '{}' in the kinds list".format(exc.args[0]))
+        raise ValueError("Unable to find '{}' in the kinds list".format(exc.args[0]))
 
     try:
         site_kinds = [mapping_to_kinds[num] for num in numbers]
     except KeyError as exc:
-        raise ValueError("Unable to find kind in kind_info for number {}".format(exc.args[0]))
+        raise ValueError('Unable to find kind in kind_info for number {}'.format(exc.args[0]))
 
     structure = StructureData(cell=cell)
     for k in _kinds:
         structure.append_kind(k)
     abs_pos = np.dot(rel_pos, cell)
     if len(abs_pos) != len(site_kinds):
-        raise ValueError("The length of the positions array is different from the "
-                         "length of the element numbers")
+        raise ValueError('The length of the positions array is different from the ' 'length of the element numbers')
 
     for kind, pos in zip(site_kinds, abs_pos):
         structure.append_site(Site(kind_name=kind.name, position=pos))
@@ -207,14 +210,20 @@ def xyz_parser_iterator(xyz_string):
                     raise
                 else:
                     # otherwise we got too less entries
-                    raise TypeError("Number of atom entries ({}) is smaller than the number of atoms ({})".format(
-                        self._catom, self._natoms))
+                    raise TypeError(
+                        'Number of atom entries ({}) is smaller than the number of atoms ({})'.format(
+                            self._catom, self._natoms
+                        )
+                    )
 
             self._catom += 1
 
             if self._catom > self._natoms:
-                raise TypeError("Number of atom entries ({}) is larger than the number of atoms ({})".format(
-                    self._catom, self._natoms))
+                raise TypeError(
+                    'Number of atom entries ({}) is larger than the number of atoms ({})'.format(
+                        self._catom, self._natoms
+                    )
+                )
 
             return (match.group('sym'), (float(match.group('x')), float(match.group('y')), float(match.group('z'))))
 
@@ -233,7 +242,8 @@ def xyz_parser_iterator(xyz_string):
 (?P<x> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get x
 (?P<y> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get y
 (?P<z> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? )            # Get z
-""", re.X | re.M)
+""", re.X | re.M
+    )
     pos_block_regex = re.compile(
         r"""
                                                             # First line contains an integer
@@ -274,7 +284,8 @@ def xyz_parser_iterator(xyz_string):
         [\n]                                                # line break at the end
     )+
 )                                                           # A positions block should be one or more lines
-                    """, re.X | re.M)
+                    """, re.X | re.M
+    )
 
     for block in pos_block_regex.finditer(xyz_string):
         natoms = int(block.group('natoms'))

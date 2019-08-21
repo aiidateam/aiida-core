@@ -71,7 +71,7 @@ Installation phase
 
 .. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
 
-* [**ensuring a UTF-8 locale**]For some reasons, on some machines 
+* [**ensuring a UTF-8 locale**]For some reasons, on some machines
   (notably often on Mac OS X) there is no
   default locale defined, and when you run ``verdi setup`` for the first
   time it fails (see also `this issue`_ of django).
@@ -85,7 +85,7 @@ Installation phase
 
 .. _this issue: https://code.djangoproject.com/ticket/16017
 
-* [**possible Ubuntu dependencies**] Several users reported the need to install 
+* [**possible Ubuntu dependencies**] Several users reported the need to install
   also ``libpq-dev`` (header files for libpq5 - PostgreSQL library)::
 
     apt-get install libpq-dev
@@ -115,7 +115,7 @@ After updating your ``PATH``, the ``verdi`` command should be available.
 
         import aiida
 
-   If you get an ``ImportError`` (and you are in the environment where AiiDA was installed), 
+   If you get an ``ImportError`` (and you are in the environment where AiiDA was installed),
    you can add it to the ``PYTHONPATH`` manually::
 
        export PYTHONPATH="${PYTHONPATH}:<AiiDA_folder>"
@@ -137,9 +137,9 @@ Configuring remote SSH computers
 
 .. _ContinuumIO/anaconda-issues#686: https://github.com/ContinuumIO/anaconda-issues/issues/686
 
-* [**Output from .bashrc and/or .bash_profile on remote computers**] 
+* [**Output from .bashrc and/or .bash_profile on remote computers**]
   (**NOTE** This applies also computers configured via ``local`` transport!)
-  
+
   When connecting to remote computers, AiiDA (like other codes as ``sftp``)
   can get confused if you have code in your ``.bashrc`` or
   ``.bash_profile`` that produces output or e.g. runs commands like ``clean``
@@ -148,8 +148,8 @@ Configuring remote SSH computers
   For instance, if you add a ``echo "a"`` in your ``.bashrc`` and then try to SFTP
   a file from it, you will get an error like ``Received message too long 1091174400``.
 
-  If you still want to have code that needs an interactive shell (``echo``, 
-  ``clean``, ...), but you want to disable it for non-interactive shells, put 
+  If you still want to have code that needs an interactive shell (``echo``,
+  ``clean``, ...), but you want to disable it for non-interactive shells, put
   at the top of your file a guard like this::
 
     if [[ $- != *i* ]] ; then
@@ -158,10 +158,10 @@ Configuring remote SSH computers
     fi
 
   Everything below this will not be executed in a non-interactive shell.
-  **Note**: Still, you might want to have some code on top, like e.g. setting the PATH or 
+  **Note**: Still, you might want to have some code on top, like e.g. setting the PATH or
   similar, if this needs to be run also in the case of non-interactive shells.
 
-  To test if a the computer does not produce spurious output, run (after 
+  To test if a the computer does not produce spurious output, run (after
   configuring)::
 
      verdi computer test <COMPUTERNAME>
@@ -175,34 +175,34 @@ Configuring remote SSH computers
 
 Improvements for dependencies
 -----------------------------
-* [**Activating the ASE visualizer**] Within a virtual environment, 
-  attempt to visualize a structure 
-  with ``ase`` (either from the shell, or using the 
-  command ``verdi data structure show --format=ase <PK>``), 
+* [**Activating the ASE visualizer**] Within a virtual environment,
+  attempt to visualize a structure
+  with ``ase`` (either from the shell, or using the
+  command ``verdi data structure show --format=ase <PK>``),
   might end up with the following error message::
-  
+
      ImportError: No module named pygtk
 
   The issue is that ``pygtk`` is currently not pip-installable. One has to install it
   separately and create the appropriate bindings manually in the virtual environment.
   You can follow the following procedure to get around this issue:
-  
+
   + Install the ``python-gtk2`` package. Under Ubuntu, do::
-     
+
      sudo apt-get install python-gtk2
-  
+
   + Create the ``lib/python2.7/dist-packages`` folder within your virtual
     environment::
-    
+
      mkdir <AIIDA_VENV_FOLDER>/lib/python2.7/dist-packages
      chmod 755 <AIIDA_VENV_FOLDER>/lib/python2.7/dist-packages
-     
+
     where ``<AIIDA_VENV_FOLDER>`` is the virtual environment folder you have created
     during the installation process.
 
   + Create several symbolic links from this folder, pointing to a number of files
     in ``/usr/lib/python2.7/dist-packages/``::
-    
+
      cd <AIIDA_VENV_FOLDER>/lib/python2.7/dist-packages
      ln -s /usr/lib/python2.7/dist-packages/glib glib
      ln -s /usr/lib/python2.7/dist-packages/gobject gobject
@@ -242,8 +242,8 @@ Use in ipython/jupyter
 Postgres restart problem
 ------------------------
 
-Due to a `bug <https://wiki.postgresql.org/wiki/May_2015_Fsync_Permissions_Bug>` affecting older postgres versions (<9.4), 
-PostgreSQL could refuse to restart after a crash or after a restore from binary backup. 
+Due to a `bug <https://wiki.postgresql.org/wiki/May_2015_Fsync_Permissions_Bug>` affecting older postgres versions (<9.4),
+PostgreSQL could refuse to restart after a crash or after a restore from binary backup.
 
 The error message would be something like::
 

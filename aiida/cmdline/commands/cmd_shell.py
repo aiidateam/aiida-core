@@ -27,12 +27,14 @@ from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
 @click.option(
     '--no-startup',
     is_flag=True,
-    help='When using plain Python, ignore the PYTHONSTARTUP environment variable and ~/.pythonrc.py script.')
+    help='When using plain Python, ignore the PYTHONSTARTUP environment variable and ~/.pythonrc.py script.'
+)
 @click.option(
     '-i',
     '--interface',
     type=click.Choice(AVAILABLE_SHELLS.keys()),
-    help='Specify an interactive interpreter interface.')
+    help='Specify an interactive interpreter interface.'
+)
 def shell(plain, no_startup, interface):
     """Start a python shell with preloaded AiiDA environment."""
 
@@ -63,12 +65,12 @@ def shell(plain, no_startup, interface):
             import rlcompleter
 
             readline.set_completer(rlcompleter.Completer(imported_objects).complete)
-            readline.parse_and_bind("tab:complete")
+            readline.parse_and_bind('tab:complete')
 
         # We want to honor both $PYTHONSTARTUP and .pythonrc.py, so follow system
         # conventions and get $PYTHONSTARTUP first then .pythonrc.py.
         if not no_startup:
-            for pythonrc in (os.environ.get("PYTHONSTARTUP"), '~/.pythonrc.py'):
+            for pythonrc in (os.environ.get('PYTHONSTARTUP'), '~/.pythonrc.py'):
                 if not pythonrc:
                     continue
                 pythonrc = os.path.expanduser(pythonrc)

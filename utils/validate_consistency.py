@@ -193,7 +193,7 @@ def validate_version():
 
     setup_content = get_setup_json()
     if version != setup_content['version']:
-        click.echo("Version number mismatch detected:")
+        click.echo('Version number mismatch detected:')
         click.echo("Version number in '{}': {}".format(FILENAME_SETUP_JSON, setup_content['version']))
         click.echo("Version number in '{}/__init__.py': {}".format('aiida', version))
         click.echo("Updating version in '{}' to: {}".format(FILENAME_SETUP_JSON, version))
@@ -242,9 +242,11 @@ def validate_pyproject():
 
     if reentry_requirement not in pyproject_toml_requires:
         click.echo(
-            'Reentry requirement from {} {} is not mirrored in {}'.format(FILEPATH_SETUP_JSON, reentry_requirement,
-                                                                          FILEPATH_TOML),
-            err=True)
+            'Reentry requirement from {} {} is not mirrored in {}'.format(
+                FILEPATH_SETUP_JSON, reentry_requirement, FILEPATH_TOML
+            ),
+            err=True
+        )
         sys.exit(1)
 
 
@@ -261,7 +263,8 @@ def update_environment_yml():
     yaml.add_representer(
         OrderedDict,
         lambda self, data: yaml.representer.SafeRepresenter.represent_dict(self, data.items()),
-        Dumper=yaml.SafeDumper)
+        Dumper=yaml.SafeDumper
+    )
 
     # fix incompatibilities between conda and pypi
     replacements = {'psycopg2-binary': 'psycopg2', 'graphviz': 'python-graphviz'}
@@ -271,7 +274,7 @@ def update_environment_yml():
     for req in install_requires:
         # skip packages required for specific python versions
         # (environment.yml aims at the latest python version)
-        if req.find("python_version") != -1:
+        if req.find('python_version') != -1:
             continue
 
         for (regex, replacement) in iter(replacements.items()):
@@ -290,7 +293,8 @@ def update_environment_yml():
     with open(file_path, 'w') as env_file:
         env_file.write('# Usage: conda env create -n myenvname -f environment.yml python=3.6\n')
         yaml.safe_dump(
-            environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True)
+            environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True
+        )
 
 
 if __name__ == '__main__':

@@ -11,8 +11,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from six.moves import range
 
+import io
+
+from six.moves import range
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
@@ -24,13 +26,34 @@ from aiida.cmdline.utils import decorators, echo
 
 LIST_PROJECT_HEADERS = ['Id', 'Label', 'Kinds', 'Sites']
 EXPORT_FORMATS = ['cif', 'xsf', 'xyz']
-IMPORT_FORMATS = ['ase', 'pwi', 'xyz']
 VISUALIZATION_FORMATS = ['ase', 'jmol', 'vesta', 'vmd', 'xcrysden']
+
+
+def _store_structure(new_structure, dry_run):
+    """
+    Store a structure and print a message (or don't store it if it's a dry_run)
+
+    This is a utility function to avoid code duplication.
+
+    :param new_structure: an unstored StructureData
+    :param dry_run: if True, do not store but print a different message
+    """
+    if dry_run:
+        echo.echo(
+            '  Successfully imported structure {} (not storing it, dry-run requested)'.format(
+                new_structure.get_formula()
+            )
+        )
+    else:
+        new_structure.store()
+        echo.echo(
+            '  Successfully imported structure {} (PK = {})'.format(new_structure.get_formula(), new_structure.pk)
+        )
 
 
 @verdi_data.group('structure')
 def structure():
-    """Manipulation of StructureData objects."""
+    """Manipulate StructureData objects (crystal structures)."""
 
 
 # pylint: disable=too-many-locals,too-many-branches
@@ -40,13 +63,14 @@ def structure():
 @list_options
 @decorators.with_dbenv()
 def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
-    """List stored StructureData objects."""
+    """List StructureData objects."""
     from aiida.orm.nodes.data.structure import StructureData, get_formula, get_symbols_string
     from tabulate import tabulate
 
     elements_only = False
-    lst = data_list(StructureData, LIST_PROJECT_HEADERS, elements, elements_only, formula_mode, past_days, groups,
-                    all_users)
+    lst = data_list(
+        StructureData, LIST_PROJECT_HEADERS, elements, elements_only, formula_mode, past_days, groups, all_users
+    )
 
     entry_list = []
     for [pid, label, akinds, asites] in lst:
@@ -55,12 +79,12 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
         # When QueryBuilder will support this (attribute)s filtering,
         # it will be pushed in the query.
         if elements is not None:
-            all_symbols = [_["symbols"][0] for _ in akinds]
+            all_symbols = [_['symbols'][0] for _ in akinds]
             if not any([s in elements for s in all_symbols]):
                 continue
 
             if elements_only:
-                echo.echo_critical("Not implemented elements-only search")
+                echo.echo_critical('Not implemented elements-only search')
 
         # We want only the StructureData that have attributes
         if akinds is None or asites is None:
@@ -80,7 +104,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
         # If for some reason there is no kind with the name
         # referenced by the site
         except KeyError:
-            formula = "<<UNKNOWN>>"
+            formula = '<<UNKNOWN>>'
         entry_list.append([str(pid), str(formula), label])
 
     counter = 0
@@ -90,7 +114,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
     for entry in entry_list:
         for i, value in enumerate(entry):
             if isinstance(value, list):
-                entry[i] = ",".join(value)
+                entry[i] = ','.join(value)
         for i in range(len(entry), len(LIST_PROJECT_HEADERS)):
             entry.append(None)
         counter += 1
@@ -98,8 +122,8 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
     if raw:
         echo.echo(tabulate(struct_list_data, tablefmt='plain'))
     else:
-        echo.echo(tabulate(struct_list_data, headers="firstrow"))
-        echo.echo("\nTotal results: {}\n".format(counter))
+        echo.echo(tabulate(struct_list_data, headers='firstrow'))
+        echo.echo('\nTotal results: {}\n'.format(counter))
 
 
 @structure.command('show')
@@ -125,7 +149,7 @@ def structure_show(data, fmt):
 @export_options
 @decorators.with_dbenv()
 def structure_export(**kwargs):
-    """Export StructureData object."""
+    """Export StructureData object to file."""
     node = kwargs.pop('datum')
     output = kwargs.pop('output')
     fmt = kwargs.pop('fmt')
@@ -136,49 +160,88 @@ def structure_export(**kwargs):
     data_export(node, output, fmt, other_args=kwargs, overwrite=force)
 
 
-# pylint: disable=too-many-arguments
-@structure.command('import')
+@structure.group('import')
+def structure_import():
+    """Import a crystal structure from file into a StructureData object."""
+
+
+@structure_import.command('aiida-xyz')
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
-@options.INPUT_FORMAT(type=click.Choice(IMPORT_FORMATS))
 @click.option(
     '--vacuum-factor',
     type=click.FLOAT,
     show_default=True,
     default=1.0,
-    help="The factor by which the cell accomodating the structure should be increased.")
+    help='The factor by which the cell accomodating the structure should be increased (angstrom).'
+)
 @click.option(
     '--vacuum-addition',
     type=click.FLOAT,
     show_default=True,
     default=10.0,
-    help='The distance to add to the unit cell after vacuum factor was applied to expand in each dimension')
+    help='The distance to add to the unit cell after vacuum factor was applied to expand in each dimension (angstrom).'
+)
 @click.option(
     '--pbc',
     type=click.INT,
     nargs=3,
     show_default=True,
     default=[0, 0, 0],
-    help='Set periodic boundary conditions for each lattice direction, where 0 means no periodicity')
-@click.option('--view', is_flag=True, default=False, help='View resulting structure using ASE.')
-@click.option('--store', is_flag=True, default=False, help='Do not store the structure in AiiDA database.')
+    help='Set periodic boundary conditions for each lattice direction, where 0 means periodic and 1 means periodic.'
+)
+@options.DRY_RUN()
 @decorators.with_dbenv()
-def structure_import(filename, fmt, vacuum_factor, vacuum_addition, pbc, view, store):
+def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, dry_run):
     """
-    Import structure
+    Import structure in XYZ format using AiiDA's internal importer
     """
-    from aiida.cmdline.commands.cmd_data import cmd_import
+    from aiida.orm import StructureData
 
-    args = {
-        'vacuum_factor': vacuum_factor,
-        'vacuum_addition': vacuum_addition,
-        'pbc': pbc,
-        'view': view,
-        'store': store,
-    }
+    with io.open(filename, encoding='utf8') as fobj:
+        xyz_txt = fobj.read()
+    new_structure = StructureData()
+
+    pbc_bools = []
+    for pbc_int in pbc:
+        if pbc_int == 0:
+            pbc_bools.append(False)
+        elif pbc_int == 1:
+            pbc_bools.append(True)
+        else:
+            raise click.BadParameter('values for pbc must be either 0 or 1', param_hint='pbc')
 
     try:
-        show_function = getattr(cmd_import, 'data_import_{}'.format(fmt))
-    except AttributeError:
-        echo.echo_critical('import format {} is not supported'.format(fmt))
+        new_structure._parse_xyz(xyz_txt)  # pylint: disable=protected-access
+        new_structure._adjust_default_cell(  # pylint: disable=protected-access
+            vacuum_addition=vacuum_addition,
+            vacuum_factor=vacuum_factor,
+            pbc=pbc_bools)
 
-    show_function(filename, **args)
+    except (ValueError, TypeError) as err:
+        echo.echo_critical(str(err))
+
+    _store_structure(new_structure, dry_run)
+
+
+@structure_import.command('ase')
+@click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@options.DRY_RUN()
+@decorators.with_dbenv()
+def import_ase(filename, dry_run):
+    """
+    Import structure with the ase library that supports a number of different formats
+    """
+    from aiida.orm import StructureData
+
+    try:
+        import ase.io
+    except ImportError:
+        echo.echo_critical('You have not installed the package ase. \n' 'You can install it with: pip install ase')
+
+    try:
+        asecell = ase.io.read(filename)
+        new_structure = StructureData(ase=asecell)
+    except ValueError as err:
+        echo.echo_critical(str(err))
+
+    _store_structure(new_structure, dry_run)

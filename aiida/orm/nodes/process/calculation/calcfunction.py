@@ -44,4 +44,5 @@ class CalcFunctionNode(FunctionCalculationMixin, CalculationNode):
             raise ValueError(
                 'trying to return an already stored Data node from a @calcfunction, however, @calcfunctions cannot '
                 'return data. If you stored the node yourself, simply do not call `store()` yourself. If you want to '
-                'return an input node, use a @workfunction instead.')
+                'return an input node, use a @workfunction instead.'
+            )

@@ -70,7 +70,7 @@ def database_exists(url):
             return bool(engine.execute(text).scalar())
 
         else:
-            raise Exception("Only PostgreSQL is supported.")
+            raise Exception('Only PostgreSQL is supported.')
     finally:
         engine.dispose()
 
@@ -117,7 +117,7 @@ def create_database(url, encoding='utf8'):
             engine.execute(text)
 
         else:
-            raise Exception("Only PostgreSQL with the psycopg2 driver is "
-                            "supported.")
+            raise Exception('Only PostgreSQL with the psycopg2 driver is '
+                            'supported.')
     finally:
         engine.dispose()

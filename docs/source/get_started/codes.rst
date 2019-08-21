@@ -21,7 +21,7 @@ With remote codes we denote codes that are installed/compiled
 on the remote computer. Indeed, this is very often the case for codes installed
 in supercomputers for high-performance computing applications, because the
 code is typically installed and optimized on the supercomputer.
-  
+
 In AiiDA, a remote code is identified by two mandatory pieces of information:
 
 * A computer on which the code is (that must be a previously configured computer);
@@ -33,28 +33,28 @@ With local codes we denote codes for which the code is not
 already present on the remote machine, and must be copied for every submission.
 This is the case if you have for instance a small, machine-independent Python
 script that you did not copy previously in all your clusters.
-  
+
 In AiiDA, a local code can be set up by specifying:
-  
+
 * A folder, containing all files to be copied over at every submission
 * The name of executable file among the files inside the folder specified above
-  
+
 Setting up a code
 -----------------
 
 The::
 
   verdi code
-  
+
 command allows to manage codes in AiiDA.
 
 To setup a new code, you execute::
 
   verdi code setup
-  
+
 and you will be guided through a process to setup your code.
 
-   
+
 .. tip:: The setup will ask you a few pieces of information. At every prompt, you can
    type the ``?`` character and press ``<enter>`` to get a more detailed
    explanation of what is being asked.
@@ -74,19 +74,19 @@ You will be asked for:
   This string has to be a valid string recognized by the ``CalculationFactory``
   function. To get the list of all available Calculation plugin strings,
   use the ``verdi plugin list aiida.calculations`` command.
-  
+
 * **Installed on target computer**: either True (for local codes) or False (for remote
   codes). For the meaning of the distinction, see above. Depending
   on your choice, you will be asked for:
 
   * REMOTE CODES:
-  
+
     * **Remote computer name**: The computer name on which the code resides,
       as configured and stored in the AiiDA database.
-      
+
     * **Remote absolute path**: The (full) absolute path of the code executable
       on the remote machine, *including the name of the executable*.
-  
+
   * LOCAL CODES:
 
     * **Local directory containing the code**: The absolute path where the executable and all other
@@ -94,7 +94,7 @@ You will be asked for:
       the remote computers for every submitted calculation.
     * **Relative path of executable inside code folder**: The relative path of the executable
       file inside the folder entered in the previous step.
-  
+
 
 At the end of these steps, you will be prompted to edit a script,
 and you will have the opportunity to include ``bash`` commands that will
@@ -154,7 +154,7 @@ This file contains the information in a series of key:value pairs:
 .. note:: You can change the label of a code by using the following command::
 
    verdi code relabel "ID" "new-label"
-   
+
   (Without the quotation marks!) "ID" can either be the numeric ID (PK) of
   the code (preferentially), or possibly its label (or ``label@computername``),
   if this string uniquely identifies a code.
@@ -162,7 +162,7 @@ This file contains the information in a series of key:value pairs:
   You can also list all available codes (and their relative IDs) with::
 
    verdi code list
-   
+
   which also accepts some flags to filter only codes on a
   given computer, only codes using a specific plugin, etc.; use the ``-h``
   command line option to see the documentation of all possible options.
@@ -170,12 +170,12 @@ This file contains the information in a series of key:value pairs:
   You can then get the information of a specific code with::
 
    verdi code show "ID"
-   
+
   Finally, to delete a code use::
 
    verdi code delete "ID"
-   
+
   (only if it wasn't used by any calculation, otherwise an exception
   is raised).
-   
+
 And now, you are ready to launch your calculations!

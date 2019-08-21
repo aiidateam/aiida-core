@@ -45,7 +45,7 @@ class OrbitalData(Data):
 
         :param site: if provided, returns all orbitals with position of site
         :kwargs: attributes than can filter the set of returned orbitals
-        :return list_of_outputs: a list of orbitals 
+        :return list_of_outputs: a list of orbitals
         """
 
         orbital_dicts = copy.deepcopy(self.get_attribute('orbital_dicts', None))
@@ -64,7 +64,7 @@ class OrbitalData(Data):
             try:
                 orbital_type = orbital_dict.pop('_orbital_type')
             except KeyError:
-                raise ValidationError("No _orbital_type found in: {}".format(orbital_dict))
+                raise ValidationError('No _orbital_type found in: {}'.format(orbital_dict))
 
             OrbitalClass = OrbitalFactory(orbital_type)
             orbital = OrbitalClass(**orbital_dict)
@@ -87,7 +87,7 @@ class OrbitalData(Data):
             try:
                 _orbital_type = orbital_dict['_orbital_type']
             except KeyError:
-                raise InputValidationError("No _orbital_type found in: {}".format(orbital_dict))
+                raise InputValidationError('No _orbital_type found in: {}'.format(orbital_dict))
             orbital_dicts.append(orbital_dict)
         self.set_attribute('orbital_dicts', orbital_dicts)
 

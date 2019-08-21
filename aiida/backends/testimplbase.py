@@ -109,7 +109,7 @@ class AiidaTestImplementation(object):
             return self.computer
         except AttributeError:
             raise exceptions.InternalError(
-                "The AiiDA Test implementation should define a self.computer in the setUpClass_method")
+                'The AiiDA Test implementation should define a self.computer in the setUpClass_method')
 
     def get_user_email(self):
         """
@@ -119,4 +119,4 @@ class AiidaTestImplementation(object):
             return self.user_email
         except AttributeError:
             raise exceptions.InternalError(
-                "The AiiDA Test implementation should define a self.user_email in the setUpClass_method")
+                'The AiiDA Test implementation should define a self.user_email in the setUpClass_method')

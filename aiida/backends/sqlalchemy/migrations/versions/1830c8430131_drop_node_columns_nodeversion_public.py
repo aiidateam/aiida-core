@@ -19,8 +19,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '1830c8430131'

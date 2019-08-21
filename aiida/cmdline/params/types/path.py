@@ -75,7 +75,9 @@ class ImportPath(click.Path):
             self.fail(
                 '{0} "{1}" could not be reached within {2} s.\n'
                 'It may be neither a valid {3} nor a valid URL.'.format(
-                    self.path_type, click._compat.filename_to_ui(url), self.timeout_seconds, self.name), param, ctx)
+                    self.path_type, click._compat.filename_to_ui(url), self.timeout_seconds, self.name
+                ), param, ctx
+            )
 
         return url
 
@@ -89,7 +91,7 @@ class ImportPath(click.Path):
         try:
             self._timeout_seconds = int(value)
         except ValueError:
-            raise TypeError("timeout_seconds should be an integer but got: {}".format(type(value)))
+            raise TypeError('timeout_seconds should be an integer but got: {}'.format(type(value)))
 
         if self._timeout_seconds < 0:
             self._timeout_seconds = 0

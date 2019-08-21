@@ -17,7 +17,7 @@ from aiida.common import exceptions
 __all__ = ('CalcJobResultManager',)
 
 
-class CalcJobResultManager(object):  # pylint: disable=useless-object-inheritance
+class CalcJobResultManager(object):
     """
     Utility class to easily access the contents of the 'default output' node of a `CalcJobNode`.
 

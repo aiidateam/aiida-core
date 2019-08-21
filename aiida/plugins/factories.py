@@ -15,8 +15,10 @@ from __future__ import absolute_import
 
 from .entry_point import load_entry_point
 
-__all__ = ('BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'OrbitalFactory', 'ParserFactory',
-           'SchedulerFactory', 'TransportFactory', 'WorkflowFactory')
+__all__ = (
+    'BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'OrbitalFactory', 'ParserFactory',
+    'SchedulerFactory', 'TransportFactory', 'WorkflowFactory'
+)
 
 
 def BaseFactory(group, name):

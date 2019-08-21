@@ -46,29 +46,29 @@ class ServerInfo(Resource):
         if len(pathlist) > 1:
             resource_type = pathlist.pop(1)
         else:
-            resource_type = "info"
+            resource_type = 'info'
 
         response = {}
 
         import aiida.restapi.common.config as conf
         from aiida import __version__
 
-        if resource_type == "info":
+        if resource_type == 'info':
             response = []
 
             # Add Rest API version
-            response.append("REST API version: " + conf.PREFIX.split("/")[-1])
+            response.append('REST API version: ' + conf.PREFIX.split('/')[-1])
 
             # Add Rest API prefix
-            response.append("REST API Prefix: " + conf.PREFIX)
+            response.append('REST API Prefix: ' + conf.PREFIX)
 
             # Add AiiDA version
-            response.append("AiiDA==" + __version__)
+            response.append('AiiDA==' + __version__)
 
-        elif resource_type == "endpoints":
+        elif resource_type == 'endpoints':
 
             from aiida.restapi.common.utils import list_routes
-            response["available_endpoints"] = list_routes()
+            response['available_endpoints'] = list_routes()
 
         headers = self.utils.build_headers(url=request.url, total_count=1)
 
@@ -79,8 +79,9 @@ class ServerInfo(Resource):
             url_root=url_root,
             path=path,
             query_string=request.query_string.decode('utf-8'),
-            resource_type="Info",
-            data=response)
+            resource_type='Info',
+            data=response
+        )
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
@@ -125,8 +126,10 @@ class BaseResource(Resource):
         (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
         # pylint: disable=unused-variable
-        (limit, offset, perpage, orderby, filters, _alist, _nalist, _elist, _nelist, _downloadformat, _visformat,
-         _filename, _rtype, tree_in_limit, tree_out_limit) = self.utils.parse_query_string(query_string)
+        (
+            limit, offset, perpage, orderby, filters, _alist, _nalist, _elist, _nelist, _downloadformat, _visformat,
+            _filename, _rtype, tree_in_limit, tree_out_limit
+        ) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(
@@ -135,7 +138,8 @@ class BaseResource(Resource):
             perpage=perpage,
             page=page,
             query_type=query_type,
-            is_querystring_defined=(bool(query_string)))
+            is_querystring_defined=(bool(query_string))
+        )
 
         ## Treat the schema case which does not imply access to the DataBase
         if query_type == 'schema':
@@ -173,7 +177,8 @@ class BaseResource(Resource):
             id=node_id,
             query_string=request.query_string.decode('utf-8'),
             resource_type=resource_type,
-            data=results)
+            data=results
+        )
 
         return self.utils.build_response(status=200, headers=headers, data=data)
 
@@ -221,8 +226,10 @@ class Node(Resource):
         ## Parse request
         (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
-        (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat, filename,
-         rtype, tree_in_limit, tree_out_limit) = self.utils.parse_query_string(query_string)
+        (
+            limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat, filename,
+            rtype, tree_in_limit, tree_out_limit
+        ) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(
@@ -231,7 +238,8 @@ class Node(Resource):
             perpage=perpage,
             page=page,
             query_type=query_type,
-            is_querystring_defined=(bool(query_string)))
+            is_querystring_defined=(bool(query_string))
+        )
 
         ## Treat the schema case which does not imply access to the DataBase
         if query_type == 'schema':
@@ -243,19 +251,21 @@ class Node(Resource):
             headers = self.utils.build_headers(url=request.url, total_count=1)
 
         ## Treat the statistics
-        elif query_type == "statistics":
-            (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
-             filename, rtype, tree_in_limit, tree_out_limit) = self.utils.parse_query_string(query_string)
+        elif query_type == 'statistics':
+            (
+                limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
+                filename, rtype, tree_in_limit, tree_out_limit
+            ) = self.utils.parse_query_string(query_string)
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if filters:
-                usr = filters["user"]["=="]
+                usr = filters['user']['==']
             else:
                 usr = None
             results = self.trans.get_statistics(usr)
 
         # TODO improve the performance of tree endpoint by getting the data from database faster
         # TODO add pagination for this endpoint (add default max limit)
-        elif query_type == "tree":
+        elif query_type == 'tree':
             headers = self.utils.build_headers(url=request.url, total_count=0)
             results = self.trans.get_io_tree(node_id, tree_in_limit, tree_out_limit)
         else:
@@ -272,7 +282,8 @@ class Node(Resource):
                 downloadformat=downloadformat,
                 visformat=visformat,
                 filename=filename,
-                rtype=rtype)
+                rtype=rtype
+            )
 
             ## Count results
             total_count = self.trans.get_total_count()
@@ -292,31 +303,33 @@ class Node(Resource):
                 ## Retrieve results
                 results = self.trans.get_results()
 
-                if query_type == "download" and results:
-                    if results["download"]["status"] == 200:
-                        data = results["download"]["data"]
+                if query_type == 'download' and results:
+                    if results['download']['status'] == 200:
+                        data = results['download']['data']
                         response = make_response(data)
                         response.headers['content-type'] = 'application/octet-stream'
                         response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(
-                            results["download"]["filename"])
+                            results['download']['filename']
+                        )
                         return response
 
-                    results = results["download"]["data"]
+                    results = results['download']['data']
 
-                if query_type in ["retrieved_inputs", "retrieved_outputs"] and results:
+                if query_type in ['retrieved_inputs', 'retrieved_outputs'] and results:
                     try:
-                        status = results[query_type]["status"]
+                        status = results[query_type]['status']
                     except KeyError:
-                        status = ""
+                        status = ''
                     except TypeError:
-                        status = ""
+                        status = ''
 
                     if status == 200:
-                        data = results[query_type]["data"]
+                        data = results[query_type]['data']
                         response = make_response(data)
                         response.headers['content-type'] = 'application/octet-stream'
                         response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(
-                            results[query_type]["filename"])
+                            results[query_type]['filename']
+                        )
                         return response
 
                 headers = self.utils.build_headers(url=request.url, total_count=total_count)
@@ -330,7 +343,8 @@ class Node(Resource):
             id=node_id,
             query_string=request.query_string.decode('utf-8'),
             resource_type=resource_type,
-            data=results)
+            data=results
+        )
 
         return self.utils.build_response(status=200, headers=headers, data=data)
 
@@ -347,7 +361,7 @@ class Computer(BaseResource):
 
         # Set wheteher to expect a pk (integer) or a uuid pattern (string) in
         # the URL path
-        self.parse_pk_uuid = "uuid"
+        self.parse_pk_uuid = 'uuid'
 
 
 class Group(BaseResource):

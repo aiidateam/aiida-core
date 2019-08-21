@@ -100,7 +100,7 @@ class Code(Data):
                     self.put_object_from_filelike(handle, os.path.split(filename)[1], 'wb', encoding=None)
 
     def __str__(self):
-        local_str = "Local" if self.is_local() else "Remote"
+        local_str = 'Local' if self.is_local() else 'Remote'
         computer_str = self.get_computer_name()
         return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str, self.label, computer_str, self.pk, self.uuid)
 
@@ -108,12 +108,12 @@ class Code(Data):
         """Get name of this code's computer."""
 
         if self.is_local():
-            computer_str = "repository"
+            computer_str = 'repository'
         else:
             if self.computer is not None:
                 computer_str = self.computer.name
             else:
-                computer_str = "[unknown]"
+                computer_str = '[unknown]'
 
         return computer_str
 
@@ -176,8 +176,8 @@ class Code(Data):
         elif qb.count() > 1:
             codes = [_ for [_] in qb.all()]
             retstr = ("There are multiple codes with label '{}', having IDs: ".format(label))
-            retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
-            retstr += ("Relabel them (using their ID), or refer to them with their ID.")
+            retstr += ', '.join(sorted([str(c.pk) for c in codes])) + '.\n'
+            retstr += ('Relabel them (using their ID), or refer to them with their ID.')
             raise MultipleObjectsError(retstr)
         else:
             return qb.first()[0]
@@ -206,7 +206,7 @@ class Code(Data):
             try:
                 return load_code(pk=code_int)
             except NotExistent:
-                raise ValueError("{} is not valid code pk".format(pk))
+                raise ValueError('{} is not valid code pk'.format(pk))
             except MultipleObjectsError:
                 raise MultipleObjectsError("More than one code in the DB with pk='{}'!".format(pk))
 
@@ -215,7 +215,7 @@ class Code(Data):
             return cls.get_code_helper(label, machinename)
 
         else:
-            raise InputValidationError("Pass either pk or code label (and machinename)")
+            raise InputValidationError('Pass either pk or code label (and machinename)')
 
     @classmethod
     def get_from_string(cls, code_string):
@@ -242,14 +242,14 @@ class Code(Data):
         try:
             label, sep, machinename = code_string.partition('@')
         except AttributeError as exception:
-            raise InputValidationError("the provided code_string is not of valid string type")
+            raise InputValidationError('the provided code_string is not of valid string type')
 
         try:
             return cls.get_code_helper(label, machinename)
         except NotExistent:
-            raise NotExistent("{} could not be resolved to a valid code label".format(code_string))
+            raise NotExistent('{} could not be resolved to a valid code label'.format(code_string))
         except MultipleObjectsError:
-            raise MultipleObjectsError("{} could not be uniquely resolved".format(code_string))
+            raise MultipleObjectsError('{} could not be uniquely resolved'.format(code_string))
 
     @classmethod
     def list_for_plugin(cls, plugin, labels=True):
@@ -276,23 +276,23 @@ class Code(Data):
         super(Code, self)._validate()
 
         if self.is_local() is None:
-            raise ValidationError("You did not set whether the code is local or remote")
+            raise ValidationError('You did not set whether the code is local or remote')
 
         if self.is_local():
             if not self.get_local_executable():
-                raise ValidationError("You have to set which file is the local executable "
-                                      "using the set_exec_filename() method")
+                raise ValidationError('You have to set which file is the local executable '
+                                      'using the set_exec_filename() method')
                 # c[1] is True if the element is a file
             if self.get_local_executable() not in self.list_object_names():
                 raise ValidationError("The local executable '{}' is not in the list of "
-                                      "files of this code".format(self.get_local_executable()))
+                                      'files of this code'.format(self.get_local_executable()))
         else:
             if self.list_object_names():
-                raise ValidationError("The code is remote but it has files inside")
+                raise ValidationError('The code is remote but it has files inside')
             if not self.get_remote_computer():
-                raise ValidationError("You did not specify a remote computer")
+                raise ValidationError('You did not specify a remote computer')
             if not self.get_remote_exec_path():
-                raise ValidationError("You did not specify a remote executable")
+                raise ValidationError('You did not specify a remote executable')
 
     def set_prepend_text(self, code):
         """
@@ -306,7 +306,7 @@ class Code(Data):
         Return the code that will be put in the scheduler script before the
         execution, or an empty string if no pre-exec code was defined.
         """
-        return self.get_attribute('prepend_text', u"")
+        return self.get_attribute('prepend_text', u'')
 
     def set_input_plugin_name(self, input_plugin):
         """
@@ -336,7 +336,7 @@ class Code(Data):
         """
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
-        return self.get_attribute('append_text', u"")
+        return self.get_attribute('append_text', u'')
 
     def set_local_executable(self, exec_name):
         """
@@ -347,7 +347,7 @@ class Code(Data):
         self.set_attribute('local_executable', exec_name)
 
     def get_local_executable(self):
-        return self.get_attribute('local_executable', u"")
+        return self.get_attribute('local_executable', u'')
 
     def set_remote_computer_exec(self, remote_computer_exec):
         """
@@ -361,14 +361,14 @@ class Code(Data):
         from aiida.common.lang import type_check
 
         if (not isinstance(remote_computer_exec, (list, tuple)) or len(remote_computer_exec) != 2):
-            raise ValueError("remote_computer_exec must be a list or tuple "
-                             "of length 2, with machine and executable "
-                             "name")
+            raise ValueError('remote_computer_exec must be a list or tuple '
+                             'of length 2, with machine and executable '
+                             'name')
 
         computer, remote_exec_path = tuple(remote_computer_exec)
 
         if not os.path.isabs(remote_exec_path):
-            raise ValueError("exec_path must be an absolute path (on the remote machine)")
+            raise ValueError('exec_path must be an absolute path (on the remote machine)')
 
         type_check(computer, orm.Computer)
 
@@ -378,12 +378,12 @@ class Code(Data):
 
     def get_remote_exec_path(self):
         if self.is_local():
-            raise ValueError("The code is local")
-        return self.get_attribute('remote_exec_path', "")
+            raise ValueError('The code is local')
+        return self.get_attribute('remote_exec_path', '')
 
     def get_remote_computer(self):
         if self.is_local():
-            raise ValueError("The code is local")
+            raise ValueError('The code is local')
 
         return self.computer
 
@@ -448,7 +448,7 @@ class Code(Data):
         For remote codes, it is the absolute path to the executable.
         """
         if self.is_local():
-            return u"./{}".format(self.get_local_executable())
+            return u'./{}'.format(self.get_local_executable())
         else:
             return self.get_remote_exec_path()
 
@@ -467,7 +467,7 @@ class Code(Data):
         from aiida.plugins import CalculationFactory
         plugin_name = self.get_input_plugin_name()
         if plugin_name is None:
-            raise ValueError("You did not specify a default input plugin for this code")
+            raise ValueError('You did not specify a default input plugin for this code')
         try:
             C = CalculationFactory(plugin_name)
         except EntryPointError:
@@ -532,5 +532,5 @@ class Code(Data):
         try:
             code.store()
         except ValidationError as exc:
-            raise ValidationError("Unable to store the computer: {}.".format(exc))
+            raise ValidationError('Unable to store the computer: {}.'.format(exc))
         return code

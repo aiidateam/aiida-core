@@ -33,11 +33,13 @@ def upgrade():
     conn = op.get_bind()
 
     # The type string for `Data` nodes changed from `data.*` to `node.data.*`.
-    statement = text(r"""
+    statement = text(
+        r"""
         UPDATE db_dbnode
         SET type = regexp_replace(type, '^data.', 'node.data.')
         WHERE type LIKE 'data.%'
-    """)
+    """
+    )
     conn.execute(statement)
 
 
@@ -45,9 +47,11 @@ def downgrade():
     """Migrations for the downgrade."""
     conn = op.get_bind()
 
-    statement = text(r"""
+    statement = text(
+        r"""
         UPDATE db_dbnode
         SET type = regexp_replace(type, '^node.data.', 'data.')
         WHERE type LIKE 'node.data.%'
-    """)
+    """
+    )
     conn.execute(statement)

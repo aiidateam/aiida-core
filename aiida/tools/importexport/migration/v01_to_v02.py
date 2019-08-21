@@ -27,8 +27,8 @@ def migrate_v1_to_v2(metadata, data, *args):
     old_version = '0.1'
     new_version = '0.2'
 
-    old_start = "aiida.djsite"
-    new_start = "aiida.backends.djsite"
+    old_start = 'aiida.djsite'
+    new_start = 'aiida.backends.djsite'
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)

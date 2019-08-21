@@ -33,7 +33,7 @@ class TestCode(AiidaTestCase):
             code.store()
 
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
-            fhandle.write("#/bin/bash\n\necho test run\n")
+            fhandle.write('#/bin/bash\n\necho test run\n')
             fhandle.flush()
             code.put_object_from_filelike(fhandle, 'test.sh')
 
@@ -66,7 +66,7 @@ class TestCode(AiidaTestCase):
 
         code = Code(remote_computer_exec=(self.computer, '/bin/ls'))
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
-            fhandle.write("#/bin/bash\n\necho test run\n")
+            fhandle.write('#/bin/bash\n\necho test run\n')
             fhandle.flush()
             code.put_object_from_filelike(fhandle, 'test.sh')
 

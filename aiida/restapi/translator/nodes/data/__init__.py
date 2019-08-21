@@ -23,12 +23,12 @@ class DataTranslator(NodeTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "data"
+    __label__ = 'data'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import Data
     _aiida_class = Data
     # The string name of the AiiDA class
-    _aiida_type = "data.Data"
+    _aiida_type = 'data.Data'
 
     _result_type = __label__
 

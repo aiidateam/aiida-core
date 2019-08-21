@@ -26,7 +26,7 @@ from aiida.common.utils import get_new_uuid
 
 
 class DbNode(Base):
-    __tablename__ = "db_dbnode"
+    __tablename__ = 'db_dbnode'
 
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
@@ -41,7 +41,7 @@ class DbNode(Base):
 
     dbcomputer_id = Column(
         Integer,
-        ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED", ondelete="RESTRICT"),
+        ForeignKey('db_dbcomputer.id', deferrable=True, initially='DEFERRED', ondelete='RESTRICT'),
         nullable=True
     )
 
@@ -49,7 +49,7 @@ class DbNode(Base):
     user_id = Column(
         Integer,
         ForeignKey(
-            'db_dbuser.id', deferrable=True, initially="DEFERRED", ondelete="restrict"
+            'db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'
         ),
         nullable=False
     )
@@ -73,10 +73,10 @@ class DbNode(Base):
 
     # outputs via db_dblink table
     outputs_q = relationship(
-        "DbNode", secondary="db_dblink",
-        primaryjoin="DbNode.id == DbLink.input_id",
-        secondaryjoin="DbNode.id == DbLink.output_id",
-        backref=backref("inputs_q", passive_deletes=True, lazy='dynamic'),
+        'DbNode', secondary='db_dblink',
+        primaryjoin='DbNode.id == DbLink.input_id',
+        secondaryjoin='DbNode.id == DbLink.output_id',
+        backref=backref('inputs_q', passive_deletes=True, lazy='dynamic'),
         lazy='dynamic',
         passive_deletes=True
     )
@@ -124,9 +124,9 @@ class DbNode(Base):
         """
         thistype = self.node_type
         # Fix for base class
-        if thistype == "":
-            thistype = "node.Node."
-        if not thistype.endswith("."):
+        if thistype == '':
+            thistype = 'node.Node.'
+        if not thistype.endswith('.'):
             return invalid_result
         else:
             thistype = thistype[:-1]  # Strip final dot
@@ -137,36 +137,36 @@ class DbNode(Base):
         return self.id
 
     def __str__(self):
-        simplename = self.get_simple_name(invalid_result="Unknown")
+        simplename = self.get_simple_name(invalid_result='Unknown')
         # node pk + type
         if self.label:
-            return "{} node [{}]: {}".format(simplename, self.pk, self.label)
+            return '{} node [{}]: {}'.format(simplename, self.pk, self.label)
         else:
-            return "{} node [{}]".format(simplename, self.pk)
+            return '{} node [{}]'.format(simplename, self.pk)
 
 
 class DbLink(Base):
-    __tablename__ = "db_dblink"
+    __tablename__ = 'db_dblink'
 
     id = Column(Integer, primary_key=True)
     input_id = Column(
         Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED"),
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
         index=True
     )
     output_id = Column(
         Integer,
         ForeignKey(
             'db_dbnode.id',
-            ondelete="CASCADE",
+            ondelete='CASCADE',
             deferrable=True,
-            initially="DEFERRED"
+            initially='DEFERRED'
         ),
         index=True
     )
 
-    input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
-    output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
+    input = relationship('DbNode', primaryjoin='DbLink.input_id == DbNode.id')
+    output = relationship('DbNode', primaryjoin='DbLink.output_id == DbNode.id')
 
     label = Column(String(255), index=True, nullable=False)
     type = Column(String(255), index=True)
@@ -183,9 +183,9 @@ class DbLink(Base):
     )
 
     def __str__(self):
-        return "{} ({}) --> {} ({})".format(
-            self.input.get_simple_name(invalid_result="Unknown node"),
+        return '{} ({}) --> {} ({})'.format(
+            self.input.get_simple_name(invalid_result='Unknown node'),
             self.input.pk,
-            self.output.get_simple_name(invalid_result="Unknown node"),
+            self.output.get_simple_name(invalid_result='Unknown node'),
             self.output.pk
         )

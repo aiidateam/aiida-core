@@ -127,7 +127,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         """
         self.reset_database()
         with Capturing():
-            self.migrate_db_up("head")
+            self.migrate_db_up('head')
 
     @property
     def current_rev(self):
@@ -316,7 +316,7 @@ class TestMigrationSchemaVsModelsSchema(AiidaTestCase):
         self.db_url_right = get_temporary_uri(str(curr_db_url))
 
         # Put the correct database url to the database used by alembic
-        self.alembic_cfg_left.set_main_option("sqlalchemy.url", self.db_url_left)
+        self.alembic_cfg_left.set_main_option('sqlalchemy.url', self.db_url_left)
 
         # Database creation
         new_database(self.db_url_left)
@@ -339,7 +339,7 @@ class TestMigrationSchemaVsModelsSchema(AiidaTestCase):
 
         with create_engine(self.db_url_left).begin() as connection:
             self.alembic_cfg_left.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
-            command.upgrade(self.alembic_cfg_left, "head")
+            command.upgrade(self.alembic_cfg_left, 'head')
 
         engine_right = create_engine(self.db_url_right)
         Base.metadata.create_all(engine_right)
@@ -347,8 +347,11 @@ class TestMigrationSchemaVsModelsSchema(AiidaTestCase):
 
         result = compare(self.db_url_left, self.db_url_right, set(['alembic_version']))
 
-        self.assertTrue(result.is_match, "The migration database doesn't match to the one "
-                        "created by the models.\nDifferences: " + result._dump_data(result.errors))  # pylint: disable=protected-access
+        self.assertTrue(
+            result.is_match,
+            "The migration database doesn't match to the one "
+            'created by the models.\nDifferences: ' + result._dump_data(result.errors)  # pylint: disable=protected-access
+        )
 
 
 class TestProvenanceRedesignMigration(TestMigrationsSQLA):
@@ -372,12 +375,14 @@ class TestProvenanceRedesignMigration(TestMigrationsSQLA):
                 session.commit()
 
                 node_calc_job_known = DbNode(
-                    type='calculation.job.arithmetic.add.ArithmeticAddCalculation.', user_id=user.id)
+                    type='calculation.job.arithmetic.add.ArithmeticAddCalculation.', user_id=user.id
+                )
                 node_calc_job_unknown = DbNode(type='calculation.job.unknown.PluginJobCalculation.', user_id=user.id)
                 node_process = DbNode(type='calculation.process.ProcessCalculation.', user_id=user.id)
                 node_work_chain = DbNode(type='calculation.work.WorkCalculation.', user_id=user.id)
                 node_work_function = DbNode(
-                    type='calculation.work.WorkCalculation.', attributes={'function_name': 'test'}, user_id=user.id)
+                    type='calculation.work.WorkCalculation.', attributes={'function_name': 'test'}, user_id=user.id
+                )
                 node_inline = DbNode(type='calculation.inline.InlineCalculation.', user_id=user.id)
                 node_function = DbNode(type='calculation.function.FunctionCalculation.', user_id=user.id)
 
@@ -465,7 +470,7 @@ class TestGroupRenamingMigration(TestMigrationsSQLA):
 
         with self.get_session() as session:
             try:
-                default_user = DbUser(email="{}@aiida.net".format(self.id()))
+                default_user = DbUser(email='{}@aiida.net'.format(self.id()))
                 session.add(default_user)
                 session.commit()
 
@@ -474,15 +479,18 @@ class TestGroupRenamingMigration(TestMigrationsSQLA):
                 session.add(group_user)
                 # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
                 group_data_upf = DbGroup(
-                    label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family')
+                    label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family'
+                )
                 session.add(group_data_upf)
                 # test auto.import group type_string: 'aiida.import' -> 'auto.import'
                 group_autoimport = DbGroup(
-                    label='test_import_group', user_id=default_user.id, type_string='aiida.import')
+                    label='test_import_group', user_id=default_user.id, type_string='aiida.import'
+                )
                 session.add(group_autoimport)
                 # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
                 group_autorun = DbGroup(
-                    label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run')
+                    label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run'
+                )
                 session.add(group_autorun)
 
                 session.commit()
@@ -548,7 +556,7 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email="{}@aiida.net".format(self.id()))
+                user = DbUser(email='{}@aiida.net'.format(self.id()))
                 session.add(user)
                 session.commit()
 
@@ -565,7 +573,8 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 }
                 node_work = DbNode(type='node.process.workflow.WorkflowNode.', attributes=attributes, user_id=user.id)
                 node_calc = DbNode(
-                    type='node.process.calculation.calcjob.CalcJobNode.', attributes=attributes, user_id=user.id)
+                    type='node.process.calculation.calcjob.CalcJobNode.', attributes=attributes, user_id=user.id
+                )
                 # Create a node of a different type to ensure that its attributes are not updated
                 node_other = DbNode(type='node.othernode.', attributes=attributes, user_id=user.id)
 
@@ -601,7 +610,8 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_NEW), self.parser_name)
                 self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_NEW), self.resources)
                 self.assertEqual(
-                    node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
+                    node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables
+                )
                 self.assertEqual(node_calc.attributes.get(self.KEY_PROCESS_LABEL_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_OLD, not_found), not_found)
                 self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_OLD, not_found), not_found)
@@ -614,7 +624,8 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
                 self.assertEqual(node_other.attributes.get(self.KEY_PARSER_NAME_OLD), self.parser_name)
                 self.assertEqual(node_other.attributes.get(self.KEY_RESOURCES_OLD), self.resources)
                 self.assertEqual(
-                    node_other.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_OLD), self.environment_variables)
+                    node_other.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_OLD), self.environment_variables
+                )
                 self.assertEqual(node_other.attributes.get(self.KEY_PROCESS_LABEL_NEW, not_found), not_found)
                 self.assertEqual(node_other.attributes.get(self.KEY_PARSER_NAME_NEW, not_found), not_found)
                 self.assertEqual(node_other.attributes.get(self.KEY_RESOURCES_NEW, not_found), not_found)
@@ -657,7 +668,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
         from aiida.backends.general.migrations.utils import dumps_json
 
         log_migration = importlib.import_module(
-            'aiida.backends.sqlalchemy.migrations.versions.041a79fc615f_dblog_cleaning')
+            'aiida.backends.sqlalchemy.migrations.versions.041a79fc615f_dblog_cleaning'
+        )
 
         DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
@@ -668,14 +680,14 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email="{}@aiida.net".format(self.id()))
+                user = DbUser(email='{}@aiida.net'.format(self.id()))
                 session.add(user)
                 session.commit()
 
-                calc_1 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
-                param = DbNode(type="data.dict.Dict.", user_id=user.id)
-                leg_workf = DbWorkflow(label="Legacy WorkflowNode", user_id=user.id)
-                calc_2 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
+                calc_1 = DbNode(type='node.process.calculation.CalculationNode.', user_id=user.id)
+                param = DbNode(type='data.dict.Dict.', user_id=user.id)
+                leg_workf = DbWorkflow(label='Legacy WorkflowNode', user_id=user.id)
+                calc_2 = DbNode(type='node.process.calculation.CalculationNode.', user_id=user.id)
 
                 session.add(calc_1)
                 session.add(param)
@@ -689,39 +701,43 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                     objname='node.calculation.job.quantumespresso.pw.',
                     message='calculation node 1',
                     metadata={
-                        "msecs": 719.0849781036377,
-                        "objpk": calc_1.id,
-                        "lineno": 350,
-                        "thread": 140011612940032,
-                        "asctime": "10/21/2018 12:39:51 PM",
-                        "created": 1540118391.719085,
-                        "levelno": 23,
-                        "message": "calculation node 1",
-                        "objname": "node.calculation.job.quantumespresso.pw.",
-                    })
+                        'msecs': 719.0849781036377,
+                        'objpk': calc_1.id,
+                        'lineno': 350,
+                        'thread': 140011612940032,
+                        'asctime': '10/21/2018 12:39:51 PM',
+                        'created': 1540118391.719085,
+                        'levelno': 23,
+                        'message': 'calculation node 1',
+                        'objname': 'node.calculation.job.quantumespresso.pw.',
+                    }
+                )
                 log_2 = DbLog(
                     loggername='something.else logger',
                     objpk=param.id,
                     objname='something.else.',
-                    message='parameter data with log message')
+                    message='parameter data with log message'
+                )
                 log_3 = DbLog(
                     loggername='TopologicalWorkflow logger',
                     objpk=leg_workf.id,
                     objname='aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow',
-                    message='parameter data with log message')
+                    message='parameter data with log message'
+                )
                 log_4 = DbLog(
                     loggername='CalculationNode logger',
                     objpk=calc_2.id,
                     objname='node.calculation.job.quantumespresso.pw.',
                     message='calculation node 2',
                     metadata={
-                        "msecs": 719.0849781036377,
-                        "objpk": calc_2.id,
-                        "lineno": 360,
-                        "levelno": 23,
-                        "message": "calculation node 1",
-                        "objname": "node.calculation.job.quantumespresso.pw.",
-                    })
+                        'msecs': 719.0849781036377,
+                        'objpk': calc_2.id,
+                        'lineno': 360,
+                        'levelno': 23,
+                        'message': 'calculation node 1',
+                        'objname': 'node.calculation.job.quantumespresso.pw.',
+                    }
+                )
                 # Creating two more log records that don't correspond to a node
                 log_5 = DbLog(
                     loggername='CalculationNode logger',
@@ -729,26 +745,28 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                     objname='node.calculation.job.quantumespresso.pw.',
                     message='calculation node 1000',
                     metadata={
-                        "msecs": 718,
-                        "objpk": (calc_2.id + 1000),
-                        "lineno": 361,
-                        "levelno": 25,
-                        "message": "calculation node 1000",
-                        "objname": "node.calculation.job.quantumespresso.pw.",
-                    })
+                        'msecs': 718,
+                        'objpk': (calc_2.id + 1000),
+                        'lineno': 361,
+                        'levelno': 25,
+                        'message': 'calculation node 1000',
+                        'objname': 'node.calculation.job.quantumespresso.pw.',
+                    }
+                )
                 log_6 = DbLog(
                     loggername='CalculationNode logger',
                     objpk=(calc_2.id + 1001),
                     objname='node.calculation.job.quantumespresso.pw.',
                     message='calculation node 10001',
                     metadata={
-                        "msecs": 722,
-                        "objpk": (calc_2.id + 1001),
-                        "lineno": 362,
-                        "levelno": 24,
-                        "message": "calculation node 1001",
-                        "objname": "node.calculation.job.quantumespresso.pw.",
-                    })
+                        'msecs': 722,
+                        'objpk': (calc_2.id + 1001),
+                        'lineno': 362,
+                        'levelno': 24,
+                        'message': 'calculation node 1001',
+                        'objname': 'node.calculation.job.quantumespresso.pw.',
+                    }
+                )
 
                 session.add(log_1)
                 session.add(log_2)
@@ -776,8 +794,9 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                     cols_to_project.append(getattr(DbLog, val))
 
                 # Getting the serialized Dict logs
-                param_data = session.query(DbLog).filter(DbLog.objpk == param.id).filter(
-                    DbLog.objname == 'something.else.').with_entities(*cols_to_project).one()
+                param_data = session.query(DbLog).filter(DbLog.objpk == param.id
+                                                        ).filter(DbLog.objname == 'something.else.'
+                                                                ).with_entities(*cols_to_project).one()
                 serialized_param_data = dumps_json([(dict(list(zip(param_data.keys(), param_data))))])
                 # Getting the serialized logs for the unknown entity logs (as the export migration fuction
                 # provides them) - this should coincide to the above
@@ -832,17 +851,17 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 session = Session(connection.engine)
 
                 # Check that only two log records exist
-                self.assertEqual(session.query(DbLog).count(), 2, "There should be two log records left")
+                self.assertEqual(session.query(DbLog).count(), 2, 'There should be two log records left')
 
                 # Get the node id of the log record referencing the node and verify that it is the correct one
                 dbnode_id_1 = session.query(DbLog).filter(
                     DbLog.id == self.to_check['CalculationNode'][1]).with_entities('dbnode_id').one()[0]
-                self.assertEqual(dbnode_id_1, self.to_check['CalculationNode'][0], "The the referenced node is not "
-                                 "the expected one")
+                self.assertEqual(dbnode_id_1, self.to_check['CalculationNode'][0], 'The the referenced node is not '
+                                 'the expected one')
                 dbnode_id_2 = session.query(DbLog).filter(
                     DbLog.id == self.to_check['CalculationNode'][3]).with_entities('dbnode_id').one()[0]
-                self.assertEqual(dbnode_id_2, self.to_check['CalculationNode'][2], "The the referenced node is not "
-                                 "the expected one")
+                self.assertEqual(dbnode_id_2, self.to_check['CalculationNode'][2], 'The the referenced node is not '
+                                 'the expected one')
             finally:
                 session.close()
 
@@ -877,8 +896,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 metadata = list(session.query(DbLog).with_entities(getattr(DbLog, 'metadata')).all())
                 # Verify that the objpk and objname are no longer part of the metadata
                 for (m_res,) in metadata:
-                    self.assertNotIn('objpk', m_res.keys(), "objpk should not exist any more in metadata")
-                    self.assertNotIn('objname', m_res.keys(), "objname should not exist any more in metadata")
+                    self.assertNotIn('objpk', m_res.keys(), 'objpk should not exist any more in metadata')
+                    self.assertNotIn('objname', m_res.keys(), 'objname should not exist any more in metadata')
 
             finally:
                 session.close()
@@ -902,12 +921,12 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email="{}@aiida.net".format(self.id()))
+                user = DbUser(email='{}@aiida.net'.format(self.id()))
                 session.add(user)
                 session.commit()
 
-                calc_1 = DbNode(type="node.process.calculation.CalculationNode.1", user_id=user.id)
-                calc_2 = DbNode(type="node.process.calculation.CalculationNode.2", user_id=user.id)
+                calc_1 = DbNode(type='node.process.calculation.CalculationNode.1', user_id=user.id)
+                calc_2 = DbNode(type='node.process.calculation.CalculationNode.2', user_id=user.id)
 
                 session.add(calc_1)
                 session.add(calc_2)
@@ -918,23 +937,23 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
                     dbnode_id=calc_1.id,
                     message='calculation node 1',
                     metadata={
-                        "msecs": 719.0849781036377,
-                        "lineno": 350,
-                        "thread": 140011612940032,
-                        "asctime": "10/21/2018 12:39:51 PM",
-                        "created": 1540118391.719085,
-                        "levelno": 23,
-                        "message": "calculation node 1",
+                        'msecs': 719.0849781036377,
+                        'lineno': 350,
+                        'thread': 140011612940032,
+                        'asctime': '10/21/2018 12:39:51 PM',
+                        'created': 1540118391.719085,
+                        'levelno': 23,
+                        'message': 'calculation node 1',
                     })
                 log_2 = DbLog(
                     loggername='CalculationNode logger',
                     dbnode_id=calc_2.id,
                     message='calculation node 2',
                     metadata={
-                        "msecs": 719.0849781036377,
-                        "lineno": 360,
-                        "levelno": 23,
-                        "message": "calculation node 1",
+                        'msecs': 719.0849781036377,
+                        'lineno': 360,
+                        'levelno': 23,
+                        'message': 'calculation node 1',
                     })
 
                 session.add(log_1)
@@ -971,21 +990,21 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
 
                     self.assertEqual(
                         log_dbnode_id, log_entry.objpk,
-                        "The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of "
-                        "the 0023 schema version.".format(log_dbnode_id, log_entry.objpk))
+                        'The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of '
+                        'the 0023 schema version.'.format(log_dbnode_id, log_entry.objpk))
                     self.assertEqual(
                         node_type, log_entry.objname,
-                        "The type ({}) of the linked node of the 0024 schema version should be identical to the "
-                        "objname ({}) of the 0023 schema version.".format(node_type, log_entry.objname))
+                        'The type ({}) of the linked node of the 0024 schema version should be identical to the '
+                        'objname ({}) of the 0023 schema version.'.format(node_type, log_entry.objname))
                     self.assertEqual(
                         log_dbnode_id, log_entry.metadata['objpk'],
-                        "The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of "
-                        "the 0023 schema version stored in the metadata.".format(log_dbnode_id,
+                        'The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of '
+                        'the 0023 schema version stored in the metadata.'.format(log_dbnode_id,
                                                                                  log_entry.metadata['objpk']))
                     self.assertEqual(
                         node_type, log_entry.metadata['objname'],
-                        "The type ({}) of the linked node of the 0024 schema version should be identical to the "
-                        "objname ({}) of the 0023 schema version stored in the metadata.".format(
+                        'The type ({}) of the linked node of the 0024 schema version should be identical to the '
+                        'objname ({}) of the 0023 schema version stored in the metadata.'.format(
                             node_type, log_entry.metadata['objname']))
             finally:
                 session.close()
@@ -1011,12 +1030,12 @@ class TestDbLogUUIDAddition(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email="{}@aiida.net".format(self.id()))
+                user = DbUser(email='{}@aiida.net'.format(self.id()))
                 session.add(user)
                 session.commit()
 
-                calc_1 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
-                calc_2 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
+                calc_1 = DbNode(type='node.process.calculation.CalculationNode.', user_id=user.id)
+                calc_2 = DbNode(type='node.process.calculation.CalculationNode.', user_id=user.id)
 
                 session.add(calc_1)
                 session.add(calc_2)
@@ -1048,7 +1067,7 @@ class TestDbLogUUIDAddition(TestMigrationsSQLA):
                 session = Session(connection.engine)
                 l_uuids = list(session.query(DbLog).with_entities(getattr(DbLog, 'uuid')).all())
                 s_uuids = set(l_uuids)
-                self.assertEqual(len(l_uuids), len(s_uuids), "The UUIDs are not all unique.")
+                self.assertEqual(len(l_uuids), len(s_uuids), 'The UUIDs are not all unique.')
             finally:
                 session.close()
 
@@ -1068,7 +1087,7 @@ class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email="{}@aiida.net".format(self.id()))
+                user = DbUser(email='{}@aiida.net'.format(self.id()))
                 session.add(user)
                 session.commit()
 

@@ -118,7 +118,7 @@ class TestComment(AiidaTestCase):
         # pylint: disable=too-many-locals
         """Test querying for comments by joining on nodes in the QueryBuilder."""
         user_one = self.user
-        user_two = orm.User(email="commenting@user.s").store()
+        user_two = orm.User(email='commenting@user.s').store()
 
         node_one = orm.Data().store()
         comment_one = Comment(node_one, user_one, 'comment_one').store()
@@ -174,7 +174,8 @@ class TestComment(AiidaTestCase):
         for comment in comments:
             self.assertIn(
                 str(comment[0]),
-                [self.comment.uuid, comment_one.uuid, comment_two.uuid, comment_three.uuid, comment_five.uuid])
+                [self.comment.uuid, comment_one.uuid, comment_two.uuid, comment_three.uuid, comment_five.uuid]
+            )
 
         # Retrieve users from comments of a single node by joining specific node
         builder = orm.QueryBuilder()

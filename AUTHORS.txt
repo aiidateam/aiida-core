@@ -29,7 +29,6 @@ Former members of the AiiDA team
 * Fernando Gargiulo (2016-2017)
 * Riccardo Sabatini (2013-2015)
 * Rico Häuselmann (2016-2018)
-* Nicolas Mounet (2015-2018)
 
 
 Contributors
@@ -51,7 +50,7 @@ We would like to thank the following people for their contibution
   for PP, PROJWFC, and the first version of the Wannier90 plugin
 * Tiziano Müller (ETHZ, Switzerland): for the first implementation of
   the new plugin system (developed in 2017) and making the code python 3 compatible
-* Phillippe Schwaller (EPFL, Switzerland): for the ICSD importer
+* Philippe Schwaller (EPFL, Switzerland): for the ICSD importer
 
 And the following people for general improvements to the code, fixing bugs,
 corrections and improvements to the documentation and useful suggestions:

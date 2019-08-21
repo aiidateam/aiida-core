@@ -128,7 +128,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         :raises `~aiida.common.exceptions.NotExistent`: if Comment with ID ``comment_id`` is not found
         """
         if not isinstance(comment_id, int):
-            raise TypeError("comment_id must be an int")
+            raise TypeError('comment_id must be an int')
 
         session = get_scoped_session()
 
@@ -152,7 +152,7 @@ class SqlaCommentCollection(BackendCommentCollection):
             session.commit()
         except Exception as exc:
             session.rollback()
-            raise exceptions.IntegrityError("Could not delete all Comments. Full exception: {}".format(exc))
+            raise exceptions.IntegrityError('Could not delete all Comments. Full exception: {}'.format(exc))
 
     def delete_many(self, filters):
         """
@@ -171,9 +171,9 @@ class SqlaCommentCollection(BackendCommentCollection):
 
         # Checks
         if not isinstance(filters, dict):
-            raise TypeError("filters must be a dictionary")
+            raise TypeError('filters must be a dictionary')
         if not filters:
-            raise exceptions.ValidationError("filters must not be empty")
+            raise exceptions.ValidationError('filters must not be empty')
 
         # Apply filter and delete found entities
         builder = QueryBuilder().append(Comment, filters=filters, project='id').all()

@@ -23,13 +23,13 @@ from wrapt import decorator
 from aiida.common import json
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
 from aiida.common.folders import SandboxFolder
+from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.exceptions import CorruptArchive
+
+__all__ = ('Archive', 'extract_zip', 'extract_tar', 'extract_tree')
 
 
-class CorruptArchive(Exception):
-    """Raised when an operation is applied to a corrupt export archive, e.g. missing files or invalid formats."""
-
-
-class Archive(object):  # pylint: disable=useless-object-inheritance
+class Archive(object):
     """Utility class to operate on exported archive files or directories.
 
     The main usage should be to construct the class with the filepath of the export archive as an argument.
@@ -83,9 +83,9 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
         if os.path.isdir(self.filepath):
             extract_tree(self.filepath, self.folder)
         elif tarfile.is_tarfile(self.filepath):
-            extract_tar(self.filepath, self.folder, silent=True, nodes_export_subfolder='nodes')
+            extract_tar(self.filepath, self.folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
         elif zipfile.is_zipfile(self.filepath):
-            extract_zip(self.filepath, self.folder, silent=True, nodes_export_subfolder='nodes')
+            extract_zip(self.filepath, self.folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
         else:
             raise CorruptArchive('unrecognized archive format')
 
@@ -222,19 +222,35 @@ class Archive(object):  # pylint: disable=useless-object-inheritance
             return json.load(fhandle)
 
 
-def extract_zip(infile, folder, nodes_export_subfolder="nodes", silent=False):
+def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
     """
     Extract the nodes to be imported from a zip file.
 
     :param infile: file path
-    :param folder: a SandboxFolder, used to extract the file tree
+    :type infile: str
+
+    :param folder: a temporary folder used to extract the file tree
+    :type folder: :py:class:`~aiida.common.folders.SandboxFolder`
+
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
+    :type nodes_export_subfolder: str
+
     :param silent: suppress debug print
-    :raises `CorruptArchive`: if the archive misses files or files have incorrect formats
+    :type silent: bool
+
+    :raises TypeError: if parameter types are not respected
+    :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: if the archive misses files or files have
+        incorrect formats
     """
     # pylint: disable=fixme
     if not silent:
         print('READING DATA AND METADATA...')
+
+    if nodes_export_subfolder:
+        if not isinstance(nodes_export_subfolder, str):
+            raise TypeError('nodes_export_subfolder must be a string')
+    else:
+        nodes_export_subfolder = NODES_EXPORT_SUBFOLDER
 
     try:
         with zipfile.ZipFile(infile, 'r', allowZip64=True) as handle:
@@ -266,19 +282,35 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes", silent=False):
         raise ValueError('The input file format for import is not valid (not a zip file)')
 
 
-def extract_tar(infile, folder, nodes_export_subfolder="nodes", silent=False):
+def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
     """
     Extract the nodes to be imported from a (possibly zipped) tar file.
 
     :param infile: file path
-    :param folder: a SandboxFolder, used to extract the file tree
+    :type infile: str
+
+    :param folder: a temporary fodler used to extract the file tree
+    :type folder: :py:class:`~aiida.common.folders.SandboxFolder`
+
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
+    :type nodes_export_subfolder: str
+
     :param silent: suppress debug print
-    :raises `CorruptArchive`: if the archive misses files or files have incorrect formats
+    :type silent: bool
+
+    :raises TypeError: if parameter types are not respected
+    :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: if the archive misses files or files have
+        incorrect formats
     """
     # pylint: disable=fixme
     if not silent:
         print('READING DATA AND METADATA...')
+
+    if nodes_export_subfolder:
+        if not isinstance(nodes_export_subfolder, str):
+            raise TypeError('nodes_export_subfolder must be a string')
+    else:
+        nodes_export_subfolder = NODES_EXPORT_SUBFOLDER
 
     try:
         with tarfile.open(infile, 'r:*', format=tarfile.PAX_FORMAT) as handle:
@@ -321,7 +353,10 @@ def extract_tree(infile, folder):
     Prepare to import nodes from plain file system tree.
 
     :param infile: path
-    :param folder: a SandboxFolder, used to extract the file tree
+    :type infile: str
+
+    :param folder: a temporary folder used to extract the file tree
+    :type folder: :py:class:`~aiida.common.folders.SandboxFolder`
     """
 
     def add_files(args, path, files):

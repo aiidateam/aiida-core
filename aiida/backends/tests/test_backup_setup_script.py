@@ -39,10 +39,10 @@ class TestBackupSetupScriptUnit(AiidaTestCase):
         ac = utils.ArrayCounter()
 
         # Checking parsing of backup variables with many empty answers
-        answers = ["", "y", "", "y", "", "y", "1", "y", "2", "y"]
+        answers = ['', 'y', '', 'y', '', 'y', '1', 'y', '2', 'y']
         # input = lambda _: answers[self.array_counter()]
         backup_utils.input = lambda _: answers[ac.array_counter()]
-        bk_vars = _backup_setup_inst.construct_backup_variables("")
+        bk_vars = _backup_setup_inst.construct_backup_variables('')
         # Check the parsed answers
         self.assertIsNone(bk_vars[AbstractBackup.OLDEST_OBJECT_BK_KEY])
         self.assertIsNone(bk_vars[AbstractBackup.DAYS_TO_BACKUP_KEY])
@@ -52,11 +52,11 @@ class TestBackupSetupScriptUnit(AiidaTestCase):
 
         # Checking parsing of backup variables with all the answers given
         ac = utils.ArrayCounter()
-        answers = ["2013-07-28 20:48:53.197537+02:00", "y",
-                    "2", "y", "2015-07-28 20:48:53.197537+02:00", "y",
-                    "3", "y", "4", "y"]
+        answers = ['2013-07-28 20:48:53.197537+02:00', 'y',
+                    '2', 'y', '2015-07-28 20:48:53.197537+02:00', 'y',
+                    '3', 'y', '4', 'y']
         backup_utils.input = lambda _: answers[ac.array_counter()]
-        bk_vars = _backup_setup_inst.construct_backup_variables("")
+        bk_vars = _backup_setup_inst.construct_backup_variables('')
         # Check the parsed answers
         self.assertEqual(bk_vars[AbstractBackup.OLDEST_OBJECT_BK_KEY], answers[0])
         self.assertEqual(bk_vars[AbstractBackup.DAYS_TO_BACKUP_KEY], 2)
@@ -79,27 +79,27 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
         temp_folder = tempfile.mkdtemp()
 
         try:
-            temp_aiida_folder = os.path.join(temp_folder, ".aiida")
+            temp_aiida_folder = os.path.join(temp_folder, '.aiida')
             # The predefined answers for the setup script
 
             ac = utils.ArrayCounter()
             self.seq = -1
             answers = [temp_aiida_folder,   # the backup folder path
-                       "",                  # should the folder be created?
-                       "",                  # destination folder of the backup
-                       "",                  # should the folder be created?
-                       "n",                 # print config explanation?
-                       "",                  # configure the backup conf file now?
-                       "2014-07-18 13:54:53.688484+00:00", # start date of backup?
-                       "",                  # is it correct?
-                       "",                  # days to backup?
-                       "",                  # is it correct?
-                       "2015-04-11 13:55:53.688484+00:00", # end date of backup
-                       "",                  # is it correct?
-                       "1",                 # periodicity
-                       "",                  # is it correct?
-                       "2",                 # threshold?
-                       ""]                  # is it correct?
+                       '',                  # should the folder be created?
+                       '',                  # destination folder of the backup
+                       '',                  # should the folder be created?
+                       'n',                 # print config explanation?
+                       '',                  # configure the backup conf file now?
+                       '2014-07-18 13:54:53.688484+00:00', # start date of backup?
+                       '',                  # is it correct?
+                       '',                  # days to backup?
+                       '',                  # is it correct?
+                       '2015-04-11 13:55:53.688484+00:00', # end date of backup
+                       '',                  # is it correct?
+                       '1',                 # periodicity
+                       '',                  # is it correct?
+                       '2',                 # threshold?
+                       '']                  # is it correct?
             backup_utils.input = lambda _: answers[ac.array_counter()]
 
             # Run the setup script and catch the sysout
@@ -112,23 +112,23 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
             # Check if all files & dirs are there
             self.assertTrue(backup_conf_records is not None and
                             len(backup_conf_records) == 4 and
-                            "backup_dest" in backup_conf_records and
-                            "backup_info.json.tmpl" in backup_conf_records and
-                            "start_backup.py" in backup_conf_records and
-                            "backup_info.json" in backup_conf_records,
+                            'backup_dest' in backup_conf_records and
+                            'backup_info.json.tmpl' in backup_conf_records and
+                            'start_backup.py' in backup_conf_records and
+                            'backup_info.json' in backup_conf_records,
                             "The created backup folder doesn't have the "
-                            "expected files. "
-                            "It contains: {}.".format(backup_conf_records))
+                            'expected files. '
+                            'It contains: {}.'.format(backup_conf_records))
 
             # Check the content of the main backup configuration file
-            with io.open(os.path.join(temp_aiida_folder, "backup_info.json"), encoding='utf8'
+            with io.open(os.path.join(temp_aiida_folder, 'backup_info.json'), encoding='utf8'
                       ) as conf_jfile:
                 conf_cont = json.load(conf_jfile)
                 self.assertEqual(conf_cont[AbstractBackup.OLDEST_OBJECT_BK_KEY],
-                                 "2014-07-18 13:54:53.688484+00:00")
+                                 '2014-07-18 13:54:53.688484+00:00')
                 self.assertEqual(conf_cont[AbstractBackup.DAYS_TO_BACKUP_KEY], None)
                 self.assertEqual(conf_cont[AbstractBackup.END_DATE_OF_BACKUP_KEY],
-                                 "2015-04-11 13:55:53.688484+00:00")
+                                 '2015-04-11 13:55:53.688484+00:00')
                 self.assertEqual(conf_cont[AbstractBackup.PERIODICITY_KEY], 1)
                 self.assertEqual(
                     conf_cont[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY], 2)

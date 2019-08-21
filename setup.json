@@ -1,6 +1,6 @@
 {
   "name": "aiida-core",
-  "version": "1.0.0b4",
+  "version": "1.0.0b5",
   "url": "http://www.aiida.net/",
   "license": "MIT License",
   "author": "The AiiDA team",
@@ -86,13 +86,13 @@
     ],
     "atomic_tools": [
       "spglib==1.12.2.post0",
+      "monty==2.0.4",
       "pymatgen<=2018.12.12",
       "ase==3.17.0",
       "PyMySQL==0.9.3",
       "PyCifRW==4.2.1; python_version < '3'",
       "PyCifRW==4.4; python_version >= '3'",
-      "seekpath==1.8.4",
-      "qe-tools==1.1.2"
+      "seekpath==1.8.4"
     ],
     "notebook": [
       "jupyter==1.0.0"
@@ -110,15 +110,12 @@
       "aiida-export-migration-tests==0.7.0"
     ],
     "dev_precommit": [
-      "astroid==2.1.0; python_version>='3.0'",
-      "pylint==2.2.2; python_version>='3.0'",
-      "pre-commit==1.14.4",
-      "yapf==0.26.0",
-      "prospector==1.1.5",
-      "pylint==1.9.4; python_version<'3.0'",
-      "pylint==2.2.2; python_version>='3.0'",
+      "pre-commit==1.17.0",
+      "yapf==0.28.0",
+      "prospector==1.1.7",
       "pylint-django==0.11.1; python_version<'3.0'",
-      "pylint-django==2.0.5; python_version>='3.0'",
+      "pylint==1.9.4; python_version<'3.0'",
+      "pylint==2.3.1; python_version>='3.0'",
       "pep8-naming==0.4.1",
       "toml==0.10.0"
     ],
@@ -144,6 +141,7 @@
       "bands = aiida.cmdline.commands.cmd_data.cmd_bands:bands",
       "cif = aiida.cmdline.commands.cmd_data.cmd_cif:cif",
       "dict = aiida.cmdline.commands.cmd_data.cmd_dict:dictionary",
+      "remote = aiida.cmdline.commands.cmd_data.cmd_remote:remote",
       "structure = aiida.cmdline.commands.cmd_data.cmd_structure:structure",
       "trajectory = aiida.cmdline.commands.cmd_data.cmd_trajectory:trajectory",
       "upf = aiida.cmdline.commands.cmd_data.cmd_upf:upf"

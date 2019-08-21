@@ -30,9 +30,11 @@ TRANSPORT_PARAMS = []
 def match_comp_transport(ctx, param, computer, transport_type):
     """Check the computer argument against the transport type."""
     if computer.get_transport_type() != transport_type:
-        echo.echo_critical('Computer {} has transport of type "{}", not {}!'.format(computer.name,
-                                                                                    computer.get_transport_type(),
-                                                                                    transport_type))
+        echo.echo_critical(
+            'Computer {} has transport of type "{}", not {}!'.format(
+                computer.name, computer.get_transport_type(), transport_type
+            )
+        )
     return computer
 
 
@@ -111,7 +113,8 @@ def create_option(name, spec):
     kwargs = {}
     if 'default' not in spec:
         kwargs['contextual_default'] = interactive_default(
-            'ssh', name, also_noninteractive=spec.pop('non_interactive_default', False))
+            'ssh', name, also_noninteractive=spec.pop('non_interactive_default', False)
+        )
     kwargs['cls'] = InteractiveOption
     kwargs.update(spec)
     if existing_option:

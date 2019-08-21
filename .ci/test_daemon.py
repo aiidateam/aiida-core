@@ -48,7 +48,7 @@ def print_daemon_log():
             ['cat', '{}'.format(daemon_log)], stderr=subprocess.STDOUT,
         ))
     except subprocess.CalledProcessError as e:
-        print("Note: the command failed, message: {}".format(e))
+        print('Note: the command failed, message: {}'.format(e))
 
 
 def jobs_have_finished(pks):
@@ -59,7 +59,7 @@ def jobs_have_finished(pks):
     for node in node_list:
         if not node.is_terminated:
             print('not terminated: {} [{}]'.format(node.pk, node.process_state))
-    print("{}/{} finished".format(num_finished, len(finished_list)))
+    print('{}/{} finished'.format(num_finished, len(finished_list)))
     return not (False in finished_list)
 
 
@@ -67,11 +67,11 @@ def print_report(pk):
     print("Output of 'verdi process report {}':".format(pk))
     try:
         print(subprocess.check_output(
-            ["verdi", "process", "report", "{}".format(pk)],
+            ['verdi', 'process', 'report', '{}'.format(pk)],
             stderr=subprocess.STDOUT,
         ))
     except subprocess.CalledProcessError as exception:
-        print("Note: the command failed, message: {}".format(exception))
+        print('Note: the command failed, message: {}'.format(exception))
 
 
 def validate_calculations(expected_results):
@@ -99,7 +99,7 @@ def validate_calculations(expected_results):
             pass
 
         if actual_dict != expected_dict:
-            print("* UNEXPECTED VALUE {} for calc pk={}: I expected {}"
+            print('* UNEXPECTED VALUE {} for calc pk={}: I expected {}'
                   .format(actual_dict, pk, expected_dict))
             valid = False
 
@@ -114,7 +114,7 @@ def validate_workchains(expected_results):
             calc = load_node(pk)
             actual_value = calc.outputs.output
         except (exceptions.NotExistent, AttributeError) as exception:
-            print("* UNABLE TO RETRIEVE VALUE for workchain pk={}: I expected {}, I got {}: {}"
+            print('* UNABLE TO RETRIEVE VALUE for workchain pk={}: I expected {}, I got {}: {}'
                   .format(pk, expected_value, type(exception), exception))
             valid = False
             this_valid = False
@@ -130,7 +130,7 @@ def validate_workchains(expected_results):
 
         # I check only if this_valid, otherwise actual_value could be unset
         if this_valid and actual_value != expected_value:
-            print("* UNEXPECTED VALUE {}, type {} for workchain pk={}: I expected {}, type {}"
+            print('* UNEXPECTED VALUE {}, type {} for workchain pk={}: I expected {}, type {}'
                   .format(actual_value, type(actual_value), pk, expected_value, type(expected_value)))
             valid = False
             this_valid = False
@@ -162,16 +162,16 @@ def validate_cached(cached_calcs):
             files_cached = calc.list_object_names()
 
             if not files_cached:
-                print("Cached calculation <{}> does not have any raw inputs files".format(calc.pk))
+                print('Cached calculation <{}> does not have any raw inputs files'.format(calc.pk))
                 print_report(calc.pk)
                 valid = False
             if not files_original:
-                print("Original calculation <{}> does not have any raw inputs files after being cached from."
+                print('Original calculation <{}> does not have any raw inputs files after being cached from.'
                       .format(original_calc.pk))
                 valid = False
 
             if set(files_original) != set(files_cached):
-                print("different raw input files [{}] vs [{}] for original<{}> and cached<{}> calculation".format(
+                print('different raw input files [{}] vs [{}] for original<{}> and cached<{}> calculation'.format(
                     set(files_original), set(files_cached), original_calc.pk, calc.pk))
                 valid = False
 
@@ -184,7 +184,7 @@ def launch_calculation(code, counter, inputval):
     """
     process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
     calc = submit(process, **inputs)
-    print("[{}] launched calculation {}, pk={}".format(counter, calc.uuid, calc.pk))
+    print('[{}] launched calculation {}, pk={}'.format(counter, calc.uuid, calc.pk))
     return calc, expected_result
 
 
@@ -194,7 +194,7 @@ def run_calculation(code, counter, inputval):
     """
     process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
     result, calc = run_get_node(process, **inputs)
-    print("[{}] ran calculation {}, pk={}".format(counter, calc.uuid, calc.pk))
+    print('[{}] ran calculation {}, pk={}'.format(counter, calc.uuid, calc.pk))
     return calc, expected_result
 
 
@@ -211,8 +211,8 @@ def create_calculation_process(code, inputval):
         # To test the case when AiiDA finds some calcs
         # in a queued state
         # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
-        'cmdline_params': ["1"],
-        'input_file_template': "{value}",  # File just contains the value to double
+        'cmdline_params': ['1'],
+        'input_file_template': '{value}',  # File just contains the value to double
         'input_file_name': 'value_to_double.txt',
         'output_file_name': 'output.txt',
         'retrieve_temporary_files': ['triple_value.tmp']
@@ -250,7 +250,7 @@ def main():
     code = Code.get_from_string(codename)
 
     # Submitting the Calculations the new way directly through the launchers
-    print("Submitting {} calculations to the daemon".format(number_calculations))
+    print('Submitting {} calculations to the daemon'.format(number_calculations))
     for counter in range(1, number_calculations + 1):
         inputval = counter
         calc, expected_result = launch_calculation(
@@ -259,7 +259,7 @@ def main():
         expected_results_calculations[calc.pk] = expected_result
 
     # Submitting the Workchains
-    print("Submitting {} workchains to the daemon".format(number_workchains))
+    print('Submitting {} workchains to the daemon'.format(number_workchains))
     for index in range(number_workchains):
         inp = Int(index)
         result, node = run_get_node(NestedWorkChain, inp=inp)
@@ -272,42 +272,42 @@ def main():
     proc = submit(builder)
     expected_results_workchains[proc.pk] = input_val
 
-    print("Submitting a workchain with a nested input namespace.")
+    print('Submitting a workchain with a nested input namespace.')
     value = Int(-12)
     pk = submit(NestedInputNamespace, foo={'bar': {'baz': value}}).pk
 
-    print("Submitting a workchain with a dynamic non-db input.")
+    print('Submitting a workchain with a dynamic non-db input.')
     value = [4, 2, 3]
     pk = submit(DynamicNonDbInput, namespace={'input': value}).pk
     expected_results_workchains[pk] = value
 
-    print("Submitting a workchain with a dynamic db input.")
+    print('Submitting a workchain with a dynamic db input.')
     value = 9
     pk = submit(DynamicDbInput, namespace={'input': Int(value)}).pk
     expected_results_workchains[pk] = value
 
-    print("Submitting a workchain with a mixed (db / non-db) dynamic input.")
+    print('Submitting a workchain with a mixed (db / non-db) dynamic input.')
     value_non_db = 3
     value_db = Int(2)
     pk = submit(DynamicMixedInput, namespace={'inputs': {'input_non_db': value_non_db, 'input_db': value_db}}).pk
     expected_results_workchains[pk] = value_non_db + value_db
 
-    print("Submitting the serializing workchain")
+    print('Submitting the serializing workchain')
     pk = submit(SerializeWorkChain, test=Int).pk
     expected_results_workchains[pk] = ObjectLoader().identify_object(Int)
 
-    print("Submitting the ListEcho workchain.")
+    print('Submitting the ListEcho workchain.')
     list_value = List()
     list_value.extend([1, 2, 3])
     pk = submit(ListEcho, list=list_value).pk
     expected_results_workchains[pk] = list_value
 
-    print("Submitting a WorkChain which contains a workfunction.")
+    print('Submitting a WorkChain which contains a workfunction.')
     value = Str('workfunction test string')
     pk = submit(WorkFunctionRunnerWorkChain, input=value).pk
     expected_results_workchains[pk] = value
 
-    print("Submitting a WorkChain which contains a calcfunction.")
+    print('Submitting a WorkChain which contains a calcfunction.')
     value = Int(1)
     pk = submit(CalcFunctionRunnerWorkChain, input=value).pk
     expected_results_workchains[pk] = Int(2)
@@ -316,7 +316,7 @@ def main():
     workchains_pks = sorted(expected_results_workchains.keys())
     pks = calculation_pks + workchains_pks
 
-    print("Wating for end of execution...")
+    print('Wating for end of execution...')
     start_time = time.time()
     exited_with_timeout = True
     while time.time() - start_time < timeout_secs:
@@ -325,36 +325,36 @@ def main():
         # Print some debug info, both for debugging reasons and to avoid
         # that the test machine is shut down because there is no output
 
-        print("#" * 78)
-        print("####### TIME ELAPSED: {} s".format(time.time() - start_time))
-        print("#" * 78)
+        print('#' * 78)
+        print('####### TIME ELAPSED: {} s'.format(time.time() - start_time))
+        print('#' * 78)
         print("Output of 'verdi process list -a':")
         try:
             print(subprocess.check_output(
-                ["verdi", "process", "list", "-a"],
+                ['verdi', 'process', 'list', '-a'],
                 stderr=subprocess.STDOUT,
             ))
         except subprocess.CalledProcessError as e:
-            print("Note: the command failed, message: {}".format(e))
+            print('Note: the command failed, message: {}'.format(e))
 
         print("Output of 'verdi daemon status':")
         try:
             print(subprocess.check_output(
-                ["verdi", "daemon", "status"],
+                ['verdi', 'daemon', 'status'],
                 stderr=subprocess.STDOUT,
             ))
         except subprocess.CalledProcessError as e:
-            print("Note: the command failed, message: {}".format(e))
+            print('Note: the command failed, message: {}'.format(e))
 
         if jobs_have_finished(pks):
-            print("Calculation terminated its execution")
+            print('Calculation terminated its execution')
             exited_with_timeout = False
             break
 
     if exited_with_timeout:
         print_daemon_log()
-        print("")
-        print("Timeout!! Calculation did not complete after {} seconds".format(timeout_secs))
+        print('')
+        print('Timeout!! Calculation did not complete after {} seconds'.format(timeout_secs))
         sys.exit(2)
     else:
         # Launch the same calculations but with caching enabled -- these should be FINISHED immediately
@@ -372,13 +372,13 @@ def main():
             validate_cached(cached_calcs)
         ):
             print_daemon_log()
-            print("")
-            print("OK, all calculations have the expected parsed result")
+            print('')
+            print('OK, all calculations have the expected parsed result')
             sys.exit(0)
         else:
             print_daemon_log()
-            print("")
-            print("ERROR! Some return values are different from the expected value")
+            print('')
+            print('ERROR! Some return values are different from the expected value')
             sys.exit(3)
 
 

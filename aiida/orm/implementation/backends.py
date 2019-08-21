@@ -25,8 +25,6 @@ EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 class Backend(object):
     """The public interface that defines a backend factory that creates backend specific concrete objects."""
 
-    # pylint: disable=useless-object-inheritance
-
     @abc.abstractmethod
     def migrate(self):
         """Migrate the database to the latest schema version."""
@@ -126,8 +124,6 @@ class Backend(object):
 @six.add_metaclass(abc.ABCMeta)
 class BackendEntity(object):
     """An first-class entity in the backend"""
-
-    # pylint: disable=useless-object-inheritance
 
     def __init__(self, backend):
         self._backend = backend

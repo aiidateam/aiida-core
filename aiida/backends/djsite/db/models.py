@@ -153,21 +153,21 @@ class DbNode(m.Model):
         """
         thistype = self.node_type
         # Fix for base class
-        if thistype == "":
-            thistype = "node.Node."
-        if not thistype.endswith("."):
+        if thistype == '':
+            thistype = 'node.Node.'
+        if not thistype.endswith('.'):
             return invalid_result
         else:
             thistype = thistype[:-1]  # Strip final dot
             return thistype.rpartition('.')[2]
 
     def __str__(self):
-        simplename = self.get_simple_name(invalid_result="Unknown")
+        simplename = self.get_simple_name(invalid_result='Unknown')
         # node pk + type
         if self.label:
-            return "{} node [{}]: {}".format(simplename, self.pk, self.label)
+            return '{} node [{}]: {}'.format(simplename, self.pk, self.label)
         else:
-            return "{} node [{}]".format(simplename, self.pk)
+            return '{} node [{}]'.format(simplename, self.pk)
 
 
 @python_2_unicode_compatible
@@ -185,10 +185,10 @@ class DbLink(m.Model):
     type = m.CharField(max_length=255, db_index=True, blank=True)
 
     def __str__(self):
-        return "{} ({}) --> {} ({})".format(
-            self.input.get_simple_name(invalid_result="Unknown node"),
+        return '{} ({}) --> {} ({})'.format(
+            self.input.get_simple_name(invalid_result='Unknown node'),
             self.input.pk,
-            self.output.get_simple_name(invalid_result="Unknown node"),
+            self.output.get_simple_name(invalid_result='Unknown node'),
             self.output.pk, )
 
 
@@ -222,8 +222,8 @@ class DbSetting(m.Model):
         setting.key = key
         setting.val = value
         setting.time = timezone.datetime.now(tz=UTC)
-        if "description" in other_attribs.keys():
-            setting.description = other_attribs["description"]
+        if 'description' in other_attribs.keys():
+            setting.description = other_attribs['description']
         setting.save()
 
     def getvalue(self):
@@ -265,7 +265,7 @@ class DbGroup(m.Model):
     label = m.CharField(max_length=255, db_index=True)
     # The type_string of group: a user group, a pseudopotential group,...
     # User groups have type_string equal to an empty string
-    type_string = m.CharField(default="", max_length=255, db_index=True)
+    type_string = m.CharField(default='', max_length=255, db_index=True)
     dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
     # Creation time
     time = m.DateTimeField(default=timezone.now, editable=False)
@@ -277,7 +277,7 @@ class DbGroup(m.Model):
                         related_name='dbgroups')
 
     class Meta:
-        unique_together = (("label", "type_string"),)
+        unique_together = (('label', 'type_string'),)
 
     def __str__(self):
         return '<DbGroup [type_string: {}] "{}">'.format(self.type_string, self.label)
@@ -348,13 +348,13 @@ class DbAuthInfo(m.Model):
     enabled = m.BooleanField(default=True)
 
     class Meta:
-        unique_together = (("aiidauser", "dbcomputer"),)
+        unique_together = (('aiidauser', 'dbcomputer'),)
 
     def __str__(self):
         if self.enabled:
-            return "DB authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
+            return 'DB authorization info for {} on {}'.format(self.aiidauser.email, self.dbcomputer.name)
         else:
-            return "DB authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
+            return 'DB authorization info for {} on {} [DISABLED]'.format(self.aiidauser.email, self.dbcomputer.name)
 
 
 @python_2_unicode_compatible
@@ -369,8 +369,8 @@ class DbComment(m.Model):
     content = m.TextField(blank=True)
 
     def __str__(self):
-        return "DbComment for [{} {}] on {}".format(self.dbnode.get_simple_name(),
-                                                    self.dbnode.pk, timezone.localtime(self.ctime).strftime("%Y-%m-%d"))
+        return 'DbComment for [{} {}] on {}'.format(self.dbnode.get_simple_name(),
+                                                    self.dbnode.pk, timezone.localtime(self.ctime).strftime('%Y-%m-%d'))
 
 
 @python_2_unicode_compatible

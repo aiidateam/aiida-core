@@ -39,7 +39,7 @@ not exist).
 .. note:: As you can see in the example above, both the cell coordinates and
   the atom coordinates are expressed in angstrom, and the position of
   the atoms are given in a global absolute reference frame.
-  
+
 In this way, any periodic structure can be defined. If you want to import
 from ASE in order to specify the coordinates, e.g., in terms of the crystal
 lattice vectors, see the guide on the conversion to/from ASE below.
@@ -87,13 +87,13 @@ and if the sum of all weights is smaller than one.
 .. note:: if you pass more than one symbol, the property ``s.is_alloy`` will
   always be ``True``, even if only one symbol has occupancy 1 and
   all others have occupancy zero::
-    
+
     >>> s = StructureData(cell=[[4,0,0],[0,4,0],[0,0,4]])
     >>> s.append_atom(position=(0.,0.,0.), symbols=['Fe', 'O'], weights=[1.,0.])
     >>> s.is_alloy
     True
- 
-   
+
+
 Internals: Kinds and Sites
 --------------------------
 Internally, the :py:meth:`~aiida.orm.nodes.data.structure.StructureData.append_atom`
@@ -120,7 +120,7 @@ the following way:
   of kinds of the structure (e.g., in the same atom with the same mass was
   already previously added). Comparison of kinds is performed using
   :py:meth:`aiida.orm.nodes.data.structure.Kind.compare_with`, and in particular
-  it returns ``True`` if the mass and the list of symbols and of weights are 
+  it returns ``True`` if the mass and the list of symbols and of weights are
   identical (within a threshold). If an identical kind ``k`` is found,
   it simply adds a new site referencing to kind ``k`` and with the provided
   ``position``. Otherwise, it appends ``k`` to the list of kinds of the current
@@ -131,45 +131,45 @@ the following way:
 * If you pass more than one species for the same chemical symbol, but e.g. with
   different masses, a new kind is created and the name is obtained postponing
   an integer to the chemical symbol name. For instance, the following lines::
-  
+
     s.append_atom(position = [0,0,0], symbols='Fe', mass = 55.8)
     s.append_atom(position = [1,1,1], symbols='Fe', mass = 57)
     s.append_atom(position = [1,1,1], symbols='Fe', mass = 59)
-  
+
   will automatically create three kinds, all for iron, with names ``Fe``,
   ``Fe1`` and ``Fe2``, and masses 55.8, 57. and 59. respecively.
-  
-* In case of alloys, the kind name is obtained concatenating all chemical 
+
+* In case of alloys, the kind name is obtained concatenating all chemical
   symbols names (and a X is the sum of weights is less than one). The same
   rules as above are used to append a digit to the kind name, if needed.
 
-* Finally, you can simply specify the kind_name to automatically generate a 
+* Finally, you can simply specify the kind_name to automatically generate a
   new kind with a specific name. This is the case if you want a name different
   from the automatically generated one, or for instance if you want to create
   two different species with the same properties (same mass, symbols, ...).
-  This is for instance the case in Quantum ESPRESSO in order to describe an 
+  This is for instance the case in Quantum ESPRESSO in order to describe an
   antiferromagnetic cyrstal, with different magnetizations on the different
   atoms in the unit cell.
-  
+
   In this case, you can for instance use::
-  
+
     s.append_atom(position = [0,0,0], symbols='Fe', mass = 55.845, name='Fe1')
     s.append_atom(position = [2,2,2], symbols='Fe', mass = 55.845, name='Fe2')
-  
+
   To create two species ``Fe1`` and ``Fe2`` for iron, with the same mass.
-  
+
   .. note:: You do not need to specify explicitly the mass if the default one
     is ok for you. However, when you pass explicitly a name and it coincides
     with the name of an existing species, all properties that you
-    specify must be identical to the ones of the existing species, or the 
+    specify must be identical to the ones of the existing species, or the
     method will raise an exception.
-  
-  .. note:: If you prefer to work with the 
-    internal :py:class:`~aiida.orm.nodes.data.structure.Kind` 
+
+  .. note:: If you prefer to work with the
+    internal :py:class:`~aiida.orm.nodes.data.structure.Kind`
     and :py:class:`~aiida.orm.nodes.data.structure.Site` classes,
     you can obtain the same
     result of the two lines above with::
-    
+
       from aiida.orm.nodes.data.structure import Kind, Site
       s.append_kind(Kind(symbols='Fe', mass=55.845, name='Fe1'))
       s.append_kind(Kind(symbols='Fe', mass=55.845, name='Fe1'))
@@ -183,7 +183,7 @@ Conversion to/from ASE
 If you have an AiiDA structure ``s``, you can get an ``ase.Atom`` object by
 just calling the :py:class:`~aiida.orm.nodes.data.structure.StructureData.get_ase`
 method::
-    
+
     ase_atoms = s.get_ase()
 
 .. note:: As we support alloys and vacancies in AiiDA, while ``ase.Atom`` does not,
@@ -196,12 +196,12 @@ from it, just pass it when initializing the class::
       # or:
       # from aiida.orm import StructureData
       aiida_structure = StructureData(ase = ase_atoms)
-      
+
 Creating multiple species
 +++++++++++++++++++++++++
 
 We implemented the possibility of specifying different Kinds (species) in the
-``ase.atoms`` and then importing them. 
+``ase.atoms`` and then importing them.
 
 In particular, if you specify atoms with different mass in ASE, during the
 import phase different kinds will be created::
@@ -217,9 +217,9 @@ import phase different kinds will be created::
   >>>     print(kind.name, kind.mass)
   Fe 55.0
   Fe1 56.0
-  
+
 Moreover, even if the mass is the same, but you want to get different species,
-you can use the ASE ``tags`` to specify the number to append to the element 
+you can use the ASE ``tags`` to specify the number to append to the element
 symbol in order to get the species name::
 
   >>> import ase
@@ -233,7 +233,7 @@ symbol in order to get the species name::
   >>>     print(kind.name)
   Fe1
   Fe2
-  
+
 .. note:: in complicated cases (multiple tags, masses, ...),
   it is possible that exporting a AiiDA structure
   to ASE and then importing it again will not perfectly preserve the kinds and

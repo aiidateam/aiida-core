@@ -16,7 +16,7 @@ PERPAGE_DEFAULT = 20
 
 ##Version prefix for all the URLs (in most cases, you need to omit trailing
 # slash)
-PREFIX="/api/v3"
+PREFIX='/api/v3'
 
 
 """

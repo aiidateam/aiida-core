@@ -39,4 +39,5 @@ def downgrade():
     """Migrations for the downgrade."""
     op.add_column(
         'db_dbcomputer',
-        sa.Column('transport_params', postgresql.JSONB(astext_type=sa.Text()), autoincrement=False, nullable=True))
+        sa.Column('transport_params', postgresql.JSONB(astext_type=sa.Text()), autoincrement=False, nullable=True)
+    )

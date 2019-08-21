@@ -27,12 +27,12 @@ class CalculationTranslator(NodeTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "calculations"
+    __label__ = 'calculations'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import CalculationNode
     _aiida_class = CalculationNode
     # The string name of the AiiDA class
-    _aiida_type = "process.calculation.calculation.CalculationNode"
+    _aiida_type = 'process.calculation.calculation.CalculationNode'
 
     _result_type = __label__
 
@@ -48,43 +48,43 @@ class CalculationTranslator(NodeTranslator):
         # All the values from column_order must present in additional info dict
         # Note: final schema will contain details for only the fields present in column order
         self._schema_projections = {
-            "column_order": [
-                "id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes.state",
-                "attributes", "extras"
+            'column_order': [
+                'id', 'label', 'node_type', 'ctime', 'mtime', 'uuid', 'user_id', 'user_email', 'attributes.state',
+                'attributes', 'extras'
             ],
-            "additional_info": {
-                "id": {
-                    "is_display": True
+            'additional_info': {
+                'id': {
+                    'is_display': True
                 },
-                "label": {
-                    "is_display": False
+                'label': {
+                    'is_display': False
                 },
-                "node_type": {
-                    "is_display": True
+                'node_type': {
+                    'is_display': True
                 },
-                "ctime": {
-                    "is_display": True
+                'ctime': {
+                    'is_display': True
                 },
-                "mtime": {
-                    "is_display": True
+                'mtime': {
+                    'is_display': True
                 },
-                "uuid": {
-                    "is_display": False
+                'uuid': {
+                    'is_display': False
                 },
-                "user_id": {
-                    "is_display": False
+                'user_id': {
+                    'is_display': False
                 },
-                "user_email": {
-                    "is_display": True
+                'user_email': {
+                    'is_display': True
                 },
-                "attributes.state": {
-                    "is_display": True
+                'attributes.state': {
+                    'is_display': True
                 },
-                "attributes": {
-                    "is_display": False
+                'attributes': {
+                    'is_display': False
                 },
-                "extras": {
-                    "is_display": False
+                'extras': {
+                    'is_display': False
                 }
             }
         }
@@ -127,27 +127,27 @@ class CalculationTranslator(NodeTranslator):
         :param node: aiida node
         :return: the retrieved input files for job calculation
         """
-        if node.node_type.startswith("process.calculation.calcjob"):
+        if node.node_type.startswith('process.calculation.calcjob'):
 
             if filename is not None:
                 response = {}
 
                 if rtype is None:
-                    rtype = "download"
+                    rtype = 'download'
 
-                if rtype == "download":
+                if rtype == 'download':
                     try:
                         content = node.get_object_content(filename)
                     except IOError:
-                        error = "Error in getting {} content".format(filename)
+                        error = 'Error in getting {} content'.format(filename)
                         raise RestInputValidationError(error)
 
-                    response["status"] = 200
-                    response["data"] = content
-                    response["filename"] = filename.replace("/", "_")
+                    response['status'] = 200
+                    response['data'] = content
+                    response['filename'] = filename.replace('/', '_')
 
                 else:
-                    raise RestInputValidationError("rtype is not supported")
+                    raise RestInputValidationError('rtype is not supported')
 
                 return response
 
@@ -164,34 +164,34 @@ class CalculationTranslator(NodeTranslator):
         :param node: aiida node
         :return: the retrieved output files for job calculation
         """
-        if node.node_type.startswith("process.calculation.calcjob"):
+        if node.node_type.startswith('process.calculation.calcjob'):
 
             retrieved_folder_node = node.outputs.retrieved
             response = {}
 
             if retrieved_folder_node is None:
-                response["status"] = 200
-                response["data"] = "This node does not have retrieved folder"
+                response['status'] = 200
+                response['data'] = 'This node does not have retrieved folder'
                 return response
 
             if filename is not None:
 
                 if rtype is None:
-                    rtype = "download"
+                    rtype = 'download'
 
-                if rtype == "download":
+                if rtype == 'download':
                     try:
                         content = retrieved_folder_node.get_object_content(filename)
                     except IOError:
-                        error = "Error in getting {} content".format(filename)
+                        error = 'Error in getting {} content'.format(filename)
                         raise RestInputValidationError(error)
 
-                    response["status"] = 200
-                    response["data"] = content
-                    response["filename"] = filename.replace("/", "_")
+                    response['status'] = 200
+                    response['data'] = content
+                    response['filename'] = filename.replace('/', '_')
 
                 else:
-                    raise RestInputValidationError("rtype is not supported")
+                    raise RestInputValidationError('rtype is not supported')
 
                 return response
 

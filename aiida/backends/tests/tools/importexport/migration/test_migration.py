@@ -71,15 +71,15 @@ class TestExportFileMigration(AiidaTestCase):
         import tarfile
         import zipfile
 
-        from aiida.common.archive import extract_tar, extract_zip
         from aiida.common.exceptions import NotExistent
         from aiida.common.folders import SandboxFolder
         from aiida.common.json import load as jsonload
+        from aiida.tools.importexport.common.archive import extract_tar, extract_zip
 
         # Get metadata.json and data.json as dicts from v0.1 file archive
         # Cannot use 'get_json_files' for 'export_v0.1_simple.aiida',
         # because we need to pass the SandboxFolder to 'migrate_recursively'
-        dirpath_archive = get_archive_file("export_v0.1_simple.aiida", **self.core_archive)
+        dirpath_archive = get_archive_file('export_v0.1_simple.aiida', **self.core_archive)
 
         with SandboxFolder(sandbox_in_repo=False) as folder:
             if zipfile.is_zipfile(dirpath_archive):
@@ -155,7 +155,8 @@ class TestExportFileMigration(AiidaTestCase):
             self.assertNotIn(
                 version,
                 legal_versions,
-                msg="'{}' was not expected to be a legal version, legal version: {}".format(version, legal_versions))
+                msg="'{}' was not expected to be a legal version, legal version: {}".format(version, legal_versions)
+            )
 
         # Make sure migrate_recursively throws a critical message and raises SystemExit
         for metadata in wrong_version_metadatas:
@@ -166,11 +167,13 @@ class TestExportFileMigration(AiidaTestCase):
                     'Critical: Cannot migrate from version {}'.format(metadata['export_version']),
                     exception.exception,
                     msg="Expected a critical statement for the wrong export version '{}', "
-                    "instead got {}".format(metadata['export_version'], exception.exception))
+                    'instead got {}'.format(metadata['export_version'], exception.exception)
+                )
                 self.assertIsNone(
                     new_version,
-                    msg="migrate_recursively should not return anything, "
-                    "hence the 'return' should be None, but instead it is {}".format(new_version))
+                    msg='migrate_recursively should not return anything, '
+                    "hence the 'return' should be None, but instead it is {}".format(new_version)
+                )
 
     def test_migrate_newest_version(self):
         """
@@ -185,14 +188,17 @@ class TestExportFileMigration(AiidaTestCase):
 
             self.assertIn(
                 'Critical: Your export file is already at the newest export version {}'.format(
-                    metadata['export_version']),
+                    metadata['export_version']
+                ),
                 exception.exception,
                 msg="Expected a critical statement that the export version '{}' is the newest export version '{}', "
-                "instead got {}".format(metadata['export_version'], newest_version, exception.exception))
+                'instead got {}'.format(metadata['export_version'], newest_version, exception.exception)
+            )
             self.assertIsNone(
                 new_version,
-                msg="migrate_recursively should not return anything, "
-                "hence the 'return' should be None, but instead it is {}".format(new_version))
+                msg='migrate_recursively should not return anything, '
+                "hence the 'return' should be None, but instead it is {}".format(new_version)
+            )
 
     @with_temp_dir
     def test_v02_to_newest(self, temp_dir):
@@ -223,8 +229,10 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg="There should be {} StructureData, instead {} were/was found".format(
-                self.struct_count, builder.count()))
+            msg='There should be {} StructureData, instead {} were/was found'.format(
+                self.struct_count, builder.count()
+            )
+        )
         for structures in builder.all():
             structure = structures[0]
             self.assertEqual(structure.label, self.known_struct_label)
@@ -276,8 +284,10 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg="There should be {} StructureData, instead {} were/was found".format(
-                self.struct_count, builder.count()))
+            msg='There should be {} StructureData, instead {} were/was found'.format(
+                self.struct_count, builder.count()
+            )
+        )
         for structures in builder.all():
             structure = structures[0]
             self.assertEqual(structure.label, self.known_struct_label)
@@ -329,8 +339,10 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg="There should be {} StructureData, instead {} were/was found".format(
-                self.struct_count, builder.count()))
+            msg='There should be {} StructureData, instead {} were/was found'.format(
+                self.struct_count, builder.count()
+            )
+        )
         for structures in builder.all():
             structure = structures[0]
             self.assertEqual(structure.label, self.known_struct_label)
@@ -382,8 +394,10 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg="There should be {} StructureData, instead {} were/was found".format(
-                self.struct_count, builder.count()))
+            msg='There should be {} StructureData, instead {} were/was found'.format(
+                self.struct_count, builder.count()
+            )
+        )
         for structures in builder.all():
             structure = structures[0]
             self.assertEqual(structure.label, self.known_struct_label)
@@ -435,8 +449,10 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg="There should be {} StructureData, instead {} were/was found".format(
-                self.struct_count, builder.count()))
+            msg='There should be {} StructureData, instead {} were/was found'.format(
+                self.struct_count, builder.count()
+            )
+        )
         for structures in builder.all():
             structure = structures[0]
             self.assertEqual(structure.label, self.known_struct_label)

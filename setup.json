@@ -86,6 +86,7 @@
     ],
     "atomic_tools": [
       "spglib==1.12.2.post0",
+      "monty==2.0.4",
       "pymatgen<=2018.12.12",
       "ase==3.17.0",
       "PyMySQL==0.9.3",

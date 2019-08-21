@@ -828,14 +828,11 @@ class Process(plumpy.Process):
 
         return AttributeDict(exposed_inputs)
 
-    def exposed_outputs(self, process_instance, process_class, namespace=None, agglomerate=True):
-        """
-        Gather the outputs which were exposed from the ``process_class`` and emitted by the specific
-        ``process_instance`` in a dictionary.
+    def exposed_outputs(self, node, process_class, namespace=None, agglomerate=True):
+        """Return the outputs which were exposed from the ``process_class`` and emitted by the specific ``node``
 
-        :param process_instance: Instance of Process class whose outputs to try and retrieve
-        :type process_instance: :class:`aiida.engine.Process`
-
+        :param node: process node whose outputs to try and retrieve
+        :type node: :class:`aiida.orm.nodes.process.ProcessNode`
 
         :param namespace: Namespace in which to search for exposed outputs.
         :type namespace: str
@@ -853,8 +850,9 @@ class Process(plumpy.Process):
         output_key_map = {}
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
+        link_types = (LinkType.CREATE, LinkType.RETURN)
         process_outputs_dict = {
-            entry.link_label: entry.node for entry in process_instance.get_outgoing(link_type=LinkType.RETURN)
+            entry.link_label: entry.node for entry in node.get_outgoing(link_type=link_types)
         }
 
         for port_name in process_outputs_dict:

@@ -67,7 +67,7 @@ The :py:class:`~aiida.orm.nodes.Node` can be annotated with labels, description 
 *Description management:*
 
 - :py:attr:`~aiida.orm.nodes.Node.description`: returns the description of the node (more detailed than the label).
-  It can also be used to *change* the description, e.g. ``mydnode.description = "new description"``.
+  It can also be used to *change* the description, e.g. ``mynode.description = "new description"``.
 
 *Comment management:*
 

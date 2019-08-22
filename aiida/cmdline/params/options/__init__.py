@@ -386,6 +386,12 @@ TIMEOUT = OverridableOption(
     help='Time in seconds to wait for a response before timing out.'
 )
 
+WAIT = OverridableOption(
+    '--wait/--no-wait',
+    default=False,
+    help='Wait for the action to be completed otherwise return as soon as it is scheduled.'
+)
+
 FORMULA_MODE = OverridableOption(
     '-f',
     '--formula-mode',
@@ -400,7 +406,7 @@ TRAJECTORY_INDEX = OverridableOption(
     'trajectory_index',
     type=click.INT,
     default=None,
-    help='Specific step of the Trajecotry to select.'
+    help='Specific step of the Trajectory to select.'
 )
 
 WITH_ELEMENTS = OverridableOption(

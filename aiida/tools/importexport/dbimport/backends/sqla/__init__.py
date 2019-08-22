@@ -380,10 +380,9 @@ def import_data_sqla(
                         # Why the copy:
                         new_entries[entity_name] = data['export_data'][entity_name].copy()
 
-            # Show Comment mode if not silent and Comments exist in existing_entries
+            # Show Comment mode if not silent
             if not silent:
-                if COMMENT_ENTITY_NAME in existing_entries:
-                    print('Comment mode: {}'.format(comment_mode))
+                print('Comment mode: {}'.format(comment_mode))
 
             # I import data from the given model
             for entity_sig in entity_sig_order:

@@ -149,20 +149,15 @@ class TestVerdiImport(AiidaTestCase):
         self.assertFalse(group.is_empty, msg='The Group should not be empty.')
 
     def test_comment_mode(self):
-        """Test comment mode flag works as intended"""
+        """Test toggling comment mode flag"""
         archives = [get_archive_file(self.newest_archive, filepath=self.archive_path)]
 
-        options = ['--comment-mode', 'newest'] + archives
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertIn('Comment mode: newest', result.output)
-        self.assertEqual(result.exit_code, 0, result.output)
-
-        options = ['--comment-mode', 'overwrite'] + archives
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertIn('Comment mode: overwrite', result.output)
-        self.assertEqual(result.exit_code, 0, result.output)
+        for mode in {'newest', 'overwrite'}:
+            options = ['--comment-mode', mode] + archives
+            result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+            self.assertIsNone(result.exception, result.output)
+            self.assertIn('Comment mode: {}'.format(mode), result.output)
+            self.assertEqual(result.exit_code, 0, result.output)
 
     def test_import_old_local_archives(self):
         """ Test import of old local archives

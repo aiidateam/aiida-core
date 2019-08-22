@@ -199,7 +199,6 @@ class AiidaApi(Api):
         self.add_resource(
             Code,
             '/codes/',
-            '/codes/types/',
             '/codes/schema/',
             '/codes/page/',
             '/codes/page/<int:page>/',

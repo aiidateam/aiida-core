@@ -559,11 +559,11 @@ class NodeTranslator(BaseTranslator):
         qb_obj.append(self._aiida_class, project=['node_type'])
         qb_response = qb_obj.distinct().all()
         results = {}
-        if len(qb_response) > 0:
+        if qb_response:
             for ntype in qb_response:
                 ntype = ntype[0]
                 ntype_parts = ntype.split('.')
-                if len(ntype_parts) > 0:
+                if ntype_parts:
                     dict_key = ntype_parts[0]
                     if dict_key not in results.keys():
                         results[dict_key] = []

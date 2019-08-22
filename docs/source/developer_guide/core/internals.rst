@@ -5,13 +5,13 @@ AiiDA internals
 Node
 ++++
 
-The :py:class:`~aiida.orm.nodes.node.Node` class is the basic class that represents all the possible objects at the AiiDA world.
-More precisely it is inherited by many classes including (among others) the :py:class:`~aiida.orm.nodes.process.ProcessNode` class, representing computations that convert data into a different form, the :py:class:`~aiida.orm.nodes.data.code.Code` class representing executables and file collections that are used by calculations and the :py:class:`~aiida.orm.nodes.data.data.Data` class which represents data that can be input or output of calculations.
+All nodes in an AiiDA provenance graph inherit from the :py:class:`~aiida.orm.nodes.node.Node` class.
+Among those are the :py:class:`~aiida.orm.nodes.data.data.Data` class, the :py:class:`~aiida.orm.nodes.process.process.ProcessNode` class representing computations that transform data, and the :py:class:`~aiida.orm.nodes.data.code.Code` class representing executables (and file collections that are used by calculations).
 
 
 Immutability concept
 ********************
-A node can store information through attributes.
+A node can store information in attributes.
 Since AiiDA guarantees a certain level of provenance, these attributes become immutable as soon as the node is stored.
 This means that as soon as a node is stored, any attempt to alter its attributes, changing its value or deleting it altogether, shall be met with a raised exception.
 Certain subclasses of nodes need to adapt this behavior however, as for example in the case of the :py:class:`~aiida.orm.nodes.process.process.ProcessNode` class (see `calculation updatable attributes`_), but since the immutability of stored nodes is a core concept of AiiDA, this behavior is nonetheless enforced on the node level.

@@ -150,7 +150,7 @@ class Utils(object):
         return [f for f in path.split('/') if f]
 
     def parse_path(self, path_string, parse_pk_uuid=None):
-        # pylint: disable=too-many-return-statements,too-many-branches
+        # pylint: disable=too-many-return-statements,too-many-branches, too-many-statements
         """
         Takes the path and parse it checking its validity. Does not parse "io",
         "content" fields. I do not check the validity of the path, since I assume
@@ -214,13 +214,19 @@ class Utils(object):
         if path[0] == 'schema':
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError('url requesting schema resources do not admit further fields')
+                raise RestInputValidationError('url requesting schema resources do not accept further fields')
             else:
                 return (resource_type, page, node_id, query_type)
         elif path[0] == 'statistics':
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError('url requesting statistics resources do not admit further fields')
+                raise RestInputValidationError('url requesting statistics resources do not accept further fields')
+            else:
+                return (resource_type, page, node_id, query_type)
+        elif path[0] == 'types':
+            query_type = path.pop(0)
+            if path:
+                raise RestInputValidationError('url requesting types do not accept further fields')
             else:
                 return (resource_type, page, node_id, query_type)
         elif path[0] == 'io' or path[0] == 'content':

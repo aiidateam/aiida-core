@@ -129,6 +129,7 @@ class AiidaApi(Api):
             '/nodes/',
             '/nodes/schema/',
             '/nodes/statistics/',
+            '/nodes/types/',
             '/nodes/page/',
             '/nodes/page/<int:page>/',
             '/nodes/<id>/',
@@ -150,6 +151,7 @@ class AiidaApi(Api):
         self.add_resource(
             Calculation,
             '/calculations/',
+            '/calculations/types/',
             '/calculations/schema/',
             '/calculations/page/',
             '/calculations/page/<int:page>/',
@@ -173,6 +175,7 @@ class AiidaApi(Api):
         self.add_resource(
             Data,
             '/data/',
+            '/data/types/',
             '/data/schema/',
             '/data/page/',
             '/data/page/<int:page>',

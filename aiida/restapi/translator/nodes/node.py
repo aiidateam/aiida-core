@@ -555,14 +555,14 @@ class NodeTranslator(BaseTranslator):
         """
         from aiida.orm.querybuilder import QueryBuilder
 
-        qb = QueryBuilder()
-        qb.append(self._aiida_class, project=["node_type"])
-        qb_response = qb.distinct().all()
+        qb_obj = QueryBuilder()
+        qb_obj.append(self._aiida_class, project=['node_type'])
+        qb_response = qb_obj.distinct().all()
         results = {}
         if len(qb_response) > 0:
             for ntype in qb_response:
                 ntype = ntype[0]
-                ntype_parts = ntype.split(".")
+                ntype_parts = ntype.split('.')
                 if len(ntype_parts) > 0:
                     dict_key = ntype_parts[0]
                     if dict_key not in results.keys():

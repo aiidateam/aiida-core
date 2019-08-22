@@ -263,7 +263,7 @@ class Node(Resource):
                 usr = None
             results = self.trans.get_statistics(usr)
 
-        elif query_type == "types":
+        elif query_type == 'types':
             headers = self.utils.build_headers(url=request.url, total_count=0)
             results = self.trans.get_types()
 

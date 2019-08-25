@@ -320,15 +320,17 @@ class Waiting(plumpy.Waiting):
         else:
             command = self.data
 
-        node.set_process_status('Waiting for transport task: {}'.format(command))
+        process_status = 'Waiting for transport task: {}'.format(command)
 
         try:
 
             if command == UPLOAD_COMMAND:
+                node.set_process_status(process_status)
                 calc_info, script_filename = yield self._launch_task(task_upload_job, node, transport_queue, *args)
                 raise Return(self.submit(calc_info, script_filename))
 
             elif command == SUBMIT_COMMAND:
+                node.set_process_status(process_status)
                 yield self._launch_task(task_submit_job, node, transport_queue, *args)
                 raise Return(self.update())
 
@@ -336,11 +338,16 @@ class Waiting(plumpy.Waiting):
                 job_done = False
 
                 while not job_done:
+                    scheduler_state = node.get_scheduler_state()
+                    scheduler_state_string = scheduler_state.name if scheduler_state else 'UNKNOWN'
+                    process_status = 'Monitoring scheduler: job state {}'.format(scheduler_state_string)
+                    node.set_process_status(process_status)
                     job_done = yield self._launch_task(task_update_job, node, self.process.runner.job_manager)
 
                 raise Return(self.retrieve())
 
             elif self.data == RETRIEVE_COMMAND:
+                node.set_process_status(process_status)
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
                 temp_folder = tempfile.mkdtemp()
                 yield self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)

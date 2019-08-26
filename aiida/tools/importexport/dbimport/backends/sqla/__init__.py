@@ -16,6 +16,8 @@ import tarfile
 import zipfile
 from itertools import chain
 
+from tqdm import tqdm
+
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType
@@ -26,7 +28,9 @@ from aiida.orm.utils.repository import Repository
 
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
-from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.config import (
+    DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER, BAR_FORMAT
+)
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
@@ -260,6 +264,15 @@ def import_data_sqla(
         ###############
         # IMPORT DATA #
         ###############
+        # Show Comment mode if not silent
+        if not silent or debug:
+            print('Comment mode: {}'.format(comment_mode))
+
+        # Show the respective Extras modes if not silent
+        if not silent or debug:
+            print('New Node Extras mode: {}'.format(extras_mode_new))
+            print('Existing Node Extras mode: {}'.format(extras_mode_existing))
+
         # DO ALL WITH A TRANSACTION
         import aiida.backends.sqlalchemy
 
@@ -272,6 +285,15 @@ def import_data_sqla(
 
             if debug:
                 print('GENERATING LIST OF DATA...')
+
+            if not silent:
+                # Instantiate progress bar
+                progress_bar = tqdm(total=1, bar_format=BAR_FORMAT, leave=True)
+                pbar_base_str = 'Generating list of data - '
+
+                # Get total entities from data.json
+                # To be used with progress bar
+                number_of_entities = 0
 
             # I first generate the list of data
             for entity_sig in entity_sig_order:
@@ -291,24 +313,27 @@ def import_data_sqla(
                     if debug:
                         print('  {}...'.format(entity_name))
 
+                    if not silent:
+                        progress_bar.set_description_str(pbar_base_str + entity_name)
+                        number_of_entities += len(data['export_data'][entity_name])
+
                     if unique_identifier is not None:
                         import_unique_ids = set(v[unique_identifier] for v in data['export_data'][entity_name].values())
 
-                        relevant_db_entries = dict()
+                        relevant_db_entries = {}
                         if import_unique_ids:
                             builder = QueryBuilder()
-                            builder.append(
-                                entity,
-                                filters={unique_identifier: {
-                                    'in': import_unique_ids
-                                }},
-                                project=['*'],
-                                tag='res'
-                            )
-                            relevant_db_entries = {
-                                str(getattr(v[0], unique_identifier)):  # str() to convert UUID() to string
-                                v[0] for v in builder.all()
-                            }
+                            builder.append(entity, filters={unique_identifier: {'in': import_unique_ids}}, project='*')
+
+                            if silent:
+                                relevant_db_entries = {getattr(v[0], unique_identifier): v[0] for v in builder.all()}
+                            elif builder.count():
+                                progress_bar.reset(total=builder.count())
+                                for object_ in builder.iterall():
+                                    progress_bar.update()
+                                    progress_bar.refresh()
+
+                                    relevant_db_entries.update({getattr(object_[0], unique_identifier): object_[0]})
 
                             foreign_ids_reverse_mappings[entity_name] = {
                                 k: v.pk for k, v in relevant_db_entries.items()
@@ -386,16 +411,10 @@ def import_data_sqla(
                         # Why the copy:
                         new_entries[entity_name] = data['export_data'][entity_name].copy()
 
-            # Show Comment mode if not silent
-            if not silent or debug:
-                print('Comment mode: {}'.format(comment_mode))
-
-            # Show the respective Extras modes if not silent and there are Nodes in existing_entries or new_entries
-            if not silent or debug:
-                if new_entries[NODE_ENTITY_NAME]:
-                    print('New Node Extras mode: {}'.format(extras_mode_new))
-                if existing_entries[NODE_ENTITY_NAME]:
-                    print('Existing Node Extras mode: {}'.format(extras_mode_existing))
+            if not silent:
+                # Progress bar - reset for import
+                progress_bar.reset(total=number_of_entities)
+                reset_progress_bar = {}
 
             # I import data from the given model
             for entity_sig in entity_sig_order:
@@ -404,7 +423,22 @@ def import_data_sqla(
                 fields_info = metadata['all_fields_info'].get(entity_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, '')
 
+                if not silent:
+                    # Progress bar initialization - Model
+                    if reset_progress_bar:
+                        progress_bar.reset(total=reset_progress_bar['total'])
+                        progress_bar.n = reset_progress_bar['n']
+                        reset_progress_bar = {}
+                    pbar_base_str = '{}s - '.format(entity_name)
+                    progress_bar.set_description_str(pbar_base_str + 'Initializing')
+
                 # EXISTING ENTRIES
+                if not silent and existing_entries[entity_name]:
+                    # Progress bar update - Model
+                    progress_bar.set_description_str(
+                        pbar_base_str + '{} existing entries'.format(len(existing_entries[entity_name]))
+                    )
+
                 for import_entry_pk, entry_data in existing_entries[entity_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_pk = foreign_ids_reverse_mappings[entity_name][unique_id]
@@ -440,6 +474,12 @@ def import_data_sqla(
                 import_new_entry_pks = dict()
 
                 # NEW ENTRIES
+                if not silent and new_entries[entity_name]:
+                    # Progress bar update - Model
+                    progress_bar.set_description_str(
+                        pbar_base_str + '{} new entries'.format(len(new_entries[entity_name]))
+                    )
+
                 for import_entry_pk, entry_data in new_entries[entity_name].items():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(
@@ -489,6 +529,11 @@ def import_data_sqla(
                         import_entry_uuid = object_.uuid
                         import_entry_pk = import_new_entry_pks[import_entry_uuid]
 
+                        if not silent:
+                            # Progress bar initialization - Node
+                            progress_bar.update()
+                            pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
+
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
                         subfolder = folder.get_subfolder(
@@ -502,11 +547,15 @@ def import_data_sqla(
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing previous folders, and move the files
                         # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
+                        if not silent:
+                            progress_bar.set_description_str(pbar_node_base_str + 'Repository')
                         destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
                         # For Nodes, we also have to store Attributes!
                         if debug:
                             print('STORING NEW NODE ATTRIBUTES...')
+                        if not silent:
+                            progress_bar.set_description_str(pbar_node_base_str + 'Attributes')
 
                         # Get attributes from import file
                         try:
@@ -520,6 +569,8 @@ def import_data_sqla(
                         if extras_mode_new == 'import':
                             if debug:
                                 print('STORING NEW NODE EXTRAS...')
+                            if not silent:
+                                progress_bar.set_description_str(pbar_node_base_str + 'Extras')
 
                             # Get extras from import file
                             try:
@@ -556,6 +607,12 @@ def import_data_sqla(
                         import_entry_uuid = str(node.uuid)
                         import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 
+                        if not silent:
+                            # Progress bar initialization - Node
+                            progress_bar.update()
+                            pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
+                            progress_bar.set_description_str(pbar_node_base_str + 'Extras')
+
                         # Get extras from import file
                         try:
                             extras = data['node_extras'][str(import_entry_pk)]
@@ -574,6 +631,13 @@ def import_data_sqla(
                         flag_modified(node, 'extras')
                         objects_to_update.append(node)
 
+                elif not silent:
+                    # Update progress bar with new non-Node entries
+                    progress_bar.update(n=len(existing_entries[entity_name]) + len(new_entries[entity_name]))
+
+                if not silent:
+                    progress_bar.set_description_str(pbar_base_str + 'Storing')
+
                 # Store them all in once; However, the PK are not set in this way...
                 if objects_to_create:
                     session.add_all(objects_to_create)
@@ -582,19 +646,32 @@ def import_data_sqla(
 
                 session.flush()
 
+                just_saved = {}
                 if import_new_entry_pks.keys():
+                    if not silent:
+                        reset_progress_bar = {'total': progress_bar.total, 'n': progress_bar.n}
+                        progress_bar.reset(total=len(import_new_entry_pks))
+
                     builder = QueryBuilder()
                     builder.append(
                         entity,
                         filters={unique_identifier: {
                             'in': list(import_new_entry_pks.keys())
                         }},
-                        project=[unique_identifier, 'id'],
-                        tag='res'
+                        project=[unique_identifier, 'id']
                     )
-                    just_saved = {v[0]: v[1] for v in builder.all()}
-                else:
-                    just_saved = dict()
+
+                    if silent:
+                        just_saved = {v[0]: v[1] for v in builder.all()}
+                    else:
+                        for entry in builder.iterall():
+                            progress_bar.update()
+                            progress_bar.refresh()
+
+                            just_saved.update({entry[0]: entry[1]})
+
+                if not silent:
+                    progress_bar.set_description_str(pbar_base_str + 'Done!')
 
                 # Now I have the PKs, print the info
                 # Moreover, add newly created Nodes to foreign_ids_reverse_mappings
@@ -616,8 +693,16 @@ def import_data_sqla(
 
             import_links = data['links_uuid']
 
+            if not silent and import_links:
+                progress_bar.reset(total=len(import_links))
+                pbar_base_str = 'Links - '
+
             for link in import_links:
                 # Check for dangling Links within the, supposed, self-consistent archive
+                if not silent:
+                    progress_bar.update()
+                    progress_bar.set_description_str(pbar_base_str + 'label={}'.format(link['label']))
+
                 try:
                     in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
                     out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
@@ -657,10 +742,20 @@ def import_data_sqla(
                 print('STORING GROUP ELEMENTS...')
 
             import_groups = data['groups_uuid']
+
+            if not silent and import_groups:
+                progress_bar.reset(total=len(import_groups))
+                pbar_base_str = 'Groups - '
+
             for groupuuid, groupnodes in import_groups.items():
                 # # TODO: cache these to avoid too many queries
                 qb_group = QueryBuilder().append(Group, filters={'uuid': {'==': groupuuid}})
                 group_ = qb_group.first()[0]
+
+                if not silent:
+                    progress_bar.update()
+                    progress_bar.set_description_str(pbar_base_str + 'label={}'.format(group_.label))
+
                 nodes_ids_to_add = [
                     foreign_ids_reverse_mappings[NODE_ENTITY_NAME][node_uuid] for node_uuid in groupnodes
                 ]
@@ -702,15 +797,29 @@ def import_data_sqla(
                     session.add(group.backend_entity._dbmodel)
 
                 # Adding nodes to group avoiding the SQLA ORM to increase speed
-                nodes = [
-                    entry[0].backend_entity
-                    for entry in QueryBuilder().append(Node, filters={
-                        'id': {
-                            'in': pks_for_group
-                        }
-                    }).all()
-                ]
+                builder = QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}})
+
+                if silent:
+                    nodes = [entry[0].backend_entity for entry in builder.all()]
+                else:
+                    progress_bar.reset(total=len(pks_for_group))
+                    progress_bar.set_description_str('Creating import Group - Preprocessing')
+                    first = True
+
+                    nodes = []
+                    for entry in builder.iterall():
+                        if first:
+                            progress_bar.set_description_str('Creating import Group', refresh=False)
+                            first = False
+                        progress_bar.update()
+                        progress_bar.refresh()
+                        nodes.append(entry[0].backend_entity)
                 group.backend_entity.add_nodes(nodes, skip_orm=True)
+
+                if not silent:
+                    # Finalize Progress bar - refresh at the end
+                    progress_bar.set_description_str('Done!')
+                    progress_bar.close()
 
                 if not silent or debug:
                     print("Imported Nodes are grouped in the import Group labeled '{}'".format(group.label))

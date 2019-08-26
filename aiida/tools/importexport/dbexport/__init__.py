@@ -433,7 +433,7 @@ def export_tree(
 
     if not silent or debug:
         print(
-            'Exporting a total of {} DB entries, of which {} nodes.'.format(
+            'Exporting a total of {} database entries, of which {} are Nodes.'.format(
                 sum(len(model_data) for model_data in export_data.values()), len(all_nodes_pk)
             )
         )
@@ -636,7 +636,7 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
     from aiida.common.folders import SandboxFolder
 
     if not overwrite and os.path.exists(outfile):
-        raise exceptions.ArchiveExportError("The output file '{}' already exists".format(outfile))
+        raise exceptions.ArchiveExportError("the output file '{}' already exists".format(outfile))
 
     if not silent:
         file_format = 'Gzipped tarball (compressed)'

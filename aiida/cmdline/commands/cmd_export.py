@@ -95,6 +95,7 @@ def create(
     You can modify some of those rules using options of this command.
     """
     from aiida.tools.importexport import export, export_zip
+    from aiida.tools.importexport.common.exceptions import ArchiveExportError
 
     entities = []
 
@@ -134,9 +135,8 @@ def create(
 
     try:
         export_function(entities, outfile=output_file, **kwargs)
-
-    except IOError as exception:
-        echo.echo_critical('failed to write the export archive file: {}'.format(exception))
+    except ArchiveExportError as exception:
+        echo.echo_critical('failed to write the archive file. Exception: {}'.format(exception))
     else:
         echo.echo_success('wrote the export archive file to {}'.format(output_file))
 

@@ -41,7 +41,8 @@ def import_data_dj(
     extras_mode_existing='kcl',
     extras_mode_new='import',
     comment_mode='newest',
-    silent=False
+    silent=False,
+    debug=False
 ):
     """Import exported AiiDA archive to the AiiDA database and repository.
 
@@ -83,6 +84,9 @@ def import_data_dj(
 
     :param silent: suppress prints.
     :type silent: bool
+
+    :param debug: Whether or not to print helpful debug messages (will mess up the progress bar a bit).
+    :type debug: bool
 
     :return: New and existing Nodes and Links.
     :rtype: dict
@@ -133,7 +137,7 @@ def import_data_dj(
             else:
                 raise exceptions.ImportValidationError(
                     'Unable to detect the input file format, it is neither a '
-                    '(possibly compressed) tar file, nor a zip file.'
+                    'tar file, nor a (possibly compressed) zip file.'
                 )
 
         if not folder.get_content_list():
@@ -189,7 +193,6 @@ def import_data_dj(
         # DOUBLE-CHECK MODEL DEPENDENCIES #
         ###################################
         # The entity import order. It is defined by the database model relationships.
-
         model_order = (
             USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
             COMMENT_ENTITY_NAME
@@ -230,6 +233,7 @@ def import_data_dj(
         # IMPORT DATA #
         ###############
         # DO ALL WITH A TRANSACTION
+        # !!! EXCEPT: Creating final import Group containing all Nodes in archive
 
         # batch size for bulk create operations
         batch_size = get_config_option('db.batch_size')
@@ -278,8 +282,15 @@ def import_data_dj(
                         new_entries[model_name] = data['export_data'][model_name].copy()
 
             # Show Comment mode if not silent
-            if not silent:
+            if not silent or debug:
                 print('Comment mode: {}'.format(comment_mode))
+
+            # Show the respective Extras modes if not silent and there are Nodes in existing_entries or new_entries
+            if not silent or debug:
+                if new_entries[NODE_ENTITY_NAME]:
+                    print('New Node Extras mode: {}'.format(extras_mode_new))
+                if existing_entries[NODE_ENTITY_NAME]:
+                    print('Existing Node Extras mode: {}'.format(extras_mode_existing))
 
             # I import data from the given model
             for model_name in model_order:
@@ -312,9 +323,9 @@ def import_data_dj(
                     if model_name not in ret_dict:
                         ret_dict[model_name] = {'new': [], 'existing': []}
                     ret_dict[model_name]['existing'].append((import_entry_pk, existing_entry_id))
-                    if not silent:
+                    if debug:
                         print('existing %s: %s (%s->%s)' % (model_name, unique_id, import_entry_pk, existing_entry_id))
-                        # print("  `-> WARNING: NO DUPLICITY CHECK DONE!")
+                        # print('  `-> WARNING: NO DUPLICITY CHECK DONE!')
                         # CHECK ALSO FILES!
 
                 # Store all objects for this model in a list, and store them all in once at the end.
@@ -376,7 +387,7 @@ def import_data_dj(
                     import_new_entry_pks[unique_id] = import_entry_pk
 
                 if model_name == NODE_ENTITY_NAME:
-                    if not silent:
+                    if debug:
                         print('STORING NEW NODE REPOSITORY FILES...')
 
                     # NEW NODES
@@ -400,7 +411,7 @@ def import_data_dj(
                         destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
                         # For DbNodes, we also have to store its attributes
-                        if not silent:
+                        if debug:
                             print('STORING NEW NODE ATTRIBUTES...')
 
                         # Get attributes from import file
@@ -413,7 +424,7 @@ def import_data_dj(
 
                         # For DbNodes, we also have to store its extras
                         if extras_mode_new == 'import':
-                            if not silent:
+                            if debug:
                                 print('STORING NEW NODE EXTRAS...')
 
                             # Get extras from import file
@@ -431,7 +442,7 @@ def import_data_dj(
                             # till here
                             object_.extras = extras
                         elif extras_mode_new == 'none':
-                            if not silent:
+                            if debug:
                                 print('SKIPPING NEW NODE EXTRAS...')
                         else:
                             raise exceptions.ImportValidationError(
@@ -441,8 +452,8 @@ def import_data_dj(
 
                     # EXISTING NODES (Extras)
                     # For the existing nodes that are also in the imported list we also update their extras if necessary
-                    if not silent:
-                        print('UPDATING EXISTING NODE EXTRAS (mode: {})'.format(extras_mode_existing))
+                    if debug:
+                        print('UPDATING EXISTING NODE EXTRAS...')
 
                     import_existing_entry_pks = {
                         entry_data[unique_identifier]: import_entry_pk
@@ -457,7 +468,7 @@ def import_data_dj(
                             extras = data['node_extras'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
-                                'Unable to find extra info for ode with UUID={}'.format(import_entry_uuid)
+                                'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
                             )
 
                         # TODO: remove when aiida extras will be moved somewhere else
@@ -498,10 +509,10 @@ def import_data_dj(
                         ret_dict[model_name] = {'new': [], 'existing': []}
                     ret_dict[model_name]['new'].append((import_entry_pk, new_pk))
 
-                    if not silent:
+                    if debug:
                         print('NEW %s: %s (%s->%s)' % (model_name, unique_id, import_entry_pk, new_pk))
 
-            if not silent:
+            if debug:
                 print('STORING NODE LINKS...')
             import_links = data['links_uuid']
             links_to_store = []
@@ -627,16 +638,17 @@ def import_data_dj(
 
             # Store new links
             if links_to_store:
-                if not silent:
+                if debug:
                     print('   ({} new links...)'.format(len(links_to_store)))
 
                 models.DbLink.objects.bulk_create(links_to_store, batch_size=batch_size)
             else:
-                if not silent:
+                if debug:
                     print('   (0 new links...)')
 
-            if not silent:
+            if debug:
                 print('STORING GROUP ELEMENTS...')
+
             import_groups = data['groups_uuid']
             for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
@@ -680,13 +692,10 @@ def import_data_dj(
             nodes = QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all(flat=True)
             group.add_nodes(nodes)
 
-            if not silent:
-                print("IMPORTED NODES ARE GROUPED IN THE IMPORT GROUP LABELED '{}'".format(group.label))
+            if not silent or debug:
+                print("Imported Nodes are grouped in the import Group labeled '{}'".format(group.label))
         else:
-            if not silent:
-                print('NO NODES TO IMPORT, SO NO GROUP CREATED, IF IT DID NOT ALREADY EXIST')
-
-    if not silent:
-        print('DONE.')
+            if not silent or debug:
+                print('No Nodes to import, so no Group created, if it did not already exist')
 
     return ret_dict

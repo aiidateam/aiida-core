@@ -46,7 +46,8 @@ def import_data_sqla(
     extras_mode_existing='kcl',
     extras_mode_new='import',
     comment_mode='newest',
-    silent=False
+    silent=False,
+    debug=False
 ):
     """Import exported AiiDA archive to the AiiDA database and repository.
 
@@ -88,6 +89,9 @@ def import_data_sqla(
 
     :param silent: suppress prints.
     :type silent: bool
+
+    :param debug: Whether or not to print helpful debug messages (will mess up the progress bar a bit).
+    :type debug: bool
 
     :return: New and existing Nodes and Links.
     :rtype: dict
@@ -134,15 +138,19 @@ def import_data_sqla(
             else:
                 raise exceptions.ImportValidationError(
                     'Unable to detect the input file format, it is neither a '
-                    '(possibly compressed) tar file, nor a zip file.'
+                    'tar file, nor a (possibly compressed) zip file.'
                 )
 
         if not folder.get_content_list():
             raise exceptions.CorruptArchive('The provided file/folder ({}) is empty'.format(in_path))
         try:
+            if debug:
+                print('CACHING metadata.json')
             with open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
 
+            if debug:
+                print('CACHING data.json')
             with open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
                 data = json.load(fhandle)
         except IOError as error:
@@ -168,6 +176,9 @@ def import_data_sqla(
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
         #              I HAVE ALL NODES FOR THE LINKS                     #
         ###################################################################
+        if debug:
+            print('CHECKING IF NODES FROM LINKS ARE IN DB OR ARCHIVE...')
+
         linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
         group_nodes = set(chain.from_iterable(data['groups_uuid'].values()))
 
@@ -235,6 +246,8 @@ def import_data_sqla(
         #           2363: 'ef04aa5d-99e7-4bfd-95ef-fe412a6a3524', 2364: '1dc59576-af21-4d71-81c2-bac1fc82a84a'},
         # 'User': {1: 'aiida@localhost'}
         # }
+        if debug:
+            print('CREATING PK-2-UUID/EMAIL MAPPING...')
         import_unique_ids_mappings = {}
         # Export data since v0.3 contains the keys entity_name
         for entity_name, import_data in data['export_data'].items():
@@ -257,6 +270,9 @@ def import_data_sqla(
             new_entries = {}
             existing_entries = {}
 
+            if debug:
+                print('GENERATING LIST OF DATA...')
+
             # I first generate the list of data
             for entity_sig in entity_sig_order:
                 entity_name = signatures_to_entity_names[entity_sig]
@@ -271,6 +287,9 @@ def import_data_sqla(
 
                 # Not necessarily all models are exported
                 if entity_name in data['export_data']:
+
+                    if debug:
+                        print('  {}...'.format(entity_name))
 
                     if unique_identifier is not None:
                         import_unique_ids = set(v[unique_identifier] for v in data['export_data'][entity_name].values())
@@ -294,6 +313,9 @@ def import_data_sqla(
                             foreign_ids_reverse_mappings[entity_name] = {
                                 k: v.pk for k, v in relevant_db_entries.items()
                             }
+
+                        if debug:
+                            print('    GOING THROUGH ARCHIVE...')
 
                         imported_comp_names = set()
                         for key, value in data['export_data'][entity_name].items():
@@ -365,8 +387,15 @@ def import_data_sqla(
                         new_entries[entity_name] = data['export_data'][entity_name].copy()
 
             # Show Comment mode if not silent
-            if not silent:
+            if not silent or debug:
                 print('Comment mode: {}'.format(comment_mode))
+
+            # Show the respective Extras modes if not silent and there are Nodes in existing_entries or new_entries
+            if not silent or debug:
+                if new_entries[NODE_ENTITY_NAME]:
+                    print('New Node Extras mode: {}'.format(extras_mode_new))
+                if existing_entries[NODE_ENTITY_NAME]:
+                    print('Existing Node Extras mode: {}'.format(extras_mode_existing))
 
             # I import data from the given model
             for entity_sig in entity_sig_order:
@@ -399,7 +428,7 @@ def import_data_sqla(
                     if entity_name not in ret_dict:
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['existing'].append((import_entry_pk, existing_entry_pk))
-                    if not silent:
+                    if debug:
                         print('existing %s: %s (%s->%s)' % (entity_sig, unique_id, import_entry_pk, existing_entry_pk))
 
                 # Store all objects for this model in a list, and store them
@@ -452,7 +481,7 @@ def import_data_sqla(
                     import_new_entry_pks[unique_id] = import_entry_pk
 
                 if entity_sig == entity_names_to_signatures[NODE_ENTITY_NAME]:
-                    if not silent:
+                    if debug:
                         print('STORING NEW NODE REPOSITORY FILES & ATTRIBUTES...')
 
                     # NEW NODES
@@ -476,6 +505,9 @@ def import_data_sqla(
                         destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
                         # For Nodes, we also have to store Attributes!
+                        if debug:
+                            print('STORING NEW NODE ATTRIBUTES...')
+
                         # Get attributes from import file
                         try:
                             object_.attributes = data['node_attributes'][str(import_entry_pk)]
@@ -485,10 +517,11 @@ def import_data_sqla(
                             )
 
                         # For DbNodes, we also have to store extras
-                        # Get extras from import file
                         if extras_mode_new == 'import':
-                            if not silent:
+                            if debug:
                                 print('STORING NEW NODE EXTRAS...')
+
+                            # Get extras from import file
                             try:
                                 extras = data['node_extras'][str(import_entry_pk)]
                             except KeyError:
@@ -503,7 +536,7 @@ def import_data_sqla(
                             # till here
                             object_.extras = extras
                         elif extras_mode_new == 'none':
-                            if not silent:
+                            if debug:
                                 print('SKIPPING NEW NODE EXTRAS...')
                         else:
                             raise exceptions.ImportValidationError(
@@ -512,8 +545,8 @@ def import_data_sqla(
                             )
 
                     # EXISTING NODES (Extras)
-                    if not silent:
-                        print('UPDATING EXISTING NODE EXTRAS (mode: {})'.format(extras_mode_existing))
+                    if debug:
+                        print('UPDATING EXISTING NODE EXTRAS...')
 
                     import_existing_entry_pks = {
                         entry_data[unique_identifier]: import_entry_pk
@@ -575,10 +608,10 @@ def import_data_sqla(
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['new'].append((import_entry_pk, new_pk))
 
-                    if not silent:
+                    if debug:
                         print('NEW %s: %s (%s->%s)' % (entity_sig, unique_id, import_entry_pk, new_pk))
 
-            if not silent:
+            if debug:
                 print('STORING NODE LINKS...')
 
             import_links = data['links_uuid']
@@ -617,11 +650,12 @@ def import_data_sqla(
                     ret_dict['Link'] = {'new': []}
                 ret_dict['Link']['new'].append((in_id, out_id))
 
-            if not silent:
+            if debug:
                 print('   ({} new links...)'.format(len(ret_dict.get('Link', {}).get('new', []))))
 
-            if not silent:
+            if debug:
                 print('STORING GROUP ELEMENTS...')
+
             import_groups = data['groups_uuid']
             for groupuuid, groupnodes in import_groups.items():
                 # # TODO: cache these to avoid too many queries
@@ -677,13 +711,14 @@ def import_data_sqla(
                     }).all()
                 ]
                 group.backend_entity.add_nodes(nodes, skip_orm=True)
-                if not silent:
-                    print("IMPORTED NODES ARE GROUPED IN THE IMPORT GROUP LABELED '{}'".format(group.label))
-            else:
-                if not silent:
-                    print('NO NODES TO IMPORT, SO NO GROUP CREATED, IF IT DID NOT ALREADY EXIST')
 
-            if not silent:
+                if not silent or debug:
+                    print("Imported Nodes are grouped in the import Group labeled '{}'".format(group.label))
+            else:
+                if not silent or debug:
+                    print('No Nodes to import, so no Group created, if it did not already exist')
+
+            if debug:
                 print('COMMITTING EVERYTHING...')
             session.commit()
         except:
@@ -691,8 +726,5 @@ def import_data_sqla(
                 print('Rolling back')
             session.rollback()
             raise
-
-    if not silent:
-        print('DONE.')
 
     return ret_dict

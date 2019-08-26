@@ -188,10 +188,12 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     help='Force migration of export file archives, if needed.'
 )
 @options.NON_INTERACTIVE()
+@click.option('--debug', is_flag=True, default=False, flag_value=True, help='Show debug messages.', hidden=True)
 @decorators.with_dbenv()
 @click.pass_context
 def cmd_import(
-    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive
+    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive,
+    debug
 ):
     """Import data from an AiiDA archive file.
 
@@ -239,7 +241,8 @@ def cmd_import(
         'extras_mode_existing': ExtrasImportCode[extras_mode_existing].value,
         'extras_mode_new': extras_mode_new,
         'comment_mode': comment_mode,
-        'non_interactive': non_interactive
+        'non_interactive': non_interactive,
+        'debug': debug
     }
 
     # Import local archives

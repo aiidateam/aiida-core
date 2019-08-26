@@ -270,3 +270,34 @@ def check_process_nodes_sealed(nodes):
             'All ProcessNodes must be sealed before they can be exported. '
             'Node(s) with PK(s): {} is/are not sealed.'.format(', '.join(str(pk) for pk in nodes - sealed_nodes))
         )
+
+
+def print_header(file_format, outfile, debug, **kwargs):
+    """Print header for export"""
+    import os
+    from aiida.cmdline.utils import echo, templates
+    from aiida.tools.importexport.common.config import EXPORT_VERSION
+
+    include_comments = kwargs.get('include_comments', True)
+    include_logs = kwargs.get('include_logs', True)
+    input_forward = kwargs.get('input_forward', False)
+    create_reversed = kwargs.get('create_reversed', True)
+    return_reversed = kwargs.get('return_reversed', False)
+    call_reversed = kwargs.get('call_reversed', False)
+
+    template = templates.env.get_template('import_export.tpl')
+    width = os.popen('stty size', 'r').read().split()[-1]
+    param_width = 31
+    header = {
+        'Export': [
+            'Archive name: '.rjust(param_width) + outfile, 'Format: '.rjust(param_width) + file_format, '',
+            'Export version: '.rjust(param_width) + EXPORT_VERSION, '', 'PARAMETERS '.center(param_width * 2),
+            'Include Comments: '.rjust(param_width) + str(include_comments),
+            'Include Logs: '.rjust(param_width) + str(include_logs),
+            'Follow INPUT Links forwards: '.rjust(param_width) + str(input_forward),
+            'Follow CREATE Links backwards: '.rjust(param_width) + str(create_reversed),
+            'Follow RETURN Links backwards: '.rjust(param_width) + str(return_reversed),
+            'Follow CALL Links backwards: '.rjust(param_width) + str(call_reversed)
+        ]
+    }
+    echo.echo(template.render(header=header, width=int(width), debug=debug))

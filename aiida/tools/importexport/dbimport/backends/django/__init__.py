@@ -16,6 +16,8 @@ import tarfile
 import zipfile
 from itertools import chain
 
+from tqdm import tqdm
+
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType, validate_link_label
@@ -24,7 +26,9 @@ from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group, ImportGroup
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
-from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.config import (
+    DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER, BAR_FORMAT
+)
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
@@ -243,6 +247,11 @@ def import_data_dj(
             new_entries = {}
             existing_entries = {}
 
+            if not silent:
+                # Get total entities from data.json
+                # To be used with progress bar
+                number_of_entities = 0
+
             # I first generate the list of data
             for model_name in model_order:
                 cls_signature = entity_names_to_signatures[model_name]
@@ -257,6 +266,9 @@ def import_data_dj(
 
                 # Not necessarily all models are exported
                 if model_name in data['export_data']:
+
+                    if not silent:
+                        number_of_entities += len(data['export_data'][model_name])
 
                     # skip nodes that are already present in the DB
                     if unique_identifier is not None:
@@ -292,14 +304,29 @@ def import_data_dj(
                 if existing_entries[NODE_ENTITY_NAME]:
                     print('Existing Node Extras mode: {}'.format(extras_mode_existing))
 
+            if not silent:
+                # Instantiate progress bar
+                progress_bar = tqdm(total=number_of_entities, bar_format=BAR_FORMAT, leave=True)
+
             # I import data from the given model
             for model_name in model_order:
+                if not silent:
+                    # Progress bar initialization - Model
+                    pbar_base_str = '{}s - '.format(model_name)
+                    progress_bar.set_description_str(pbar_base_str + 'Initializing')
+
                 cls_signature = entity_names_to_signatures[model_name]
                 model = get_object_from_string(cls_signature)
                 fields_info = metadata['all_fields_info'].get(model_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(model_name, None)
 
                 # EXISTING ENTRIES
+                if not silent and existing_entries[model_name]:
+                    # Progress bar update - Model
+                    progress_bar.set_description_str(
+                        pbar_base_str + '{} existing entries'.format(len(existing_entries[model_name]))
+                    )
+
                 for import_entry_pk, entry_data in existing_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
@@ -335,6 +362,12 @@ def import_data_dj(
                 imported_comp_names = set()
 
                 # NEW ENTRIES
+                if not silent and new_entries[model_name]:
+                    # Progress bar update - Model
+                    progress_bar.set_description_str(
+                        pbar_base_str + '{} new entries'.format(len(new_entries[model_name]))
+                    )
+
                 for import_entry_pk, entry_data in new_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(
@@ -395,6 +428,11 @@ def import_data_dj(
                         import_entry_uuid = object_.uuid
                         import_entry_pk = import_new_entry_pks[import_entry_uuid]
 
+                        if not silent:
+                            # Progress bar initialization - Node
+                            progress_bar.update()
+                            pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
+
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
                         subfolder = folder.get_subfolder(
@@ -408,11 +446,15 @@ def import_data_dj(
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing previous folders, and move the files
                         # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
+                        if not silent:
+                            progress_bar.set_description_str(pbar_node_base_str + 'Repository')
                         destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
                         # For DbNodes, we also have to store its attributes
                         if debug:
                             print('STORING NEW NODE ATTRIBUTES...')
+                        if not silent:
+                            progress_bar.set_description_str(pbar_node_base_str + 'Attributes')
 
                         # Get attributes from import file
                         try:
@@ -426,6 +468,8 @@ def import_data_dj(
                         if extras_mode_new == 'import':
                             if debug:
                                 print('STORING NEW NODE EXTRAS...')
+                            if not silent:
+                                progress_bar.set_description_str(pbar_node_base_str + 'Extras')
 
                             # Get extras from import file
                             try:
@@ -463,6 +507,12 @@ def import_data_dj(
                         import_entry_uuid = str(node.uuid)
                         import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 
+                        if not silent:
+                            # Progress bar initialization - Node
+                            progress_bar.update()
+                            pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
+                            progress_bar.set_description_str(pbar_node_base_str + 'Extras')
+
                         # Get extras from import file
                         try:
                             extras = data['node_extras'][str(import_entry_pk)]
@@ -481,6 +531,13 @@ def import_data_dj(
 
                         # Already saving existing node here to update its extras
                         node.save()
+
+                elif not silent:
+                    # Update progress bar with new non-Node entries
+                    progress_bar.update(n=len(existing_entries[model_name]) + len(new_entries[model_name]))
+
+                if not silent:
+                    progress_bar.set_description_str(pbar_base_str + 'Storing')
 
                 # If there is an mtime in the field, disable the automatic update
                 # to keep the mtime that we have set here
@@ -538,8 +595,16 @@ def import_data_dj(
                 LinkType.RETURN: (workflow_node_types, data_node_types, 'unique_pair', 'unique_triple'),
             }
 
+            if not silent and import_links:
+                progress_bar.reset(total=len(import_links))
+                pbar_base_str = 'Links - '
+
             for link in import_links:
                 # Check for dangling Links within the, supposed, self-consistent archive
+                if not silent:
+                    progress_bar.update()
+                    progress_bar.set_description_str(pbar_base_str + 'label={}'.format(link['label']))
+
                 try:
                     in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
                     out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
@@ -650,9 +715,19 @@ def import_data_dj(
                 print('STORING GROUP ELEMENTS...')
 
             import_groups = data['groups_uuid']
+
+            if not silent and import_groups:
+                progress_bar.reset(total=len(import_groups))
+                pbar_base_str = 'Groups - '
+
             for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
                 group_ = models.DbGroup.objects.get(uuid=groupuuid)
+
+                if not silent:
+                    progress_bar.update()
+                    progress_bar.set_description_str(pbar_base_str + 'label={}'.format(group_.label))
+
                 nodes_to_store = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][node_uuid] for node_uuid in groupnodes]
                 if nodes_to_store:
                     group_.dbnodes.add(*nodes_to_store)
@@ -688,14 +763,39 @@ def import_data_dj(
                 group = ImportGroup(label=group_label).store()
 
             # Add all the nodes to the new group
-            # TODO: decide if we want to return the group label
-            nodes = QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all(flat=True)
+            builder = QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}})
+
+            if silent:
+                nodes = builder.all(flat=True)
+            else:
+                progress_bar.reset(total=len(pks_for_group))
+                progress_bar.set_description_str('Creating import Group - Preprocessing')
+                first = True
+
+                nodes = []
+                for entry in builder.iterall():
+                    if first:
+                        progress_bar.set_description_str('Creating import Group', refresh=False)
+                        first = False
+                    progress_bar.update()
+                    progress_bar.refresh()
+                    nodes.append(entry[0])
             group.add_nodes(nodes)
+
+            if not silent:
+                # Finalize Progress bar - refresh at the end
+                progress_bar.set_description_str('Done!')
+                progress_bar.close()
 
             if not silent or debug:
                 print("Imported Nodes are grouped in the import Group labeled '{}'".format(group.label))
         else:
             if not silent or debug:
                 print('No Nodes to import, so no Group created, if it did not already exist')
+
+        if not silent:
+            # Finalize Progress bar - refresh at the end
+            progress_bar.set_description_str('Done!')
+            progress_bar.close()
 
     return ret_dict

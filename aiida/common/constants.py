@@ -28,21 +28,9 @@ from __future__ import division
 # a migration.
 AIIDA_FLOAT_PRECISION = 14
 
-## PHYSICAL CONSTANTS BELOW HERE
-
-bohr_to_ang = 0.52917720859  # pylint: disable=invalid-name
-ang_to_m = 1.e-10  # pylint: disable=invalid-name
-bohr_si = bohr_to_ang * ang_to_m  # pylint: disable=invalid-name
-ry_to_ev = 13.6056917253  # pylint: disable=invalid-name
-ry_si = 4.35974394 / 2. * 10**(-18)  # pylint: disable=invalid-name
-hartree_to_ev = ry_to_ev * 2.  # pylint: disable=invalid-name
-timeau_to_sec = 2.418884326155573e-17  # pylint: disable=invalid-name
-invcm_to_THz = 0.0299792458  # pylint: disable=invalid-name
-
 # Element table, from NIST (http://www.nist.gov/pml/data/index.cfm)
-# Retrieved in October 2014 for atomic numbers 1-103, and in May 2016
-# for atomic numbers 104-112, 114 and 116. In addition, element X is
-# added to support unknown elements.
+# Retrieved in October 2014 for atomic numbers 1-103, and in May 2016 or atomic numbers 104-112, 114 and 116.
+# In addition, element X is added to support unknown elements.
 elements = {  # pylint: disable=invalid-name
     0: {
         'mass': 1.00000,

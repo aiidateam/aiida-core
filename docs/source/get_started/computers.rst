@@ -38,7 +38,10 @@ login from your user to the cluster. To do so type first (only if you do not
 already have some keys in your local ``~/.ssh`` directory - i.e. files like
 ``id_rsa.pub``)::
 
-    ssh-keygen -t rsa
+    ssh-keygen -t rsa -b 4096 -m PEM
+
+.. note:: The ``-m PEM`` flag is necessary in newer versions of OpenSSL that switched to a different key format by default.
+   As of 2019-08, the paramiko library used by AiiDA `only supports the PEM format <https://github.com/paramiko/paramiko/issues/340>`_.
 
 Then copy your keys to the remote computer (in ~/.ssh/authorized_keys) with::
 

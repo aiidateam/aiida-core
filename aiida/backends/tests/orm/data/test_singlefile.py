@@ -107,3 +107,29 @@ class TestSinglefileData(AiidaTestCase):
 
         self.assertEqual(content_stored, content_original)
         self.assertEqual(node.list_object_names(), [SinglefileData.DEFAULT_FILENAME])
+
+    def test_binary_file(self):
+        """Test that the constructor accepts binary files."""
+        byte_array = [120, 3, 255, 0, 100]
+        content_binary = bytearray(byte_array)
+
+        with tempfile.NamedTemporaryFile(mode='wb+') as handle:
+            basename = os.path.basename(handle.name)
+            handle.write(bytearray(content_binary))
+            handle.flush()
+            handle.seek(0)
+            node = SinglefileData(handle.name)
+
+        with node.open(mode='rb') as handle:
+            content_stored = handle.read()
+
+        self.assertEqual(content_stored, content_binary)
+        self.assertEqual(node.list_object_names(), [basename])
+
+        node.store()
+
+        with node.open(mode='rb') as handle:
+            content_stored = handle.read()
+
+        self.assertEqual(content_stored, content_binary)
+        self.assertEqual(node.list_object_names(), [basename])

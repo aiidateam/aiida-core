@@ -179,13 +179,14 @@ class Repository(object):
         :param force: boolean, if True, will skip the mutability check
         :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
+        # pylint: disable=unused-argument
         if not force:
             self.validate_mutability()
 
         self.validate_object_key(key)
 
-        with io.open(path) as handle:
-            self.put_object_from_filelike(handle, key, mode=mode, encoding=encoding)
+        with io.open(path, mode='rb') as handle:
+            self.put_object_from_filelike(handle, key, mode='wb')
 
     def put_object_from_filelike(self, handle, key, mode='w', encoding='utf8', force=False):
         """Store a new object under `key` with contents of filelike object `handle`.

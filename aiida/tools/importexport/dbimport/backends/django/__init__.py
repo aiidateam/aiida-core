@@ -24,7 +24,7 @@ from aiida.common.utils import grouper, get_object_from_string
 from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group
 from aiida.tools.importexport.common import exceptions
-from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
+from aiida.tools.importexport.common.archive import Archive
 from aiida.tools.importexport.common.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
@@ -117,45 +117,15 @@ def import_data_dj(
     ################
     # EXTRACT DATA #
     ################
-    # The sandbox has to remain open until the end
-    with SandboxFolder() as folder:
-        if os.path.isdir(in_path):
-            folder = extract_tree(in_path)
-        else:
-            if tarfile.is_tarfile(in_path):
-                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
-            elif zipfile.is_zipfile(in_path):
-                try:
-                    extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
-                except ValueError as exc:
-                    print('The following problem occured while processing the provided file: {}'.format(exc))
-                    return
-            else:
-                raise exceptions.ImportValidationError(
-                    'Unable to detect the input file format, it is neither a '
-                    '(possibly compressed) tar file, nor a zip file.'
-                )
-
-        if not folder.get_content_list():
-            raise exceptions.CorruptArchive('The provided file/folder ({}) is empty'.format(in_path))
-        try:
-            with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                metadata = json.load(fhandle)
-
-            with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                data = json.load(fhandle)
-        except IOError as error:
-            raise exceptions.CorruptArchive(
-                'Unable to find the file {} in the import file or folder'.format(error.filename)
-            )
-
+    # The archive has to remain open until the end (it is a sandbox)
+    with Archive(in_path, silent=silent) as archive:
         ######################
         # PRELIMINARY CHECKS #
         ######################
-        export_version = StrictVersion(str(metadata['export_version']))
+        export_version = StrictVersion(str(archive.meta_data['export_version']))
         if export_version != expected_export_version:
             msg = 'Export file version is {}, can import only version {}'\
-                    .format(metadata['export_version'], expected_export_version)
+                    .format(archive.meta_data['export_version'], expected_export_version)
             if export_version < expected_export_version:
                 msg += "\nUse 'verdi export migrate' to update this export file."
             else:
@@ -166,11 +136,11 @@ def import_data_dj(
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
         ##########################################################################
-        linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
-        group_nodes = set(chain.from_iterable(data['groups_uuid'].values()))
+        linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in archive.data['links_uuid']))
+        group_nodes = set(chain.from_iterable(archive.data['groups_uuid'].values()))
 
-        if NODE_ENTITY_NAME in data['export_data']:
-            import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
+        if NODE_ENTITY_NAME in archive.data['export_data']:
+            import_nodes_uuid = set(v['uuid'] for v in archive.data['export_data'][NODE_ENTITY_NAME].values())
         else:
             import_nodes_uuid = set()
 
@@ -195,7 +165,7 @@ def import_data_dj(
             COMMENT_ENTITY_NAME
         )
 
-        for import_field_name in metadata['all_fields_info']:
+        for import_field_name in archive.meta_data['all_fields_info']:
             if import_field_name not in model_order:
                 raise exceptions.ImportValidationError(
                     "You are trying to import an unknown model '{}'!".format(import_field_name)
@@ -203,7 +173,7 @@ def import_data_dj(
 
         for idx, model_name in enumerate(model_order):
             dependencies = []
-            for field in metadata['all_fields_info'][model_name].values():
+            for field in archive.meta_data['all_fields_info'][model_name].values():
                 try:
                     dependencies.append(field['requires'])
                 except KeyError:
@@ -219,11 +189,11 @@ def import_data_dj(
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
         ###################################################
         import_unique_ids_mappings = {}
-        for model_name, import_data in data['export_data'].items():
-            if model_name in metadata['unique_identifiers']:
+        for model_name, import_data in archive.data['export_data'].items():
+            if model_name in archive.meta_data['unique_identifiers']:
                 # I have to reconvert the pk to integer
                 import_unique_ids_mappings[model_name] = {
-                    int(k): v[metadata['unique_identifiers'][model_name]] for k, v in import_data.items()
+                    int(k): v[archive.meta_data['unique_identifiers'][model_name]] for k, v in import_data.items()
                 }
 
         ###############
@@ -239,8 +209,8 @@ def import_data_dj(
             for model_name in model_order:
                 cls_signature = entity_names_to_signatures[model_name]
                 model = get_object_from_string(cls_signature)
-                fields_info = metadata['all_fields_info'].get(model_name, {})
-                unique_identifier = metadata['unique_identifiers'].get(model_name, None)
+                fields_info = archive.meta_data['all_fields_info'].get(model_name, {})
+                unique_identifier = archive.meta_data['unique_identifiers'].get(model_name, None)
 
                 new_entries[model_name] = {}
                 existing_entries[model_name] = {}
@@ -248,11 +218,13 @@ def import_data_dj(
                 foreign_ids_reverse_mappings[model_name] = {}
 
                 # Not necessarily all models are exported
-                if model_name in data['export_data']:
+                if model_name in archive.data['export_data']:
 
                     # skip nodes that are already present in the DB
                     if unique_identifier is not None:
-                        import_unique_ids = set(v[unique_identifier] for v in data['export_data'][model_name].values())
+                        import_unique_ids = set(
+                            v[unique_identifier] for v in archive.data['export_data'][model_name].values()
+                        )
 
                         relevant_db_entries_result = model.objects.filter(
                             **{'{}__in'.format(unique_identifier): import_unique_ids}
@@ -263,7 +235,7 @@ def import_data_dj(
                         }
 
                         foreign_ids_reverse_mappings[model_name] = {k: v.pk for k, v in relevant_db_entries.items()}
-                        for key, value in data['export_data'][model_name].items():
+                        for key, value in archive.data['export_data'][model_name].items():
                             if value[unique_identifier] in relevant_db_entries.keys():
                                 # Already in DB
                                 existing_entries[model_name][key] = value
@@ -271,7 +243,7 @@ def import_data_dj(
                                 # To be added
                                 new_entries[model_name][key] = value
                     else:
-                        new_entries[model_name] = data['export_data'][model_name].copy()
+                        new_entries[model_name] = archive.data['export_data'][model_name].copy()
 
             # Show Comment mode if not silent
             if not silent:
@@ -281,8 +253,8 @@ def import_data_dj(
             for model_name in model_order:
                 cls_signature = entity_names_to_signatures[model_name]
                 model = get_object_from_string(cls_signature)
-                fields_info = metadata['all_fields_info'].get(model_name, {})
-                unique_identifier = metadata['unique_identifiers'].get(model_name, None)
+                fields_info = archive.meta_data['all_fields_info'].get(model_name, {})
+                unique_identifier = archive.meta_data['unique_identifiers'].get(model_name, None)
 
                 # EXISTING ENTRIES
                 for import_entry_pk, entry_data in existing_entries[model_name].items():
@@ -382,7 +354,7 @@ def import_data_dj(
 
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
-                        subfolder = folder.get_subfolder(
+                        subfolder = archive.folder.get_subfolder(
                             os.path.join(NODES_EXPORT_SUBFOLDER, export_shard_uuid(import_entry_uuid))
                         )
                         if not subfolder.exists():
@@ -406,7 +378,7 @@ def import_data_dj(
 
                         # Get attributes from import file
                         try:
-                            object_.attributes = data['node_attributes'][str(import_entry_pk)]
+                            object_.attributes = archive.data['node_attributes'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
                                 'Unable to find attribute info for Node with UUID={}'.format(import_entry_uuid)
@@ -419,7 +391,7 @@ def import_data_dj(
 
                             # Get extras from import file
                             try:
-                                extras = data['node_extras'][str(import_entry_pk)]
+                                extras = archive.data['node_extras'][str(import_entry_pk)]
                             except KeyError:
                                 raise exceptions.CorruptArchive(
                                     'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
@@ -455,7 +427,7 @@ def import_data_dj(
 
                         # Get extras from import file
                         try:
-                            extras = data['node_extras'][str(import_entry_pk)]
+                            extras = archive.data['node_extras'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
                                 'Unable to find extra info for ode with UUID={}'.format(import_entry_uuid)
@@ -504,7 +476,7 @@ def import_data_dj(
 
             if not silent:
                 print('STORING NODE LINKS...')
-            import_links = data['links_uuid']
+            import_links = archive.data['links_uuid']
             links_to_store = []
 
             # Needed, since QueryBuilder does not yet work for recently saved Nodes
@@ -641,7 +613,7 @@ def import_data_dj(
 
             if not silent:
                 print('STORING GROUP ELEMENTS...')
-            import_groups = data['groups_uuid']
+            import_groups = archive.data['groups_uuid']
             for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
                 group_ = models.DbGroup.objects.get(uuid=groupuuid)

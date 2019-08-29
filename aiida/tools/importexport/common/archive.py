@@ -18,12 +18,15 @@ import zipfile
 from wrapt import decorator
 
 from aiida.common import json
-from aiida.common.exceptions import ContentNotExistent, InvalidOperation
+from aiida.common.exceptions import InvalidOperation
 from aiida.common.folders import SandboxFolder
 from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.exceptions import CorruptArchive
 
 __all__ = ('Archive', 'extract_zip', 'extract_tar', 'extract_tree')
+
+FILENAME_DATA = 'data.json'
+FILENAME_METADATA = 'metadata.json'
 
 
 class Archive:
@@ -38,11 +41,10 @@ class Archive:
 
     """
 
-    FILENAME_DATA = 'data.json'
-    FILENAME_METADATA = 'metadata.json'
-
-    def __init__(self, filepath):
+    def __init__(self, filepath, silent=True, sandbox_in_repo=True):
         self._filepath = filepath
+        self._silent = silent
+        self._sandbox_in_repo = sandbox_in_repo
         self._folder = None
         self._unpacked = False
         self._data = None
@@ -50,7 +52,7 @@ class Archive:
 
     def __enter__(self):
         """Instantiate a SandboxFolder into which the archive can be lazily unpacked."""
-        self._folder = SandboxFolder()
+        self._folder = SandboxFolder(sandbox_in_repo=self._sandbox_in_repo)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -77,17 +79,24 @@ class Archive:
     @ensure_within_context
     def unpack(self):
         """Unpack the archive and store the contents in a sandbox."""
-        if os.path.isdir(self.filepath):
-            self._folder = extract_tree(self.filepath, self.folder)
-        elif tarfile.is_tarfile(self.filepath):
-            extract_tar(self.filepath, self.folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
-        elif zipfile.is_zipfile(self.filepath):
-            extract_zip(self.filepath, self.folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
-        else:
-            raise CorruptArchive('unrecognized archive format')
+        try:
+            if os.path.isdir(self.filepath):
+                self._folder = extract_tree(self.filepath, self.folder)
+            elif tarfile.is_tarfile(self.filepath):
+                extract_tar(
+                    self.filepath, self.folder, silent=self.silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER
+                )
+            elif zipfile.is_zipfile(self.filepath):
+                extract_zip(
+                    self.filepath, self.folder, silent=self.silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER
+                )
+            else:
+                raise CorruptArchive('unrecognized archive format')
+        except Exception as why:
+            raise CorruptArchive('Error during unpacking of {}: {}'.format(self.filepath, why))
 
         if not self.folder.get_content_list():
-            raise ContentNotExistent('the provided archive {} is empty'.format(self.filepath))
+            raise CorruptArchive('the provided archive {} is empty'.format(self.filepath))
 
         self._unpacked = True
 
@@ -98,6 +107,11 @@ class Archive:
         :return: the archive filepath
         """
         return self._filepath
+
+    @property
+    def silent(self):
+        """Return whether unpacking should be done silently."""
+        return self._silent
 
     @property
     def folder(self):
@@ -115,7 +129,7 @@ class Archive:
         :return: dictionary with contents of data file
         """
         if self._data is None:
-            self._data = self._read_json_file(self.FILENAME_DATA)
+            self._data = self._read_json_file(FILENAME_DATA)
 
         return self._data
 
@@ -127,7 +141,7 @@ class Archive:
         :return: dictionary with contents of meta data file
         """
         if self._meta_data is None:
-            self._meta_data = self._read_json_file(self.FILENAME_METADATA)
+            self._meta_data = self._read_json_file(FILENAME_METADATA)
 
         return self._meta_data
 
@@ -215,8 +229,11 @@ class Archive:
         :param filename: the filename relative to the sandbox folder
         :return: a dictionary with the loaded JSON content
         """
-        with io.open(self.folder.get_abs_path(filename), 'r', encoding='utf8') as fhandle:
-            return json.load(fhandle)
+        try:
+            with io.open(self.folder.get_abs_path(filename), 'r', encoding='utf8') as fhandle:
+                return json.load(fhandle)
+        except OSError as error:
+            raise CorruptArchive('Error reading {}: {}'.format(filename, error))
 
 
 def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
@@ -240,6 +257,8 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
         incorrect formats
     """
     # pylint: disable=fixme
+    json_files = [FILENAME_DATA, FILENAME_METADATA]
+
     if not silent:
         print('READING DATA AND METADATA...')
 
@@ -252,18 +271,14 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
     try:
         with zipfile.ZipFile(infile, 'r', allowZip64=True) as handle:
 
-            if not handle.namelist():
+            if not handle.infolist():
                 raise CorruptArchive('no files detected')
 
-            try:
-                handle.extract(path=folder.abspath, member='metadata.json')
-            except KeyError:
-                raise CorruptArchive('required file `metadata.json` is not included')
-
-            try:
-                handle.extract(path=folder.abspath, member='data.json')
-            except KeyError:
-                raise CorruptArchive('required file `data.json` is not included')
+            for json_file in json_files:
+                try:
+                    handle.extract(path=folder.abspath, member=json_file)
+                except KeyError:
+                    raise CorruptArchive('required file `{}` is not included'.format(json_file))
 
             if not silent:
                 print('EXTRACTING NODE DATA...')
@@ -300,6 +315,8 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
         incorrect formats
     """
     # pylint: disable=fixme
+    json_files = [FILENAME_DATA, FILENAME_METADATA]
+
     if not silent:
         print('READING DATA AND METADATA...')
 
@@ -312,15 +329,11 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
     try:
         with tarfile.open(infile, 'r:*', format=tarfile.PAX_FORMAT) as handle:
 
-            try:
-                handle.extract(path=folder.abspath, member=handle.getmember('metadata.json'))
-            except KeyError:
-                raise CorruptArchive('required file `metadata.json` is not included')
-
-            try:
-                handle.extract(path=folder.abspath, member=handle.getmember('data.json'))
-            except KeyError:
-                raise CorruptArchive('required file `data.json` is not included')
+            for json_file in json_files:
+                try:
+                    handle.extract(path=folder.abspath, member=handle.getmember(json_file))
+                except KeyError:
+                    raise CorruptArchive('required file `{}` is not included'.format(json_file))
 
             if not silent:
                 print('EXTRACTING NODE DATA...')
@@ -342,7 +355,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
                     continue
                 handle.extract(path=folder.abspath, member=member)
     except tarfile.ReadError:
-        raise ValueError('The input file format for import is not valid (1)')
+        raise ValueError('The input file format for import is not valid (not a compressed tar file)')
 
 
 def extract_tree(infile, folder):
@@ -360,12 +373,12 @@ def extract_tree(infile, folder):
     :param folder: a temporary folder to which the archive contents are copied
     :type folder: :py:class:`~aiida.common.folders.SandboxFolder`
     """
-    json_files = {'metadata.json', 'data.json'}
+    json_files = [FILENAME_DATA, FILENAME_METADATA]
 
     # Make sure necessary JSON files exist
-    for filename in json_files:
-        if not os.path.exists(os.path.join(infile, filename)):
-            raise CorruptArchive('required file `{}` is not included'.format(filename))
+    for json_file in json_files:
+        if not os.path.exists(os.path.join(infile, json_file)):
+            raise CorruptArchive('required file `{}` is not included'.format(json_file))
 
     folder.replace_with_folder(infile, move=False, overwrite=True)
     return folder

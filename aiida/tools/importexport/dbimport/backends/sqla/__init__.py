@@ -26,7 +26,7 @@ from aiida.orm.utils.links import link_triple_exists, validate_link
 from aiida.orm.utils.repository import Repository
 
 from aiida.tools.importexport.common import exceptions
-from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
+from aiida.tools.importexport.common.archive import Archive
 from aiida.tools.importexport.common.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
@@ -124,40 +124,14 @@ def import_data_sqla(
     # EXTRACT DATA #
     ################
     # The sandbox has to remain open until the end
-    with SandboxFolder() as folder:
-        if os.path.isdir(in_path):
-            folder = extract_tree(in_path)
-        else:
-            if tarfile.is_tarfile(in_path):
-                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
-            elif zipfile.is_zipfile(in_path):
-                extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
-            else:
-                raise exceptions.ImportValidationError(
-                    'Unable to detect the input file format, it is neither a '
-                    '(possibly compressed) tar file, nor a zip file.'
-                )
-
-        if not folder.get_content_list():
-            raise exceptions.CorruptArchive('The provided file/folder ({}) is empty'.format(in_path))
-        try:
-            with io.open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
-                metadata = json.load(fhandle)
-
-            with io.open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
-                data = json.load(fhandle)
-        except IOError as error:
-            raise exceptions.CorruptArchive(
-                'Unable to find the file {} in the import file or folder'.format(error.filename)
-            )
-
+    with Archive(in_path, silent=silent) as archive:
         ######################
         # PRELIMINARY CHECKS #
         ######################
-        export_version = StrictVersion(str(metadata['export_version']))
+        export_version = StrictVersion(str(archive.meta_data['export_version']))
         if export_version != expected_export_version:
             msg = 'Export file version is {}, can import only version {}'\
-                    .format(metadata['export_version'], expected_export_version)
+                    .format(archive.meta_data['export_version'], expected_export_version)
             if export_version < expected_export_version:
                 msg += "\nUse 'verdi export migrate' to update this export file."
             else:
@@ -169,15 +143,15 @@ def import_data_sqla(
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
         #              I HAVE ALL NODES FOR THE LINKS                     #
         ###################################################################
-        linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
-        group_nodes = set(chain.from_iterable(data['groups_uuid'].values()))
+        linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in archive.data['links_uuid']))
+        group_nodes = set(chain.from_iterable(archive.data['groups_uuid'].values()))
 
         # Check that UUIDs are valid
         linked_nodes = set(x for x in linked_nodes if validate_uuid(x))
         group_nodes = set(x for x in group_nodes if validate_uuid(x))
 
         import_nodes_uuid = set()
-        for value in data['export_data'].get(NODE_ENTITY_NAME, {}).values():
+        for value in archive.data['export_data'].get(NODE_ENTITY_NAME, {}).values():
             import_nodes_uuid.add(value['uuid'])
 
         unknown_nodes = linked_nodes.union(group_nodes) - import_nodes_uuid
@@ -203,7 +177,7 @@ def import_data_sqla(
         #  I make a new list that contains the entity names:
         # eg: ['User', 'Computer', 'Node', 'Group']
         all_entity_names = [signatures_to_entity_names[entity_sig] for entity_sig in entity_sig_order]
-        for import_field_name in metadata['all_fields_info']:
+        for import_field_name in archive.meta_data['all_fields_info']:
             if import_field_name not in all_entity_names:
                 raise exceptions.ImportValidationError(
                     "You are trying to import an unknown model '{}'!".format(import_field_name)
@@ -213,7 +187,7 @@ def import_data_sqla(
             dependencies = []
             entity_name = signatures_to_entity_names[entity_sig]
             # for every field, I checked the dependencies given as value for key requires
-            for field in metadata['all_fields_info'][entity_name].values():
+            for field in archive.meta_data['all_fields_info'][entity_name].values():
                 try:
                     dependencies.append(field['requires'])
                 except KeyError:
@@ -238,12 +212,12 @@ def import_data_sqla(
         # }
         import_unique_ids_mappings = {}
         # Export data since v0.3 contains the keys entity_name
-        for entity_name, import_data in data['export_data'].items():
+        for entity_name, import_data in archive.data['export_data'].items():
             # Again I need the entity_name since that's what's being stored since 0.3
-            if entity_name in metadata['unique_identifiers']:
+            if entity_name in archive.meta_data['unique_identifiers']:
                 # I have to reconvert the pk to integer
                 import_unique_ids_mappings[entity_name] = {
-                    int(k): v[metadata['unique_identifiers'][entity_name]] for k, v in import_data.items()
+                    int(k): v[archive.meta_data['unique_identifiers'][entity_name]] for k, v in import_data.items()
                 }
         ###############
         # IMPORT DATA #
@@ -263,7 +237,7 @@ def import_data_sqla(
                 entity_name = signatures_to_entity_names[entity_sig]
                 entity = entity_names_to_entities[entity_name]
                 # I get the unique identifier, since v0.3 stored under entity_name
-                unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
+                unique_identifier = archive.meta_data['unique_identifiers'].get(entity_name, None)
 
                 # so, new_entries. Also, since v0.3 it makes more sense to use the entity_name
                 new_entries[entity_name] = {}
@@ -271,10 +245,12 @@ def import_data_sqla(
                 foreign_ids_reverse_mappings[entity_name] = {}
 
                 # Not necessarily all models are exported
-                if entity_name in data['export_data']:
+                if entity_name in archive.data['export_data']:
 
                     if unique_identifier is not None:
-                        import_unique_ids = set(v[unique_identifier] for v in data['export_data'][entity_name].values())
+                        import_unique_ids = set(
+                            v[unique_identifier] for v in archive.data['export_data'][entity_name].values()
+                        )
 
                         relevant_db_entries = dict()
                         if import_unique_ids:
@@ -297,7 +273,7 @@ def import_data_sqla(
                             }
 
                         imported_comp_names = set()
-                        for key, value in data['export_data'][entity_name].items():
+                        for key, value in archive.data['export_data'][entity_name].items():
                             if entity_name == GROUP_ENTITY_NAME:
                                 # Check if there is already a group with the same name,
                                 # and if so, recreate the name
@@ -363,7 +339,7 @@ def import_data_sqla(
                                 new_entries[entity_name][key] = value
                     else:
                         # Why the copy:
-                        new_entries[entity_name] = data['export_data'][entity_name].copy()
+                        new_entries[entity_name] = archive.data['export_data'][entity_name].copy()
 
             # Show Comment mode if not silent
             if not silent:
@@ -373,8 +349,8 @@ def import_data_sqla(
             for entity_sig in entity_sig_order:
                 entity_name = signatures_to_entity_names[entity_sig]
                 entity = entity_names_to_entities[entity_name]
-                fields_info = metadata['all_fields_info'].get(entity_name, {})
-                unique_identifier = metadata['unique_identifiers'].get(entity_name, '')
+                fields_info = archive.meta_data['all_fields_info'].get(entity_name, {})
+                unique_identifier = archive.meta_data['unique_identifiers'].get(entity_name, '')
 
                 # EXISTING ENTRIES
                 for import_entry_pk, entry_data in existing_entries[entity_name].items():
@@ -463,7 +439,7 @@ def import_data_sqla(
 
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
-                        subfolder = folder.get_subfolder(
+                        subfolder = archive.folder.get_subfolder(
                             os.path.join(NODES_EXPORT_SUBFOLDER, export_shard_uuid(import_entry_uuid))
                         )
                         if not subfolder.exists():
@@ -484,7 +460,7 @@ def import_data_sqla(
                         # For Nodes, we also have to store Attributes!
                         # Get attributes from import file
                         try:
-                            object_.attributes = data['node_attributes'][str(import_entry_pk)]
+                            object_.attributes = archive.data['node_attributes'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
                                 'Unable to find attribute info for Node with UUID={}'.format(import_entry_uuid)
@@ -496,7 +472,7 @@ def import_data_sqla(
                             if not silent:
                                 print('STORING NEW NODE EXTRAS...')
                             try:
-                                extras = data['node_extras'][str(import_entry_pk)]
+                                extras = archive.data['node_extras'][str(import_entry_pk)]
                             except KeyError:
                                 raise exceptions.CorruptArchive(
                                     'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
@@ -531,7 +507,7 @@ def import_data_sqla(
 
                         # Get extras from import file
                         try:
-                            extras = data['node_extras'][str(import_entry_pk)]
+                            extras = archive.data['node_extras'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
                                 'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
@@ -587,7 +563,7 @@ def import_data_sqla(
             if not silent:
                 print('STORING NODE LINKS...')
 
-            import_links = data['links_uuid']
+            import_links = archive.data['links_uuid']
 
             for link in import_links:
                 # Check for dangling Links within the, supposed, self-consistent archive
@@ -631,7 +607,7 @@ def import_data_sqla(
 
             if not silent:
                 print('STORING GROUP ELEMENTS...')
-            import_groups = data['groups_uuid']
+            import_groups = archive.data['groups_uuid']
             for groupuuid, groupnodes in import_groups.items():
                 # # TODO: cache these to avoid too many queries
                 qb_group = QueryBuilder().append(Group, filters={'uuid': {'==': groupuuid}})

@@ -155,51 +155,42 @@ def migrate(input_file, output_file, force, silent, archive_format):
     import zipfile
 
     from aiida.common import json
-    from aiida.common.folders import SandboxFolder
-    from aiida.tools.importexport import migration, extract_zip, extract_tar
+    from aiida.tools.importexport import migration, Archive, ExportImportException
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')
 
-    with SandboxFolder(sandbox_in_repo=False) as folder:
+    try:
+        with Archive(input_file, silent=silent, sandbox_in_repo=False) as archive:
+            data = archive.data
+            metadata = archive.meta_data
 
-        if zipfile.is_zipfile(input_file):
-            extract_zip(input_file, folder, silent=silent)
-        elif tarfile.is_tarfile(input_file):
-            extract_tar(input_file, folder, silent=silent)
-        else:
-            echo.echo_critical('invalid file format, expected either a zip archive or gzipped tarball')
+            old_version = migration.verify_metadata_version(metadata)
+            new_version = migration.migrate_recursively(metadata, data, archive.folder)
 
-        try:
-            with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                data = json.load(fhandle)
-            with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                metadata = json.load(fhandle)
-        except IOError:
-            echo.echo_critical('export archive does not contain the required file {}'.format(fhandle.filename))
+            with io.open(archive.folder.get_abs_path('data.json'), 'wb') as fhandle:
+                json.dump(data, fhandle, indent=4)
 
-        old_version = migration.verify_metadata_version(metadata)
-        new_version = migration.migrate_recursively(metadata, data, folder)
+            with io.open(archive.folder.get_abs_path('metadata.json'), 'wb') as fhandle:
+                json.dump(metadata, fhandle)
 
-        with io.open(folder.get_abs_path('data.json'), 'wb') as fhandle:
-            json.dump(data, fhandle, indent=4)
+            if archive_format in ['zip', 'zip-uncompressed']:
+                compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
+                with zipfile.ZipFile(
+                    output_file, mode='w', compression=compression, allowZip64=True
+                ) as migrated_archive:
+                    src = archive.folder.abspath
+                    for dirpath, dirnames, filenames in os.walk(src):
+                        relpath = os.path.relpath(dirpath, src)
+                        for filename in dirnames + filenames:
+                            real_src = os.path.join(dirpath, filename)
+                            real_dest = os.path.join(relpath, filename)
+                            migrated_archive.write(real_src, real_dest)
+            elif archive_format == 'tar.gz':
+                with tarfile.open(output_file, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as migrated_archive:
+                    migrated_archive.add(archive.folder.abspath, arcname='')
 
-        with io.open(folder.get_abs_path('metadata.json'), 'wb') as fhandle:
-            json.dump(metadata, fhandle)
-
-        if archive_format in ['zip', 'zip-uncompressed']:
-            compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
-            with zipfile.ZipFile(output_file, mode='w', compression=compression, allowZip64=True) as archive:
-                src = folder.abspath
-                for dirpath, dirnames, filenames in os.walk(src):
-                    relpath = os.path.relpath(dirpath, src)
-                    for filename in dirnames + filenames:
-                        real_src = os.path.join(dirpath, filename)
-                        real_dest = os.path.join(relpath, filename)
-                        archive.write(real_src, real_dest)
-        elif archive_format == 'tar.gz':
-            with tarfile.open(output_file, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
-                archive.add(folder.abspath, arcname='')
-
-        if not silent:
-            echo.echo_success('migrated the archive from version {} to {}'.format(old_version, new_version))
+            if not silent:
+                echo.echo_success('migrated the archive from version {} to {}'.format(old_version, new_version))
+    except ExportImportException as why:
+        echo.echo_critical('An error occurred while migrating {}: {}'.format(input_file, why))

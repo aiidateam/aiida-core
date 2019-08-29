@@ -661,9 +661,12 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         url parameters: id, limit and offset
         """
-        node_pk = self.get_dummy_data()['computers'][0]['id']
+        node_pk = self.get_dummy_data()['computers'][0]['name']
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers?id>' + str(node_pk) + '&limit=2&offset=3', expected_list_ids=[4]
+            self,
+            'computers',
+            '/computers?name>' + str(node_pk) + '&limit=2&offset=3&orderby=name',
+            expected_list_ids=[4]
         )
 
     def test_computers_mixed2(self):

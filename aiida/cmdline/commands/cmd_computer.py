@@ -572,7 +572,9 @@ def computer_configure():
     '--defaults', is_flag=True, default=False, help='Show the default configuration settings for this computer.'
 )
 @click.option('--as-option-string', is_flag=True)
-@options.USER()
+@options.USER(
+    help='Email address of the AiiDA user for whom to configure this computer (if different from default user).'
+)
 @arguments.COMPUTER()
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current configuration for a computer."""

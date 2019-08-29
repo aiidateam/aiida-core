@@ -1,3 +1,32 @@
+## v1.0.0b6
+
+### Deprecations
+- To be removed in `v2.0.0`: the `mode` and `encoding` arguments of the `put_object_from_file` of the `Node` class and `Repository` utility mixin [[#3289]](https://github.com/aiidateam/aiida-core/pull/3289)
+
+### Minor bug fixes
+- Allow to construct `SinglefileData` nodes from binary files [[#3285]](https://github.com/aiidateam/aiida-core/pull/3285)
+- Fix eagerness of `verdi setup --help` being overruled [[#3257]](https://github.com/aiidateam/aiida-core/pull/3257)
+- Fix bugs in `verdi process watch`  [[#3260]](https://github.com/aiidateam/aiida-core/pull/3260)
+- Fix bug in archive import updating existing `Node` extras [[#3187]](https://github.com/aiidateam/aiida-core/pull/3187)
+- Fix bug in tree printer of `verdi node tree` [[#3190]](https://github.com/aiidateam/aiida-core/pull/3190)
+- Make the `execmanager.submit_calculation` idempotent'ish [[#3188]](https://github.com/aiidateam/aiida-core/pull/3188)
+- Fix error message for wrong path to `verdi calcjob input/outputcat` [[#3251]](https://github.com/aiidateam/aiida-core/pull/3251)
+- Fix import line in `backup_setup.py` [[#3210]](https://github.com/aiidateam/aiida-core/pull/3210)
+
+### Improvements
+- Improve process status for updating calc jobs in `verdi process list` [[#3276]](https://github.com/aiidateam/aiida-core/pull/3276)
+- Add `--all` option to `verdi process play/pause` [[#3259]](https://github.com/aiidateam/aiida-core/pull/3259)
+- Add support for `CalcJobNode` in `Process.exposed_outputs` [[#3258]](https://github.com/aiidateam/aiida-core/pull/3258)
+- Format timezone aware datetimes in local timezone in `verdi` output [[#3239]](https://github.com/aiidateam/aiida-core/pull/3239)
+- User-experience improvements for `verdi data structure import` [[#3216]](https://github.com/aiidateam/aiida-core/pull/3216)
+- Add class property `Process.get_exit_statuses` [[#3217]](https://github.com/aiidateam/aiida-core/pull/3217)
+- Adding the `dry_run_info` attribute to a `CalcJobNode` [[#3212]](https://github.com/aiidateam/aiida-core/pull/3212)
+- Add commands `verdi node attributes` and `verdi node extras` [[#3153]](https://github.com/aiidateam/aiida-core/pull/3153)
+- Allow wildcard usage in process label option `verdi process list` [[#3192]](https://github.com/aiidateam/aiida-core/pull/3192)
+- Improve the efficiency of link validation [[#3164]](https://github.com/aiidateam/aiida-core/pull/3164)
+- Make sure all CLI help strings are short and consistent[[#3224]](https://github.com/aiidateam/aiida-core/pull/3224)
+
+
 ## v1.0.0b5
 
 ### Major bug fixes

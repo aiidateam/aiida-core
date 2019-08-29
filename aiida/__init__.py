@@ -36,7 +36,7 @@ __copyright__ = (
     u'For further information please visit http://www.aiida.net/. All rights reserved.'
 )
 __license__ = 'MIT license, see LICENSE.txt file.'
-__version__ = '1.0.0b5'
+__version__ = '1.0.0b6'
 __authors__ = 'The AiiDA team.'
 __paper__ = (
     u'G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky,'

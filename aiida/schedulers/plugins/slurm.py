@@ -292,6 +292,7 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         Parse the output of the jobinfo command defined in _get_detailed_jobinfo_command.
 
         """
+
         # First entry contains the formatting tags, so we skip this
         details = jobinfo_details.split('\n')[1:]
         # When using --parsable with saact we get a string which is divided by |,
@@ -317,12 +318,14 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         detailed_info['UserIdentifier'] = int(detailed_info['UserIdentifier'])
         detailed_info['GroupIdentifier'] = int(detailed_info['GroupIdentifier'])
         detailed_info['QualityOfServiceID'] = int(detailed_info['QualityOfServiceID'])
-
+        # Sometimes the exit code is just a number and do not carry the extra signal code,
+        # anyway, only read first value
+        detailed_info['SchedulerExitCode'] = detailed_info['ExitCode'].split(':')[0]
         # For multinode systems, we might have a FAILED status on a single node, so
         # check this and update the scheduler exit code.
-        detailed_info['SchedulerExitCode'] = detailed_info['ExitCode'].split(':')[0]
-        if details:
-            for element in details[1:]:
+        for element in details[1:]:
+            if element:
+                # Only do it if there is in fact a non-empty string there
                 exit_code_comp = element.split('|')[list(_MAP_DETAILED_JOB_SLURM).index('ExitCode')]
                 exit_code = exit_code_comp.split(':')[0]
                 if exit_code > detailed_info['SchedulerExitCode']:
@@ -793,3 +796,24 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
                                 'there was some text in stdout: {}'.format(transport_string, stdout))
 
         return True
+
+    def get_exit_status(self, detailed_info):
+        """
+        Analyse the scheduler exit code from the detailed job info.
+
+        Map the schedulers exit code to en ExitCode defined in the Scheduler class.
+        """
+
+        exit_code = detailed_info['SchedulerExitCode']
+
+        print(dir(self))
+        if exit_code:
+            # Now this becomes tricky. SLURM ejects the exit code returned by the
+            # bash command that have been executed (at least for sbatch). This might
+            # be sufficient for some software. Others will be compiler dependent, or
+            # some software do not return anything in case of failure.
+            # For this reason we always analyze the stdout and stderr files.
+            stdout, stderr = self._parse_output_files()
+
+    def _parse_output_files(self):
+        """Parses the stdout and stderr files."""

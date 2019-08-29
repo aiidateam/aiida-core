@@ -20,6 +20,7 @@ from aiida.common.lang import classproperty
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import AiidaException, FeatureNotAvailable
 from aiida.schedulers.datastructures import JobTemplate
+from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 
 __all__ = ('Scheduler', 'SchedulerError', 'SchedulerParsingError')
 
@@ -50,8 +51,16 @@ class Scheduler(object):
     # The class to be used for the job resource.
     _job_resource_class = None
 
+    # Exit status keys
+    EXIT_MESSAGE_KEY = 'exit_message'
+    EXIT_STATUS_KEY = 'exit_status'
+
     def __init__(self):
         self._transport = None
+        self._exit_codes = ExitCodesNamespace()
+        self.exit_code(
+            10000, 'ERROR_INSUFFICIENT_MEMORY', message='the allocated memory for each core have been exceeded'
+        )
 
     def set_transport(self, transport):
         """
@@ -303,6 +312,14 @@ class Scheduler(object):
         # pylint: disable=no-self-use, not-callable, unused-argument
         raise FeatureNotAvailable('Cannot get detailed job info, missing parser')
 
+    def get_exit_status(self, detailed_jobinfo):
+        """
+        Check the exit status of the scheduler and map that to the exit statuses defined
+        as an ExitCode (defined first on the Process class) in the Scheduler class.
+        """
+        # pylint: disable=no-self-use, not-callable, unused-argument
+        raise FeatureNotAvailable('Cannot get the schedulers exit status, missing function')
+
     def get_detailed_jobinfo(self, jobid):
         """
         Return a string with the output of the detailed_jobinfo command.
@@ -316,14 +333,13 @@ class Scheduler(object):
         command = self._get_detailed_jobinfo_command(jobid=jobid)  # pylint: disable=assignment-from-no-return
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(command)
-
         # Parse the returned information
         detailed_info = self._parse_detailed_jobinfo(stdout)  # pylint: disable=assignment-from-no-return
 
         # Update the dictionary with return code, and stderr, in case
         # something nasty happened and we want to check it downstream
-        detailed_info['ReturnCode'] = retval
-        detailed_info['StdErr'] = stderr
+        detailed_info['AccountingCommandReturnCode'] = retval
+        detailed_info['AccountingCommandStdErr'] = stderr
 
         return detailed_info
 
@@ -357,7 +373,6 @@ class Scheduler(object):
         """
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
-
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:
             jobdict = {job.job_id: job for job in joblist}
@@ -451,3 +466,81 @@ class Scheduler(object):
         :return: True if everything seems ok, False otherwise.
         """
         raise NotImplementedError
+
+    @property
+    def exit_codes(self):
+        """
+        Return the namespace of exit codes defined for this Scheduler class
+
+        :returns: ExitCodesNamespace of ExitCode named tuples
+        """
+        return self._exit_codes
+
+    def exit_code(self, status, label, message):
+        """
+        Add an exit code to the Scheduler class
+
+        :param status: the exit status integer
+        :param label: a label by which the exit code can be addressed
+        :param message: a more detailed description of the exit code
+        """
+        if not isinstance(status, int):
+            raise TypeError('status should be of integer type and not of {}'.format(type(status)))
+
+        if status < 0:
+            raise ValueError('status should be a positive integer, received {}'.format(type(status)))
+
+        if not isinstance(label, six.string_types):
+            raise TypeError('label should be of basestring type and not of {}'.format(type(label)))
+
+        if not isinstance(message, six.string_types):
+            raise TypeError('message should be of basestring type and not of {}'.format(type(message)))
+
+        self._exit_codes[label] = ExitCode(status, message)
+
+    @property
+    def exit_status(self):
+        """
+        Return the exit status of the scheduler
+
+        :returns: the exit status, an integer exit code or None
+        """
+        return self.EXIT_STATUS_KEY  #pylint: disable=invalid-name
+
+    def _set_exit_status(self, status):
+        """
+        Set the exit status of the scheduler
+
+        :param state: an integer exit code or None, which will be interpreted as zero
+        """
+        if status is None:
+            status = 0
+
+        if not isinstance(status, int):
+            raise ValueError('exit status has to be an integer, got {}'.format(status))
+
+        self.EXIT_STATUS_KEY = status  #pylint: disable=invalid-name
+
+    @property
+    def exit_message(self):
+        """
+        Return the exit message of the scheduler
+
+        :returns: the exit message
+        """
+        return self.EXIT_MESSAGE_KEY  #pylint: disable=invalid-name
+
+    def _set_exit_message(self, message):
+        """
+        Set the exit message of the scheduler, if None nothing will be done
+
+        :param message: a string message
+        """
+
+        if message is None:
+            message = ''
+
+        if not isinstance(message, six.string_types):
+            raise ValueError('exit message has to be a string type, got {}'.format(type(message)))
+
+        self.EXIT_MESSAGE_KEY = message  #pylint: disable=invalid-name

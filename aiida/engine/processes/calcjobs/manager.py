@@ -110,7 +110,6 @@ class JobsList(object):
                 kwargs['jobs'] = self._get_jobs_with_scheduler()
 
             scheduler_response = scheduler.get_jobs(**kwargs)
-
             # Update the last update time and clear the jobs cache
             self._last_updated = time.time()
             jobs_cache = {}
@@ -119,7 +118,9 @@ class JobsList(object):
             for job_id, job_info in iteritems(scheduler_response):
                 # If the job is done then get detailed job information
                 detailed_job_info = None
-                if job_info.job_state == schedulers.JobState.DONE:
+                job_exit_status = None
+                if job_info.job_state == schedulers.JobState.RUNNING or \
+                   job_info.job_state == schedulers.JobState.QUEUED:
                     try:
                         detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
                     except exceptions.FeatureNotAvailable:
@@ -128,10 +129,10 @@ class JobsList(object):
                             'a command and/or parser for obtaining '
                             'detailed job information'
                         )
-
+                    job_exit_status = scheduler.get_exit_status(detailed_job_info)
                 job_info.detailedJobinfo = detailed_job_info
+                job_info.exit_status = job_exit_status
                 jobs_cache[job_id] = job_info
-
             raise gen.Return(jobs_cache)
 
     @gen.coroutine

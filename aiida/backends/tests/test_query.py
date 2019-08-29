@@ -114,7 +114,8 @@ class TestQueryBuilder(AiidaTestCase):
         """
         Test querying for a process class.
         """
-        from aiida.engine import run, WorkChain, if_, return_, ExitCode
+        from aiida.common.exit_codes import ExitCode
+        from aiida.engine import run, WorkChain, if_, return_
         from aiida.common.warnings import AiidaEntryPointWarning
 
         class PotentialFailureWorkChain(WorkChain):
@@ -518,9 +519,9 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb.get_used_tags(), ['n1', 'n2', 'e1', 'n3', 'e2', 'c1', 'nonsense'])
 
         # Now I am testing the default tags,
-        qb = orm.QueryBuilder().append(orm.StructureData
-                                      ).append(orm.ProcessNode).append(orm.StructureData
-                                                                      ).append(orm.Dict, with_outgoing=orm.ProcessNode)
+        qb = orm.QueryBuilder().append(orm.StructureData).append(orm.ProcessNode).append(orm.StructureData).append(
+            orm.Dict, with_outgoing=orm.ProcessNode
+        )
         self.assertEqual(
             qb.get_used_tags(), [
                 'StructureData_1', 'ProcessNode_1', 'StructureData_1--ProcessNode_1', 'StructureData_2',
@@ -743,12 +744,13 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
         self.assertEqual(res, tuple(range(5, 8)))
 
         # Specifying the order  explicitly the order:
-        qb = orm.QueryBuilder().append(orm.Node,
-                                       project='attributes.foo').order_by({orm.Node: {
-                                           'ctime': {
-                                               'order': 'asc'
-                                           }
-                                       }})
+        qb = orm.QueryBuilder().append(
+            orm.Node, project='attributes.foo'
+        ).order_by({orm.Node: {
+            'ctime': {
+                'order': 'asc'
+            }
+        }})
 
         res = next(zip(*qb.all()))
         self.assertEqual(res, tuple(range(10)))
@@ -764,12 +766,13 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
         self.assertEqual(res, tuple(range(5, 8)))
 
         # Reversing the order:
-        qb = orm.QueryBuilder().append(orm.Node,
-                                       project='attributes.foo').order_by({orm.Node: {
-                                           'ctime': {
-                                               'order': 'desc'
-                                           }
-                                       }})
+        qb = orm.QueryBuilder().append(
+            orm.Node, project='attributes.foo'
+        ).order_by({orm.Node: {
+            'ctime': {
+                'order': 'desc'
+            }
+        }})
 
         res = next(zip(*qb.all()))
         self.assertEqual(res, tuple(range(9, -1, -1)))
@@ -1077,7 +1080,9 @@ class QueryBuilderPath(AiidaTestCase):
                 'id': n8.pk
             },
             tag='desc',
-        ).append(orm.Node, with_descendants='desc', edge_project='path', filters={'id': n1.pk})
+        ).append(
+            orm.Node, with_descendants='desc', edge_project='path', filters={'id': n1.pk}
+        )
         queried_path_set = {frozenset(p) for p, in qb.all()}
 
         paths_there_should_be = {
@@ -1087,9 +1092,13 @@ class QueryBuilderPath(AiidaTestCase):
 
         self.assertTrue(queried_path_set == paths_there_should_be)
 
-        qb = orm.QueryBuilder().append(orm.Node, filters={
-            'id': n1.pk
-        }, tag='anc').append(orm.Node, with_ancestors='anc', filters={'id': n8.pk}, edge_project='path')
+        qb = orm.QueryBuilder().append(
+            orm.Node, filters={
+                'id': n1.pk
+            }, tag='anc'
+        ).append(
+            orm.Node, with_ancestors='anc', filters={'id': n8.pk}, edge_project='path'
+        )
 
         self.assertEqual({frozenset(p) for p, in qb.all()}, {
             frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),

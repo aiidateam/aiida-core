@@ -14,7 +14,8 @@ from __future__ import absolute_import
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.engine import run, run_get_node, submit, calcfunction, workfunction, Process, ExitCode
+from aiida.engine import run, run_get_node, submit, calcfunction, workfunction, Process
+from aiida.common.exit_codes import ExitCode
 from aiida.orm.nodes.data.bool import get_true_node
 
 DEFAULT_INT = 256

@@ -23,10 +23,10 @@ from plumpy.workchains import if_, while_, return_, _PropagateReturn
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
+from aiida.common.exit_codes import ExitCode
 from aiida.orm import Node, WorkChainNode
 from aiida.orm.utils import load_node
 
-from ..exit_code import ExitCode
 from ..process_spec import ProcessSpec
 from ..process import Process, ProcessState
 from .awaitable import AwaitableTarget, AwaitableAction, construct_awaitable

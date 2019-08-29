@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import six
 import plumpy
 
-from .exit_code import ExitCode, ExitCodesNamespace
+from aiida.common.exit_codes import ExitCode, ExitCodesNamespace
 from .ports import InputPort, PortNamespace, CalcJobOutputPort
 
 

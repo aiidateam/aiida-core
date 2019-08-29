@@ -20,7 +20,8 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils import processes as test_processes
 from aiida.common.lang import override
-from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_pk, run_get_node
+from aiida.common.exit_codes import ExitCode, ExitCodesNamespace
+from aiida.engine import Process, run, run_get_pk, run_get_node
 from aiida.engine.processes.ports import PortNamespace
 from aiida.plugins import CalculationFactory
 

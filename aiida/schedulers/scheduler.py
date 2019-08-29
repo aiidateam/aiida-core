@@ -19,8 +19,8 @@ import aiida.common
 from aiida.common.lang import classproperty
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import AiidaException, FeatureNotAvailable
+from aiida.common.exit_codes import ExitCode, ExitCodesNamespace
 from aiida.schedulers.datastructures import JobTemplate
-from aiida.engine.processes.exit_code import ExitCode, ExitCodesNamespace
 
 __all__ = ('Scheduler', 'SchedulerError', 'SchedulerParsingError')
 

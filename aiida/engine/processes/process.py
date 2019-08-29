@@ -33,8 +33,8 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.common.exit_codes import ExitCode
 
-from .exit_code import ExitCode
 from .builder import ProcessBuilder
 from .ports import InputPort, OutputPort, PortNamespace, PORT_NAMESPACE_SEPARATOR
 from .process_spec import ProcessSpec

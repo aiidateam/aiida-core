@@ -397,7 +397,7 @@ class FunctionProcess(Process):
         :rtype: :class:`aiida.engine.ExitCode`
         """
         from aiida.orm import Data
-        from .exit_code import ExitCode
+        from aiida.common.exit_codes import ExitCode
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
         # state of `Finished` the cached process will still enter the running state. The process state will have then

@@ -371,7 +371,7 @@ def parse_results(process, retrieved_temporary_folder=None):
 
     :returns: integer exit code, where 0 indicates success and non-zero failure
     """
-    from aiida.engine import ExitCode
+    from aiida.common.exit_codes import ExitCode
 
     assert process.node.get_state() == CalcJobState.PARSING, \
         'job should be in the PARSING state when calling this function yet it is {}'.format(process.node.get_state())

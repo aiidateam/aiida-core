@@ -39,7 +39,9 @@ from aiida.tools.importexport.common.config import (
     entity_names_to_entities
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
-from aiida.tools.importexport.dbimport.backends.utils import deserialize_field, merge_comment, merge_extras
+from aiida.tools.importexport.dbimport.utils import (
+    deserialize_field, merge_comment, merge_extras, start_header, finish_header
+)
 from aiida.tools.importexport.dbimport.backends.sqla.utils import validate_uuid
 
 
@@ -51,7 +53,8 @@ def import_data_sqla(
     extras_mode_new='import',
     comment_mode='newest',
     silent=False,
-    debug=False
+    debug=False,
+    **kwargs
 ):
     """Import exported AiiDA archive to the AiiDA database and repository.
 
@@ -136,9 +139,9 @@ def import_data_sqla(
             extract_tree(in_path, folder)
         else:
             if tarfile.is_tarfile(in_path):
-                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
             elif zipfile.is_zipfile(in_path):
-                extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+                extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
             else:
                 raise exceptions.ImportValidationError(
                     'Unable to detect the input file format, it is neither a '
@@ -175,6 +178,9 @@ def import_data_sqla(
                 msg += '\nUpdate your AiiDA version in order to import this file.'
 
             raise exceptions.IncompatibleArchiveVersionError(msg)
+
+        if not silent:
+            start_header(in_path, comment_mode, extras_mode_new, extras_mode_existing, debug)
 
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
@@ -260,15 +266,6 @@ def import_data_sqla(
         ###############
         # IMPORT DATA #
         ###############
-        # Show Comment mode if not silent
-        if not silent or debug:
-            print('Comment mode: {}'.format(comment_mode))
-
-        # Show the respective Extras modes if not silent
-        if not silent or debug:
-            print('New Node Extras mode: {}'.format(extras_mode_new))
-            print('Existing Node Extras mode: {}'.format(extras_mode_existing))
-
         # DO ALL WITH A TRANSACTION
         import aiida.backends.sqlalchemy
 
@@ -284,7 +281,14 @@ def import_data_sqla(
 
             if not silent:
                 # Instantiate progress bar
-                progress_bar = tqdm(total=1, bar_format=BAR_FORMAT, leave=True)
+                if 'progress_bar' in kwargs:
+                    progress_bar = kwargs['progress_bar']
+                    progress_bar.bar_format = BAR_FORMAT
+                    progress_bar.total = 1
+                    progress_bar.leave = True
+                    progress_bar.disable = False
+                else:
+                    progress_bar = tqdm(total=1, bar_format=BAR_FORMAT, leave=True)
                 pbar_base_str = 'Generating list of data - '
 
                 # Get total entities from data.json
@@ -812,23 +816,33 @@ def import_data_sqla(
                         progress_bar.refresh()
                         nodes.append(entry[0].backend_entity)
                 group.backend_entity.add_nodes(nodes, skip_orm=True)
-
-                if not silent:
-                    # Finalize Progress bar - refresh at the end
-                    progress_bar.set_description_str('Done!')
-                    progress_bar.close()
-
-                if not silent or debug:
-                    print("Imported Nodes are grouped in the import Group labeled '{}'".format(group.label))
             else:
-                if not silent or debug:
+                if debug:
                     print('No Nodes to import, so no Group created, if it did not already exist')
 
             if debug:
                 print('COMMITTING EVERYTHING...')
             session.commit()
+
+            if not silent:
+                # Finalize Progress bar
+                if not debug:
+                    progress_bar.leave = False
+                progress_bar.close()
+
+                # Summarize import
+                finish_header(ret_dict, getattr(group, 'label', None))
+
         except:
             if not silent:
+                # Finalize Progress bar
+                if not debug:
+                    progress_bar.leave = False
+                progress_bar.close()
+
+                finish_header({}, None)
+
+            if debug:
                 print('Rolling back')
             session.rollback()
             raise

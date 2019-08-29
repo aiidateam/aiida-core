@@ -22,6 +22,7 @@ from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType, validate_link_label
 from aiida.common.utils import grouper, get_object_from_string
+from aiida.manage.configuration import get_config_option
 from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group, ImportGroup
 from aiida.tools.importexport.common import exceptions
@@ -34,8 +35,9 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.config import entity_names_to_signatures
 from aiida.tools.importexport.common.utils import export_shard_uuid
-from aiida.tools.importexport.dbimport.backends.utils import deserialize_field, merge_comment, merge_extras
-from aiida.manage.configuration import get_config_option
+from aiida.tools.importexport.dbimport.utils import (
+    deserialize_field, merge_comment, merge_extras, start_header, finish_header
+)
 
 
 def import_data_dj(
@@ -46,7 +48,8 @@ def import_data_dj(
     extras_mode_new='import',
     comment_mode='newest',
     silent=False,
-    debug=False
+    debug=False,
+    **kwargs
 ):
     """Import exported AiiDA archive to the AiiDA database and repository.
 
@@ -131,10 +134,10 @@ def import_data_dj(
             extract_tree(in_path, folder)
         else:
             if tarfile.is_tarfile(in_path):
-                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
             elif zipfile.is_zipfile(in_path):
                 try:
-                    extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+                    extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
                 except ValueError as exc:
                     print('The following problem occured while processing the provided file: {}'.format(exc))
                     return
@@ -170,6 +173,9 @@ def import_data_dj(
                 msg += '\nUpdate your AiiDA version in order to import this file.'
 
             raise exceptions.IncompatibleArchiveVersionError(msg)
+
+        if not silent:
+            start_header(in_path, comment_mode, extras_mode_new, extras_mode_existing, debug)
 
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
@@ -293,20 +299,16 @@ def import_data_dj(
                     else:
                         new_entries[model_name] = data['export_data'][model_name].copy()
 
-            # Show Comment mode if not silent
-            if not silent or debug:
-                print('Comment mode: {}'.format(comment_mode))
-
-            # Show the respective Extras modes if not silent and there are Nodes in existing_entries or new_entries
-            if not silent or debug:
-                if new_entries[NODE_ENTITY_NAME]:
-                    print('New Node Extras mode: {}'.format(extras_mode_new))
-                if existing_entries[NODE_ENTITY_NAME]:
-                    print('Existing Node Extras mode: {}'.format(extras_mode_existing))
-
             if not silent:
                 # Instantiate progress bar
-                progress_bar = tqdm(total=number_of_entities, bar_format=BAR_FORMAT, leave=True)
+                if 'progress_bar' in kwargs:
+                    progress_bar = kwargs['progress_bar']
+                    progress_bar.bar_format = BAR_FORMAT
+                    progress_bar.total = number_of_entities
+                    progress_bar.leave = True
+                    progress_bar.disable = False
+                else:
+                    progress_bar = tqdm(total=number_of_entities, bar_format=BAR_FORMAT, leave=True)
 
             # I import data from the given model
             for model_name in model_order:
@@ -784,21 +786,17 @@ def import_data_dj(
                     progress_bar.refresh()
                     nodes.append(entry[0])
             group.add_nodes(nodes)
-
-            if not silent:
-                # Finalize Progress bar - refresh at the end
-                progress_bar.set_description_str('Done!')
-                progress_bar.close()
-
-            if not silent or debug:
-                print("Imported Nodes are grouped in the import Group labeled '{}'".format(group.label))
         else:
-            if not silent or debug:
+            if debug:
                 print('No Nodes to import, so no Group created, if it did not already exist')
 
-        if not silent:
-            # Finalize Progress bar - refresh at the end
-            progress_bar.set_description_str('Done!')
-            progress_bar.close()
+    if not silent:
+        # Finalize Progress bar
+        if not debug:
+            progress_bar.leave = False
+        progress_bar.close()
+
+        # Summarize import
+        finish_header(ret_dict, getattr(group, 'label', None))
 
     return ret_dict

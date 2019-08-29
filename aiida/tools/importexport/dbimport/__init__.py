@@ -64,13 +64,15 @@ def import_data(in_path, group=None, silent=False, **kwargs):
     from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
     from aiida.tools.importexport.common.exceptions import ArchiveImportError
 
-    if configuration.PROFILE.database_backend == BACKEND_SQLA:
+    backend = configuration.PROFILE.database_backend
+
+    if backend == BACKEND_SQLA:
         from aiida.tools.importexport.dbimport.backends.sqla import import_data_sqla
         return import_data_sqla(in_path, group=group, silent=silent, **kwargs)
 
-    if configuration.PROFILE.database_backend == BACKEND_DJANGO:
+    if backend == BACKEND_DJANGO:
         from aiida.tools.importexport.dbimport.backends.django import import_data_dj
         return import_data_dj(in_path, group=group, silent=silent, **kwargs)
 
     # else
-    raise ArchiveImportError('Unknown backend: {}'.format(configuration.PROFILE.database_backend))
+    raise ArchiveImportError('Unknown backend: {}'.format(backend))

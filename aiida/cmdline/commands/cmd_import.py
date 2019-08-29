@@ -33,7 +33,7 @@ class ExtrasImportCode(Enum):
     ask = 'kca'
 
 
-def _echo_error(message, non_interactive, more_archives, **kwargs):  # pylint: disable=unused-argument
+def _echo_error(message, non_interactive, more_archives, progress_bar=None, debug=False, **kwargs):  # pylint: disable=unused-argument
     """Utility function to help write an error message for ``verdi import``
 
     :param message: Message following red-colored, bold "Error:".
@@ -42,14 +42,26 @@ def _echo_error(message, non_interactive, more_archives, **kwargs):  # pylint: d
     :type non_interactive: bool
     :param more_archives: Whether or not there are more archives to import.
     :type more_archives: bool
+    :param progress_bar: A tqdm progress bar instance.
+    :param debug: Whether or not debug mode was on. [Default: False]
+    :type debug: bool
     """
     import traceback
 
-    exception = traceback.format_exc(limit=0).splitlines()[-1]
-    exception_type = exception.split(':')[0].split('.')
-    if len(exception_type) > 1:
-        exception = ' '.join(exception.split(':')[1:])
-        exception = ':'.join([exception_type[-1], exception])
+    # Close progress bar, if it exists
+    if progress_bar:
+        if not debug:
+            progress_bar.leave = False
+        progress_bar.close()
+
+    if debug:
+        exception = traceback.format_exc()
+    else:
+        exception = traceback.format_exc(limit=0).splitlines()[-1]
+        exception_type = exception.split(':')[0].split('.')
+        if len(exception_type) > 1:
+            exception = ' '.join(exception.split(':')[1:])
+            exception = ':'.join([exception_type[-1], exception])
 
     echo.echo_error(message)
     echo.echo(exception)
@@ -105,9 +117,13 @@ def _try_import(
             _echo_error(
                 '{} has been migrated, but it still cannot be imported'.format(archive),
                 non_interactive=non_interactive,
-                more_archives=more_archives
+                more_archives=more_archives,
+                **kwargs
             )
         else:
+            progress_bar = kwargs.get('progress_bar')
+            progress_bar.close()
+
             # Migration has not yet been tried.
             if migration:
                 # Confirm migration
@@ -128,7 +144,8 @@ def _try_import(
         _echo_error(
             'an exception occurred while importing the archive {}'.format(archive),
             non_interactive=non_interactive,
-            more_archives=more_archives
+            more_archives=more_archives,
+            **kwargs
         )
     else:
         echo.echo_success('imported archive {}'.format(archive))
@@ -171,9 +188,15 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
             more_archives=more_archives
         )
     else:
-        echo.echo_success('archive migrated, proceeding with import')
+        # Success
+        echo.echo_info('proceeding with import')
 
         return temp_folder.get_abs_path(temp_out_file)
+
+
+def _get_progress_bar():
+    from tqdm import tqdm
+    return tqdm(total=1, leave=False)
 
 
 @verdi.command('import')
@@ -294,6 +317,7 @@ def cmd_import(
         import_opts['archive'] = archive
         import_opts['file_to_import'] = import_opts['archive']
         import_opts['more_archives'] = archive != archives_file[-1] or archives_url
+        import_opts['progress_bar'] = _get_progress_bar()
 
         # First attempt to import archive
         migrate_archive = _try_import(migration_performed=False, **import_opts)
@@ -327,6 +351,7 @@ def cmd_import(
 
             # First attempt to import archive
             import_opts['file_to_import'] = temp_folder.get_abs_path(temp_file)
+            import_opts['progress_bar'] = _get_progress_bar()
             migrate_archive = _try_import(migration_performed=False, **import_opts)
 
             # Migrate archive if needed and desired

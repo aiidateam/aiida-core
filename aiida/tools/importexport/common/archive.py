@@ -236,7 +236,7 @@ def update_description(path, progress_bar):
     progress_bar.set_description_str(description)
 
 
-def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
+def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, progress_bar=None):
     """
     Extract the nodes to be imported from a zip file.
 
@@ -271,7 +271,13 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
             if not handle.namelist():
                 raise CorruptArchive('no files detected in archive')
 
-            p_bar = json_files if silent else tqdm(json_files, unit='files', bar_format=BAR_FORMAT, leave=False)
+            if silent:
+                p_bar = json_files
+            else:
+                if progress_bar:
+                    progress_bar.leave = False
+                    progress_bar.close()
+                p_bar = tqdm(json_files, bar_format=BAR_FORMAT, leave=False)
 
             for json_file in p_bar:
                 if not silent:
@@ -300,7 +306,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
         raise ValueError('The input file format for import is not valid (not a zip file)')
 
 
-def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
+def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, progress_bar=None):
     """
     Extract the nodes to be imported from a (possibly zipped) tar file.
 
@@ -335,7 +341,13 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
             if len(handle.getmembers()) == 1 and handle.getmembers()[0].size == 0:
                 raise CorruptArchive('no files detected in archive')
 
-            p_bar = json_files if silent else tqdm(json_files, unit='files', bar_format=BAR_FORMAT, leave=False)
+            if silent:
+                p_bar = json_files
+            else:
+                if progress_bar:
+                    progress_bar.leave = False
+                    progress_bar.close()
+                p_bar = tqdm(json_files, bar_format=BAR_FORMAT, leave=False)
 
             for json_file in p_bar:
                 if not silent:

@@ -615,15 +615,18 @@ def import_data_sqla(
                                 'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
                             )
 
+                        old_extras = node.extras.copy()
                         # TODO: remove when aiida extras will be moved somewhere else
                         # from here
                         extras = {key: value for key, value in extras.items() if not key.startswith('_aiida_')}
                         if node.node_type.endswith('code.Code.'):
                             extras = {key: value for key, value in extras.items() if not key == 'hidden'}
                         # till here
-                        node.extras = merge_extras(node.extras, extras, extras_mode_existing)
-                        flag_modified(node, 'extras')
-                        objects_to_update.append(node)
+                        new_extras = merge_extras(node.extras, extras, extras_mode_existing)
+                        if new_extras != old_extras:
+                            node.extras = new_extras
+                            flag_modified(node, 'extras')
+                            objects_to_update.append(node)
 
                 elif not silent:
                     # Update progress bar with new non-Node entries

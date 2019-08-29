@@ -99,7 +99,7 @@ class SinglefileData(Data):
         if is_filelike:
             self.put_object_from_filelike(file, key, mode='wb')
         else:
-            self.put_object_from_file(file, key, mode='wb')
+            self.put_object_from_file(file, key)
 
         # Delete any other existing objects (minus the current `key` which was already removed from the list)
         for existing_key in existing_object_names:

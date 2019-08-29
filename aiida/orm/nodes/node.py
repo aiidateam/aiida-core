@@ -665,7 +665,7 @@ class Node(Entity):
         """
         self._repository.put_object_from_tree(path, key, contents_only, force)
 
-    def put_object_from_file(self, path, key, mode='w', encoding='utf8', force=False):
+    def put_object_from_file(self, path, key, mode=None, encoding=None, force=False):
         """Store a new object under `key` with contents of the file located at `path` on this file system.
 
         .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
@@ -674,10 +674,28 @@ class Node(Entity):
         :param path: absolute path of file whose contents to copy to the repository
         :param key: fully qualified identifier for the object within the repository
         :param mode: the file mode with which the object will be written
+            Deprecated: will be removed in `v2.0.0`
         :param encoding: the file encoding with which the object will be written
+            Deprecated: will be removed in `v2.0.0`
         :param force: boolean, if True, will skip the mutability check
         :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
+        # pylint: disable=no-member
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning
+
+        # Note that the defaults of `mode` and `encoding` had to be change to `None` from `w` and `utf-8` resptively, in
+        # order to detect when they were being passed such that the deprecation warning can be emitted. The defaults did
+        # not make sense and so ignoring them is justified, since the side-effect of this function, a file being copied,
+        # will continue working the same.
+        if mode is not None:
+            warnings.warn('the `mode` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning)
+
+        if encoding is not None:
+            warnings.warn(
+                'the `encoding` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
+            )
+
         self._repository.put_object_from_file(path, key, mode, encoding, force)
 
     def put_object_from_filelike(self, handle, key, mode='w', encoding='utf8', force=False):

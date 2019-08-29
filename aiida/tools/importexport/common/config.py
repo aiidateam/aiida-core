@@ -21,8 +21,9 @@ DUPL_SUFFIX = ' (Imported #{})'
 # The name of the subfolder in which the node files are stored
 NODES_EXPORT_SUBFOLDER = 'nodes'
 
-# Progress bar
+# Progress bar and header
 BAR_FORMAT = '{desc:37.37}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
+HEADER_PARAMETER_WIDTH = 31
 
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify

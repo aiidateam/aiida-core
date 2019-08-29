@@ -274,9 +274,8 @@ def check_process_nodes_sealed(nodes):
 
 def print_header(file_format, outfile, debug, **kwargs):
     """Print header for export"""
-    import os
     from aiida.cmdline.utils import echo, templates
-    from aiida.tools.importexport.common.config import EXPORT_VERSION
+    from aiida.tools.importexport.common.config import EXPORT_VERSION, HEADER_PARAMETER_WIDTH
 
     include_comments = kwargs.get('include_comments', True)
     include_logs = kwargs.get('include_logs', True)
@@ -285,13 +284,13 @@ def print_header(file_format, outfile, debug, **kwargs):
     return_reversed = kwargs.get('return_reversed', False)
     call_reversed = kwargs.get('call_reversed', False)
 
-    template = templates.env.get_template('import_export.tpl')
-    width = os.popen('stty size', 'r').read().split()[-1]
-    param_width = 31
+    template = templates.env.get_template('export.tpl')
+    width = HEADER_PARAMETER_WIDTH * 2
+    param_width = HEADER_PARAMETER_WIDTH
     header = {
         'Export': [
             'Archive name: '.rjust(param_width) + outfile, 'Format: '.rjust(param_width) + file_format, '',
-            'Export version: '.rjust(param_width) + EXPORT_VERSION, '', 'PARAMETERS '.center(param_width * 2),
+            'Export version: '.rjust(param_width) + EXPORT_VERSION, '', 'PARAMETERS'.center(width - 4),
             'Include Comments: '.rjust(param_width) + str(include_comments),
             'Include Logs: '.rjust(param_width) + str(include_logs),
             'Follow INPUT Links forwards: '.rjust(param_width) + str(input_forward),

@@ -585,7 +585,7 @@ def export_tree(
             thisnodefolder.insert_path(src=src.abspath, dest_name='.')
 
     if not silent:
-        progress_bar.set_description_str('Done!')
+        progress_bar.leave = False
         progress_bar.close()
 
 

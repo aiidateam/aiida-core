@@ -207,25 +207,21 @@ def import_data_sqla(
         # DOUBLE-CHECK MODEL DEPENDENCIES #
         ###################################
         # The entity import order. It is defined by the database model relationships.
-        entity_sig_order = [
-            entity_names_to_signatures[m] for m in (
-                USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
-                COMMENT_ENTITY_NAME
-            )
+        entity_order = [
+            USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
+            COMMENT_ENTITY_NAME
         ]
 
         #  I make a new list that contains the entity names:
         # eg: ['User', 'Computer', 'Node', 'Group']
-        all_entity_names = [signatures_to_entity_names[entity_sig] for entity_sig in entity_sig_order]
         for import_field_name in metadata['all_fields_info']:
-            if import_field_name not in all_entity_names:
+            if import_field_name not in entity_order:
                 raise exceptions.ImportValidationError(
                     "You are trying to import an unknown model '{}'!".format(import_field_name)
                 )
 
-        for idx, entity_sig in enumerate(entity_sig_order):
+        for idx, entity_name in enumerate(entity_order):
             dependencies = []
-            entity_name = signatures_to_entity_names[entity_sig]
             # for every field, I checked the dependencies given as value for key requires
             for field in metadata['all_fields_info'][entity_name].values():
                 try:
@@ -234,9 +230,9 @@ def import_data_sqla(
                     # (No ForeignKey)
                     pass
             for dependency in dependencies:
-                if dependency not in all_entity_names[:idx]:
+                if dependency not in entity_order[:idx]:
                     raise exceptions.ArchiveImportError(
-                        'Entity {} requires {} but would be loaded first; stopping...'.format(entity_sig, dependency)
+                        'Entity {} requires {} but would be loaded first; stopping...'.format(entity_name, dependency)
                     )
 
         ###################################################
@@ -296,8 +292,7 @@ def import_data_sqla(
                 number_of_entities = 0
 
             # I first generate the list of data
-            for entity_sig in entity_sig_order:
-                entity_name = signatures_to_entity_names[entity_sig]
+            for entity_name in entity_order:
                 entity = entity_names_to_entities[entity_name]
                 # I get the unique identifier, since v0.3 stored under entity_name
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
@@ -417,8 +412,7 @@ def import_data_sqla(
                 reset_progress_bar = {}
 
             # I import data from the given model
-            for entity_sig in entity_sig_order:
-                entity_name = signatures_to_entity_names[entity_sig]
+            for entity_name in entity_order:
                 entity = entity_names_to_entities[entity_name]
                 fields_info = metadata['all_fields_info'].get(entity_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, '')
@@ -453,7 +447,7 @@ def import_data_sqla(
                     )
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
 
-                    if entity_sig is entity_names_to_signatures[COMMENT_ENTITY_NAME]:
+                    if entity_name == COMMENT_ENTITY_NAME:
                         new_entry_uuid = merge_comment(import_data, comment_mode)
                         if new_entry_uuid is not None:
                             entry_data[unique_identifier] = new_entry_uuid
@@ -463,7 +457,7 @@ def import_data_sqla(
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['existing'].append((import_entry_pk, existing_entry_pk))
                     if debug:
-                        print('existing %s: %s (%s->%s)' % (entity_sig, unique_id, import_entry_pk, existing_entry_pk))
+                        print('existing %s: %s (%s->%s)' % (entity_name, unique_id, import_entry_pk, existing_entry_pk))
 
                 # Store all objects for this model in a list, and store them
                 # all in once at the end.
@@ -520,7 +514,7 @@ def import_data_sqla(
                     objects_to_create.append(db_entity(**import_data))
                     import_new_entry_pks[unique_id] = import_entry_pk
 
-                if entity_sig == entity_names_to_signatures[NODE_ENTITY_NAME]:
+                if entity_name == NODE_ENTITY_NAME:
                     if debug:
                         print('STORING NEW NODE REPOSITORY FILES & ATTRIBUTES...')
 
@@ -686,7 +680,7 @@ def import_data_sqla(
                     ret_dict[entity_name]['new'].append((import_entry_pk, new_pk))
 
                     if debug:
-                        print('NEW %s: %s (%s->%s)' % (entity_sig, unique_id, import_entry_pk, new_pk))
+                        print('NEW %s: %s (%s->%s)' % (entity_name, unique_id, import_entry_pk, new_pk))
 
             if debug:
                 print('STORING NODE LINKS...')

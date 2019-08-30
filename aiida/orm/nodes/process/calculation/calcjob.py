@@ -35,7 +35,8 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_JOB_ID_KEY = 'job_id'
     SCHEDULER_STATE_KEY = 'scheduler_state'
     SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
-    SCHEUDLER_LAST_JOB_INFO_KEY = 'last_jobinfo'
+    SCHEDULER_LAST_JOB_INFO_KEY = 'last_jobinfo'
+    SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
 
     # Base path within the repository where to put objects by default
     _repository_base_path = 'raw_input'
@@ -85,7 +86,8 @@ class CalcJobNode(CalculationNode):
             cls.SCHEDULER_JOB_ID_KEY,
             cls.SCHEDULER_STATE_KEY,
             cls.SCHEDULER_LAST_CHECK_TIME_KEY,
-            cls.SCHEUDLER_LAST_JOB_INFO_KEY,
+            cls.SCHEDULER_LAST_JOB_INFO_KEY,
+            cls.SCHEDULER_DETAILED_JOB_INFO_KEY,
         )
 
     @classproperty
@@ -415,12 +417,26 @@ class CalcJobNode(CalculationNode):
 
         return value
 
+    def set_detailed_job_info(self, detailed_job_info):
+        """Set the detailed job info dictionary.
+
+        :param detailed_job_info: a dictionary with metadata with the accounting of a completed job
+        """
+        self.set_attribute(self.SCHEDULER_DETAILED_JOB_INFO_KEY, detailed_job_info)
+
+    def get_detailed_job_info(self):
+        """Return the detailed job info dictionary.
+
+        :return: the dictionary with detailed job info if defined or None
+        """
+        return self.get_attribute(self.SCHEDULER_DETAILED_JOB_INFO_KEY, None)
+
     def set_last_job_info(self, last_job_info):
         """Set the last job info.
 
         :param last_job_info: a `JobInfo` object
         """
-        self.set_attribute(self.SCHEUDLER_LAST_JOB_INFO_KEY, last_job_info.serialize())
+        self.set_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, last_job_info.serialize())
 
     def get_last_job_info(self):
         """Return the last information asked to the scheduler about the status of the job.
@@ -429,7 +445,7 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.schedulers.datastructures import JobInfo
 
-        last_job_info_serialized = self.get_attribute(self.SCHEUDLER_LAST_JOB_INFO_KEY, None)
+        last_job_info_serialized = self.get_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, None)
 
         if last_job_info_serialized is not None:
             job_info = JobInfo()

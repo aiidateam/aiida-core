@@ -16,7 +16,7 @@ from tornado.gen import coroutine, Return
 import plumpy
 
 from aiida.common.datastructures import CalcJobState
-from aiida.common.exceptions import TransportTaskException
+from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
 from aiida.engine.daemon import execmanager
 from aiida.engine.utils import exponential_backoff_retry, interruptable_task
 from aiida.schedulers.datastructures import JobState
@@ -37,8 +37,7 @@ logger = logging.getLogger(__name__)
 
 @coroutine
 def task_upload_job(node, transport_queue, calc_info, script_filename, cancellable):
-    """
-    Transport task that will attempt to upload the files of a job calculation to the remote
+    """Transport task that will attempt to upload the files of a job calculation to the remote.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
@@ -86,8 +85,7 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
 
 @coroutine
 def task_submit_job(node, transport_queue, calc_info, script_filename, cancellable):
-    """
-    Transport task that will attempt to submit a job calculation
+    """Transport task that will attempt to submit a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
@@ -136,8 +134,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
 
 @coroutine
 def task_update_job(node, job_manager, cancellable):
-    """
-    Transport task that will attempt to update the scheduler status of the job calculation
+    """Transport task that will attempt to update the scheduler status of the job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
@@ -198,8 +195,7 @@ def task_update_job(node, job_manager, cancellable):
 
 @coroutine
 def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancellable):
-    """
-    Transport task that will attempt to retrieve all files of a completed job calculation
+    """Transport task that will attempt to retrieve all files of a completed job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
@@ -226,6 +222,21 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     def do_retrieve():
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
+
+            # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
+            # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
+            # accounting was called but could not be set.
+            scheduler = node.computer.get_scheduler()
+            scheduler.set_transport(transport)
+
+            try:
+                detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
+            except FeatureNotAvailable:
+                logger.info('detailed job info not available for scheduler of CalcJob<{}>'.format(node.pk))
+                node.set_detailed_job_info(None)
+            else:
+                node.set_detailed_job_info(detailed_job_info)
+
             raise Return(execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder))
 
     try:
@@ -245,8 +256,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
 
 @coroutine
 def task_kill_job(node, transport_queue, cancellable):
-    """
-    Transport task that will attempt to kill a job calculation
+    """Transport task that will attempt to kill a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
@@ -379,31 +389,26 @@ class Waiting(plumpy.Waiting):
 
     def upload(self, calc_info, script_filename):
         """Return the `Waiting` state that will `upload` the `CalcJob`."""
-        return self.create_state(
-            ProcessState.WAITING,
-            None,
-            msg='Waiting for calculation folder upload',
-            data=(UPLOAD_COMMAND, calc_info, script_filename))
+        msg = 'Waiting for calculation folder upload'
+        return self.create_state(ProcessState.WAITING, None, msg=msg, data=(UPLOAD_COMMAND, calc_info, script_filename))
 
     def submit(self, calc_info, script_filename):
         """Return the `Waiting` state that will `submit` the `CalcJob`."""
-        return self.create_state(
-            ProcessState.WAITING,
-            None,
-            msg='Waiting for scheduler submission',
-            data=(SUBMIT_COMMAND, calc_info, script_filename))
+        msg = 'Waiting for scheduler submission'
+        return self.create_state(ProcessState.WAITING, None, msg=msg, data=(SUBMIT_COMMAND, calc_info, script_filename))
 
     def update(self):
         """Return the `Waiting` state that will `update` the `CalcJob`."""
-        return self.create_state(
-            ProcessState.WAITING, None, msg='Waiting for scheduler update', data=UPDATE_COMMAND)
+        msg = 'Waiting for scheduler update'
+        return self.create_state(ProcessState.WAITING, None, msg=msg, data=UPDATE_COMMAND)
 
     def retrieve(self):
         """Return the `Waiting` state that will `retrieve` the `CalcJob`."""
-        return self.create_state(ProcessState.WAITING, None, msg='Waiting to retrieve', data=RETRIEVE_COMMAND)
+        msg = 'Waiting to retrieve'
+        return self.create_state(ProcessState.WAITING, None, msg=msg, data=RETRIEVE_COMMAND)
 
     def parse(self, retrieved_temporary_folder):
-        """Return the `Running` state that will `parse` the `CalcJob`.
+        """Return the `Running` state that will parse the `CalcJob`.
 
         :param retrieved_temporary_folder: temporary folder used in retrieving that can be used during parsing.
         """

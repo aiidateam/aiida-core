@@ -217,7 +217,7 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         self.logger.debug('squeue command: {}'.format(comm))
         return comm
 
-    def _get_detailed_jobinfo_command(self, jobid):
+    def _get_detailed_job_info_command(self, job_id):
         """
         Return the command to run to get the detailed information on a job,
         even after the job has finished.

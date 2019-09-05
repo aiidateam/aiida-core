@@ -16,14 +16,15 @@ from sphinx import addnodes
 from sphinx.ext.autodoc import ClassDocumenter
 from aiida.sphinxext.base import AiidaProcessDirective
 
-def setup_aiida_workchain(app):
-    app.add_directive_to_domain('py', 'aiida-workchain', AiidaWorkchainDirective)
-    app.add_autodocumenter(WorkChainDocumenter)
+
+def setup_aiida_calcjob(app):
+    app.add_directive_to_domain('py', 'aiida-calcjob', AiidaCalcJobDirective)
+    app.add_autodocumenter(CalcJobDocumenter)
 
 
-class WorkChainDocumenter(ClassDocumenter):
+class CalcJobDocumenter(ClassDocumenter):
     """
-    A Documenter for WorkChain processes.
+    A Documenter for CalcJob processes.
     """
     directivetype = 'aiida-workchain'
     objtype = 'workchain'
@@ -36,18 +37,19 @@ class WorkChainDocumenter(ClassDocumenter):
             load_profile()
             from aiida.engine import WorkChain
             return issubclass(member, WorkChain)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
-class AiidaWorkchainDirective(AiidaProcessDirective):
+class AiidaCalcJobDirective(AiidaProcessDirective):
     """
     Directive to auto-document AiiDA workchains.
     """
+
     def build_signature(self):
         """Returns the signature of the workchain."""
-        signature = addnodes.desc_signature(first=False, fullname='Workchain')
-        signature += addnodes.desc_annotation(text='workchain')
+        signature = addnodes.desc_signature(first=False, fullname='CalcJob')
+        signature += addnodes.desc_annotation(text='calcjob')
         signature += addnodes.desc_addname(text=self.module_name + '.')
         signature += addnodes.desc_name(text=self.class_name)
         return signature

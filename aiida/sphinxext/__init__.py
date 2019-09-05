@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import aiida
 from . import workchain
+from . import calcjob
 
 
 def setup(app):
@@ -24,5 +25,6 @@ def setup(app):
     Setup function to add the extension classes / nodes to Sphinx.
     """
     workchain.setup_aiida_workchain(app)
+    calcjob.setup_aiida_calcjob(app)
 
     return {'version': aiida.__version__, 'parallel_read_safe': True}

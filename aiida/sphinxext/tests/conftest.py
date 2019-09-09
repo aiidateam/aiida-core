@@ -47,7 +47,9 @@ def build_sphinx(build_dir):
         subprocess.check_call([
             sys.executable, '-m', 'sphinx', '-b', builder, '-d', doctree_dir,
             source_dir, out_dir
-        ])
+        ],
+        # add demo_workchain.py to the PYTHONPATH
+        cwd=os.path.join(source_dir, os.pardir))
 
         return out_dir
 

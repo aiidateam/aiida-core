@@ -187,9 +187,11 @@ def validate_version():
     they match.
     """
     # Get version from python package
-    sys.path.insert(0, ROOT_DIR)
+    sys.path.insert(1, ROOT_DIR)
     import aiida  # pylint: disable=wrong-import-position
     version = aiida.__version__
+    # Clean up sys.path again
+    sys.path.pop(1)
 
     setup_content = get_setup_json()
     if version != setup_content['version']:

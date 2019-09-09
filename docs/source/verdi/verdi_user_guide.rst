@@ -61,7 +61,8 @@ The ``Usage:`` line encodes information on the command's parameters, e.g.:
  * ``[PROCESSES]``: this command takes a process as an *optional* positional argument
  * ``[PROCESSES]...``: this command takes one or more processes as *optional* positional arguments
 
-Multi-value options are followed by ``...`` in the help string and the ``Usage:`` line of the corresponding command will contains the 'endopts' marker. For example::
+Multi-value options are followed by ``...`` in the help string and the ``Usage:`` line of the corresponding command will contain the 'endopts' marker.
+For example::
 
   Usage: verdi export create [OPTIONS] [--] OUTPUT_FILE
 
@@ -83,7 +84,7 @@ Multi-value options are followed by ``...`` in the help string and the ``Usage:`
 
 Profile
 -------
-AiiDA supports multiple profiles per installation, one of which is marked as the default and used unless another profile is requested
+AiiDA supports multiple profiles per installation, one of which is marked as the default and used unless another profile is requested.
 Show the current default profile using::
 
   verdi profile list
@@ -103,8 +104,8 @@ Identifiers
 When working with AiiDA entities, you need a way to *refer* to them on the command line.
 Any entity in AiiDA can be addressed via three identifiers:
 
- * "Primary Key" (PK): An integer, e.g. ``723``, that identifies your entity within your database (automatically assigned)
- * `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)>`_ (UUID): A string, e.g. ``ce81c420-7751-48f6-af8e-eb7c6a30cec3`` that identifies your entity globally (automatically assigned)
+ * "Primary Key" (PK): An integer, e.g. ``723``, identifying your entity within your database (automatically assigned)
+ * `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)>`_ (UUID): A string, e.g. ``ce81c420-7751-48f6-af8e-eb7c6a30cec3`` identifying your entity globally (automatically assigned)
  * Label: A human-readable string, e.g. ``test_calculation`` (manually assigned)
 
 .. note::
@@ -119,7 +120,7 @@ Since command line parameters are passed as strings, AiiDA needs to deduce the t
 You can take the following precautions in order to avoid such edge cases:
 
   * PK: no precautions needed
-  * UUID: no precautions needed for full UUIDs. Partial UUIDs should include at least one non-numeric character or dash.
+  * UUID: no precautions needed for full UUIDs. Partial UUIDs should include at least one non-numeric character or dash
   * Label: add an exclamation mark ``!`` at the end of the identifier in order to force interpretation as a label
 
 
@@ -131,7 +132,7 @@ Implementation of identifier resolution
 The logic for deducing the identifier type is as follows:
 
  1. Try interpreting the identifier as a PK (integer)
- 2. If this fails, try interpreting the identifier as a UUID (full or partial).
+ 2. If this fails, try interpreting the identifier as a UUID (full or partial)
  3. If this fails, interpret the identifier as a label
 
 The following example illustrates edge cases that can arise in this logic:
@@ -144,9 +145,9 @@ PK   UUID                                   LABEL
 12   3df34a1e-5215-4e1a-b626-7f75b9586ef5   deadbeef
 ===  =====================================  ========
 
- * trying to identify the first entity by its partial UUID ``12`` would match the third entity by its PK instead.
+ * trying to identify the first entity by its partial UUID ``12`` would match the third entity by its PK instead
  * trying to identify the second entity by its label ``10`` would match the first entity by its PK instead
- * trying to identify the third entity by its label ``deadbeef`` would match the second entity on its partial UUID ``deadbeef`` instead.
+ * trying to identify the third entity by its label ``deadbeef`` would match the second entity on its partial UUID ``deadbeef`` instead
 
 The ambiguity between a partial UUID and a PK can always be resolved by including a longer substring of the UUID, eventually rendering the identifier no longer a valid PK.
 

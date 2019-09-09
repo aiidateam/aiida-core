@@ -57,12 +57,11 @@ All help strings consist of three parts:
 The ``Usage:`` line encodes information on the command's parameters, e.g.:
 
  * ``[OPTIONS]``: this command takes one (or more) options
- * ``PROCESSES``: this command requires a process as a positional argument
- * ``[PROCESSES]``: this command takes a process as an optional positional argument
- * ``[PROCESSES]...``: this command takes one or more processes as (optional) positional arguments
+ * ``PROCESSES``: this command *requires* a process as a positional argument
+ * ``[PROCESSES]``: this command takes a process as an *optional* positional argument
+ * ``[PROCESSES]...``: this command takes one or more processes as *optional* positional arguments
 
-Multi-value options are followed by ``...`` in the help string and the ``Usage:`` line
-of the corresponding command will contains the 'endopts' marker. For example::
+Multi-value options are followed by ``...`` in the help string and the ``Usage:`` line of the corresponding command will contains the 'endopts' marker. For example::
 
   Usage: verdi export create [OPTIONS] [--] OUTPUT_FILE
 
@@ -78,13 +77,13 @@ of the corresponding command will contains the 'endopts' marker. For example::
                                     ID, UUID or name
     -N, --nodes NODE...             one or multiple nodes identified by their ID
                                     or UUID
+    ...
 
 .. _cli_profile:
 
 Profile
 -------
-AiiDA supports multiple profiles per installation, one of which is marked as the default
-and used unless another profile is requested.
+AiiDA supports multiple profiles per installation, one of which is marked as the default and used unless another profile is requested
 Show the current default profile using::
 
   verdi profile list
@@ -108,7 +107,12 @@ Any entity in AiiDA can be addressed via three identifiers:
  * `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)>`_ (UUID): A string, e.g. ``ce81c420-7751-48f6-af8e-eb7c6a30cec3`` that identifies your entity globally (automatically assigned)
  * Label: A human-readable string, e.g. ``test_calculation`` (manually assigned)
 
-Any ``verdi`` command that expects and identifier as a paramter will accept PKs, UUIDs and labels.
+.. note::
+
+   PKs are easy to type and work as long as you stay within your database.
+   **When sharing data with others, however, always use UUIDs.**
+
+Any ``verdi`` command that expects an identifier as a paramter will accept PKs, UUIDs and labels.
 
 In almost all cases, this will work out of the box.
 Since command line parameters are passed as strings, AiiDA needs to deduce the type of identifier from its content, which can fail in edge cases (see :ref:`cli_identifier_resolution` for details).

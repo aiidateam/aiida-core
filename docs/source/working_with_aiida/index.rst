@@ -2,10 +2,9 @@
 Command line interface
 ======================
 
-One way of interacting with AiiDA is through the ``verdi`` command line interface.
+One way of interacting with AiiDA is through the ``verdi`` command line interface (CLI).
 
-Before checking out the individual commands below, 
-start with a brief look at the :ref:`general concepts<cli_concepts>` that apply across all commands.
+Before checking out the individual commands below, start with a brief look at the :ref:`general concepts<cli_concepts>` that apply across all commands.
 
 .. toctree::
     :maxdepth: 1
@@ -60,11 +59,8 @@ Python API
 Scripting
 =========
 
-While many common functionalities are provided by either command-line tools
-(via ``verdi``) or the web interface, for fine tuning (or automatization)
-it is useful to directly access the python objects and call their methods.
-This is possible in two ways, either via an interactive shell, or writing and
-running a script. Both methods are described below.
+While the ``verdi`` CLI provides shortcuts for many common tasks, the AiiDA python API provides full access to the underlying AiiDA python objects and their methods.
+This is possible via the interactive ``verdi shell`` and via python scripts:
 
 .. toctree::
     :maxdepth: 4

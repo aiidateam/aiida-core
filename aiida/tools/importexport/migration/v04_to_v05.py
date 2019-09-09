@@ -25,7 +25,7 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 """
 # pylint: disable=invalid-name
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata, remove_fields
+from aiida.tools.importexport.migration.utils import verify_archive_version, update_metadata, remove_fields
 
 
 def migration_drop_node_columns_nodeversion_public(metadata, data):
@@ -48,16 +48,21 @@ def migration_drop_computer_transport_params(metadata, data):
     remove_fields(metadata, data, [entity], [field])
 
 
-def migrate_v4_to_v5(metadata, data, *args):  # pylint: disable=unused-argument
-    """
-    Migration of export files from v0.4 to v0.5
+def migrate_v4_to_v5(archive):
+    """Migration of export files from v0.4 to v0.5
 
-    This is from migration 0034 (drop_node_columns_nodeversion_public) and onwards
+    This is from migration 0034 (drop_node_columns_nodeversion_public) and onwards.
+
+    :param archive: The export archive to be migrated.
+    :type archive: :py:class:`~aiida.tools.importexport.common.archive.Archive`
     """
     old_version = '0.4'
     new_version = '0.5'
 
-    verify_metadata_version(metadata, old_version)
+    metadata = archive.meta_data
+    data = archive.data
+
+    verify_archive_version(archive.version_format, old_version)
     update_metadata(metadata, new_version)
 
     # Apply migrations

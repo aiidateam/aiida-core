@@ -10,17 +10,10 @@
 """Test export file migration from export version 0.3 to 0.4"""
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
-import io
-import tarfile
-import zipfile
-
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_archive_file, get_json_files
-from aiida.common.exceptions import NotExistent
-from aiida.common.folders import SandboxFolder
-from aiida.common.json import load as jsonload
-from aiida.tools.importexport.common.archive import extract_tar, extract_zip
-from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.backends.tests.utils.archives import get_archive_file
+from aiida.tools.importexport.common.archive import Archive
+from aiida.tools.importexport.migration.utils import verify_archive_version
 from aiida.tools.importexport.migration.v03_to_v04 import migrate_v3_to_v4
 
 
@@ -39,36 +32,22 @@ class TestMigrateV03toV04(AiidaTestCase):
         """Test function migrate_v3_to_v4"""
         from aiida import get_version
 
-        # Get metadata.json and data.json as dicts from v0.4 file archive
-        metadata_v4, data_v4 = get_json_files('export_v0.4_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v4, version='0.4')
+        archive_v3 = get_archive_file('export_v0.3_simple.aiida', **self.core_archive)
+        archive_v4 = get_archive_file('export_v0.4_simple.aiida', **self.core_archive)
 
-        # Get metadata.json and data.json as dicts from v0.3 file archive
-        # Cannot use 'get_json_files' for 'export_v0.3_simple.aiida',
-        # because we need to pass the SandboxFolder to 'migrate_v3_to_v4'
-        dirpath_archive = get_archive_file('export_v0.3_simple.aiida', **self.core_archive)
+        with Archive(archive_v3) as archive:
+            verify_archive_version(archive.version_format, '0.3')
+            migrate_v3_to_v4(archive)
+            verify_archive_version(archive.version_format, '0.4')
 
-        with SandboxFolder(sandbox_in_repo=False) as folder:
-            if zipfile.is_zipfile(dirpath_archive):
-                extract_zip(dirpath_archive, folder, silent=True)
-            elif tarfile.is_tarfile(dirpath_archive):
-                extract_tar(dirpath_archive, folder, silent=True)
-            else:
-                raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
+            data_v3 = archive.data
+            metadata_v3 = archive.meta_data
 
-            try:
-                with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                    data_v3 = jsonload(fhandle)
-                with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                    metadata_v3 = jsonload(fhandle)
-            except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
+        with Archive(archive_v4) as archive:
+            verify_archive_version(archive.version_format, '0.4')
 
-            verify_metadata_version(metadata_v3, version='0.3')
-
-            # Migrate to v0.4
-            migrate_v3_to_v4(metadata_v3, data_v3, folder)
-            verify_metadata_version(metadata_v3, version='0.4')
+            data_v4 = archive.data
+            metadata_v4 = archive.meta_data
 
         # Remove AiiDA version, since this may change irregardless of the migration function
         metadata_v3.pop('aiida_version')
@@ -98,42 +77,28 @@ class TestMigrateV03toV04(AiidaTestCase):
         """Test migration for file containing complete v0.3 era possibilities"""
 
         # Get metadata.json and data.json as dicts from v0.3 file archive
-        dirpath_archive = get_archive_file('export_v0.3.aiida', **self.external_archive)
+        archive_v3 = get_archive_file('export_v0.3.aiida', **self.external_archive)
 
-        # Migrate
-        with SandboxFolder(sandbox_in_repo=False) as folder:
-            if zipfile.is_zipfile(dirpath_archive):
-                extract_zip(dirpath_archive, folder, silent=True)
-            elif tarfile.is_tarfile(dirpath_archive):
-                extract_tar(dirpath_archive, folder, silent=True)
-            else:
-                raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
-
-            try:
-                with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                    data = jsonload(fhandle)
-                with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                    metadata = jsonload(fhandle)
-            except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
-
-            verify_metadata_version(metadata, version='0.3')
+        with Archive(archive_v3) as archive:
+            verify_archive_version(archive.version_format, '0.3')
 
             # Save pre-migration info
-            links_count_org = len(data['links_uuid'])
+            links_count_org = len(archive.data['links_uuid'])
             work_uuids = {
                 value['uuid']
-                for value in data['export_data']['Node'].values()
+                for value in archive.data['export_data']['Node'].values()
                 if value['type'].startswith('calculation.function') or value['type'].startswith('calculation.work')
             }
             illegal_links = []
-            for link in data['links_uuid']:
+            for link in archive.data['links_uuid']:
                 if link['input'] in work_uuids and link['type'] == 'createlink':
                     illegal_links.append(link)
 
-            # Migrate to v0.4
-            migrate_v3_to_v4(metadata, data, folder)
-            verify_metadata_version(metadata, version='0.4')
+            migrate_v3_to_v4(archive)
+            verify_archive_version(archive.version_format, '0.4')
+
+            data = archive.data
+            metadata = archive.meta_data
 
         ## Following checks are based on the archive-file
         ## Which means there are more legal entities, they are simply not relevant here.
@@ -304,31 +269,17 @@ class TestMigrateV03toV04(AiidaTestCase):
         (AiiDA versions 0.12.3 versus 1.0.0b2)
         NB: Since PKs and UUIDs will have changed, comparisons between 'data.json'-files will be made indirectly
         """
-        # Get metadata.json and data.json as dicts from v0.3 file archive and migrate
-        dirpath_archive = get_archive_file('export_v0.3.aiida', **self.external_archive)
+        archive_v3 = get_archive_file('export_v0.3.aiida', **self.external_archive)
+        archive_v4 = get_archive_file('export_v0.4.aiida', **self.external_archive)
 
-        # Migrate
-        with SandboxFolder(sandbox_in_repo=False) as folder:
-            if zipfile.is_zipfile(dirpath_archive):
-                extract_zip(dirpath_archive, folder, silent=True)
-            elif tarfile.is_tarfile(dirpath_archive):
-                extract_tar(dirpath_archive, folder, silent=True)
-            else:
-                raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
+        with Archive(archive_v3) as archive:
+            migrate_v3_to_v4(archive)
+            data_v3 = archive.data
+            metadata_v3 = archive.meta_data
 
-            try:
-                with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                    data_v3 = jsonload(fhandle)
-                with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                    metadata_v3 = jsonload(fhandle)
-            except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
-
-            # Migrate to v0.4
-            migrate_v3_to_v4(metadata_v3, data_v3, folder)
-
-        # Get metadata.json and data.json as dicts from v0.4 file archive
-        metadata_v4, data_v4 = get_json_files('export_v0.4.aiida', **self.external_archive)
+        with Archive(archive_v4) as archive:
+            data_v4 = archive.data
+            metadata_v4 = archive.meta_data
 
         # Compare 'metadata.json'
         self.maxDiff = None
@@ -442,37 +393,21 @@ class TestMigrateV03toV04(AiidaTestCase):
     def test_illegal_create_links(self):
         """Test illegal create links from workchain are detected and removed from exports using v0.3"""
         # Initialization
-        dirpath_archive = get_archive_file('export_v0.3.aiida', **self.external_archive)
+        archive_v3 = get_archive_file('export_v0.3.aiida', **self.external_archive)
         known_illegal_links = 2
 
-        # Unpack archive, check data.json, and migrate to v0.4
-        with SandboxFolder(sandbox_in_repo=False) as folder:
-            if zipfile.is_zipfile(dirpath_archive):
-                extract_zip(dirpath_archive, folder, silent=True)
-            elif tarfile.is_tarfile(dirpath_archive):
-                extract_tar(dirpath_archive, folder, silent=True)
-            else:
-                raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
-
-            try:
-                with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                    data = jsonload(fhandle)
-                with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                    metadata = jsonload(fhandle)
-            except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
-
+        with Archive(archive_v3) as archive:
             # Check illegal create links are present in org. export file
-            links_count = len(data['links_uuid'])
+            links_count = len(archive.data['links_uuid'])
             links_count_migrated = links_count - known_illegal_links
 
             workfunc_uuids = {
                 value['uuid']
-                for value in data['export_data']['Node'].values()
+                for value in archive.data['export_data']['Node'].values()
                 if value['type'].startswith('calculation.function') or value['type'].startswith('calculation.work')
             }
             violations = []
-            for link in data['links_uuid']:
+            for link in archive.data['links_uuid']:
                 if link['input'] in workfunc_uuids and link['type'] == 'createlink':
                     violations.append(link)
             self.assertEqual(
@@ -483,8 +418,8 @@ class TestMigrateV03toV04(AiidaTestCase):
                 )
             )
 
-            # Migrate to v0.4
-            migrate_v3_to_v4(metadata, data, folder)
+            migrate_v3_to_v4(archive)
+            data = archive.data
 
         # Check illegal create links were removed
         self.assertEqual(

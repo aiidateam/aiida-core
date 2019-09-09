@@ -30,7 +30,7 @@ import os
 import numpy as np
 
 from aiida.cmdline.utils import echo
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata, remove_fields
+from aiida.tools.importexport.migration.utils import verify_archive_version, update_metadata, remove_fields
 
 
 def migration_base_data_plugin_type_string(data):
@@ -431,18 +431,23 @@ def add_extras(data):
     data.update({'node_extras': node_extras, 'node_extras_conversion': node_extras_conversion})
 
 
-def migrate_v3_to_v4(metadata, data, folder, *args):  # pylint: disable=unused-argument
-    """
-    Migration of export files from v0.3 to v0.4
+def migrate_v3_to_v4(archive):
+    """Migration of export files from v0.3 to v0.4
 
     Note concerning migration 0032 - REV. 1.0.32:
     Remove legacy workflow tables: DbWorkflow, DbWorkflowData, DbWorkflowStep
     These were (according to Antimo Marrazzo) never exported.
+
+    :param archive: The export archive to be migrated.
+    :type archive: :py:class:`~aiida.tools.importexport.common.archive.Archive`
     """
     old_version = '0.3'
     new_version = '0.4'
 
-    verify_metadata_version(metadata, old_version)
+    metadata = archive.meta_data
+    data = archive.data
+
+    verify_archive_version(archive.version_format, old_version)
     update_metadata(metadata, new_version)
 
     # Apply migrations in correct sequential order
@@ -456,7 +461,7 @@ def migrate_v3_to_v4(metadata, data, folder, *args):  # pylint: disable=unused-a
     migration_dbgroup_type_string_change_content(data)
     migration_calc_job_option_attribute_keys(data)
     migration_move_data_within_node_module(data)
-    migration_trajectory_symbols_to_attribute(data, folder)
+    migration_trajectory_symbols_to_attribute(data, archive.folder)
     migration_remove_node_prefix(data)
     migration_rename_parameter_data_to_dict(data)
     migration_dbnode_type_to_dbnode_node_type(metadata, data)

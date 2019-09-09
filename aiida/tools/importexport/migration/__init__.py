@@ -10,9 +10,9 @@
 """Migration export files from old export versions to the newest, used by `verdi export migrate` command."""
 
 from aiida.cmdline.utils import echo
-from aiida.tools.importexport.common.exceptions import DanglingLinkError
+from aiida.tools.importexport.common import exceptions
 
-from .utils import verify_metadata_version
+from .utils import verify_archive_version
 from .v01_to_v02 import migrate_v1_to_v2
 from .v02_to_v03 import migrate_v2_to_v3
 from .v03_to_v04 import migrate_v3_to_v4
@@ -21,7 +21,7 @@ from .v05_to_v06 import migrate_v5_to_v6
 from .v06_to_v07 import migrate_v6_to_v7
 from .v07_to_v08 import migrate_v7_to_v8
 
-__all__ = ('migrate_recursively', 'verify_metadata_version')
+__all__ = ('migrate_archive', 'verify_archive_version')
 
 MIGRATE_FUNCTIONS = {
     '0.1': migrate_v1_to_v2,
@@ -34,34 +34,68 @@ MIGRATE_FUNCTIONS = {
 }
 
 
-def migrate_recursively(metadata, data, folder):
+def migrate_recursively(archive):
     """
     Recursive migration of export files from v0.1 to newest version,
     See specific migration functions for detailed descriptions.
 
-    :param metadata: the content of an export archive metadata.json file
-    :param data: the content of an export archive data.json file
-    :param folder: SandboxFolder in which the archive has been unpacked (workdir)
+    :param archive: The export archive to be migrated.
+    :type archive: :py:class:`~aiida.tools.importexport.common.archive.Archive`
     """
     from aiida.tools.importexport import EXPORT_VERSION as newest_version
 
-    old_version = verify_metadata_version(metadata)
+    old_version = archive.version_format
 
-    try:
-        if old_version == newest_version:
-            echo.echo_critical('Your export file is already at the newest export version {}'.format(newest_version))
-        elif old_version in MIGRATE_FUNCTIONS:
-            MIGRATE_FUNCTIONS[old_version](metadata, data, folder)
-        else:
-            echo.echo_critical('Cannot migrate from version {}'.format(old_version))
-    except ValueError as exception:
-        echo.echo_critical(exception)
-    except DanglingLinkError:
-        echo.echo_critical('Export file is invalid because it contains dangling links')
+    if old_version == newest_version:
+        raise exceptions.MigrationValidationError(
+            'Your export file is already at the newest export version {}'.format(newest_version)
+        )
+    elif old_version in MIGRATE_FUNCTIONS:
+        MIGRATE_FUNCTIONS[old_version](archive)
+    else:
+        raise exceptions.MigrationValidationError('Cannot migrate from version {}'.format(old_version))
 
-    new_version = verify_metadata_version(metadata)
+    new_version = archive.version_format
 
-    if new_version < newest_version:
-        new_version = migrate_recursively(metadata, data, folder)
+    if new_version:
+        if new_version < newest_version:
+            new_version = migrate_recursively(archive)
+    else:
+        raise exceptions.MigrationValidationError('Archive version could not be determined')
 
     return new_version
+
+
+def migrate_archive(source, output=None, overwrite=False, silent=False):
+    """Unpack, migrate, and repack an export archive
+
+    :param source: Path to source archive to be migrated.
+    :type source: str
+    :param output: Path to newly migrated archive.
+    :type output: str
+    :param overwrite: Whether or not to overwrite the newly migrated archive, if it already exists.
+    :type overwrite: bool
+    :param silent: Whether or not to unpack archive and migrate silently.
+    :type silent: bool
+
+    :return: Results overview
+    :rtype: dict
+    """
+    import os
+    from aiida.tools.importexport import Archive
+
+    if output and os.path.exists(output) and not overwrite:
+        raise exceptions.MigrationValidationError('The output file already exists')
+
+    try:
+        with Archive(
+            source, output_filepath=output, overwrite=overwrite, silent=silent, sandbox_in_repo=False
+        ) as archive:
+            old_version = archive.version_format
+            new_version = migrate_recursively(archive)
+
+            archive.repack()
+    except Exception as why:
+        raise exceptions.ArchiveMigrationError(why)
+
+    return old_version, new_version

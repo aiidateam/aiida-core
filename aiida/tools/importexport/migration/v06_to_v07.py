@@ -25,7 +25,7 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 """
 # pylint: disable=invalid-name
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+from aiida.tools.importexport.migration.utils import verify_archive_version, update_metadata
 
 
 def migration_data_migration_legacy_process_attributes(data):
@@ -112,14 +112,20 @@ def remove_attribute_link_metadata(metadata):
             metadata[dictionary].pop(entity, None)
 
 
-def migrate_v6_to_v7(metadata, data, *args):  # pylint: disable=unused-argument
-    """Migration of export files from v0.6 to v0.7"""
+def migrate_v6_to_v7(archive):
+    """Migration of export files from v0.6 to v0.7
+
+    :param archive: The export archive to be migrated.
+    :type archive: :py:class:`~aiida.tools.importexport.common.archive.Archive`
+    """
     old_version = '0.6'
     new_version = '0.7'
 
-    verify_metadata_version(metadata, old_version)
+    metadata = archive.meta_data
+
+    verify_archive_version(archive.version_format, old_version)
     update_metadata(metadata, new_version)
 
     # Apply migrations
-    migration_data_migration_legacy_process_attributes(data)
+    migration_data_migration_legacy_process_attributes(archive.data)
     remove_attribute_link_metadata(metadata)

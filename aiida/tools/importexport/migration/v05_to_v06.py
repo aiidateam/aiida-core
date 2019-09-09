@@ -25,7 +25,7 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 """
 # pylint: disable=invalid-name
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+from aiida.tools.importexport.migration.utils import verify_archive_version, update_metadata
 
 
 def migrate_deserialized_datetime(data, conversion):
@@ -131,13 +131,19 @@ def migration_migrate_legacy_job_calculation_data(data):
             values['process_label'] = 'Legacy JobCalculation'
 
 
-def migrate_v5_to_v6(metadata, data, *args):  # pylint: disable=unused-argument
-    """Migration of export files from v0.5 to v0.6"""
+def migrate_v5_to_v6(archive):
+    """Migration of export files from v0.5 to v0.6
+
+    :param archive: The export archive to be migrated.
+    :type archive: :py:class:`~aiida.tools.importexport.common.archive.Archive`
+    """
     old_version = '0.5'
     new_version = '0.6'
 
-    verify_metadata_version(metadata, old_version)
-    update_metadata(metadata, new_version)
+    data = archive.data
+
+    verify_archive_version(archive.version_format, old_version)
+    update_metadata(archive.meta_data, new_version)
 
     # Apply migrations
     migration_serialize_datetime_objects(data)

@@ -71,20 +71,19 @@ class TestVerdiImport(AiidaTestCase):
         """Test import for archive folder from disk"""
         import os
 
-        from aiida.common.folders import SandboxFolder
-        from aiida.tools.importexport.common.archive import extract_zip
+        from aiida.tools.importexport import Archive
 
-        archive = get_archive_file(self.newest_archive, filepath=self.archive_path)
+        archive_filepath = get_archive_file(self.newest_archive, filepath=self.archive_path)
 
-        with SandboxFolder() as temp_dir:
-            extract_zip(archive, temp_dir, silent=True)
+        with Archive(archive_filepath, silent=True) as archive:
+            archive.unpack()
 
-            # Make sure the JSON files and the nodes subfolder was correctly extracted,
+            # Make sure the JSON files and the nodes subfolder exists and are correctly extracted,
             # then try to import it by passing the extracted folder to `verdi import`.
             for name in {'metadata.json', 'data.json', 'nodes'}:
-                self.assertTrue(os.path.exists(os.path.join(temp_dir.abspath, name)))
+                self.assertTrue(os.path.exists(os.path.join(archive.folder.abspath, name)))
 
-            result = self.cli_runner.invoke(cmd_import.cmd_import, [temp_dir.abspath])
+            result = self.cli_runner.invoke(cmd_import.cmd_import, [archive.folder.abspath])
 
             self.assertIsNone(result.exception, msg=result.output)
             self.assertEqual(result.exit_code, 0, msg=result.output)

@@ -11,8 +11,9 @@
 
 from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_json_files
-from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.backends.tests.utils.archives import get_archive_file
+from aiida.tools.importexport.common.archive import Archive
+from aiida.tools.importexport.migration.utils import verify_archive_version
 from aiida.tools.importexport.migration.v05_to_v06 import migrate_v5_to_v6
 
 
@@ -31,17 +32,22 @@ class TestMigrateV05toV06(AiidaTestCase):
         """Test migration for file containing complete v0.5 era possibilities"""
         from aiida import get_version
 
-        # Get metadata.json and data.json as dicts from v0.5 file archive
-        metadata_v5, data_v5 = get_json_files('export_v0.5_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v5, version='0.5')
+        archive_v5 = get_archive_file('export_v0.5_simple.aiida', **self.core_archive)
+        archive_v6 = get_archive_file('export_v0.6_simple.aiida', **self.core_archive)
 
-        # Get metadata.json and data.json as dicts from v0.6 file archive
-        metadata_v6, data_v6 = get_json_files('export_v0.6_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v6, version='0.6')
+        with Archive(archive_v5) as archive:
+            verify_archive_version(archive.version_format, '0.5')
+            migrate_v5_to_v6(archive)
+            verify_archive_version(archive.version_format, '0.6')
 
-        # Migrate to v0.6
-        migrate_v5_to_v6(metadata_v5, data_v5)
-        verify_metadata_version(metadata_v5, version='0.6')
+            data_v5 = archive.data
+            metadata_v5 = archive.meta_data
+
+        with Archive(archive_v6) as archive:
+            verify_archive_version(archive.version_format, '0.6')
+
+            data_v6 = archive.data
+            metadata_v6 = archive.meta_data
 
         # Remove AiiDA version, since this may change irregardless of the migration function
         metadata_v5.pop('aiida_version')
@@ -73,23 +79,21 @@ class TestMigrateV05toV06(AiidaTestCase):
         This test has to use a local archive because the current archive from the `aiida-export-migration-tests`
         module does not include a `CalcJobNode` with a legacy `state` attribute.
         """
-        # Get metadata.json and data.json as dicts from v0.5 file archive
-        metadata, data = get_json_files('export_v0.5_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata, version='0.5')
+        archive_v5 = get_archive_file('export_v0.5_simple.aiida', **self.core_archive)
 
-        calc_job_node_type = 'process.calculation.calcjob.CalcJobNode.'
-        node_data = data['export_data'].get('Node', {})
-        node_attributes = data['node_attributes']
-        calc_jobs = {}
-        for pk, values in node_data.items():
-            if values['node_type'] == calc_job_node_type and 'state' in data['node_attributes'].get(pk, {}):
-                calc_jobs[pk] = data['node_attributes'][pk]['state']
+        with Archive(archive_v5) as archive:
 
-        # Migrate to v0.6
-        migrate_v5_to_v6(metadata, data)
-        verify_metadata_version(metadata, version='0.6')
+            calc_job_node_type = 'process.calculation.calcjob.CalcJobNode.'
+            node_data = archive.data['export_data'].get('Node', {})
+            node_attributes = archive.data['node_attributes']
+            calc_jobs = {}
+            for pk, values in node_data.items():
+                if values['node_type'] == calc_job_node_type and 'state' in archive.data['node_attributes'].get(pk, {}):
+                    calc_jobs[pk] = archive.data['node_attributes'][pk]['state']
 
-        node_attributes = data['node_attributes']
+            migrate_v5_to_v6(archive)
+
+            node_attributes = archive.data['node_attributes']
 
         # The export archive contains a single `CalcJobNode` that had `state=FINISHED`.
         for pk, state in calc_jobs.items():
@@ -115,41 +119,40 @@ class TestMigrateV05toV06(AiidaTestCase):
         Here we test that the archive migration correctly reattaches the timezone information. The archive that we are
         using `export_v0.5_simple.aiida` contains a node with the attribute "scheduler_lastchecktime".
         """
-        # Get metadata.json and data.json as dicts from v0.5 file archive
-        metadata, data = get_json_files('export_v0.5_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata, version='0.5')
+        archive_name = 'export_v0.5_simple.aiida'
+        archive_v5 = get_archive_file(archive_name, **self.core_archive)
 
-        for key, values in data['node_attributes'].items():
-            if 'scheduler_lastchecktime' not in values:
-                continue
+        with Archive(archive_v5) as archive:
+            for key, values in archive.data['node_attributes'].items():
+                if 'scheduler_lastchecktime' not in values:
+                    continue
 
-            serialized_original = values['scheduler_lastchecktime']
-            msg = 'the serialized datetime before migration should not contain a plus: {}'.format(serialized_original)
-            self.assertTrue('+' not in serialized_original, msg=msg)
+                serialized_original = values['scheduler_lastchecktime']
+                msg = 'the serialized datetime before migration should not contain a plus: {}'.format(
+                    serialized_original
+                )
+                self.assertTrue('+' not in serialized_original, msg=msg)
 
-            # Migrate to v0.6
-            migrate_v5_to_v6(metadata, data)
-            verify_metadata_version(metadata, version='0.6')
+                # Migrate to v0.6
+                migrate_v5_to_v6(archive)
+                verify_archive_version(archive.version_format, version='0.6')
 
-            serialized_migrated = data['node_attributes'][key]['scheduler_lastchecktime']
-            self.assertEqual(serialized_migrated, serialized_original + '+00:00')
-            break
+                serialized_migrated = archive.data['node_attributes'][key]['scheduler_lastchecktime']
+                self.assertEqual(serialized_migrated, serialized_original + '+00:00')
+                break
 
-        else:
-            raise RuntimeError(
-                'the archive `export_v0.5_simple.aiida` did not contain a node with the attribute '
-                '`scheduler_lastchecktime` which is required for this test.'
-            )
+            else:
+                raise RuntimeError(
+                    'the archive `{}` did not contain a node with the attribute '
+                    '`scheduler_lastchecktime` which is required for this test.'.format(archive_name)
+                )
 
     def test_migrate_v5_to_v6_complete(self):
         """Test migration for file containing complete v0.5 era possibilities"""
-        # Get metadata.json and data.json as dicts from v0.5 file archive
-        metadata, data = get_json_files('export_v0.5_manual.aiida', **self.external_archive)
-        verify_metadata_version(metadata, version='0.5')
-
-        # Migrate to v0.6
-        migrate_v5_to_v6(metadata, data)
-        verify_metadata_version(metadata, version='0.6')
+        archive_v5 = get_archive_file('export_v0.5_manual.aiida', **self.external_archive)
+        with Archive(archive_v5) as archive:
+            migrate_v5_to_v6(archive)
+            data = archive.data
 
         self.maxDiff = None  # pylint: disable=invalid-name
         # Explicitly check that conversion dictionaries were removed

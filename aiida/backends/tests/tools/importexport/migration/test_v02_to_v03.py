@@ -11,8 +11,9 @@
 # pylint: disable=too-many-branches
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_json_files
-from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.backends.tests.utils.archives import get_archive_file
+from aiida.tools.importexport import Archive
+from aiida.tools.importexport.migration.utils import verify_archive_version
 from aiida.tools.importexport.migration.v02_to_v03 import migrate_v2_to_v3
 
 
@@ -31,17 +32,22 @@ class TestMigrateV02toV03(AiidaTestCase):
         """Test function migrate_v2_to_v3"""
         from aiida import get_version
 
-        # Get metadata.json and data.json as dicts from v0.2 file archive
-        metadata_v2, data_v2 = get_json_files('export_v0.2_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v2, version='0.2')
+        archive_v2 = get_archive_file('export_v0.2_simple.aiida', **self.core_archive)
+        archive_v3 = get_archive_file('export_v0.3_simple.aiida', **self.core_archive)
 
-        # Get metadata.json and data.json as dicts from v0.3 file archive
-        metadata_v3, data_v3 = get_json_files('export_v0.3_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v3, version='0.3')
+        with Archive(archive_v2) as archive:
+            verify_archive_version(archive.version_format, '0.2')
+            migrate_v2_to_v3(archive)
+            verify_archive_version(archive.version_format, '0.3')
 
-        # Migrate to v0.3
-        migrate_v2_to_v3(metadata_v2, data_v2)
-        verify_metadata_version(metadata_v2, version='0.3')
+            data_v2 = archive.data
+            metadata_v2 = archive.meta_data
+
+        with Archive(archive_v3) as archive:
+            verify_archive_version(archive.version_format, '0.3')
+
+            data_v3 = archive.data
+            metadata_v3 = archive.meta_data
 
         # Remove AiiDA version, since this may change irregardless of the migration function
         metadata_v2.pop('aiida_version')
@@ -69,14 +75,14 @@ class TestMigrateV02toV03(AiidaTestCase):
 
     def test_migrate_v2_to_v3_complete(self):
         """Test migration for file containing complete v0.2 era possibilities"""
+        archive_v2 = get_archive_file('export_v0.2.aiida', **self.external_archive)
+        with Archive(archive_v2) as archive:
+            verify_archive_version(archive.version_format, version='0.2')
+            migrate_v2_to_v3(archive)
+            verify_archive_version(archive.version_format, version='0.3')
 
-        # Get metadata.json and data.json as dicts from v0.2 file archive
-        metadata, data = get_json_files('export_v0.2.aiida', **self.external_archive)
-        verify_metadata_version(metadata, version='0.2')
-
-        # Migrate to v0.3
-        migrate_v2_to_v3(metadata, data)
-        verify_metadata_version(metadata, version='0.3')
+            data = archive.data
+            metadata = archive.meta_data
 
         self.maxDiff = None  # pylint: disable=invalid-name
         # Check link types
@@ -124,11 +130,18 @@ class TestMigrateV02toV03(AiidaTestCase):
         """
 
         # Get metadata.json and data.json as dicts from v0.2 file archive and migrate
-        metadata_v2, data_v2 = get_json_files('export_v0.2.aiida', **self.external_archive)
-        migrate_v2_to_v3(metadata_v2, data_v2)
+        archive_v2 = get_archive_file('export_v0.2.aiida', **self.external_archive)
+        with Archive(archive_v2) as archive:
+            migrate_v2_to_v3(archive)
+
+            data_v2 = archive.data
+            metadata_v2 = archive.meta_data
 
         # Get metadata.json and data.json as dicts from v0.3 file archive
-        metadata_v3, data_v3 = get_json_files('export_v0.3.aiida', **self.external_archive)
+        archive_v3 = get_archive_file('export_v0.3.aiida', **self.external_archive)
+        with Archive(archive_v3) as archive:
+            data_v3 = archive.data
+            metadata_v3 = archive.meta_data
 
         # Compare 'metadata.json'
         metadata_v2.pop('conversion_info')

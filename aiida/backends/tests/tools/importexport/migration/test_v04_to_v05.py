@@ -9,17 +9,10 @@
 ###########################################################################
 """Test export file migration from export version 0.4 to 0.5"""
 
-import io
-import tarfile
-import zipfile
-
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_archive_file, get_json_files
-from aiida.common.exceptions import NotExistent
-from aiida.common.folders import SandboxFolder
-from aiida.common.json import load as jsonload
-from aiida.tools.importexport.common.archive import extract_tar, extract_zip
-from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.backends.tests.utils.archives import get_archive_file
+from aiida.tools.importexport.common.archive import Archive
+from aiida.tools.importexport.migration.utils import verify_archive_version
 from aiida.tools.importexport.migration.v04_to_v05 import migrate_v4_to_v5
 
 
@@ -38,36 +31,22 @@ class TestMigrateV04toV05(AiidaTestCase):
         """Test function migrate_v4_to_v5"""
         from aiida import get_version
 
-        # Get metadata.json and data.json as dicts from v0.5 file archive
-        metadata_v5, data_v5 = get_json_files('export_v0.5_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v5, version='0.5')
+        archive_v4 = get_archive_file('export_v0.4_simple.aiida', **self.core_archive)
+        archive_v5 = get_archive_file('export_v0.5_simple.aiida', **self.core_archive)
 
-        # Get metadata.json and data.json as dicts from v0.4 file archive
-        # Cannot use 'get_json_files' for 'export_v0.4_simple.aiida',
-        # because we need to pass the SandboxFolder to 'migrate_v4_to_v5'
-        dirpath_archive = get_archive_file('export_v0.4_simple.aiida', **self.core_archive)
+        with Archive(archive_v4) as archive:
+            verify_archive_version(archive.version_format, '0.4')
+            migrate_v4_to_v5(archive)
+            verify_archive_version(archive.version_format, '0.5')
 
-        with SandboxFolder(sandbox_in_repo=False) as folder:
-            if zipfile.is_zipfile(dirpath_archive):
-                extract_zip(dirpath_archive, folder, silent=True)
-            elif tarfile.is_tarfile(dirpath_archive):
-                extract_tar(dirpath_archive, folder, silent=True)
-            else:
-                raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
+            data_v4 = archive.data
+            metadata_v4 = archive.meta_data
 
-            try:
-                with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                    data_v4 = jsonload(fhandle)
-                with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                    metadata_v4 = jsonload(fhandle)
-            except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
+        with Archive(archive_v5) as archive:
+            verify_archive_version(archive.version_format, '0.5')
 
-            verify_metadata_version(metadata_v4, version='0.4')
-
-            # Migrate to v0.5
-            migrate_v4_to_v5(metadata_v4, data_v4)
-            verify_metadata_version(metadata_v4, version='0.5')
+            data_v5 = archive.data
+            metadata_v5 = archive.meta_data
 
         # Remove AiiDA version, since this may change irregardless of the migration function
         metadata_v4.pop('aiida_version')
@@ -96,14 +75,14 @@ class TestMigrateV04toV05(AiidaTestCase):
 
     def test_migrate_v4_to_v5_complete(self):
         """Test migration for file containing complete v0.4 era possibilities"""
+        archive_v4 = get_archive_file('export_v0.4.aiida', **self.external_archive)
+        with Archive(archive_v4) as archive:
+            verify_archive_version(archive.version_format, version='0.4')
+            migrate_v4_to_v5(archive)
+            verify_archive_version(archive.version_format, version='0.5')
 
-        # Get metadata.json and data.json as dicts from v0.4 file archive
-        metadata, data = get_json_files('export_v0.4.aiida', **self.external_archive)
-        verify_metadata_version(metadata, version='0.4')
-
-        # Migrate to v0.5
-        migrate_v4_to_v5(metadata, data)
-        verify_metadata_version(metadata, version='0.5')
+            data = archive.data
+            metadata = archive.meta_data
 
         self.maxDiff = None  # pylint: disable=invalid-name
         # Check schema-changes

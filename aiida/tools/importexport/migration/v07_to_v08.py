@@ -25,7 +25,7 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 """
 # pylint: disable=invalid-name
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+from aiida.tools.importexport.migration.utils import verify_archive_version, update_metadata
 
 
 def migration_default_link_label(data):
@@ -38,12 +38,19 @@ def migration_default_link_label(data):
             link['label'] = 'result'
 
 
-def migrate_v7_to_v8(metadata, data, *args):  # pylint: disable=unused-argument
-    """Migration of export files from v0.7 to v0.8."""
+def migrate_v7_to_v8(archive):
+    """Migration of export files from v0.7 to v0.8.
+
+    :param archive: The export archive to be migrated.
+    :type archive: :py:class:`~aiida.tools.importexport.common.archive.Archive`
+    """
     old_version = '0.7'
     new_version = '0.8'
 
-    verify_metadata_version(metadata, old_version)
+    data = archive.data
+    metadata = archive.meta_data
+
+    verify_archive_version(archive.version_format, old_version)
     update_metadata(metadata, new_version)
 
     # Apply migrations

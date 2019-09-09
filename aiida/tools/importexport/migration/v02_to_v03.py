@@ -13,17 +13,17 @@
 import enum
 
 from aiida.tools.importexport.common.exceptions import DanglingLinkError
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+from aiida.tools.importexport.migration.utils import verify_archive_version, update_metadata
 
 
-def migrate_v2_to_v3(metadata, data, *args):
-    """
-    Migration of export files from v0.2 to v0.3, which means adding the link
-    types to the link entries and making the entity key names backend agnostic
+def migrate_v2_to_v3(archive):
+    """Migration of export files from v0.2 to v0.3
+
+    Which means adding the link types to the link entries and making the entity key names backend agnostic
     by effectively removing the prefix 'aiida.backends.djsite.db.models'
 
-    :param data: the content of an export archive data.json file
-    :param metadata: the content of an export archive metadata.json file
+    :param archive: The export archive to be migrated.
+    :type archive: :py:class:`~aiida.tools.importexport.common.archive.Archive`
     """
 
     old_version = '0.2'
@@ -56,7 +56,10 @@ def migrate_v2_to_v3(metadata, data, *args):
         'aiida.backends.djsite.db.models.DbAttribute': 'Attribute'
     }
 
-    verify_metadata_version(metadata, old_version)
+    metadata = archive.meta_data
+    data = archive.data
+
+    verify_archive_version(archive.version_format, old_version)
     update_metadata(metadata, new_version)
 
     # Create a mapping from node uuid to node type

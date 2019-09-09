@@ -207,16 +207,13 @@ class TestSpecificImport(AiidaTestCase):
     @with_temp_dir
     def test_missing_node_repo_folder_import(self, temp_dir):
         """
-        Make sure `~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised during import when missing
-        Node repository folder.
+        Make sure :py:class:`~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised during import
+        when missing Node repository folder.
         Create and export a Node and manually remove its repository folder in the export file.
-        Attempt to import it and make sure `~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised,
-        due to the missing folder.
+        Attempt to import it and make sure :py:class:`~aiida.tools.importexport.common.exceptions.CorruptArchive`
+        is raised, due to the missing folder.
         """
-        import tarfile
-
-        from aiida.common.folders import SandboxFolder
-        from aiida.tools.importexport.common.archive import extract_tar
+        from aiida.tools.importexport import Archive
         from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
         from aiida.tools.importexport.common.utils import export_shard_uuid
 
@@ -237,16 +234,18 @@ class TestSpecificImport(AiidaTestCase):
         # Untar export file, remove repository folder, re-tar
         node_shard_uuid = export_shard_uuid(node_uuid)
         node_top_folder = node_shard_uuid.split('/')[0]
-        with SandboxFolder() as folder:
-            extract_tar(filename, folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
-            node_folder = folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_shard_uuid))
+        with Archive(filename, silent=True) as archive:
+            archive.unpack()
+
+            node_folder = archive.folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_shard_uuid))
             self.assertTrue(
                 node_folder.exists(), msg="The Node's repository folder should still exist in the export file"
             )
 
             # Removing the Node's repository folder from the export file
             shutil.rmtree(
-                folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_top_folder)).abspath, ignore_errors=True
+                archive.folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_top_folder)).abspath,
+                ignore_errors=True
             )
             self.assertFalse(
                 node_folder.exists(),
@@ -254,8 +253,7 @@ class TestSpecificImport(AiidaTestCase):
             )
 
             filename_corrupt = os.path.join(temp_dir, 'export_corrupt.tar.gz')
-            with tarfile.open(filename_corrupt, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
-                tar.add(folder.abspath, arcname='')
+            archive.repack(filename_corrupt)
 
         # Try to import, check it raises and check the raise message
         with self.assertRaises(exceptions.CorruptArchive) as exc:
@@ -328,30 +326,29 @@ class TestSpecificImport(AiidaTestCase):
 
         It is important to check that the source directory or any of its contents are not deleted after import.
         """
-        from aiida.common.folders import SandboxFolder
         from aiida.backends.tests.utils.archives import get_archive_file
-        from aiida.tools.importexport.common.archive import extract_zip
+        from aiida.tools.importexport import Archive
 
-        archive = get_archive_file('arithmetic.add.aiida', filepath='calcjob')
+        archive_filepath = get_archive_file('arithmetic.add.aiida', filepath='calcjob')
 
-        with SandboxFolder() as temp_dir:
-            extract_zip(archive, temp_dir, silent=True)
+        with Archive(archive_filepath, silent=True) as archive:
+            archive.unpack()
 
-            # Make sure the JSON files and the nodes subfolder was correctly extracted (is present),
+            # Make sure the JSON files and the nodes subfolder exists and are correctly extracted,
             # then try to import it by passing the extracted folder to the import function.
             for name in {'metadata.json', 'data.json', 'nodes'}:
-                self.assertTrue(os.path.exists(os.path.join(temp_dir.abspath, name)))
+                self.assertTrue(os.path.exists(os.path.join(archive.folder.abspath, name)))
 
             # Get list of all folders in extracted archive
             org_folders = []
-            for dirpath, dirnames, _ in os.walk(temp_dir.abspath):
+            for dirpath, dirnames, _ in os.walk(archive.folder.abspath):
                 org_folders += [os.path.join(dirpath, dirname) for dirname in dirnames]
 
-            import_data(temp_dir.abspath, silent=True)
+            import_data(archive.folder.abspath, silent=True)
 
             # Check nothing from the source was deleted
             src_folders = []
-            for dirpath, dirnames, _ in os.walk(temp_dir.abspath):
+            for dirpath, dirnames, _ in os.walk(archive.folder.abspath):
                 src_folders += [os.path.join(dirpath, dirname) for dirname in dirnames]
             self.maxDiff = None  # pylint: disable=invalid-name
             self.assertListEqual(org_folders, src_folders)

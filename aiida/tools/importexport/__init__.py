@@ -19,5 +19,6 @@ Tests: <tree>/aiida/backends/tests/test_export_and_import.py
 from .dbexport import *
 from .dbimport import *
 from .common import *
+from .migration import *
 
-__all__ = (dbexport.__all__ + dbimport.__all__ + common.__all__)
+__all__ = (dbexport.__all__ + dbimport.__all__ + common.__all__ + migration.__all__)

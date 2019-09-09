@@ -9,31 +9,23 @@
 ###########################################################################
 """Utility functions for migration of export-files."""
 
-from aiida.tools.importexport.common import exceptions
 
+def verify_archive_version(archive_version, version):
+    """Utility function to verify that the archive has the correct version number.
 
-def verify_metadata_version(metadata, version=None):
-    """Utility function to verify that the metadata has the correct version number.
-
-    If no version number is passed, it will just extract the version number and return it.
-
-    :param metadata: the content of an export archive metadata.json file
-    :param version: string version number that the metadata is expected to have
+    :param archive_version: the version from an export archive metadata.json file
+    :type archive_version: str
+    :param version: version number that the archive is expected to have
+    :type version: str
     """
-    try:
-        metadata_version = metadata['export_version']
-    except KeyError:
-        raise exceptions.ArchiveMigrationError("metadata is missing the 'export_version' key")
+    from aiida.tools.importexport.common.exceptions import MigrationValidationError
 
-    if version is None:
-        return metadata_version
-
-    if metadata_version != version:
-        raise exceptions.MigrationValidationError(
-            'expected export file with version {} but found version {}'.format(version, metadata_version)
+    if not isinstance(archive_version, str) or not isinstance(version, str):
+        raise MigrationValidationError('Only strings are accepted for "verify_archive_version"')
+    if archive_version != version:
+        raise MigrationValidationError(
+            'expected export file with version {} but found version {}'.format(version, archive_version)
         )
-
-    return None
 
 
 def update_metadata(metadata, version):
@@ -50,7 +42,6 @@ def update_metadata(metadata, version):
     conversion_message = 'Converted from version {} to {} with AiiDA v{}'.format(old_version, version, get_version())
     conversion_info.append(conversion_message)
 
-    metadata['aiida_version'] = get_version()
     metadata['export_version'] = version
     metadata['conversion_info'] = conversion_info
 

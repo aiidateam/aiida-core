@@ -212,21 +212,6 @@ class TestVerdiExport(AiidaTestCase):
             finally:
                 delete_temporary_file(filename_output)
 
-    def test_migrate_tar_gz(self):
-        """Test that -F/--archive-format option can be used to write a tar.gz instead."""
-        filename_input = get_archive_file(self.penultimate_archive, filepath=self.fixture_archive)
-        filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
-
-        for option in ['-F', '--archive-format']:
-            try:
-                options = [option, 'tar.gz', filename_input, filename_output]
-                result = self.cli_runner.invoke(cmd_export.migrate, options)
-                self.assertIsNone(result.exception, result.output)
-                self.assertTrue(os.path.isfile(filename_output))
-                self.assertTrue(tarfile.is_tarfile(filename_output))
-            finally:
-                delete_temporary_file(filename_output)
-
     def test_inspect(self):
         """Test the functionality of `verdi export inspect`."""
         archives = []

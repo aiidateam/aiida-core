@@ -10,7 +10,6 @@
 # pylint: disable=too-many-arguments,import-error,too-many-locals
 """`verdi export` command."""
 
-import io
 import os
 
 import click
@@ -143,54 +142,22 @@ def create(
 @verdi_export.command('migrate')
 @arguments.INPUT_FILE()
 @arguments.OUTPUT_FILE()
-@options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
 @options.SILENT()
-def migrate(input_file, output_file, force, silent, archive_format):
+def migrate(input_file, output_file, force, silent):
     # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """
     Migrate an old export archive file to the most recent format.
     """
-    import tarfile
-    import zipfile
-
-    from aiida.common import json
-    from aiida.tools.importexport import migration, Archive, ExportImportException
+    from aiida.tools.importexport import migrate_archive, ArchiveMigrationError
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')
 
     try:
-        with Archive(input_file, silent=silent, sandbox_in_repo=False) as archive:
-            data = archive.data
-            metadata = archive.meta_data
-
-            old_version = migration.verify_metadata_version(metadata)
-            new_version = migration.migrate_recursively(metadata, data, archive.folder)
-
-            with io.open(archive.folder.get_abs_path('data.json'), 'wb') as fhandle:
-                json.dump(data, fhandle, indent=4)
-
-            with io.open(archive.folder.get_abs_path('metadata.json'), 'wb') as fhandle:
-                json.dump(metadata, fhandle)
-
-            if archive_format in ['zip', 'zip-uncompressed']:
-                compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
-                with zipfile.ZipFile(
-                    output_file, mode='w', compression=compression, allowZip64=True
-                ) as migrated_archive:
-                    src = archive.folder.abspath
-                    for dirpath, dirnames, filenames in os.walk(src):
-                        relpath = os.path.relpath(dirpath, src)
-                        for filename in dirnames + filenames:
-                            real_src = os.path.join(dirpath, filename)
-                            real_dest = os.path.join(relpath, filename)
-                            migrated_archive.write(real_src, real_dest)
-            elif archive_format == 'tar.gz':
-                with tarfile.open(output_file, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as migrated_archive:
-                    migrated_archive.add(archive.folder.abspath, arcname='')
-
-            if not silent:
-                echo.echo_success('migrated the archive from version {} to {}'.format(old_version, new_version))
-    except ExportImportException as why:
+        old_version, new_version = migrate_archive(input_file, output_file, overwrite=force, silent=silent)
+    except ArchiveMigrationError as why:
         echo.echo_critical('An error occurred while migrating {}: {}'.format(input_file, why))
+    else:
+        if not silent:
+            echo.echo_success('migrated the archive from version {} to {}'.format(old_version, new_version))

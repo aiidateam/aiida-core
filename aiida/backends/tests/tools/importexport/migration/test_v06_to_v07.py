@@ -10,8 +10,9 @@
 """Test export file migration from export version 0.6 to 0.7"""
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_json_files
-from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.backends.tests.utils.archives import get_archive_file
+from aiida.tools.importexport.common.archive import Archive
+from aiida.tools.importexport.migration.utils import verify_archive_version
 from aiida.tools.importexport.migration.v06_to_v07 import (
     migrate_v6_to_v7, migration_data_migration_legacy_process_attributes
 )
@@ -32,17 +33,22 @@ class TestMigrateV06toV07(AiidaTestCase):
         """Test migration for file containing complete v0.6 era possibilities"""
         from aiida import get_version
 
-        # Get metadata.json and data.json as dicts from v0.6 file archive
-        metadata_v6, data_v6 = get_json_files('export_v0.6_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v6, version='0.6')
+        archive_v6 = get_archive_file('export_v0.6_simple.aiida', **self.core_archive)
+        archive_v7 = get_archive_file('export_v0.7_simple.aiida', **self.core_archive)
 
-        # Get metadata.json and data.json as dicts from v0.7 file archive
-        metadata_v7, data_v7 = get_json_files('export_v0.7_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v7, version='0.7')
+        with Archive(archive_v6) as archive:
+            verify_archive_version(archive.version_format, '0.6')
+            migrate_v6_to_v7(archive)
+            verify_archive_version(archive.version_format, '0.7')
 
-        # Migrate to v0.7
-        migrate_v6_to_v7(metadata_v6, data_v6)
-        verify_metadata_version(metadata_v6, version='0.7')
+            data_v6 = archive.data
+            metadata_v6 = archive.meta_data
+
+        with Archive(archive_v7) as archive:
+            verify_archive_version(archive.version_format, '0.7')
+
+            data_v7 = archive.data
+            metadata_v7 = archive.meta_data
 
         # Remove AiiDA version, since this may change irregardless of the migration function
         metadata_v6.pop('aiida_version')
@@ -70,13 +76,15 @@ class TestMigrateV06toV07(AiidaTestCase):
 
     def test_migrate_v6_to_v7_complete(self):
         """Test migration for file containing complete v0.6 era possibilities"""
-        # Get metadata.json and data.json as dicts from v0.6 file archive
-        metadata, data = get_json_files('export_v0.6_manual.aiida', **self.external_archive)
-        verify_metadata_version(metadata, version='0.6')
+        archive_v6 = get_archive_file('export_v0.6_manual.aiida', **self.external_archive)
 
-        # Migrate to v0.7
-        migrate_v6_to_v7(metadata, data)
-        verify_metadata_version(metadata, version='0.7')
+        with Archive(archive_v6) as archive:
+            verify_archive_version(archive.version_format, version='0.6')
+            migrate_v6_to_v7(archive)
+            verify_archive_version(archive.version_format, version='0.7')
+
+            data = archive.data
+            metadata = archive.meta_data
 
         self.maxDiff = None  # pylint: disable=invalid-name
         # Check attributes of process.* nodes

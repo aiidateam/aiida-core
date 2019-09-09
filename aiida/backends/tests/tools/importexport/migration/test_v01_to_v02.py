@@ -11,8 +11,9 @@
 
 from aiida import get_version
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_json_files
-from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.backends.tests.utils.archives import get_archive_file
+from aiida.tools.importexport import Archive
+from aiida.tools.importexport.migration.utils import verify_archive_version
 from aiida.tools.importexport.migration.v01_to_v02 import migrate_v1_to_v2
 
 
@@ -21,17 +22,22 @@ class TestMigrateV01toV02(AiidaTestCase):
 
     def test_migrate_v1_to_v2(self):
         """Test function migrate_v1_to_v2"""
-        # Get metadata.json and data.json as dicts from v0.1 file archive
-        metadata_v1, data_v1 = get_json_files('export_v0.1_simple.aiida', filepath='export/migrate')
-        verify_metadata_version(metadata_v1, version='0.1')
+        archive_v1 = get_archive_file('export_v0.1_simple.aiida', filepath='export/migrate')
+        archive_v2 = get_archive_file('export_v0.2_simple.aiida', filepath='export/migrate')
 
-        # Get metadata.json and data.json as dicts from v0.2 file archive
-        metadata_v2, data_v2 = get_json_files('export_v0.2_simple.aiida', filepath='export/migrate')
-        verify_metadata_version(metadata_v2, version='0.2')
+        with Archive(archive_v1) as archive:
+            verify_archive_version(archive.version_format, '0.1')
+            migrate_v1_to_v2(archive)
+            verify_archive_version(archive.version_format, '0.2')
 
-        # Migrate to v0.2
-        migrate_v1_to_v2(metadata_v1, data_v1)
-        verify_metadata_version(metadata_v1, version='0.2')
+            data_v1 = archive.data
+            metadata_v1 = archive.meta_data
+
+        with Archive(archive_v2) as archive:
+            verify_archive_version(archive.version_format, '0.2')
+
+            data_v2 = archive.data
+            metadata_v2 = archive.meta_data
 
         # Remove AiiDA version, since this may change irregardless of the migration function
         metadata_v1.pop('aiida_version')

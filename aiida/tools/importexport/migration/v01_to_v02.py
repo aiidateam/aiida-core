@@ -10,16 +10,16 @@
 """Migration from v0.1 to v0.2, used by `verdi export migrate` command."""
 # pylint: disable=unused-argument
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+from aiida.tools.importexport.migration.utils import verify_archive_version, update_metadata
 
 
-def migrate_v1_to_v2(metadata, data, *args):
-    """
-    Migration of export files from v0.1 to v0.2, which means generalizing the
-    field names with respect to the database backend
+def migrate_v1_to_v2(archive):
+    """Migration of export files from v0.1 to v0.2
 
-    :param metadata: the content of an export archive metadata.json file
-    :param data: the content of an export archive data.json file
+    Which means generalizing the field names with respect to the database backend.
+
+    :param archive: The export archive to be migrated.
+    :type archive: :py:class:`~aiida.tools.importexport.common.archive.Archive`
     """
     old_version = '0.1'
     new_version = '0.2'
@@ -27,7 +27,10 @@ def migrate_v1_to_v2(metadata, data, *args):
     old_start = 'aiida.djsite'
     new_start = 'aiida.backends.djsite'
 
-    verify_metadata_version(metadata, old_version)
+    metadata = archive.meta_data
+    data = archive.data
+
+    verify_archive_version(archive.version_format, old_version)
     update_metadata(metadata, new_version)
 
     def get_new_string(old_string):

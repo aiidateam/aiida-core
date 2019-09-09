@@ -10,9 +10,10 @@
 """Test export file migration from export version 0.7 to 0.8"""
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_json_files
-from aiida.tools.importexport.migration.utils import verify_metadata_version
-from aiida.tools.importexport.migration.v07_to_v08 import (migrate_v7_to_v8, migration_default_link_label)
+from aiida.backends.tests.utils.archives import get_archive_file
+from aiida.tools.importexport.common.archive import Archive
+from aiida.tools.importexport.migration.utils import verify_archive_version
+from aiida.tools.importexport.migration.v07_to_v08 import migrate_v7_to_v8, migration_default_link_label
 
 
 class TestMigrateV07toV08(AiidaTestCase):
@@ -30,17 +31,22 @@ class TestMigrateV07toV08(AiidaTestCase):
         """Test migration for file containing complete v0.7 era possibilities"""
         from aiida import get_version
 
-        # Get metadata.json and data.json as dicts from v0.7 file archive
-        metadata_v7, data_v7 = get_json_files('export_v0.7_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v7, version='0.7')
+        archive_v7 = get_archive_file('export_v0.7_simple.aiida', **self.core_archive)
+        archive_v8 = get_archive_file('export_v0.8_simple.aiida', **self.core_archive)
 
-        # Get metadata.json and data.json as dicts from v0.8 file archive
-        metadata_v8, data_v8 = get_json_files('export_v0.8_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v8, version='0.8')
+        with Archive(archive_v7) as archive:
+            verify_archive_version(archive.version_format, '0.7')
+            migrate_v7_to_v8(archive)
+            verify_archive_version(archive.version_format, '0.8')
 
-        # Migrate to v0.8
-        migrate_v7_to_v8(metadata_v7, data_v7)
-        verify_metadata_version(metadata_v7, version='0.8')
+            data_v7 = archive.data
+            metadata_v7 = archive.meta_data
+
+        with Archive(archive_v8) as archive:
+            verify_archive_version(archive.version_format, '0.8')
+
+            data_v8 = archive.data
+            metadata_v8 = archive.meta_data
 
         # Remove AiiDA version, since this may change irregardless of the migration function
         metadata_v7.pop('aiida_version')
@@ -68,13 +74,14 @@ class TestMigrateV07toV08(AiidaTestCase):
 
     def test_migrate_v7_to_v8_complete(self):
         """Test migration for file containing complete v0.7 era possibilities"""
-        # Get metadata.json and data.json as dicts from v0.7 file archive
-        metadata, data = get_json_files('export_v0.7_manual.aiida', **self.external_archive)
-        verify_metadata_version(metadata, version='0.7')
+        archive_v7 = get_archive_file('export_v0.7_manual.aiida', **self.external_archive)
 
-        # Migrate to v0.8
-        migrate_v7_to_v8(metadata, data)
-        verify_metadata_version(metadata, version='0.8')
+        with Archive(archive_v7) as archive:
+            verify_archive_version(archive.version_format, version='0.7')
+            migrate_v7_to_v8(archive)
+            verify_archive_version(archive.version_format, version='0.8')
+
+            data = archive.data
 
         self.maxDiff = None  # pylint: disable=invalid-name
         # Check that no links have the label '_return', since it should now be 'result'

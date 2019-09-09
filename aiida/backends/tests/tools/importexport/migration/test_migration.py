@@ -13,11 +13,11 @@ import os
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_archive_file, get_json_files, migrate_archive
+from aiida.backends.tests.utils.archives import get_archive_file, NoContextArchive
 from aiida.backends.tests.utils.configuration import with_temp_dir
-from aiida.tools.importexport import import_data, EXPORT_VERSION as newest_version
-from aiida.tools.importexport.migration import migrate_recursively, verify_metadata_version
-from aiida.common.utils import Capturing
+from aiida.tools.importexport import import_data, Archive, EXPORT_VERSION as newest_version
+from aiida.tools.importexport.common.exceptions import MigrationValidationError
+from aiida.tools.importexport.migration import migrate_recursively, verify_archive_version, migrate_archive
 
 
 class TestExportFileMigration(AiidaTestCase):
@@ -63,44 +63,16 @@ class TestExportFileMigration(AiidaTestCase):
         super().setUp()
         self.reset_database()
 
-    def test_migrate_recursively(self):
-        """Test function 'migrate_recursively'"""
-        import io
-        import tarfile
-        import zipfile
+    @with_temp_dir
+    def test_migrate_archive(self, temp_dir):
+        """Test function 'migrate_archive'"""
+        input_file = get_archive_file('export_v0.1_simple.aiida', **self.core_archive)
+        migrated_file = os.path.join(temp_dir, 'migrated_file.aiida')
 
-        from aiida.common.exceptions import NotExistent
-        from aiida.common.folders import SandboxFolder
-        from aiida.common.json import load as jsonload
-        from aiida.tools.importexport.common.archive import extract_tar, extract_zip
-
-        # Get metadata.json and data.json as dicts from v0.1 file archive
-        # Cannot use 'get_json_files' for 'export_v0.1_simple.aiida',
-        # because we need to pass the SandboxFolder to 'migrate_recursively'
-        dirpath_archive = get_archive_file('export_v0.1_simple.aiida', **self.core_archive)
-
-        with SandboxFolder(sandbox_in_repo=False) as folder:
-            if zipfile.is_zipfile(dirpath_archive):
-                extract_zip(dirpath_archive, folder, silent=True)
-            elif tarfile.is_tarfile(dirpath_archive):
-                extract_tar(dirpath_archive, folder, silent=True)
-            else:
-                raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
-
-            try:
-                with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                    data = jsonload(fhandle)
-                with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                    metadata = jsonload(fhandle)
-            except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
-
-            verify_metadata_version(metadata, version='0.1')
-
-            # Migrate to newest version
-            new_version = migrate_recursively(metadata, data, folder)
-            verify_metadata_version(metadata, version=newest_version)
-            self.assertEqual(new_version, newest_version)
+        # Migrate to newest version
+        old_version, new_version = migrate_archive(input_file, migrated_file, silent=True)
+        self.assertEqual(old_version, '0.1')
+        self.assertEqual(new_version, newest_version)
 
     @with_temp_dir
     def test_no_node_export(self, temp_dir):
@@ -119,7 +91,7 @@ class TestExportFileMigration(AiidaTestCase):
         user_emails.append('aiida@localhost')
 
         # Perform the migration
-        migrate_archive(input_file, output_file)
+        migrate_archive(input_file, output_file, silent=True)
 
         # Load the migrated file
         import_data(output_file, silent=True)
@@ -156,23 +128,24 @@ class TestExportFileMigration(AiidaTestCase):
                 msg="'{}' was not expected to be a legal version, legal version: {}".format(version, legal_versions)
             )
 
-        # Make sure migrate_recursively throws a critical message and raises SystemExit
+        # Make sure migrate_recursively throws a critical message and raises MigrationValidationError
         for metadata in wrong_version_metadatas:
-            with self.assertRaises(SystemExit) as exception:
-                with Capturing(capture_stderr=True):
-                    new_version = migrate_recursively(metadata, {}, None)
+            archive = NoContextArchive(metadata=metadata)
+            with self.assertRaises(MigrationValidationError) as exception:
+                new_version = migrate_recursively(archive)
 
-                self.assertIn(
-                    'Critical: Cannot migrate from version {}'.format(metadata['export_version']),
-                    exception.exception,
-                    msg="Expected a critical statement for the wrong export version '{}', "
-                    'instead got {}'.format(metadata['export_version'], exception.exception)
-                )
                 self.assertIsNone(
                     new_version,
                     msg='migrate_recursively should not return anything, '
                     "hence the 'return' should be None, but instead it is {}".format(new_version)
                 )
+
+            self.assertIn(
+                'Cannot migrate from version {}'.format(metadata['export_version']),
+                str(exception.exception),
+                msg="Expected a critical statement for the wrong export version '{}', "
+                'instead got {}'.format(metadata['export_version'], str(exception.exception))
+            )
 
     def test_migrate_newest_version(self):
         """
@@ -180,26 +153,24 @@ class TestExportFileMigration(AiidaTestCase):
         """
         # Initialization
         metadata = {'export_version': newest_version}
+        archive = NoContextArchive(metadata=metadata)
 
         # Check
-        with self.assertRaises(SystemExit) as exception:
+        with self.assertRaises(MigrationValidationError) as exception:
+            new_version = migrate_recursively(archive)
 
-            with Capturing(capture_stderr=True):
-                new_version = migrate_recursively(metadata, {}, None)
-
-            self.assertIn(
-                'Critical: Your export file is already at the newest export version {}'.format(
-                    metadata['export_version']
-                ),
-                exception.exception,
-                msg="Expected a critical statement that the export version '{}' is the newest export version '{}', "
-                'instead got {}'.format(metadata['export_version'], newest_version, exception.exception)
-            )
             self.assertIsNone(
                 new_version,
                 msg='migrate_recursively should not return anything, '
                 "hence the 'return' should be None, but instead it is {}".format(new_version)
             )
+
+        self.assertIn(
+            'Your export file is already at the newest export version {}'.format(metadata['export_version']),
+            str(exception.exception),
+            msg="Expected a critical statement that the export version '{}' is the newest export version '{}', "
+            'instead got {}'.format(metadata['export_version'], newest_version, str(exception.exception))
+        )
 
     @with_temp_dir
     def test_v02_to_newest(self, temp_dir):
@@ -209,9 +180,9 @@ class TestExportFileMigration(AiidaTestCase):
         output_file = os.path.join(temp_dir, 'output_file.aiida')
 
         # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
+        migrate_archive(input_file, output=output_file, silent=True)
+        with Archive(output_file) as archive:
+            verify_archive_version(archive.version_format, version=newest_version)
 
         # Load the migrated file
         import_data(output_file, silent=True)
@@ -264,9 +235,9 @@ class TestExportFileMigration(AiidaTestCase):
         output_file = os.path.join(temp_dir, 'output_file.aiida')
 
         # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
+        migrate_archive(input_file, output_file, silent=True)
+        with Archive(output_file) as archive:
+            verify_archive_version(archive.version_format, version=newest_version)
 
         # Load the migrated file
         import_data(output_file, silent=True)
@@ -319,9 +290,9 @@ class TestExportFileMigration(AiidaTestCase):
         output_file = os.path.join(temp_dir, 'output_file.aiida')
 
         # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
+        migrate_archive(input_file, output_file, silent=True)
+        with Archive(output_file) as archive:
+            verify_archive_version(archive.version_format, version=newest_version)
 
         # Load the migrated file
         import_data(output_file, silent=True)
@@ -374,9 +345,9 @@ class TestExportFileMigration(AiidaTestCase):
         output_file = os.path.join(temp_dir, 'output_file.aiida')
 
         # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
+        migrate_archive(input_file, output_file, silent=True)
+        with Archive(output_file) as archive:
+            verify_archive_version(archive.version_format, version=newest_version)
 
         # Load the migrated file
         import_data(output_file, silent=True)
@@ -429,9 +400,9 @@ class TestExportFileMigration(AiidaTestCase):
         output_file = os.path.join(temp_dir, 'output_file.aiida')
 
         # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
+        migrate_archive(input_file, output_file, silent=True)
+        with Archive(output_file) as archive:
+            verify_archive_version(archive.version_format, version=newest_version)
 
         # Load the migrated file
         import_data(output_file, silent=True)
@@ -484,9 +455,9 @@ class TestExportFileMigration(AiidaTestCase):
         output_file = os.path.join(temp_dir, 'output_file.aiida')
 
         # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
+        migrate_archive(input_file, output_file, silent=True)
+        with Archive(output_file) as archive:
+            verify_archive_version(archive.version_format, version=newest_version)
 
         # Load the migrated file
         import_data(output_file, silent=True)

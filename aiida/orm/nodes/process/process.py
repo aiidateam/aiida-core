@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -117,8 +117,11 @@ class ProcessNode(Sealable, Node):
         try:
             process_class = load_entry_point_from_string(self.process_type)
         except exceptions.EntryPointError as exception:
-            raise ValueError('could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
-                self.pk, self.process_type, exception))
+            raise ValueError(
+                'could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
+                    self.pk, self.process_type, exception
+                )
+            )
         except ValueError:
             try:
                 import importlib
@@ -126,8 +129,11 @@ class ProcessNode(Sealable, Node):
                 module = importlib.import_module(module_name)
                 process_class = getattr(module, class_name)
             except (ValueError, ImportError):
-                raise ValueError('could not load process class CalcJobNode<{}> given its `process_type`: {}'.format(
-                    self.pk, self.process_type))
+                raise ValueError(
+                    'could not load process class CalcJobNode<{}> given its `process_type`: {}'.format(
+                        self.pk, self.process_type
+                    )
+                )
 
         return process_class
 
@@ -477,7 +483,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: True if this process node is valid to be used for caching, False otherwise
         """
-        return super(ProcessNode, self).is_valid_cache and self.is_finished_ok
+        return super(ProcessNode, self).is_valid_cache and self.is_finished
 
     def _get_objects_to_hash(self):
         """

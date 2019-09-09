@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -16,16 +16,15 @@ plugin-specific operations.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 
-import warnings
 from six.moves import zip
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import FolderData
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.plugins import DataFactory
@@ -43,10 +42,19 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
     :param transport: an already opened transport to use to submit the calculation.
     :param calc_info: the calculation info datastructure returned by `CalcJobNode.presubmit`
     :param script_filename: the job launch script returned by `CalcJobNode.presubmit`
+    :return: tuple of ``calc_info`` and ``script_filename``
     """
     from logging import LoggerAdapter
     from tempfile import NamedTemporaryFile
     from aiida.orm import load_node, Code, RemoteData
+
+    # If the calculation already has a `remote_folder`, simply return. The upload was apparently already completed
+    # before, which can happen if the daemon is restarted and it shuts down after uploading but before getting the
+    # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the upload.
+    link_label = 'remote_folder'
+    if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
+        execlogger.warning('CalcJobNode<{}> already has a `{}` output: skipping upload'.format(node.pk, link_label))
+        return calc_info, script_filename
 
     computer = node.computer
 
@@ -81,15 +89,15 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
             transport.chdir(remote_working_directory)
         except IOError:
             logger.debug(
-                "[submission of calculation {}] Unable to chdir in {}, trying to create it".format(
+                '[submission of calculation {}] Unable to chdir in {}, trying to create it'.format(
                     node.pk, remote_working_directory))
             try:
                 transport.makedirs(remote_working_directory)
                 transport.chdir(remote_working_directory)
             except EnvironmentError as exc:
                 raise exceptions.ConfigurationError(
-                    "[submission of calculation {}] "
-                    "Unable to create the remote directory {} on "
+                    '[submission of calculation {}] '
+                    'Unable to create the remote directory {} on '
                     "computer '{}': {}".format(
                         node.pk, remote_working_directory, computer.name, exc))
         # Store remotely with sharding (here is where we choose
@@ -144,7 +152,7 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
     # In a dry_run, the working directory is the raw input folder, which will already contain these resources
     if not dry_run:
         for filename in folder.get_content_list():
-            logger.debug("[submission of calculation {}] copying file/folder {}...".format(node.pk, filename))
+            logger.debug('[submission of calculation {}] copying file/folder {}...'.format(node.pk, filename))
             transport.put(folder.get_abs_path(filename), filename)
 
     # local_copy_list is a list of tuples, each with (uuid, dest_rel_path)
@@ -154,7 +162,7 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
     remote_symlink_list = calc_info.remote_symlink_list or []
 
     for uuid, filename, target in local_copy_list:
-        logger.debug("[submission of calculation {}] copying local file/folder to {}".format(node.pk, target))
+        logger.debug('[submission of calculation {}] copying local file/folder to {}'.format(node.pk, target))
 
         try:
             data_node = load_node(uuid=uuid)
@@ -187,34 +195,39 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
             if remote_computer_uuid == computer.uuid:
-                logger.debug("[submission of calculation {}] copying {} remotely, directly on the machine {}".format(
+                logger.debug('[submission of calculation {}] copying {} remotely, directly on the machine {}'.format(
                     node.pk, dest_rel_path, computer.name))
                 try:
                     transport.copy(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
-                    logger.warning("[submission of calculation {}] Unable to copy remote resource from {} to {}! "
-                                   "Stopping.".format(node.pk, remote_abs_path, dest_rel_path))
+                    logger.warning('[submission of calculation {}] Unable to copy remote resource from {} to {}! '
+                                   'Stopping.'.format(node.pk, remote_abs_path, dest_rel_path))
                     raise
             else:
                 raise NotImplementedError(
-                    "[submission of calculation {}] Remote copy between two different machines is "
-                    "not implemented yet".format(node.pk))
+                    '[submission of calculation {}] Remote copy between two different machines is '
+                    'not implemented yet'.format(node.pk))
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_symlink_list:
             if remote_computer_uuid == computer.uuid:
-                logger.debug("[submission of calculation {}] copying {} remotely, directly on the machine {}".format(
+                logger.debug('[submission of calculation {}] copying {} remotely, directly on the machine {}'.format(
                     node.pk, dest_rel_path, computer.name))
                 try:
                     transport.symlink(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
-                    logger.warning("[submission of calculation {}] Unable to create remote symlink from {} to {}! "
-                                   "Stopping.".format(node.pk, remote_abs_path, dest_rel_path))
+                    logger.warning('[submission of calculation {}] Unable to create remote symlink from {} to {}! '
+                                   'Stopping.'.format(node.pk, remote_abs_path, dest_rel_path))
                     raise
             else:
-                raise IOError("It is not possible to create a symlink between two different machines for "
-                              "calculation {}".format(node.pk))
+                raise IOError('It is not possible to create a symlink between two different machines for '
+                              'calculation {}'.format(node.pk))
 
     if not dry_run:
+        # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
+        # chance of making this method idempotent. That is to say, if a runner gets interrupted during this action, it
+        # will simply retry the upload, unless we got here and managed to link it up, in which case we move to the next
+        # task. Because in that case, the check for the existence of this link at the top of this function will exit
+        # early from this command.
         remotedata = RemoteData(computer=computer, remote_path=workdir)
         remotedata.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
         remotedata.store()
@@ -223,8 +236,7 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
 
 
 def submit_calculation(calculation, transport, calc_info, script_filename):
-    """
-    Submit a calculation
+    """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
     :param transport: an already opened transport to use to submit the calculation.
@@ -232,18 +244,28 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     :return: the job id as returned by the scheduler `submit_from_script` call
     """
+    job_id = calculation.get_job_id()
+
+    # If the `job_id` attribute is already set, that means this function was already executed once and the scheduler
+    # submit command was successful as the job id it returned was set on the node. This scenario can happen when the
+    # daemon runner gets shutdown right after accomplishing the submission task, but before it gets the chance to
+    # finalize the state transition of the `CalcJob` to the `UPDATE` transport task. Since the job is already submitted
+    # we do not want to submit it a second time, so we simply return the existing job id here.
+    if job_id is not None:
+        return job_id
+
     scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
 
     workdir = calculation.get_remote_workdir()
     job_id = scheduler.submit_from_script(workdir, script_filename)
     calculation.set_job_id(job_id)
+
     return job_id
 
 
 def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
-    """
-    Retrieve all the files of a completed job calculation using the given transport.
+    """Retrieve all the files of a completed job calculation using the given transport.
 
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
     `retrieved_temporary_folder`. The caller is responsible for creating and destroying this folder.
@@ -252,22 +274,24 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     :param transport: an already opened transport to use for the retrieval.
     :param retrieved_temporary_folder: the absolute path to a directory in which to store the files
         listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
-
-    .. deprecated:: 1.0.0
-        `retrieve_singlefile_list` will be removed in `v2.0.0`, use `retrieve_temporary_list` instead.
     """
     logger_extra = get_dblogger_extra(calculation)
-
-    execlogger.debug("Retrieving calc {}".format(calculation.pk), extra=logger_extra)
     workdir = calculation.get_remote_workdir()
 
-    execlogger.debug(
-        "[retrieval of calc {}] chdir {}".format(calculation.pk, workdir),
-        extra=logger_extra)
+    execlogger.debug('Retrieving calc {}'.format(calculation.pk), extra=logger_extra)
+    execlogger.debug('[retrieval of calc {}] chdir {}'.format(calculation.pk, workdir), extra=logger_extra)
 
-    # Create the FolderData node to attach everything to
+    # If the calculation already has a `retrieved` folder, simply return. The retrieval was apparently already completed
+    # before, which can happen if the daemon is restarted and it shuts down after retrieving but before getting the
+    # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the retrieval.
+    link_label = calculation.link_label_retrieved
+    if calculation.get_outgoing(FolderData, link_label_filter=link_label).first():
+        execlogger.warning('CalcJobNode<{}> already has a `{}` output folder: skipping retrieval'.format(
+            calculation.pk, link_label))
+        return
+
+    # Create the FolderData node into which to store the files that are to be retrieved
     retrieved_files = FolderData()
-    retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
     with transport:
         transport.chdir(workdir)
@@ -284,8 +308,6 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
 
         # Second, retrieve the singlefiles, if any files were specified in the 'retrieve_temporary_list' key
         if retrieve_singlefile_list:
-            warnings.warn('`retrieve_singlefile_list` has been deprecated, use `retrieve_temporary_list` instead',
-                AiidaDeprecationWarning)  # pylint: disable=no-member
             with SandboxFolder() as folder:
                 _retrieve_singlefiles(calculation, transport, folder, retrieve_singlefile_list, logger_extra)
 
@@ -301,10 +323,15 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
 
         # Store everything
         execlogger.debug(
-            "[retrieval of calc {}] "
-            "Storing retrieved_files={}".format(calculation.pk, retrieved_files.pk),
+            '[retrieval of calc {}] '
+            'Storing retrieved_files={}'.format(calculation.pk, retrieved_files.pk),
             extra=logger_extra)
         retrieved_files.store()
+
+    # Make sure that attaching the `retrieved` folder with a link is the last thing we do. This gives the biggest chance
+    # of making this method idempotent. That is to say, if a runner gets interrupted during this action, it will simply
+    # retry the retrieval, unless we got here and managed to link it up, in which case we move to the next task.
+    retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
 
 def kill_calculation(calculation, transport):
@@ -357,16 +384,16 @@ def parse_results(process, retrieved_temporary_folder=None):
         files = []
         for root, directories, filenames in os.walk(retrieved_temporary_folder):
             for directory in directories:
-                files.append("- [D] {}".format(os.path.join(root, directory)))
+                files.append('- [D] {}'.format(os.path.join(root, directory)))
             for filename in filenames:
-                files.append("- [F] {}".format(os.path.join(root, filename)))
+                files.append('- [F] {}'.format(os.path.join(root, filename)))
 
-        execlogger.debug("[parsing of calc {}] "
-                         "Content of the retrieved_temporary_folder: \n"
-                         "{}".format(process.node.pk, "\n".join(files)), extra=logger_extra)
+        execlogger.debug('[parsing of calc {}] '
+                         'Content of the retrieved_temporary_folder: \n'
+                         '{}'.format(process.node.pk, '\n'.join(files)), extra=logger_extra)
     else:
-        execlogger.debug("[parsing of calc {}] "
-                         "No retrieved_temporary_folder.".format(process.node.pk), extra=logger_extra)
+        execlogger.debug('[parsing of calc {}] '
+                         'No retrieved_temporary_folder.'.format(process.node.pk), extra=logger_extra)
 
     if parser_class is not None:
 
@@ -401,7 +428,7 @@ def parse_results(process, retrieved_temporary_folder=None):
 def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_extra=None):
     singlefile_list = []
     for (linkname, subclassname, filename) in retrieve_file_list:
-        execlogger.debug("[retrieval of calc {}] Trying "
+        execlogger.debug('[retrieval of calc {}] Trying '
                          "to retrieve remote singlefile '{}'".format(
             job.pk, filename), extra=logger_extra)
         localfilename = os.path.join(folder.abspath, os.path.split(filename)[1])
@@ -421,8 +448,8 @@ def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_ext
 
     for fil in singlefiles:
         execlogger.debug(
-            "[retrieval of calc {}] "
-            "Storing retrieved_singlefile={}".format(job.pk, fil.pk),
+            '[retrieval of calc {}] '
+            'Storing retrieved_singlefile={}'.format(job.pk, fil.pk),
             extra=logger_extra)
         fil.store()
 

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -26,5 +26,5 @@ def _get_aiida_structure_inline(trajectory, parameters):
     if parameters is not None:
         kwargs = parameters.get_dict()
     if 'index' not in kwargs.keys() or kwargs['index'] is None:
-        raise ValueError("Step index is not supplied for TrajectoryData")
+        raise ValueError('Step index is not supplied for TrajectoryData')
     return {'structure': trajectory.get_step_structure(**kwargs)}

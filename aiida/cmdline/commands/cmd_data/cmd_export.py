@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -24,46 +24,52 @@ EXPORT_OPTIONS = [
         'reduce_symmetry',
         is_flag=True,
         default=None,
-        help='Do (default) or do not perform symmetry reduction.'),
+        help='Do (default) or do not perform symmetry reduction.'
+    ),
     click.option(
         '--parameter-data',
         type=click.INT,
         default=None,
-        help="ID of the Dict to be exported alongside the"
-        " StructureData instance. By default, if StructureData"
-        " originates from a calculation with single"
-        " Dict in the output, aforementioned"
-        " Dict is picked automatically. Instead, the"
-        " option is used in the case the calculation produces"
-        " more than a single instance of Dict."),
+        help='ID of the Dict to be exported alongside the'
+        ' StructureData instance. By default, if StructureData'
+        ' originates from a calculation with single'
+        ' Dict in the output, aforementioned'
+        ' Dict is picked automatically. Instead, the'
+        ' option is used in the case the calculation produces'
+        ' more than a single instance of Dict.'
+    ),
     click.option(
         '--dump-aiida-database/--no-dump-aiida-database',
         'dump_aiida_database',
         is_flag=True,
         default=None,
-        help='Export (default) or do not export AiiDA database to the CIF file.'),
+        help='Export (default) or do not export AiiDA database to the CIF file.'
+    ),
     click.option(
         '--exclude-external-contents/--no-exclude-external-contents',
         'exclude_external_contents',
         is_flag=True,
         default=None,
-        help='Do not (default) or do save the contents for external resources even if URIs are provided'),
+        help='Do not (default) or do save the contents for external resources even if URIs are provided'
+    ),
     click.option('--gzip/--no-gzip', is_flag=True, default=None, help='Do or do not (default) gzip large files.'),
     click.option(
         '--gzip-threshold',
         type=click.INT,
         default=None,
-        help="Specify the minimum size of exported file which should"
-        " be gzipped."),
+        help='Specify the minimum size of exported file which should'
+        ' be gzipped.'
+    ),
     click.option(
         '-o',
         '--output',
         type=click.STRING,
         default=None,
-        help="If present, store the output directly on a file "
-        "with the given name. It is essential to use this option "
-        "if more than one file needs to be created."),
-    options.FORCE(help="Overwrite files without checking."),
+        help='If present, store the output directly on a file '
+        'with the given name. It is essential to use this option '
+        'if more than one file needs to be created.'
+    ),
+    options.FORCE(help='Overwrite files without checking.'),
 ]
 
 
@@ -98,17 +104,21 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
             try:
                 node.export(output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
             except OSError as err:
-                echo.echo_critical("OSError while exporting file:\n{}".format(err))
+                echo.echo_critical('OSError while exporting file:\n{}'.format(err))
         else:
             filetext, extra_files = node._exportcontent(fileformat, main_file_name=output_fname, **other_args)
             if extra_files:
-                echo.echo_critical("This format requires to write more than one file.\n"
-                                   "You need to pass the -o option to specify a file name.")
+                echo.echo_critical(
+                    'This format requires to write more than one file.\n'
+                    'You need to pass the -o option to specify a file name.'
+                )
             else:
                 echo.echo(filetext.decode('utf-8'))
     except TypeError as err:
         # This typically occurs for parameters that are passed down to the
         # methods in, e.g., BandsData, but they are not accepted
-        echo.echo_critical("TypeError, perhaps a parameter is not "
-                           "supported by the specific format?\nError "
-                           "message: {}".format(err))
+        echo.echo_critical(
+            'TypeError, perhaps a parameter is not '
+            'supported by the specific format?\nError '
+            'message: {}'.format(err)
+        )

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -25,7 +25,7 @@ from aiida.common import timezone
 
 
 class DbSetting(Base):
-    __tablename__ = "db_dbsetting"
+    __tablename__ = 'db_dbsetting'
     __table_args__ = (UniqueConstraint('key'),)
     id = Column(Integer, primary_key=True)
 
@@ -53,10 +53,10 @@ class DbSetting(Base):
 
         setting.key = key
         setting.val = value
-        flag_modified(setting, "val")
+        flag_modified(setting, 'val')
         setting.time = timezone.datetime.now(tz=UTC)
-        if "description" in other_attribs.keys():
-            setting.description = other_attribs["description"]
+        if 'description' in other_attribs.keys():
+            setting.description = other_attribs['description']
         setting.save()
 
     def getvalue(self):
@@ -77,5 +77,5 @@ class DbSetting(Base):
         setting = sa.get_scoped_session().query(DbSetting).filter(key=key)
         setting.val = None
         setting.time = timezone.datetime.utcnow()
-        flag_modified(setting, "val")
+        flag_modified(setting, 'val')
         setting.save()

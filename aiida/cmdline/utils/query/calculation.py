@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -15,16 +15,17 @@ from aiida.common.lang import classproperty
 from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper
 
 
-class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inheritance
+class CalculationQueryBuilder(object):
     """Utility class to construct a QueryBuilder instance for Calculation nodes and project the query set."""
 
     # This tuple serves to mark compound projections that cannot explicitly be projected in the QueryBuilder, but will
     # have to be manually projected from composing its individual projection constituents
     _compound_projections = ('state',)
     _default_projections = ('pk', 'ctime', 'process_label', 'state', 'process_status')
-    _valid_projections = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status',
-                          'sealed', 'process_label', 'label', 'description', 'node_type', 'paused', 'process_type',
-                          'job_state', 'scheduler_state')
+    _valid_projections = (
+        'pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status', 'sealed',
+        'process_label', 'label', 'description', 'node_type', 'paused', 'process_type', 'job_state', 'scheduler_state'
+    )
 
     def __init__(self, mapper=None):
         if mapper is None:
@@ -44,20 +45,31 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
     def valid_projections(self):
         return self._valid_projections
 
-    def get_filters(self, all_entries=False, process_state=None, exit_status=None, failed=False, node_types=None):
+    def get_filters(
+        self,
+        all_entries=False,
+        process_state=None,
+        process_label=None,
+        exit_status=None,
+        failed=False,
+        node_types=None
+    ):
         """
         Return a set of QueryBuilder filters based on typical command line options.
 
         :param node_types: a tuple of node classes to filter for (must be sub classes of Calculation)
         :param all_entries: boolean to negate filtering for process state
-        :param process_state: filter for this process state
+        :param process_state: filter for this process state attribute
+        :param process_label: filter for this process label attribute
         :param exit_status: filter for this exit status
         :param failed: boolean to filter only failed processes
         :return: dictionary of filters suitable for a QueryBuilder.append() call
         """
+        # pylint: disable=too-many-arguments
         from aiida.engine import ProcessState
 
         exit_status_attribute = self.mapper.get_attribute('exit_status')
+        process_label_attribute = self.mapper.get_attribute('process_label')
         process_state_attribute = self.mapper.get_attribute('process_state')
 
         filters = {}
@@ -69,6 +81,12 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
 
         if process_state and not all_entries:
             filters[process_state_attribute] = {'in': process_state}
+
+        if process_label is not None:
+            if '%' in process_label or '_' in process_label:
+                filters[process_label_attribute] = {'like': process_label}
+            else:
+                filters[process_label_attribute] = process_label
 
         if failed:
             filters[process_state_attribute] = {'==': ProcessState.FINISHED.value}

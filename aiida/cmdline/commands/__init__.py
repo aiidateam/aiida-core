@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -18,11 +18,8 @@ import click_completion
 click_completion.init()
 
 # Import to populate the `verdi` sub commands
-from aiida.cmdline.commands import (cmd_calcjob, cmd_code, cmd_comment, cmd_completioncommand, cmd_computer, cmd_config,
-                                    cmd_data, cmd_database, cmd_daemon, cmd_devel, cmd_export, cmd_graph, cmd_group,
-                                    cmd_import, cmd_node, cmd_plugin, cmd_process, cmd_profile, cmd_rehash, cmd_restapi,
-                                    cmd_run, cmd_setup, cmd_shell, cmd_status, cmd_user)
-
-# Import to populate the `verdi data` sub commands
-from aiida.cmdline.commands.cmd_data import (cmd_array, cmd_bands, cmd_cif, cmd_dict, cmd_remote, cmd_structure,
-                                             cmd_trajectory, cmd_upf)
+from aiida.cmdline.commands import (
+    cmd_calcjob, cmd_code, cmd_comment, cmd_completioncommand, cmd_computer, cmd_config, cmd_data, cmd_database,
+    cmd_daemon, cmd_devel, cmd_export, cmd_graph, cmd_group, cmd_import, cmd_node, cmd_plugin, cmd_process, cmd_profile,
+    cmd_rehash, cmd_restapi, cmd_run, cmd_setup, cmd_shell, cmd_status, cmd_user
+)

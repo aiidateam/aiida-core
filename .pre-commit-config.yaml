@@ -1,3 +1,9 @@
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.2.3
+  hooks:
+  - id: trailing-whitespace
+  - id: double-quote-string-fixer
+
 - repo: local
   hooks:
   - id: yapf
@@ -25,7 +31,6 @@
         aiida/backends/djsite/db/migrations/0012_drop_dblock.py|
         aiida/backends/djsite/db/migrations/0013_django_1_8.py|
         aiida/backends/djsite/db/migrations/0014_add_node_uuid_unique_constraint.py|
-        aiida/backends/djsite/db/migrations/0015_invalidating_node_hash.py|
         aiida/backends/djsite/db/migrations/0016_code_sub_class_of_data.py|
         aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
         aiida/backends/djsite/db/migrations/__init__.py|
@@ -49,7 +54,6 @@
         aiida/backends/sqlalchemy/migrations/versions/e15ef2630a1b_initial_schema.py|
         aiida/backends/sqlalchemy/migrations/versions/f9a69de76a9a_delete_kombu_tables.py|
         aiida/backends/sqlalchemy/migrations/versions/62fe0d36de90_add_node_uuid_unique_constraint.py|
-        aiida/backends/sqlalchemy/migrations/versions/5d4d844852b6_invalidating_node_hash.py|
         aiida/backends/sqlalchemy/migrations/versions/a603da2cc809_code_sub_class_of_data.py|
         aiida/backends/sqlalchemy/migrations/versions/162b99bca4a2_drop_dbcalcstate.py|
         aiida/backends/sqlalchemy/models/authinfo.py|
@@ -62,7 +66,6 @@
         aiida/backends/sqlalchemy/models/node.py|
         aiida/backends/sqlalchemy/models/settings.py|
         aiida/backends/sqlalchemy/models/user.py|
-        aiida/backends/sqlalchemy/models/utils.py|
         aiida/backends/sqlalchemy/queries.py|
         aiida/backends/sqlalchemy/tests/test_generic.py|
         aiida/backends/sqlalchemy/tests/__init__.py|
@@ -130,7 +133,6 @@
         aiida/plugins/entry.py|
         aiida/plugins/info.py|
         aiida/plugins/registry.py|
-        aiida/plugins/utils.py|
         aiida/schedulers/datastructures.py|
         aiida/schedulers/plugins/direct.py|
         aiida/schedulers/plugins/lsf.py|
@@ -149,11 +151,9 @@
         aiida/sphinxext/tests/workchain_source/conf.py|
         aiida/sphinxext/tests/workchain_source/demo_workchain.py|
         aiida/sphinxext/workchain.py|
-        aiida/tools/data/array/kpoints/__init__.py|
         aiida/tools/data/array/kpoints/legacy.py|
         aiida/tools/data/array/kpoints/seekpath.py|
         aiida/tools/data/__init__.py|
-        aiida/tools/data/structure/__init__.py|
         aiida/tools/dbexporters/__init__.py|
         aiida/tools/dbimporters/baseclasses.py|
         aiida/tools/dbimporters/__init__.py|

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -59,11 +59,13 @@ def construct_awaitable(target):
     else:
         raise ValueError('invalid class for awaitable target: {}'.format(type(target)))
 
-    awaitable = Awaitable(**{
-        'pk': target.pk,
-        'action': AwaitableAction.ASSIGN,
-        'target': awaitable_target,
-        'outputs': False,
-    })
+    awaitable = Awaitable(
+        **{
+            'pk': target.pk,
+            'action': AwaitableAction.ASSIGN,
+            'target': awaitable_target,
+            'outputs': False,
+        }
+    )
 
     return awaitable

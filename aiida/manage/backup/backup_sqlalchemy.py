@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -54,7 +54,8 @@ class Backup(AbstractBackup):
         :return:
         """
         q_nodes = aiida.backends.sqlalchemy.get_scoped_session().query(DbNode).filter(
-            DbNode.mtime >= start_of_backup).filter(DbNode.mtime <= backup_end_for_this_round)
+            DbNode.mtime >= start_of_backup
+        ).filter(DbNode.mtime <= backup_end_for_this_round)
 
         return [q_nodes]
 
@@ -77,6 +78,6 @@ class Backup(AbstractBackup):
             source_dir = os.path.normpath(RepositoryFolder(section=Repository._section_name, uuid=item.uuid).abspath)
         else:
             # Raise exception
-            self._logger.error("Unexpected item type to backup: %s", type(item))
-            raise BackupError("Unexpected item type to backup: {}".format(type(item)))
+            self._logger.error('Unexpected item type to backup: %s', type(item))
+            raise BackupError('Unexpected item type to backup: {}'.format(type(item)))
         return source_dir

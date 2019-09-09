@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -23,9 +23,9 @@ import six
 from six.moves import filter, range
 from pika.exceptions import ConnectionClosed
 
-from kiwipy.communications import UnroutableError
 import plumpy
 from plumpy import ProcessState
+from kiwipy.communications import UnroutableError
 
 from aiida import orm
 from aiida.common import exceptions
@@ -135,6 +135,17 @@ class Process(plumpy.Process):
         if self._logger is None:
             self.set_logger(self.node.logger)
 
+    @classmethod
+    def get_exit_statuses(cls, exit_code_labels):
+        """Return the exit status (integers) for the given exit code labels.
+
+        :param exit_code_labels: a list of strings that reference exit code labels of this process class
+        :return: list of exit status integers that correspond to the given exit code labels
+        :raises AttributeError: if at least one of the labels does not correspond to an existing exit code
+        """
+        exit_codes = cls.exit_codes
+        return [getattr(exit_codes, label).status for label in exit_code_labels]
+
     @classproperty
     def exit_codes(cls):  # pylint: disable=no-self-argument
         """Return the namespace of exit codes defined for this WorkChain through its ProcessSpec.
@@ -195,8 +206,8 @@ class Process(plumpy.Process):
             try:
                 self.runner.persister.save_checkpoint(self)
             except plumpy.PersistenceError:
-                self.logger.exception("Exception trying to save checkpoint, this means you will "
-                                      "not be able to restart in case of a crash until the next successful checkpoint.")
+                self.logger.exception('Exception trying to save checkpoint, this means you will '
+                                      'not be able to restart in case of a crash until the next successful checkpoint.')
 
     @override
     def save_instance_state(self, out_state, save_context):
@@ -633,6 +644,9 @@ class Process(plumpy.Process):
 
     def _setup_metadata(self):
         """Store the metadata on the ProcessNode."""
+        version_info = self.runner.plugin_version_provider.get_version_info(self)
+        self.node.set_attribute_many(version_info)
+
         for name, metadata in self.metadata.items():
             if name in ['store_provenance', 'dry_run', 'call_link_label']:
                 continue
@@ -814,14 +828,11 @@ class Process(plumpy.Process):
 
         return AttributeDict(exposed_inputs)
 
-    def exposed_outputs(self, process_instance, process_class, namespace=None, agglomerate=True):
-        """
-        Gather the outputs which were exposed from the ``process_class`` and emitted by the specific
-        ``process_instance`` in a dictionary.
+    def exposed_outputs(self, node, process_class, namespace=None, agglomerate=True):
+        """Return the outputs which were exposed from the ``process_class`` and emitted by the specific ``node``
 
-        :param process_instance: Instance of Process class whose outputs to try and retrieve
-        :type process_instance: :class:`aiida.engine.Process`
-
+        :param node: process node whose outputs to try and retrieve
+        :type node: :class:`aiida.orm.nodes.process.ProcessNode`
 
         :param namespace: Namespace in which to search for exposed outputs.
         :type namespace: str
@@ -839,8 +850,9 @@ class Process(plumpy.Process):
         output_key_map = {}
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
+        link_types = (LinkType.CREATE, LinkType.RETURN)
         process_outputs_dict = {
-            entry.link_label: entry.node for entry in process_instance.get_outgoing(link_type=LinkType.RETURN)
+            entry.link_label: entry.node for entry in node.get_outgoing(link_type=link_types)
         }
 
         for port_name in process_outputs_dict:
@@ -899,8 +911,8 @@ def get_query_string_from_process_type_string(process_type_string):  # pylint: d
     :return: string that can be used to query for subclasses of the process type using 'LIKE <string>'
     :rtype: str
     """
-    if ":" in process_type_string:
-        return process_type_string + "."
+    if ':' in process_type_string:
+        return process_type_string + '.'
 
     path = process_type_string.rsplit('.', 2)[0]
-    return path + "."
+    return path + '.'

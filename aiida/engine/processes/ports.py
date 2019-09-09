@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -19,15 +19,17 @@ from plumpy import ports
 
 from aiida.common.lang import type_check
 
-__all__ = ('PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize',
-           'PORT_NAMESPACE_SEPARATOR')
+__all__ = (
+    'PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize',
+    'PORT_NAMESPACE_SEPARATOR'
+)
 
 PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1  # pylint: disable=invalid-name
 PORT_NAMESPACE_SEPARATOR = '__'  # The character sequence to represent a nested port namespace in a flat link label
 OutputPort = ports.OutputPort  # pylint: disable=invalid-name
 
 
-class WithNonDb(object):  # pylint: disable=useless-object-inheritance
+class WithNonDb(object):
     """
     A mixin that adds support to a port to flag a that should not be stored
     in the database using the non_db=True flag.
@@ -68,7 +70,7 @@ class WithNonDb(object):  # pylint: disable=useless-object-inheritance
         self._non_db = non_db
 
 
-class WithSerialize(object):  # pylint: disable=useless-object-inheritance
+class WithSerialize(object):
     """
     A mixin that adds support for a serialization function which is automatically applied on inputs
     that are not AiiDA data types.

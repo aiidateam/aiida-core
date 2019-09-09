@@ -15,18 +15,18 @@ The provenance redesign
 In the early stages of AiiDA, the concept of its provenance graph was simple.
 Data is used as input for calculations, that in turn create new data as output.
 The data and calculations, produced and ran by AiiDA, were stored as nodes in a graph.
-Due to the causality principle, the resulting graph was naturally acyclic, as no piece of data could possibly be an input to its own creation.
+Due to the causality principle, the resulting graph was naturally acyclic, as no piece of data could possibly also have been an input to its own creation.
 The directed acyclic graph that stored the data provenance in AiiDA was well defined and all was good.
 
 However, as AiiDA matured, its use cases became more complex and soon there was a need to be able to define and run workflows.
 Workflows allow the user to define a sequence of calculations, that ultimately produce a result.
 In order to be able to retrieve the final result directly from the workflow, it needed to be able to return the data created by the calculations that it ran.
 "Easy peasy: we simply add a ``return`` link from the workflow node in the graph to the created data node".
-But wat seemed like an easy solution brought a host of unforeseen problems with it.
+But what seemed like an easy solution brought a host of unforeseen problems with it.
 By introducing the concept of a ``return`` link, the acyclicity of the graph was broken, and with it, much of AiiDA's graph traversal API that assumed this property.
 
 After more than a year of discussion, AiiDA developers and users concluded that the concept of the ``return`` link was absolutely crucial.
-Without them, for complicated and heavily nested workflows, their results will be buried deep within their call stack and difficult to retrieve.
+Without it, the results of complicated and heavily nested workflows will be buried deep within their call stack and difficult to retrieve.
 The alternative was to redesign the provenance graph architecture such that acyclicity would be returned to part of the provenance graph, while keeping the utility of the ``return`` link.
 The AiiDA development team, in close collaboration with advanced users, spent a year and a half, redesigning the provenance architecture and implementing the changes into AiiDA's API.
 As always, we have tried our best to allow early adopters of AiiDA to migrate their existing databases to newer versions as easy as possible, by providing automatic migration.
@@ -75,7 +75,7 @@ The module hierarchy and importing
 AiiDA has been developed and used since 2013 and in the past six years we have tried, as much as possible, to reduce the changes to the python API over time to a minimum.
 At the same time, a lot of new functionality has been added to the code, with a potentially complex submodule structure for the AiiDA python package, that had started to become too complex even just to remember where to find a given function or class.
 
-With ``aiida-core`` version ``1.0.0``, we have decided to restructure the package module hierarchy, moving functions and classes to more intutive locations, and exposing functionality that is commonly used by users at higher levels (e.g. now one can do ``from aiida.orm import CalcJobNode`` in addition to ``from aiida.orm.nodes.process.calculation.calcjob.CalcJobNode``).
+With ``aiida-core`` version ``1.0.0``, we have decided to restructure the package module hierarchy, moving functions and classes to more intuitive locations, and exposing functionality that is commonly used by users at higher levels (e.g. now one can do ``from aiida.orm import CalcJobNode`` in addition to ``from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode``).
 
 Albeit this change was essential to increase usability, we want to guarantee a high-degree of stability for users for the components that are intended to be public.
 To facilitiate this, we explain here first the module hierarchy of ``aiida-core``, what parts of its API are intended to be public and how those should be preferentially imported.

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -41,7 +41,8 @@ class TestBackendNode(AiidaTestCase):
             user=self.user,
             computer=self.computer,
             label=self.node_label,
-            description=self.node_description)
+            description=self.node_description
+        )
 
     def create_node(self):
         return self.backend.nodes.create(node_type=self.node_type, user=self.user)
@@ -49,7 +50,8 @@ class TestBackendNode(AiidaTestCase):
     def test_creation(self):
         """Test creation of a BackendNode and all its properties."""
         node = self.backend.nodes.create(
-            node_type=self.node_type, user=self.user, label=self.node_label, description=self.node_description)
+            node_type=self.node_type, user=self.user, label=self.node_label, description=self.node_description
+        )
 
         # Before storing
         self.assertIsNone(node.id)
@@ -115,7 +117,8 @@ class TestBackendNode(AiidaTestCase):
             label=self.node_label,
             description=self.node_description,
             mtime=mtime,
-            ctime=ctime)
+            ctime=ctime
+        )
 
         # Check that the ctime and mtime are the given ones
         self.assertEqual(node.ctime, ctime)

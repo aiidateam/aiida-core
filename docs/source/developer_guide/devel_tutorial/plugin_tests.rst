@@ -6,7 +6,7 @@ Writing tests for plugin
 When developing a plugin it is important to write tests. The main concern of running
 tests is that the test environment has to be separated from the production environment
 and care should be taken to avoid any unwanted change to the user's database.
-You may have noticed that ``aiida_core`` has its own test framework for developments.
+You may have noticed that ``aiida-core`` has its own test framework for developments.
 While it is possible to use the same framework for the plugins,
 it is not ideal as any tests of plugins has to be run with
 the ``verdi devel tests`` command-line interface.
@@ -39,7 +39,7 @@ To utilize the ``fixture_manager``, we first need to define the actual fixtures:
 
 .. literalinclude:: conftest.py
 
-  
+
 The ``aiida_profile`` fixture initialize the ``fixture_manager`` yields it to the test function.
 By using the *with* clause, we ensure that the test profile to run tests are destroyed in the end.
 The scope of this fixture should be *session*, since there is no need to re-initialize the
@@ -133,15 +133,15 @@ The discovery of the tests will be handled by pytest (file, class and function n
 Using the unittest framework
 ----------------------------
 
-The ``uniitest`` package is included in the python standard library.
-It is widely used despite some limitations (it is also used for testing ``aiida_core``).
+The ``unittest`` package is included in the python standard library.
+It is widely used despite some limitations (it is also used for testing ``aiida-core``).
 We provide a :py:class:`aiida.manage.fixtures.PluginTestCase` to be used for inheritance.
 By default, each test method in the test case class runs with a fresh aiida database.
-Due to the limitation of ``uniitest``, sub-clasess of ``PluginTestCase`` has to be run
+Due to the limitation of ``unittest``, sub-clasess of ``PluginTestCase`` has to be run
 with the special runner in  :py:class:`aiida.manage.fixtures.TestRunner`.
 To run the actually tests, you need to prepare a run script in python::
 
-  import uniitest
+  import unittest
   from aiida.manage.fixtures import TestRunner
 
   test = unittest.deaultTestLoader.discover('.')
@@ -186,7 +186,7 @@ First, let's see a typical test class using the ``unittest``::
           comdata.store()
 
       def test_complex_retrieve(self):
-          """Test if the complex 
+          """Test if the complex
 
           comp_num = 1 + 2j
           pk = self.store_complex(cnum)
@@ -242,7 +242,7 @@ run with ``pytest`` directly, as shown below:
           comdata = load_node(pk)
           self.assertEqual(comdata.value == comp_num)
 
- 
+
 To allow pytest to run the tests, we first swap the ``AiidaTestCase`` with the generic
 ``TestCase``. We define a module scope fixture ``module_import`` to import the
 required AiiDA modules and make them available in the module namespace.
@@ -257,7 +257,7 @@ we define a ``reset_db`` fixture to reset the database for every tests.
 The ``autouse=True`` flag tells all test methods inside the class to use it automatically.
 
 When migrating your code to use the pytest, you may define a base class with these
-modifications and use it as the superclass for other test classes. 
+modifications and use it as the superclass for other test classes.
 
 .. _request: https://docs.pytest.org/en/3.6.3/reference.html#request
 
@@ -265,8 +265,8 @@ modifications and use it as the superclass for other test classes.
   More details can be found in the `pytest documentation`_ about running ``unittest`` tests.
 
 .. note::
-  The modification will break the compatibility of ``uniitest`` and you will not be able
+  The modification will break the compatibility of ``unittest`` and you will not be able
   to run with ``verdi devel tests`` interface.
-  Do not forget to remove redundant entry points in your setup.json. 
+  Do not forget to remove redundant entry points in your setup.json.
 
 .. _pytest documentation: https://docs.pytest.org/en/latest/unittest.html

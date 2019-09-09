@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -31,15 +31,19 @@ from aiida.common.log import configure_logging
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.configuration import get_config_option, get_profile, load_profile
 
-__copyright__ = (u'Copyright (c), This file is part of the AiiDA platform. '
-                 u'For further information please visit http://www.aiida.net/. All rights reserved.')
+__copyright__ = (
+    u'Copyright (c), This file is part of the AiiDA platform. '
+    u'For further information please visit http://www.aiida.net/. All rights reserved.'
+)
 __license__ = 'MIT license, see LICENSE.txt file.'
-__version__ = '1.0.0b4'
+__version__ = '1.0.0b6'
 __authors__ = 'The AiiDA team.'
-__paper__ = (u'G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky,'
-             u'"AiiDA: automated interactive infrastructure and database for computational science", '
-             u'Comp. Mat. Sci 111, 218-230 (2016); https://doi.org/10.1016/j.commatsci.2015.09.013 '
-             u'- http://www.aiida.net.')
+__paper__ = (
+    u'G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky,'
+    u'"AiiDA: automated interactive infrastructure and database for computational science", '
+    u'Comp. Mat. Sci 111, 218-230 (2016); https://doi.org/10.1016/j.commatsci.2015.09.013 '
+    u'- http://www.aiida.net.'
+)
 __paper_short__ = 'G. Pizzi et al., Comp. Mat. Sci 111, 218 (2016).'
 
 # Configure the default logging
@@ -65,7 +69,7 @@ def load_dbenv(profile=None):
     :type profile: str
 
     .. deprecated:: 1.0.0
-        Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
+        Will be removed in `v2.0.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
     warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
     current_profile = get_profile()
@@ -88,7 +92,7 @@ def try_load_dbenv(profile=None):
 
 
     .. deprecated:: 1.0.0
-        Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
+        Will be removed in `v2.0.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
     warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
     if not is_dbenv_loaded():
@@ -103,7 +107,7 @@ def is_dbenv_loaded():
     :rtype: bool
 
     .. deprecated:: 1.0.0
-        Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
+        Will be removed in `v2.0.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
     warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
     return get_profile() is not None
@@ -144,7 +148,7 @@ If you use AiiDA for publication purposes, please cite:
 """.format(__version__, __paper__)
 
 
-def get_file_header(comment_char="# "):
+def get_file_header(comment_char='# '):
     """
     Get the default header for source AiiDA source code files.
 

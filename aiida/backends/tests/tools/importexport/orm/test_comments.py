@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -29,7 +29,7 @@ class TestComments(AiidaTestCase):
         super(TestComments, self).setUp()
         self.reset_database()
         self.comments = [
-            "We're no strangers to love", "You know the rules and so do I", "A full commitment's what I'm thinking of",
+            "We're no strangers to love", 'You know the rules and so do I', "A full commitment's what I'm thinking of",
             "You wouldn't get this from any other guy"
         ]
 
@@ -44,6 +44,7 @@ class TestComments(AiidaTestCase):
 
         # Create Node and initial comments and save UUIDs prior to export
         node = orm.CalculationNode().store()
+        node.seal()
         comment_one = orm.Comment(node, user, self.comments[0]).store()
         comment_two = orm.Comment(node, user, self.comments[1]).store()
         node_uuid = node.uuid
@@ -109,7 +110,7 @@ class TestComments(AiidaTestCase):
         """Test comments and associated commenting users are not exported when using `include_comments=False`."""
         # Create users, node, and comments
         user_one = orm.User.objects.get_default()
-        user_two = orm.User(email="commenting@user.s").store()
+        user_two = orm.User(email='commenting@user.s').store()
 
         node = orm.Data().store()
 
@@ -154,6 +155,7 @@ class TestComments(AiidaTestCase):
         user = orm.User.objects.get_default()
 
         calc_node = orm.CalculationNode().store()
+        calc_node.seal()
         data_node = orm.Data().store()
 
         comment_one = orm.Comment(calc_node, user, self.comments[0]).store()
@@ -202,9 +204,10 @@ class TestComments(AiidaTestCase):
         """ Test multiple users commenting on a single orm.CalculationNode """
         # Create users, node, and comments
         user_one = orm.User.objects.get_default()
-        user_two = orm.User(email="commenting@user.s").store()
+        user_two = orm.User(email='commenting@user.s').store()
 
         node = orm.CalculationNode().store()
+        node.seal()
 
         comment_one = orm.Comment(node, user_one, self.comments[0]).store()
         comment_two = orm.Comment(node, user_one, self.comments[1]).store()
@@ -286,10 +289,11 @@ class TestComments(AiidaTestCase):
         # Get user
         user = orm.User.objects.get_default()
 
-        comment_content = "You get what you give"
+        comment_content = 'You get what you give'
 
         # Create node
         calc = orm.CalculationNode().store()
+        calc.seal()
 
         # Create comment
         orm.Comment(calc, user, comment_content).store()
@@ -339,6 +343,8 @@ class TestComments(AiidaTestCase):
         It may be `'newest'` or `'overwrite'`.
         Test import of 'old' comment that has since been changed in DB.
         """
+        from aiida.tools.importexport.common.exceptions import ImportValidationError
+
         # Get user
         # Will have to do this again after resetting the DB
         user = orm.User.objects.get_default()
@@ -346,6 +352,7 @@ class TestComments(AiidaTestCase):
         ## Test comment_mode='newest'
         # Create node
         calc = orm.CalculationNode().store()
+        calc.seal()
         calc_uuid = calc.uuid
 
         # Creates comment
@@ -353,7 +360,7 @@ class TestComments(AiidaTestCase):
         cmt_uuid = cmt.uuid
 
         # Export calc and comment
-        export_file = os.path.join(temp_dir, "export_file.tar.gz")
+        export_file = os.path.join(temp_dir, 'export_file.tar.gz')
         export([calc], outfile=export_file, silent=True)
 
         # Update comment
@@ -366,7 +373,7 @@ class TestComments(AiidaTestCase):
         self.assertEqual(export_comments.all()[0][1], self.comments[1])
 
         # Export calc and UPDATED comment
-        export_file_updated = os.path.join(temp_dir, "export_file_updated.tar.gz")
+        export_file_updated = os.path.join(temp_dir, 'export_file_updated.tar.gz')
         export([calc], outfile=export_file_updated, silent=True)
 
         # Reimport exported 'old' calc and comment
@@ -403,7 +410,7 @@ class TestComments(AiidaTestCase):
         self.assertEqual(import_comments.all()[0][2], self.comments[0])
 
         ## Test ValueError is raised when using a wrong comment_mode:
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(export_file, silent=True, comment_mode='invalid')
 
     @with_temp_dir
@@ -440,9 +447,9 @@ class TestComments(AiidaTestCase):
         in pairs, except for their UUID.
         """
         export_filenames = {
-            "EXISTING": "export_EXISTING_db.tar.gz",
-            "FULL": "export_FULL_db.tar.gz",
-            "NEW": "export_NEW_db.tar.gz"
+            'EXISTING': 'export_EXISTING_db.tar.gz',
+            'FULL': 'export_FULL_db.tar.gz',
+            'NEW': 'export_NEW_db.tar.gz'
         }
 
         # Get user
@@ -453,6 +460,7 @@ class TestComments(AiidaTestCase):
         # Create node and save UUID
         calc = orm.CalculationNode()
         calc.store()
+        calc.seal()
         calc_uuid = calc.uuid
 
         # Create first comment
@@ -468,7 +476,7 @@ class TestComments(AiidaTestCase):
         existing_comment_uuids = [str(export_comments.all()[0][0])]
 
         # Export "EXISTING" DB
-        export_file_existing = os.path.join(temp_dir, export_filenames["EXISTING"])
+        export_file_existing = os.path.join(temp_dir, export_filenames['EXISTING'])
         export([calc], outfile=export_file_existing, silent=True)
 
         # Add remaining Comments
@@ -488,7 +496,7 @@ class TestComments(AiidaTestCase):
         self.assertEqual(len(full_comment_uuids), len(self.comments))
 
         # Export "FULL" DB
-        export_file_full = os.path.join(temp_dir, export_filenames["FULL"])
+        export_file_full = os.path.join(temp_dir, export_filenames['FULL'])
         export([calc], outfile=export_file_full, silent=True)
 
         # Clean database
@@ -527,7 +535,7 @@ class TestComments(AiidaTestCase):
         self.assertEqual(len(new_comment_uuids), len(self.comments))
 
         # Export "NEW" DB
-        export_file_new = os.path.join(temp_dir, export_filenames["NEW"])
+        export_file_new = os.path.join(temp_dir, export_filenames['NEW'])
         export([calc], outfile=export_file_new, silent=True)
 
         # Clean database

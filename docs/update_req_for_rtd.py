@@ -4,7 +4,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -35,7 +35,7 @@ def update_req_for_rtd(pre_commit):
     reqs = set(extras['testing'] + extras['docs'] + extras['rest'] + extras['atomic_tools'] +
                # To avoid that it requires also the postgres libraries
                [p for p in setup_json['install_requires'] if not p.startswith('psycopg2')])
-    reqs_str = "\n".join(sorted(reqs))
+    reqs_str = '\n'.join(sorted(reqs))
 
     basename = 'requirements_for_rtd.txt'
 

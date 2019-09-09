@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -47,7 +47,8 @@ def upgrade():
     """
     conn = op.get_bind()
 
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dbnode
         SET attributes = jsonb_set(attributes, '{environment_variables}', attributes->'custom_environment_variables')
         WHERE
@@ -91,7 +92,8 @@ def upgrade():
             attributes ? 'parser' AND
             type = 'node.process.calculation.calcjob.CalcJobNode.';
         -- parser -> parser_name
-        """)
+        """
+    )
     conn.execute(statement)
 
 

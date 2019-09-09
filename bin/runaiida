@@ -1,6 +1,6 @@
 #!/bin/bash
 # Pass all parameters to 'verdi run'
-# This is useful to use in a shebang line: i.e., you can put 
+# This is useful to use in a shebang line: i.e., you can put
 # the following line as the first line in a file:
 
 #!/usr/bin/env runaiida

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -78,7 +78,8 @@ def _get_config(config_file):
             config[key] = [get_object_from_string(c) for c in config[key]]
     except (ValueError) as err:
         six.raise_from(
-            exceptions.ConfigurationError("Unknown class given in 'cache_config.yml': '{}'".format(err)), err)
+            exceptions.ConfigurationError("Unknown class given in 'cache_config.yml': '{}'".format(err)), err
+        )
     return config
 
 

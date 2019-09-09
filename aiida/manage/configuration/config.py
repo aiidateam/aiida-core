@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -26,7 +26,7 @@ from .settings import DEFAULT_UMASK, DEFAULT_CONFIG_INDENT_SIZE
 __all__ = ('Config',)
 
 
-class Config(object):  # pylint: disable=useless-object-inheritance,too-many-public-methods
+class Config(object):  # pylint: disable=too-many-public-methods
     """Object that represents the configuration file of an AiiDA instance."""
 
     KEY_VERSION = 'CONFIG_VERSION'

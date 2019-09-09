@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -153,10 +153,12 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
         try:
             authinfo = session.query(DbAuthInfo).filter_by(dbcomputer_id=computer.id, aiidauser_id=user.id).one()
         except NoResultFound:
-            raise exceptions.NotExistent('User<{}> has no configuration for Computer<{}>'.format(
-                user.email, computer.name))
+            raise exceptions.NotExistent(
+                'User<{}> has no configuration for Computer<{}>'.format(user.email, computer.name)
+            )
         except MultipleResultsFound:
-            raise exceptions.MultipleObjectsError('User<{}> has multiple configurations for Computer<{}>'.format(
-                user.email, computer.name))
+            raise exceptions.MultipleObjectsError(
+                'User<{}> has multiple configurations for Computer<{}>'.format(user.email, computer.name)
+            )
         else:
             return self.from_dbmodel(authinfo)

@@ -44,7 +44,7 @@ In the same module, there is also a :py:class:`~aiida.orm.nodes.data.list.List` 
 store a list of base data types.
 
 The different datatypes can be accessed through the :py:func:`~aiida.plugins.factories.DataFactory` function
-(also exposed from :py:mod:`aiida.plugins`) by passing an entry point to it as an argument. A list of all the data entry points 
+(also exposed from :py:mod:`aiida.plugins`) by passing an entry point to it as an argument. A list of all the data entry points
 can be obtain running the command ``verdi plugin list aiida.data``.
 
 Dict

@@ -19,7 +19,7 @@ Let's suppose you want to query for calculation nodes in your database::
     or the ``Process`` class (e.g. ``CalcJob``, ``PwCalculation``),
     which will automatically apply the correct filters for the type of calculation.
 
-If you are interested in instances of different classes, you can also pass a tuple, list or set of classes. 
+If you are interested in instances of different classes, you can also pass a tuple, list or set of classes.
 However, they have to be of the same ORM-type (e.g. all have to be subclasses of Node)::
 
     from aiida.orm.querybuilder import QueryBuilder
@@ -72,7 +72,7 @@ Suppose we do not want to all CalcJobNodes, but only the ones in state
     qb.append(
         CalcJobNode,                 # I am appending a CalcJobNode
         filters={                       # Specifying the filters:
-            'state':{'==':'FINISHED'},  # the calculation has to have finished
+            'attributes.process_state':{'==':'finished'},  # the calculation has to have finished
         },
     )
 
@@ -89,7 +89,7 @@ state 'FINISHED' and were created in the last *n* days::
     qb.append(
         CalcJobNode,                 # I am appending a CalcJobNode
         filters={                       # Specifying the filters:
-            'state':{'==':'FINISHED'},  # the calculation has to have finished AND
+            'attributes.process_state':{'==':'finished'},  # the calculation has to have finished AND
             'ctime':{'>':time_n_days_ago}     # created in the last n days
         },
     )
@@ -110,37 +110,37 @@ What if we want calculations that have finished **or** were created in the last
         CalcJobNode,
         filters={
             'or':[
-                {'state':{'==':'FINISHED'}},
+                {'attributes.process_state':{'==':'finished'}},
                 {'ctime':{'>': now - timedelta(days=n)}}
             ]
         },
     )
-    res =vqb.dict()
+    res = qb.dict()
 
 If we had written *and* instead of *or*, we would have created the exact same
 query as in the first query, because *and* is the default behavior if
 you attach several filters.
-What if you want calculation in state 'FINISHED' or 'RETRIEVING'?
+What if you want calculation in state 'FINISHED' or 'EXCEPTED'?
 This will be the next example::
 
     qb = QueryBuilder()
     qb.append(
         CalcJobNode,
         filters={
-            'state':{'in':['FINISHED', 'RETRIEVING']}
+            'attributes.process_state':{'in':['finished', 'excepted']}
         },
     )
     res = qb.all()
 
-In order to negate a filter, that is to apply the not operator, precede the filter 
+In order to negate a filter, that is to apply the not operator, precede the filter
 keyword with an exclamation mark.
-So, to ask for all calculations that are not in 'FINISHED' or 'RETRIEVING'::
+So, to ask for all calculations that are not in 'FINISHED' or 'EXCEPTED'::
 
     qb = QueryBuilder()
     qb.append(
         CalcJobNode,
         filters={
-            'state':{'!in':['FINISHED', 'RETRIEVING']}
+            'attributes.process_state':{'!in':['finished', 'excepted']}
         },
     )
     res = qb.all()
@@ -254,44 +254,44 @@ to a previous entity by using one of the keywords in the above table
 and as a value the tag of the vertice that it has a relationship with.
 There are several relationships that entities in Aiida can have:
 
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| **Entity from**  | **Entity to** | **Relationship**   | **Deprecated Relationship** | **Explanation**                                 |
-+==================+===============+====================+=============================+=================================================+
-| Node             | Node          | *with_outgoing*    | *input_of*                  | One node as input of another node               |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Node          | *with_incoming*    | *output_of*                 | One node as output of another node              |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Node          | *with_descendants* | *ancestor_of*               | One node as the ancestor of another node (Path) |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Node          | *with_ancestors*   | *descendant_of*             | One node as descendant of another node (Path)   |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Group         | *with_node*        | *group_of*                  | The group of a node                             |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Group            | Node          | *with_group*       | *member_of*                 | The node is a member of a group                 |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Computer      | *with_node*        | *computer_of*               | The computer of a node                          |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Computer         | Node          | *with_computer*    | *has_computer*              | The node of a computer                          |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | User          | *with_node*        | *creator_of*                | The creator of a node is a user                 |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| User             | Node          | *with_user*        | *created_by*                | The node was created by a user                  |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| User             | Group         | *with_user*        | *belongs_to*                | The node was created by a user                  |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Group            | User          | *with_group*       | *owner_of*                  | The node was created by a user                  |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Node             | Log           | *with_node*        |                             | The log of a node                               |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Log              | Node          | *with_log*         |                             | The node has a log                              |
-| Node             | Comment       | *with_node*        |                             | The comment of a node                           |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Comment          | Node          | *with_comment*     |                             | The node has a comment                          |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| User             | Comment       | *with_user*        |                             | The comment was created by a user               |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
-| Comment          | User          | *with_comment*     |                             | The creator of a comment is a user              |
-+------------------+---------------+--------------------+-----------------------------+-------------------------------------------------+
++------------------+---------------+--------------------+-------------------------------------------------+
+| **Entity from**  | **Entity to** | **Relationship**   | **Explanation**                                 |
++==================+===============+====================+=================================================+
+| Node             | Node          | *with_outgoing*    | One node as input of another node               |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Node          | *with_incoming*    | One node as output of another node              |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Node          | *with_descendants* | One node as the ancestor of another node (Path) |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Node          | *with_ancestors*   | One node as descendant of another node (Path)   |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Group         | *with_node*        | The group of a node                             |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Group            | Node          | *with_group*       | The node is a member of a group                 |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Computer      | *with_node*        | The computer of a node                          |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Computer         | Node          | *with_computer*    | The node of a computer                          |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | User          | *with_node*        | The creator of a node is a user                 |
++------------------+---------------+--------------------+-------------------------------------------------+
+| User             | Node          | *with_user*        | The node was created by a user                  |
++------------------+---------------+--------------------+-------------------------------------------------+
+| User             | Group         | *with_user*        | The node was created by a user                  |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Group            | User          | *with_group*       | The node was created by a user                  |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Log           | *with_node*        | The log of a node                               |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Log              | Node          | *with_log*         | The node has a log                              |
+| Node             | Comment       | *with_node*        | The comment of a node                           |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Comment          | Node          | *with_comment*     | The node has a comment                          |
++------------------+---------------+--------------------+-------------------------------------------------+
+| User             | Comment       | *with_user*        | The comment was created by a user               |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Comment          | User          | *with_comment*     | The creator of a comment is a user              |
++------------------+---------------+--------------------+-------------------------------------------------+
 
 
 Some more examples::
@@ -315,7 +315,7 @@ Some more examples::
     # Find all descendants of a structure with a certain uuid
     qb = QueryBuilder()
     qb.append(StructureData, tag='structure', filters={'uuid':{'==':myuuid}})
-    qb.append(Node, descendant_of='structure')
+    qb.append(Node, with_ancestors='structure')
 
 The above QueryBuilder will join a structure to all its descendants via the
 transitive closure table.
@@ -342,8 +342,8 @@ Let's stick to the previous example::
     )
     qb.append(
         Node,
-        descendant_of='structure',
-        project=['type', 'uuid'],  # returns type (string) and uuid (string)
+        with_ancestors='structure',
+        project=['node_type', 'uuid'],  # returns type (string) and uuid (string)
     )
 
 
@@ -358,49 +358,49 @@ all Node that are descendants of the structure::
     )
     qb.append(
         Node,
-        descendant_of='structure',
-        project=['type', 'id'],  # returns type (string) and id (string)
+        with_ancestors='structure',
+        project=['node_type', 'id'],  # returns type (string) and id (string)
         tag='descendant'
     )
 
     # Return the dictionaries:
-    print "\n\nqb.iterdict()"
+    print("\n\nqb.iterdict()")
     for d in qb.iterdict():
-        print '>>>', d
+        print('>>>', d)
 
     # Return the lists:
-    print "\n\nqb.iterall()"
+    print("\n\nqb.iterall()")
     for l in qb.iterall():
-        print '>>>', l
+        print('>>>', l)
 
     # Return the first result:
-    print "\n\nqb.first()"
-    print '>>>', qb.first()
+    print("\n\nqb.first()")
+    print('>>>', qb.first())
 
 
 
 results in the following output::
 
     qb.iterdict()
-    >>> {'descendant': {'type': u'calculation.job.quantumespresso.pw.PwCalculation.', 'id': 7716}}
-    >>> {'descendant': {'type': u'data.remote.RemoteData.', 'id': 8510}}
-    >>> {'descendant': {'type': u'data.folder.FolderData.', 'id': 9090}}
-    >>> {'descendant': {'type': u'data.array.ArrayData.', 'id': 9091}}
-    >>> {'descendant': {'type': u'data.array.trajectory.TrajectoryData.', 'id': 9092}}
-    >>> {'descendant': {'type': u'data.dict.Dict.', 'id': 9093}}
+    >>> {'descendant': {'node_type': 'calculation.job.quantumespresso.pw.PwCalculation.', 'id': 7716}}
+    >>> {'descendant': {'node_type': 'data.remote.RemoteData.', 'id': 8510}}
+    >>> {'descendant': {'node_type': 'data.folder.FolderData.', 'id': 9090}}
+    >>> {'descendant': {'node_type': 'data.array.ArrayData.', 'id': 9091}}
+    >>> {'descendant': {'node_type': 'data.array.trajectory.TrajectoryData.', 'id': 9092}}
+    >>> {'descendant': {'node_type': 'data.dict.Dict.', 'id': 9093}}
 
 
     qb.iterall()
-    >>> [u'calculation.job.quantumespresso.pw.PwCalculation.', 7716]
-    >>> [u'data.remote.RemoteData.', 8510]
-    >>> [u'data.folder.FolderData.', 9090]
-    >>> [u'data.array.ArrayData.', 9091]
-    >>> [u'data.array.trajectory.TrajectoryData.', 9092]
-    >>> [u'data.dict.Dict.', 9093]
+    >>> ['calculation.job.quantumespresso.pw.PwCalculation.', 7716]
+    >>> ['data.remote.RemoteData.', 8510]
+    >>> ['data.folder.FolderData.', 9090]
+    >>> ['data.array.ArrayData.', 9091]
+    >>> ['data.array.trajectory.TrajectoryData.', 9092]
+    >>> ['data.dict.Dict.', 9093]
 
 
     qb.first()
-    >>> [u'calculation.job.quantumespresso.pw.PwCalculation.', 7716]
+    >>> ['calculation.job.quantumespresso.pw.PwCalculation.', 7716]
 
 Asking only for the properties that you are interested in can result
 in much faster queries. If you want the Aiida-ORM instance, add '*' to your list
@@ -414,24 +414,24 @@ of projections::
     )
     qb.append(
         Node,
-        descendant_of='structure',
+        with_ancestors='structure',
         project=['*'],      # returns the Aiida ORM instance
         tag='desc'
     )
 
     # Return the dictionaries:
-    print "\n\nqb.iterdict()"
+    print("\n\nqb.iterdict()")
     for d in qb.iterdict():
-        print '>>>', d
+        print('>>>', d)
 
     # Return the lists:
-    print "\n\nqb.iterall()"
+    print("\n\nqb.iterall()")
     for l in qb.iterall():
-        print '>>>', l
+        print('>>>', l)
 
     # Return the first result:
-    print "\n\nqb.first()"
-    print '>>>', qb.first()
+    print("\n\nqb.first()")
+    print('>>>', qb.first())
 
 Output::
 
@@ -475,17 +475,17 @@ Output::
 
     qb.limit(1).dict()
     >>> {'StructureData': {
-            u'user_id': 2,
-            u'description': u'',
-            u'ctime': datetime.datetime(2016, 2, 3, 18, 20, 17, 88239),
-            u'label': u'',
-            u'mtime': datetime.datetime(2016, 2, 3, 18, 20, 17, 116627),
-            u'id': 3028,
-            u'dbcomputer_id': None,
-            u'nodeversion': 1,
-            u'type': u'data.structure.StructureData.',
-            u'public': False,
-            u'uuid': u'93c0db51-8a39-4a0d-b14d-5a50e40a2cc4'
+            'user_id': 2,
+            'description': '',
+            'ctime': datetime.datetime(2016, 2, 3, 18, 20, 17, 88239),
+            'label': '',
+            'mtime': datetime.datetime(2016, 2, 3, 18, 20, 17, 116627),
+            'id': 3028,
+            'dbcomputer_id': None,
+            'nodeversion': 1,
+            'node_type': 'data.structure.StructureData.',
+            'public': False,
+            'uuid': '93c0db51-8a39-4a0d-b14d-5a50e40a2cc4'
         }}
 
 
@@ -765,4 +765,3 @@ You can also limit the number of rows returned with the method *limit*::
 
 The above query returns the latest 10 calculation that produced
 a final energy above -5.0.
-

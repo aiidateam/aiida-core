@@ -15,7 +15,7 @@ dependencies:
 - six==1.12.0
 - psutil==5.5.1
 - mock==2.0.0
-- numpy==1.16.1
+- numpy==1.16.4
 - SQLAlchemy==1.3.3
 - SQLAlchemy-Utils==0.33.11
 - alembic==1.0.7
@@ -29,12 +29,13 @@ dependencies:
 - ete3==3.1.1
 - uritools==2.2.0
 - psycopg2==2.8
-- paramiko==2.4.2
+- paramiko==2.6.0
 - ipython>=4.0,<6.0
-- plumpy==0.14.1
+- plumpy==0.14.2
 - kiwipy[rmq]==0.5.1
 - pika==1.0.0
 - circus==0.15.0
 - tornado<5.0
 - wrapt==1.11.1
 - simplejson==3.16.0
+- python-graphviz==0.10.1

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -183,18 +183,18 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
         return None
 
     if path is None:
-        path = os.environ.get("PATH", os.defpath)
+        path = os.environ.get('PATH', os.defpath)
     if not path:
         return None
     path = path.split(os.pathsep)
 
-    if sys.platform == "win32":
+    if sys.platform == 'win32':
         # The current directory takes precedence on Windows.
         if os.curdir not in path:
             path.insert(0, os.curdir)
 
         # PATHEXT is necessary to check on Windows.
-        pathext = os.environ.get("PATHEXT", "").split(os.pathsep)
+        pathext = os.environ.get('PATHEXT', '').split(os.pathsep)
         # See if the given file matches any of the expected path extensions.
         # This will allow us to short circuit when given "python.exe".
         # If it does match, only test that one, otherwise we have to try

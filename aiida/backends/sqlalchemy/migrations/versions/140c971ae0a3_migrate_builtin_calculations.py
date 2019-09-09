@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -37,7 +37,8 @@ def upgrade():
 
     # The built in calculation plugins `arithmetic.add` and `templatereplacer` have been moved and their entry point
     # renamed. In the change the `simpleplugins` namespace was dropped so we migrate the existing nodes.
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dbnode SET type = 'calculation.job.arithmetic.add.ArithmeticAddCalculation.'
         WHERE type = 'calculation.job.simpleplugins.arithmetic.add.ArithmeticAddCalculation.';
 
@@ -57,7 +58,8 @@ def upgrade():
         UPDATE db_dbnode SET attributes = jsonb_set(attributes, '{"input_plugin"}', '"templatereplacer"')
         WHERE attributes @> '{"input_plugin": "simpleplugins.templatereplacer"}'
         AND type = 'data.code.Code.';
-    """)
+    """
+    )
     conn.execute(statement)
 
 
@@ -65,7 +67,8 @@ def downgrade():
     """Migrations for the downgrade."""
     conn = op.get_bind()  # pylint: disable=no-member
 
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dbnode SET type = 'calculation.job.simpleplugins.arithmetic.add.ArithmeticAddCalculation.'
         WHERE type = 'calculation.job.arithmetic.add.ArithmeticAddCalculation.';
 
@@ -85,5 +88,6 @@ def downgrade():
         UPDATE db_dbnode SET attributes = jsonb_set(attributes, '{"input_plugin"}', '"simpleplugins.templatereplacer"')
         WHERE attributes @> '{"input_plugin": "templatereplacer"}'
         AND type = 'data.code.Code.';
-    """)
+    """
+    )
     conn.execute(statement)

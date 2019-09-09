@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -21,8 +21,9 @@ NO_DEFAULT = ()
 DEFAULT_DAEMON_TIMEOUT = 20  # Default timeout in seconds for circus client calls
 VALID_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'REPORT', 'INFO', 'DEBUG']
 
-Option = collections.namedtuple('Option',
-                                ['name', 'key', 'valid_type', 'valid_values', 'default', 'description', 'global_only'])
+Option = collections.namedtuple(
+    'Option', ['name', 'key', 'valid_type', 'valid_values', 'default', 'description', 'global_only']
+)
 
 
 def get_option(option_name):
@@ -80,7 +81,10 @@ def parse_option(option_name, option_value):
 
     if option.valid_values is not None:
         if value not in option.valid_values:
-            raise ValueError('{} is not among the list of accepted values for option {}'.format(value, option.name))
+            raise ValueError(
+                '{} is not among the list of accepted values for option {}.\nThe valid values are: '
+                '{}'.format(value, option.name, ', '.join(option.valid_values))
+            )
 
     return option, value
 

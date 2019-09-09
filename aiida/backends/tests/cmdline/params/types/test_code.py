@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -36,10 +36,10 @@ class TestCodeParamType(AiidaTestCase):
         cls.param_base = CodeParamType()
         cls.param_entry_point = CodeParamType(entry_point='arithmetic.add')
         cls.entity_01 = Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
-        cls.entity_02 = Code(
-            remote_computer_exec=(cls.computer, '/bin/true'), input_plugin_name='arithmetic.add').store()
-        cls.entity_03 = Code(
-            remote_computer_exec=(cls.computer, '/bin/true'), input_plugin_name='templatereplacer').store()
+        cls.entity_02 = Code(remote_computer_exec=(cls.computer, '/bin/true'),
+                             input_plugin_name='arithmetic.add').store()
+        cls.entity_03 = Code(remote_computer_exec=(cls.computer, '/bin/true'),
+                             input_plugin_name='templatereplacer').store()
 
         cls.entity_01.label = 'computer_01'
         cls.entity_02.label = str(cls.entity_01.pk)

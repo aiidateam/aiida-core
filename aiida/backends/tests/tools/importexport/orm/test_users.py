@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -42,7 +42,7 @@ class TestUsers(AiidaTestCase):
         manager = get_manager()
 
         # Create another user
-        new_email = "newuser@new.n"
+        new_email = 'newuser@new.n'
         user = orm.User(email=new_email).store()
 
         # Create a structure data node that has a calculation as output
@@ -53,7 +53,7 @@ class TestUsers(AiidaTestCase):
 
         jc1 = orm.CalcJobNode()
         jc1.computer = self.computer
-        jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        jc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         jc1.user = user
         jc1.label = 'jc1'
         jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
@@ -65,10 +65,11 @@ class TestUsers(AiidaTestCase):
         sd2.label = 'sd2'
         sd2.store()
         sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')  # I assume jc1 CREATED sd2
+        jc1.seal()
 
         jc2 = orm.CalcJobNode()
         jc2.computer = self.computer
-        jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        jc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         jc2.label = 'jc2'
         jc2.add_incoming(sd2, link_type=LinkType.INPUT_CALC, link_label='l2')
         jc2.store()
@@ -77,11 +78,12 @@ class TestUsers(AiidaTestCase):
         sd3.label = 'sd3'
         sd3.store()
         sd3.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
+        jc2.seal()
 
         uuids_u1 = [sd1.uuid, jc1.uuid, sd2.uuid]
         uuids_u2 = [jc2.uuid, sd3.uuid]
 
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
 
         export([sd3], outfile=filename, silent=True)
         self.clean_db()
@@ -97,7 +99,7 @@ class TestUsers(AiidaTestCase):
             self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user)
 
     @with_temp_dir
-    def test_non_default_user_nodes(self, temp_dir):
+    def test_non_default_user_nodes(self, temp_dir):  # pylint: disable=too-many-statements
         """
         This test checks that nodes belonging to user A (which is not the
         default user) can be correctly exported, imported, enriched with nodes
@@ -111,7 +113,7 @@ class TestUsers(AiidaTestCase):
         manager = get_manager()
 
         # Create another user
-        new_email = "newuser@new.n"
+        new_email = 'newuser@new.n'
         user = orm.User(email=new_email).store()
 
         # Create a structure data node that has a calculation as output
@@ -122,7 +124,7 @@ class TestUsers(AiidaTestCase):
 
         jc1 = orm.CalcJobNode()
         jc1.computer = self.computer
-        jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        jc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         jc1.user = user
         jc1.label = 'jc1'
         jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
@@ -134,10 +136,11 @@ class TestUsers(AiidaTestCase):
         sd2.label = 'sd2'
         sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')
         sd2.store()
+        jc1.seal()
         sd2_uuid = sd2.uuid
 
         # At this point we export the generated data
-        filename1 = os.path.join(temp_dir, "export1.tar.gz")
+        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
         export([sd2], outfile=filename1, silent=True)
         uuids1 = [sd1.uuid, jc1.uuid, sd2.uuid]
         self.clean_db()
@@ -155,7 +158,7 @@ class TestUsers(AiidaTestCase):
 
         jc2 = orm.CalcJobNode()
         jc2.computer = self.computer
-        jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        jc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         jc2.label = 'jc2'
         jc2.add_incoming(sd2_imp, link_type=LinkType.INPUT_CALC, link_label='l2')
         jc2.store()
@@ -164,12 +167,13 @@ class TestUsers(AiidaTestCase):
         sd3.label = 'sd3'
         sd3.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
         sd3.store()
+        jc2.seal()
 
         # Store the UUIDs of the nodes that should be checked
         # if they can be imported correctly.
         uuids2 = [jc2.uuid, sd3.uuid]
 
-        filename2 = os.path.join(temp_dir, "export2.tar.gz")
+        filename2 = os.path.join(temp_dir, 'export2.tar.gz')
         export([sd3], outfile=filename2, silent=True)
         self.clean_db()
         self.insert_data()

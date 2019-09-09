@@ -16,7 +16,7 @@ then
     # Start the daemon for the correct profile and add four additional workers to prevent deadlock with integration tests
     verdi -p $TEST_AIIDA_BACKEND daemon start
     verdi -p $TEST_AIIDA_BACKEND daemon incr 4
-    
+
     if [[ "$COMPUTER_SETUP_TYPE" != "jenkins" ]]
     then
         # Setup the torquessh computer

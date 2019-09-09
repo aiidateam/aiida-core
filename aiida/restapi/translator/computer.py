@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -23,11 +23,11 @@ class ComputerTranslator(BaseTranslator):
     Translator relative to resource 'computers' and aiida class Computer
     """
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "computers"
+    __label__ = 'computers'
     # The AiiDA class one-to-one associated to the present class
     _aiida_class = orm.Computer
     # The string name of the AiiDA class
-    _aiida_type = "Computer"
+    _aiida_type = 'Computer'
 
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = True
@@ -38,28 +38,28 @@ class ComputerTranslator(BaseTranslator):
     # All the values from column_order must present in additional info dict
     # Note: final schema will contain details for only the fields present in column order
     _schema_projections = {
-        "column_order": ["id", "name", "hostname", "description", "scheduler_type", "transport_type", "uuid"],
-        "additional_info": {
-            "id": {
-                "is_display": True
+        'column_order': ['id', 'name', 'hostname', 'description', 'scheduler_type', 'transport_type', 'uuid'],
+        'additional_info': {
+            'id': {
+                'is_display': True
             },
-            "name": {
-                "is_display": True
+            'name': {
+                'is_display': True
             },
-            "hostname": {
-                "is_display": True
+            'hostname': {
+                'is_display': True
             },
-            "description": {
-                "is_display": False
+            'description': {
+                'is_display': False
             },
-            "scheduler_type": {
-                "is_display": True
+            'scheduler_type': {
+                'is_display': True
             },
-            "transport_type": {
-                "is_display": False
+            'transport_type': {
+                'is_display': False
             },
-            "uuid": {
-                "is_display": False
+            'uuid': {
+                'is_display': False
             }
         }
     }

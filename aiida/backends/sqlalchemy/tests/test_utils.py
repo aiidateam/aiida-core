@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -70,7 +70,7 @@ def database_exists(url):
             return bool(engine.execute(text).scalar())
 
         else:
-            raise Exception("Only PostgreSQL is supported.")
+            raise Exception('Only PostgreSQL is supported.')
     finally:
         engine.dispose()
 
@@ -117,7 +117,7 @@ def create_database(url, encoding='utf8'):
             engine.execute(text)
 
         else:
-            raise Exception("Only PostgreSQL with the psycopg2 driver is "
-                            "supported.")
+            raise Exception('Only PostgreSQL with the psycopg2 driver is '
+                            'supported.')
     finally:
         engine.dispose()

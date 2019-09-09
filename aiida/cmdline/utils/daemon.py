@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -89,8 +89,10 @@ def get_daemon_status(client):
         'workers': workers_info
     }
 
-    template = ('Daemon is running as PID {pid} since {time}\nActive workers [{nworkers}]:\n{workers}\n'
-                'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers')
+    template = (
+        'Daemon is running as PID {pid} since {time}\nActive workers [{nworkers}]:\n{workers}\n'
+        'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers'
+    )
 
     return template.format(**info)
 
@@ -122,7 +124,8 @@ def delete_stale_pid_file(client):
                 raise StartCircusNotFound()  # Also this is a case in which the process is not there anymore
         except (psutil.AccessDenied, psutil.NoSuchProcess, StartCircusNotFound):
             echo.echo_warning(
-                'Deleted apparently stale daemon PID file as its associated process<{}> does not exist anymore'.format(
-                    pid))
+                'Deleted apparently stale daemon PID file as its associated process<{}> does not exist anymore'.
+                format(pid)
+            )
             if os.path.isfile(client.circus_pid_file):
                 os.remove(client.circus_pid_file)

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import contextlib
+import logging
 import time
 
 from six import iteritems, itervalues
@@ -20,12 +21,11 @@ from tornado import concurrent, gen
 
 from aiida import schedulers
 from aiida.common import exceptions, lang
-from aiida.common.log import AIIDA_LOGGER
 
 __all__ = ('JobsList', 'JobManager')
 
 
-class JobsList(object):  # pylint: disable=useless-object-inheritance
+class JobsList(object):
     """Manager of calculation jobs submitted with a specific ``AuthInfo``, i.e. computer configured for a specific user.
 
     This container of active calculation jobs is used to update their status periodically in batches, ensuring that
@@ -57,7 +57,7 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
         self._authinfo = authinfo
         self._transport_queue = transport_queue
         self._loop = transport_queue.loop()
-        self._logger = AIIDA_LOGGER.getChild('calcjobs')
+        self._logger = logging.getLogger(__name__)
 
         self._jobs_cache = {}
         self._job_update_requests = {}  # Mapping: {job_id: Future}
@@ -97,6 +97,7 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
         :rtype: dict
         """
         with self._transport_queue.request_transport(self._authinfo) as request:
+            self.logger.info('waiting for transport')
             transport = yield request
 
             scheduler = self._authinfo.computer.get_scheduler()
@@ -104,7 +105,7 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
 
             kwargs = {'as_dict': True}
             if scheduler.get_feature('can_query_by_user'):
-                kwargs['user'] = "$USER"
+                kwargs['user'] = '$USER'
             else:
                 kwargs['jobs'] = self._get_jobs_with_scheduler()
 
@@ -147,6 +148,13 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
             for future in itervalues(self._job_update_requests):
                 if not future.done():
                     future.set_exception(exception)
+
+            # Reset the `_update_handle` manually. Normally this is done in the `updating` coroutine, but since we
+            # reraise this exception, that code path is never hit. If the next time a request comes in, the method
+            # `_ensure_updating` will falsely conclude we are still updating, since the handle is not `None` and so it
+            # will not schedule the next update, causing the job update futures to never be resolved.
+            self._update_handle = None
+
             raise
         else:
             for job_id, future in iteritems(self._job_update_requests):
@@ -258,8 +266,6 @@ class JobManager(object):
     will be maintained. Note, however, that since each ``Runner`` will create its own job manager, these guarantees
     only hold per runner.
     """
-
-    # pylint: disable=useless-object-inheritance
 
     def __init__(self, transport_queue):
         self._transport_queue = transport_queue

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -107,7 +107,8 @@ class Migration(migrations.Migration):
                 related_name='user_set',
                 related_query_name='user',
                 to='auth.Group',
-                verbose_name='groups'),
+                verbose_name='groups'
+            ),
         ),
         migrations.AlterField(
             model_name='dbworkflow',

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -28,8 +28,6 @@ __all__ = ('Parser',)
 @six.add_metaclass(ABCMeta)
 class Parser(object):
     """Base class for a Parser that can parse the outputs produced by a CalcJob process."""
-
-    # pylint: disable=useless-object-inheritance
 
     def __init__(self, node):
         """Construct the Parser instance.

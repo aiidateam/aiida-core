@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -31,7 +31,7 @@ class TestComputer(AiidaTestCase):
         import aiida.backends.sqlalchemy
 
         newcomputer = self.backend.computers.create(
-            name="testdeletioncomputer",
+            name='testdeletioncomputer',
             hostname='localhost',
             transport_type='local',
             scheduler_type='pbspro')
@@ -181,6 +181,6 @@ class TestGroupNoOrmSQLA(AiidaTestCase):
         # correct addition.
         batch_sizes = (1, 3, 10, 1000)
         for batch_size in batch_sizes:
-            group = Group(name='test_batches_' + str(batch_size)).store()
+            group = Group(label='test_batches_' + str(batch_size)).store()
             group.backend_entity.add_nodes(nodes, skip_orm=True, batch_size=batch_size)
             self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))

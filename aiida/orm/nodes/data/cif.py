@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -146,15 +146,17 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
 
     cif = CifFile.CifFile()  # pylint: disable=no-member
     try:
-        cif.set_grammar("1.1")
+        cif.set_grammar('1.1')
     except AttributeError:
         # if no grammar can be set, we assume it's 1.1 (widespread standard)
         pass
 
     if names and len(names) < len(datablocks):
-        raise ValueError("Not enough names supplied for "
-                         "datablocks: {} (names) < "
-                         "{} (datablocks)".format(len(names), len(datablocks)))
+        raise ValueError(
+            'Not enough names supplied for '
+            'datablocks: {} (names) < '
+            '{} (datablocks)'.format(len(names), len(datablocks))
+        )
     for i, values in enumerate(datablocks):
         name = str(i)
         if names:
@@ -173,10 +175,12 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
                     if row_size is None:
                         row_size = len(tag_values)
                     elif row_size != len(tag_values):
-                        raise ValueError("Number of values for tag "
-                                         "'{}' is different from "
-                                         "the others in the same "
-                                         "loop".format(tag))
+                        raise ValueError(
+                            'Number of values for tag '
+                            "'{}' is different from "
+                            'the others in the same '
+                            'loop'.format(tag)
+                        )
                     if row_size == 0:
                         continue
                     datablock.AddItem(tag, tag_values)
@@ -237,14 +241,9 @@ class CifData(SinglefileData):
     _values = None
     _ase = None
 
-    def __init__(self,
-                 ase=None,
-                 file=None,
-                 values=None,
-                 source=None,
-                 scan_type='standard',
-                 parse_policy='eager',
-                 **kwargs):
+    def __init__(
+        self, ase=None, file=None, values=None, source=None, scan_type='standard', parse_policy='eager', **kwargs
+    ):
         # pylint: disable=too-many-arguments, redefined-builtin
 
         args = {
@@ -335,7 +334,7 @@ class CifData(SinglefileData):
         from aiida.common.files import md5_file
 
         if not os.path.abspath(filename):
-            raise ValueError("filename must be an absolute path")
+            raise ValueError('filename must be an absolute path')
         md5 = md5_file(filename)
 
         cifs = cls.from_md5(md5)
@@ -350,9 +349,11 @@ class CifData(SinglefileData):
             if use_first:
                 return (cifs[0], False)
 
-            raise ValueError("More than one copy of a CIF file "
-                             "with the same MD5 has been found in "
-                             "the DB. pks={}".format(",".join([str(i.pk) for i in cifs])))
+            raise ValueError(
+                'More than one copy of a CIF file '
+                'with the same MD5 has been found in '
+                'the DB. pks={}'.format(','.join([str(i.pk) for i in cifs]))
+            )
 
         return cifs[0], False
 
@@ -496,7 +497,7 @@ class CifData(SinglefileData):
         if scan_type in self._scan_types:
             self.set_attribute('scan_type', scan_type)
         else:
-            raise ValueError("Got unknown scan_type {}".format(scan_type))
+            raise ValueError('Got unknown scan_type {}'.format(scan_type))
 
     def set_parse_policy(self, parse_policy):
         """
@@ -508,7 +509,7 @@ class CifData(SinglefileData):
         if parse_policy in self._parse_policies:
             self.set_attribute('parse_policy', parse_policy)
         else:
-            raise ValueError("Got unknown parse_policy {}".format(parse_policy))
+            raise ValueError('Got unknown parse_policy {}'.format(parse_policy))
 
     def get_formulae(self, mode='sum'):
         """
@@ -519,7 +520,7 @@ class CifData(SinglefileData):
         """
         # note: If formulae are not None, they could be returned
         # directly (but the function is very cheap anyhow).
-        formula_tag = "_chemical_formula_{}".format(mode)
+        formula_tag = '_chemical_formula_{}'.format(mode)
         formulae = []
         for datablock in self.values.keys():
             formula = None
@@ -535,7 +536,7 @@ class CifData(SinglefileData):
         """
         # note: If spacegroup_numbers are not None, they could be returned
         # directly (but the function is very cheap anyhow).
-        spg_tags = ["_space_group.it_number", "_space_group_it_number", "_symmetry_int_tables_number"]
+        spg_tags = ['_space_group.it_number', '_space_group_it_number', '_symmetry_int_tables_number']
         spacegroup_numbers = []
         for datablock in self.values.keys():
             spacegroup_number = None
@@ -699,27 +700,6 @@ class CifData(SinglefileData):
         with self.open(mode='rb') as handle:
             return md5_from_filelike(handle)
 
-    def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
-
-        :param converter: specify the converter. Default 'pymatgen'.
-        :param store: if True, intermediate calculation gets stored in the
-            AiiDA database for record. Default False.
-        :param primitive_cell: if True, primitive cell is returned,
-            conventional cell if False. Default False.
-        :param occupancy_tolerance: If total occupancy of a site is between 1 and occupancy_tolerance,
-            the occupancies will be scaled down to 1. (pymatgen only)
-        :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
-            in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
-        :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn(  # pylint: disable=no-member
-            'This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0', DeprecationWarning)
-        return self.get_structure(converter=converter, store=store, **kwargs)
-
     def get_structure(self, converter='pymatgen', store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
@@ -753,7 +733,7 @@ class CifData(SinglefileData):
         return result['structure']
 
     # pylint: disable=unused-argument
-    def _prepare_cif(self, main_file_name=""):
+    def _prepare_cif(self, main_file_name=''):
         """
         Return CIF string of CifData object.
 

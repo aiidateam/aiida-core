@@ -3,14 +3,12 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module to get the backend instance from the Models instance
-"""
-
+# pylint: disable=cyclic-import,no-member
+"""Module to get an ORM backend instance from a database model instance."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -19,8 +17,6 @@ try:  # Python3
     from functools import singledispatch
 except ImportError:  # Python2
     from singledispatch import singledispatch
-
-# pylint: disable=cyclic-import
 
 import aiida.backends.djsite.db.models as djmodels
 
@@ -34,8 +30,9 @@ def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument
 
     :param dbmodel: the db model instance
     """
-    raise TypeError('No corresponding AiiDA backend class exists for the DbModel instance {}'.format(
-        dbmodel.__class__.__name__))
+    raise TypeError(
+        'No corresponding AiiDA backend class exists for the DbModel instance {}'.format(dbmodel.__class__.__name__)
+    )
 
 
 @get_backend_entity.register(djmodels.DbUser)
@@ -108,7 +105,8 @@ def _(dbmodel, backend):
         email=dbmodel.email,
         first_name=dbmodel.first_name,
         last_name=dbmodel.last_name,
-        institution=dbmodel.institution)
+        institution=dbmodel.institution
+    )
     return users.DjangoUser.from_dbmodel(djuser_instance, backend)
 
 
@@ -146,7 +144,8 @@ def _(dbmodel, backend):
         description=dbmodel.description,
         transport_type=dbmodel.transport_type,
         scheduler_type=dbmodel.scheduler_type,
-        metadata=dbmodel.metadata)
+        metadata=dbmodel.metadata
+    )
     return computers.DjangoComputer.from_dbmodel(djcomputer_instance, backend)
 
 
@@ -168,7 +167,8 @@ def _(dbmodel, backend):
         dbcomputer_id=dbmodel.dbcomputer_id,
         user_id=dbmodel.user_id,
         attributes=dbmodel.attributes,
-        extras=dbmodel.extras)
+        extras=dbmodel.extras
+    )
 
     from . import nodes
     return nodes.DjangoNode.from_dbmodel(djnode_instance, backend)
@@ -205,7 +205,8 @@ def _(dbmodel, backend):
         ctime=dbmodel.ctime,
         mtime=dbmodel.mtime,
         user_id=dbmodel.user_id,
-        content=dbmodel.content)
+        content=dbmodel.content
+    )
     return comments.DjangoComment.from_dbmodel(djcomment, backend)
 
 

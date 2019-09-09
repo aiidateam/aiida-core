@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -21,7 +21,7 @@ from aiida.plugins.entry_point import entry_point_group_to_module_path_map
 
 @verdi.group('plugin')
 def verdi_plugin():
-    """Inspect installed plugins for various entry point categories."""
+    """Inspect AiiDA plugins."""
 
 
 @verdi_plugin.command('list')

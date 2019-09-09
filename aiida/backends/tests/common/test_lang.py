@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -22,7 +22,7 @@ protected_unchecked = lang.protected_decorator(check=False)  # pylint: disable=i
 class Protected(object):
     """Class to test the protected decorator."""
 
-    # pylint: disable=no-self-use,useless-object-inheritance
+    # pylint: disable=no-self-use
 
     def member_internal(self):
         """Class method that is allowed to call the protected methods."""
@@ -56,7 +56,7 @@ class Protected(object):
 class TestProtectedDecorator(AiidaTestCase):
     """Tests for the :py:func:`~aiida.common.lang.protected` decorator."""
 
-    # pylint: disable=unused-variable,useless-object-inheritance
+    # pylint: disable=unused-variable
 
     def test_free_function(self):
         """Decorating a free function should raise."""

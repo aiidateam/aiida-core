@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -41,44 +41,48 @@ class TrajectoryData(ArrayData):
         import numpy
 
         if not isinstance(symbols, collections.Iterable):
-            raise TypeError("TrajectoryData.symbols must be of type list")
+            raise TypeError('TrajectoryData.symbols must be of type list')
         if any([not isinstance(i, six.string_types) for i in symbols]):
-            raise TypeError("TrajectoryData.symbols must be a 1d list of strings")
+            raise TypeError('TrajectoryData.symbols must be a 1d list of strings')
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
-            raise TypeError("TrajectoryData.positions must be a numpy array of floats")
+            raise TypeError('TrajectoryData.positions must be a numpy array of floats')
         if stepids is not None:
             if not isinstance(stepids, numpy.ndarray) or stepids.dtype != int:
-                raise TypeError("TrajectoryData.stepids must be a numpy array of integers")
+                raise TypeError('TrajectoryData.stepids must be a numpy array of integers')
         if cells is not None:
             if not isinstance(cells, numpy.ndarray) or cells.dtype != float:
-                raise TypeError("TrajectoryData.cells must be a numpy array of floats")
+                raise TypeError('TrajectoryData.cells must be a numpy array of floats')
         if times is not None:
             if not isinstance(times, numpy.ndarray) or times.dtype != float:
-                raise TypeError("TrajectoryData.times must be a numpy array of floats")
+                raise TypeError('TrajectoryData.times must be a numpy array of floats')
         if velocities is not None:
             if not isinstance(velocities, numpy.ndarray) or velocities.dtype != float:
-                raise TypeError("TrajectoryData.velocities must be a numpy array of floats, or None")
+                raise TypeError('TrajectoryData.velocities must be a numpy array of floats, or None')
         if stepids is not None:
             numsteps = stepids.size
             if stepids.shape != (numsteps,):
-                raise ValueError("TrajectoryData.stepids must be a 1d array")
+                raise ValueError('TrajectoryData.stepids must be a 1d array')
         else:
             numsteps = positions.shape[0]
         if cells is not None:
             if cells.shape != (numsteps, 3, 3):
-                raise ValueError("TrajectoryData.cells must have shape (s,3,3), with s=number of steps")
+                raise ValueError('TrajectoryData.cells must have shape (s,3,3), with s=number of steps')
         numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
-            raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
-                             "with s=number of steps and n=number of symbols")
+            raise ValueError(
+                'TrajectoryData.positions must have shape (s,n,3), '
+                'with s=number of steps and n=number of symbols'
+            )
         if times is not None:
             if times.shape != (numsteps,):
-                raise ValueError("TrajectoryData.times must have shape (s,), with s=number of steps")
+                raise ValueError('TrajectoryData.times must have shape (s,), with s=number of steps')
         if velocities is not None:
             if velocities.shape != (numsteps, numatoms, 3):
-                raise ValueError("TrajectoryData.velocities, if not None, must "
-                                 "have shape (s,n,3), "
-                                 "with s=number of steps and n=number of symbols")
+                raise ValueError(
+                    'TrajectoryData.velocities, if not None, must '
+                    'have shape (s,n,3), '
+                    'with s=number of steps and n=number of symbols'
+                )
 
     def set_trajectory(self, symbols, positions, stepids=None, cells=None, times=None, velocities=None):  # pylint: disable=too-many-arguments
         r"""
@@ -186,7 +190,7 @@ class TrajectoryData(ArrayData):
         symbols_first = [str(s.kind_name) for s in structurelist[0].sites]
         for symbols_now in [[str(s.kind_name) for s in structurelist[i].sites] for i in stepids]:
             if symbols_first != symbols_now:
-                raise ValueError("Symbol lists have to be the same for all of the supplied structures")
+                raise ValueError('Symbol lists have to be the same for all of the supplied structures')
         symbols = list(symbols_first)
         positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
         self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
@@ -200,12 +204,16 @@ class TrajectoryData(ArrayData):
         from aiida.common.exceptions import ValidationError
 
         try:
-            self._internal_validate(self.get_stepids(), self.get_cells(), self.symbols, self.get_positions(),
-                                    self.get_times(), self.get_velocities())
+            self._internal_validate(
+                self.get_stepids(), self.get_cells(), self.symbols, self.get_positions(), self.get_times(),
+                self.get_velocities()
+            )
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as exception:
-            raise ValidationError("The TrajectoryData did not validate. "
-                                  "Error: {} with message {}".format(type(exception).__name__, exception))
+            raise ValidationError(
+                'The TrajectoryData did not validate. '
+                'Error: {} with message {}'.format(type(exception).__name__, exception)
+            )
 
     @property
     def numsteps(self):
@@ -312,7 +320,7 @@ class TrajectoryData(ArrayData):
         try:
             return numpy.where(self.get_stepids() == stepid)[0][0]
         except IndexError:
-            raise ValueError("{} not among the stepids".format(stepid))
+            raise ValueError('{} not among the stepids'.format(stepid))
 
     def get_step_data(self, index):
         r"""
@@ -337,8 +345,10 @@ class TrajectoryData(ArrayData):
         :raises KeyError: if you did not store the trajectory yet.
         """
         if index >= self.numsteps:
-            raise IndexError("You have only {} steps, but you are looking beyond"
-                             " (index={})".format(self.numsteps, index))
+            raise IndexError(
+                'You have only {} steps, but you are looking beyond'
+                ' (index={})'.format(self.numsteps, index)
+            )
 
         vel = self.get_velocities()
         if vel is not None:
@@ -383,16 +393,20 @@ class TrajectoryData(ArrayData):
             kind_names = []
             for k in custom_kinds:
                 if not isinstance(k, Kind):
-                    raise TypeError("Each element of the custom_kinds list must "
-                                    "be a aiida.orm.nodes.data.structure.Kind object")
+                    raise TypeError(
+                        'Each element of the custom_kinds list must '
+                        'be a aiida.orm.nodes.data.structure.Kind object'
+                    )
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):
-                raise ValueError("Multiple kinds with the same name passed as custom_kinds")
+                raise ValueError('Multiple kinds with the same name passed as custom_kinds')
             if set(kind_names) != set(symbols):
-                raise ValueError("If you pass custom_kinds, you have to "
-                                 "pass one Kind object for each symbol "
-                                 "that is present in the trajectory. You "
-                                 "passed {}, but the symbols are {}".format(sorted(kind_names), sorted(symbols)))
+                raise ValueError(
+                    'If you pass custom_kinds, you have to '
+                    'pass one Kind object for each symbol '
+                    'that is present in the trajectory. You '
+                    'passed {}, but the symbols are {}'.format(sorted(kind_names), sorted(symbols))
+                )
 
         struc = StructureData(cell=cell)
         if custom_kinds is not None:
@@ -407,7 +421,7 @@ class TrajectoryData(ArrayData):
 
         return struc
 
-    def _prepare_xsf(self, index=None, main_file_name=""):  # pylint: disable=unused-argument
+    def _prepare_xsf(self, index=None, main_file_name=''):  # pylint: disable=unused-argument
         """
         Write the given trajectory to a string of format XSF (for XCrySDen).
         """
@@ -417,35 +431,35 @@ class TrajectoryData(ArrayData):
         indices = list(range(self.numsteps))
         if index is not None:
             indices = [index]
-        return_string = "ANIMSTEPS {}\nCRYSTAL\n".format(len(indices))
+        return_string = 'ANIMSTEPS {}\nCRYSTAL\n'.format(len(indices))
         # Do the checks once and for all here:
         structure = self.get_step_structure(index=0)
         if structure.is_alloy or structure.has_vacancies:
-            raise NotImplementedError("XSF for alloys or systems with vacancies not implemented.")
+            raise NotImplementedError('XSF for alloys or systems with vacancies not implemented.')
         cells = self.get_cells()
         if cells is None:
-            raise ValueError("No cell parameters have been supplied for TrajectoryData")
+            raise ValueError('No cell parameters have been supplied for TrajectoryData')
         positions = self.get_positions()
         symbols = self.symbols
         atomic_numbers_list = [_atomic_numbers[s] for s in symbols]
         nat = len(symbols)
 
         for idx in indices:
-            return_string += "PRIMVEC {}\n".format(idx + 1)
+            return_string += 'PRIMVEC {}\n'.format(idx + 1)
             for cell_vector in cells[idx]:
-                return_string += ' '.join(["{:18.5f}".format(i) for i in cell_vector])
-                return_string += "\n"
-            return_string += "PRIMCOORD {}\n".format(idx + 1)
-            return_string += "{} 1\n".format(nat)
+                return_string += ' '.join(['{:18.5f}'.format(i) for i in cell_vector])
+                return_string += '\n'
+            return_string += 'PRIMCOORD {}\n'.format(idx + 1)
+            return_string += '{} 1\n'.format(nat)
             for atn, pos in zip(atomic_numbers_list, positions[idx]):
                 try:
-                    return_string += "{} {:18.10f} {:18.10f} {:18.10f}\n".format(atn, pos[0], pos[1], pos[2])
+                    return_string += '{} {:18.10f} {:18.10f} {:18.10f}\n'.format(atn, pos[0], pos[1], pos[2])
                 except:
                     print(atn, pos)
                     raise
         return return_string.encode('utf-8'), {}
 
-    def _prepare_cif(self, trajectory_index=None, main_file_name=""):  # pylint: disable=unused-argument
+    def _prepare_cif(self, trajectory_index=None, main_file_name=''):  # pylint: disable=unused-argument
         """
         Write the given trajectory to a string of format CIF.
         """
@@ -453,7 +467,7 @@ class TrajectoryData(ArrayData):
             import ase_loops, cif_from_ase, pycifrw_from_cif
         from aiida.common.utils import Capturing
 
-        cif = ""
+        cif = ''
         indices = list(range(self.numsteps))
         if trajectory_index is not None:
             indices = [trajectory_index]
@@ -464,27 +478,12 @@ class TrajectoryData(ArrayData):
                 cif = cif + ciffile.WriteOut()
         return cif.encode('utf-8'), {}
 
-    def _get_aiida_structure(self, store=False, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
-
-        :param converter: specify the converter. Default 'ase'.
-        :param store: If True, intermediate calculation gets stored in the
-            AiiDA database for record. Default False.
-        :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn(  # pylint: disable=no-member
-            'This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0', DeprecationWarning)
-        return self.get_structure(store=store, **kwargs)
-
     def get_structure(self, store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
 
         .. versionadded:: 1.0
-           Renamed from _get_aiida_structure
+            Renamed from _get_aiida_structure
 
         :param converter: specify the converter. Default 'ase'.
         :param store: If True, intermediate calculation gets stored in the
@@ -498,16 +497,6 @@ class TrajectoryData(ArrayData):
 
         ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})  # pylint: disable=unexpected-keyword-arg
         return ret_dict['structure']
-
-    def _get_cif(self, index=None, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.nodes.data.cif.CifData`
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn(  # pylint: disable=no-member
-            'This method has been deprecated and will be renamed to get_cif() in AiiDA v1.0', DeprecationWarning)
-        return self.get_cif(index=index, **kwargs)
 
     def get_cif(self, index=None, **kwargs):
         """
@@ -549,19 +538,22 @@ class TrajectoryData(ArrayData):
 
         numsteps = self.numsteps
         if numsteps == 0:
-            raise ValidationError("steps must be set before importing positional data")
+            raise ValidationError('steps must be set before importing positional data')
 
         numsites = self.numsites
         if numsites == 0:
-            raise ValidationError("symbols must be set before importing positional data")
+            raise ValidationError('symbols must be set before importing positional data')
 
         positions = array(
-            [[list(position) for _, position in atoms] for _, _, atoms in xyz_parser_iterator(inputstring)])
+            [[list(position) for _, position in atoms] for _, _, atoms in xyz_parser_iterator(inputstring)]
+        )
 
         if positions.shape != (numsteps, numsites, 3):
-            raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
-                             "with s=number of steps={} and "
-                             "n=number of symbols={}".format(numsteps, numsites))
+            raise ValueError(
+                'TrajectoryData.positions must have shape (s,n,3), '
+                'with s=number of steps={} and '
+                'n=number of symbols={}'.format(numsteps, numsites)
+            )
 
         self.set_array('positions', positions)
 
@@ -580,19 +572,22 @@ class TrajectoryData(ArrayData):
 
         numsteps = self.numsteps
         if numsteps == 0:
-            raise ValidationError("steps must be set before importing positional data")
+            raise ValidationError('steps must be set before importing positional data')
 
         numsites = self.numsites
         if numsites == 0:
-            raise ValidationError("symbols must be set before importing positional data")
+            raise ValidationError('symbols must be set before importing positional data')
 
         velocities = array(
-            [[list(velocity) for _, velocity in atoms] for _, _, atoms in xyz_parser_iterator(inputstring)])
+            [[list(velocity) for _, velocity in atoms] for _, _, atoms in xyz_parser_iterator(inputstring)]
+        )
 
         if velocities.shape != (numsteps, numsites, 3):
-            raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
-                             "with s=number of steps={} and "
-                             "n=number of symbols={}".format(numsteps, numsites))
+            raise ValueError(
+                'TrajectoryData.positions must have shape (s,n,3), '
+                'with s=number of steps={} and '
+                'n=number of symbols={}'.format(numsteps, numsites)
+            )
 
         self.set_array('velocities', velocities)
 
@@ -646,9 +641,9 @@ class TrajectoryData(ArrayData):
         elif colors == 'cpk':
             from ase.data.colors import cpk_colors as colors
         else:
-            raise InputValidationError("Unknown color spec {}".format(colors))
+            raise InputValidationError('Unknown color spec {}'.format(colors))
         if kwargs:
-            raise InputValidationError("Unrecognized keyword {}".format(kwargs.keys()))
+            raise InputValidationError('Unrecognized keyword {}'.format(kwargs.keys()))
 
         if element_list is None:
             # If not all elements are allowed
@@ -697,12 +692,14 @@ class TrajectoryData(ArrayData):
         try:
             from mayavi import mlab
         except ImportError:
-            raise ImportError("Unable to import the mayavi package, that is required to"
-                              "use the plotting feature you requested. "
-                              "Please install it first and then call this command again "
-                              "(note that the installation of mayavi is quite complicated "
-                              "and requires that you already installed the python numpy "
-                              "package, as well as the vtk package")
+            raise ImportError(
+                'Unable to import the mayavi package, that is required to'
+                'use the plotting feature you requested. '
+                'Please install it first and then call this command again '
+                '(note that the installation of mayavi is quite complicated '
+                'and requires that you already installed the python numpy '
+                'package, as well as the vtk package'
+            )
         from ase.data.colors import jmol_colors
         from ase.data import atomic_numbers
 
@@ -742,7 +739,7 @@ class TrajectoryData(ArrayData):
 
         try:
             if self.get_attribute('units|positions') in ('bohr', 'atomic'):
-                from aiida.common.constants import bohr_to_ang
+                bohr_to_ang = 0.52917720859
                 positions *= bohr_to_ang
         except KeyError:
             pass
@@ -753,7 +750,7 @@ class TrajectoryData(ArrayData):
 
         cells = self.get_cells()
         if cells is None:
-            raise ValueError("No cell parameters have been supplied for TrajectoryData")
+            raise ValueError('No cell parameters have been supplied for TrajectoryData')
         else:
             cell = np.array(cells[0])
         storage_dict = {s: {} for s in elements}
@@ -762,8 +759,9 @@ class TrajectoryData(ArrayData):
         for iat, ele in enumerate(symbols):
             if ele in elements:
                 for idim in range(3):
-                    storage_dict[ele][idim] = np.concatenate((storage_dict[ele][idim],
-                                                              positions[:, iat, idim].flatten()))
+                    storage_dict[ele][idim] = np.concatenate(
+                        (storage_dict[ele][idim], positions[:, iat, idim].flatten())
+                    )
 
         for ele in elements:
             storage_dict[ele] = np.array(storage_dict[ele]).T
@@ -821,7 +819,8 @@ class TrajectoryData(ArrayData):
                     color=tuple(jmol_colors[atomic_numbers[ele]].tolist()),
                     scale_mode='none',
                     scale_factor=0.3,
-                    opacity=0.3)
+                    opacity=0.3
+                )
 
         mlab.view(azimuth=155, elevation=70, distance='auto')
         mlab.show()

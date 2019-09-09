@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -21,7 +21,7 @@ from aiida.common.links import LinkType
 __all__ = ('NodeLinksManager', 'AttributeManager')
 
 
-class NodeLinksManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance
+class NodeLinksManager(object):  # pylint: disable=too-few-public-methods
     """
     A manager that allows to inspect, with tab-completion, nodes linked to a given one.
     See an example of its use in `CalculationNode.inputs`.
@@ -40,10 +40,10 @@ class NodeLinksManager(object):  # pylint: disable=too-few-public-methods,useles
         from aiida.orm import Node
 
         if not isinstance(node, Node):
-            raise TypeError("node must be a valid AiiDA Node")
+            raise TypeError('node must be a valid AiiDA Node')
         self._node = node
         if not isinstance(link_type, LinkType):
-            raise TypeError("link_type must be a valid LinkType")
+            raise TypeError('link_type must be a valid LinkType')
         self._link_type = link_type
         self._incoming = incoming
 
@@ -99,14 +99,15 @@ class NodeLinksManager(object):  # pylint: disable=too-few-public-methods,useles
 
     def __str__(self):
         """Return a string representation of the manager"""
-        return "Manager for {} {} links for node pk={}".format("incoming" if self._incoming else "outgoing",
-                                                               self._link_type.value.upper(), self._node.pk)
+        return 'Manager for {} {} links for node pk={}'.format(
+            'incoming' if self._incoming else 'outgoing', self._link_type.value.upper(), self._node.pk
+        )
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
 
-class AttributeManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance
+class AttributeManager(object):  # pylint: disable=too-few-public-methods
     """
     An object used internally to return the attributes as a dictionary.
     This is currently used in :py:class:`~aiida.orm.nodes.data.dict.Dict`,

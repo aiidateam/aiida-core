@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -134,25 +134,11 @@ class TestNodeHashing(AiidaTestCase):
         return node
 
     def test_folder_file_different(self):
-        f1 = self.create_folderdata_with_empty_file()
-        f2 = self.create_folderdata_with_empty_folder()
+        f1 = self.create_folderdata_with_empty_file().store()
+        f2 = self.create_folderdata_with_empty_folder().store()
 
         assert (f1.list_object_names('path') == f2.list_object_names('path'))
         assert f1.get_hash() != f2.get_hash()
-
-    def test_folder_same(self):
-        f1 = self.create_folderdata_with_empty_folder()
-        f2 = self.create_folderdata_with_empty_folder()
-        f1.store()
-        f2.store(use_cache=True)
-        assert f1.uuid == f2.get_extra('_aiida_cached_from')
-
-    def test_file_same(self):
-        f1 = self.create_folderdata_with_empty_file()
-        f2 = self.create_folderdata_with_empty_file()
-        f1.store()
-        f2.store(use_cache=True)
-        assert f1.uuid == f2.get_extra('_aiida_cached_from')
 
     def test_simple_unequal_nodes(self):
         attributes = [
@@ -188,12 +174,47 @@ class TestNodeHashing(AiidaTestCase):
         """
         Tests that updatable attributes are ignored.
         """
-        node = orm.ProcessNode()
+        node = orm.CalculationNode().store()
         hash1 = node.get_hash()
         node.set_process_state('finished')
         hash2 = node.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)
+
+
+class TestNodeHashing(AiidaTestCase):
+    """
+    Test that the source is taken from the expected node.
+
+    Important: these tests must run on an empty database.
+    """
+    @staticmethod
+    def create_folderdata_with_empty_file():
+        node = orm.FolderData()
+        with tempfile.NamedTemporaryFile() as handle:
+            node.put_object_from_filelike(handle, 'path/name')
+        return node
+
+    @staticmethod
+    def create_folderdata_with_empty_folder():
+        dirpath = tempfile.mkdtemp()
+        node = orm.FolderData()
+        node.put_object_from_tree(dirpath, 'path/name')
+        return node
+
+    def test_folder_same(self):
+        f1 = self.create_folderdata_with_empty_folder()
+        f2 = self.create_folderdata_with_empty_folder()
+        f1.store()
+        f2.store(use_cache=True)
+        assert f1.uuid == f2.get_extra('_aiida_cached_from')
+
+    def test_file_same(self):
+        f1 = self.create_folderdata_with_empty_file()
+        f2 = self.create_folderdata_with_empty_file()
+        f1.store()
+        f2.store(use_cache=True)
+        assert f1.uuid == f2.get_extra('_aiida_cached_from')
 
 
 class TestTransitiveNoLoops(AiidaTestCase):
@@ -244,7 +265,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     def test_with_subclasses(self):
         from aiida.plugins import DataFactory
 
-        extra_name = self.__class__.__name__ + "/test_with_subclasses"
+        extra_name = self.__class__.__name__ + '/test_with_subclasses'
 
         Dict = DataFactory('dict')
 
@@ -300,7 +321,7 @@ class TestNodeBasic(AiidaTestCase):
     boolval = True
     intval = 123
     floatval = 4.56
-    stringval = "aaaa"
+    stringval = 'aaaa'
     # A recursive dictionary
     dictval = {
         'num': 3,
@@ -319,7 +340,7 @@ class TestNodeBasic(AiidaTestCase):
             }
         }
     }
-    listval = [1, "s", True, None]
+    listval = [1, 's', True, None]
     emptydict = {}
     emptylist = []
 
@@ -918,15 +939,15 @@ class TestNodeBasic(AiidaTestCase):
             'bool': True,
             'integer': 12,
             'float': 26.2,
-            'string': "a string",
+            'string': 'a string',
             'dict': {
-                "a": "b",
-                "sublist": [1, 2, 3],
-                "subdict": {
-                    "c": "d"
+                'a': 'b',
+                'sublist': [1, 2, 3],
+                'subdict': {
+                    'c': 'd'
                 }
             },
-            'list': [1, True, "ggg", {
+            'list': [1, True, 'ggg', {
                 'h': 'j'
             }, [9, 8, 7]],
         }
@@ -975,16 +996,16 @@ class TestNodeBasic(AiidaTestCase):
         l2.store()
 
         # Manages to store, and value is converted to its base type
-        p = orm.Dict(dict={'b': orm.Str("sometext"), 'c': l1})
+        p = orm.Dict(dict={'b': orm.Str('sometext'), 'c': l1})
         p.store()
-        self.assertEqual(p.get_attribute('b'), "sometext")
+        self.assertEqual(p.get_attribute('b'), 'sometext')
         self.assertIsInstance(p.get_attribute('b'), six.string_types)
         self.assertEqual(p.get_attribute('c'), ['b', [1, 2]])
         self.assertIsInstance(p.get_attribute('c'), (list, tuple))
 
         # Check also before storing
         n = orm.Data()
-        n.set_attribute('a', orm.Str("sometext2"))
+        n.set_attribute('a', orm.Str('sometext2'))
         n.set_attribute('b', l2)
         self.assertEqual(n.get_attribute('a').value, 'sometext2')
         self.assertIsInstance(n.get_attribute('a'), orm.Str)
@@ -993,11 +1014,11 @@ class TestNodeBasic(AiidaTestCase):
 
         # Check also deep in a dictionary/list
         n = orm.Data()
-        n.set_attribute('a', {'b': [orm.Str("sometext3")]})
-        self.assertEqual(n.get_attribute('a')['b'][0].value, "sometext3")
+        n.set_attribute('a', {'b': [orm.Str('sometext3')]})
+        self.assertEqual(n.get_attribute('a')['b'][0].value, 'sometext3')
         self.assertIsInstance(n.get_attribute('a')['b'][0], orm.Str)
         n.store()
-        self.assertEqual(n.get_attribute('a')['b'][0], "sometext3")
+        self.assertEqual(n.get_attribute('a')['b'][0], 'sometext3')
         self.assertIsInstance(n.get_attribute('a')['b'][0], six.string_types)
 
     def test_basetype_as_extra(self):
@@ -1016,10 +1037,10 @@ class TestNodeBasic(AiidaTestCase):
         # Check also before storing
         n = orm.Data()
         n.store()
-        n.set_extra('a', orm.Str("sometext2"))
+        n.set_extra('a', orm.Str('sometext2'))
         n.set_extra('c', l1)
         n.set_extra('d', l2)
-        self.assertEqual(n.get_extra('a'), "sometext2")
+        self.assertEqual(n.get_extra('a'), 'sometext2')
         self.assertIsInstance(n.get_extra('a'), six.string_types)
         self.assertEqual(n.get_extra('c'), ['b', [1, 2]])
         self.assertIsInstance(n.get_extra('c'), (list, tuple))
@@ -1029,8 +1050,8 @@ class TestNodeBasic(AiidaTestCase):
         # Check also deep in a dictionary/list
         n = orm.Data()
         n.store()
-        n.set_extra('a', {'b': [orm.Str("sometext3")]})
-        self.assertEqual(n.get_extra('a')['b'][0], "sometext3")
+        n.set_extra('a', {'b': [orm.Str('sometext3')]})
+        self.assertEqual(n.get_extra('a')['b'][0], 'sometext3')
         self.assertIsInstance(n.get_extra('a')['b'][0], six.string_types)
 
     def test_comments(self):
@@ -1309,22 +1330,22 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endcalc = orm.CalculationNode()
 
         # Nothing stored
-        endcalc.add_incoming(n1, LinkType.INPUT_CALC, "N1")
+        endcalc.add_incoming(n1, LinkType.INPUT_CALC, 'N1')
         # Try also reverse storage
-        endcalc.add_incoming(n2, LinkType.INPUT_CALC, "N2")
+        endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
         self.assertEqual(
             set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([("N1", n1.uuid), ("N2", n2.uuid)]))
+            set([('N1', n1.uuid), ('N2', n2.uuid)]))
 
         # Endnode not stored yet, n3 and n4 already stored
-        endcalc.add_incoming(n3, LinkType.INPUT_CALC, "N3")
+        endcalc.add_incoming(n3, LinkType.INPUT_CALC, 'N3')
         # Try also reverse storage
-        endcalc.add_incoming(n4, LinkType.INPUT_CALC, "N4")
+        endcalc.add_incoming(n4, LinkType.INPUT_CALC, 'N4')
 
         self.assertEqual(
             set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
+            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)]))
 
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
@@ -1332,14 +1353,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         self.assertEqual(
             set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
+            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)]))
 
         # This will also store n1 and n2!
         endcalc.store_all()
 
         self.assertEqual(
             set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
+            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)]))
 
     def test_store_with_unstored_parents(self):
         """
@@ -1349,8 +1370,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n2 = orm.Data().store()
         endcalc = orm.CalculationNode()
 
-        endcalc.add_incoming(n1, LinkType.INPUT_CALC, "N1")
-        endcalc.add_incoming(n2, LinkType.INPUT_CALC, "N2")
+        endcalc.add_incoming(n1, LinkType.INPUT_CALC, 'N1')
+        endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
@@ -1362,7 +1383,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         self.assertEqual(
             set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([("N1", n1.uuid), ("N2", n2.uuid)]))
+            set([('N1', n1.uuid), ('N2', n2.uuid)]))
 
     def test_storeall_with_unstored_grandparents(self):
         """
@@ -1372,8 +1393,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n2 = orm.Data()
         endcalc = orm.CalculationNode()
 
-        n2.add_incoming(n1, LinkType.CREATE, "N1")
-        endcalc.add_incoming(n2, LinkType.INPUT_CALC, "N2")
+        n2.add_incoming(n1, LinkType.CREATE, 'N1')
+        endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
         # Grandparents are unstored
         with self.assertRaises(ModificationNotAllowed):
@@ -1384,8 +1405,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endcalc.store_all()
 
         # Check the parents...
-        self.assertEqual(set([(i.link_label, i.node.uuid) for i in n2.get_incoming()]), set([("N1", n1.uuid)]))
-        self.assertEqual(set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]), set([("N2", n2.uuid)]))
+        self.assertEqual(set([(i.link_label, i.node.uuid) for i in n2.get_incoming()]), set([('N1', n1.uuid)]))
+        self.assertEqual(set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]), set([('N2', n2.uuid)]))
 
     # pylint: disable=unused-variable,no-member,no-self-use
     def test_calculation_load(self):
@@ -1600,7 +1621,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
         self.assertEquals(len(node_origin2.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
         self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.INPUT_WORK).all()), 1)
-        self.assertEquals(len(node_origin.get_incoming(link_label_filter="in_ut%").all()), 1)
+        self.assertEquals(len(node_origin.get_incoming(link_label_filter='in_ut%').all()), 1)
         self.assertEquals(len(node_origin.get_incoming(node_class=orm.Node).all()), 2)
 
         # Link specific outgoing
@@ -1646,7 +1667,7 @@ class TestNodeDeletion(AiidaTestCase):
             six.reraise(
                 type(exc),
                 str(exc) +
-                "\nCurrent UUID being processed: {}\nFull uuids_check_existence: {}; full uuids_check_deleted: {}".format(
+                '\nCurrent UUID being processed: {}\nFull uuids_check_existence: {}; full uuids_check_deleted: {}'.format(
                     uuid, uuids_check_existence, uuids_check_deleted),
                 sys.exc_info()[2])
 

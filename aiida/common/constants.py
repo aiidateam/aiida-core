@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -12,19 +12,25 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 
-bohr_to_ang = 0.52917720859  # pylint: disable=invalid-name
-ang_to_m = 1.e-10  # pylint: disable=invalid-name
-bohr_si = bohr_to_ang * ang_to_m  # pylint: disable=invalid-name
-ry_to_ev = 13.6056917253  # pylint: disable=invalid-name
-ry_si = 4.35974394 / 2. * 10**(-18)  # pylint: disable=invalid-name
-hartree_to_ev = ry_to_ev * 2.  # pylint: disable=invalid-name
-timeau_to_sec = 2.418884326155573e-17  # pylint: disable=invalid-name
-invcm_to_THz = 0.0299792458  # pylint: disable=invalid-name
+# This is the precision with which AiiDA internally will store float numbers
+# In particular, before storing a number (in attributes/extras),
+# when going via clean_value, AiiDA will first serialize to a string with
+# this precision, and then bring it back to float. This is important to
+# ensure consistency between the precision of different backends, and also
+# for hashing - the hashing MUST use the same precision, so that a hash computed
+# after clean_value but before storing to the database will be the same as the
+# hash recomputed (e.g. via `verdi rehash`) after storing and reloading the node
+# from the database.
+# See also discussion on GitHub issue #2631
+#
+# IMPORTANT! Changing this value requires to rehash the whole database!
+# So if you plan to change this, think carefully, and you might need to add
+# a migration.
+AIIDA_FLOAT_PRECISION = 14
 
 # Element table, from NIST (http://www.nist.gov/pml/data/index.cfm)
-# Retrieved in October 2014 for atomic numbers 1-103, and in May 2016
-# for atomic numbers 104-112, 114 and 116. In addition, element X is
-# added to support unknown elements.
+# Retrieved in October 2014 for atomic numbers 1-103, and in May 2016 or atomic numbers 104-112, 114 and 116.
+# In addition, element X is added to support unknown elements.
 elements = {  # pylint: disable=invalid-name
     0: {
         'mass': 1.00000,

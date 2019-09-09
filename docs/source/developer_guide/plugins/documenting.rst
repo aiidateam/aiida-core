@@ -16,7 +16,7 @@ documentation that just needs to be adjusted to your needs.
         docs/source/user_guide/index.rst
         docs/source/user_guide/get_started.rst
         docs/source/user_guide/tutorial.rst
-    
+
  #. Use `Sphinx`_ to generate the html documentation::
 
         cd docs

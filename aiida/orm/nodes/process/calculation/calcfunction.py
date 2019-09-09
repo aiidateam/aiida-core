@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -44,4 +44,5 @@ class CalcFunctionNode(FunctionCalculationMixin, CalculationNode):
             raise ValueError(
                 'trying to return an already stored Data node from a @calcfunction, however, @calcfunctions cannot '
                 'return data. If you stored the node yourself, simply do not call `store()` yourself. If you want to '
-                'return an input node, use a @workfunction instead.')
+                'return an input node, use a @workfunction instead.'
+            )

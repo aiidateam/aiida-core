@@ -8,8 +8,8 @@ What a Plugin Is
 An AiiDA plugin is a `python package <packages>`_ that provides a set of
 extensions to AiiDA.
 
-AiiDA plugins can use :ref:`entry points <plugins.entry_points>` in order to 
-make the ``aiida_core`` package aware of the extensions.
+AiiDA plugins can use :ref:`entry points <plugins.entry_points>` in order to
+make the ``aiida-core`` package aware of the extensions.
 
 **Note:** In the python community, the term 'package' is used rather loosely.
 Depending on context, it can refer to a collection of python modules or it may,
@@ -26,12 +26,12 @@ Design guidelines
    :py:class:`Dict <aiida.orm.nodes.data.dict.Dict>`,
    :py:class:`SinglefileData <aiida.orm.nodes.data.singlefile.SinglefileData>`,
    ...
-   Write only what is necessary to pass information from and to AiiDA. 
+   Write only what is necessary to pass information from and to AiiDA.
  * **Don't break data provenance.** Store what is needed for full reproducibility.
  * **Parse what you want to query for.** Think about which files to parse into the database and which files to keep on disk.
- * **Expose the full functionality.** 
+ * **Expose the full functionality.**
    Don't artificially limit the power of a code you are wrapping - or your users
-   will get frustrated. 
+   will get frustrated.
    If the code can do it, there should be *some* way to do it with your plugin.
 
 
@@ -71,9 +71,9 @@ Failure to comply will likely prevent your plugin
 from being listed on the official `AiiDA plugin registry <registry>`_.
 
 If you find yourself tempted to do any of the above, please open an issue on
-the `AiiDA repository <aiida_core>`_ and explain why.
+the `AiiDA repository <core>`_ and explain why.
 We will advise on how to proceed.
 
 
-.. _aiida_core: https://github.com/aiidateam/aiida_core
+.. _core: https://github.com/aiidateam/aiida-core
 .. _registry: https://github.com/aiidateam/aiida-registry

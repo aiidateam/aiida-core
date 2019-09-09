@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -34,18 +34,20 @@ CONFIG_DIR = os.path.join(os.path.split(os.path.abspath(aiida.restapi.__file__))
     '--config-dir',
     type=click.Path(exists=True),
     default=CONFIG_DIR,
-    help='the path of the configuration directory')
+    help='the path of the configuration directory'
+)
 @click.option('--debug', 'debug', is_flag=True, default=False, help='run app in debug mode')
 @click.option(
     '--wsgi-profile',
     'wsgi_profile',
     is_flag=True,
     default=False,
-    help='to use WSGI profiler middleware for finding bottlenecks in web application')
+    help='to use WSGI profiler middleware for finding bottlenecks in web application'
+)
 @click.option('--hookup/--no-hookup', 'hookup', is_flag=True, default=True, help='to hookup app')
 def restapi(hostname, port, config_dir, debug, wsgi_profile, hookup):
     """
-    Run the AiiDA REST API server
+    Run the AiiDA REST API server.
 
     Example Usage:
 
@@ -65,7 +67,8 @@ def restapi(hostname, port, config_dir, debug, wsgi_profile, hookup):
         debug=debug,
         wsgi_profile=wsgi_profile,
         hookup=hookup,
-        catch_internal_server=True)
+        catch_internal_server=True
+    )
 
     # Invoke the runner
     run_api(App, AiidaApi, **kwargs)

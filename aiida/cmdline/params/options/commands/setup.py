@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -20,8 +20,6 @@ import click
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.cmdline.params import options, types
-from aiida.cmdline.params.options.interactive import InteractiveOption
-from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.manage.configuration import get_config, get_config_option, Profile
 from aiida.manage.external.postgres import DEFAULT_DBINFO
 
@@ -59,11 +57,11 @@ def get_profile_attribute_default(attribute_tuple, ctx):
             return default
 
 
-def get_repository_path_default(ctx):
-    """Return the default value for the repository URI for the current profile in the context.
+def get_repository_uri_default(ctx):
+    """Return the default value for the repository URI for the current profile in the click context.
 
     :param ctx: click context which should contain the selected profile
-    :return: default absolute path for the repository
+    :return: default repository URI
     """
     import os
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
@@ -74,12 +72,12 @@ def get_repository_path_default(ctx):
 
 
 def get_quicksetup_repository_uri(ctx, param, value):  # pylint: disable=unused-argument
-    """Determine the repository URI to be used as default in `verdi quicksetup`
+    """Return the repository URI to be used as default in `verdi quicksetup`
 
     :param ctx: click context which should contain the contextual parameters
     :return: the repository URI
     """
-    return get_repository_path_default(ctx)
+    return get_repository_uri_default(ctx)
 
 
 def get_quicksetup_database_name(ctx, param, value):  # pylint: disable=unused-argument
@@ -153,16 +151,16 @@ def get_quicksetup_password(ctx, param, value):  # pylint: disable=unused-argume
     return value
 
 
-SETUP_PROFILE = OverridableOption(
+SETUP_PROFILE = options.OverridableOption(
     '--profile',
     prompt='Profile name',
     help='The name of the new profile.',
     required=True,
-    is_eager=True,
     type=types.ProfileParamType(cannot_exist=True),
-    cls=InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
-SETUP_USER_EMAIL = OverridableOption(
+SETUP_USER_EMAIL = options.OverridableOption(
     '--email',
     'email',
     prompt='User email',
@@ -170,9 +168,10 @@ SETUP_USER_EMAIL = OverridableOption(
     default=get_config_option('user.email'),
     required_fn=lambda x: get_config_option('user.email') is None,
     required=True,
-    cls=InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
-SETUP_USER_FIRST_NAME = OverridableOption(
+SETUP_USER_FIRST_NAME = options.OverridableOption(
     '--first-name',
     'first_name',
     prompt='First name',
@@ -181,9 +180,10 @@ SETUP_USER_FIRST_NAME = OverridableOption(
     default=get_config_option('user.first_name'),
     required_fn=lambda x: get_config_option('user.first_name') is None,
     required=True,
-    cls=InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
-SETUP_USER_LAST_NAME = OverridableOption(
+SETUP_USER_LAST_NAME = options.OverridableOption(
     '--last-name',
     'last_name',
     prompt='Last name',
@@ -192,9 +192,10 @@ SETUP_USER_LAST_NAME = OverridableOption(
     default=get_config_option('user.last_name'),
     required_fn=lambda x: get_config_option('user.last_name') is None,
     required=True,
-    cls=InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
-SETUP_USER_INSTITUTION = OverridableOption(
+SETUP_USER_INSTITUTION = options.OverridableOption(
     '--institution',
     'institution',
     prompt='Institution',
@@ -203,9 +204,10 @@ SETUP_USER_INSTITUTION = OverridableOption(
     default=get_config_option('user.institution'),
     required_fn=lambda x: get_config_option('user.institution') is None,
     required=True,
-    cls=InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
-SETUP_USER_PASSWORD = OverridableOption(
+SETUP_USER_PASSWORD = options.OverridableOption(
     '--password',
     'password',
     prompt='Password',
@@ -214,100 +216,121 @@ SETUP_USER_PASSWORD = OverridableOption(
     type=click.STRING,
     default=PASSWORD_UNCHANGED,
     confirmation_prompt=True,
-    cls=InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
-QUICKSETUP_DATABASE_ENGINE = OverridableOption(
+QUICKSETUP_DATABASE_ENGINE = options.OverridableOption(
     '--db-engine',
     help='Engine to use to connect to the database.',
     default='postgresql_psycopg2',
-    type=click.Choice(['postgresql_psycopg2']))
+    type=click.Choice(['postgresql_psycopg2'])
+)
 
-QUICKSETUP_DATABASE_BACKEND = OverridableOption(
+QUICKSETUP_DATABASE_BACKEND = options.OverridableOption(
     '--db-backend',
     help='Backend type to use to map the database.',
     default=BACKEND_DJANGO,
-    type=click.Choice([BACKEND_DJANGO, BACKEND_SQLA]))
+    type=click.Choice([BACKEND_DJANGO, BACKEND_SQLA])
+)
 
-QUICKSETUP_DATABASE_HOSTNAME = OverridableOption(
-    '--db-host', help='Hostname to connect to the database.', default=DEFAULT_DBINFO['host'], type=click.STRING)
+QUICKSETUP_DATABASE_HOSTNAME = options.OverridableOption(
+    '--db-host', help='Hostname to connect to the database.', default=DEFAULT_DBINFO['host'], type=click.STRING
+)
 
-QUICKSETUP_DATABASE_PORT = OverridableOption(
-    '--db-port', help='Port to connect to the database.', default=DEFAULT_DBINFO['port'], type=click.INT)
+QUICKSETUP_DATABASE_PORT = options.OverridableOption(
+    '--db-port', help='Port to connect to the database.', default=DEFAULT_DBINFO['port'], type=click.INT
+)
 
-QUICKSETUP_DATABASE_NAME = OverridableOption(
-    '--db-name', help='Name of the database to create.', type=click.STRING, callback=get_quicksetup_database_name)
+QUICKSETUP_DATABASE_NAME = options.OverridableOption(
+    '--db-name', help='Name of the database to create.', type=click.STRING, callback=get_quicksetup_database_name
+)
 
-QUICKSETUP_DATABASE_USERNAME = OverridableOption(
-    '--db-username', help='Name of the database user to create.', type=click.STRING, callback=get_quicksetup_username)
+QUICKSETUP_DATABASE_USERNAME = options.OverridableOption(
+    '--db-username', help='Name of the database user to create.', type=click.STRING, callback=get_quicksetup_username
+)
 
-QUICKSETUP_DATABASE_PASSWORD = OverridableOption(
+QUICKSETUP_DATABASE_PASSWORD = options.OverridableOption(
     '--db-password',
     help='Password to connect to the database.',
     type=click.STRING,
     hide_input=True,
-    callback=get_quicksetup_password)
+    callback=get_quicksetup_password
+)
 
-QUICKSETUP_SUPERUSER_DATABASE_USERNAME = OverridableOption(
-    '--su-db-username', help='User name of the database super user.', type=click.STRING, default=DEFAULT_DBINFO['user'])
+QUICKSETUP_SUPERUSER_DATABASE_USERNAME = options.OverridableOption(
+    '--su-db-username', help='User name of the database super user.', type=click.STRING, default=DEFAULT_DBINFO['user']
+)
 
-QUICKSETUP_SUPERUSER_DATABASE_NAME = OverridableOption(
+QUICKSETUP_SUPERUSER_DATABASE_NAME = options.OverridableOption(
     '--su-db-name',
     help='Name of the template database to connect to as the database superuser.',
     type=click.STRING,
-    default=DEFAULT_DBINFO['database'])
+    default=DEFAULT_DBINFO['database']
+)
 
-QUICKSETUP_SUPERUSER_DATABASE_PASSWORD = OverridableOption(
+QUICKSETUP_SUPERUSER_DATABASE_PASSWORD = options.OverridableOption(
     '--su-db-password',
     help='Password to connect as the database superuser.',
     type=click.STRING,
     hide_input=True,
-    default=DEFAULT_DBINFO['password'])
+    default=DEFAULT_DBINFO['password']
+)
 
-QUICKSETUP_REPOSITORY_URI = OverridableOption(
+QUICKSETUP_REPOSITORY_URI = options.OverridableOption(
     '--repository',
     help='Absolute path for the file system repository.',
     type=click.Path(file_okay=False),
-    callback=get_quicksetup_repository_uri)
+    callback=get_quicksetup_repository_uri  # Cannot use `default` because `ctx` is needed to determine the default
+)
 
 SETUP_DATABASE_ENGINE = QUICKSETUP_DATABASE_ENGINE.clone(
     prompt='Database engine',
     contextual_default=functools.partial(get_profile_attribute_default, ('database_engine', 'postgresql_psycopg2')),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
 SETUP_DATABASE_BACKEND = QUICKSETUP_DATABASE_BACKEND.clone(
     prompt='Database backend',
     contextual_default=functools.partial(get_profile_attribute_default, ('database_backend', BACKEND_DJANGO)),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
 SETUP_DATABASE_HOSTNAME = QUICKSETUP_DATABASE_HOSTNAME.clone(
     prompt='Database hostname',
     contextual_default=functools.partial(get_profile_attribute_default, ('database_hostname', 'localhost')),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
 SETUP_DATABASE_PORT = QUICKSETUP_DATABASE_PORT.clone(
     prompt='Database port',
     contextual_default=functools.partial(get_profile_attribute_default, ('database_port', 5432)),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
 SETUP_DATABASE_NAME = QUICKSETUP_DATABASE_NAME.clone(
     prompt='Database name',
     required=True,
     contextual_default=functools.partial(get_profile_attribute_default, ('database_name', None)),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
 SETUP_DATABASE_USERNAME = QUICKSETUP_DATABASE_USERNAME.clone(
     prompt='Database username',
     required=True,
     contextual_default=functools.partial(get_profile_attribute_default, ('database_username', None)),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
 SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
     prompt='Database password',
     required=True,
     contextual_default=functools.partial(get_profile_attribute_default, ('database_password', None)),
-    cls=options.interactive.InteractiveOption)
+    cls=options.interactive.InteractiveOption
+)
 
 SETUP_REPOSITORY_URI = QUICKSETUP_REPOSITORY_URI.clone(
     prompt='Repository directory',
-    contextual_default=get_repository_path_default,
-    cls=options.interactive.InteractiveOption)
+    callback=None,  # Unset the `callback` to define the default, which is instead done by the `contextual_default`
+    contextual_default=get_repository_uri_default,
+    cls=options.interactive.InteractiveOption
+)

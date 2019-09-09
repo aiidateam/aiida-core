@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -23,8 +23,6 @@ import numbers
 import random
 import time
 import uuid
-import struct
-import sys
 from datetime import datetime
 from operator import itemgetter
 from itertools import chain
@@ -42,30 +40,30 @@ except ImportError:  # Python2
     import collections as abc
     from collections import OrderedDict
 
-import numpy as np
+from aiida.common.constants import AIIDA_FLOAT_PRECISION
 
 from .folders import Folder
 
 # The prefix of the hashed using pbkdf2_sha256 algorithm in Django
-HASHING_PREFIX_DJANGO = "pbkdf2_sha256"
+HASHING_PREFIX_DJANGO = 'pbkdf2_sha256'
 # The prefix of the hashed using pbkdf2_sha256 algorithm in Passlib
-HASHING_PREFIX_PBKDF2_SHA256 = "$pbkdf2-sha256"
+HASHING_PREFIX_PBKDF2_SHA256 = '$pbkdf2-sha256'
 
 # This will never be a valid encoded hash
 UNUSABLE_PASSWORD_PREFIX = '!'  # noqa
 # Number of random chars to add after UNUSABLE_PASSWORD_PREFIX
 UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
 
-HASHING_KEY = "HashingKey"
+HASHING_KEY = 'HashingKey'
 
 # The key that is used to store the hash in the node extras
 _HASH_EXTRA_KEY = '_aiida_hash'
 
 pwd_context = CryptContext(  # pylint: disable=invalid-name
     # The list of hashes that we support
-    schemes=["argon2", "pbkdf2_sha256", "des_crypt"],
+    schemes=['argon2', 'pbkdf2_sha256', 'des_crypt'],
     # The default hashing mechanism
-    default="pbkdf2_sha256",
+    default='pbkdf2_sha256',
 
     # We set the number of rounds that should be used...
     pbkdf2_sha256__default_rounds=8000,
@@ -82,8 +80,7 @@ try:
     using_sysrandom = True
 except NotImplementedError:
     import warnings
-    warnings.warn('A secure pseudo-random number generator is not available '  # pylint: disable=no-member
-                  'on your system. Falling back to Mersenne Twister.')
+    warnings.warn('A secure pseudo-random number generator is not available. Falling back to Mersenne Twister.')  # pylint: disable=no-member
     using_sysrandom = False  # pylint: disable=invalid-name
 
 
@@ -101,7 +98,7 @@ def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyz' 'ABC
         # time a random string is required. This may change the
         # properties of the chosen random sequence slightly, but this
         # is better than absolute predictability.
-        random.seed(hashlib.sha256(("%s%s%s" % (random.getstate(), time.time(), HASHING_KEY)).encode('utf-8')).digest())
+        random.seed(hashlib.sha256(('%s%s%s' % (random.getstate(), time.time(), HASHING_KEY)).encode('utf-8')).digest())
     return u''.join(random.choice(allowed_chars) for i in range(length))
 
 
@@ -156,7 +153,7 @@ def _make_hash(object_to_hash, **_):
     Implementation of the ``make_hash`` function. The hash is created as a
     28 byte integer, and only later converted to a string.
     """
-    raise ValueError("Value of type {} cannot be hashed".format(type(object_to_hash)))
+    raise ValueError('Value of type {} cannot be hashed'.format(type(object_to_hash)))
 
 
 def _single_digest(obj_type, obj_bytes=b''):
@@ -187,16 +184,16 @@ def _(val, **kwargs):
 @_make_hash.register(abc.Sequence)
 def _(sequence_obj, **kwargs):
     # unpack the list and use the elements
-    return [_single_digest('list(')] + list(chain.from_iterable(
-        _make_hash(i, **kwargs) for i in sequence_obj)) + [_END_DIGEST]
+    return [_single_digest('list(')] + list(chain.from_iterable(_make_hash(i, **kwargs) for i in sequence_obj)
+                                           ) + [_END_DIGEST]
 
 
 @_make_hash.register(abc.Set)
 def _(set_obj, **kwargs):
     # turn the set objects into a list of hashes which are always sortable,
     # then return a flattened list of the hashes
-    return [_single_digest('set(')] + list(chain.from_iterable(sorted(
-        _make_hash(i, **kwargs) for i in set_obj))) + [_END_DIGEST]
+    return [_single_digest('set(')] + list(chain.from_iterable(sorted(_make_hash(i, **kwargs) for i in set_obj))
+                                          ) + [_END_DIGEST]
 
 
 @_make_hash.register(abc.Mapping)
@@ -208,8 +205,10 @@ def _(mapping, **kwargs):
             yield (_make_hash(key, **kwargs), value)
 
     return [_single_digest('dict(')] + list(
-        chain.from_iterable((k_digest + _make_hash(val, **kwargs))
-                            for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0)))) + [_END_DIGEST]
+        chain.from_iterable(
+            (k_digest + _make_hash(val, **kwargs)) for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0))
+        )
+    ) + [_END_DIGEST]
 
 
 @_make_hash.register(OrderedDict)
@@ -224,24 +223,37 @@ def _(mapping, **kwargs):
         return _make_hash.registry[abc.Mapping](mapping)
 
     return ([_single_digest('odict(')] + list(
-        chain.from_iterable(
-            (_make_hash(key, **kwargs) + _make_hash(val, **kwargs)) for key, val in mapping.items())) + [_END_DIGEST])
+        chain.from_iterable((_make_hash(key, **kwargs) + _make_hash(val, **kwargs)) for key, val in mapping.items())
+    ) + [_END_DIGEST])
 
 
 @_make_hash.register(numbers.Real)
 def _(val, **kwargs):
-    return [_single_digest('float', struct.pack("<d", truncate_float64(val)))]
+    """
+    Before hashing a float, convert to a string (via rounding) and with a fixed number of digits after the comma.
+    Note that the `_singe_digest` requires a bytes object so we need to encode the utf-8 string first
+    """
+    return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
 
 
 @_make_hash.register(numbers.Complex)
 def _(val, **kwargs):
-    return [_single_digest('complex', struct.pack("<dd", truncate_float64(val.real), truncate_float64(val.imag)))]
+    """
+    In case of a complex number, use the same encoding of two floats and join them with a special symbol (a ! here).
+    """
+    return [
+        _single_digest(
+            'complex', u'{}!{}'.format(
+                float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION), float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)
+            ).encode('utf-8')
+        )
+    ]
 
 
 @_make_hash.register(numbers.Integral)
 def _(val, **kwargs):
     """get the hash of the little-endian signed long long representation of the integer"""
-    return [_single_digest('int', struct.pack("<q", val))]
+    return [_single_digest('int', u'{}'.format(val).encode('utf-8'))]
 
 
 @_make_hash.register(bool)
@@ -269,7 +281,7 @@ def _(val, **kwargs):
             val = val.replace(tzinfo=pytz.utc)
         timestamp = val.timestamp()
 
-    return [_single_digest('datetime', struct.pack("<d", timestamp))]
+    return [_single_digest('datetime', float_to_text(timestamp, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
 
 
 @_make_hash.register(uuid.UUID)
@@ -305,42 +317,13 @@ def _(folder, **kwargs):
     return [_single_digest('folder')] + [d for d in folder_digests(folder)]
 
 
-@_make_hash.register(np.ndarray)
-def _(arr, **kwargs):
-    """Hashing for Numpy arrays"""
-
-    def little_endian_array(array):
-        if sys.byteorder == 'little':
-            return array
-        return array.byteswap()
-
-    if arr.dtype == np.float64:
-        return [_single_digest('arr.float', little_endian_array(truncate_array64(arr)).tobytes())]
-
-    if arr.dtype == np.complex128:
-        return [
-            _single_digest('arr.complex'),
-            little_endian_array(truncate_array64(arr.real)).tobytes() + little_endian_array(truncate_array64(
-                arr.imag)).tobytes()
-        ]
-
-    return [_single_digest('arr.*', little_endian_array(arr).tobytes())]
-
-
-def truncate_float64(value, num_bits=4):
+def float_to_text(value, sig):
     """
-    reduce the number of bits making it into the hash to avoid rehashing due to
-    possible truncation in float->str->float roundtrips
+    Convert float to text string for computing hash.
+    Preseve up to N significant number given by sig.
+
+    :param value: the float value to convert
+    :param sig: choose how many digits after the comma should be output
     """
-    mask = ~(2**num_bits - 1)
-    int_repr = np.float64(value).view(np.int64)  # pylint: disable=no-member,too-many-function-args,assignment-from-no-return
-    masked_int = int_repr & mask
-    truncated_value = masked_int.view(np.float64)
-    return truncated_value
-
-
-def truncate_array64(value, num_bits=4):
-    mask = ~(2**num_bits - 1)
-    int_array = np.array(value, dtype=np.float64).view(np.int64)
-    masked_array = int_array & mask
-    return masked_array.view(np.float64)
+    fmt = u'{{:.{}g}}'.format(sig)
+    return fmt.format(value)

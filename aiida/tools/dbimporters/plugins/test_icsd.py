@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -51,7 +51,7 @@ def has_icsd_config():
     return required_keywords <= set(profile.dictionary.keys())
 
 
-@unittest.skipUnless(has_mysqldb() and has_icsd_config(), "ICSD configuration in profile required")
+@unittest.skipUnless(has_mysqldb() and has_icsd_config(), 'ICSD configuration in profile required')
 class TestIcsd(AiidaTestCase):
     """
     Tests for the ICSD importer
@@ -79,7 +79,7 @@ class TestIcsd(AiidaTestCase):
         Test Icsd intranet webinterface
         """
         from six.moves import urllib
-        urllib.request.urlopen(self.server + "icsd/").read()
+        urllib.request.urlopen(self.server + 'icsd/').read()
 
     def test_mysqldb(self):
         """
@@ -98,14 +98,14 @@ class TestIcsd(AiidaTestCase):
         No results should be obtained from year 3000.
         """
         with self.assertRaises(icsd.NoResultsWebExp):
-            self.importerweb.query(year="3000")
+            self.importerweb.query(year='3000')
 
     def test_web_collcode_155006(self):
         """
         Query for the CIF code 155006, should return 1 result.
         """
 
-        queryresults = self.importerweb.query(id="155006")
+        queryresults = self.importerweb.query(id='155006')
         self.assertEqual(queryresults.number_of_results, 1)
 
         with self.assertRaises(StopIteration):
@@ -121,7 +121,7 @@ class TestIcsd(AiidaTestCase):
         """
 
         importer = icsd.IcsdDbImporter(server=self.server, host=self.host)
-        noresults = importer.query(year="3000")  # which should work at least for the next 85 years..
+        noresults = importer.query(year='3000')  # which should work at least for the next 85 years..
         self.assertEqual(noresults.number_of_results, 0)
 
         with self.assertRaises(StopIteration):

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -43,7 +43,8 @@ def verify_uuid_uniqueness(table):
     if duplicates:
         raise exceptions.IntegrityError(
             'Table {table:} contains rows with duplicate UUIDS: run '
-            '`verdi database integrity detect-duplicate-uuid -t {table:}` to address the problem'.format(table=table))
+            '`verdi database integrity detect-duplicate-uuid -t {table:}` to address the problem'.format(table=table)
+        )
 
 
 def apply_new_uuid_mapping(table, mapping):

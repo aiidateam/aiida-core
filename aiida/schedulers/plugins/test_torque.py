@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -888,7 +888,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
@@ -918,7 +918,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
@@ -947,7 +947,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
@@ -978,7 +978,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL

@@ -48,7 +48,7 @@ behaviour:
 Additional options (often format-specific) exist, and can be discovered passing the ``-h``
 option to the command line. For instance:
 
-* ``verdi data structure export`` accepts a number of formats including ``xsf``, ``cif`` and  ``xyz``, 
+* ``verdi data structure export`` accepts a number of formats including ``xsf``, ``cif`` and  ``xyz``,
   and additional parameters like ``--no-reduce-symmetry`` (to be used in combination
   with the ``tcod`` format to tell AiiDA not to try to reduce simmetry in the output CIF file, etc.
 

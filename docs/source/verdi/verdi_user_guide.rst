@@ -3,17 +3,39 @@
 Concepts
 ========
 
-In this section, a few basic concepts of the command line interface will be explained that will apply to all the ``verdi`` commands.
+This section explains basic concepts of the command line interface that apply to all ``verdi`` commands.
+
+.. _cli_parameters:
+
+Parameters
+----------
+Parameters to ``verdi`` commands come in two flavors:
+
+  * Arguments: positional parameters, e.g. ``123`` in ``verdi process kill 123``
+  * Options: announced by a flag (e.g. ``-f`` or ``--flag``), potentially followed by a value. E.g. ``verdi process list --limit 10`` or ``verdi process -h``.
+
+.. _cli_multi_value_options:
+
+Multi-value options
+...................
+
+Some ``verdi`` commands provide *options* that can take multiple values.
+This allows to avoid repetition and e.g. write::
+
+  verdi export create -N 10 11 12 -- archive.aiida
+
+instead of the more lengthy::
+
+  verdi export create -N 10 -N 11 -N 12 archive.aiida
+
+Note the use of the so-called 'endopts' marker ``--`` that is necessary to mark the end of the ``-N`` option and distinguish it from the ``archive.aiida`` argument.
 
 .. _cli_help_strings:
 
 Help strings
 ------------
-Each ``verdi`` command and any optional sub commands have automatically generated help strings that explain the command's functionality and usage.
-To show the help string for any command, simply append the ``--help`` option.
-For example ``verdi process kill --help`` will display:
-
-::
+Append the ``--help`` option to any verdi (sub-)command to get help on how to use it.
+For example, ``verdi process kill --help`` shows::
 
   Usage: verdi process kill [OPTIONS] [PROCESSES]...
 
@@ -26,119 +48,21 @@ For example ``verdi process kill --help`` will display:
                          soon as it's scheduled.
     -h, --help           Show this message and exit.
 
-All help strings have the same format and consist of three parts:
+All help strings consist of three parts:
 
-  * A usage line describing how to invoke and the accepted parameters
-  * A description of the commands functionality
+  * A ``Usage:`` line describing how to invoke the command
+  * A description of the command's functionality
   * A list of the available options
 
-The ``[OPTIONS]`` and ``[PROCESSES]...`` tags in the usage description, denote the 'parameters' that the command takes.
-A more detailed description of the available options will be listed after the description of the commands functionality
-The positional arguments will only be described in the command description itself.
-For a more detailed explanation of the difference between options and arguments, see the section about command line :ref:`parameters<cli_parameters>`.
+The ``Usage:`` line encodes information on the command's parameters, e.g.:
 
+ * ``[OPTIONS]``: this command takes one (or more) options
+ * ``PROCESSES``: this command *requires* a process as a positional argument
+ * ``[PROCESSES]``: this command takes a process as an *optional* positional argument
+ * ``[PROCESSES]...``: this command takes one or more processes as *optional* positional arguments
 
-.. _cli_parameters:
-
-Parameters
-----------
-Most of the ``verdi`` commands and their subcommands can take one or multiple parameters.
-In the language of command line interfaces, these parameters come in two flavors:
-
-  * Options
-  * Arguments
-
-Arguments are positional parameters, whereas options are indicated by a flag that precedes the value, typically of the form ``-f``, or ``--flag``.
-The command line :ref:`help string<cli_help_strings>` section explained that each command will have a help string with a usage line, for example::
-
-  Usage: verdi process kill [OPTIONS] [PROCESSES]...
-
-The ``[OPTIONS]`` tag indicates that the command takes one or multiple options and one or multiple ``[PROCESSES]`` as arguments.
-The square brackets in the usage line, indicate that the parameter is optional and not required.
-Three dots ``...`` following a parameter indicate that it can not take just one, but also more than one values.
-
-
-.. _cli_profile:
-
-Profile
--------
-AiiDA supports multiple profiles per installation, that can each be configured to use different databases.
-One of these profiles will always be marked as the default profile.
-To show the current default profile, execute the command::
-
-  verdi profile list
-
-The default profile will be highlighted.
-By default, all ``verdi`` commands will always use the default profile.
-Having to change the default profile, anytime one wants to apply the ``verdi`` command to another profile is cumbersome.
-Therefore, each ``verdi`` command supports the ``-p/--profile`` option, that will force ``verdi`` to use the given profile.
-For example, if you wanted to display the list of processes for a profile that is not the current default, you can execute::
-
-  verdi -p <profile> process list
-
-Note that the specified profile will be used for this and only this command.
-All subsequent commands, when no specific profile is given, will return to using the default profile.
-
-
-.. _cli_identifiers:
-
-Identifiers
------------
-Many commands will support arguments or options that serve to identify specific entities in the database, such as nodes, users, groups etc.
-Any entity in AiiDA typically will have three different types of identifier:
-
-  * ``ID``: the integer primary key in the database
-  * ``UUID``: the universally unique identifier, a dash-separated hexadecimal string
-  * ``LABEL``: a custom string-based label
-
-The ``ID`` and ``UUID`` identifiers follow the exact same rules for all the entities in AiiDA's data model.
-However, the ``LABEL`` will vary from entity to entity.
-For a ``Code`` instance it will be the ``label`` attribute, whereas for a ``Group`` instance, it will be its name.
-
-All ``verdi`` command arguments and options that serve to pass an entity identifier, will automatically deduce the intended identifier type.
-However, since the type of the value is lost over the command line (as each value will be passed as a string type), the command line will have to guess the type.
-Each value will first be interpreted as an ``ID``.
-If the value cannot be mapped to the ``ID`` of an entity, it will instead be considered a partial or full ``UUID``.
-In the case where the identifier can be resolved to neither a valid ``ID`` nor a ``UUID``, the code will finally assume that the value should be interpreted as a ``LABEL``.
-In almost all cases, this approach will be able to successfully and unambiguously determine the identifier type, however, there are exceptions.
-
-Consider for example a database with the following three groups:
-
-===  =====================================  ========
-ID   UUID                                   LABEL
-===  =====================================  ========
-10   12dfb104-7b2b-4bca-adc0-1e4fd4ffcc88   group
-11   deadbeef-62ba-444f-976d-31d925dac557   10
-12   3df34a1e-5215-4e1a-b626-7f75b9586ef5   deadbeef
-===  =====================================  ========
-
-We would run into trouble if we wanted to identify the second group by its label ``10``, since it would first be interpreted as an ``ID``, which would return the first group instead.
-Likewise, if we wanted to retrieve the third group by its label, we would get the second group instead, since the label ``deadbeef`` is also a valid partial UUID of the second group.
-Finally, say we wanted to select the first group using its partial ``UUID`` ``12``, it would unfortunately match the third group on its ``ID`` instead.
-
-Luckily, ``verdi`` provides the tools to break all of these ambiguities with guaranteed success.
-The latter ambiguity, between an ``ID`` and ``UUID`` can always be resolved by passing a larger partial ``UUID``.
-Inevitably, eventually a non-numeric character or a dash will be included in the partial ``UUID``, rendering it an invalid ``ID`` and the identifier will be cast to the right type.
-The case of an identifier, that is intended to refer to a ``LABEL``, that just happens to also be a valid ``ID`` or ``UUID`` cannot be solved in this way.
-For this case ``verdi`` reserves a special character, the exclamation mark ``!`` that can be appended to the identifier.
-Before any type guessing is done, the command line will check for the presence of this marker, and if found will directly interpret the identifier as a ``LABEL``.
-For example, to solve ambiguity problems of the first two examples given in this section, one would have had to pass ``10!`` and ``deadbeef!``.
-The exclamation point would have forced them to be interpreted as a ``LABEL`` and ensured that the right group would be retrieved.
-
-In summary, to guarantee correct identification of a specific type:
-
-  * ``UUID``: include at least one non-numeric character or dash in the partial identifier
-  * ``LABEL``: append an exclamation mark ``!`` at the end of the identifier
-
-
-.. _cli_multi_value_options:
-
-Multi value options
--------------------
-The section on command line :ref:`parameters<cli_parameters>` explained that some commands support options and arguments that take one or multiple values.
-This is fairly typical for command line arguments, but slightly more unorthodox for options, that typically only ever take one value, or none at all if it is a flag.
-However, ``verdi`` has multiple commands where an option needs to be able to support options that take more than one value.
-Take for example the ``verdi export create`` command, with part of its help string::
+Multi-value options are followed by ``...`` in the help string and the ``Usage:`` line of the corresponding command will contain the 'endopts' marker.
+For example::
 
   Usage: verdi export create [OPTIONS] [--] OUTPUT_FILE
 
@@ -154,27 +78,83 @@ Take for example the ``verdi export create`` command, with part of its help stri
                                     ID, UUID or name
     -N, --nodes NODE...             one or multiple nodes identified by their ID
                                     or UUID
+    ...
 
-The file to which the export archive should be written is given by the argument ``OUTPUT_FILE`` and the command supports various identifier options, e.g. ``CODE...`` and ``NODE...``, that allow the user to specify which entities should be exported.
-Note the terminal dots ``...`` that indicate that the options take one or more values.
-In traditional command line interfaces, one would have to repeat the option flag if multiple values needed to be specified, e.g.::
+.. _cli_profile:
 
-  verdi export create -N 10 -N 11 -N 12 archive.aiida
+Profile
+-------
+AiiDA supports multiple profiles per installation, one of which is marked as the default and used unless another profile is requested.
+Show the current default profile using::
 
-However, for large numbers of values, this gets cumbersome, which is why ``verdi`` supports so-called multiple value options, that allow this to be rewritten as::
+  verdi profile list
 
-  verdi export create -N 10 11 12 archive.aiida
+In order to use a different profile, pass the ``-p/--profile`` option to any ``verdi`` command, for example::
 
-Unfortunately, this leads to an ambiguity, as the 'greedy' multi value option ``-N`` will interpret the argument ``archive.aiida`` as an option value.
-This will cause the command to abort if the validation fails, but even worse it might be silently accepted.
-The root of the problem is that the multi value option needs to necessarily be greedy and cannot distinguish which value belongs to it and which value is just another argument.
-The typical solution for this problem is to use the so called 'endopts' marker, which is defined as two dashes ``--``, which can be used to mark the end of the options and clearly distinguish them from the arguments.
-Note that this is also indicated by the usage string of the command where it shows ``[--]`` between the ``[OPTIONS]`` and ``OUTPUT_FILE`` parameters, meaning that the ``--`` endopts marker can optionally be used.
-The previous command can therefore be made unambiguous as follows::
+  verdi -p <profile> process list
 
-  verdi export create -N 10 11 12 -- archive.aiida
+Note that the specified profile will be used for this and *only* this command.
+Use ``verdi profile setdefault`` in order to permanently change the default profile.
 
-This time the parser will notice the ``--`` end options marker and correctly identify ``archive.aiida`` as the positional argument.
+.. _cli_identifiers:
+
+Identifiers
+-----------
+
+When working with AiiDA entities, you need a way to *refer* to them on the command line.
+Any entity in AiiDA can be addressed via three identifiers:
+
+ * "Primary Key" (PK): An integer, e.g. ``723``, identifying your entity within your database (automatically assigned)
+ * `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)>`_ (UUID): A string, e.g. ``ce81c420-7751-48f6-af8e-eb7c6a30cec3`` identifying your entity globally (automatically assigned)
+ * Label: A human-readable string, e.g. ``test_calculation`` (manually assigned)
+
+.. note::
+
+   PKs are easy to type and work as long as you stay within your database.
+   **When sharing data with others, however, always use UUIDs.**
+
+Any ``verdi`` command that expects an identifier as a paramter will accept PKs, UUIDs and labels.
+
+In almost all cases, this will work out of the box.
+Since command line parameters are passed as strings, AiiDA needs to deduce the type of identifier from its content, which can fail in edge cases (see :ref:`cli_identifier_resolution` for details).
+You can take the following precautions in order to avoid such edge cases:
+
+  * PK: no precautions needed
+  * UUID: no precautions needed for full UUIDs. Partial UUIDs should include at least one non-numeric character or dash
+  * Label: add an exclamation mark ``!`` at the end of the identifier in order to force interpretation as a label
+
+
+.. _cli_identifier_resolution:
+
+Implementation of identifier resolution
+.......................................
+
+The logic for deducing the identifier type is as follows:
+
+ 1. Try interpreting the identifier as a PK (integer)
+ 2. If this fails, try interpreting the identifier as a UUID (full or partial)
+ 3. If this fails, interpret the identifier as a label
+
+The following example illustrates edge cases that can arise in this logic:
+
+===  =====================================  ========
+PK   UUID                                   LABEL
+===  =====================================  ========
+10   12dfb104-7b2b-4bca-adc0-1e4fd4ffcc88   group
+11   deadbeef-62ba-444f-976d-31d925dac557   10
+12   3df34a1e-5215-4e1a-b626-7f75b9586ef5   deadbeef
+===  =====================================  ========
+
+ * trying to identify the first entity by its partial UUID ``12`` would match the third entity by its PK instead
+ * trying to identify the second entity by its label ``10`` would match the first entity by its PK instead
+ * trying to identify the third entity by its label ``deadbeef`` would match the second entity on its partial UUID ``deadbeef`` instead
+
+The ambiguity between a partial UUID and a PK can always be resolved by including a longer substring of the UUID, eventually rendering the identifier no longer a valid PK.
+
+The case of a label being also a valid PK or (partial) UUID requires a different solution.
+For this case, ``verdi`` reserves a special character, the exclamation mark ``!``, that can be appended to the identifier.
+Before any type guessing is done, AiiDA checks for the presence of this marker and, if found, will interpret the identifier as a label.
+I.e. to solve ambiguity examples mentioned above, one would pass ``10!`` and ``deadbeef!``.
 
 
 .. _verdi_commands:

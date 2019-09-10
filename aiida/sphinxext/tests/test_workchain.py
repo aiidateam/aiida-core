@@ -15,12 +15,16 @@ from __future__ import absolute_import
 from os.path import join, dirname
 
 import six
-import pytest
+import pytest  # pylint: disable=unused-import
 
 WORKCHAIN = join(dirname(__file__), 'workchain_source')
 
 
 def test_workchain_build(build_sphinx, xml_equal, reference_result):
+    """Test building sphinx documentation for WorkChain.
+
+    Builds Sphinx documentation for workchain and compares against expected XML result.
+    """
     out_dir = build_sphinx(WORKCHAIN)
     index_file = join(out_dir, 'index.xml')
     if six.PY2:

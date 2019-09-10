@@ -935,7 +935,7 @@ class TestNodeBasic(AiidaTestCase):
         n.set_attribute('b', l2)
         self.assertEqual(n.get_attribute('a').value, 'sometext2')
         self.assertIsInstance(n.get_attribute('a'), orm.Str)
-        self.assertEqual(n.get_attribute('b').get_list()    , ['f', True, {'gg': None}])
+        self.assertEqual(n.get_attribute('b').get_list(), ['f', True, {'gg': None}])
         self.assertIsInstance(n.get_attribute('b'), orm.List)
 
         # Check also deep in a dictionary/list
@@ -1261,8 +1261,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
         self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([('N1', n1.uuid), ('N2', n2.uuid)]))
+            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]), set([('N1', n1.uuid), ('N2', n2.uuid)])
+        )
 
         # Endnode not stored yet, n3 and n4 already stored
         endcalc.add_incoming(n3, LinkType.INPUT_CALC, 'N3')
@@ -1271,7 +1271,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         self.assertEqual(
             set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)]))
+            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)])
+        )
 
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
@@ -1279,14 +1280,16 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         self.assertEqual(
             set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)]))
+            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)])
+        )
 
         # This will also store n1 and n2!
         endcalc.store_all()
 
         self.assertEqual(
             set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)]))
+            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)])
+        )
 
     def test_store_with_unstored_parents(self):
         """
@@ -1308,8 +1311,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endcalc.store()
 
         self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([('N1', n1.uuid), ('N2', n2.uuid)]))
+            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]), set([('N1', n1.uuid), ('N2', n2.uuid)])
+        )
 
     def test_storeall_with_unstored_grandparents(self):
         """
@@ -1442,7 +1445,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with tempfile.NamedTemporaryFile('w+') as handle:
             d2 = SinglefileData(file=handle).store()
 
-        unsavedcomputer = orm.Computer(name='localhost2', hostname='localhost', scheduler_type='direct', transport_type='local')
+        unsavedcomputer = orm.Computer(
+            name='localhost2', hostname='localhost', scheduler_type='direct', transport_type='local'
+        )
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
@@ -1592,108 +1597,22 @@ class TestNodeDeletion(AiidaTestCase):
             import sys
             six.reraise(
                 type(exc),
-                str(exc) +
-                '\nCurrent UUID being processed: {}\nFull uuids_check_existence: {}; full uuids_check_deleted: {}'.format(
-                    uuid, uuids_check_existence, uuids_check_deleted),
-                sys.exc_info()[2])
-
-    def _create_calls_n_returns_graph(self):
-        """
-        Creates a complicated graph with a master with 1 inputs,
-        2 slaves of it also using that input and an additional 1,
-        producing output that is either returned or not returned by the master.
-        Master also creates one nodes. This allows to check whether the delete_nodes
-        command works as anticipated.
-        """
-        # in1 -> wf
-        #     `-> slave1
-        #      ____^  ^
-        #     /       "CALL
-        # in2 -> slave2
-        # ind
-        in1 = orm.Data().store()
-        in2 = orm.Data().store()
-        wf = orm.WorkflowNode()
-        slave1 = orm.WorkflowNode()
-        outp1 = orm.Data().store()
-        outp2 = orm.Data().store()
-        slave2 = orm.CalculationNode()
-        outp3 = orm.Data().store()
-        outp4 = orm.Data().store()
-        wf.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link1')
-        slave1.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link2')
-        slave1.add_incoming(in2, link_type=LinkType.INPUT_WORK, link_label='link3')
-        slave2.add_incoming(in2, link_type=LinkType.INPUT_CALC, link_label='link4')
-        slave1.add_incoming(wf, link_type=LinkType.CALL_WORK, link_label='link5')
-        slave2.add_incoming(wf, link_type=LinkType.CALL_CALC, link_label='link6')
-
-        wf.store()
-        slave1.store()
-        slave2.store()
-
-        outp1.add_incoming(slave1, link_type=LinkType.RETURN, link_label='link7')
-        outp2.add_incoming(slave2, link_type=LinkType.CREATE, link_label='link8')
-        outp2.add_incoming(wf, link_type=LinkType.RETURN, link_label='link9')
-        outp3.add_incoming(wf, link_type=LinkType.RETURN, link_label='link10')
-        outp4.add_incoming(wf, link_type=LinkType.RETURN, link_label='link11')
-        return in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4
-
-    def test_deletion_simple(self):
-        """
-        I'm setting up a sequence of nodes connected by data provenance links.
-        Testing whether I will delete the right ones.
-        """
-        nodes = [
-            orm.Data(),  # 0
-            orm.CalculationNode(), orm.CalculationNode(), orm.CalculationNode(),  # 1, 2, 3
-            orm.Data(), orm.Data(), orm.Data(),  # 4, 5, 6
-            orm.CalculationNode(), orm.CalculationNode(), orm.CalculationNode(),  # 7, 8, 9
-            orm.Data(),  # 10
-            orm.CalculationNode(),  # 11
-            orm.Data(),  # 12
-            orm.CalculationNode(),  # 13
-            orm.Data(),  # 14
-        ]
-
-        uuids_check_existence = [n.uuid for n in nodes[:3]]
-        uuids_check_deleted = [n.uuid for n in nodes[3:]]
-
-        # Now I am linking the nodes in a branched network
-        # Connecting nodes 1,2,3 to 0
-        for i in range(1, 4):
-            nodes[i].add_incoming(nodes[0], link_type=LinkType.INPUT_CALC, link_label='link{}'.format(i))
-        # Connecting nodes 4,5,6 to 3
-        for i in range(4, 7):
-            nodes[i].add_incoming(nodes[3], link_type=LinkType.CREATE, link_label='link{}'.format(i))
-        # Connecting nodes 7,8 to 4
-        for i in range(7, 9):
-            nodes[i].add_incoming(nodes[4], link_type=LinkType.INPUT_CALC, link_label='link{}'.format(i))
-        # Connecting node 9 (WF) to 5 (input data)
-        nodes[9].add_incoming(nodes[5], link_type=LinkType.INPUT_CALC, link_label='link9')
-
-        # Connect each node to the next one
-        for i in range(10, 14):
-            # First link to create: 10 (Data) -> 11 (Calc) via a INPUT_CALC
-            link_type = LinkType.CREATE if i % 2 else LinkType.INPUT_CALC
-            nodes[i + 1].add_incoming(nodes[i], link_type=link_type, link_label='link{}'.format(i))
-
-        for node in nodes:
-            node.store()
-
-        with Capturing():
-            delete_nodes((nodes[3].pk, nodes[10].pk), force=True, verbosity=2)
-
-        self._check_existence(uuids_check_existence, uuids_check_deleted)
+                exc.__class__((
+                    str(exc) + '\nCurrent UUID being processed: {}' + '\nFull uuids_check_existence: {}' +
+                    '\nFull uuids_check_deleted: {}'
+                ).format(uuid, uuids_check_existence, uuids_check_deleted)),
+                sys.exc_info()[2]
+            )
 
     def test_deletion_non_existing_pk(self):
         """Verify that passing a non-existing pk should not raise."""
-        nodes = self._create_calls_n_returns_graph()
+        nodes = self._create_minimal_graph()
         existing_pks = [node.pk for node in nodes]
 
         non_existing_pk = 1
 
         # Starting from pk=1, find a pk that does not exist
-        while(True):
+        while (True):
             if non_existing_pk not in existing_pks:
                 break
 
@@ -1702,100 +1621,324 @@ class TestNodeDeletion(AiidaTestCase):
         with Capturing():
             delete_nodes([non_existing_pk], verbosity=2, force=True)
 
-    def test_deletion_with_calls_with_returns(self):
-        """
-        Checking the case where I follow calls and return links for deletion
-        """
-        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
-        # The inputs are not harmed.
-        uuids_check_existence = (in1.uuid, in2.uuid)
-        # the slaves and their outputs have to disappear since calls are followed!
-        uuids_check_deleted = [n.uuid for n in (wf, slave1, outp1, outp2, outp3, slave2, outp4)]
+#   TEST BASIC CASES
 
+    def _create_minimal_graph(self):
+        """
+        Creates a minimal graph with 1 call of each type:
+        - logical: W1 call_work W2 call_calc C0
+        - logical: DI input_work W2 return DO
+        - data:    DI input_calc C0 create DO
+        """
+
+        data_i = orm.Data().store()
+        data_o = orm.Data().store()
+
+        calc_0 = orm.CalculationNode()
+        work_1 = orm.WorkflowNode()
+        work_2 = orm.WorkflowNode()
+
+        calc_0.add_incoming(data_i, link_type=LinkType.INPUT_CALC, link_label='inpcalc')
+        work_1.add_incoming(data_i, link_type=LinkType.INPUT_WORK, link_label='inpwork')
+        calc_0.add_incoming(work_1, link_type=LinkType.CALL_CALC, link_label='callcalc')
+        work_1.add_incoming(work_2, link_type=LinkType.CALL_WORK, link_label='callwork')
+
+        work_2.store()
+        work_1.store()
+        calc_0.store()
+
+        data_o.add_incoming(calc_0, link_type=LinkType.CREATE, link_label='create0')
+        data_o.add_incoming(work_1, link_type=LinkType.RETURN, link_label='return1')
+        data_o.add_incoming(work_2, link_type=LinkType.RETURN, link_label='return2')
+
+        return data_i, data_o, calc_0, work_1, work_2
+
+    def test_delete_cases(self):
+
+        # By default deleting input data should eliminate everything that it
+        # generated downwards.
+        di, do, c0, w1, w2 = self._create_minimal_graph()
+        uuids_check_existence = [n.uuid for n in ()]
+        uuids_check_deleted = [n.uuid for n in (di, do, c0, w1, w2)]
         with Capturing():
-            delete_nodes([wf.pk], verbosity=2, force=True, follow_calls=True, follow_returns=True)
-
+            delete_nodes([di.pk], verbosity=2, force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-    def test_deletion_with_calls_no_returns(self):
-        """
-        Checking the case where I follow calls and not return links for deletion
-        """
-        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
-        # The inputs are not harmed.
-        uuids_check_existence = [n.uuid for n in (in1, in2, outp1, outp3, outp4)]
-        # the slaves and their outputs have to disappear since calls are followed!
-        uuids_check_deleted = [n.uuid for n in (wf, slave1, slave2, outp2)]
-
+        # By default deleting output data should eliminate the creating calcs and
+        # returning workflows (and upwards logic should be eliminated but not the
+        # upwards data)
+        di, do, c0, w1, w2 = self._create_minimal_graph()
+        uuids_check_existence = [n.uuid for n in (di,)]
+        uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
         with Capturing():
-            delete_nodes([wf.pk], verbosity=2, force=True, follow_calls=True, follow_returns=False)
-
+            delete_nodes([do.pk], verbosity=2, force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-    def test_deletion_no_calls_no_returns(self):
-        """
-        Checking the case where I don't follow calls and also not return links for deletion
-        """
-        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
-        # I don't follow calls, so the slaves and their output are unharmed, as well as input
-        uuids_check_existence = [n.uuid for n in (in1, in2, slave1, outp1, outp2, outp3, slave2, outp4)]
-        # the wf and it's direct output
-        uuids_check_deleted = [n.uuid for n in (wf,)]
-
+        # By default deleting a calculation should eliminate its output data but
+        # keep any inputs, and eliminate all logical upwards provenance.
+        di, do, c0, w1, w2 = self._create_minimal_graph()
+        uuids_check_existence = [n.uuid for n in (di,)]
+        uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
         with Capturing():
-            delete_nodes([wf.pk], verbosity=2, force=True, follow_calls=False, follow_returns=False)
-
-        self._check_existence(uuids_check_existence, uuids_check_deleted)
+            delete_nodes([c0.pk], verbosity=2, force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-    def test_deletion_no_calls_with_returns(self):
-        """
-        Checking the case where I follow returns and not calls for deletion
-        """
-        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
-        # I don't follow calls, so the slaves and their output are unharmed, as well as input
-        uuids_check_existence = [n.uuid for n in (in1, in2, slave1, outp1, slave2)]
-        # the wf and it's direct output and what it returned
-        uuids_check_deleted = [n.uuid for n in (wf, outp3, outp2, outp4)]
-
+        # But you can prevent data output deletion by unsetting the corresponding
+        # keyword in the call
+        di, do, c0, w1, w2 = self._create_minimal_graph()
+        uuids_check_existence = [n.uuid for n in (di, do)]
+        uuids_check_deleted = [n.uuid for n in (c0, w1, w2)]
         with Capturing():
-            delete_nodes([wf.pk], verbosity=2, force=True, follow_calls=False, follow_returns=True)
-
-        self._check_existence(uuids_check_existence, uuids_check_deleted)
+            delete_nodes([c0.pk], verbosity=2, force=True, follow_create=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-    def test_deletion_with_returns_n_loops(self):
-        """
-        Setting up a simple loop, to check that the following doesn't go bananas.
-        """
-        in1, in2, wf = [orm.Data().store(), orm.Data().store(), orm.WorkflowNode()]
-        wf.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link1')
-        wf.add_incoming(in2, link_type=LinkType.INPUT_WORK, link_label='link2')
-        wf.store()
-        in2.add_incoming(wf, link_type=LinkType.RETURN, link_label='link3')
-
-        uuids_check_existence = (in1.uuid,)
-        uuids_check_deleted = [n.uuid for n in (wf, in2)]
-
+        # By default deleting a workflow should delete all upwards logical provenance
+        # but not downwards provenance, and should not affect input or output data.
+        #  > deleting w1 only deletes w2.
+        #  > deleting w2 doesn't affect anything else.
+        di, do, c0, w1, w2 = self._create_minimal_graph()
+        uuids_check_existence = [n.uuid for n in (di, do, c0, w1)]
+        uuids_check_deleted = [n.uuid for n in (w2,)]
         with Capturing():
-            delete_nodes([wf.pk], verbosity=2, force=True, follow_returns=True)
-
+            delete_nodes([w2.pk], verbosity=2, force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-    def test_delete_called_but_not_caller(self):
-        """
-        Check that deleting a ProcessNode that was called by another ProcessNode which won't be
-        deleted works, even though it will raise a warning
-        """
-        caller, called = [orm.WorkflowNode() for i in range(2)]
-        called.add_incoming(caller, link_type=LinkType.CALL_WORK, link_label='link')
-        caller.store()
-        called.store()
-
-        uuids_check_existence = (caller.uuid,)
-        uuids_check_deleted = [n.uuid for n in (called,)]
-
+        di, do, c0, w1, w2 = self._create_minimal_graph()
+        uuids_check_existence = [n.uuid for n in (di, do, c0)]
+        uuids_check_deleted = [n.uuid for n in (w1, w2)]
         with Capturing():
-            delete_nodes([called.pk], verbosity=2, force=True, follow_returns=True)
+            delete_nodes([w1.pk], verbosity=2, force=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
 
+        # You can also delete all generated stuff by a workflow by activating
+        # the keyword to go downwards (THIS MAY DELETE ALL YOUR STUFF)
+        di, do, c0, w1, w2 = self._create_minimal_graph()
+        uuids_check_existence = [n.uuid for n in (di,)]
+        uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
+        with Capturing():
+            delete_nodes([w2.pk], verbosity=2, force=True, follow_calls=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # But you can also be more carefull and not delete the final data
+        # when you do this (NEED TO TEST MULTIPLE CALCS)
+        di, do, c0, w1, w2 = self._create_minimal_graph()
+        uuids_check_existence = [n.uuid for n in (di, do)]
+        uuids_check_deleted = [n.uuid for n in (c0, w1, w2)]
+        with Capturing():
+            delete_nodes([w2.pk], verbosity=2, force=True, follow_calls=True, follow_create=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # Or even keep all data provenance (calcs but not works)
+        di, do, c0, w1, w2 = self._create_minimal_graph()
+        uuids_check_existence = [n.uuid for n in (di, do, c0)]
+        uuids_check_deleted = [n.uuid for n in (w1, w2)]
+        with Capturing():
+            delete_nodes([w2.pk], verbosity=2, force=True, follow_calls=True, keep_dataprov=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+#   TEST LOOP
+
+    def _create_looped_graph(self):
+        """
+        Creates a basic graph with one workflow made of one sub-workflow that
+        chooses from a series of inputs and uses it for a calculation.
+        - PWM: This is the master workflow.
+        - PWS: This is the slave workflow that chooses DI1 from DI1-DI4.
+        - PCS: This is the calculation that takes DI1 and produces DO1.
+        """
+
+        di1 = orm.Data().store()
+        di2 = orm.Data().store()
+        di3 = orm.Data().store()
+        di4 = orm.Data().store()
+
+        pwm = orm.WorkflowNode()
+        pwm.add_incoming(di1, link_type=LinkType.INPUT_WORK, link_label='inpwm1')
+        pwm.add_incoming(di2, link_type=LinkType.INPUT_WORK, link_label='inpwm2')
+        pwm.add_incoming(di3, link_type=LinkType.INPUT_WORK, link_label='inpwm3')
+        pwm.add_incoming(di4, link_type=LinkType.INPUT_WORK, link_label='inpwm4')
+        pwm.store()
+
+        pws = orm.WorkflowNode()
+        pws.add_incoming(di1, link_type=LinkType.INPUT_WORK, link_label='inpws1')
+        pws.add_incoming(di2, link_type=LinkType.INPUT_WORK, link_label='inpws2')
+        pws.add_incoming(di3, link_type=LinkType.INPUT_WORK, link_label='inpws3')
+        pws.add_incoming(di4, link_type=LinkType.INPUT_WORK, link_label='inpws4')
+        pws.add_incoming(pwm, link_type=LinkType.CALL_WORK, link_label='callw')
+        pws.store()
+
+        di1.add_incoming(pws, link_type=LinkType.RETURN, link_label='outpws')
+
+        pcs = orm.CalculationNode()
+        pcs.add_incoming(di1, link_type=LinkType.INPUT_CALC, link_label='inpcs1')
+        pcs.add_incoming(pwm, link_type=LinkType.CALL_CALC, link_label='callc')
+        pcs.store()
+
+        do1 = orm.Data().store()
+        do1.add_incoming(pcs, link_type=LinkType.CREATE, link_label='outpcs')
+        do1.add_incoming(pwm, link_type=LinkType.RETURN, link_label='outpwm')
+
+        return di1, di2, di3, di4, do1, pws, pcs, pwm
+
+    def test_loop_cases(self):
+
+        # By default deleting and input of the selection process will delete
+        # the workflow that involves the selection process but not any
+        # procedure that uses non-deleted inputs...
+        di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
+        uuids_check_existence = [n.uuid for n in (di1, di2, di3, do1, pcs)]
+        uuids_check_deleted = [n.uuid for n in (di4, pws, pwm)]
+        with Capturing():
+            delete_nodes([di4.pk], verbosity=2, force=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # If the deleted input is the chosen one, then that's another story
+        di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
+        uuids_check_existence = [n.uuid for n in (di2, di3, di4)]
+        uuids_check_deleted = [n.uuid for n in (di1, do1, pws, pcs, pwm)]
+        with Capturing():
+            delete_nodes([di1.pk], verbosity=2, force=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # Deleting the workflow that chooses inputs should not touch the data
+        # provenance either.
+        di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
+        uuids_check_existence = [n.uuid for n in (di1, di2, di3, di4, do1, pcs)]
+        uuids_check_deleted = [n.uuid for n in (pws, pwm)]
+        with Capturing():
+            delete_nodes([pws.pk], verbosity=2, force=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # Again, deleting with follow_calls also deletes other parts of
+        # the graph.
+        di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
+        uuids_check_existence = [n.uuid for n in (di1, di2, di3, di4)]
+        uuids_check_deleted = [n.uuid for n in (do1, pws, pcs, pwm)]
+        with Capturing():
+            delete_nodes([pcs.pk], verbosity=2, force=True, follow_calls=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+    def _create_indep2w_graph(self):
+        """
+        Creates a simple graph with one workflow handling two workflows, each with
+        one calculation with one input and one output.
+        - PW0: This is the master workflow, it has inputs DIA and DIB, outputs DOA
+               and DOB, and calls processes PWA and PWB.
+        - PWA: Input (DIA) goes into calc (PCA), return output (DOA).
+        - PWB: Input (DIB) goes into calc (PCB), return output (DOB).
+        This ilustrates the behaviour: if PWA is deleted with forward_calls, then
+        this will delete PWB as well despite being 'independent'.
+        """
+
+        dia = orm.Data().store()
+        dib = orm.Data().store()
+
+        pw0 = orm.WorkflowNode()
+        pw0.add_incoming(dia, link_type=LinkType.INPUT_WORK, link_label='inpwork0a')
+        pw0.add_incoming(dib, link_type=LinkType.INPUT_WORK, link_label='inpwork0b')
+        pw0.store()
+
+        pwa = orm.WorkflowNode()
+        pwa.add_incoming(dia, link_type=LinkType.INPUT_WORK, link_label='inpworka')
+        pwa.add_incoming(pw0, link_type=LinkType.CALL_WORK, link_label='callworka')
+        pwa.store()
+
+        pwb = orm.WorkflowNode()
+        pwb.add_incoming(dib, link_type=LinkType.INPUT_WORK, link_label='inpworkb')
+        pwb.add_incoming(pw0, link_type=LinkType.CALL_WORK, link_label='callworkb')
+        pwb.store()
+
+        pca = orm.CalculationNode()
+        pca.add_incoming(dia, link_type=LinkType.INPUT_CALC, link_label='inpcalca')
+        pca.add_incoming(pwa, link_type=LinkType.CALL_CALC, link_label='calla')
+        pca.store()
+
+        pcb = orm.CalculationNode()
+        pcb.add_incoming(dib, link_type=LinkType.INPUT_CALC, link_label='inpcalcb')
+        pcb.add_incoming(pwb, link_type=LinkType.CALL_CALC, link_label='callb')
+        pcb.store()
+
+        doa = orm.Data().store()
+        doa.add_incoming(pca, link_type=LinkType.CREATE, link_label='createa')
+        doa.add_incoming(pwa, link_type=LinkType.RETURN, link_label='returna')
+        doa.add_incoming(pw0, link_type=LinkType.RETURN, link_label='return0a')
+
+        dob = orm.Data().store()
+        dob.add_incoming(pcb, link_type=LinkType.CREATE, link_label='createb')
+        dob.add_incoming(pwb, link_type=LinkType.RETURN, link_label='returnb')
+        dob.add_incoming(pw0, link_type=LinkType.RETURN, link_label='return0b')
+
+        return dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0
+
+    def test_indep2w(self):
+
+        dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
+        uuids_check_existence = [n.uuid for n in [dia, dib]]
+        uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, dob, pcb, pwb, pw0]]
+        with Capturing():
+            delete_nodes((pwa.pk,), verbosity=2, force=True, follow_calls=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # If you want to keep the independent process, first delete the global
+        # workflow
+        dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
+
+        uuids_check_existence = [n.uuid for n in [dia, doa, pca, pwa, dib, dob, pcb, pwb]]
+        uuids_check_deleted = [n.uuid for n in [pw0]]
+        with Capturing():
+            delete_nodes((pw0.pk,), verbosity=2, force=True, follow_calls=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        uuids_check_existence = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
+        uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, pw0]]
+        with Capturing():
+            delete_nodes((pwa.pk,), verbosity=2, force=True, follow_calls=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+
+#   TEST FOR TIME?
+
+    def _create_long_graph(self):
+        """
+        Creates a simple graph with one workflow handling other three workflows
+        which themselves have:
+        - PW0: This is the master workflow.
+        - PWA: Two inputs (DA1, DA2) generate two outputs (DA3, DA4) through a
+               calculation (CA1) which in turn are inputs of another calculation
+               (CA2) that returns only one output (DA5).
+        - PWB: 4 inputs (DB1-DB4) are processed by one workflow (PWC) which then
+               returns the first (DB1) which is then used as input for a single
+               calculation
+               calculation.
+        """
+
+        old_data = orm.Data().store()
+        node_list_id = [old_data.id]
+
+        for ii in range(20):
+            new_calc = orm.CalculationNode()
+            new_data = orm.Data().store()
+            new_calc.add_incoming(old_data, link_type=LinkType.INPUT_CALC, link_label='inp' + str(ii))
+            new_calc.store()
+            new_data.add_incoming(new_calc, link_type=LinkType.CREATE, link_label='out' + str(ii))
+            node_list_id.append(new_calc.id)
+            node_list_id.append(new_data.id)
+            old_data = orm.load_node(new_data.id)
+
+        node_list = []
+        for node_id in node_list_id:
+            node_list.append(orm.load_node(node_id))
+
+        return node_list
+
+    def test_long_case(self):
+
+        # By default deleting input data should eliminate everything that it
+        # generated downwards.
+        node_list = self._create_long_graph()
+
+        uuids_check_existence = [n.uuid for n in node_list[:3]]
+        uuids_check_deleted = [n.uuid for n in node_list[3:]]
+        with Capturing():
+            delete_nodes((node_list[3].pk,), verbosity=2, force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)

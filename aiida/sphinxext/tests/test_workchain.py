@@ -15,7 +15,6 @@ from __future__ import absolute_import
 from os.path import join, dirname
 
 import six
-import pytest  # pylint: disable=unused-import
 
 WORKCHAIN = join(dirname(__file__), 'workchain_source')
 

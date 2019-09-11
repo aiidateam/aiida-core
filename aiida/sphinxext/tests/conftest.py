@@ -37,12 +37,8 @@ def build_dir():
     """Create directory to build documentation."""
     # Python 2 doesn't have tempfile.TemporaryDirectory
     dirname = tempfile.mkdtemp()
-    try:
-        yield dirname
-    except Exception as exc:
-        raise exc
-    finally:
-        shutil.rmtree(dirname)
+    yield dirname
+    shutil.rmtree(dirname)
 
 
 @pytest.fixture

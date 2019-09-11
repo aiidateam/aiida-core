@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -22,11 +22,11 @@ class UserTranslator(BaseTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "users"
+    __label__ = 'users'
     # The AiiDA class one-to-one associated to the present class
     _aiida_class = orm.User
     # The string name of the AiiDA class
-    _aiida_type = "User"
+    _aiida_type = 'User'
 
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = False

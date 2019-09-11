@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -30,7 +30,7 @@ class Only42IntParamType(IntParamType):
     def convert(self, value, param, ctx):
         newval = super(Only42IntParamType, self).convert(value, param, ctx)
         if newval != 42:
-            self.fail("Type validation: invalid, should be 42")
+            self.fail('Type validation: invalid, should be 42')
         return newval
 
     def __repr__(self):
@@ -77,7 +77,7 @@ class InteractiveOptionTest(unittest.TestCase):
         """Return expected output of simple_command, given a commandline cli_input string."""
         # pylint: disable=no-self-use
 
-        return "Opt: {}\n{}\n".format(cli_input, converted or cli_input)
+        return 'Opt: {}\n{}\n'.format(cli_input, converted or cli_input)
 
     def test_callback_prompt_twice(self):
         """
@@ -118,7 +118,7 @@ class InteractiveOptionTest(unittest.TestCase):
         cmd = self.simple_command(type=str)
         runner = CliRunner()
         result = runner.invoke(cmd, [], input='\nTEST\n')
-        expected = "Opt: \nOpt: TEST\nTEST\n"
+        expected = 'Opt: \nOpt: TEST\nTEST\n'
         self.assertIsNone(result.exception)
         self.assertIn(expected, result.output)
 
@@ -395,14 +395,14 @@ class InteractiveOptionTest(unittest.TestCase):
 
     def test_default_empty_empty_cli(self):
         """Test that default="" allows to pass an empty cli option."""
-        cmd = self.simple_command(default="", type=str)
+        cmd = self.simple_command(default='', type=str)
         result = self.runner.invoke(cmd, ['--opt='])
         self.assertIsNone(result.exception)
         self.assertEqual(result.output, '\n')
 
     def test_default_empty_prompt(self):
         """Test that default="" allows to pass an empty cli option."""
-        cmd = self.simple_command(default="", type=str)
+        cmd = self.simple_command(default='', type=str)
         result = self.runner.invoke(cmd, input='\n')
         expected = 'Opt []: \n\n'
         self.assertIsNone(result.exception)

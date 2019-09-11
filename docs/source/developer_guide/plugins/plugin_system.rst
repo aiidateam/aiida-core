@@ -8,7 +8,7 @@ The plugin system is the part of AiiDA that enables sharing workflows and distri
 
 .. We want plugins to be installed as packages
 
-Since both are written in python and shared as source code, we believe they should be distributed in the usual way for python code - python packages using `setuptools`_. This provides a well documented install process familiar to all python users. It simplifies the user experience for sharing workflows and extensions, especially since this allows AiiDA to be distributed and deployed in the same way. 
+Since both are written in python and shared as source code, we believe they should be distributed in the usual way for python code - python packages using `setuptools`_. This provides a well documented install process familiar to all python users. It simplifies the user experience for sharing workflows and extensions, especially since this allows AiiDA to be distributed and deployed in the same way.
 
 Goals
 -----
@@ -63,7 +63,7 @@ Example
 
 In the following snippet only the most relevant code lines are picked to give an idea of the functioning. We will look only at one type of plugin, calculations, for simplicity.
 
-First of all, AiiDA defines groups of of entry points in ``aiida_core/setup.py``::
+First of all, AiiDA defines groups of of entry points in ``aiida-core/setup.py``::
 
     # in setuptools.setup() call
     entry_points = {

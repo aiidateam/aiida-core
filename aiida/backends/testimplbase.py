@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -109,7 +109,7 @@ class AiidaTestImplementation(object):
             return self.computer
         except AttributeError:
             raise exceptions.InternalError(
-                "The AiiDA Test implementation should define a self.computer in the setUpClass_method")
+                'The AiiDA Test implementation should define a self.computer in the setUpClass_method')
 
     def get_user_email(self):
         """
@@ -119,4 +119,4 @@ class AiidaTestImplementation(object):
             return self.user_email
         except AttributeError:
             raise exceptions.InternalError(
-                "The AiiDA Test implementation should define a self.user_email in the setUpClass_method")
+                'The AiiDA Test implementation should define a self.user_email in the setUpClass_method')

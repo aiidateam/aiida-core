@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -31,7 +31,7 @@ def upgrade():
     # Check if constraint uix_dbnode_id_dbgroup_id of migration 7a6587e16f4c
     # is there and if yes, drop it
     insp = Inspector.from_engine(op.get_bind())
-    for constr in insp.get_unique_constraints("db_dbgroup_dbnodes"):
+    for constr in insp.get_unique_constraints('db_dbgroup_dbnodes'):
         if constr['name'] == 'uix_dbnode_id_dbgroup_id':
             op.drop_constraint('uix_dbnode_id_dbgroup_id',
                                'db_dbgroup_dbnodes')

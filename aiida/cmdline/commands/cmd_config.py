@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -26,7 +26,7 @@ from aiida.cmdline.utils import echo
 @click.option('--unset', is_flag=True, help='Remove the line matching the option name from the config file.')
 @click.pass_context
 def verdi_config(ctx, option, value, globally, unset):
-    """Set, unset and get profile specific or global configuration options."""
+    """Configure profile-specific or global AiiDA options."""
     config = ctx.obj.config
     profile = ctx.obj.profile
 

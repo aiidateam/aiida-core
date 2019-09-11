@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -32,7 +32,7 @@ class TestMaterialsProject(AiidaTestCase):
 
     import unittest
 
-    @unittest.skipIf(not run_materialsproject_api_tests(), "MaterialsProject API tests not enabled")
+    @unittest.skipIf(not run_materialsproject_api_tests(), 'MaterialsProject API tests not enabled')
     def test_invalid_api_key(self):  # pylint: disable=no-self-use
         """
         Test if Materials Project rejects an invalid API key and that we catch the error.

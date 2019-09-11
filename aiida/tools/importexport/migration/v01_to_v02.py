@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -27,8 +27,8 @@ def migrate_v1_to_v2(metadata, data, *args):
     old_version = '0.1'
     new_version = '0.2'
 
-    old_start = "aiida.djsite"
-    new_start = "aiida.backends.djsite"
+    old_start = 'aiida.djsite'
+    new_start = 'aiida.backends.djsite'
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)

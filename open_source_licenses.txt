@@ -9,7 +9,7 @@ Django:
   * aiida/common/hashing.py
   * aiida/utils/timezone.py
 
-Python: 
+Python:
   * aiida/transport/__init__.py
 
 Fastep:

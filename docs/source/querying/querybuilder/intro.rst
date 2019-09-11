@@ -18,7 +18,7 @@ Before starting to write a query, it helps to:
     ancestor or a descendant.
 *   know what how you want to filter the result.
 
-Once you are clear about what you want and how you can get it, 
+Once you are clear about what you want and how you can get it,
 the QueryBuilder will build an SQL-query for you.
 
 There are two ways of using the QueryBuilder:

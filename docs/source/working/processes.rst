@@ -126,12 +126,15 @@ An example input port that explicitly sets all these attributes is the following
     spec.input('positive_number', required=False, default=Int(1), valid_type=(Int, Float), validator=is_number_positive)
 
 Here we define an input named ``positive_number`` that is not required, if a value is not explicitly passed, the default ``Int(1)`` will be used and if a value *is* passed, it should be of type ``Int`` or ``Float`` and it should be valid according to the ``is_number_positive`` validator.
-Note that the validator is nothing more than a free function which takes a single argument, being the value that is to be validated and should return ``True`` if that value is valid or ``False`` otherwise, for example:
+Note that the validator is nothing more than a free function which takes a single argument, being the value that is to be validated.
+If nothing is returned, the value is considered to be valid.
+To signal that the value is invalid and to have a validation error raised, simply return a string with the validation error message, for example:
 
 .. code:: python
 
     def is_number_positive(number):
-        return number >= 0
+        if number < 0:
+            return 'The number has to be greater or equal to zero'
 
 The ``valid_type`` can define a single type, or a tuple of valid types.
 
@@ -240,6 +243,24 @@ Assume for example that we ran a ``Process`` that threw the exit code described 
 This is useful, because the caller can now programmatically, based on the ``exit_status``, decide how to proceed.
 This is an infinitely more robust way of communcating specific errors to a non-human then parsing text based logs or reports.
 Additionally, The exit codes make it also very easy to query for failed processes with specific error codes.
+
+
+.. _working_processes_exit_code_conventions:
+
+Exit code conventions
+.....................
+In principle, the only restriction on the exit status of an exit code is that it should be a positive integer or zero.
+However, to make effective use of exit codes, there are some guidelines and conventions as to decide what integers to use.
+Note that since the following rules are *guidelines* you can choose to ignore them and currently the engine will not complain, but this might change in the future.
+Regardless, we advise you to follow the guidelines since it will improve the interoperability of your code with other existing plugins.
+The following integer ranges are reserved or suggested:
+
+    *   0 -  99: Reserved for internal use by `aiida-core`
+    * 100 - 199: Reserved for errors parsed from scheduler output of calculation jobs (note: this is not yet implemented)
+    * 200 - 299: Suggested to be used for process input validation errors
+    * 300 - 399: Suggested for critical process errors
+
+For any other exit codes, one can use the integers from 400 and up.
 
 
 .. _working_processes_metadata:

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -58,24 +58,24 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
     :return: CIF representation of symmetry operator
     """
     import re
-    axes = ["x", "y", "z"]
-    parts = ["", "", ""]
+    axes = ['x', 'y', 'z']
+    parts = ['', '', '']
     for i in range(3):
         for j in range(3):
             sign = None
             if matrix[i][j] > eps:
-                sign = "+"
+                sign = '+'
             elif matrix[i][j] < -eps:
-                sign = "-"
+                sign = '-'
             if sign:
-                parts[i] = format("{}{}{}".format(parts[i], sign, axes[j]))
+                parts[i] = format('{}{}{}'.format(parts[i], sign, axes[j]))
         if tr[i] < -eps or tr[i] > eps:
-            sign = "+"
+            sign = '+'
             if tr[i] < -eps:
-                sign = "-"
-            parts[i] = format("{}{}{}".format(parts[i], sign, abs(tr[i])))
+                sign = '-'
+            parts[i] = format('{}{}{}'.format(parts[i], sign, abs(tr[i])))
         parts[i] = re.sub(r'^\+', '', parts[i])
-    return ",".join(parts)
+    return ','.join(parts)
 
 
 @calcfunction
@@ -150,7 +150,8 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
         else:
             # If it now succeeds, non-unity occupancies were the culprit
             raise InvalidOccupationsError(
-                'detected atomic sites with an occupation number larger than the occupation tolerance')
+                'detected atomic sites with an occupation number larger than the occupation tolerance'
+            )
 
     return {'structure': StructureData(pymatgen_structure=structures[0])}
 
@@ -169,17 +170,21 @@ def refine_inline(node):
     from aiida.orm.nodes.data.structure import StructureData, ase_refine_cell
 
     if len(node.values.keys()) > 1:
-        raise ValueError("CifData seems to contain more than one data "
-                         "block -- multiblock CIF files are not "
-                         "supported yet")
+        raise ValueError(
+            'CifData seems to contain more than one data '
+            'block -- multiblock CIF files are not '
+            'supported yet'
+        )
 
     name = list(node.values.keys())[0]
 
     original_atoms = node.get_ase(index=None)
     if len(original_atoms) > 1:
-        raise ValueError("CifData seems to contain more than one crystal "
-                         "structure -- such refinement is not supported "
-                         "yet")
+        raise ValueError(
+            'CifData seems to contain more than one crystal '
+            'structure -- such refinement is not supported '
+            'yet'
+        )
 
     original_atoms = original_atoms[0]
 

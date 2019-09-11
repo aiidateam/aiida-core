@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -16,8 +16,9 @@ from __future__ import print_function
 
 from six.moves.html_parser import HTMLParser
 
-from aiida.tools.importexport.config import (NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME,
-                                             USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME)
+from aiida.tools.importexport.common.config import (
+    NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
+)
 
 
 def schema_to_entity_names(class_string):
@@ -29,24 +30,26 @@ def schema_to_entity_names(class_string):
     if class_string is None:
         return None
 
-    if class_string in ("aiida.backends.djsite.db.models.DbNode", "aiida.backends.sqlalchemy.models.node.DbNode"):
+    if class_string in ('aiida.backends.djsite.db.models.DbNode', 'aiida.backends.sqlalchemy.models.node.DbNode'):
         return NODE_ENTITY_NAME
 
-    if class_string in ("aiida.backends.djsite.db.models.DbGroup", "aiida.backends.sqlalchemy.models.group.DbGroup"):
+    if class_string in ('aiida.backends.djsite.db.models.DbGroup', 'aiida.backends.sqlalchemy.models.group.DbGroup'):
         return GROUP_ENTITY_NAME
 
-    if class_string in ("aiida.backends.djsite.db.models.DbComputer",
-                        "aiida.backends.sqlalchemy.models.computer.DbComputer"):
+    if class_string in (
+        'aiida.backends.djsite.db.models.DbComputer', 'aiida.backends.sqlalchemy.models.computer.DbComputer'
+    ):
         return COMPUTER_ENTITY_NAME
 
-    if class_string in ("aiida.backends.djsite.db.models.DbUser", "aiida.backends.sqlalchemy.models.user.DbUser"):
+    if class_string in ('aiida.backends.djsite.db.models.DbUser', 'aiida.backends.sqlalchemy.models.user.DbUser'):
         return USER_ENTITY_NAME
 
-    if class_string in ("aiida.backends.djsite.db.models.DbLog", "aiida.backends.sqlalchemy.models.log.DbLog"):
+    if class_string in ('aiida.backends.djsite.db.models.DbLog', 'aiida.backends.sqlalchemy.models.log.DbLog'):
         return LOG_ENTITY_NAME
 
-    if class_string in ("aiida.backends.djsite.db.models.DbComment",
-                        "aiida.backends.sqlalchemy.models.comment.DbComment"):
+    if class_string in (
+        'aiida.backends.djsite.db.models.DbComment', 'aiida.backends.sqlalchemy.models.comment.DbComment'
+    ):
         return COMMENT_ENTITY_NAME
 
 
@@ -96,3 +99,17 @@ def get_valid_import_links(url):
         return_urls.append(urllib.parse.urljoin(request.geturl(), link))
 
     return return_urls
+
+
+def export_shard_uuid(uuid):
+    """Sharding of the UUID for the import/export
+
+    :param uuid: UUID to be sharded (v4)
+    :type uuid: str
+
+    :return: Sharded UUID as a subfolder path
+    :rtype: str
+    """
+    import os
+
+    return os.path.join(uuid[:2], uuid[2:4], uuid[4:])

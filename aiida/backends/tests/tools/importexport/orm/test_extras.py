@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -160,16 +160,18 @@ class TestExtras(AiidaTestCase):
 
     def test_extras_import_mode_wrong(self):
         """Check a mode that is wrong"""
+        from aiida.tools.importexport.common.exceptions import ImportValidationError
+
         self.import_extras()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing='xnd')  # first letter is wrong
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing='nxd')  # second letter is wrong
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing='nnx')  # third letter is wrong
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing='n')  # too short
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing='nndnn')  # too long
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ImportValidationError):
             import_data(self.export_file, silent=True, extras_mode_existing=5)  # wrong type

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -99,7 +99,10 @@ class CalcJobProcessSpec(ProcessSpec):
         valid_type_required = Dict
 
         if valid_type_port is not valid_type_required:
-            raise ValueError('the valid type of a default output has to be a {} but it is {}'.format(
-                valid_type_port, valid_type_required))
+            raise ValueError(
+                'the valid type of a default output has to be a {} but it is {}'.format(
+                    valid_type_port, valid_type_required
+                )
+            )
 
         self._default_output_node = port_name

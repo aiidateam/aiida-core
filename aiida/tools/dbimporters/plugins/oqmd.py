@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -30,12 +30,12 @@ class OqmdDbImporter(DbImporter):
         if not isinstance(values, six.string_types) and not isinstance(values, int):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
-        return "{}={}".format(key, values)
+        return '{}={}'.format(key, values)
 
     _keywords = {'element': ['element', None]}
 
     def __init__(self, **kwargs):
-        self._query_url = "http://oqmd.org"
+        self._query_url = 'http://oqmd.org'
         self.setup_db(**kwargs)
 
     def query_get(self, **kwargs):
@@ -50,7 +50,7 @@ class OqmdDbImporter(DbImporter):
         if not isinstance(elements, list):
             elements = [elements]
 
-        return "{}/materials/composition/{}".format(self._query_url, "".join(elements))
+        return '{}/materials/composition/{}'.format(self._query_url, ''.join(elements))
 
     def query(self, **kwargs):
         """
@@ -65,16 +65,16 @@ class OqmdDbImporter(DbImporter):
 
         query_statement = self.query_get(**kwargs)
         response = urllib.request.urlopen(query_statement).read()
-        entries = re.findall("(/materials/entry/\d+)", response)
+        entries = re.findall('(/materials/entry/\d+)', response)
 
         results = []
         for entry in entries:
-            response = urllib.request.urlopen("{}{}".format(self._query_url,
+            response = urllib.request.urlopen('{}{}'.format(self._query_url,
                                                      entry)).read()
-            structures = re.findall("/materials/export/conventional/cif/(\d+)",
+            structures = re.findall('/materials/export/conventional/cif/(\d+)',
                                     response)
             for struct in structures:
-                results.append({"id": struct})
+                results.append({'id': struct})
 
         return OqmdSearchResults(results)
 
@@ -104,7 +104,7 @@ class OqmdSearchResults(DbSearchResults):
     """
     Results of the search, performed on OQMD.
     """
-    _base_url = "http://oqmd.org/materials/export/conventional/cif/"
+    _base_url = 'http://oqmd.org/materials/export/conventional/cif/'
 
     def __init__(self, results):
         super(OqmdSearchResults, self).__init__(results)

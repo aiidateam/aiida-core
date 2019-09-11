@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -194,7 +194,7 @@ def deprecated_command(message):
         if not profile.is_test_profile:
             template = templates.env.get_template('deprecated.tpl')
             width = 80
-            echo.echo(template.render(msg=wrap(message, width), width=width))
+            echo.echo(template.render(msg=wrap(message, width - 4), width=width))
 
         return wrapped(*args, **kwargs)
 

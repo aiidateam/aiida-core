@@ -112,7 +112,7 @@ ${outline}
 
         for i in range(operand):
             running = self.submit(self.ctx.child_class, **inputs)
-            self.report('launching {}<{}> with operands {}'.format(self.ctx.child_class.__name__, running.pk, operands.value))          
+            self.report('launching {}<{}> with operands {}'.format(self.ctx.child_class.__name__, running.pk, operands.value))
             self.to_context(workchains=append_(running))
 
     def post_raise_power(self):

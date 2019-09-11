@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -74,10 +74,11 @@ class TestCode(AiidaTestCase):
 
         calc = orm.CalcJobNode()
         calc.computer = self.computer
-        calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
         calc.add_incoming(code, LinkType.INPUT_CALC, 'code')
         calc.store()
+        calc.seal()
         links_count = 1
 
         export_links = get_all_node_links()
@@ -96,11 +97,13 @@ class TestCode(AiidaTestCase):
         import_links = get_all_node_links()
         self.assertListEqual(sorted(export_links), sorted(import_links))
         self.assertEqual(
-            len(export_links), links_count, "Expected to find only one link from code to "
-            "the calculation node before export. {} found.".format(len(export_links)))
+            len(export_links), links_count, 'Expected to find only one link from code to '
+            'the calculation node before export. {} found.'.format(len(export_links))
+        )
         self.assertEqual(
-            len(import_links), links_count, "Expected to find only one link from code to "
-            "the calculation node after import. {} found.".format(len(import_links)))
+            len(import_links), links_count, 'Expected to find only one link from code to '
+            'the calculation node after import. {} found.'.format(len(import_links))
+        )
 
     @with_temp_dir
     def test_solo_code(self, temp_dir):

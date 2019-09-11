@@ -3,10 +3,11 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=cyclic-import
 """AiiDA manager for global settings"""
 from __future__ import division
 from __future__ import print_function
@@ -19,7 +20,7 @@ __all__ = ('get_manager', 'reset_manager')
 MANAGER = None
 
 
-class Manager(object):  # pylint: disable=useless-object-inheritance
+class Manager(object):
     """
     Manager singleton to provide global versions of commonly used profile/settings related objects
     and methods to facilitate their construction.
@@ -77,12 +78,15 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         """
         from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
         from aiida.common import ConfigurationError, InvalidOperation
+        from aiida.common.log import configure_logging
         from aiida.manage import configuration
 
         profile = self.get_profile()
 
         if profile is None:
-            raise ConfigurationError('could not determine the current profile')
+            raise ConfigurationError(
+                'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+            )
 
         if configuration.BACKEND_UUID is not None and configuration.BACKEND_UUID != profile.uuid:
             raise InvalidOperation('cannot load backend because backend of another profile is already loaded')
@@ -110,6 +114,10 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         elif backend_type == BACKEND_SQLA:
             from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
             self._backend = SqlaBackend()
+
+        # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
+        # are taken into account and the `DbLogHandler` is configured.
+        configure_logging(with_orm=True)
 
         return self._backend
 
@@ -302,7 +310,8 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
             loop=runner_loop,
             persister=self.get_persister(),
             load_context=plumpy.LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader())
+            loader=persistence.get_object_loader()
+        )
 
         def callback(*args, **kwargs):
             return plumpy.create_task(functools.partial(task_receiver, *args, **kwargs), loop=runner_loop)

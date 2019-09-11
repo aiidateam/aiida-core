@@ -17,7 +17,7 @@ a proxy to create a sort of tunnel. One way to perform such an
 operation is to use ``netcat``, a tool that simply takes the standard input and
 redirects it to a given TCP port.
 
-Therefore, a requirement is to install ``netcat`` on computer A. 
+Therefore, a requirement is to install ``netcat`` on computer A.
 You can already check if the ``netcat`` or ``nc`` command is available
 on you computer, since some distributions include it (if it is already
 installed, the output of the command::
@@ -49,7 +49,7 @@ ssh/config
 You can now test the proxy command with ``ssh``. Edit the
 ``~/.ssh/config`` file on the computer on which you installed AiiDA
 (or create it if missing) and add the following lines::
-  
+
   Host FULLHOSTNAME_B
   Hostname FULLHOSTNAME_B
   User USER_B
@@ -61,7 +61,7 @@ where you have to replace:
   the fully-qualified hostnames of computer ``A`` and ``B`` (remembering that ``B``
   is the computer you want to actually connect to, and ``A`` is the
   intermediate computer to which you have direct access)
-* ``USER_A`` and ``USER_B`` are the usernames on the two machines (that 
+* ``USER_A`` and ``USER_B`` are the usernames on the two machines (that
   can possibly be the same).
 * ``ABSPATH_NETCAT`` is the absolute path to the ``nc`` executable
   that you obtained in the previous step.
@@ -70,7 +70,7 @@ Remember also to configure passwordless ssh connections using ssh keys
 both from your computer to ``A``, and from ``A`` to ``B``.
 
 Once you add this lines and save the file, try to execute::
-  
+
   ssh FULLHOSTNAME_B
 
 which should allow you to directly connect to ``B``.
@@ -116,7 +116,7 @@ Some notes on the ``proxy_command`` option
   placeholders, that are then automatically replaced by ssh with the hostname
   and the port of the machine ``B`` when creating the proxy.
   However, in the AiiDA ``proxy_command`` option, you need to put the
-  actual hostname and port. If you start from a properly configured 
+  actual hostname and port. If you start from a properly configured
   ``~/.ssh/config`` file, AiiDA will already replace these
   placeholders with the correct values. However, if you input the ``proxy_command``
   value manually, remember to write the

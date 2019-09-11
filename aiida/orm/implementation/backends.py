@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -24,8 +24,6 @@ EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 @six.add_metaclass(abc.ABCMeta)
 class Backend(object):
     """The public interface that defines a backend factory that creates backend specific concrete objects."""
-
-    # pylint: disable=useless-object-inheritance
 
     @abc.abstractmethod
     def migrate(self):
@@ -126,8 +124,6 @@ class Backend(object):
 @six.add_metaclass(abc.ABCMeta)
 class BackendEntity(object):
     """An first-class entity in the backend"""
-
-    # pylint: disable=useless-object-inheritance
 
     def __init__(self, backend):
         self._backend = backend

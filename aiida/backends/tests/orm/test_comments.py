@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -30,9 +30,7 @@ class TestComment(AiidaTestCase):
 
     def tearDown(self):
         super(TestComment, self).tearDown()
-        comments = Comment.objects.all()
-        for comment in comments:
-            Comment.objects.delete(comment.id)
+        Comment.objects.delete_all()
 
     def test_comment_content(self):
         """Test getting and setting content of a Comment."""
@@ -73,11 +71,54 @@ class TestComment(AiidaTestCase):
         with self.assertRaises(exceptions.NotExistent):
             Comment.objects.get(id=comment_pk)
 
+    def test_comment_collection_delete_all(self):
+        """Test deleting all Comments through the collection."""
+        comment = Comment(self.node, self.user, 'I will perish').store()
+        Comment(self.node, self.user, 'Surely not?').store()
+        comment_pk = comment.pk
+
+        # Assert the comments exist
+        self.assertEqual(len(Comment.objects.all()), 3)
+
+        # Delete all Comments
+        Comment.objects.delete_all()
+
+        with self.assertRaises(exceptions.NotExistent):
+            Comment.objects.delete(comment_pk)
+
+        with self.assertRaises(exceptions.NotExistent):
+            Comment.objects.get(id=comment_pk)
+
+    def test_comment_collection_delete_many(self):
+        """Test deleting many Comments through the collection."""
+        comment_one = Comment(self.node, self.user, 'I will perish').store()
+        comment_two = Comment(self.node, self.user, 'Surely not?').store()
+        comment_ids = [_.id for _ in [comment_one, comment_two]]
+
+        # Assert the Comments exist
+        self.assertEqual(len(Comment.objects.all()), 3)
+
+        # Delete new Comments using filter
+        filters = {'id': {'in': comment_ids}}
+        Comment.objects.delete_many(filters=filters)
+
+        # Make sure only the setUp Comment is left
+        builder = orm.QueryBuilder().append(Comment, project='id')
+        self.assertEqual(builder.count(), 1)
+        self.assertEqual(builder.all()[0][0], self.comment.id)
+
+        for comment_pk in comment_ids:
+            with self.assertRaises(exceptions.NotExistent):
+                Comment.objects.delete(comment_pk)
+
+            with self.assertRaises(exceptions.NotExistent):
+                Comment.objects.get(id=comment_pk)
+
     def test_comment_querybuilder(self):
         # pylint: disable=too-many-locals
         """Test querying for comments by joining on nodes in the QueryBuilder."""
         user_one = self.user
-        user_two = orm.User(email="commenting@user.s").store()
+        user_two = orm.User(email='commenting@user.s').store()
 
         node_one = orm.Data().store()
         comment_one = Comment(node_one, user_one, 'comment_one').store()
@@ -133,7 +174,8 @@ class TestComment(AiidaTestCase):
         for comment in comments:
             self.assertIn(
                 str(comment[0]),
-                [self.comment.uuid, comment_one.uuid, comment_two.uuid, comment_three.uuid, comment_five.uuid])
+                [self.comment.uuid, comment_one.uuid, comment_two.uuid, comment_three.uuid, comment_five.uuid]
+            )
 
         # Retrieve users from comments of a single node by joining specific node
         builder = orm.QueryBuilder()

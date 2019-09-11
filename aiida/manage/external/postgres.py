@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -28,9 +28,11 @@ from .pgsu import PGSU, PostgresConnectionMode, DEFAULT_DBINFO
 
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
 _DROP_USER_COMMAND = 'DROP USER "{}"'
-_CREATE_DB_COMMAND = ('CREATE DATABASE "{}" OWNER "{}" ENCODING \'UTF8\' '
-                      'LC_COLLATE=\'en_US.UTF-8\' LC_CTYPE=\'en_US.UTF-8\' '
-                      'TEMPLATE=template0')
+_CREATE_DB_COMMAND = (
+    'CREATE DATABASE "{}" OWNER "{}" ENCODING \'UTF8\' '
+    'LC_COLLATE=\'en_US.UTF-8\' LC_CTYPE=\'en_US.UTF-8\' '
+    'TEMPLATE=template0'
+)
 _DROP_DB_COMMAND = 'DROP DATABASE "{}"'
 _GRANT_PRIV_COMMAND = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
 _GET_USERS_COMMAND = "SELECT usename FROM pg_user WHERE usename='{}'"
@@ -72,7 +74,9 @@ class Postgres(PGSU):
         dbinfo.update(
             dict(
                 host=profile.database_hostname or DEFAULT_DBINFO['host'],
-                port=profile.database_port or DEFAULT_DBINFO['port']))
+                port=profile.database_port or DEFAULT_DBINFO['port']
+            )
+        )
 
         return Postgres(dbinfo=dbinfo, **kwargs)
 

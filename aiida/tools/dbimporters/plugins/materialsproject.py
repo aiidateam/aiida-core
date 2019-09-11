@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -47,9 +47,12 @@ class MaterialsProjectImporter(DbImporter):
                 api_key = os.environ['PMG_MAPI_KEY']
             except KeyError as exc:
                 raise_from(
-                    KeyError('API key not supplied and PMG_MAPI_KEY environment '
-                             'variable not set. Either pass it when initializing the class, '
-                             'or set the environment variable PMG_MAPI_KEY to your API key.'), exc)
+                    KeyError(
+                        'API key not supplied and PMG_MAPI_KEY environment '
+                        'variable not set. Either pass it when initializing the class, '
+                        'or set the environment variable PMG_MAPI_KEY to your API key.'
+                    ), exc
+                )
             api_key = None
 
         self._api_key = api_key
@@ -61,7 +64,8 @@ class MaterialsProjectImporter(DbImporter):
         Verify the supplied API key by issuing a request to Materials Project.
         """
         response = requests.get(
-            'https://www.materialsproject.org/rest/v1/api_check', headers={'X-API-KEY': self._api_key})
+            'https://www.materialsproject.org/rest/v1/api_check', headers={'X-API-KEY': self._api_key}
+        )
         response_content = response.json()  # a dict
         if 'error' in response_content:
             raise RuntimeError(response_content['error'])
@@ -103,8 +107,10 @@ class MaterialsProjectImporter(DbImporter):
         try:
             query = kwargs['query']
         except AttributeError:
-            raise AttributeError('Make sure the supplied dictionary has `query` as a key. This '
-                                 'should contain a dictionary with the right query needed.')
+            raise AttributeError(
+                'Make sure the supplied dictionary has `query` as a key. This '
+                'should contain a dictionary with the right query needed.'
+            )
         try:
             properties = kwargs['properties']
         except AttributeError:

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -34,11 +34,13 @@ if __name__ == '__main__':
         += SETUP_JSON['extras_require']['rest'] \
         + SETUP_JSON['extras_require']['atomic_tools']
 
-    SETUP_JSON['extras_require']['all'] = list(
-        {item for sublist in SETUP_JSON['extras_require'].values() for item in sublist if item != 'bpython'})
+    SETUP_JSON['extras_require']['all'] = list({
+        item for sublist in SETUP_JSON['extras_require'].values() for item in sublist if item != 'bpython'
+    })
 
     setup(
         packages=find_packages(),
         long_description=open(path.join(THIS_FOLDER, 'README.md')).read(),
         long_description_content_type='text/markdown',
-        **SETUP_JSON)
+        **SETUP_JSON
+    )

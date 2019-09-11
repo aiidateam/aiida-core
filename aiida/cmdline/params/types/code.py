@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -49,7 +49,10 @@ class CodeParamType(IdentifierParamType):
         if code and self._entry_point is not None:
             entry_point = code.get_input_plugin_name()
             if entry_point != self._entry_point:
-                raise click.BadParameter('the retrieved Code<{}> has plugin type "{}" while "{}" is required'.format(
-                    code.pk, entry_point, self._entry_point))
+                raise click.BadParameter(
+                    'the retrieved Code<{}> has plugin type "{}" while "{}" is required'.format(
+                        code.pk, entry_point, self._entry_point
+                    )
+                )
 
         return code

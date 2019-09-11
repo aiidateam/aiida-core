@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -49,7 +49,7 @@ class AttributeDict(dict):
 
     def __repr__(self):
         """Representation of the object."""
-        return "%s(%s)" % (self.__class__.__name__, dict.__repr__(self))
+        return '%s(%s)' % (self.__class__.__name__, dict.__repr__(self))
 
     def __getattr__(self, attr):
         """Read a key as an attribute.
@@ -67,8 +67,10 @@ class AttributeDict(dict):
         try:
             self[attr] = value
         except KeyError:
-            raise AttributeError("AttributeError: '{}' is not a valid attribute of the object "
-                                 "'{}'".format(attr, self.__class__.__name__))
+            raise AttributeError(
+                "AttributeError: '{}' is not a valid attribute of the object "
+                "'{}'".format(attr, self.__class__.__name__)
+            )
 
     def __delattr__(self, attr):
         """Delete a key as an attribute.
@@ -222,8 +224,9 @@ class DefaultFieldsAttributeDict(AttributeDict):
                 try:
                     validator(self[key])
                 except Exception as exc:
-                    raise exceptions.ValidationError("Invalid value for key '{}' [{}]: {}".format(
-                        key, exc.__class__.__name__, exc))
+                    raise exceptions.ValidationError(
+                        "Invalid value for key '{}' [{}]: {}".format(key, exc.__class__.__name__, exc)
+                    )
 
     def __setattr__(self, attr, value):
         """

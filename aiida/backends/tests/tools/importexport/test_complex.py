@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -47,38 +47,41 @@ class TestComplex(AiidaTestCase):
 
         calc1 = orm.CalcJobNode()
         calc1.computer = self.computer
-        calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        calc1.label = "calc1"
+        calc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc1.label = 'calc1'
         calc1.store()
 
         pd1 = orm.Dict()
-        pd1.label = "pd1"
+        pd1.label = 'pd1'
         pd1.store()
 
         pd2 = orm.Dict()
-        pd2.label = "pd2"
+        pd2.label = 'pd2'
         pd2.store()
 
         rd1 = orm.RemoteData()
-        rd1.label = "rd1"
-        rd1.set_remote_path("/x/y.py")
+        rd1.label = 'rd1'
+        rd1.set_remote_path('/x/y.py')
         rd1.computer = self.computer
         rd1.store()
         rd1.add_incoming(calc1, link_type=LinkType.CREATE, link_label='link')
 
         calc2 = orm.CalcJobNode()
         calc2.computer = self.computer
-        calc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        calc2.label = "calc2"
+        calc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc2.label = 'calc2'
         calc2.add_incoming(pd1, link_type=LinkType.INPUT_CALC, link_label='link1')
         calc2.add_incoming(pd2, link_type=LinkType.INPUT_CALC, link_label='link2')
         calc2.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='link3')
         calc2.store()
 
         fd1 = orm.FolderData()
-        fd1.label = "fd1"
+        fd1.label = 'fd1'
         fd1.store()
         fd1.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
+
+        calc1.seal()
+        calc2.seal()
 
         node_uuids_labels = {
             calc1.uuid: calc1.label,
@@ -89,7 +92,7 @@ class TestComplex(AiidaTestCase):
             fd1.uuid: fd1.label
         }
 
-        filename = os.path.join(temp_dir, "export.tar.gz")
+        filename = os.path.join(temp_dir, 'export.tar.gz')
         export([fd1], outfile=filename, silent=True)
 
         self.clean_db()
@@ -101,7 +104,7 @@ class TestComplex(AiidaTestCase):
             try:
                 orm.load_node(uuid)
             except NotExistent:
-                self.fail("Node with UUID {} and label {} was not found.".format(uuid, label))
+                self.fail('Node with UUID {} and label {} was not found.'.format(uuid, label))
 
     @with_temp_dir
     def test_reexport(self, temp_dir):
@@ -190,12 +193,14 @@ class TestComplex(AiidaTestCase):
         group.store()
         group.add_nodes(array)
 
+        calc.seal()
+
         hash_from_dbcontent = get_hash_from_db_content(grouplabel)
 
         # I export and reimport 3 times in a row:
         for i in range(3):
             # Always new filename:
-            filename = os.path.join(temp_dir, "export-{}.zip".format(i))
+            filename = os.path.join(temp_dir, 'export-{}.zip'.format(i))
             # Loading the group from the string
             group = orm.Group.get(label=grouplabel)
             # exporting based on all members of the group

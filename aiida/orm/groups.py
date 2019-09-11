@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -60,8 +60,10 @@ class Group(entities.Entity):
 
             if 'type_string' in kwargs:
                 if not isinstance(kwargs['type_string'], six.string_types):
-                    raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
-                                                     "{}".format(str, type(kwargs['type_string'])))
+                    raise exceptions.ValidationError(
+                        'type_string must be {}, you provided an object of type '
+                        '{}'.format(str, type(kwargs['type_string']))
+                    )
 
                 filters['type_string'] = kwargs['type_string']
 
@@ -71,7 +73,7 @@ class Group(entities.Entity):
                 return Group(label, backend=self.backend, **kwargs).store(), True
 
             if len(res) > 1:
-                raise exceptions.MultipleObjectsError("More than one groups found in the database")
+                raise exceptions.MultipleObjectsError('More than one groups found in the database')
 
             return res[0], False
 
@@ -107,15 +109,18 @@ class Group(entities.Entity):
 
         # Check that chosen type_string is allowed
         if not isinstance(type_string, six.string_types):
-            raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
-                                             "{}".format(str, type(type_string)))
+            raise exceptions.ValidationError(
+                'type_string must be {}, you provided an object of type '
+                '{}'.format(str, type(type_string))
+            )
 
         backend = backend or get_manager().get_backend()
         user = user or users.User.objects(backend).get_default()
         type_check(user, users.User)
 
         model = backend.groups.create(
-            label=label, user=user.backend_entity, description=description, type_string=type_string)
+            label=label, user=user.backend_entity, description=description, type_string=type_string
+        )
         super(Group, self).__init__(model)
 
     def __repr__(self):
@@ -293,8 +298,10 @@ class Group(entities.Entity):
         filters = {}
         if 'type_string' in kwargs:
             if not isinstance(kwargs['type_string'], six.string_types):
-                raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
-                                                 "{}".format(str, type(kwargs['type_string'])))
+                raise exceptions.ValidationError(
+                    'type_string must be {}, you provided an object of type '
+                    '{}'.format(str, type(kwargs['type_string']))
+                )
 
         query = QueryBuilder()
         for key, val in kwargs.items():
@@ -328,42 +335,42 @@ class Group(entities.Entity):
         :rtype: dict
         """
         return {
-            "description": {
-                "display_name": "Description",
-                "help_text": "short description of the Computer",
-                "is_foreign_key": False,
-                "type": "str"
+            'description': {
+                'display_name': 'Description',
+                'help_text': 'Short description of the group',
+                'is_foreign_key': False,
+                'type': 'str'
             },
-            "id": {
-                "display_name": "Id",
-                "help_text": "Id of the object",
-                "is_foreign_key": False,
-                "type": "int"
+            'id': {
+                'display_name': 'Id',
+                'help_text': 'Id of the object',
+                'is_foreign_key': False,
+                'type': 'int'
             },
-            "label": {
-                "display_name": "Label",
-                "help_text": "Name of the object",
-                "is_foreign_key": False,
-                "type": "str"
+            'label': {
+                'display_name': 'Label',
+                'help_text': 'Name of the object',
+                'is_foreign_key': False,
+                'type': 'str'
             },
-            "type_string": {
-                "display_name": "Type_string",
-                "help_text": "Code type",
-                "is_foreign_key": False,
-                "type": "str"
+            'type_string': {
+                'display_name': 'Type_string',
+                'help_text': 'Type of the group',
+                'is_foreign_key': False,
+                'type': 'str'
             },
-            "user_id": {
-                "display_name": "Id of creator",
-                "help_text": "Id of the user that created the node",
-                "is_foreign_key": True,
-                "related_column": "id",
-                "related_resource": "_dbusers",
-                "type": "int"
+            'user_id': {
+                'display_name': 'Id of creator',
+                'help_text': 'Id of the user that created the node',
+                'is_foreign_key': True,
+                'related_column': 'id',
+                'related_resource': '_dbusers',
+                'type': 'int'
             },
-            "uuid": {
-                "display_name": "Unique ID",
-                "help_text": "Universally Unique Identifier",
-                "is_foreign_key": False,
-                "type": "unicode"
+            'uuid': {
+                'display_name': 'Unique ID',
+                'help_text': 'Universally Unique Identifier',
+                'is_foreign_key': False,
+                'type': 'unicode'
             }
         }

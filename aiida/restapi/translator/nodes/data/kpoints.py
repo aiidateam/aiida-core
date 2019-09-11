@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -23,12 +23,12 @@ class KpointsDataTranslator(DataTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "kpoints"
+    __label__ = 'kpoints'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import KpointsData
     _aiida_class = KpointsData
     # The string name of the AiiDA class
-    _aiida_type = "data.array.kpoints.KpointsData"
+    _aiida_type = 'data.array.kpoints.KpointsData'
 
     _result_type = __label__
 
@@ -104,9 +104,9 @@ class KpointsDataTranslator(DataTranslator):
 
             json_visualization['reciprocal_vectors_unit'] = u'1/\u212b'
 
-            # Get BZ facesa and add them to the json. Fields: faces,
+            # Get BZ faces and add them to the json. Fields: faces,
             # triangles, triangle_vertices. Most probably only faces is needed.
-            from seekpath.brillouinzone.brillouinzone import get_BZ
+            from seekpath.brillouinzone.brillouinzone import get_BZ  # pylint: disable=import-error,no-name-in-module
             json_visualization['faces_data'] = get_BZ(coords1, coords2, coords3)
 
             # Provide kpoints cooridnates in absolute units ...
@@ -179,4 +179,4 @@ class KpointsDataTranslator(DataTranslator):
 
         from aiida.restapi.common.exceptions import RestFeatureNotAvailable
 
-        raise RestFeatureNotAvailable("This endpoint is not available for Kpoints.")
+        raise RestFeatureNotAvailable('This endpoint is not available for Kpoints.')

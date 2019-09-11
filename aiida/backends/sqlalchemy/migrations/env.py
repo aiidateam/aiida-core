@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -41,7 +41,7 @@ def run_migrations_offline():
     script output.
 
     """
-    raise NotImplementedError("This feature is not currently supported.")
+    raise NotImplementedError('This feature is not currently supported.')
 
 
 def run_migrations_online():
@@ -61,8 +61,8 @@ def run_migrations_online():
 
     if connectable is None:
         from aiida.common.exceptions import ConfigurationError
-        raise ConfigurationError("An initialized connection is expected "
-                                 "for the AiiDA online migrations.")
+        raise ConfigurationError('An initialized connection is expected '
+                                 'for the AiiDA online migrations.')
 
     with connectable.connect() as connection:
         context.configure(

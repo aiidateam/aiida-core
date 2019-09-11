@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -26,30 +26,30 @@ table_groups_nodes = Table(
     'db_dbgroup_dbnodes',
     Base.metadata,
     Column('id', Integer, primary_key=True),
-    Column('dbnode_id', Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")),
-    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED")),
+    Column('dbnode_id', Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED')),
+    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially='DEFERRED')),
 
     UniqueConstraint('dbgroup_id', 'dbnode_id', name='db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key'),
 )
 
 
 class DbGroup(Base):
-    __tablename__ = "db_dbgroup"
+    __tablename__ = 'db_dbgroup'
 
     id = Column(Integer, primary_key=True)
 
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
     label = Column(String(255), index=True)
 
-    type_string = Column(String(255), default="", index=True)
+    type_string = Column(String(255), default='', index=True)
 
     time = Column(DateTime(timezone=True), default=timezone.now)
     description = Column(Text, nullable=True)
 
-    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially="DEFERRED"))
+    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
-    dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref="dbgroups", lazy='dynamic')
+    dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref='dbgroups', lazy='dynamic')
 
     __table_args__ = (
         UniqueConstraint('label', 'type_string'),

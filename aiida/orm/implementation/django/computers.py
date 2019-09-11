@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -135,5 +135,7 @@ class DjangoComputerCollection(BackendComputerCollection):
         try:
             models.DbComputer.objects.filter(pk=pk).delete()
         except ProtectedError:
-            raise exceptions.InvalidOperation("Unable to delete the requested computer: there"
-                                              "is at least one node using this computer")
+            raise exceptions.InvalidOperation(
+                'Unable to delete the requested computer: there'
+                'is at least one node using this computer'
+            )

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -51,7 +51,8 @@ def database_migrate(force):
 
     expected_answer = 'MIGRATE NOW'
     confirm_message = 'If you have completed the steps above and want to migrate profile "{}", type {}'.format(
-        profile.name, expected_answer)
+        profile.name, expected_answer
+    )
 
     try:
         response = click.prompt(confirm_message)
@@ -67,7 +68,7 @@ def database_migrate(force):
 
 @verdi_database.group('integrity')
 def verdi_database_integrity():
-    """Various commands that will check the integrity of the database and fix potential issues when asked."""
+    """Check the integrity of the database and fix potential issues."""
 
 
 @verdi_database_integrity.command('detect-duplicate-uuid')
@@ -76,11 +77,13 @@ def verdi_database_integrity():
     '--table',
     type=click.Choice(TABLES_UUID_DEDUPLICATION),
     default='db_dbnode',
-    help='The database table to operate on.')
+    help='The database table to operate on.'
+)
 @click.option(
-    '-a', '--apply-patch', is_flag=True, help='Actually apply the proposed changes instead of performing a dry run.')
+    '-a', '--apply-patch', is_flag=True, help='Actually apply the proposed changes instead of performing a dry run.'
+)
 def detect_duplicate_uuid(table, apply_patch):
-    """Detect and solve entities with duplicate UUIDs in a given database table.
+    """Detect and fix entities with duplicate UUIDs.
 
     Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the node table in the database
     and a few other tables as well. This made it possible to store multiple entities with identical UUIDs in the same

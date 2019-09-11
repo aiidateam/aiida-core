@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -33,8 +33,8 @@ depends_on = None
 def upgrade():
     op.drop_table('db_dbpath')
     conn = op.get_bind()
-    conn.execute("DROP TRIGGER IF EXISTS autoupdate_tc ON db_dblink")
-    conn.execute("DROP FUNCTION IF EXISTS update_tc()")
+    conn.execute('DROP TRIGGER IF EXISTS autoupdate_tc ON db_dblink')
+    conn.execute('DROP FUNCTION IF EXISTS update_tc()')
 
 
 def downgrade():

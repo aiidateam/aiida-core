@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -43,4 +43,5 @@ class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):
         if link_type is LinkType.RETURN and not target.is_stored:
             raise ValueError(
                 'trying to return an unstored Data node from a @workfunction, however, @workfunctions cannot create '
-                'data. You probably want to use a @calcfunction instead.')
+                'data. You probably want to use a @calcfunction instead.'
+            )

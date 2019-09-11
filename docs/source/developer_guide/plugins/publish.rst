@@ -24,7 +24,7 @@ This marks your plugin as an AiiDA package and makes it easy to find on package 
 -------------------------
 
 AiiDA plugins should be listed on the AiiDA plugin `registry`_ to
-avoid name-clashes with other plugins. 
+avoid name-clashes with other plugins.
 
 If you wish to get your plugin listed on the official registry for AiiDA
 plugins, you will provide the following keyword arguments as key-value pairs in

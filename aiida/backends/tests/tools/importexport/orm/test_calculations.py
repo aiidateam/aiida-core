@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -57,7 +57,7 @@ class TestCalculations(AiidaTestCase):
         # These are the uuids that shouldn't be exported since it's a selection.
         not_wanted_uuids = [v.uuid for v in (b, c, d)]
         # At this point we export the generated data
-        filename1 = os.path.join(temp_dir, "export1.tar.gz")
+        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
         export([res], outfile=filename1, silent=True, return_reversed=True)
         self.clean_db()
         self.insert_data()
@@ -90,8 +90,11 @@ class TestCalculations(AiidaTestCase):
 
         output_1.add_incoming(master, LinkType.RETURN, 'RETURN')
 
+        master.seal()
+        slave.seal()
+
         uuids_values = [(v.uuid, v.value) for v in (output_1,)]
-        filename1 = os.path.join(temp_dir, "export1.tar.gz")
+        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
         export([output_1], outfile=filename1, silent=True)
         self.clean_db()
         self.insert_data()

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -47,19 +47,21 @@ class Transport(object):
     Abstract class for a generic transport (ssh, local, ...)
     Contains the set of minimal methods
     """
-    # pylint: disable=too-many-public-methods,useless-object-inheritance,bad-option-value
+    # pylint: disable=too-many-public-methods
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
     _valid_auth_params = None
     _MAGIC_CHECK = re.compile('[*?[]')
     _valid_auth_options = []
-    _common_auth_options = [('safe_interval', {
-        'type': float,
-        'prompt': 'Connection cooldown time (s)',
-        'help': 'Minimum time interval in seconds between consecutive connection openings',
-        'callback': validate_positive_number
-    })]
+    _common_auth_options = [(
+        'safe_interval', {
+            'type': float,
+            'prompt': 'Connection cooldown time (s)',
+            'help': 'Minimum time interval in seconds between consecutive connection openings',
+            'callback': validate_positive_number
+        }
+    )]
 
     def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
         """
@@ -132,7 +134,7 @@ class Transport(object):
 
     # redefine this in each subclass
     def __str__(self):
-        return "[Transport class or subclass]"
+        return '[Transport class or subclass]'
 
     def set_logger_extra(self, logger_extra):
         """
@@ -156,12 +158,12 @@ class Transport(object):
         # Remove empty lines
         docstring = cls.__doc__
         if not docstring:
-            return "No documentation available"
+            return 'No documentation available'
 
         doclines = [i for i in docstring.splitlines() if i.strip()]
         if doclines:
             return doclines[0].strip()
-        return "No documentation available"
+        return 'No documentation available'
 
     @classmethod
     def get_valid_transports(cls):
@@ -215,7 +217,7 @@ class Transport(object):
                 return logging.LoggerAdapter(logger=self._logger, extra=self._logger_extra)
             return self._logger
         except AttributeError:
-            raise InternalError("No self._logger configured for {}!")
+            raise InternalError('No self._logger configured for {}!')
 
     def get_safe_open_interval(self):
         """
@@ -350,7 +352,7 @@ class Transport(object):
         }
 
         if kwargs:
-            self.logger.error("Unknown parameters passed to copy_from_remote_to_remote")
+            self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
 
         with SandboxFolder() as sandbox:
             self.get(remotesource, sandbox.abspath, **kwargs_get)
@@ -672,12 +674,14 @@ class Transport(object):
         retval, username, stderr = self.exec_command_wait(command)
         if retval == 0:
             if stderr.strip():
-                self.logger.warning("There was nonempty stderr in the whoami command: {}".format(stderr))
+                self.logger.warning('There was nonempty stderr in the whoami command: {}'.format(stderr))
             return username.strip()
 
-        self.logger.error("Problem executing whoami. Exit code: {}, stdout: '{}', "
-                          "stderr: '{}'".format(retval, username, stderr))
-        raise IOError("Error while executing whoami. Exit code: {}".format(retval))
+        self.logger.error(
+            "Problem executing whoami. Exit code: {}, stdout: '{}', "
+            "stderr: '{}'".format(retval, username, stderr)
+        )
+        raise IOError('Error while executing whoami. Exit code: {}'.format(retval))
 
     def path_exists(self, path):
         """

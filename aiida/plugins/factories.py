@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -15,8 +15,10 @@ from __future__ import absolute_import
 
 from .entry_point import load_entry_point
 
-__all__ = ('BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'OrbitalFactory', 'ParserFactory',
-           'SchedulerFactory', 'TransportFactory', 'WorkflowFactory')
+__all__ = (
+    'BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'OrbitalFactory', 'ParserFactory',
+    'SchedulerFactory', 'TransportFactory', 'WorkflowFactory'
+)
 
 
 def BaseFactory(group, name):

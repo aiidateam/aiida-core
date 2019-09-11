@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -23,12 +23,12 @@ class BandsDataTranslator(DataTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "bands"
+    __label__ = 'bands'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import BandsData
     _aiida_class = BandsData
     # The string name of the AiiDA class
-    _aiida_type = "data.array.bands.BandsData"
+    _aiida_type = 'data.array.bands.BandsData'
 
     _result_type = __label__
 
@@ -76,4 +76,4 @@ class BandsDataTranslator(DataTranslator):
 
         from aiida.restapi.common.exceptions import RestFeatureNotAvailable
 
-        raise RestFeatureNotAvailable("This endpoint is not available for Bands.")
+        raise RestFeatureNotAvailable('This endpoint is not available for Bands.')

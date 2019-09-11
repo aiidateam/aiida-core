@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -26,7 +26,7 @@ class NonEmptyStringParamType(StringParamType):
     def convert(self, value, param, ctx):
         newval = super(NonEmptyStringParamType, self).convert(value, param, ctx)
         if not newval:  # None or empty string
-            self.fail("Empty string is not valid!")
+            self.fail('Empty string is not valid!')
 
         return newval
 

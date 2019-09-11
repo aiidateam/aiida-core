@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -46,7 +46,7 @@ class TestOrbital(AiidaTestCase):
         # position must be a list of three floats
         with self.assertRaises(ValidationError) as exc:
             Orbital(position=(1, 2, 3), some_strange_key=1)
-        self.assertIn("some_strange_key", str(exc.exception))
+        self.assertIn('some_strange_key', str(exc.exception))
 
 
 class TestRealhydrogenOrbital(AiidaTestCase):
@@ -59,12 +59,14 @@ class TestRealhydrogenOrbital(AiidaTestCase):
         with self.assertRaises(ValidationError):
             RealhydrogenOrbital(position=(1, 2, 3))
 
-        orbital = RealhydrogenOrbital(**{
-            'position': (-1, -2, -3),
-            'angular_momentum': 1,
-            'magnetic_number': 0,
-            'radial_nodes': 2
-        })
+        orbital = RealhydrogenOrbital(
+            **{
+                'position': (-1, -2, -3),
+                'angular_momentum': 1,
+                'magnetic_number': 0,
+                'radial_nodes': 2
+            }
+        )
         self.assertAlmostEqual(orbital.get_orbital_dict()['position'][0], -1.)
         self.assertAlmostEqual(orbital.get_orbital_dict()['position'][1], -2.)
         self.assertAlmostEqual(orbital.get_orbital_dict()['position'][2], -3.)
@@ -77,31 +79,37 @@ class TestRealhydrogenOrbital(AiidaTestCase):
         RealhydrogenOrbital = OrbitalFactory('realhydrogen')  # pylint: disable=invalid-name
 
         with self.assertRaises(ValidationError) as exc:
-            RealhydrogenOrbital(**{
-                'position': (-1, -2, -3),
-                'angular_momentum': 100,
-                'magnetic_number': 0,
-                'radial_nodes': 2
-            })
-        self.assertIn("angular_momentum", str(exc.exception))
+            RealhydrogenOrbital(
+                **{
+                    'position': (-1, -2, -3),
+                    'angular_momentum': 100,
+                    'magnetic_number': 0,
+                    'radial_nodes': 2
+                }
+            )
+        self.assertIn('angular_momentum', str(exc.exception))
 
         with self.assertRaises(ValidationError) as exc:
-            RealhydrogenOrbital(**{
-                'position': (-1, -2, -3),
-                'angular_momentum': 1,
-                'magnetic_number': 3,
-                'radial_nodes': 2
-            })
-        self.assertIn("magnetic number must be in the range", str(exc.exception))
+            RealhydrogenOrbital(
+                **{
+                    'position': (-1, -2, -3),
+                    'angular_momentum': 1,
+                    'magnetic_number': 3,
+                    'radial_nodes': 2
+                }
+            )
+        self.assertIn('magnetic number must be in the range', str(exc.exception))
 
         with self.assertRaises(ValidationError) as exc:
-            RealhydrogenOrbital(**{
-                'position': (-1, -2, -3),
-                'angular_momentum': 1,
-                'magnetic_number': 0,
-                'radial_nodes': 100
-            })
-        self.assertIn("radial_nodes", str(exc.exception))
+            RealhydrogenOrbital(
+                **{
+                    'position': (-1, -2, -3),
+                    'angular_momentum': 1,
+                    'magnetic_number': 0,
+                    'radial_nodes': 100
+                }
+            )
+        self.assertIn('radial_nodes', str(exc.exception))
 
     def test_optional_fields(self):
         """
@@ -110,12 +118,14 @@ class TestRealhydrogenOrbital(AiidaTestCase):
         """
         RealhydrogenOrbital = OrbitalFactory('realhydrogen')  # pylint: disable=invalid-name
 
-        orbital = RealhydrogenOrbital(**{
-            'position': (-1, -2, -3),
-            'angular_momentum': 1,
-            'magnetic_number': 0,
-            'radial_nodes': 2
-        })
+        orbital = RealhydrogenOrbital(
+            **{
+                'position': (-1, -2, -3),
+                'angular_momentum': 1,
+                'magnetic_number': 0,
+                'radial_nodes': 2
+            }
+        )
         # Check that the optional value is there and has its default value
         self.assertEqual(orbital.get_orbital_dict()['spin'], 0)
         self.assertEqual(orbital.get_orbital_dict()['diffusivity'], None)
@@ -128,7 +138,8 @@ class TestRealhydrogenOrbital(AiidaTestCase):
                 'radial_nodes': 2,
                 'spin': 1,
                 'diffusivity': 3.1
-            })
+            }
+        )
         self.assertEqual(orbital.get_orbital_dict()['spin'], 1)
         self.assertEqual(orbital.get_orbital_dict()['diffusivity'], 3.1)
 
@@ -140,9 +151,10 @@ class TestRealhydrogenOrbital(AiidaTestCase):
                     'magnetic_number': 0,
                     'radial_nodes': 2,
                     'spin': 1,
-                    'diffusivity': "a"
-                })
-        self.assertIn("diffusivity", str(exc.exception))
+                    'diffusivity': 'a'
+                }
+            )
+        self.assertIn('diffusivity', str(exc.exception))
 
         with self.assertRaises(ValidationError) as exc:
             RealhydrogenOrbital(
@@ -153,8 +165,9 @@ class TestRealhydrogenOrbital(AiidaTestCase):
                     'radial_nodes': 2,
                     'spin': 5,
                     'diffusivity': 3.1
-                })
-        self.assertIn("spin", str(exc.exception))
+                }
+            )
+        self.assertIn('spin', str(exc.exception))
 
     def test_unknown_fields(self):
         """Verify that unkwown fields raise a validation error."""
@@ -168,8 +181,9 @@ class TestRealhydrogenOrbital(AiidaTestCase):
                     'magnetic_number': 0,
                     'radial_nodes': 2,
                     'some_strange_key': 1
-                })
-        self.assertIn("some_strange_key", str(exc.exception))
+                }
+            )
+        self.assertIn('some_strange_key', str(exc.exception))
 
     def test_get_name_from_quantum_numbers(self):
         """

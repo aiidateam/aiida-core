@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -26,8 +26,9 @@ class FixtureManagerTestCase(unittest.TestCase):
 
     def setUp(self):
         self.fixture_manager = FixtureManager()
-        self.backend = BACKEND_DJANGO if os.environ.get('TEST_AIIDA_BACKEND',
-                                                        BACKEND_DJANGO) == BACKEND_DJANGO else BACKEND_SQLA
+        self.backend = BACKEND_DJANGO if os.environ.get(
+            'TEST_AIIDA_BACKEND', BACKEND_DJANGO
+        ) == BACKEND_DJANGO else BACKEND_SQLA
         self.fixture_manager.backend = self.backend
 
     def test_create_db_cluster(self):

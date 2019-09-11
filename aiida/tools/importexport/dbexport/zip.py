@@ -3,23 +3,20 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""" Export a zip-file """
-# pylint: disable=useless-object-inheritance,missing-docstring,redefined-builtin
+"""Export a zip-file."""
+# pylint: disable=missing-docstring,redefined-builtin
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
 import os
-import time
 import zipfile
 
 import six
-
-__all__ = ('export_zip',)
 
 
 class MyWritingZipFile(object):
@@ -31,7 +28,7 @@ class MyWritingZipFile(object):
 
     def open(self):
         if self._buffer is not None:
-            raise IOError("Cannot open again!")
+            raise IOError('Cannot open again!')
         self._buffer = six.moves.StringIO()
 
     def write(self, data):
@@ -74,13 +71,14 @@ class ZipFolder(object):
         if isinstance(zipfolder_or_fname, six.string_types):
             the_mode = mode
             if the_mode is None:
-                the_mode = "r"
+                the_mode = 'r'
             if use_compression:
                 compression = zipfile.ZIP_DEFLATED
             else:
                 compression = zipfile.ZIP_STORED
             self._zipfile = zipfile.ZipFile(
-                zipfolder_or_fname, mode=the_mode, compression=compression, allowZip64=allowZip64)
+                zipfolder_or_fname, mode=the_mode, compression=compression, allowZip64=allowZip64
+            )
             self._pwd = subfolder
         else:
             if mode is not None:
@@ -127,7 +125,7 @@ class ZipFolder(object):
         src = six.text_type(src)
 
         if not os.path.isabs(src):
-            raise ValueError("src must be an absolute path in insert_file")
+            raise ValueError('src must be an absolute path in insert_file')
 
         if not overwrite:
             try:
@@ -136,7 +134,7 @@ class ZipFolder(object):
             except KeyError:
                 exists = False
             if exists:
-                raise IOError("destination already exists: {}".format(base_filename))
+                raise IOError('destination already exists: {}'.format(base_filename))
 
         # print src, filename
         if os.path.isdir(src):
@@ -148,17 +146,3 @@ class ZipFolder(object):
                     self._zipfile.write(real_src, real_dest)
         else:
             self._zipfile.write(src, base_filename)
-
-
-def export_zip(what, outfile='testzip', overwrite=False, silent=False, use_compression=True, **kwargs):
-    """Export in a zipped folder"""
-    from aiida.tools.importexport.dbexport import export_tree
-
-    if not overwrite and os.path.exists(outfile):
-        raise IOError("the output file '{}' already exists".format(outfile))
-
-    time_start = time.time()
-    with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
-        export_tree(what, folder=folder, silent=silent, **kwargs)
-    if not silent:
-        print("File written in {:10.3g} s.".format(time.time() - time_start))

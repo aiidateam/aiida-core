@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -39,8 +39,9 @@ if PROFILE is None:
     raise exceptions.ProfileConfigurationError('no profile has been loaded')
 
 if PROFILE.database_backend != 'django':
-    raise exceptions.ProfileConfigurationError('incommensurate database backend `{}` for profile `{}`'.format(
-        PROFILE.database_backend, PROFILE.name))
+    raise exceptions.ProfileConfigurationError(
+        'incommensurate database backend `{}` for profile `{}`'.format(PROFILE.database_backend, PROFILE.name)
+    )
 
 PROFILE_CONF = PROFILE.dictionary
 

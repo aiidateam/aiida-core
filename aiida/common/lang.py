@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -85,11 +85,11 @@ def protected_decorator(check=False):
 
     def wrap(func):  # pylint: disable=missing-docstring
         if isinstance(func, property):
-            raise RuntimeError("Protected must go after @property decorator")
+            raise RuntimeError('Protected must go after @property decorator')
 
         args = get_arg_spec(func)[0]  # pylint: disable=deprecated-method
         if not args:
-            raise RuntimeError("Can only use the protected decorator on member functions")
+            raise RuntimeError('Can only use the protected decorator on member functions')
 
         # We can only perform checks if the interpreter is capable of giving
         # us the stack i.e. currentframe() produces a valid object
@@ -101,8 +101,10 @@ def protected_decorator(check=False):
                     calling_class = stack()[1][0].f_locals['self']
                     assert self is calling_class
                 except (KeyError, AssertionError):
-                    raise RuntimeError("Cannot access protected function {} from outside"
-                                       " class hierarchy".format(func.__name__))
+                    raise RuntimeError(
+                        'Cannot access protected function {} from outside'
+                        ' class hierarchy'.format(func.__name__)
+                    )
 
                 return func(self, *args, **kwargs)
         else:
@@ -118,11 +120,11 @@ def override_decorator(check=False):
 
     def wrap(func):  # pylint: disable=missing-docstring
         if isinstance(func, property):
-            raise RuntimeError("Override must go after @property decorator")
+            raise RuntimeError('Override must go after @property decorator')
 
         args = get_arg_spec(func)[0]  # pylint: disable=deprecated-method
         if not args:
-            raise RuntimeError("Can only use the override decorator on member functions")
+            raise RuntimeError('Can only use the override decorator on member functions')
 
         if check:
 
@@ -131,7 +133,7 @@ def override_decorator(check=False):
                 try:
                     getattr(super(self.__class__, self), func.__name__)
                 except AttributeError:
-                    raise RuntimeError("Function {} does not override a superclass method".format(func))
+                    raise RuntimeError('Function {} does not override a superclass method'.format(func))
 
                 return func(self, *args, **kwargs)
         else:
@@ -146,7 +148,7 @@ protected = protected_decorator(check=False)  # pylint: disable=invalid-name
 override = override_decorator(check=False)  # pylint: disable=invalid-name
 
 
-class classproperty(object):  # pylint: disable=too-few-public-methods,invalid-name,useless-object-inheritance
+class classproperty(object):  # pylint: disable=too-few-public-methods,invalid-name
     """
     A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together
@@ -190,7 +192,7 @@ class abstractstaticmethod(staticmethod):  # pylint: disable=too-few-public-meth
         super(abstractstaticmethod, self).__init__(callable)
 
 
-class combomethod(object):  # pylint: disable=invalid-name,too-few-public-methods,useless-object-inheritance
+class combomethod(object):  # pylint: disable=invalid-name,too-few-public-methods
     """
     A decorator that wraps a function that can be both a classmethod or
     instancemethod and behaves accordingly::
@@ -232,7 +234,7 @@ class combomethod(object):  # pylint: disable=invalid-name,too-few-public-method
         return _wrapper
 
 
-class EmptyContextManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance
+class EmptyContextManager(object):  # pylint: disable=too-few-public-methods
     """
     A dummy/no-op context manager.
     """

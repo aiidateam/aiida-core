@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -25,7 +25,7 @@ __all__ = ('BackendQueryBuilder',)
 class BackendQueryBuilder(object):
     """Backend query builder interface"""
 
-    # pylint: disable=invalid-name,too-many-public-methods,useless-object-inheritance
+    # pylint: disable=invalid-name,too-many-public-methods
 
     outer_to_inner_schema = None
     inner_to_outer_schema = None
@@ -75,7 +75,7 @@ class BackendQueryBuilder(object):
     @abc.abstractmethod
     def AuthInfo(self):
         """
-        A property, decorated with @property. Returns the implementation for the Group
+        A property, decorated with @property. Returns the implementation for the AuthInfo
         """
 
     @abc.abstractmethod
@@ -280,10 +280,12 @@ class BackendQueryBuilder(object):
         try:
             return getattr(alias, colname)
         except AttributeError:
-            raise exceptions.InputValidationError("{} is not a column of {}\n"
-                                                  "Valid columns are:\n"
-                                                  "{}".format(
-                                                      colname,
-                                                      alias,
-                                                      '\n'.join(alias._sa_class_manager.mapper.c.keys())  # pylint: disable=protected-access
-                                                  ))
+            raise exceptions.InputValidationError(
+                '{} is not a column of {}\n'
+                'Valid columns are:\n'
+                '{}'.format(
+                    colname,
+                    alias,
+                    '\n'.join(alias._sa_class_manager.mapper.c.keys())  # pylint: disable=protected-access
+                )
+            )

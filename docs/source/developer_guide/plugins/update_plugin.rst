@@ -36,7 +36,7 @@ Old plugin system::
                ...
 
 Turns into::
-   
+
    aiida-myplugin/
       aiida_myplugin/
          __init__.py
@@ -79,7 +79,7 @@ Then in ``setup.py``::
       },
       ...
    )
-   
+
 As you see, the name of the entry point matches the argument to the factory method.
 
 import statements
@@ -95,7 +95,7 @@ old::
    from aiida.tools.codespecific.myplugin.thistool import this_convenience_func
 
 new::
-   
+
    from aiida_myplugin.tools.thistool import this_convenience_func
 
 

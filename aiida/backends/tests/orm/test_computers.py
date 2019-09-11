@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -27,8 +27,8 @@ class TestComputer(AiidaTestCase):
         import tempfile
 
         new_comp = orm.Computer(
-            name='bbb', hostname='localhost', transport_type='local', scheduler_type='direct',
-            workdir='/tmp/aiida').store()
+            name='bbb', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+        ).store()
 
         # Configure the computer - no parameters for local transport
         authinfo = orm.AuthInfo(computer=new_comp, user=orm.User.objects.get_default())
@@ -46,7 +46,8 @@ class TestComputer(AiidaTestCase):
     def test_delete(self):
         """Test the deletion of a `Computer` instance."""
         new_comp = orm.Computer(
-            name='aaa', hostname='aaa', transport_type='local', scheduler_type='pbspro', workdir='/tmp/aiida').store()
+            name='aaa', hostname='aaa', transport_type='local', scheduler_type='pbspro', workdir='/tmp/aiida'
+        ).store()
 
         comp_pk = new_comp.pk
 

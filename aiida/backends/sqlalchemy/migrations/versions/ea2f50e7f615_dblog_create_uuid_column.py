@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -53,7 +53,7 @@ def set_new_uuid(connection):
         uuids.add(get_new_uuid())
 
     # Create the key/value pairs
-    key_values = ",".join("({}, '{}')".format(curr_id, curr_uuid) for curr_id, curr_uuid in zip(ids, uuids))
+    key_values = ','.join("({}, '{}')".format(curr_id, curr_uuid) for curr_id, curr_uuid in zip(ids, uuids))
 
     update_stm = """
         UPDATE db_dblog as t SET
@@ -68,8 +68,9 @@ def upgrade():
     connection = op.get_bind()
 
     # Create the UUID column
-    op.add_column('db_dblog',
-                  sa.Column('uuid', postgresql.UUID(), autoincrement=False, nullable=True, default=get_new_uuid))
+    op.add_column(
+        'db_dblog', sa.Column('uuid', postgresql.UUID(), autoincrement=False, nullable=True, default=get_new_uuid)
+    )
 
     # Populate the uuid column
     set_new_uuid(connection)

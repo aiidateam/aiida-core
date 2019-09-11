@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -31,8 +31,9 @@ from .user import UserParamType
 from .test_module import TestModuleParamType
 from .workflow import WorkflowParamType
 
-__all__ = ('LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType',
-           'ConfigOptionParamType', 'DataParamType', 'GroupParamType', 'NodeParamType', 'MpirunCommandParamType',
-           'MultipleValueParamType', 'NonEmptyStringParamType', 'PluginParamType', 'AbsolutePathParamType',
-           'ShebangParamType', 'UserParamType', 'TestModuleParamType', 'ProfileParamType', 'WorkflowParamType',
-           'ProcessParamType', 'ImportPath')
+__all__ = (
+    'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType',
+    'ConfigOptionParamType', 'DataParamType', 'GroupParamType', 'NodeParamType', 'MpirunCommandParamType',
+    'MultipleValueParamType', 'NonEmptyStringParamType', 'PluginParamType', 'AbsolutePathParamType', 'ShebangParamType',
+    'UserParamType', 'TestModuleParamType', 'ProfileParamType', 'WorkflowParamType', 'ProcessParamType', 'ImportPath'
+)

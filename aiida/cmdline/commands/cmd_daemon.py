@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -91,6 +91,7 @@ def status(all_profiles):
 
     for profile in profiles:
         client = get_daemon_client(profile.name)
+        delete_stale_pid_file(client)
         click.secho('Profile: ', fg='red', bold=True, nl=False)
         click.secho('{}'.format(profile.name), bold=True)
         result = get_daemon_status(client)

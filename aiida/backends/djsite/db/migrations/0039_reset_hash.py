@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -30,7 +30,7 @@ _HASH_EXTRA_KEY = '_aiida_hash'
 
 
 def notify_user(apps, schema_editor):  # pylint: disable=unused-argument
-    echo_warning("Invalidating all the hashes of all the nodes. Please run verdi rehash", bold=True)
+    echo_warning('Invalidating all the hashes of all the nodes. Please run verdi rehash', bold=True)
 
 
 class Migration(migrations.Migration):
@@ -44,6 +44,7 @@ class Migration(migrations.Migration):
         migrations.RunPython(notify_user, reverse_code=notify_user),
         migrations.RunSQL(
             """UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""",
-            reverse_sql="""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];"""),
+            reverse_sql="""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];"""
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

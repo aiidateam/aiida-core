@@ -36,7 +36,7 @@ When running AiiDA in multiple virtual environments (using ``virtualenv`` or ``c
 you can ask AiiDA to use a separate ``.aiida`` configuration directory per environment.
 
 1. Create your virtual environment ``aiida2``
-2. Edit the activation script ``~/.virtualenvs/aiida2/bin/activate`` 
+2. Edit the activation script ``~/.virtualenvs/aiida2/bin/activate``
    and append a line to set the ``AIIDA_PATH`` environment variable::
 
     export AIIDA_PATH='~/.virtualenvs/aiida2'  # use .aiida configuration in this folder
@@ -127,8 +127,8 @@ add the following code to a ``.py`` file (create one if there isn't any) in ``<h
       load_ipython_extension(ipython)
 
 This file will be executed when the ipython kernel starts up and enable the line magic ``%aiida``.
-Alternatively, if you have a ``aiida_core`` repository checked out locally,
-you can just copy the file ``<aiida_core>/aiida/tools/ipython/aiida_magic_register.py`` to the same folder.
+Alternatively, if you have a ``aiida-core`` repository checked out locally,
+you can just copy the file ``<aiida-core>/aiida/tools/ipython/aiida_magic_register.py`` to the same folder.
 The current ipython profile folder can be located using::
 
   ipython locate profile

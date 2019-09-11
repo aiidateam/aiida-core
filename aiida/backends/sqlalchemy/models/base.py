@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -41,8 +41,8 @@ class _QueryProperty(object):
 class _SessionProperty(object):
     def __get__(self, obj, _type):
         if not aiida.backends.sqlalchemy.get_scoped_session():
-            raise InvalidOperation("You need to call load_dbenv before "
-                                   "accessing the session of SQLALchemy.")
+            raise InvalidOperation('You need to call load_dbenv before '
+                                   'accessing the session of SQLALchemy.')
         return aiida.backends.sqlalchemy.get_scoped_session()
 
 

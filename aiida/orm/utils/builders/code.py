@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -20,7 +20,7 @@ from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.common.utils import ErrorAccumulator
 
 
-class CodeBuilder(object):  # pylint: disable=useless-object-inheritance
+class CodeBuilder(object):
     """Build a code with validation of attribute combinations"""
 
     def __init__(self, **kwargs):
@@ -60,8 +60,10 @@ class CodeBuilder(object):  # pylint: disable=useless-object-inheritance
             code = Code(local_executable=self._get_and_count('code_rel_path', used), files=file_list)
         else:
             code = Code(
-                remote_computer_exec=(self._get_and_count('computer', used),
-                                      self._get_and_count('remote_abs_path', used)))
+                remote_computer_exec=(
+                    self._get_and_count('computer', used), self._get_and_count('remote_abs_path', used)
+                )
+            )
 
         code.label = self._get_and_count('label', used)
         code.description = self._get_and_count('description', used)
@@ -71,8 +73,9 @@ class CodeBuilder(object):  # pylint: disable=useless-object-inheritance
 
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
-            raise self.CodeValidationError('Unknown parameters passed to the CodeBuilder: {}'.format(", ".join(
-                sorted(passed_keys - used))))
+            raise self.CodeValidationError(
+                'Unknown parameters passed to the CodeBuilder: {}'.format(', '.join(sorted(passed_keys - used)))
+            )
 
         return code
 
@@ -169,8 +172,9 @@ class CodeBuilder(object):  # pylint: disable=useless-object-inheritance
     def validate_code_type(self):
         """Make sure the code type is set correctly"""
         if self._get('code_type') and self.code_type not in self.CodeType:
-            raise self.CodeValidationError('invalid code type: must be one of {}, not {}'.format(
-                list(self.CodeType), self.code_type))
+            raise self.CodeValidationError(
+                'invalid code type: must be one of {}, not {}'.format(list(self.CodeType), self.code_type)
+            )
 
     def validate_upload(self):
         """If the code is stored and uploaded, catch invalid on-computer attributes"""

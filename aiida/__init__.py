@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -31,15 +31,19 @@ from aiida.common.log import configure_logging
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.configuration import get_config_option, get_profile, load_profile
 
-__copyright__ = (u'Copyright (c), This file is part of the AiiDA platform. '
-                 u'For further information please visit http://www.aiida.net/. All rights reserved.')
+__copyright__ = (
+    u'Copyright (c), This file is part of the AiiDA platform. '
+    u'For further information please visit http://www.aiida.net/. All rights reserved.'
+)
 __license__ = 'MIT license, see LICENSE.txt file.'
-__version__ = '1.0.0b4'
+__version__ = '1.0.0b6'
 __authors__ = 'The AiiDA team.'
-__paper__ = (u'G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky,'
-             u'"AiiDA: automated interactive infrastructure and database for computational science", '
-             u'Comp. Mat. Sci 111, 218-230 (2016); https://doi.org/10.1016/j.commatsci.2015.09.013 '
-             u'- http://www.aiida.net.')
+__paper__ = (
+    u'G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky,'
+    u'"AiiDA: automated interactive infrastructure and database for computational science", '
+    u'Comp. Mat. Sci 111, 218-230 (2016); https://doi.org/10.1016/j.commatsci.2015.09.013 '
+    u'- http://www.aiida.net.'
+)
 __paper_short__ = 'G. Pizzi et al., Comp. Mat. Sci 111, 218 (2016).'
 
 # Configure the default logging
@@ -144,7 +148,7 @@ If you use AiiDA for publication purposes, please cite:
 """.format(__version__, __paper__)
 
 
-def get_file_header(comment_char="# "):
+def get_file_header(comment_char='# '):
     """
     Get the default header for source AiiDA source code files.
 

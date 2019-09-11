@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -40,7 +40,7 @@ def upgrade():
     conn = op.get_bind()
 
     # Invalidate all the hashes & inform the user
-    echo_warning("Invalidating all the hashes of all the nodes. Please run verdi rehash", bold=True)
+    echo_warning('Invalidating all the hashes of all the nodes. Please run verdi rehash', bold=True)
     statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
     conn.execute(statement)
 
@@ -50,6 +50,6 @@ def downgrade():
     conn = op.get_bind()
 
     # Invalidate all the hashes & inform the user
-    echo_warning("Invalidating all the hashes of all the nodes. Please run verdi rehash", bold=True)
+    echo_warning('Invalidating all the hashes of all the nodes. Please run verdi rehash', bold=True)
     statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
     conn.execute(statement)

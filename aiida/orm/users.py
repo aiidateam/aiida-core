@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -133,13 +133,13 @@ class User(entities.Entity):
         :return: the user full name
         """
         if self.first_name and self.last_name:
-            full_name = "{} {} ({})".format(self.first_name, self.last_name, self.email)
+            full_name = '{} {} ({})'.format(self.first_name, self.last_name, self.email)
         elif self.first_name:
-            full_name = "{} ({})".format(self.first_name, self.email)
+            full_name = '{} ({})'.format(self.first_name, self.email)
         elif self.last_name:
-            full_name = "{} ({})".format(self.last_name, self.email)
+            full_name = '{} ({})'.format(self.last_name, self.email)
         else:
-            full_name = "{}".format(self.email)
+            full_name = '{}'.format(self.email)
 
         return full_name
 

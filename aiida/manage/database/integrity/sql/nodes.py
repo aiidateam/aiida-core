@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -54,11 +54,13 @@ SELECT_NODES_WITH_INVALID_TYPE = """
     WHERE node.node_type NOT SIMILAR TO %(valid_node_types)s;
     """
 
-INVALID_NODE_SELECT_STATEMENTS = (AttributeDict({
-    'sql': SELECT_NODES_WITH_INVALID_TYPE,
-    'parameters': {
-        'valid_node_types': VALID_NODE_TYPE_STRING
-    },
-    'headers': ['ID', 'UUID', 'Type'],
-    'message': 'detected nodes with invalid type'
-}),)
+INVALID_NODE_SELECT_STATEMENTS = (
+    AttributeDict({
+        'sql': SELECT_NODES_WITH_INVALID_TYPE,
+        'parameters': {
+            'valid_node_types': VALID_NODE_TYPE_STRING
+        },
+        'headers': ['ID', 'UUID', 'Type'],
+        'message': 'detected nodes with invalid type'
+    }),
+)

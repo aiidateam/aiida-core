@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -37,12 +37,12 @@ def verdi_export():
 @click.option('-d', '--data', is_flag=True, help='Print the data contents and exit.')
 @click.option('-m', '--meta-data', is_flag=True, help='Print the meta data contents and exit.')
 def inspect(archive, version, data, meta_data):
-    """Inspect the contents of an exported archive without importing the content.
+    """Inspect contents of an exported archive without importing it.
 
     By default a summary of the archive contents will be printed. The various options can be used to change exactly what
     information is displayed.
     """
-    from aiida.common.archive import Archive, CorruptArchive
+    from aiida.tools.importexport import Archive, CorruptArchive
 
     with Archive(archive) as archive_object:
         try:
@@ -73,38 +73,48 @@ def inspect(archive, version, data, meta_data):
     '--input-forward/--no-input-forward',
     default=False,
     show_default=True,
-    help='Follow forward INPUT links (recursively) when calculating the node set to export.')
+    help='Follow forward INPUT links (recursively) when calculating the node set to export.'
+)
 @click.option(
     '--create-reversed/--no-create-reversed',
     default=True,
     show_default=True,
-    help='Follow reverse CREATE links (recursively) when calculating the node set to export.')
+    help='Follow reverse CREATE links (recursively) when calculating the node set to export.'
+)
 @click.option(
     '--return-reversed/--no-return-reversed',
     default=False,
     show_default=True,
-    help='Follow reverse RETURN links (recursively) when calculating the node set to export.')
+    help='Follow reverse RETURN links (recursively) when calculating the node set to export.'
+)
 @click.option(
     '--call-reversed/--no-call-reversed',
     default=False,
     show_default=True,
-    help='Follow reverse CALL links (recursively) when calculating the node set to export.')
+    help='Follow reverse CALL links (recursively) when calculating the node set to export.'
+)
 @click.option(
     '--include-logs/--exclude-logs',
     default=True,
     show_default=True,
-    help='Include or exclude logs for node(s) in export.')
+    help='Include or exclude logs for node(s) in export.'
+)
 @click.option(
     '--include-comments/--exclude-comments',
     default=True,
     show_default=True,
-    help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).')
+    help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).'
+)
 @decorators.with_dbenv()
-def create(output_file, codes, computers, groups, nodes, archive_format, force, input_forward, create_reversed,
-           return_reversed, call_reversed, include_comments, include_logs):
+def create(
+    output_file, codes, computers, groups, nodes, archive_format, force, input_forward, create_reversed,
+    return_reversed, call_reversed, include_comments, include_logs
+):
     """
-    Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
-    sharing purposes.
+    Export parts of the AiiDA database to file for sharing.
+
+    Various entities can be exported, such as Codes, Computers, Groups, Nodes,
+    Comments, Logs, ...
     """
     from aiida.tools.importexport import export, export_zip
 
@@ -159,15 +169,14 @@ def create(output_file, codes, computers, groups, nodes, archive_format, force, 
 def migrate(input_file, output_file, force, silent, archive_format):
     # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """
-    Migrate an existing export archive file to the most recent version of the export format
+    Migrate an old export archive file to the most recent format.
     """
     import tarfile
     import zipfile
 
     from aiida.common import json
     from aiida.common.folders import SandboxFolder
-    from aiida.common.archive import extract_zip, extract_tar
-    from aiida.tools.importexport import migration
+    from aiida.tools.importexport import migration, extract_zip, extract_tar
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')

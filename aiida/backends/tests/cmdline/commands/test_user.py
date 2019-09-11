@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -19,16 +19,16 @@ from aiida.cmdline.commands import cmd_user
 from aiida import orm
 
 user_1 = {
-    'email': "testuser1@localhost",
-    'first_name': "Max",
-    'last_name': "Mueller",
-    'institution': "Testing Instiute"
+    'email': 'testuser1@localhost',
+    'first_name': 'Max',
+    'last_name': 'Mueller',
+    'institution': 'Testing Instiute'
 }
 user_2 = {
-    'email': "testuser2@localhost",
-    'first_name': "Sabine",
-    'last_name': "Garching",
-    'institution': "Second testing instiute"
+    'email': 'testuser2@localhost',
+    'first_name': 'Sabine',
+    'last_name': 'Garching',
+    'institution': 'Second testing instiute'
 }
 
 

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -16,7 +16,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
 
 
-class ComputerBuilder(object):  # pylint: disable=useless-object-inheritance
+class ComputerBuilder(object):
     """Build a computer with validation of attribute combinations"""
 
     @staticmethod
@@ -96,14 +96,18 @@ class ComputerBuilder(object):  # pylint: disable=useless-object-inheritance
             try:
                 mpiprocs_per_machine = int(mpiprocs_per_machine)
             except ValueError:
-                raise self.ComputerValidationError("Invalid value provided for mpiprocs_per_machine, "
-                                                   "must be a valid integer")
+                raise self.ComputerValidationError(
+                    'Invalid value provided for mpiprocs_per_machine, '
+                    'must be a valid integer'
+                )
             if mpiprocs_per_machine <= 0:
-                raise self.ComputerValidationError("Invalid value provided for mpiprocs_per_machine, "
-                                                   "must be positive")
+                raise self.ComputerValidationError(
+                    'Invalid value provided for mpiprocs_per_machine, '
+                    'must be positive'
+                )
             computer.set_default_mpiprocs_per_machine(mpiprocs_per_machine)
 
-        mpirun_command_internal = self._get_and_count('mpirun_command', used).strip().split(" ")
+        mpirun_command_internal = self._get_and_count('mpirun_command', used).strip().split(' ')
         if mpirun_command_internal == ['']:
             mpirun_command_internal = []
         computer._mpirun_command_validator(mpirun_command_internal)  # pylint: disable=protected-access
@@ -111,8 +115,9 @@ class ComputerBuilder(object):  # pylint: disable=useless-object-inheritance
 
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
-            raise self.ComputerValidationError('Unknown parameters passed to the ComputerBuilder: {}'.format(", ".join(
-                sorted(passed_keys - used))))
+            raise self.ComputerValidationError(
+                'Unknown parameters passed to the ComputerBuilder: {}'.format(', '.join(sorted(passed_keys - used)))
+            )
 
         return computer
 

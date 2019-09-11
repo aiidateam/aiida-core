@@ -163,3 +163,20 @@ A process checkpoint is a complete representation of a ``Process`` instance in m
 Since it is a complete representation, the ``Process`` instance can also be fully reconstructed from such a checkpoint.
 At any state transition of a process, a checkpoint will be created, by serializing the process instance and storing it as an attribute on the corresponding process node.
 This mechanism is the final cog in the machine, together with the persisted process queue of RabbitMQ as explained in the previous section, that allows processes to continue after the machine they were running on, has been shutdown and restarted.
+
+
+.. _concepts_process_sealing:
+
+Process sealing
+===============
+One of the cardinal rules of AiiDA is that once a node is *stored*, it is immutable, which means that its attributes can no longer be changed.
+This rule is a problem for processes, however, since in order to be able to start running it, its corresponding process node first has to be stored.
+However, at that point its attributes, such as the process state or other mutable attributes, can no longer be changed by the engine throughout the lifetime of the corresponding process.
+To overcome this limitation, the concept of *updatable* attributes is introduced.
+These are special attributes that are allowed to be changed *even* when the process node is already stored *and* the corresponding process is still active.
+To mark the point where a process is terminated and even the updatable attributes on the process node are to be considered immutable, the node is *sealed*.
+A sealed process node behaves exactly like a normal stored node, as in *all* of its attributes are immutable.
+In addition, once a process node is sealed, no more incoming or outgoing links can be attached to it.
+Unsealed process nodes can also not be exported, because they belong to processes that are still active.
+Note that the sealing concept does not apply to data nodes and they are exportable as soon as they are stored.
+To determine whether a process node is sealed, one can use the property :py:meth:`~aiida.orm.utils.mixins.Sealable.is_sealed`.

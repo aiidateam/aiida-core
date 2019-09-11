@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -76,7 +76,7 @@ def get_args(cls, dist, header=None):
         for name, epoint in dist.get_entry_map(group).items():
             # ensure_safe_name
             if re.search(r'[\\/]', name):
-                raise ValueError("Path separators not allowed in script names")
+                raise ValueError('Path separators not allowed in script names')
             script_text = TEMPLATE.format(epoint.module_name, epoint.attrs[0], '.'.join(epoint.attrs))
             args = cls._get_script_args(type_, name, header, script_text)
             for res in args:

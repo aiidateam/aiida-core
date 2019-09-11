@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -69,4 +69,5 @@ class WorkflowNode(ProcessNode):
             raise ValueError(
                 'Workflow<{}> tried returning an unstored `Data` node. This likely means new `Data` is being created '
                 'inside the workflow. In order to preserve data provenance, use a `calcfunction` to create this node '
-                'and return its output from the workflow'.format(self.process_label))
+                'and return its output from the workflow'.format(self.process_label)
+            )

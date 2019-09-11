@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -35,7 +35,7 @@ class TestLogs(AiidaTestCase):
         Delete all the created log entries
         """
         super(TestLogs, self).tearDown()
-        orm.Log.objects.delete_many({})
+        orm.Log.objects.delete_all()
 
     @with_temp_dir
     def test_critical_log_msg_and_metadata(self, temp_dir):
@@ -50,6 +50,7 @@ class TestLogs(AiidaTestCase):
 
         # After storing the node, logs above log level should be stored
         calc.store()
+        calc.seal()
         calc.logger.critical(message)
 
         # Store Log metadata
@@ -77,6 +78,7 @@ class TestLogs(AiidaTestCase):
         # Create node
         calc = orm.CalculationNode()
         calc.store()
+        calc.seal()
 
         # Create log message
         calc.logger.critical(log_msg)
@@ -111,6 +113,7 @@ class TestLogs(AiidaTestCase):
         # Create node
         calc = orm.CalculationNode()
         calc.store()
+        calc.seal()
 
         # Create log message
         calc.logger.critical(log_msg)
@@ -164,10 +167,11 @@ class TestLogs(AiidaTestCase):
     @with_temp_dir
     def test_multiple_imports_for_single_node(self, temp_dir):
         """Test multiple imports for single node with different logs are imported correctly"""
-        log_msgs = ["Life is like riding a bicycle.", "To keep your balance,", "you must keep moving."]
+        log_msgs = ['Life is like riding a bicycle.', 'To keep your balance,', 'you must keep moving.']
 
         # Create Node and initial log message and save UUIDs prior to export
         node = orm.CalculationNode().store()
+        node.seal()
         node.logger.critical(log_msgs[0])
         node_uuid = node.uuid
         log_uuid_existing = orm.QueryBuilder().append(orm.Log, project=['uuid']).all()
@@ -261,17 +265,18 @@ class TestLogs(AiidaTestCase):
         in pairs, except for their UUID.
         """
         export_filenames = {
-            "EXISTING": "export_EXISTING_db.tar.gz",
-            "FULL": "export_FULL_db.tar.gz",
-            "NEW": "export_NEW_db.tar.gz"
+            'EXISTING': 'export_EXISTING_db.tar.gz',
+            'FULL': 'export_FULL_db.tar.gz',
+            'NEW': 'export_NEW_db.tar.gz'
         }
 
-        log_msgs = ["Life is like riding a bicycle.", "To keep your balance,", "you must keep moving."]
+        log_msgs = ['Life is like riding a bicycle.', 'To keep your balance,', 'you must keep moving.']
 
         ## Part I
         # Create node and save UUID
         calc = orm.CalculationNode()
         calc.store()
+        calc.seal()
         calc_uuid = calc.uuid
 
         # Create first log message
@@ -287,7 +292,7 @@ class TestLogs(AiidaTestCase):
         existing_log_uuids = [str(export_logs.all()[0][0])]
 
         # Export "EXISTING" DB
-        export_file_existing = os.path.join(temp_dir, export_filenames["EXISTING"])
+        export_file_existing = os.path.join(temp_dir, export_filenames['EXISTING'])
         export([calc], outfile=export_file_existing, silent=True)
 
         # Add remaining Log messages
@@ -307,7 +312,7 @@ class TestLogs(AiidaTestCase):
         self.assertEqual(len(full_log_uuids), len(log_msgs))
 
         # Export "FULL" DB
-        export_file_full = os.path.join(temp_dir, export_filenames["FULL"])
+        export_file_full = os.path.join(temp_dir, export_filenames['FULL'])
         export([calc], outfile=export_file_full, silent=True)
 
         # Clean database
@@ -345,7 +350,7 @@ class TestLogs(AiidaTestCase):
         self.assertEqual(len(new_log_uuids), len(log_msgs))
 
         # Export "NEW" DB
-        export_file_new = os.path.join(temp_dir, export_filenames["NEW"])
+        export_file_new = os.path.join(temp_dir, export_filenames['NEW'])
         export([calc], outfile=export_file_new, silent=True)
 
         # Clean database

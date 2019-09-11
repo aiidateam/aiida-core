@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -39,7 +39,7 @@ def get_default(key, ctx):
     """
     try:
         value = getattr(ctx.code_builder, key)
-        if value == "":
+        if value == '':
             value = None
     except KeyError:
         value = None
@@ -78,7 +78,7 @@ def set_code_builder(ctx, param, value):
 @options.CONFIG_FILE()
 @with_dbenv()
 def setup_code(non_interactive, **kwargs):
-    """Setup a new Code."""
+    """Setup a new code."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
 
@@ -125,7 +125,7 @@ def setup_code(non_interactive, **kwargs):
 @click.pass_context
 @with_dbenv()
 def code_duplicate(ctx, code, non_interactive, **kwargs):
-    """Create duplicate of existing Code."""
+    """Duplicate a code allowing to change some parameters."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
 
@@ -166,7 +166,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @options.VERBOSE()
 @with_dbenv()
 def show(code, verbose):
-    """Display detailed information for the given CODE."""
+    """Display detailed information for a code."""
     click.echo(tabulate.tabulate(code.get_full_text_info(verbose)))
 
 
@@ -174,7 +174,11 @@ def show(code, verbose):
 @arguments.CODES()
 @with_dbenv()
 def delete(codes):
-    """Delete codes that have not yet been used for calculations, i.e. if it has outgoing links."""
+    """Delete a code.
+
+    Note that it is possible to delete a code only if it has not yet been used
+    as an input of a calculation, i.e., if it does not have outgoing links.
+    """
     from aiida.common.exceptions import InvalidOperation
     from aiida.orm import Node
 
@@ -193,7 +197,7 @@ def delete(codes):
 @arguments.CODES()
 @with_dbenv()
 def hide(codes):
-    """Hide one or more codes from the `verdi code list` command."""
+    """Hide one or more codes from `verdi code list`."""
     for code in codes:
         code.hide()
         echo.echo_success('Code<{}> {} hidden'.format(code.pk, code.full_label))
@@ -203,7 +207,7 @@ def hide(codes):
 @arguments.CODES()
 @with_dbenv()
 def reveal(codes):
-    """Reveal one or more hidden codes to the `verdi code list` command."""
+    """Reveal one or more hidden codes in `verdi code list`."""
     for code in codes:
         code.reveal()
         echo.echo_success('Code<{}> {} revealed'.format(code.pk, code.full_label))
@@ -233,7 +237,7 @@ def relabel(code, label):
 @click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False, help='Show owners of codes.')
 @with_dbenv()
 def code_list(computer, input_plugin, all_entries, all_users, show_owner):
-    """List the codes in the database."""
+    """List the available codes."""
     from aiida.orm import Code  # pylint: disable=redefined-outer-name
     from aiida import orm
 
@@ -262,7 +266,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
             }
         }]
 
-    echo.echo("# List of configured codes:")
+    echo.echo('# List of configured codes:')
     echo.echo("# (use 'verdi code show CODEID' to see the details)")
 
     showed_results = False
@@ -270,15 +274,15 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     # pylint: disable=invalid-name
     if computer is not None:
         qb = orm.QueryBuilder()
-        qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
+        qb.append(Code, tag='code', filters=qb_code_filters, project=['id', 'label'])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(orm.User, with_node="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.User, with_node='code', project=['email'], filters=qb_user_filters)
         # We also add the filter on computer. This will automatically
         # return codes that have a computer (and of course satisfy the
         # other filters). The codes that have a computer attached are the
         # remote codes.
-        qb.append(orm.Computer, with_node="code", project=["name"], filters=qb_computer_filters)
+        qb.append(orm.Computer, with_node='code', project=['name'], filters=qb_computer_filters)
         qb.order_by({Code: {'id': 'asc'}})
         showed_results = qb.count() > 0
         print_list_res(qb, show_owner)
@@ -288,11 +292,11 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         # Print all codes that have a computer assigned to them
         # (these are the remote codes)
         qb = orm.QueryBuilder()
-        qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
+        qb.append(Code, tag='code', filters=qb_code_filters, project=['id', 'label'])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(orm.User, with_node="code", project=["email"], filters=qb_user_filters)
-        qb.append(orm.Computer, with_node="code", project=["name"])
+        qb.append(orm.User, with_node='code', project=['email'], filters=qb_user_filters)
+        qb.append(orm.Computer, with_node='code', project=['name'])
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
         showed_results = showed_results or qb.count() > 0
@@ -300,25 +304,25 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         # Now print all the local codes. To get the local codes we ask
         # the dbcomputer_id variable to be None.
         qb = orm.QueryBuilder()
-        comp_non_existence = {"dbcomputer_id": {"==": None}}
+        comp_non_existence = {'dbcomputer_id': {'==': None}}
         if not qb_code_filters:
             qb_code_filters = comp_non_existence
         else:
-            new_qb_code_filters = {"and": [qb_code_filters, comp_non_existence]}
+            new_qb_code_filters = {'and': [qb_code_filters, comp_non_existence]}
             qb_code_filters = new_qb_code_filters
-        qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
+        qb.append(Code, tag='code', filters=qb_code_filters, project=['id', 'label'])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(orm.User, with_node="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.User, with_node='code', project=['email'], filters=qb_user_filters)
         qb.order_by({Code: {'id': 'asc'}})
         showed_results = showed_results or qb.count() > 0
         print_list_res(qb, show_owner)
     if not showed_results:
-        echo.echo("# No codes found matching the specified criteria.")
+        echo.echo('# No codes found matching the specified criteria.')
 
 
 def print_list_res(qb_query, show_owner):
-    """Print list of codes."""
+    """Print a list of available codes."""
     # pylint: disable=invalid-name
     for tuple_ in qb_query.all():
         if len(tuple_) == 3:
@@ -327,15 +331,15 @@ def print_list_res(qb_query, show_owner):
         elif len(tuple_) == 4:
             (pk, label, useremail, computername) = tuple_
         else:
-            echo.echo_warning("Wrong tuple size")
+            echo.echo_warning('Wrong tuple size')
             return
 
         if show_owner:
-            owner_string = " ({})".format(useremail)
+            owner_string = ' ({})'.format(useremail)
         else:
-            owner_string = ""
+            owner_string = ''
         if computername is None:
-            computernamestring = ""
+            computernamestring = ''
         else:
-            computernamestring = "@{}".format(computername)
-        echo.echo("* pk {} - {}{}{}".format(pk, label, computernamestring, owner_string))
+            computernamestring = '@{}'.format(computername)
+        echo.echo('* pk {} - {}{}{}'.format(pk, label, computernamestring, owner_string))

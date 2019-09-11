@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -35,7 +35,7 @@ class ModelWrapper(object):
     * `setattr`: if the item corresponds to a mutable model field, changes are flushed after performing the change
     """
 
-    # pylint: disable=too-many-instance-attributes,useless-object-inheritance
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(self, model, auto_flush=()):
         """Construct the ModelWrapper.

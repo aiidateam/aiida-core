@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -45,7 +45,9 @@ def config_needs_migrating(config):
     if oldest_compatible_version > CURRENT_CONFIG_VERSION:
         raise exceptions.ConfigurationVersionError(
             'The configuration file has version {} which is not compatible with the current version {}.'.format(
-                current_version, CURRENT_CONFIG_VERSION))
+                current_version, CURRENT_CONFIG_VERSION
+            )
+        )
 
     return CURRENT_CONFIG_VERSION > current_version
 

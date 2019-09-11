@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -21,8 +21,8 @@ from concurrent.futures import Future
 import six
 from click.testing import CliRunner
 from tornado import gen
-import kiwipy
 import plumpy
+import kiwipy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils import processes as test_processes
@@ -50,7 +50,8 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         profile = get_config().current_profile
         self.daemon_client = DaemonClient(profile)
         self.daemon_pid = subprocess.Popen(
-            self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout).pid
+            self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout
+        ).pid
         self.runner = get_manager().create_runner(rmq_submit=True)
         self.cli_runner = CliRunner()
 
@@ -94,7 +95,8 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         # future to True. This will be our signal that we can start testing
         waiting_future = Future()
         filters = kiwipy.BroadcastFilter(
-            lambda *args, **kwargs: waiting_future.set_result(True), sender=calc.pk, subject='state_changed.*.waiting')
+            lambda *args, **kwargs: waiting_future.set_result(True), sender=calc.pk, subject='state_changed.*.waiting'
+        )
         self.runner.communicator.add_broadcast_subscriber(filters)
 
         # The process may already have been picked up by the daemon and put in the waiting state, before the subscriber
@@ -133,6 +135,7 @@ class TestVerdiProcess(AiidaTestCase):
         from aiida.orm.groups import Group
 
         cls.calcs = []
+        cls.process_label = 'SomeDummyWorkFunctionNode'
 
         # Create 6 WorkFunctionNodes and WorkChainNodes (one for each ProcessState)
         for state in ProcessState:
@@ -143,6 +146,9 @@ class TestVerdiProcess(AiidaTestCase):
             # Set the WorkFunctionNode as successful
             if state == ProcessState.FINISHED:
                 calc.set_exit_status(0)
+
+            # Give a `process_label` to the `WorkFunctionNodes` so the `--process-label` option can be tested
+            calc.set_attribute('process_label', cls.process_label)
 
             calc.store()
             cls.calcs.append(calc)
@@ -245,6 +251,15 @@ class TestVerdiProcess(AiidaTestCase):
             self.assertEqual(len(get_result_lines(result)), 1)
             self.assertEqual(get_result_lines(result)[0], str(self.calcs[0].pk))
 
+        # The process label should limit the query set to nodes with the given `process_label` attribute
+        for flag in ['-L', '--process-label']:
+            for process_label in [self.process_label, self.process_label.replace('Dummy', '%')]:
+                result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, process_label])
+                self.assertClickResultNoException(result)
+                self.assertEqual(len(get_result_lines(result)), 3)  # Should only match the active `WorkFunctionNodes`
+                for line in get_result_lines(result):
+                    self.assertIn(self.process_label, line.strip())
+
     def test_process_show(self):
         """Test verdi process show"""
         # We must choose a Node we can store
@@ -320,8 +335,9 @@ class TestVerdiProcess(AiidaTestCase):
         # Max depth should limit nesting level
         for flag in ['-m', '--max-depth']:
             for flag_value in [1, 2]:
-                result = self.cli_runner.invoke(cmd_process.process_report,
-                                                [str(grandparent.pk), flag, str(flag_value)])
+                result = self.cli_runner.invoke(
+                    cmd_process.process_report, [str(grandparent.pk), flag, str(flag_value)]
+                )
                 self.assertIsNone(result.exception, result.output)
                 self.assertEqual(len(get_result_lines(result)), flag_value)
 
@@ -396,7 +412,7 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         # Default cmd should not throw the warning as we are below the limit
         result = self.cli_runner.invoke(cmd_process.process_list)
         self.assertClickResultNoException(result)
-        warning_phrase = "of the available daemon worker slots have been used!"
+        warning_phrase = 'of the available daemon worker slots have been used!'
         self.assertTrue(all([warning_phrase not in line for line in get_result_lines(result)]))
 
         # Add one more running node to put us over the limit
@@ -407,7 +423,7 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         # Now the warning should fire
         result = self.cli_runner.invoke(cmd_process.process_list)
         self.assertClickResultNoException(result)
-        warning_phrase = "% of the available daemon worker slots have been used!"
+        warning_phrase = '% of the available daemon worker slots have been used!'
         self.assertTrue(any([warning_phrase in line for line in get_result_lines(result)]))
 
 

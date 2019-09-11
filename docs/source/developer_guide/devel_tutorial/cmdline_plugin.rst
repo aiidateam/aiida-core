@@ -60,7 +60,7 @@ First, we create a new subpackage (this is optional but helps structure our plug
 Inside that module we will first create an empty command-group (it will do nothing but subcommands can be added to it later). which can be called from the commandline using ``verdi data yourplugin-float``. Command groups are explained in the `Click documentation <click_docs>`_.
 
 File ``float_cmd.py``::
-   
+
    import click  # This we will use in a later step
 
    from aiida.cmdline.commands import data_cmd
@@ -121,7 +121,7 @@ A subcommand to a group can be defined using the following pattern::
 Where the subcommand will now automatically have the name of the function. If you want it to have a different name, simply pass it as an argument to the ``<group>.command('<subcmd name>')`` decorator.
 
 ::
-   
+
    def export(...):
       """..."""
       load_dbenv_if_not_loaded()  # Important to load the dbenv in the last moment

@@ -17,22 +17,22 @@ high-level objects (for instance, for a crystal structure, there can be a method
 for setting the unit cell, one for adding an atom in a given position, ...).
 Internally, you should choose where to store the content. There are two options:
 
-* **In the AiiDA database**. This is useful for small amounts of data, that you plan 
+* **In the AiiDA database**. This is useful for small amounts of data, that you plan
   to query. In this case, use ``self._set_attr(attr_name, attr_value)`` to store
-  the required value. 
-* **In the AiiDA file repository (as a file on the disk)**. This is suitable 
-  for big files and quantities that you do not 
-  want to query. In this case, access the folder using ``self.folder`` and 
+  the required value.
+* **In the AiiDA file repository (as a file on the disk)**. This is suitable
+  for big files and quantities that you do not
+  want to query. In this case, access the folder using ``self.folder`` and
   use the methods of ``self.folder`` to create files, subfolders, ...
-  
+
 Of course, it is also good practice to provide "getter" methods to retrieve
 the data in the database and return it back to the user. The idea is that the
 user can operate directly only with the methods you provide, and should not
 need to know how you decided to store the data inside the AiiDA database.
 
-As a simple example that we will use for the exercise below, 
-imagine that we want to introduce a new type of data node that simply 
-stores a float number. We will call it ``FloatData``, and the class 
+As a simple example that we will use for the exercise below,
+imagine that we want to introduce a new type of data node that simply
+stores a float number. We will call it ``FloatData``, and the class
 implementation can look like this::
 
    from aiida.orm import Data
@@ -143,7 +143,7 @@ Therefore, you have to update the ``retdict`` object accordingly::
         })
 
 You need then to change the main code to use the values obtained from the
-two nodes, rather than from a single node as before. This should be easy, 
+two nodes, rather than from a single node as before. This should be easy,
 so we leave this task to you. Note that we plan to use the same python code
 to actually perform the sum, so the JSON file to be generated should have
 the same format.
@@ -167,11 +167,11 @@ plugin.
 
 Submission script
 /////////////////
-Finally, adapt your submission script to create the correct input nodes, 
+Finally, adapt your submission script to create the correct input nodes,
 and try to perform a sum of two numbers to verify that you did all correctly!
 
 .. note:: After (re)registering the entry points, do not forget to restart the daemon so that
    it will recognize the change! The same should be done if you do any change to
    the plugin, otherwise the daemon may have cached the old file and will keep
    using it.
-   
+

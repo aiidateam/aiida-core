@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -22,12 +22,9 @@ __all__ = ('CalculationNode',)
 
 class CalculationNode(ProcessNode):
     """Base class for all nodes representing the execution of a calculation process."""
-    # pylint: disable=too-few-public-methods
 
-    _cachable = True
-
-    # Calculation nodes are storable
-    _storable = True
+    _storable = True  # Calculation nodes are storable
+    _cachable = True  # Calculation nodes can be cached from
     _unstorable_message = 'storing for this node has been disabled'
 
     @property

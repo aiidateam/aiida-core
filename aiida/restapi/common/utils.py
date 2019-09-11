@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -64,7 +64,7 @@ class CustomJSONEncoder(JSONEncoder):
 
 
 class DatetimePrecision(object):
-    # pylint: disable=too-few-public-methods,useless-object-inheritance
+    # pylint: disable=too-few-public-methods
     """
     A simple class which stores a datetime object with its precision. No
     internal check is done (cause itis not possible).
@@ -79,16 +79,16 @@ class DatetimePrecision(object):
         """ Constructor to check valid datetime object and precision """
 
         if not isinstance(dtobj, datetime):
-            raise TypeError("dtobj argument has to be a datetime object")
+            raise TypeError('dtobj argument has to be a datetime object')
 
         if not isinstance(precision, int):
-            raise TypeError("precision argument has to be an integer")
+            raise TypeError('precision argument has to be an integer')
 
         self.dtobj = dtobj
         self.precision = precision
 
 
-class Utils(object):  # pylint: disable=useless-object-inheritance
+class Utils(object):
     """
     A class that gathers all the utility functions for parsing URI,
     validating request, pass it to the translator, and building HTTP response
@@ -150,7 +150,7 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         return [f for f in path.split('/') if f]
 
     def parse_path(self, path_string, parse_pk_uuid=None):
-        # pylint: disable=too-many-return-statements,too-many-branches
+        # pylint: disable=too-many-return-statements,too-many-branches, too-many-statements
         """
         Takes the path and parse it checking its validity. Does not parse "io",
         "content" fields. I do not check the validity of the path, since I assume
@@ -167,7 +167,7 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         ## Initialization
         page = None
         node_id = None
-        query_type = "default"
+        query_type = 'default'
         path = self.split_path(self.strip_api_prefix(path_string))
 
         ## Pop out iteratively the "words" of the path until it is an empty
@@ -214,23 +214,29 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         if path[0] == 'schema':
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError("url requesting schema resources do not admit further fields")
+                raise RestInputValidationError('url requesting schema resources do not accept further fields')
             else:
                 return (resource_type, page, node_id, query_type)
         elif path[0] == 'statistics':
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError("url requesting statistics resources do not admit further fields")
+                raise RestInputValidationError('url requesting statistics resources do not accept further fields')
             else:
                 return (resource_type, page, node_id, query_type)
-        elif path[0] == "io" or path[0] == "content":
+        elif path[0] == 'types':
+            query_type = path.pop(0)
+            if path:
+                raise RestInputValidationError('url requesting types do not accept further fields')
+            else:
+                return (resource_type, page, node_id, query_type)
+        elif path[0] == 'io' or path[0] == 'content':
             path.pop(0)
             query_type = path.pop(0)
             if not path:
                 return (resource_type, page, node_id, query_type)
 
         # Page (this has to be in any case the last field)
-        if path[0] == "page":
+        if path[0] == 'page':
             path.pop(0)
             if not path:
                 page = 1
@@ -239,13 +245,9 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
 
         return (resource_type, page, node_id, query_type)
 
-    def validate_request(self,
-                         limit=None,
-                         offset=None,
-                         perpage=None,
-                         page=None,
-                         query_type=None,
-                         is_querystring_defined=False):
+    def validate_request(
+        self, limit=None, offset=None, perpage=None, page=None, query_type=None, is_querystring_defined=False
+    ):
         # pylint: disable=fixme,no-self-use,too-many-arguments,too-many-branches
         """
         Performs various checks on the consistency of the request.
@@ -257,18 +259,20 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         # TODO Consider using **kwargs so to make easier to add more validations
         # 1. perpage incompatible with offset and limits
         if perpage is not None and (limit is not None or offset is not None):
-            raise RestValidationError("perpage key is incompatible with limit and offset")
+            raise RestValidationError('perpage key is incompatible with limit and offset')
         # 2. /page/<int: page> in path is incompatible with limit and offset
         if page is not None and (limit is not None or offset is not None):
-            raise RestValidationError("requesting a specific page is incompatible with limit and offset")
+            raise RestValidationError('requesting a specific page is incompatible with limit and offset')
         # 3. perpage requires that the path contains a page request
         if perpage is not None and page is None:
-            raise RestValidationError("perpage key requires that a page is "
-                                      "requested (i.e. the path must contain "
-                                      "/page/)")
+            raise RestValidationError(
+                'perpage key requires that a page is '
+                'requested (i.e. the path must contain '
+                '/page/)'
+            )
         # 4. No querystring if query type = schema'
         if query_type in ('schema') and is_querystring_defined:
-            raise RestInputValidationError("schema requests do not allow specifying a query string")
+            raise RestInputValidationError('schema requests do not allow specifying a query string')
 
     def paginate(self, page, perpage, total_count):
         """
@@ -290,17 +294,17 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         try:
             page = int(page)
         except ValueError:
-            raise InputValidationError("page number must be an integer")
+            raise InputValidationError('page number must be an integer')
         try:
             total_count = int(total_count)
         except ValueError:
-            raise InputValidationError("total_count must be an integer")
+            raise InputValidationError('total_count must be an integer')
         # Non-mandatory params
         if perpage is not None:
             try:
                 perpage = int(perpage)
             except ValueError:
-                raise InputValidationError("perpage must be an integer")
+                raise InputValidationError('perpage must be an integer')
         else:
             perpage = self.perpage_default
 
@@ -317,8 +321,10 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         # previous,
         #  and next page
         if page > last_page or page < 1:
-            raise RestInputValidationError("Non existent page requested. The "
-                                           "page range is [{} : {}]".format(first_page, last_page))
+            raise RestInputValidationError(
+                'Non existent page requested. The '
+                'page range is [{} : {}]'.format(first_page, last_page)
+            )
 
         limit = perpage
         offset = (page - 1) * perpage
@@ -348,17 +354,17 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         try:
             total_count = int(total_count)
         except ValueError:
-            raise InputValidationError("total_count must be a long integer")
+            raise InputValidationError('total_count must be a long integer')
 
         # non mandatory parameters
         if rel_pages is not None and not isinstance(rel_pages, dict):
-            raise InputValidationError("rel_pages must be a dictionary")
+            raise InputValidationError('rel_pages must be a dictionary')
 
         if url is not None:
             try:
                 url = str(url)
             except ValueError:
-                raise InputValidationError("url must be a string")
+                raise InputValidationError('url must be a string')
 
         ## Input consistency
         # rel_pages cannot be defined without url
@@ -370,7 +376,7 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         ## Setting mandatory headers
         # set X-Total-Count
         headers['X-Total-Count'] = total_count
-        expose_header = ["X-Total-Count"]
+        expose_header = ['X-Total-Count']
 
         ## Two auxiliary functions
         def split_url(url):
@@ -380,14 +386,14 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
                 question_mark = '?'
             else:
                 path = url
-                query_string = ""
-                question_mark = ""
+                query_string = ''
+                question_mark = ''
             return (path, query_string, question_mark)
 
         def make_rel_url(rel, page):
             new_path_elems = path_elems + ['page', str(page)]
             return '<' + '/'.join(new_path_elems) + \
-                   question_mark + query_string + ">; rel={}, ".format(rel)
+                   question_mark + query_string + '>; rel={}, '.format(rel)
 
         ## Setting non-mandatory parameters
         # set links to related pages
@@ -401,7 +407,7 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
                     if page is not None:
                         links.append(make_rel_url(rel, page))
                 headers['Link'] = ''.join(links)
-                expose_header.append("Link")
+                expose_header.append('Link')
             else:
                 pass
 
@@ -426,17 +432,17 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         ## Type checks
         # mandatory parameters
         if not isinstance(data, dict):
-            raise InputValidationError("data must be a dictionary")
+            raise InputValidationError('data must be a dictionary')
 
         # non-mandatory parameters
         if status is not None:
             try:
                 status = int(status)
             except ValueError:
-                raise InputValidationError("status must be an integer")
+                raise InputValidationError('status must be an integer')
 
         if headers is not None and not isinstance(headers, dict):
-            raise InputValidationError("header must be a dictionary")
+            raise InputValidationError('header must be a dictionary')
 
         # Build response
         response = jsonify(data)
@@ -467,7 +473,7 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         """
 
         if not isinstance(dtobj, DatetimePrecision):
-            TypeError("dtobj argument has to be a DatetimePrecision object")
+            TypeError('dtobj argument has to be a DatetimePrecision object')
 
         reference_datetime = dtobj.dtobj
         precision = dtobj.precision
@@ -482,7 +488,7 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         elif precision == 4:
             delta_time = timedelta(seconds=1)
         else:
-            raise RestValidationError("The datetime resolution is not valid.")
+            raise RestValidationError('The datetime resolution is not valid.')
 
         filters = {'and': [{'>=': reference_datetime}, {'<': reference_datetime + delta_time}]}
 
@@ -539,33 +545,33 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
 
         ## Check the reserved keywords
         if 'limit' in field_counts.keys() and field_counts['limit'] > 1:
-            raise RestInputValidationError("You cannot specify limit more than once")
+            raise RestInputValidationError('You cannot specify limit more than once')
         if 'offset' in field_counts.keys() and field_counts['offset'] > 1:
-            raise RestInputValidationError("You cannot specify offset more than once")
+            raise RestInputValidationError('You cannot specify offset more than once')
         if 'perpage' in field_counts.keys() and field_counts['perpage'] > 1:
-            raise RestInputValidationError("You cannot specify perpage more than once")
+            raise RestInputValidationError('You cannot specify perpage more than once')
         if 'orderby' in field_counts.keys() and field_counts['orderby'] > 1:
-            raise RestInputValidationError("You cannot specify orderby more than once")
+            raise RestInputValidationError('You cannot specify orderby more than once')
         if 'alist' in field_counts.keys() and field_counts['alist'] > 1:
-            raise RestInputValidationError("You cannot specify alist more than once")
+            raise RestInputValidationError('You cannot specify alist more than once')
         if 'nalist' in field_counts.keys() and field_counts['nalist'] > 1:
-            raise RestInputValidationError("You cannot specify nalist more than once")
+            raise RestInputValidationError('You cannot specify nalist more than once')
         if 'elist' in field_counts.keys() and field_counts['elist'] > 1:
-            raise RestInputValidationError("You cannot specify elist more than once")
+            raise RestInputValidationError('You cannot specify elist more than once')
         if 'nelist' in field_counts.keys() and field_counts['nelist'] > 1:
-            raise RestInputValidationError("You cannot specify nelist more than once")
+            raise RestInputValidationError('You cannot specify nelist more than once')
         if 'format' in field_counts.keys() and field_counts['format'] > 1:
-            raise RestInputValidationError("You cannot specify format more than once")
+            raise RestInputValidationError('You cannot specify format more than once')
         if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
-            raise RestInputValidationError("You cannot specify visformat more than once")
+            raise RestInputValidationError('You cannot specify visformat more than once')
         if 'filename' in field_counts.keys() and field_counts['filename'] > 1:
-            raise RestInputValidationError("You cannot specify filename more than once")
+            raise RestInputValidationError('You cannot specify filename more than once')
         if 'rtype' in field_counts.keys() and field_counts['rtype'] > 1:
-            raise RestInputValidationError("You cannot specify rtype more than once")
+            raise RestInputValidationError('You cannot specify rtype more than once')
         if 'in_limit' in field_counts.keys() and field_counts['in_limit'] > 1:
-            raise RestInputValidationError("You cannot specify in_limit more than once")
+            raise RestInputValidationError('You cannot specify in_limit more than once')
         if 'out_limit' in field_counts.keys() and field_counts['out_limit'] > 1:
-            raise RestInputValidationError("You cannot specify out_limit more than once")
+            raise RestInputValidationError('You cannot specify out_limit more than once')
 
         ## Extract results
         for field in field_list:
@@ -680,8 +686,10 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         # if limit is None:
         #     limit = self.limit_default
 
-        return (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
-                filename, rtype, tree_in_limit, tree_out_limit)
+        return (
+            limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat, filename,
+            rtype, tree_in_limit, tree_out_limit
+        )
 
     def parse_query_string(self, query_string):
         # pylint: disable=too-many-locals
@@ -707,8 +715,10 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         # key types
         key = Word(alphas + '_', alphanums + '_')
         # operators
-        operator = (Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |
-                    Literal('!=') | Literal('>=') | Literal('>') | Literal('<=') | Literal('<'))
+        operator = (
+            Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |
+            Literal('!=') | Literal('>=') | Literal('>') | Literal('<=') | Literal('<')
+        )
         # Value types
         value_num = ppc.number
         value_bool = (Literal('true') | Literal('false')).addParseAction(lambda toks: bool(toks[0]))
@@ -720,16 +730,18 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         #  them and convert them to datetime objects
         # Date
         value_date = Combine(
-            Word(nums, exact=4) + Literal('-') + Word(nums, exact=2) + Literal('-') + Word(nums, exact=2))
+            Word(nums, exact=4) + Literal('-') + Word(nums, exact=2) + Literal('-') + Word(nums, exact=2)
+        )
         # Time
         value_time = Combine(
             Literal('T') + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)) +
-            Optional(Literal(':') + Word(nums, exact=2)))
+            Optional(Literal(':') + Word(nums, exact=2))
+        )
         # Shift
         value_shift = Combine(Word('+-', exact=1) + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)))
         # Combine atomic values
         value_datetime = Combine(
-            value_date + Optional(value_time) + Optional(value_shift) + WE(printables.replace("&", ""))
+            value_date + Optional(value_time) + Optional(value_shift) + WE(printables.replace('&', ''))
             # To us the
             # word must end with '&' or end of the string
             # Adding  WordEnd  only here is very important. This makes atomic
@@ -757,21 +769,24 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
             try:
                 dtobj = dtparser.parse(datetime_string)
             except ValueError:
-                raise RestInputValidationError("time value has wrong format. The "
-                                               "right format is "
-                                               "<date>T<time><offset>, "
-                                               "where <date> is expressed as "
-                                               "[YYYY]-[MM]-[DD], "
-                                               "<time> is expressed as [HH]:[MM]:["
-                                               "SS], "
-                                               "<offset> is expressed as +/-[HH]:["
-                                               "MM] "
-                                               "given with "
-                                               "respect to UTC")
+                raise RestInputValidationError(
+                    'time value has wrong format. The '
+                    'right format is '
+                    '<date>T<time><offset>, '
+                    'where <date> is expressed as '
+                    '[YYYY]-[MM]-[DD], '
+                    '<time> is expressed as [HH]:[MM]:['
+                    'SS], '
+                    '<offset> is expressed as +/-[HH]:['
+                    'MM] '
+                    'given with '
+                    'respect to UTC'
+                )
             if dtobj.tzinfo is not None and dtobj.utcoffset() is not None:
                 tzoffset_minutes = int(dtobj.utcoffset().total_seconds() // 60)
                 return DatetimePrecision(
-                    dtobj.replace(tzinfo=FixedOffsetTimezone(offset=tzoffset_minutes, name=None)), precision)
+                    dtobj.replace(tzinfo=FixedOffsetTimezone(offset=tzoffset_minutes, name=None)), precision
+                )
 
             return DatetimePrecision(dtobj.replace(tzinfo=FixedOffsetTimezone(offset=0, name=None)), precision)
 
@@ -807,17 +822,19 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
             # JQuery adds _=timestamp a parameter to not use cached data/response.
             # To handle query, remove this "_" parameter from the query string
             # For more details check issue #789
-            # (https://github.com/aiidateam/aiida_core/issues/789) in aiida_core
-            field_list = [entry for entry in fields.asList() if entry[0] != "_"]
+            # (https://github.com/aiidateam/aiida-core/issues/789) in aiida-core
+            field_list = [entry for entry in fields.asList() if entry[0] != '_']
 
         except ParseException as err:
-            raise RestInputValidationError("The query string format is invalid. "
-                                           "Parser returned this massage: \"{"
-                                           "}.\" Please notice that the column "
-                                           "number "
-                                           "is counted from "
-                                           "the first character of the query "
-                                           "string.".format(err))
+            raise RestInputValidationError(
+                'The query string format is invalid. '
+                "Parser returned this massage: \"{"
+                "}.\" Please notice that the column "
+                'number '
+                'is counted from '
+                'the first character of the query '
+                'string.'.format(err)
+            )
 
         ## return the translator instructions elaborated from the field_list
         return self.build_translator_parameters(field_list)
@@ -830,11 +847,11 @@ def list_routes():
 
     output = []
     for rule in current_app.url_map.iter_rules():
-        if rule.endpoint == "static":
+        if rule.endpoint == 'static':
             continue
 
         methods = ','.join(rule.methods)
-        line = urllib.parse.unquote("{:15s} {:20s} {}".format(rule.endpoint, methods, rule))
+        line = urllib.parse.unquote('{:15s} {:20s} {}'.format(rule.endpoint, methods, rule))
         output.append(line)
 
     return sorted(set(output))

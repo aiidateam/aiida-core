@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -37,16 +37,18 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
     MODEL_CLASS = models.DbNode
     LINK_CLASS = models.DbLink
 
-    def __init__(self,
-                 backend,
-                 node_type,
-                 user,
-                 computer=None,
-                 process_type=None,
-                 label='',
-                 description='',
-                 ctime=None,
-                 mtime=None):
+    def __init__(
+        self,
+        backend,
+        node_type,
+        user,
+        computer=None,
+        process_type=None,
+        label='',
+        description='',
+        ctime=None,
+        mtime=None
+    ):
         """Construct a new `BackendNode` instance wrapping a new `DbNode` instance.
 
         :param backend: the backend

@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -85,8 +85,10 @@ def migration_add_node_uuid_unique_constraint(data):
         all_uuids = [content['uuid'] for content in data['export_data'][entry_type].values()]
         unique_uuids = set(all_uuids)
         if len(all_uuids) != len(unique_uuids):
-            echo.echo_critical("""{}s with exactly the same UUID found, cannot proceed further. Please contact AiiDA
-            developers: http://www.aiida.net/mailing-list/ to help you resolve this issue.""".format(entry_type))
+            echo.echo_critical(
+                """{}s with exactly the same UUID found, cannot proceed further. Please contact AiiDA
+            developers: http://www.aiida.net/mailing-list/ to help you resolve this issue.""".format(entry_type)
+            )
 
 
 def migration_migrate_builtin_calculations(data):
@@ -135,7 +137,8 @@ def migration_provenance_redesign(data):  # pylint: disable=too-many-locals,too-
     if calcjobs_to_migrate:
         # step1: rename the type column of process nodes
         mapping_node_entry = infer_calculation_entry_point(
-            type_strings=[e['type'] for e in calcjobs_to_migrate.values()])
+            type_strings=[e['type'] for e in calcjobs_to_migrate.values()]
+        )
         for uuid, content in calcjobs_to_migrate.items():
             type_string = content['type']
             entry_point_string = mapping_node_entry[type_string]
@@ -176,10 +179,10 @@ def migration_provenance_redesign(data):  # pylint: disable=too-many-locals,too-
 
     # calculations with outgoing CALL links
     calculation_uuids = {
-        value['uuid']
-        for value in data['export_data'].get('Node', {}).values()
-        if (value.get('type', '').startswith('calculation.job.') or
-            value.get('type', '').startswith('calculation.inline.'))
+        value['uuid'] for value in data['export_data'].get('Node', {}).values() if (
+            value.get('type', '').startswith('calculation.job.') or
+            value.get('type', '').startswith('calculation.inline.')
+        )
     }
     warning_message = 'detected calculation nodes with outgoing `call` links.'
     delete_wrong_links(calculation_uuids, 'calllink', headers, warning_message, action_message)
@@ -191,10 +194,10 @@ def migration_provenance_redesign(data):  # pylint: disable=too-many-locals,too-
     # outgoing CREATE links from FunctionCalculation and WorkCalculation nodes
     warning_message = 'detected outgoing `create` links from FunctionCalculation and/or WorkCalculation nodes.'
     work_uuids = {
-        value['uuid']
-        for value in data['export_data'].get('Node', {}).values()
-        if (value.get('type', '').startswith('calculation.function') or
-            value.get('type', '').startswith('calculation.work'))
+        value['uuid'] for value in data['export_data'].get('Node', {}).values() if (
+            value.get('type', '').startswith('calculation.function') or
+            value.get('type', '').startswith('calculation.work')
+        )
     }
     delete_wrong_links(work_uuids, 'createlink', headers, warning_message, action_message)
 
@@ -205,8 +208,10 @@ def migration_provenance_redesign(data):  # pylint: disable=too-many-locals,too-
 
         #  WorkCalculations that have a `function_name` attribute are FunctionCalculations
         if node.get('type', '') == 'calculation.work.WorkCalculation.':
-            if ('function_name' in data['node_attributes'][node_id] and
-                    data['node_attributes'][node_id]['function_name'] is not None):
+            if (
+                'function_name' in data['node_attributes'][node_id] and
+                data['node_attributes'][node_id]['function_name'] is not None
+            ):
                 # for some reason for the workchains the 'function_name' attribute is present but has None value
                 node['type'] = 'node.process.workflow.workfunction.WorkFunctionNode.'
             else:
@@ -340,11 +345,14 @@ def migration_trajectory_symbols_to_attribute(data, folder):
     """Apply migrations: 0026 - REV. 1.0.26 and 0027 - REV. 1.0.27
     Create the symbols attribute from the repository array for all `TrajectoryData` nodes.
     """
+    from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
+
     for node_id, content in data['export_data'].get('Node', {}).items():
         if content.get('type', '') == 'node.data.array.trajectory.TrajectoryData.':
             uuid = content['uuid']
             symbols_path = os.path.join(
-                folder.get_abs_path('nodes'), uuid[0:2], uuid[2:4], uuid[4:], 'path', 'symbols.npy')
+                folder.get_abs_path(NODES_EXPORT_SUBFOLDER), uuid[0:2], uuid[2:4], uuid[4:], 'path', 'symbols.npy'
+            )
             symbols = np.load(symbols_path).tolist()
             os.remove(symbols_path)
             # Update 'node_attributes'
@@ -464,38 +472,38 @@ def migrate_v3_to_v4(metadata, data, folder, *args):  # pylint: disable=unused-a
 
     # Update metadata.json with the new Log and Comment entities
     new_entities = {
-        "Log": {
-            "uuid": {},
-            "time": {
-                "convert_type": "date"
+        'Log': {
+            'uuid': {},
+            'time': {
+                'convert_type': 'date'
             },
-            "loggername": {},
-            "levelname": {},
-            "message": {},
-            "metadata": {},
-            "dbnode": {
-                "related_name": "dblogs",
-                "requires": "Node"
+            'loggername': {},
+            'levelname': {},
+            'message': {},
+            'metadata': {},
+            'dbnode': {
+                'related_name': 'dblogs',
+                'requires': 'Node'
             }
         },
-        "Comment": {
-            "uuid": {},
-            "ctime": {
-                "convert_type": "date"
+        'Comment': {
+            'uuid': {},
+            'ctime': {
+                'convert_type': 'date'
             },
-            "mtime": {
-                "convert_type": "date"
+            'mtime': {
+                'convert_type': 'date'
             },
-            "content": {},
-            "dbnode": {
-                "related_name": "dbcomments",
-                "requires": "Node"
+            'content': {},
+            'dbnode': {
+                'related_name': 'dbcomments',
+                'requires': 'Node'
             },
-            "user": {
-                "related_name": "dbcomments",
-                "requires": "User"
+            'user': {
+                'related_name': 'dbcomments',
+                'requires': 'User'
             }
         }
     }
     metadata['all_fields_info'].update(new_entities)
-    metadata['unique_identifiers'].update({"Log": "uuid", "Comment": "uuid"})
+    metadata['unique_identifiers'].update({'Log': 'uuid', 'Comment': 'uuid'})

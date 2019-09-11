@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -73,7 +73,7 @@ class RemoteData(Data):
                 t.getfile(full_path, destpath)
             except IOError as e:
                 if e.errno == 2:  # file not existing
-                    raise IOError("The required remote file {} on {} does not exist or has been deleted.".format(
+                    raise IOError('The required remote file {} on {} does not exist or has been deleted.'.format(
                         full_path, self.computer.name
                     ))
                 else:
@@ -81,7 +81,7 @@ class RemoteData(Data):
 
             return t.listdir()
 
-    def listdir(self, relpath="."):
+    def listdir(self, relpath='.'):
         """
         Connects to the remote folder and lists the directory content.
 
@@ -98,7 +98,7 @@ class RemoteData(Data):
             except IOError as e:
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
-                        "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.format(
                             full_path, self.computer.name
                         ))
                     exc.errno = e.errno
@@ -111,7 +111,7 @@ class RemoteData(Data):
             except IOError as e:
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
-                        "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.format(
                             full_path, self.computer.name
                         ))
                     exc.errno = e.errno
@@ -119,7 +119,7 @@ class RemoteData(Data):
                 else:
                     raise
 
-    def listdir_withattributes(self, path="."):
+    def listdir_withattributes(self, path='.'):
         """
         Connects to the remote folder and lists the directory content.
 
@@ -136,7 +136,7 @@ class RemoteData(Data):
             except IOError as e:
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
-                        "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.format(
                             full_path, self.computer.name
                         ))
                     exc.errno = e.errno
@@ -149,7 +149,7 @@ class RemoteData(Data):
             except IOError as e:
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
-                        "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
+                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.format(
                             full_path, self.computer.name
                         ))
                     exc.errno = e.errno
@@ -182,7 +182,7 @@ class RemoteData(Data):
 
         computer = self.computer
         if computer is None:
-            raise ValidationError("Remote computer not set.")
+            raise ValidationError('Remote computer not set.')
 
     def get_authinfo(self):
         return AuthInfo.objects.get(dbcomputer=self.computer, aiidauser=self.user)

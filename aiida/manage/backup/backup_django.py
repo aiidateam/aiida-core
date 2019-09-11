@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -69,6 +69,6 @@ class Backup(AbstractBackup):
             source_dir = os.path.normpath(RepositoryFolder(section=Repository._section_name, uuid=item.uuid).abspath)
         else:
             # Raise exception
-            self._logger.error("Unexpected item type to backup: %s", type(item))
-            raise BackupError("Unexpected item type to backup: {}".format(type(item)))
+            self._logger.error('Unexpected item type to backup: %s', type(item))
+            raise BackupError('Unexpected item type to backup: {}'.format(type(item)))
         return source_dir

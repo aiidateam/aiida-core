@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -114,10 +114,10 @@ class Data(Node):
         :raise ValueError: if supplied source description is not a dictionary.
         """
         if not isinstance(source, dict):
-            raise ValueError("Source must be supplied as a dictionary")
+            raise ValueError('Source must be supplied as a dictionary')
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise KeyError("Unknown source parameters: {}".format(", ".join(unknown_attrs)))
+            raise KeyError('Unknown source parameters: {}'.format(', '.join(unknown_attrs)))
 
         self.set_attribute('source', source)
 
@@ -140,7 +140,7 @@ class Data(Node):
         return None
 
     @override
-    def _exportcontent(self, fileformat, main_file_name="", **kwargs):
+    def _exportcontent(self, fileformat, main_file_name='', **kwargs):
         """
         Converts a Data node to one (or multiple) files.
 
@@ -166,12 +166,17 @@ class Data(Node):
             func = exporters[fileformat]
         except KeyError:
             if exporters.keys():
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(fileformat, self.__class__.__name__,
-                                                                         ",".join(exporters.keys())))
+                raise ValueError(
+                    'The format {} is not implemented for {}. '
+                    'Currently implemented are: {}.'.format(
+                        fileformat, self.__class__.__name__, ','.join(exporters.keys())
+                    )
+                )
             else:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(fileformat, self.__class__.__name__))
+                raise ValueError(
+                    'The format {} is not implemented for {}. '
+                    'No formats are implemented yet.'.format(fileformat, self.__class__.__name__)
+                )
 
         return func(main_file_name=main_file_name, **kwargs)
 
@@ -191,17 +196,17 @@ class Data(Node):
         import os
 
         if not path:
-            raise ValueError("Path not recognized")
+            raise ValueError('Path not recognized')
 
         if os.path.exists(path) and not overwrite:
-            raise OSError("A file was already found at {}".format(path))
+            raise OSError('A file was already found at {}'.format(path))
 
         if fileformat is None:
             extension = os.path.splitext(path)[1]
             if extension.startswith(os.path.extsep):
                 extension = extension[len(os.path.extsep):]
             if not extension:
-                raise ValueError("Cannot recognized the fileformat from the extension")
+                raise ValueError('Cannot recognized the fileformat from the extension')
 
             # Replace the fileformat using the replacements specified in the
             # _export_format_replacements dictionary. If not found there,
@@ -215,10 +220,10 @@ class Data(Node):
         if not overwrite:
             for fname in extra_files:
                 if os.path.exists(fname):
-                    raise OSError("The file {} already exists, stopping.".format(fname))
+                    raise OSError('The file {} already exists, stopping.'.format(fname))
 
             if os.path.exists(path):
-                raise OSError("The file {} already exists, stopping.".format(path))
+                raise OSError('The file {} already exists, stopping.'.format(path))
 
         for additional_fname, additional_fcontent in extra_files.items():
             retlist.append(additional_fname)
@@ -252,8 +257,9 @@ class Data(Node):
         """
         exporter_prefix = '_prepare_'
         method_names = dir(cls)  # get list of class methods names
-        valid_format_names = [i[len(exporter_prefix):] for i in method_names if i.startswith(exporter_prefix)
-                             ]  # filter them
+        valid_format_names = [
+            i[len(exporter_prefix):] for i in method_names if i.startswith(exporter_prefix)
+        ]  # filter them
         return sorted(valid_format_names)
 
     def importstring(self, inputstring, fileformat, **kwargs):
@@ -269,12 +275,17 @@ class Data(Node):
             func = importers[fileformat]
         except KeyError:
             if importers.keys():
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(fileformat, self.__class__.__name__,
-                                                                         ",".join(importers.keys())))
+                raise ValueError(
+                    'The format {} is not implemented for {}. '
+                    'Currently implemented are: {}.'.format(
+                        fileformat, self.__class__.__name__, ','.join(importers.keys())
+                    )
+                )
             else:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(fileformat, self.__class__.__name__))
+                raise ValueError(
+                    'The format {} is not implemented for {}. '
+                    'No formats are implemented yet.'.format(fileformat, self.__class__.__name__)
+                )
 
         # func is bound to self by getattr in _get_importers()
         func(inputstring, **kwargs)
@@ -316,7 +327,7 @@ class Data(Node):
         import six
 
         if object_format is None:
-            raise ValueError("object_format must be provided")
+            raise ValueError('object_format must be provided')
 
         if not isinstance(object_format, six.string_types):
             raise ValueError('object_format should be a string')
@@ -327,12 +338,17 @@ class Data(Node):
             func = converters[object_format]
         except KeyError:
             if converters.keys():
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(object_format, self.__class__.__name__,
-                                                                         ",".join(converters.keys())))
+                raise ValueError(
+                    'The format {} is not implemented for {}. '
+                    'Currently implemented are: {}.'.format(
+                        object_format, self.__class__.__name__, ','.join(converters.keys())
+                    )
+                )
             else:
-                raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(object_format, self.__class__.__name__))
+                raise ValueError(
+                    'The format {} is not implemented for {}. '
+                    'No formats are implemented yet.'.format(object_format, self.__class__.__name__)
+                )
 
         return func(*args)
 

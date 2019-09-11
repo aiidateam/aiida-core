@@ -23,7 +23,7 @@ This feature is not enabled by default. In order to enable caching:
 
  2. Run ``verdi -p aiida2 rehash`` in order to compute hashes of all nodes in your existing database.
 
-From this point onwards, when you launch a new calculation, AiiDA will compute its hash (depending both on the type of calculation and its inputs, see :ref:`caching_matches`). 
+From this point onwards, when you launch a new calculation, AiiDA will compute its hash (depending both on the type of calculation and its inputs, see :ref:`caching_matches`).
 If another calculation with the same hash is found to be already present in the database, AiiDA will reuse its results without repeating the actual calculation.
 
 .. _fig_caching:
@@ -54,7 +54,7 @@ By default (see also :ref:`devel_controlling_caching`), the hash of a Data node 
 The hash of a :class:`~aiida.orm.ProcessNode` will, on top of this, include the hashes of any of its input ``Data`` nodes.
 
 Once a node is stored in the database, its hash is stored in the ``_aiida_hash`` extra, and this extra is used to find matching nodes.
-If a node of the same class with the same hash already exists in the database, this is considered a cache match. 
+If a node of the same class with the same hash already exists in the database, this is considered a cache match.
 
 Use the :meth:`~aiida.orm.nodes.Node.get_hash` method to check the hash of any node.
 
@@ -64,10 +64,10 @@ In order to figure out why a calculation is *not* being reused, the :meth:`._get
     :verbatim:
 
     In [5]: calc=load_node(1234)
-    
+
     In [6]: calc.get_hash()
     Out[6]: '62eca804967c9428bdbc11c692b7b27a59bde258d9971668e19ccf13a5685eb8'
-    
+
     In [7]: calc._get_objects_to_hash()
     Out[7]:
     ['1.0.0b4',
@@ -80,7 +80,7 @@ In order to figure out why a calculation is *not* being reused, the :meth:`._get
       'parameters': '2c20fdc49672c3505cebabacfb9b1258e71e7baae5940a80d25837bee0032b59',
       'structure': 'c0f1c1d1bbcfc7746dcf7d0d675904c62a5b1759d37db77b564948fa5a788769',
       'parent_calc_folder': 'e375178ceeffcde086546d3ddbce513e0527b5fa99993091b2837201ad96569c'}]
- 
+
 
 Configuration
 -------------
@@ -100,7 +100,7 @@ Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides c
       disabled:
         - aiida.orm.nodes.data.float.Float
 
-In this example, caching is enabled for ``TemplatereplacerCalculation`` and ``Str``, and disabled for all other classes. 
+In this example, caching is enabled for ``TemplatereplacerCalculation`` and ``Str``, and disabled for all other classes.
 Note that the fully qualified class import name (e.g., ``aiida.orm.nodes.data.str.Str``) must be provided, consisting of the module name and the class name.
 You can construct it by hand or (usually) get it directly from the string representation of the class
 (it is **not** the same as the type string stored in the database):
@@ -164,8 +164,7 @@ it is also possible to manually *prevent* a specific node from being reused:
 
         for n in node.get_all_same_nodes():
             n.clear_hash()
-3. Run your calculation again. The node in questions should no longer be reused.
-
+3. Run your calculation again. The node in question should no longer be reused.
 
 
 .. _caching_limitations:
@@ -174,13 +173,13 @@ Limitations
 -----------
 
 1. The current implementation does **not** deduplicate data.
-   The current implementation of caching for data nodes clones not only the *graph representation* of the reused node; it also clones the underlying data in the database and file repository. 
+   The current implementation of caching for data nodes clones not only the *graph representation* of the reused node; it also clones the underlying data in the database and file repository.
    This could be improved in order to reduce data duplication.
 
-1. The current implementation of caching for data nodes clones not only the *graph representation* of the reused node; it also clones the underlying data in the database and file repository. 
+1. The current implementation of caching for data nodes clones not only the *graph representation* of the reused node; it also clones the underlying data in the database and file repository.
    This could be improved in order to reduce data duplication.
 
-2. The caching mechanism for calculations *should* trigger only when the inputs and the calculation to be performed are exactly the same.  
+2. The caching mechanism for calculations *should* trigger only when the inputs and the calculation to be performed are exactly the same.
    Edge cases where this assumption might be violated include cases where the calculation parser is in a different python module than the calculation and the developer made changes without updating the version number of the plugin.
 
 3. The constraint that the shape of the provenance graph should be independent of whether caching is enabled or not, imposes limitations on the possible caching operations.
@@ -188,7 +187,7 @@ Limitations
 
    * **Data nodes:** Making a copy of a data node should not change its links, so AiiDA just needs to link the new node to the direct ancestors of the old node.
    * **Calculation nodes:** Calculation nodes can have inputs and create new data nodes as outputs. Again, the new node needs to replicate these links. In order to make it look as if the cloned calculation had produced its own outputs, the output nodes are copied and linked as well.
-   * **Workflow nodes:** Workflows differ from calculations in that they can *return* an input node or an output node created by a calculation. 
+   * **Workflow nodes:** Workflows differ from calculations in that they can *return* an input node or an output node created by a calculation.
      This is not compatible with the cloning model chosen for calculations (leave input nodes untouched, clone output nodes). For this reason, workflows are not cached.
-     
+
   Overall, this limitation is acceptable, since the runtime of AiiDA WorkChains is usually dominated by expensive calculations, which are covered by the caching mechanism.

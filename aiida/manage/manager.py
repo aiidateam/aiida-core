@@ -84,7 +84,9 @@ class Manager(object):
         profile = self.get_profile()
 
         if profile is None:
-            raise ConfigurationError('could not determine the current profile')
+            raise ConfigurationError(
+                'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+            )
 
         if configuration.BACKEND_UUID is not None and configuration.BACKEND_UUID != profile.uuid:
             raise InvalidOperation('cannot load backend because backend of another profile is already loaded')

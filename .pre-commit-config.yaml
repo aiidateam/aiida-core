@@ -251,7 +251,7 @@
 
 # modernizer: make sure our code-base is Python 3 ready
 - repo: https://github.com/python-modernize/python-modernize.git
-  sha: a234ce4e185cf77a55632888f1811d83b4ad9ef2
+  rev: a234ce4e185cf77a55632888f1811d83b4ad9ef2
   hooks:
   - id: python-modernize
     exclude: >
@@ -317,6 +317,6 @@
       - --fix=zip
 
 - repo: git://github.com/pre-commit/pre-commit-hooks
-  sha: v1.1.1
+  rev: v1.1.1
   hooks:
   - id: check-yaml

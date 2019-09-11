@@ -32,9 +32,10 @@ If another calculation with the same hash is found to be already present in the 
   :height: 350px
 
   When reusing a cached calculation, AiiDA links up to the input nodes as usual, and copies both the calculation node **C** and its outputs **D3**.
+  While this sketch shows **C'** reuse the input nodes of **C'**, it is only the *content* of the input nodes (their hash) that matters.
 
 In order to ensure that the provenance graph with and without caching is the same,
-AiiDA creates a *copy* of the orginial calculation node, linked to the original inputs, as well as a to a copy of the original outputs, as shown in :numref:`fig_caching`.
+AiiDA creates both a new calculation node and a copy of the output data nodes as shown in :numref:`fig_caching`.
 
 .. note:: Caching is **not** implemented at the WorkChain/workfunction level (see :ref:`caching_limitations` for details).
 
@@ -172,22 +173,18 @@ it is also possible to manually *prevent* a specific node from being reused:
 Limitations
 -----------
 
-1. The current implementation does **not** deduplicate data.
-   The current implementation of caching for data nodes clones not only the *graph representation* of the reused node; it also clones the underlying data in the database and file repository.
-   This could be improved in order to reduce data duplication.
+#. While caching saves unnecessary computations, the current implementation does not yet save disk space:
+   The output nodes of the cached calculation are full copies of the original outputs.
+   The plan is to add data deduplication as a global feature at the repository level (independent of caching).
 
-1. The current implementation of caching for data nodes clones not only the *graph representation* of the reused node; it also clones the underlying data in the database and file repository.
-   This could be improved in order to reduce data duplication.
+#. Workflow nodes are not cached. As explained below, in the current design this follows from the requirement that the provenance graph be independent of whether caching is enabled or not.
 
-2. The caching mechanism for calculations *should* trigger only when the inputs and the calculation to be performed are exactly the same.
-   Edge cases where this assumption might be violated include cases where the calculation parser is in a different python module than the calculation and the developer made changes without updating the version number of the plugin.
-
-3. The constraint that the shape of the provenance graph should be independent of whether caching is enabled or not, imposes limitations on the possible caching operations.
-   In order to reuse a cached node, we need to know not only its contents but also how the new node should be linked to its parents and children.
-
-   * **Data nodes:** Making a copy of a data node should not change its links, so AiiDA just needs to link the new node to the direct ancestors of the old node.
-   * **Calculation nodes:** Calculation nodes can have inputs and create new data nodes as outputs. Again, the new node needs to replicate these links. In order to make it look as if the cloned calculation had produced its own outputs, the output nodes are copied and linked as well.
+   * **Calculation nodes:** Calculation nodes can have data inputs and create new data nodes as outputs.
+     In order to make it look as if a cloned calculation produced its own outputs, the output nodes are copied and linked as well.
    * **Workflow nodes:** Workflows differ from calculations in that they can *return* an input node or an output node created by a calculation.
-     This is not compatible with the cloning model chosen for calculations (leave input nodes untouched, clone output nodes). For this reason, workflows are not cached.
+     Since caching does not care about the *identity* of input nodes but only their *content*, it is not straightforward to figure out which node to return in a cached workflow.
 
-  Overall, this limitation is acceptable, since the runtime of AiiDA WorkChains is usually dominated by expensive calculations, which are covered by the caching mechanism.
+  For the moment, this limitation is acceptable since the runtime of AiiDA WorkChains is usually dominated by expensive calculations, which are covered by the current caching mechanism.
+
+#. The caching mechanism for calculations *should* trigger only when the inputs and the calculation to be performed are exactly the same.
+   Edge cases where this assumption might be violated include cases where the calculation parser is in a different python module than the calculation and the developer made changes without updating the version number of the plugin.

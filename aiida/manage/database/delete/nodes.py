@@ -27,24 +27,23 @@ def delete_nodes(
     pks, verbosity=0, dry_run=False, force=False, follow_create=True, follow_calls=False, keep_dataprov=False
 ):
     """
-    Delete nodes by a list of pks
+    Delete nodes by a list of pks.
 
     This command will delete not only the specified nodes, but also the ones that
-    are linked to them and should be also deleted in order to keep a provenance
-    that makes sense. The general rules for this are:
+    are linked to these and should be also deleted in order to keep a consistent
+    provenance according to the rules set here. In summary:
 
-    (1) If a DATA node is deleted, all procedures that are conected to it must
-        be deleted as well (it doesn't make sense to keep procedures without
-        its inputs or outputs).
+    1. If a DATA node is deleted, any other (process) nodes that are linked to
+       it must be deleted as well.
 
-    (2) If a CALC node is deleted, any WORK node that is linked will also be deleted
-        and (by default) any OUT-DATA nodes will be deleted as well.
-        INP-DATA nodes are kept.
+    2. If a CALC node is deleted, any incoming WORK node (callers) will be deleted
+       as well whereas any incoming DATA node (inputs) will be kept. Outgoing DATA
+       nodes (outputs) will be deleted by default but this can be disabled.
 
-    (3) If a WORK node is deleted, any WORK node that is upwards-connected will be
-        deleted as well, but by default it wont delete any WORK or CALC node that
-        are called by it (downwards-connected).
-        All DATA nodes are kept (either inputs or outputs).
+    3. If a WORK node is deleted, any incoming WORK node (callers) will be deleted
+       as well, but all DATA nodes will be kept. Outgoing WORK or CALC nodes will
+       be kept by default, but deletion of either of both kind of connected nodes
+       can be enabled.
 
     These rules are 'recursive', so if a CALC node is deleted, then its output
     DATA nodes will be deleted as well, and then any CALC node that may have
@@ -55,15 +54,15 @@ def delete_nodes(
     :param int verbosity: 0 prints nothing,
                           1 prints just sums and total,
                           2 prints individual nodes.
-    :param bool follow_create (True):
+    :param bool follow_create:
         This will delete all output data created by any deleted calculation.
-    :param bool follow_calls (False):
-        This will delete all procedures called by the deleted workflow and also by all the
-        controling workflows upstream (not that this may delete workflow sections that are
-        'unrelated' to what has been chosen to delete just because they are connected at some
-        point of the upwards provenance). Use with care, and it is advisable to never combine
-        with force.
-    :param bool keep_dataprov (False):
+    :param bool follow_calls:
+        This will also delete all processed called by any workflow that is going to be deleted.
+        Note that when you delete a workflow, also all parent workflows are deleted (recursively).
+        Therefore, setting this flag to True may delete workflow sections that are
+        'unrelated' to what has been chosen to be deleted, just because they are connected at some
+        point in the upwards provenance. Use with care, and it is advisable to never combine it with force.
+    :param bool keep_dataprov:
         Only used when follow_calls=True, this will keep all the data provenance from all
         deleted nodes, only propagating deletion to the logical provenance (i.e., the
         follow_calls will only follow CALL_WORK but not CALL_CALC).

@@ -1625,10 +1625,17 @@ class TestNodeDeletion(AiidaTestCase):
 
     def _create_minimal_graph(self):
         """
-        Creates a minimal graph with 1 call of each type:
-        - logical: W1 call_work W2 call_calc C0
-        - logical: DI input_work W2 return DO
-        - data:    DI input_calc C0 create DO
+        Creates a minimal graph which has one master workflow (W1) that calls
+        a slave workflow (W2) which calls a calculation function (C0). There
+        is one input (DI) and one output (DO). It has at least one link of
+        each class:
+
+        * CALL_WORK from W1 to W2.
+        * CALL_CALC from W2 to C0.
+        * INPUT_CALC from DI to C0 and CREATE from C0 to DO.
+        * INPUT_WORK from DI to W1 and RETURN from C0 to W1.
+        * INPUT_WORK from DI to W2 and RETURN from C0 to W2 (repeats links but
+          must exist for consistency).
         """
 
         data_i = orm.Data().store()
@@ -1654,6 +1661,10 @@ class TestNodeDeletion(AiidaTestCase):
         return data_i, data_o, calc_0, work_1, work_2
 
     def test_delete_cases(self):
+        """
+        Using a minimal graph (almost only one of each type of link) will test all
+        the conditions established for the consistent deletion of nodes.
+        """
 
         # By default deleting input data should eliminate everything that it
         # generated downwards.
@@ -1736,15 +1747,13 @@ class TestNodeDeletion(AiidaTestCase):
             delete_nodes([w2.pk], verbosity=2, force=True, follow_calls=True, keep_dataprov=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-#   TEST LOOP
 
     def _create_looped_graph(self):
         """
-        Creates a basic graph with one workflow made of one sub-workflow that
-        chooses from a series of inputs and uses it for a calculation.
-        - PWM: This is the master workflow.
-        - PWS: This is the slave workflow that chooses DI1 from DI1-DI4.
-        - PCS: This is the calculation that takes DI1 and produces DO1.
+        Creates a basic graph with one master workflow (PWM) which first calls a slave
+        workflow (PWS) to choose one input from a set (DI1 from DI1-DI4), and then use
+        it to perform a calculation (PCS) and obtain an output (DO1). The node PWM will
+        call both PWS and PCS itself.
         """
 
         di1 = orm.Data().store()
@@ -1781,10 +1790,14 @@ class TestNodeDeletion(AiidaTestCase):
         return di1, di2, di3, di4, do1, pws, pcs, pwm
 
     def test_loop_cases(self):
+        """
+        Using a looped graph, will test the behaviour when deleting nodes that
+        can be both input and output of a workflow.
+        """
 
         # By default deleting and input of the selection process will delete
-        # the workflow that involves the selection process but not any
-        # procedure that uses non-deleted inputs...
+        # the workflow that involves the selection procedure but not any
+        # process that uses non-deleted inputs...
         di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
         uuids_check_existence = [n.uuid for n in (di1, di2, di3, do1, pcs)]
         uuids_check_deleted = [n.uuid for n in (di4, pws, pwm)]
@@ -1820,14 +1833,15 @@ class TestNodeDeletion(AiidaTestCase):
 
     def _create_indep2w_graph(self):
         """
-        Creates a simple graph with one workflow handling two workflows, each with
-        one calculation with one input and one output.
-        - PW0: This is the master workflow, it has inputs DIA and DIB, outputs DOA
-               and DOB, and calls processes PWA and PWB.
-        - PWA: Input (DIA) goes into calc (PCA), return output (DOA).
-        - PWB: Input (DIB) goes into calc (PCB), return output (DOB).
-        This ilustrates the behaviour: if PWA is deleted with forward_calls, then
-        this will delete PWB as well despite being 'independent'.
+        Creates a simple graph with one workflow handling two independent workflows
+        (with one simple calculation each). It was designed and used mainly to point
+        out how the deletion behaviour works when setting forward_calls to true: in
+        this case if PWA is deleted, the somewhat independent PWB will be deleted as
+        well.
+
+        * PW0: master workflow, which calls both PWA and PWB.
+        * PWA: it has a single call to PCA, with input DIA and output DOA.
+        * PWB: it has a single call to PCB, with input DIB and output DOB.
         """
 
         dia = orm.Data().store()
@@ -1871,6 +1885,12 @@ class TestNodeDeletion(AiidaTestCase):
         return dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0
 
     def test_indep2w(self):
+        """
+        Using a simple graph, will test the behaviour when deleting an independent
+        workflow that is somehow connected to another one simply by being part of
+        the the same master workflow (i.e. two workflows connected by the logical
+        provenance but not the data provenance).
+        """
 
         dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
         uuids_check_existence = [n.uuid for n in [dia, dib]]
@@ -1896,20 +1916,12 @@ class TestNodeDeletion(AiidaTestCase):
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
 
-#   TEST FOR TIME?
-
     def _create_long_graph(self):
         """
-        Creates a simple graph with one workflow handling other three workflows
-        which themselves have:
-        - PW0: This is the master workflow.
-        - PWA: Two inputs (DA1, DA2) generate two outputs (DA3, DA4) through a
-               calculation (CA1) which in turn are inputs of another calculation
-               (CA2) that returns only one output (DA5).
-        - PWB: 4 inputs (DB1-DB4) are processed by one workflow (PWC) which then
-               returns the first (DB1) which is then used as input for a single
-               calculation
-               calculation.
+        Creates a straighforward graph with up to N=20 (currently) nodes. It
+        checks if propagation works correctly, but it also can be used quickly
+        to make preliminary timing profiling (increasing hardcoded N). The link
+        scheeme looks like this: inp_0 ( -> calc_k -> inp_k ) for k = 1, ..., N
         """
 
         old_data = orm.Data().store()
@@ -1932,6 +1944,10 @@ class TestNodeDeletion(AiidaTestCase):
         return node_list
 
     def test_long_case(self):
+        """
+        Using a simple but long graph, will test the propagation of the delete
+        functionality and that the efficiency for it is decent.
+        """
 
         # By default deleting input data should eliminate everything that it
         # generated downwards.

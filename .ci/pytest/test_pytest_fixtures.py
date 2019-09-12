@@ -8,13 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-For pytest
-This file should be put into the root directory of the package to make
-the fixtures available to all tests.
+Test pytest fixtures.
 """
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import pytest  # pylint: disable=unused-import
-pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name
+
+def test_aiida_localhost(aiida_localhost):
+    """Test aiida_localhost fixture.
+
+    Note: This indirectly also tests that the aiida_profile, tempdir and clean_database fixtures run.
+    """
+    assert aiida_localhost.label == 'localhost'

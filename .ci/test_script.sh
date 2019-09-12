@@ -25,8 +25,10 @@ case "$TEST_TYPE" in
         coverage erase
 
         # Run preliminary tests
-        coverage run -a "${CI_DIR}/test_fixtures.py"
+        coverage run -a "${CI_DIR}/test_test_manager.py"
         coverage run -a "${CI_DIR}/test_plugin_testcase.py"
+        # append to coverage file, do not create final report
+        pytest --cov aiida --cov-append --cov-report= -vv "${CI_DIR}/pytest"
 
         # Run verdi devel tests
         VERDI=`which verdi`

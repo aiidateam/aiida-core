@@ -27,7 +27,7 @@ class PluginTestCase(unittest.TestCase):
     """
     Set up a complete temporary AiiDA environment for plugin tests.
 
-    Note: This tests class needs to be run through the :py:class:`TestRunner`
+    Note: This test class needs to be run through the :py:class:`~aiida.manage.tests.unittest_classes.TestRunner`
     and will **not** work simply with `python -m unittest discover`.
 
     Usage example::

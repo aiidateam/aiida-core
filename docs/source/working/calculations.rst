@@ -321,7 +321,7 @@ In addition to the common metadata inputs, such as ``label`` and ``description``
 These options allow to subtly change the behavior of the calculation job, for example which parser should be used once it is finished and special scheduler directives.
 The full list of available options are documented below as part of the ``CalcJob`` interface:
 
-.. aiida-process:: CalcJob
+.. aiida-calcjob:: CalcJob
     :module: aiida.engine.processes.calcjobs
 
 

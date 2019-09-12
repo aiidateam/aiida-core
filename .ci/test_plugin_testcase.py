@@ -23,7 +23,7 @@ import unittest
 import tempfile
 import shutil
 
-from aiida.manage.fixtures import PluginTestCase, TestRunner
+from aiida.manage.tests.unittest_classes import PluginTestCase, TestRunner
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 
 

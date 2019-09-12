@@ -16,29 +16,29 @@ import unittest
 
 from pgtest import pgtest
 
-from aiida.manage.fixtures import FixtureManager, FixtureError
+from aiida.manage.tests import TestManager, TestManagerError
 from aiida.common.utils import Capturing
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 
 
-class FixtureManagerTestCase(unittest.TestCase):
-    """Test the FixtureManager class"""
+class TestManagerTestCase(unittest.TestCase):
+    """Test the TestManager class"""
 
     def setUp(self):
-        self.fixture_manager = FixtureManager()
+        self.test_manager = TestManager()
         self.backend = BACKEND_DJANGO if os.environ.get(
             'TEST_AIIDA_BACKEND', BACKEND_DJANGO
         ) == BACKEND_DJANGO else BACKEND_SQLA
-        self.fixture_manager.backend = self.backend
+        self.test_manager.backend = self.backend
 
     def test_create_db_cluster(self):
-        self.fixture_manager.create_db_cluster()
-        self.assertTrue(pgtest.is_server_running(self.fixture_manager.pg_cluster.cluster))
+        self.test_manager.create_db_cluster()
+        self.assertTrue(pgtest.is_server_running(self.test_manager.pg_cluster.cluster))
 
     def test_create_aiida_db(self):
-        self.fixture_manager.create_db_cluster()
-        self.fixture_manager.create_aiida_db()
-        self.assertTrue(self.fixture_manager.postgres.db_exists(self.fixture_manager.db_name))
+        self.test_manager.create_db_cluster()
+        self.test_manager.create_aiida_db()
+        self.assertTrue(self.test_manager.postgres.db_exists(self.test_manager.db_name))
 
     def test_create_use_destroy_profile(self):
         """
@@ -50,13 +50,13 @@ class FixtureManagerTestCase(unittest.TestCase):
         * destroy_all removes all traces of the test run
         """
         with Capturing() as output:
-            self.fixture_manager.create_profile()
+            self.test_manager.create_profile()
 
-        self.assertTrue(self.fixture_manager.root_dir_ok, msg=output)
-        self.assertTrue(self.fixture_manager.config_dir_ok, msg=output)
-        self.assertTrue(self.fixture_manager.repo_ok, msg=output)
+        self.assertTrue(self.test_manager.root_dir_ok, msg=output)
+        self.assertTrue(self.test_manager.config_dir_ok, msg=output)
+        self.assertTrue(self.test_manager.repo_ok, msg=output)
         from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
-        self.assertEqual(AIIDA_CONFIG_FOLDER, self.fixture_manager.config_dir, msg=output)
+        self.assertEqual(AIIDA_CONFIG_FOLDER, self.test_manager.config_dir, msg=output)
 
         from aiida.orm import load_node
         from aiida.plugins import DataFactory
@@ -65,23 +65,23 @@ class FixtureManagerTestCase(unittest.TestCase):
         data_pk = data.pk
         self.assertTrue(load_node(data_pk))
 
-        with self.assertRaises(FixtureError):
+        with self.assertRaises(TestManagerError):
             self.test_create_aiida_db()
 
-        self.fixture_manager.reset_db()
+        self.test_manager.reset_db()
         with self.assertRaises(Exception):
             load_node(data_pk)
 
-        temp_dir = self.fixture_manager.root_dir
-        self.fixture_manager.destroy_all()
+        temp_dir = self.test_manager.root_dir
+        self.test_manager.destroy_all()
         with self.assertRaises(Exception):
-            self.fixture_manager.postgres.db_exists(self.fixture_manager.db_name)
+            self.test_manager.postgres.db_exists(self.test_manager.db_name)
         self.assertFalse(os.path.exists(temp_dir))
-        self.assertIsNone(self.fixture_manager.root_dir)
-        self.assertIsNone(self.fixture_manager.pg_cluster)
+        self.assertIsNone(self.test_manager.root_dir)
+        self.assertIsNone(self.test_manager.pg_cluster)
 
     def tearDown(self):
-        self.fixture_manager.destroy_all()
+        self.test_manager.destroy_all()
 
 
 if __name__ == '__main__':

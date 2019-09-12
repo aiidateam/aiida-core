@@ -14,7 +14,7 @@ Special profiles also have to be set mannually by the user and in automated test
 
 AiiDA ships with tools to simplify tests for plugins.
 The recommended way is to use the `pytest`_ framework, while the `unittest`_ package is also supported.
-Internally, test environments are created and managed by the :py:func:`aiida.manage.fixtures.fixture_manager` defined in :py:mod:`aiida.manage.fixtures`.
+Internally, test environments are created and managed by the :py:func:`aiida.manage.tests.test_manager` defined in :py:mod:`aiida.manage.tests`.
 
 .. _pytest: https://pytest.org
 .. _unittest: https://docs.python.org/library/unittest.html
@@ -35,16 +35,16 @@ test act on, resources for the tests, or just some code you want to run before t
 test starts. Please see pytest's `documentation <https://docs.pytest.org/en/latest/>`_ for details, especially if you are new to writing testes.
 
 
-To utilize the ``fixture_manager``, we first need to define the actual fixtures:
+To utilize the ``test_manager``, we first need to define the actual fixtures:
 
 .. literalinclude:: conftest.py
 
 
-The ``aiida_profile`` fixture initialize the ``fixture_manager`` yields it to the test function.
+The ``aiida_profile`` fixture initialize the ``test_manager`` yields it to the test function.
 By using the *with* clause, we ensure that the test profile to run tests are destroyed in the end.
 The scope of this fixture should be *session*, since there is no need to re-initialize the
 test profile mid-way.
-The next fixture ``new_database`` request the ``aiida_profile`` fixture and tells the received ``FixtureManager`` instance to reset the database.
+The next fixture ``new_database`` request the ``aiida_profile`` fixture and tells the received ``TestManager`` instance to reset the database.
 By requesting the ``new_database`` fixture, the test function will start with a fresh aiida environment.
 The next fixture, ``new_workdir``, returns an temporary directory for file operations and delete it when the test is finished.
 You may also want to define other fixtures such as those setup and return ``Data`` nodes or prepare calculations.
@@ -135,14 +135,14 @@ Using the unittest framework
 
 The ``unittest`` package is included in the python standard library.
 It is widely used despite some limitations (it is also used for testing ``aiida-core``).
-We provide a :py:class:`aiida.manage.fixtures.PluginTestCase` to be used for inheritance.
+We provide a :py:class:`aiida.manage.tests.unittest_classes.PluginTestCase` to be used for inheritance.
 By default, each test method in the test case class runs with a fresh aiida database.
 Due to the limitation of ``unittest``, sub-clasess of ``PluginTestCase`` has to be run
-with the special runner in  :py:class:`aiida.manage.fixtures.TestRunner`.
+with the special runner in  :py:class:`aiida.manage.tests.unittest_classes.TestRunner`.
 To run the actually tests, you need to prepare a run script in python::
 
   import unittest
-  from aiida.manage.fixtures import TestRunner
+  from aiida.manage.tests.unittest_classes import TestRunner
 
   test = unittest.deaultTestLoader.discover('.')
   TestRunner().run(tests)

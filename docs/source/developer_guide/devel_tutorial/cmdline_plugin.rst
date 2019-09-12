@@ -150,7 +150,7 @@ Example test in ``test_float_cmd.py``::
    import os
 
    from click.testing import CliRunner
-   from aiida.manage.fixtures import PluginTestCase
+   from aiida.manage.tests.unittest_classes import PluginTestCase
 
    from aiida_yourplugin.cmdline.float_cmd import float_cmd
 

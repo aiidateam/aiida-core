@@ -341,13 +341,11 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
     from django.db import transaction
     from aiida.utils import timezone
 
-    from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.links import LinkType
     from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
-    from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
 
     # This is the export version expected by this function
@@ -432,7 +430,7 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
         db_nodes_uuid = set(relevant_db_nodes.keys())
         #~ dbnode_model = get_class_string(models.DbNode)
         #~ print dbnode_model
-        import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
+        import_nodes_uuid = set(v['uuid'] for v in data['export_data'].get(NODE_ENTITY_NAME, {}).values())
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
         # the combined set of db_nodes_uuid and import_nodes_uuid was received from the staff actually referred to in export_data
@@ -872,10 +870,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
     from aiida.utils import timezone
 
-    from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.folders import SandboxFolder, RepositoryFolder
-    from aiida.common.utils import get_object_from_string
     from aiida.common.datastructures import calc_states
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.common.links import LinkType
@@ -967,7 +963,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             for res in qb.iterall():
                 db_nodes_uuid.add(res[0])
 
-        for v in data['export_data'][NODE_ENTITY_NAME].values():
+        for v in data['export_data'].get(NODE_ENTITY_NAME, {}).values():
             import_nodes_uuid.add(v['uuid'])
 
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
@@ -2170,7 +2166,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     import json
     import aiida
 
-    from aiida.orm import Node, Calculation, Data, Group, Code
+    from aiida.orm import Node, Calculation, Data, Group, Code, Computer
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
     if not silent:
@@ -2186,6 +2182,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     all_fields_info, unique_identifiers = get_all_fields_info()
 
     to_be_exported_group_entry_ids = set()
+    to_be_exported_computer_entry_ids = set()
 
     # The dictionary that contains node ids/pks of given nodes. They will be enriched with the ids/pks
     # of related nodes given a set of rules and arguments.
@@ -2205,12 +2202,14 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
                 to_be_visited[Data].add(entry.pk)
             elif issubclass(entry.__class__, Calculation):
                 to_be_visited[Calculation].add(entry.pk)
+        elif issubclass(entry.__class__, Computer):
+            to_be_exported_computer_entry_ids.add(entry.pk)
         else:
-            raise ValueError("I was given {}, which is not a Node nor Group "
+            raise ValueError("I was given {}, which is not a Node, Group, nor Computer "
                              "instance. It is of type {}"
                              .format(entry, entry.__class__))
 
-    # Search fot the node entities that should be exported based on the set of export rules
+    # Search for the node entities that should be exported based on the set of export rules
     # and arguments.
     to_be_exported_node_entry_ids = node_export_set_expansion(to_be_visited, input_forward, create_reversed,
                                                            return_reversed, call_reversed)
@@ -2222,6 +2221,8 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
         to_be_exported_entities.append(GROUP_ENTITY_NAME)
     if len(to_be_exported_node_entry_ids) > 0:
         to_be_exported_entities.append(NODE_ENTITY_NAME)
+    if len(to_be_exported_computer_entry_ids) > 0:
+        to_be_exported_entities.append(COMPUTER_ENTITY_NAME)
 
     entries_to_add = dict()
     for to_be_exported_entity in to_be_exported_entities:
@@ -2239,9 +2240,12 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
             project_cols.append(nprop)
 
         # Getting the ids that correspond to the right entity
-        entry_ids_to_add = (to_be_exported_node_entry_ids
-                            if (to_be_exported_entity == NODE_ENTITY_NAME)
-                            else to_be_exported_group_entry_ids)
+        if to_be_exported_entity == NODE_ENTITY_NAME:
+            entry_ids_to_add = to_be_exported_node_entry_ids
+        elif to_be_exported_entity == GROUP_ENTITY_NAME:
+            entry_ids_to_add = to_be_exported_group_entry_ids
+        elif to_be_exported_entity == COMPUTER_ENTITY_NAME:
+            entry_ids_to_add = to_be_exported_computer_entry_ids
 
         qb = QueryBuilder()
         qb.append(entity_names_to_entities[to_be_exported_entity],

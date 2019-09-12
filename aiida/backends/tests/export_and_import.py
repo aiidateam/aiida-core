@@ -171,6 +171,63 @@ class TestSpecificImport(AiidaTestCase):
             qb.append(Calculation, output_of='remote')
             self.assertGreater(len(qb.all()), 0)
 
+    def test_no_nodes_import(self):
+        """Make sure an archive without Nodes can be imported.
+
+        Export a Computer, try to import the archive.
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.computer import Computer
+
+        # Creating a folder for the import/export files
+        export_file_tmp_folder = tempfile.mkdtemp()
+
+        try:
+            comp_name = unicode(self.computer.name)
+            comp_uuid = unicode(self.computer.uuid)
+
+            # Export the Computer
+            filename = os.path.join(export_file_tmp_folder, 'export.tar.gz')
+            export([self.computer], outfile=filename, silent=True)
+
+            # Clean the local database
+            self.clean_db()
+
+            # Check that there are no computers
+            builder = QueryBuilder().append(Computer, project=['*'])
+            self.assertEqual(
+                builder.count(),
+                0,
+                'There should not be any computers in the database at this point.')
+
+            # Import
+            import_data(filename, silent=True)
+
+            # Check that the Computer is imported correctly
+            builder = QueryBuilder().append(Computer, project=['name', 'uuid'])
+            self.assertEqual(
+                builder.count(),
+                1,
+                'Only one computer should be found.')
+            imported_computer_name = unicode(builder.first()[0])
+            imported_computer_uuid = unicode(builder.first()[1])
+            self.assertEqual(
+                imported_computer_name,
+                comp_name,
+                'The computer name is not correct.')
+            self.assertEqual(
+                imported_computer_uuid,
+                comp_uuid,
+                'The computer uuid is not correct.')
+        finally:
+            # Deleting the created temporary folders
+            shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
+
 
 class TestSimple(AiidaTestCase):
 

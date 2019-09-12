@@ -90,17 +90,17 @@ class CalcJob(Process):
             help='If set to true, the submission script will load the system environment variables',)
         spec.input('metadata.options.environment_variables', valid_type=dict, default={},
             help='Set a dictionary of custom environment variables for this calculation',)
-        spec.input('metadata.options.priority', valid_type=six.string_types[0], required=False,
+        spec.input('metadata.options.priority', valid_type=six.string_types, required=False,
             help='Set the priority of the job to be queued')
         spec.input('metadata.options.max_memory_kb', valid_type=int, required=False,
             help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
-        spec.input('metadata.options.prepend_text', valid_type=six.string_types[0], default='',
+        spec.input('metadata.options.prepend_text', valid_type=six.string_types, default='',
             help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
                  'script, just before the code execution',)
-        spec.input('metadata.options.append_text', valid_type=six.string_types[0], default='',
+        spec.input('metadata.options.append_text', valid_type=six.string_types, default='',
             help='Set the calculation-specific append text, which is going to be appended in the scheduler-job '
                  'script, just after the code execution',)
-        spec.input('metadata.options.parser_name', valid_type=six.string_types[0], required=False,
+        spec.input('metadata.options.parser_name', valid_type=six.string_types, required=False,
             help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
         spec.output('remote_folder', valid_type=orm.RemoteData,

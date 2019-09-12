@@ -1,7 +1,7 @@
 .. _plugin.testing:
 
-Writing tests for plugin
-========================
+Writing tests for plugins
+=========================
 
 When developing a plugin it is important to write tests. The main concern of running
 tests is that the test environment has to be separated from the production environment
@@ -14,7 +14,6 @@ Special profiles also have to be set mannually by the user and in automated test
 
 AiiDA ships with tools to simplify tests for plugins.
 The recommended way is to use the `pytest`_ framework, while the `unittest`_ package is also supported.
-Internally, test environments are created and managed by the :py:func:`aiida.manage.tests.test_manager` defined in :py:mod:`aiida.manage.tests`.
 
 .. _pytest: https://pytest.org
 .. _unittest: https://docs.python.org/library/unittest.html
@@ -23,34 +22,32 @@ Internally, test environments are created and managed by the :py:func:`aiida.man
 Using the pytest framework
 --------------------------
 
-In this section we will introduce using the ``pytest`` framework to write tests for
-plugins.
+In this section we will introduce using the ``pytest`` framework to write tests for AiiDA plugins.
 
-Preparing the fixtures
-^^^^^^^^^^^^^^^^^^^^^^
+AiiDA's fixtures
+^^^^^^^^^^^^^^^^
 
-One important concept of the pytest framework is the `fixture`_.
-A fixture is something that a test requires. It could be a predefined object that the
-test act on, resources for the tests, or just some code you want to run before the
-test starts. Please see pytest's `documentation <https://docs.pytest.org/en/latest/>`_ for details, especially if you are new to writing testes.
+A `fixture`_ is something that a test requires. It could be a predefined object that the test acts on, resources for the tests, or just some code you want to run before the test starts.
+Please see pytest's `documentation <https://docs.pytest.org/en/latest/>`_ for details, especially if you are new to writing tests.
 
+AiiDA defines a selection of fixtures in :py:mod:`aiida.manage.tests.pytest_fixtures` for you to use:
 
-To utilize the ``test_manager``, we first need to define the actual fixtures:
+.. literalinclude:: ../../../../aiida/manage/tests/pytest_fixtures.py
+
+For example:
+
+  * The ``aiida_profile`` fixture initializes the ``test_manager`` and yields it to the test function.
+    By using the *with* clause, it ensures that the test profile is destroyed after the tests have run.
+  * The ``clear_database`` fixture request the ``aiida_profile`` fixture and tells the received ``TestManager`` instance to reset the database.
+    By requesting the ``clear_database`` fixture, a test function will start with a fresh aiida environment.
+  * The ``tempdir`` fixture returns a temporary directory for file operations and deletes it when the test is finished.
+  * ...
+
+In order to make these fixtures available to your tests, add them to your ``conftest.py`` file at the root level of your plugin as follows:
 
 .. literalinclude:: conftest.py
 
-
-The ``aiida_profile`` fixture initialize the ``test_manager`` yields it to the test function.
-By using the *with* clause, we ensure that the test profile to run tests are destroyed in the end.
-The scope of this fixture should be *session*, since there is no need to re-initialize the
-test profile mid-way.
-The next fixture ``new_database`` request the ``aiida_profile`` fixture and tells the received ``TestManager`` instance to reset the database.
-By requesting the ``new_database`` fixture, the test function will start with a fresh aiida environment.
-The next fixture, ``new_workdir``, returns an temporary directory for file operations and delete it when the test is finished.
-You may also want to define other fixtures such as those setup and return ``Data`` nodes or prepare calculations.
-
-To make these fixtures available to all tests, they can be put into the ``conftest.py``
-in root level of the package or ``tests`` sub-packages. The code shown above can be downloaded :download:`here <conftest.py>`.
+You can always build on the fixtures provided by AiiDA to create your own fixtures tailored for your plugin (e.g. to set up specific ``Data`` nodes, prepare calculations, etc.).
 
 .. seealso::
   More information of ``conftest.py`` can be found `here <conftest>`_.

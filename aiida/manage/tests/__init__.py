@@ -86,8 +86,8 @@ class TestManager(object):  # pylint: disable=too-many-public-methods
         tests.destroy_all()
         # everything cleaned up
 
-    For usage with pytest, see :py:class:`~aiida.manage.tests.pytest`.
-    For usage with unittest, see :py:class:`~aiida.manage.tests.unittest`.
+    For usage with pytest, see :py:class:`~aiida.manage.tests.pytest_fixtures`.
+    For usage with unittest, see :py:class:`~aiida.manage.tests.unittest_classes`.
     """
 
     _test_case = None

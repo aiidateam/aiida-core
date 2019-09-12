@@ -30,10 +30,13 @@ import aiida.manage.tests
 def aiida_profile():
     """Set up AiiDA test profile for the duration of the tests.
 
-    Note: Thanks to ``autouse=True``, this happens as soon as you import this fixure in your ``conftest.py``.
+    Note: scope='session' limits this fixture to run once per session. Thanks to ``autouse=True``, you don't actually
+     need to depend on it explicitly - it will activate as soon as you import it in your ``conftest.py``.
     """
+    # create new TestManager instance
     with aiida.manage.tests.test_manager() as test_manager:
         yield test_manager
+    # here, the TestManager instance has already been destroyed
 
 
 @pytest.fixture(scope='function', autouse=True)
@@ -43,6 +46,7 @@ def clear_database(aiida_profile):  # pylint: disable=redefined-outer-name
     Note: Thanks to ``autouse=True``, this happens as soon as you import this fixure in your ``conftest.py``.
     """
     yield
+    # after the test function has completed, reset the database
     aiida_profile.reset_db()
 
 
@@ -58,6 +62,7 @@ def tempdir():
     """
     dirpath = tempfile.mkdtemp()
     yield dirpath
+    # after the test function has completed, remove the directory again
     shutil.rmtree(dirpath)
 
 

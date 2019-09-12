@@ -151,7 +151,8 @@ class AiidaProcessDirective(Directive):
         Build the paragraph that describes a single port.
         """
         paragraph = nodes.paragraph()
-        paragraph += addnodes.literal_strong(text=name)
+        #paragraph += addnodes.literal_strong(text=name)
+        paragraph.extend(publish_doctree('``{0}``'.format(name))[0].children)
         paragraph += nodes.Text(', ')
         paragraph += nodes.emphasis(text=self.format_valid_types(port.valid_type))
         paragraph += nodes.Text(', ')
@@ -168,7 +169,7 @@ class AiidaProcessDirective(Directive):
 
     @staticmethod
     def format_valid_types(valid_type):
-        """Print valid types."""
+        """Format valid types."""
         try:
             return valid_type.__name__
         except AttributeError:

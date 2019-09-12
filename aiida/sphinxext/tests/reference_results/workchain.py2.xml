@@ -8,7 +8,7 @@
         <compound classes="toctree-wrapper">
         </compound>
         <desc desctype="class" domain="py" noindex="False" objtype="class">
-            <desc_signature first="False" fullname="Workchain"><desc_annotation xml:space="preserve">workchain</desc_annotation><desc_addname xml:space="preserve">demo_workchain.</desc_addname><desc_name xml:space="preserve">DemoWorkChain</desc_name></desc_signature>
+            <desc_signature first="False" fullname="WorkChain"><desc_annotation xml:space="preserve">workchain</desc_annotation><desc_addname xml:space="preserve">demo_workchain.</desc_addname><desc_name xml:space="preserve">DemoWorkChain</desc_name></desc_signature>
             <desc_content>
                 <paragraph>
                         A demo workchain to show how the workchain auto-documentation works.
@@ -19,7 +19,7 @@
         </desc>
         <paragraph>You can use the <literal>:hide-unstored-inputs:</literal> option to not show the inputs which are not stored in the DB:</paragraph>
         <desc desctype="class" domain="py" noindex="False" objtype="class">
-            <desc_signature first="False" fullname="Workchain"><desc_annotation xml:space="preserve">workchain</desc_annotation><desc_addname xml:space="preserve">demo_workchain.</desc_addname><desc_name xml:space="preserve">DemoWorkChain</desc_name></desc_signature>
+            <desc_signature first="False" fullname="WorkChain"><desc_annotation xml:space="preserve">workchain</desc_annotation><desc_addname xml:space="preserve">demo_workchain.</desc_addname><desc_name xml:space="preserve">DemoWorkChain</desc_name></desc_signature>
             <desc_content>
                 <paragraph>
                         A demo workchain to show how the workchain auto-documentation works.
@@ -33,7 +33,7 @@
         <index entries="['single',\ u'demo_workchain\ (module)',\ u'module-demo_workchain',\ '',\ None]"></index>
         <paragraph>This module defines an example workchain for the aiida-workchain documentation directive.</paragraph>
         <desc desctype="class" domain="py" noindex="False" objtype="class">
-            <desc_signature first="False" fullname="Workchain"><desc_annotation xml:space="preserve">workchain</desc_annotation><desc_addname xml:space="preserve">demo_workchain.</desc_addname><desc_name xml:space="preserve">DemoWorkChain</desc_name></desc_signature>
+            <desc_signature first="False" fullname="WorkChain"><desc_annotation xml:space="preserve">workchain</desc_annotation><desc_addname xml:space="preserve">demo_workchain.</desc_addname><desc_name xml:space="preserve">DemoWorkChain</desc_name></desc_signature>
             <desc_content>
                 <paragraph>
                         A demo workchain to show how the workchain auto-documentation works.

@@ -129,10 +129,6 @@ class CalcJobNode(CalculationNode):
         ]
         return objects
 
-    def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):  # pylint: disable=arguments-differ
-        return super(CalcJobNode, self
-                    ).get_hash(ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
-
     def get_builder_restart(self):
         """Return a `ProcessBuilder` that is ready to relaunch the same `CalcJob` that created this node.
 

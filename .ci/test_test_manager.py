@@ -16,26 +16,26 @@ import unittest
 
 from pgtest import pgtest
 
-from aiida.manage.tests import TestManager, TestManagerError, get_test_backend
+from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend
 from aiida.common.utils import Capturing
 
 
-class TestManagerTestCase(unittest.TestCase):
-    """Test the TestManager class"""
+class TemporaryProfileManagerTestCase(unittest.TestCase):
+    """Test the TemporaryProfileManager class"""
 
     def setUp(self):
-        self.test_manager = TestManager()
+        self.profile_manager = TemporaryProfileManager()
         self.backend = get_test_backend()
-        self.test_manager.backend = self.backend
+        self.profile_manager.backend = self.backend
 
     def test_create_db_cluster(self):
-        self.test_manager.create_db_cluster()
-        self.assertTrue(pgtest.is_server_running(self.test_manager.pg_cluster.cluster))
+        self.profile_manager.create_db_cluster()
+        self.assertTrue(pgtest.is_server_running(self.profile_manager.pg_cluster.cluster))
 
     def test_create_aiida_db(self):
-        self.test_manager.create_db_cluster()
-        self.test_manager.create_aiida_db()
-        self.assertTrue(self.test_manager.postgres.db_exists(self.test_manager.db_name))
+        self.profile_manager.create_db_cluster()
+        self.profile_manager.create_aiida_db()
+        self.assertTrue(self.profile_manager.postgres.db_exists(self.profile_manager.dbinfo['db_name']))
 
     def test_create_use_destroy_profile(self):
         """
@@ -47,13 +47,13 @@ class TestManagerTestCase(unittest.TestCase):
         * destroy_all removes all traces of the test run
         """
         with Capturing() as output:
-            self.test_manager.create_profile()
+            self.profile_manager.create_profile()
 
-        self.assertTrue(self.test_manager.root_dir_ok, msg=output)
-        self.assertTrue(self.test_manager.config_dir_ok, msg=output)
-        self.assertTrue(self.test_manager.repo_ok, msg=output)
+        self.assertTrue(self.profile_manager.root_dir_ok, msg=output)
+        self.assertTrue(self.profile_manager.config_dir_ok, msg=output)
+        self.assertTrue(self.profile_manager.repo_ok, msg=output)
         from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
-        self.assertEqual(AIIDA_CONFIG_FOLDER, self.test_manager.config_dir, msg=output)
+        self.assertEqual(AIIDA_CONFIG_FOLDER, self.profile_manager.config_dir, msg=output)
 
         from aiida.orm import load_node
         from aiida.plugins import DataFactory
@@ -65,20 +65,20 @@ class TestManagerTestCase(unittest.TestCase):
         with self.assertRaises(TestManagerError):
             self.test_create_aiida_db()
 
-        self.test_manager.reset_db()
+        self.profile_manager.reset_db()
         with self.assertRaises(Exception):
             load_node(data_pk)
 
-        temp_dir = self.test_manager.root_dir
-        self.test_manager.destroy_all()
+        temp_dir = self.profile_manager.root_dir
+        self.profile_manager.destroy_all()
         with self.assertRaises(Exception):
-            self.test_manager.postgres.db_exists(self.test_manager.db_name)
+            self.profile_manager.postgres.db_exists(self.profile_manager.dbinfo['db_name'])
         self.assertFalse(os.path.exists(temp_dir))
-        self.assertIsNone(self.test_manager.root_dir)
-        self.assertIsNone(self.test_manager.pg_cluster)
+        self.assertIsNone(self.profile_manager.root_dir)
+        self.assertIsNone(self.profile_manager.pg_cluster)
 
     def tearDown(self):
-        self.test_manager.destroy_all()
+        self.profile_manager.destroy_all()
 
 
 if __name__ == '__main__':

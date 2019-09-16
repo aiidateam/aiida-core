@@ -23,7 +23,7 @@ from __future__ import print_function
 import tempfile
 import shutil
 import pytest
-import aiida.manage.tests
+from aiida.manage.tests import test_manager, get_test_backend
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -34,8 +34,8 @@ def aiida_profile():
      need to depend on it explicitly - it will activate as soon as you import it in your ``conftest.py``.
     """
     # create new TestManager instance
-    with aiida.manage.tests.test_manager() as test_manager:
-        yield test_manager
+    with test_manager(backend=get_test_backend()) as test_mgr:
+        yield test_mgr
     # here, the TestManager instance has already been destroyed
 
 

@@ -16,9 +16,8 @@ import unittest
 
 from pgtest import pgtest
 
-from aiida.manage.tests import TestManager, TestManagerError
+from aiida.manage.tests import TestManager, TestManagerError, get_test_backend
 from aiida.common.utils import Capturing
-from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 
 
 class TestManagerTestCase(unittest.TestCase):
@@ -26,9 +25,7 @@ class TestManagerTestCase(unittest.TestCase):
 
     def setUp(self):
         self.test_manager = TestManager()
-        self.backend = BACKEND_DJANGO if os.environ.get(
-            'TEST_AIIDA_BACKEND', BACKEND_DJANGO
-        ) == BACKEND_DJANGO else BACKEND_SQLA
+        self.backend = get_test_backend()
         self.test_manager.backend = self.backend
 
     def test_create_db_cluster(self):

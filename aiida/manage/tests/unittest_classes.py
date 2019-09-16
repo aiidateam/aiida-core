@@ -16,9 +16,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 import unittest
 
-from aiida.backends import BACKEND_DJANGO
 from aiida.manage.manager import get_manager
-from . import _GLOBAL_TEST_MANAGER, test_manager
+from . import _GLOBAL_TEST_MANAGER, test_manager, get_test_backend
 
 __all__ = ('PluginTestCase', 'TestRunner')
 
@@ -50,7 +49,8 @@ class PluginTestCase(unittest.TestCase):
         cls.test_manager = _GLOBAL_TEST_MANAGER
         if not cls.test_manager.has_profile_open():
             raise ValueError(
-                'Fixture mananger has no open profile. Please use aiida.manage.tests.TestRunner to run these tests.'
+                'Fixture mananger has no open profile.' +
+                'Please use aiida.manage.tests.unittest_classes.TestRunner to run these tests.'
             )
 
         cls.backend = get_manager().get_backend()
@@ -74,7 +74,7 @@ class TestRunner(unittest.runner.TextTestRunner):
     """
 
     # pylint: disable=arguments-differ
-    def run(self, suite, backend=BACKEND_DJANGO):
+    def run(self, suite, backend=None):
         """
         Run tests using fixture manager for specified backend.
 
@@ -83,5 +83,5 @@ class TestRunner(unittest.runner.TextTestRunner):
         """
         from aiida.common.utils import Capturing
         with Capturing():
-            with test_manager(backend=backend):
+            with test_manager(backend=backend or get_test_backend()):
                 return super(TestRunner, self).run(suite)

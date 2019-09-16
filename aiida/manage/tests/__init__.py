@@ -444,3 +444,17 @@ def test_manager(backend=BACKEND_DJANGO, pgtest=None):
         yield _GLOBAL_TEST_MANAGER
     finally:
         _GLOBAL_TEST_MANAGER.destroy_all()
+
+
+def get_test_backend():
+    """ Read database backend from environment variable.
+
+    Reads from 'TEST_AIIDA_BACKEND' environment variable.
+    Defaults to django backend.
+    """
+    import os
+
+    backend_env = os.environ.get('TEST_AIIDA_BACKEND', BACKEND_DJANGO)
+    if backend_env in (BACKEND_DJANGO, BACKEND_SQLA):
+        return backend_env
+    raise ValueError("Unknown backend '{}' read from TEST_AIIDA_BACKEND environment variable".format(backend_env))

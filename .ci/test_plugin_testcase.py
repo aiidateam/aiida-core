@@ -17,18 +17,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import os
 import sys
 import unittest
 import tempfile
 import shutil
 
 from aiida.manage.tests.unittest_classes import PluginTestCase, TestRunner
-from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
-
-
-def determine_backend():
-    return BACKEND_DJANGO if os.environ.get('TEST_AIIDA_BACKEND', BACKEND_DJANGO) == BACKEND_DJANGO else BACKEND_SQLA
 
 
 class PluginTestCase1(PluginTestCase):
@@ -108,7 +102,7 @@ class PluginTestCase2(PluginTestCase):
 if __name__ == '__main__':
     MODULE = sys.modules[__name__]
     SUITE = unittest.defaultTestLoader.loadTestsFromModule(MODULE)
-    RESULT = TestRunner().run(SUITE, backend=determine_backend())
+    RESULT = TestRunner().run(SUITE)
 
     EXIT_CODE = int(not RESULT.wasSuccessful())
     sys.exit(EXIT_CODE)

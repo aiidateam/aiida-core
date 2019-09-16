@@ -109,23 +109,23 @@ class TestManager(object):  # pylint: disable=too-many-public-methods
         }
         self.pg_cluster = None
         self.postgres = None
-        self.__is_running_on_test_db = False
-        self.__is_running_on_test_profile = False
+        self._is_running_on_test_db = False
+        self._is_running_on_test_profile = False
         self._backup = {}
         self._backup['config'] = configuration.CONFIG
         self._backup['config_dir'] = settings.AIIDA_CONFIG_FOLDER
         self._backup['profile'] = configuration.PROFILE
-        self.__backend = None
+        self._backend = None
 
     @property
     def _backend(self):
         """
         Get the backend
         """
-        if self.__backend is None:
+        if self._backend is None:
             # Lazy load the backend so we don't do it too early (i.e. before load_dbenv())
-            self.__backend = get_manager().get_backend()
-        return self.__backend
+            self._backend = get_manager().get_backend()
+        return self._backend
 
     def create_db_cluster(self, pgtest=None):
         """
@@ -155,7 +155,7 @@ class TestManager(object):  # pylint: disable=too-many-public-methods
         self.db_params = self.postgres.dbinfo.copy()
         self.postgres.create_dbuser(self.db_user, self.db_pass)
         self.postgres.create_db(self.db_user, self.db_name)
-        self.__is_running_on_test_db = True
+        self._is_running_on_test_db = True
 
     def create_profile(self, pgtest=None):
         """
@@ -166,7 +166,7 @@ class TestManager(object):  # pylint: disable=too-many-public-methods
         """
         if configuration.PROFILE is not None:
             raise TestManagerError('AiiDA dbenv can not be loaded while creating a tests profile')
-        if not self.__is_running_on_test_db:
+        if not self._is_running_on_test_db:
             self.create_aiida_db(pgtest)
         from aiida.manage.configuration import settings, load_profile, Profile
         if not self.root_dir:
@@ -192,7 +192,7 @@ class TestManager(object):  # pylint: disable=too-many-public-methods
         set_default_user(profile, user)
         load_profile(profile_name)
 
-        self.__is_running_on_test_profile = True
+        self._is_running_on_test_profile = True
         self._create_test_case()
         self.init_db()
 
@@ -320,7 +320,7 @@ class TestManager(object):  # pylint: disable=too-many-public-methods
 
     @backend.setter
     def backend(self, backend):
-        if self.__is_running_on_test_profile:
+        if self._is_running_on_test_profile:
             raise TestManagerError('backend cannot be changed after setting up the environment')
 
         valid_backends = [BACKEND_DJANGO, BACKEND_SQLA]
@@ -385,8 +385,8 @@ class TestManager(object):  # pylint: disable=too-many-public-methods
         if self.pg_cluster:
             self.pg_cluster.close()
             self.pg_cluster = None
-        self.__is_running_on_test_db = False
-        self.__is_running_on_test_profile = False
+        self._is_running_on_test_db = False
+        self._is_running_on_test_profile = False
         if 'config' in self._backup:
             configuration.CONFIG = self._backup['config']
         if 'config_dir' in self._backup:
@@ -398,7 +398,7 @@ class TestManager(object):  # pylint: disable=too-many-public-methods
         """
         Create the tests case for the correct backend which will be used to clean up
         """
-        if not self.__is_running_on_test_profile:
+        if not self._is_running_on_test_profile:
             raise TestManagerError('No tests profile has been set up yet, cannot create appropriate tests case')
         if self.profile_info['backend'] == BACKEND_DJANGO:
             from aiida.backends.djsite.db.testbase import DjangoTests
@@ -411,7 +411,7 @@ class TestManager(object):  # pylint: disable=too-many-public-methods
             self._test_case.test_session = get_scoped_session()
 
     def has_profile_open(self):
-        return self.__is_running_on_test_profile
+        return self._is_running_on_test_profile
 
 
 _GLOBAL_TEST_MANAGER = TestManager()

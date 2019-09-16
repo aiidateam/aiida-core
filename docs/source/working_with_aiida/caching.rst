@@ -175,7 +175,7 @@ Limitations
 
 #. While caching saves unnecessary computations, the current implementation does not yet save disk space:
    The output nodes of the cached calculation are full copies of the original outputs.
-   The plan is to add data deduplication as a global feature at the repository level (independent of caching).
+   The plan is to add data deduplication as a global feature at the repository and database level (independent of caching).
 
 #. Workflow nodes are not cached. As explained below, in the current design this follows from the requirement that the provenance graph be independent of whether caching is enabled or not.
 

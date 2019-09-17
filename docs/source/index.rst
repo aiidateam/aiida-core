@@ -84,7 +84,7 @@ For developers
     concepts/processes
     concepts/calculations
     concepts/workflows
-
+    concepts/delete_export
 
 .. toctree::
     :maxdepth: 1

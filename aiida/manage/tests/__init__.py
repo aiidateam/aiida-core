@@ -79,7 +79,10 @@ class TestManager(object):
         """
         if configuration.PROFILE is not None:
             raise TestManagerError('AiiDA dbenv must not be loaded before setting up a test profile.')
-        self._manager = TemporaryProfileManager(backend=backend, pgtest=pgtest)
+        if self._manager is not None:
+            raise TestManagerError('Profile manager already loaded.')
+        self._manager = TemporaryProfileManager(backend=backend)
+        self._manager.create_profile(pgtest=pgtest)
 
     def use_profile(self, profile):
         """Set up Test manager to use existing profile.
@@ -90,6 +93,9 @@ class TestManager(object):
         """
         if configuration.PROFILE is not None:
             raise TestManagerError('AiiDA dbenv must not be loaded before setting up a test profile.')
+        if self._manager is not None:
+            raise TestManagerError('Profile manager already loaded.')
+
         self._manager = ProfileManager(profile_name=profile)
 
     def has_profile_open(self):
@@ -210,7 +216,7 @@ class TemporaryProfileManager(ProfileManager):
 
     _test_case = None
 
-    def __init__(self, backend=BACKEND_DJANGO, pgtest=None):  # pylint: disable=super-init-not-called
+    def __init__(self, backend=BACKEND_DJANGO):  # pylint: disable=super-init-not-called
         from aiida.manage.configuration import settings
 
         self.dbinfo = {}
@@ -226,8 +232,6 @@ class TemporaryProfileManager(ProfileManager):
         self._backup['config'] = configuration.CONFIG
         self._backup['config_dir'] = settings.AIIDA_CONFIG_FOLDER
         self._backup['profile'] = configuration.PROFILE
-
-        self.create_profile(pgtest=pgtest)
 
     @property
     def profile_dictionary(self):
@@ -253,6 +257,10 @@ class TemporaryProfileManager(ProfileManager):
 
         :param pgtest: a dictionary containing input to PGTest()
         """
+        if self.pg_cluster is not None:
+            raise TestManagerError(
+                'Running temporary postgresql cluster detected.' + 'Use destroy_all() before creating a new cluster.'
+            )
         if pgtest is None:
             pgtest = {}
         self.pg_cluster = PGTest(**pgtest)
@@ -268,7 +276,7 @@ class TemporaryProfileManager(ProfileManager):
         """
         if configuration.PROFILE is not None:
             raise TestManagerError('AiiDA dbenv can not be loaded while creating a tests db environment')
-        if not self.pg_cluster:
+        if self.pg_cluster is not None:
             self.create_db_cluster(pgtest)
         self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.dbinfo)
         self.dbinfo = self.postgres.dbinfo.copy()
@@ -305,13 +313,13 @@ class TemporaryProfileManager(ProfileManager):
         backend = get_manager()._load_backend(schema_check=False)
         backend.migrate()
 
+        # add a default user for the new profile
         from aiida.orm import User
         from aiida.cmdline.commands.cmd_user import set_default_user
-        if not User.objects.get_default():
-            user = User(**get_user_dict(self.profile_info))
-            user.store()
-            set_default_user(profile, user)
-            self._user = user
+        user = User(**get_user_dict(self.profile_info))
+        user.store()
+        set_default_user(profile, user)
+        self._user = user
 
         self._create_test_case(backend=self._profile.database_backend)
         self.init_db()

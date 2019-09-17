@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 import unittest
+import warnings
 
 from pgtest import pgtest
 
@@ -24,9 +25,13 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
     """Test the TemporaryProfileManager class"""
 
     def setUp(self):
-        self.profile_manager = TemporaryProfileManager()
+        # tell unittest not to warn about running processes
+        warnings.simplefilter('ignore', ResourceWarning)
         self.backend = get_test_backend()
-        self.profile_manager.backend = self.backend
+        self.profile_manager = TemporaryProfileManager(backend=self.backend)
+
+    def tearDown(self):
+        self.profile_manager.destroy_all()
 
     def test_create_db_cluster(self):
         self.profile_manager.create_db_cluster()
@@ -35,7 +40,7 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
     def test_create_aiida_db(self):
         self.profile_manager.create_db_cluster()
         self.profile_manager.create_aiida_db()
-        self.assertTrue(self.profile_manager.postgres.db_exists(self.profile_manager.dbinfo['db_name']))
+        self.assertTrue(self.profile_manager.postgres.db_exists(self.profile_manager.profile_info['database_name']))
 
     def test_create_use_destroy_profile(self):
         """
@@ -76,9 +81,6 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
         self.assertFalse(os.path.exists(temp_dir))
         self.assertIsNone(self.profile_manager.root_dir)
         self.assertIsNone(self.profile_manager.pg_cluster)
-
-    def tearDown(self):
-        self.profile_manager.destroy_all()
 
 
 if __name__ == '__main__':

@@ -42,7 +42,7 @@ def migrate_recursively(archive):
     :param archive: The export archive to be migrated.
     :type archive: :py:class:`~aiida.tools.importexport.common.archive.Archive`
     """
-    from aiida.tools.importexport import EXPORT_VERSION as newest_version
+    from aiida.tools.importexport.common.config import EXPORT_VERSION as newest_version
 
     old_version = archive.version_format
 
@@ -82,19 +82,17 @@ def migrate_archive(source, output=None, overwrite=False, silent=False):
     :rtype: dict
     """
     import os
-    from aiida.tools.importexport import Archive
+    from aiida.tools.importexport.common.archive import Archive
 
     if output and os.path.exists(output) and not overwrite:
         raise exceptions.MigrationValidationError('The output file already exists')
 
     try:
-        with Archive(
-            source, output_filepath=output, overwrite=overwrite, silent=silent, sandbox_in_repo=False
-        ) as archive:
+        with Archive(source, silent=silent) as archive:
             old_version = archive.version_format
             new_version = migrate_recursively(archive)
 
-            archive.repack()
+            archive.repack(output_filepath=output, overwrite=overwrite)
     except Exception as why:
         raise exceptions.ArchiveMigrationError(why)
 

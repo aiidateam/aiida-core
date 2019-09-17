@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=fixme
 """Utility functions and classes to interact with AiiDA export archives."""
 
 import io
@@ -20,9 +21,9 @@ from wrapt import decorator
 from aiida.common import json
 from aiida.common.folders import SandboxFolder
 from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
-from aiida.tools.importexport.common.exceptions import CorruptArchive, InvalidArchiveOperation
+from aiida.tools.importexport.common.exceptions import CorruptArchive, InvalidArchiveOperation, ArchiveOperationError
 
-__all__ = ('Archive', 'extract_zip', 'extract_tar')
+__all__ = ('Archive',)
 
 FILENAME_DATA = 'data.json'
 FILENAME_METADATA = 'metadata.json'
@@ -57,15 +58,14 @@ class Archive:
             archive.version
 
     """
+    # TODO: These sets should be determined from config.py - or similar - when the export function is updated to do the
+    # same. This will make it easy to update from a single place in the future, if needed.
     MANDATORY_DATA_KEYS = {'node_attributes', 'node_extras', 'export_data', 'links_uuid', 'groups_uuid'}
     MANDATORY_METADATA_KEYS = {'aiida_version', 'export_version', 'all_fields_info', 'unique_identifiers'}
 
-    def __init__(self, filepath, output_filepath=None, overwrite=False, silent=True, sandbox_in_repo=True):
+    def __init__(self, filepath, silent=True):
         self._filepath = filepath
-        self._output_filepath = output_filepath
-        self._overwrite = overwrite
         self._silent = silent
-        self._sandbox_in_repo = sandbox_in_repo
         self._folder = None
         self._unpacked = False
         self._keep = False
@@ -75,7 +75,7 @@ class Archive:
 
     def __enter__(self):
         """Instantiate a SandboxFolder into which the archive can be lazily unpacked."""
-        self._folder = SandboxFolder(sandbox_in_repo=self._sandbox_in_repo)
+        self._folder = SandboxFolder(sandbox_in_repo=True)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -101,12 +101,12 @@ class Archive:
                 self._keep = True
             elif tarfile.is_tarfile(self.filepath):
                 extract_tar(
-                    self.filepath, self.folder, silent=self.silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER
+                    self.filepath, self.folder, silent=self._silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER
                 )
                 self._archive_format = 'tar'
             elif zipfile.is_zipfile(self.filepath):
                 extract_zip(
-                    self.filepath, self.folder, silent=self.silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER
+                    self.filepath, self.folder, silent=self._silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER
                 )
             else:
                 raise CorruptArchive('unrecognized archive format')
@@ -120,40 +120,40 @@ class Archive:
 
     @ensure_unpacked
     @ensure_within_context
-    def repack(self, output_filepath=None, overwrite=None):
+    def repack(self, output_filepath=None, overwrite=False):
         """Repack the archive.
 
         Set new filepath name for repacked archive (if requested), write current data and meta_data dictionaries
         to folder.
 
-        :param output_filepath: the filename
+        :param output_filepath: the filename, if an absolute path is not provided,
+            it will be created in the current working directory.
         :type output_filepath: str
-        :param overwrite: whether or not to overwrite output_filepath, if it already exists
+        :param overwrite: whether or not to overwrite output_filepath, if it already exists (default: False).
         :type overwrite: bool
         """
         import six
 
-        if overwrite is None:
-            overwrite = self.overwrite
-
         # Try to create an output_filepath automatically (based on time and date), if none has been specified
-        if not output_filepath and not self.output_filepath:
-            self._output_filepath = self._new_output_filename(overwrite)
-        elif output_filepath and isinstance(output_filepath, six.string_types):
-            self._output_filepath = output_filepath
+        if not output_filepath:
+            output_filepath = self._new_output_filename(overwrite)
+        elif not isinstance(output_filepath, six.string_types):
+            raise InvalidArchiveOperation(
+                'output_filepath must be a string, instead {} was given'.format(type(output_filepath))
+            )
 
-        if os.path.exists(self.output_filepath) and not overwrite:
-            raise InvalidArchiveOperation('output file for repacking already exists')
+        if os.path.exists(output_filepath) and not overwrite:
+            raise ArchiveOperationError('output file for repacking already exists')
 
         self._write_json_file(FILENAME_DATA, self.data)
         self._write_json_file(FILENAME_METADATA, self.meta_data)
 
-        if self.archive_format == 'tar':
-            with tarfile.open(self.output_filepath, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as out_file:
+        if self._archive_format == 'tar':
+            with tarfile.open(output_filepath, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as out_file:
                 out_file.add(self.folder.abspath, arcname='')
-        elif self.archive_format == 'zip':
+        elif self._archive_format == 'zip':
             with zipfile.ZipFile(
-                self.output_filepath, mode='w', compression=zipfile.ZIP_DEFLATED, allowZip64=True
+                output_filepath, mode='w', compression=zipfile.ZIP_DEFLATED, allowZip64=True
             ) as out_file:
                 for dirpath, dirnames, filenames in os.walk(self.folder.abspath):
                     relpath = os.path.relpath(dirpath, self.folder.abspath)
@@ -162,7 +162,7 @@ class Archive:
                         real_dest = os.path.join(relpath, filename)
                         out_file.write(real_src, real_dest)
         else:
-            raise InvalidArchiveOperation('archive_format must be set prior to exit, when Archive should be kept')
+            raise ArchiveOperationError('archive_format must be set prior to exit, when Archive should be kept')
 
     def _new_output_filename(self, overwrite):
         """Create and return new filename based on self.filepath to repack into.
@@ -183,7 +183,7 @@ class Archive:
             basename = new_filename.split('.')
             new_filename = '.'.join([basename[0] + '_{}'.format(i), basename[1]])
             if i == 100:
-                raise InvalidArchiveOperation('an output file for repacking cannot be created')
+                raise ArchiveOperationError('an output file for repacking cannot be created')
 
         return new_filename
 
@@ -196,31 +196,6 @@ class Archive:
         return self._filepath
 
     @property
-    def output_filepath(self):
-        """Return the filepath of where the archive should be repacked
-
-        :return: the archive output filepath
-        """
-        return self._output_filepath
-
-    @property
-    def overwrite(self):
-        """Return whether repacking should be overwrite a possible existing file."""
-        return self._overwrite
-
-    @property
-    def silent(self):
-        """Return whether unpacking should be done silently."""
-        return self._silent
-
-    @silent.setter
-    def silent(self, value=True):
-        """Set silent."""
-        if not isinstance(value, bool):
-            raise TypeError('silent must be a boolean')
-        self._silent = value
-
-    @property
     def folder(self):
         """Return the folder
 
@@ -228,16 +203,6 @@ class Archive:
         :rtype: :py:class:`~aiida.common.folders.SandboxFolder`, :py:class:`~aiida.common.folders.Folder`
         """
         return self._folder
-
-    @property
-    @ensure_unpacked
-    def archive_format(self):
-        """Return the archive format
-
-        :return: format of filepath
-        :rtype: str
-        """
-        return self._archive_format
 
     @property
     @ensure_within_context
@@ -297,8 +262,8 @@ class Archive:
 
         :return: a dictionary with basic details
         """
-        export_data = self.read_data('export_data')
-        links_data = self.read_data('links_uuid')
+        export_data = self.get_data_member('export_data')
+        links_data = self.get_data_member('links_uuid')
 
         computers = export_data.get('Computer', {})
         groups = export_data.get('Group', {})
@@ -322,7 +287,7 @@ class Archive:
 
         :return: version number
         """
-        return self.read_meta_data('aiida_version')
+        return self.get_meta_data_member('aiida_version')
 
     @property
     @ensure_within_context
@@ -331,7 +296,7 @@ class Archive:
 
         :return: version number
         """
-        return self.read_meta_data('export_version')
+        return self.get_meta_data_member('export_version')
 
     @property
     @ensure_within_context
@@ -340,7 +305,7 @@ class Archive:
 
         :return: list of conversion notifications
         """
-        return self.read_meta_data('conversion_info')
+        return self.get_meta_data_member('conversion_info')
 
     @ensure_within_context
     @ensure_unpacked
@@ -374,38 +339,39 @@ class Archive:
         :raises ~aiida.tools.importexport.common.exceptions.CorruptArchive: if the key cannot be found in JSON file
         """
         if json_filename == FILENAME_DATA:
-            json_file = self.data
+            json_content = self.data
             mandatory_keys = self.MANDATORY_DATA_KEYS
         elif json_filename == FILENAME_METADATA:
-            json_file = self.meta_data
+            json_content = self.meta_data
             mandatory_keys = self.MANDATORY_METADATA_KEYS
         else:
-            raise CorruptArchive('{} is not a valid archive JSON file'.format(json_file))
+            raise CorruptArchive('{} is not a valid archive JSON file'.format(json_content))
 
-        if key in json_file:
-            return json_file[key]
-        if key not in mandatory_keys:
-            return {}
-        # else
+        try:
+            return json_content[key]
+        except KeyError:
+            if key not in mandatory_keys:
+                return {}
+
         raise CorruptArchive('{} is missing the mandatory key "{}"'.format(json_filename, key))
 
     @ensure_within_context
-    def read_data(self, key):
+    def get_data_member(self, member):
         """Return value in data.json
 
-        :param key: Key matching the value to be returned
-        :type key: str
+        :param member: Member to be returned, i.e., the dictionary key matching the value to be returned
+        :type member: str
         """
-        return self._read_json_file_content(FILENAME_DATA, key)
+        return self._read_json_file_content(FILENAME_DATA, member)
 
     @ensure_within_context
-    def read_meta_data(self, key):
+    def get_meta_data_member(self, member):
         """Return value in metadata.json
 
-        :param key: Key matching the value to be returned
-        :type key: str
+        :param member: Member to be returned, i.e., the dictionary key matching the value to be returned
+        :type member: str
         """
-        return self._read_json_file_content(FILENAME_METADATA, key)
+        return self._read_json_file_content(FILENAME_METADATA, member)
 
     @ensure_within_context
     @ensure_unpacked
@@ -425,14 +391,14 @@ class Archive:
 
             self._keep = True
         except OSError as error:
-            raise CorruptArchive('Error writing {}: {}'.format(filename, error))
+            raise ArchiveOperationError('Error writing {}: {}'.format(filename, error))
 
     @ensure_within_context
     def _redirect_archive_folder(self):
         """Return new Folder, pointing to path, which will not erase path upon exit.
 
         Erase SandboxFolder, if it was instantiated (it shouldn't have been).
-        Redirect self.folder to point at self.filepath, since this is should be a valid unpacked archive.
+        Redirect self.folder to point at self.filepath, since this should be a valid unpacked archive.
         Before this, however, do a superficial check of the folder's contents.
         """
         from aiida.common.folders import Folder

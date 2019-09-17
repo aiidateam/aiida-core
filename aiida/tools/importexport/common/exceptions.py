@@ -17,8 +17,9 @@ from aiida.common.exceptions import AiidaException
 
 __all__ = (
     'ExportImportException', 'ArchiveExportError', 'ArchiveImportError', 'IncompatibleArchiveVersionError',
-    'InvalidArchiveOperation', 'CorruptArchive', 'ExportValidationError', 'ImportUniquenessError',
-    'ImportValidationError', 'ArchiveMigrationError', 'MigrationValidationError', 'DanglingLinkError'
+    'CorruptArchive', 'InvalidArchiveOperation', 'ArchiveOperationError', 'ExportValidationError',
+    'ImportUniquenessError', 'ImportValidationError', 'ArchiveMigrationError', 'MigrationValidationError',
+    'DanglingLinkError'
 )
 
 
@@ -38,12 +39,17 @@ class IncompatibleArchiveVersionError(ExportImportException):
     """Raised when trying to import an export archive with an incompatible schema version."""
 
 
+class CorruptArchive(ExportImportException):
+    """Raised when an operation is applied to a corrupt export archive, e.g. missing files or invalid formats."""
+
+
 class InvalidArchiveOperation(ExportImportException):
     """Invalid operation in the class :py:class`~aiida.tools.importexport.common.archive.Archive`"""
 
 
-class CorruptArchive(ExportImportException):
-    """Raised when an operation is applied to a corrupt export archive, e.g. missing files or invalid formats."""
+class ArchiveOperationError(InvalidArchiveOperation):
+    """Operation error (e.g., OSError or IOError)
+    in the class :py:class`~aiida.tools.importexport.common.archive.Archive`"""
 
 
 class ExportValidationError(ArchiveExportError):

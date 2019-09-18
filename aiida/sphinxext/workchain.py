@@ -21,16 +21,18 @@ from docutils.parsers.rst import Directive, directives
 from sphinx import addnodes
 from sphinx.ext.autodoc import ClassDocumenter
 
-from aiida.common.utils import get_object_from_string
 from plumpy.ports import OutputPort
+from aiida.common.utils import get_object_from_string
 
 
 def setup_aiida_workchain(app):
+    """Add sphinx directive."""
     app.add_directive_to_domain('py', 'aiida-workchain', AiidaWorkchainDirective)
     app.add_autodocumenter(WorkChainDocumenter)
 
 
 class WorkChainDocumenter(ClassDocumenter):
+    """Documenter class for AiiDA WorkChains."""
     directivetype = 'aiida-workchain'
     objtype = 'workchain'
     priority = 20
@@ -42,14 +44,12 @@ class WorkChainDocumenter(ClassDocumenter):
             load_profile()
             from aiida.engine import WorkChain
             return issubclass(member, WorkChain)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
 class AiidaWorkchainDirective(Directive):
-    """
-    Directive to auto-document AiiDA workchains.
-    """
+    """Directive to auto-document AiiDA workchains."""
     required_arguments = 1
     optional_arguments = 0
     final_argument_whitespace = True
@@ -79,9 +79,7 @@ class AiidaWorkchainDirective(Directive):
 
     def build_node_tree(self):
         """Returns the docutils node tree."""
-        workchain_node = addnodes.desc(
-            desctype='class', domain='py', noindex=False, objtype='class'
-        )
+        workchain_node = addnodes.desc(desctype='class', domain='py', noindex=False, objtype='class')
         workchain_node += self.build_signature()
         workchain_node += self.build_content()
         return [workchain_node]
@@ -102,11 +100,10 @@ class AiidaWorkchainDirective(Directive):
         content += nodes.paragraph(text=self.workchain.__doc__)
 
         content += self.build_doctree(
-            title='Inputs:', port_namespace=self.workchain_spec.inputs,
+            title='Inputs:',
+            port_namespace=self.workchain_spec.inputs,
         )
-        content += self.build_doctree(
-            title='Outputs:', port_namespace=self.workchain_spec.outputs
-        )
+        content += self.build_doctree(title='Outputs:', port_namespace=self.workchain_spec.outputs)
 
         return content
 
@@ -117,7 +114,7 @@ class AiidaWorkchainDirective(Directive):
         paragraph = nodes.paragraph()
         paragraph += nodes.strong(text=title)
         namespace_doctree = self.build_portnamespace_doctree(port_namespace)
-        if len(namespace_doctree) > 0:
+        if namespace_doctree:
             paragraph += namespace_doctree
         else:
             paragraph += nodes.paragraph(text='None defined.')
@@ -157,9 +154,7 @@ class AiidaWorkchainDirective(Directive):
         paragraph = nodes.paragraph()
         paragraph += addnodes.literal_strong(text=name)
         paragraph += nodes.Text(', ')
-        paragraph += nodes.emphasis(
-            text=self.format_valid_types(port.valid_type)
-        )
+        paragraph += nodes.emphasis(text=self.format_valid_types(port.valid_type))
         paragraph += nodes.Text(', ')
         paragraph += nodes.Text('required' if port.required else 'optional')
         if _is_non_db(port):
@@ -174,6 +169,12 @@ class AiidaWorkchainDirective(Directive):
 
     @staticmethod
     def format_valid_types(valid_type):
+        """
+        Format valid input/output types.
+
+        :param valid_type: class
+        :return: formatted string
+        """
         try:
             return valid_type.__name__
         except AttributeError:

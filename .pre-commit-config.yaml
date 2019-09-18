@@ -146,11 +146,7 @@
         aiida/schedulers/plugins/test_sge.py|
         aiida/schedulers/plugins/test_slurm.py|
         aiida/schedulers/plugins/test_torque.py|
-        aiida/sphinxext/tests/conftest.py|
-        aiida/sphinxext/tests/test_workchain.py|
         aiida/sphinxext/tests/workchain_source/conf.py|
-        aiida/sphinxext/tests/workchain_source/demo_workchain.py|
-        aiida/sphinxext/workchain.py|
         aiida/tools/data/array/kpoints/legacy.py|
         aiida/tools/data/array/kpoints/seekpath.py|
         aiida/tools/data/__init__.py|
@@ -251,7 +247,7 @@
 
 # modernizer: make sure our code-base is Python 3 ready
 - repo: https://github.com/python-modernize/python-modernize.git
-  sha: a234ce4e185cf77a55632888f1811d83b4ad9ef2
+  rev: a234ce4e185cf77a55632888f1811d83b4ad9ef2
   hooks:
   - id: python-modernize
     exclude: >
@@ -317,6 +313,6 @@
       - --fix=zip
 
 - repo: git://github.com/pre-commit/pre-commit-hooks
-  sha: v1.1.1
+  rev: v1.1.1
   hooks:
   - id: check-yaml

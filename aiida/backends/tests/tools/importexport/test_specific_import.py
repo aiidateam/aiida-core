@@ -17,6 +17,8 @@ import os
 import shutil
 import tempfile
 
+import unittest
+
 import numpy as np
 
 from aiida import orm
@@ -268,3 +270,62 @@ class TestSpecificImport(AiidaTestCase):
         self.assertIn(
             'Unable to find the repository folder for Node with UUID={}'.format(node_uuid), str(exc.exception)
         )
+
+    @unittest.skip('Reenable when issue #3199 is solve (PR #3242): Fix `extract_tree`')
+    @with_temp_dir
+    def test_empty_repo_folder_export(self, temp_dir):
+        """Check a Node's empty repository folder is exported properly"""
+        from aiida.common.folders import Folder
+        from aiida.tools.importexport.dbexport import export_zip, export_tree
+
+        node = orm.Dict().store()
+        node_uuid = node.uuid
+
+        node_repo = RepositoryFolder(section=Repository._section_name, uuid=node_uuid)  # pylint: disable=protected-access
+        self.assertTrue(
+            node_repo.exists(), msg='Newly created and stored Node should have had an existing repository folder'
+        )
+        for filename, is_file in node_repo.get_content_list(only_paths=False):
+            abspath_filename = os.path.join(node_repo.abspath, filename)
+            if is_file:
+                os.remove(abspath_filename)
+            else:
+                shutil.rmtree(abspath_filename, ignore_errors=False)
+        self.assertFalse(
+            node_repo.get_content_list(),
+            msg='Repository folder should be empty, instead the following was found: {}'.format(
+                node_repo.get_content_list()
+            )
+        )
+
+        archive_variants = {
+            'archive folder': os.path.join(temp_dir, 'export_tree'),
+            'tar archive': os.path.join(temp_dir, 'export.tar.gz'),
+            'zip archive': os.path.join(temp_dir, 'export.zip')
+        }
+
+        export_tree([node], folder=Folder(archive_variants['archive folder']), silent=True)
+        export([node], outfile=archive_variants['tar archive'], silent=True)
+        export_zip([node], outfile=archive_variants['zip archive'], silent=True)
+
+        for variant, filename in archive_variants.items():
+            self.reset_database()
+            node_count = orm.QueryBuilder().append(orm.Dict, project='uuid').count()
+            self.assertEqual(node_count, 0, msg='After DB reset {} Dict Nodes was (wrongly) found'.format(node_count))
+
+            import_data(filename, silent=True)
+            builder = orm.QueryBuilder().append(orm.Dict, project='uuid')
+            imported_node_count = builder.count()
+            self.assertEqual(
+                imported_node_count,
+                1,
+                msg='After {} import a single Dict Node should have been found, '
+                'instead {} was/were found'.format(variant, imported_node_count)
+            )
+            imported_node_uuid = builder.all()[0][0]
+            self.assertEqual(
+                imported_node_uuid,
+                node_uuid,
+                msg='The wrong UUID was found for the imported {}: '
+                '{}. It should have been: {}'.format(variant, imported_node_uuid, node_uuid)
+            )

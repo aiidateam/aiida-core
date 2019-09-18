@@ -1636,6 +1636,26 @@ class TestNodeDeletion(AiidaTestCase):
         * INPUT_WORK from DI to W1 and RETURN from C0 to W1.
         * INPUT_WORK from DI to W2 and RETURN from C0 to W2 (repeats links but
           must exist for consistency).
+
+        This graph looks like this::
+
+                  input_work     +----+     return
+              +----------------> | W2 | ---------------+
+              |                  +----+                |
+              |                    |                   |
+              |                    | call_work         |
+              |                    |                   |
+              |                    v                   |
+              |     input_work   +----+    return      |
+              |  +-------------> | W1 | ------------+  |
+              |  |               +----+             |  |
+              |  |                 |                |  |
+              |  |                 | call_calc      |  |
+              |  |                 |                |  |
+              |  |                 v                v  v
+            +------+ input_calc  +----+  create   +------+
+            |  DI  | ----------> | C0 | --------> |  DO  |
+            +------+             +----+           +------+
         """
 
         data_i = orm.Data().store()
@@ -1700,7 +1720,7 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in (di, do)]
         uuids_check_deleted = [n.uuid for n in (c0, w1, w2)]
         with Capturing():
-            delete_nodes([c0.pk], verbosity=2, force=True, follow_create=False)
+            delete_nodes([c0.pk], verbosity=2, force=True, forward_create=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # By default deleting a workflow should delete all upwards logical provenance
@@ -1727,16 +1747,16 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in (di,)]
         uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
         with Capturing():
-            delete_nodes([w2.pk], verbosity=2, force=True, follow_calls=True)
+            delete_nodes([w2.pk], verbosity=2, force=True, forward_calcs=True, forward_works=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # But you can also be more carefull and not delete the final data
-        # when you do this (NEED TO TEST MULTIPLE CALCS)
+        # when you do this
         di, do, c0, w1, w2 = self._create_minimal_graph()
         uuids_check_existence = [n.uuid for n in (di, do)]
         uuids_check_deleted = [n.uuid for n in (c0, w1, w2)]
         with Capturing():
-            delete_nodes([w2.pk], verbosity=2, force=True, follow_calls=True, follow_create=False)
+            delete_nodes([w2.pk], verbosity=2, force=True, forward_calcs=True, forward_works=True, forward_create=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # Or even keep all data provenance (calcs but not works)
@@ -1744,7 +1764,7 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in (di, do, c0)]
         uuids_check_deleted = [n.uuid for n in (w1, w2)]
         with Capturing():
-            delete_nodes([w2.pk], verbosity=2, force=True, follow_calls=True, keep_dataprov=True)
+            delete_nodes([w2.pk], verbosity=2, force=True, forward_calcs=True, forward_works=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
 
@@ -1822,13 +1842,13 @@ class TestNodeDeletion(AiidaTestCase):
             delete_nodes([pws.pk], verbosity=2, force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-        # Again, deleting with follow_calls also deletes other parts of
+        # Again, deleting with forward_calcs/works also deletes other parts of
         # the graph.
         di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
         uuids_check_existence = [n.uuid for n in (di1, di2, di3, di4)]
         uuids_check_deleted = [n.uuid for n in (do1, pws, pcs, pwm)]
         with Capturing():
-            delete_nodes([pcs.pk], verbosity=2, force=True, follow_calls=True)
+            delete_nodes([pcs.pk], verbosity=2, force=True, forward_calcs=True, forward_works=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
     def _create_indep2w_graph(self):
@@ -1842,6 +1862,27 @@ class TestNodeDeletion(AiidaTestCase):
         * PW0: master workflow, which calls both PWA and PWB.
         * PWA: it has a single call to PCA, with input DIA and output DOA.
         * PWB: it has a single call to PCB, with input DIB and output DOB.
+
+        This should look something like this::
+
+              +-------------------------------------+   +-------------------------------------+
+              |     inwork                          |   |                          inwork     |
+              |                                     v   v                                     |
+              |                      call_work    +-------+    call_work                      |
+              |                 +---------------- |  PW0  | -----------------+                |
+              |                 |                 +-------+                  |                |
+              |                 v                  |     |                   v                |
+              |     inwork    +---+    return      |     |      return    +---+    inwork     |
+              | +-----------> |PWA| ------------+  |     |  +-----------> |PWB| ------------+ |
+              | |             +---+             |  |     |  |             +---+             | |
+              | |               |               |  |     |  |               |               | |
+              | |               | call_calc     |  |     |  |               | call_calc     | |
+              | |               |               |  |     |  |               |               | |
+              | |               v               v  v     v  v               v               | |
+            +-----+  incall   +---+  create   +-----+   +-----+   create  +---+   incall  +-----+
+            | DIA | --------> |PCA| --------> | DOA |   | DOB | <-------- |PCB| <-------- | DIB |
+            +-----+           +---+           +-----+   +-----+           +---+           +-----+
+
         """
 
         dia = orm.Data().store()
@@ -1896,7 +1937,7 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in [dia, dib]]
         uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, dob, pcb, pwb, pw0]]
         with Capturing():
-            delete_nodes((pwa.pk,), verbosity=2, force=True, follow_calls=True)
+            delete_nodes((pwa.pk,), verbosity=2, force=True, forward_calcs=True, forward_works=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # If you want to keep the independent process, first delete the global
@@ -1906,13 +1947,13 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in [dia, doa, pca, pwa, dib, dob, pcb, pwb]]
         uuids_check_deleted = [n.uuid for n in [pw0]]
         with Capturing():
-            delete_nodes((pw0.pk,), verbosity=2, force=True, follow_calls=False)
+            delete_nodes((pw0.pk,), verbosity=2, force=True, forward_calcs=False, forward_works=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         uuids_check_existence = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
         uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, pw0]]
         with Capturing():
-            delete_nodes((pwa.pk,), verbosity=2, force=True, follow_calls=True)
+            delete_nodes((pwa.pk,), verbosity=2, force=True, forward_calcs=True, forward_works=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
 
@@ -1921,7 +1962,11 @@ class TestNodeDeletion(AiidaTestCase):
         Creates a straighforward graph with up to N=20 (currently) nodes. It
         checks if propagation works correctly, but it also can be used quickly
         to make preliminary timing profiling (increasing hardcoded N). The link
-        scheeme looks like this: inp_0 ( -> calc_k -> inp_k ) for k = 1, ..., N
+        scheeme looks like this::
+
+            +----+     +----+     +----+     +----+     +----+
+            | D0 | --> | C1 | --> | D1 | --> | C2 | --> | D2 | --> ...
+            +----+     +----+     +----+     +----+     +----+
         """
 
         old_data = orm.Data().store()

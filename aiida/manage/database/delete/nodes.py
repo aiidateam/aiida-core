@@ -16,15 +16,9 @@ import click
 
 from aiida.cmdline.utils import echo
 
-# OBS: keep_dataprov only affects if follow_calls is True: should it default
-#      to False and delete everything or to True and be more carefull without
-#      further specifications?
-#      Are we REALLY going to use this in another case? Or should I just have
-#      follow_callcalc and follow_callwork?
-
 
 def delete_nodes(
-    pks, verbosity=0, dry_run=False, force=False, follow_create=True, follow_calls=False, keep_dataprov=False
+    pks, verbosity=0, dry_run=False, force=False, forward_create=True, forward_calcs=False, forward_works=False
 ):
     """
     Delete nodes by a list of pks.
@@ -54,18 +48,17 @@ def delete_nodes(
     :param int verbosity: 0 prints nothing,
                           1 prints just sums and total,
                           2 prints individual nodes.
-    :param bool follow_create:
+    :param bool forward_create:
         This will delete all output data created by any deleted calculation.
-    :param bool follow_calls:
-        This will also delete all processed called by any workflow that is going to be deleted.
+    :param bool forward_calcs:
+        This will also delete all calculations called by any workflow that is going to be deleted.
         Note that when you delete a workflow, also all parent workflows are deleted (recursively).
-        Therefore, setting this flag to True may delete workflow sections that are
-        'unrelated' to what has been chosen to be deleted, just because they are connected at some
-        point in the upwards provenance. Use with care, and it is advisable to never combine it with force.
-    :param bool keep_dataprov:
-        Only used when follow_calls=True, this will keep all the data provenance from all
-        deleted nodes, only propagating deletion to the logical provenance (i.e., the
-        follow_calls will only follow CALL_WORK but not CALL_CALC).
+        Therefore, setting this flag to True may delete calculations that are 'unrelated' to what
+        has been chosen to be deleted, just because they are connected at some point in the
+        upwards provenance. Use with care, and it is advisable to never combine it with force.
+    :param bool forward_works:
+        This will also delete all calculations called by any workflow that is going to be deleted.
+        The same disclaimer as forward_calcs applies here as well.
     :param bool dry_run:
         Do not delete, a dry run, with statistics printed according to verbosity levels.
     :param bool force:
@@ -102,12 +95,13 @@ def delete_nodes(
     follow_downwards.append(LinkType.INPUT_CALC.value)
     follow_downwards.append(LinkType.INPUT_WORK.value)
 
-    if follow_calls:
-        follow_downwards.append(LinkType.CALL_WORK.value)
-        if not keep_dataprov:
-            follow_downwards.append(LinkType.CALL_CALC.value)
+    if forward_calcs:
+        follow_downwards.append(LinkType.CALL_CALC.value)
 
-    if follow_create:
+    if forward_works:
+        follow_downwards.append(LinkType.CALL_WORK.value)
+
+    if forward_create:
         follow_downwards.append(LinkType.CREATE.value)
 
     links_upwards = {'type': {'in': follow_upwards}}

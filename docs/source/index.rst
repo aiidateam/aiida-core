@@ -117,6 +117,7 @@ For developers
     developer_guide/core/caching
     developer_guide/core/plugin_system
     developer_guide/tools/sphinx_cheatsheet
+    developer_guide/tools/visual_aids
     developer_guide/design/changes
 
 .. toctree::

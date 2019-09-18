@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import io
 import os
 import copy
+import warnings
 from enum import Enum
 from contextlib import contextmanager
 
@@ -23,7 +24,7 @@ import six
 from wrapt import decorator
 
 from aiida.common import exceptions
-from aiida.common.utils import get_object_from_string
+from aiida.common.warnings import AiidaDeprecationWarning
 
 __all__ = ('get_use_cache', 'enable_caching', 'disable_caching')
 
@@ -50,6 +51,7 @@ def _get_config(config_file):
     :return: the configuration dictionary
     """
     from aiida.manage.configuration import get_profile
+    from aiida.plugins.entry_point import is_valid_entry_point_string, load_entry_point_from_string
 
     profile = get_profile()
 
@@ -59,27 +61,34 @@ def _get_config(config_file):
     try:
         with io.open(config_file, 'r', encoding='utf8') as handle:
             config = yaml.load(handle)[profile.name]
-    # no config file, or no config for this profile
     except (OSError, IOError, KeyError):
+        # No config file, or no config for this profile
         return DEFAULT_CONFIG
 
-    # validate configuration
+    # Validate configuration
     for key in config:
         if key not in DEFAULT_CONFIG:
             raise ValueError("Configuration error: Invalid key '{}' in cache_config.yml".format(key))
 
-    # add defaults where config is missing
+    # Add defaults where config is missing
     for key, default_config in DEFAULT_CONFIG.items():
         config[key] = config.get(key, default_config)
 
-    # load classes
-    try:
-        for key in [ConfigKeys.ENABLED.value, ConfigKeys.DISABLED.value]:
-            config[key] = [get_object_from_string(c) for c in config[key]]
-    except (ValueError) as err:
-        six.raise_from(
-            exceptions.ConfigurationError("Unknown class given in 'cache_config.yml': '{}'".format(err)), err
-        )
+    # Validate and load the entry point identifiers
+    for key in [ConfigKeys.ENABLED.value, ConfigKeys.DISABLED.value]:
+        for identifier in config[key]:
+            if not is_valid_entry_point_string(identifier):
+                raise exceptions.ConfigurationError(
+                    "entry point '{}' in 'cache_config.yml' is not a valid entry point string.".format(identifier)
+                )
+
+            try:
+                load_entry_point_from_string(identifier)
+            except exceptions.EntryPointError as exception:
+                raise exceptions.ConfigurationError(
+                    "entry point '{}' in 'cache_config.yml' can not be loaded: {}.".format(identifier, exception)
+                )
+
     return config
 
 
@@ -87,9 +96,7 @@ _CONFIG = {}
 
 
 def configure(config_file=None):
-    """
-    Reads the caching configuration file and sets the _CONFIG variable.
-    """
+    """Reads the caching configuration file and sets the _CONFIG variable."""
     # pylint: disable=global-statement
     if config_file is None:
         from aiida.manage.configuration import get_config
@@ -111,22 +118,35 @@ def _with_config(wrapped, _, args, kwargs):
 
 
 @_with_config
-def get_use_cache(node_class=None):
-    """Return whether the caching mechanism should be used for the given node class according to the configuration.
+def get_use_cache(node_class=None, identifier=None):
+    """Return whether the caching mechanism should be used for the given entry point according to the configuration.
 
     :param node_class: the Node class or sub class to check if enabled for caching
+    :param identifier: the full entry point string of the process, e.g. `aiida.calculations:arithmetic.add`
     :return: boolean, True if caching is enabled, False otherwise
     :raises ValueError: if the configuration is invalid by defining the class both enabled and disabled
     """
+    from aiida.common.lang import type_check
+
     if node_class is not None:
-        enabled = node_class in _CONFIG[ConfigKeys.ENABLED.value]
-        disabled = node_class in _CONFIG[ConfigKeys.DISABLED.value]
+        warnings.warn(  # pylint: disable=no-member
+            'the `node_class` argument is deprecated and will be removed in `v2.0.0`. '
+            'Use the `identifier` argument instead', AiidaDeprecationWarning
+        )
+
+    if identifier is not None:
+        type_check(identifier, six.string_types)
+
+        enabled = identifier in _CONFIG[ConfigKeys.ENABLED.value]
+        disabled = identifier in _CONFIG[ConfigKeys.DISABLED.value]
+
         if enabled and disabled:
-            raise ValueError('Invalid configuration: Caching for {} is both enabled and disabled.'.format(node_class))
+            raise ValueError('Invalid configuration: caching for {} is both enabled and disabled.'.format(identifier))
         elif enabled:
             return True
         elif disabled:
             return False
+
     return _CONFIG[ConfigKeys.DEFAULT.value]
 
 
@@ -143,40 +163,54 @@ def _reset_config():
 
 
 @contextmanager
-def enable_caching(node_class=None):
-    """
-    Context manager to enable caching, either for a specific node class, or globally.
-    Note that this does not affect the behavior of the daemon, only the local Python instance.
+def enable_caching(node_class=None, identifier=None):
+    """Context manager to enable caching, either for a specific node class, or globally.
+
+    .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
 
     :param node_class: Node class for which caching should be enabled.
+    :param identifier: the full entry point string of the process, e.g. `aiida.calculations:arithmetic.add`
     """
+    if node_class is not None:
+        warnings.warn(  # pylint: disable=no-member
+            'the `node_class` argument is deprecated and will be removed in `v2.0.0`. '
+            'Use the `identifier` argument instead', AiidaDeprecationWarning
+        )
+
     with _reset_config():
-        if node_class is None:
+        if identifier is None:
             _CONFIG[ConfigKeys.DEFAULT.value] = True
         else:
-            _CONFIG[ConfigKeys.ENABLED.value].append(node_class)
+            _CONFIG[ConfigKeys.ENABLED.value].append(identifier)
             try:
-                _CONFIG[ConfigKeys.DISABLED.value].remove(node_class)
+                _CONFIG[ConfigKeys.DISABLED.value].remove(identifier)
             except ValueError:
                 pass
         yield
 
 
 @contextmanager
-def disable_caching(node_class=None):
-    """
-    Context manager to disable caching, either for a specific node class, or globally.
-    Note that this does not affect the behavior of the daemon, only the local Python instance.
+def disable_caching(node_class=None, identifier=None):
+    """Context manager to disable caching, either for a specific node class, or globally.
+
+    .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
 
     :param node_class: Node class for which caching should be disabled.
+    :param identifier: the full entry point string of the process, e.g. `aiida.calculations:arithmetic.add`
     """
+    if node_class is not None:
+        warnings.warn(  # pylint: disable=no-member
+            'the `node_class` argument is deprecated and will be removed in `v2.0.0`. '
+            'Use the `identifier` argument instead', AiidaDeprecationWarning
+        )
+
     with _reset_config():
-        if node_class is None:
+        if identifier is None:
             _CONFIG[ConfigKeys.DEFAULT.value] = False
         else:
-            _CONFIG[ConfigKeys.DISABLED.value].append(node_class)
+            _CONFIG[ConfigKeys.DISABLED.value].append(identifier)
             try:
-                _CONFIG[ConfigKeys.ENABLED.value].remove(node_class)
+                _CONFIG[ConfigKeys.ENABLED.value].remove(identifier)
             except ValueError:
                 pass
         yield

@@ -8,35 +8,34 @@ Enabling caching
 ----------------
 
 There are numerous reasons why you may need to re-run calculations you’ve already done before.
-Since AiiDA stores the full provenance of each calculation, it can *detect* whether a calculation has been run before and reuse its outputs without wasting computational resources.
+Since AiiDA stores the full provenance of each calculation, it can detect whether a calculation has been run before and reuse its outputs without wasting computational resources.
 This is what we mean by **caching** in AiiDA.
 
-This feature is not enabled by default. In order to enable caching:
+Caching is **not enabled by default**. In order to enable caching for your AiiDA profile (here called ``aiida2``), place the following ``cache_config.yml`` file in your ``.aiida`` configuration folder:
 
- 1. Place the following ``cache_config.yml`` file in your ``.aiida`` configuration folder
-    in order to enable caching for your AiiDA profile (here called ``aiida2``):
+.. code:: yaml
 
-    .. code:: yaml
+    aiida2:
+      default: True
 
-        aiida2:
-          default: True
+From this point onwards, when you launch a new calculation, AiiDA will compare its hash (depending both on the type of calculation and its inputs, see :ref:`caching_matches`) against other calculations already present in your database.
+If another calculation with the same hash is found, AiiDA will reuse its results without repeating the actual calculation.
 
- 2. Run ``verdi -p aiida2 rehash`` in order to compute hashes of all nodes in your existing database.
-
-From this point onwards, when you launch a new calculation, AiiDA will compute its hash (depending both on the type of calculation and its inputs, see :ref:`caching_matches`).
-If another calculation with the same hash is found to be already present in the database, AiiDA will reuse its results without repeating the actual calculation.
+In order to ensure that the provenance graph with and without caching is the same,
+AiiDA creates both a new calculation node and a copy of the output data nodes as shown in :numref:`fig_caching`.
 
 .. _fig_caching:
 .. figure:: include/images/caching.png
   :align: center
   :height: 350px
 
-  When reusing a cached calculation, AiiDA links up to the input nodes as usual, and copies both the calculation node **C** and its outputs **D3**.
-  Note that AiiDA uses the *hashes* of the input nodes to match the calculation **C'**  will reuse a calculation **C** whenever the *contents* of the input notes even if the While this sketch shows **C'** reuse the input nodes of **C**, it is only the *content* of the input nodes (their hash) that matters.
-  For calculation C' to be matched to the already completed calculation C one does not have to pass the exact same input nodes D1 and D2 when launching the calculation. Even completely "new" input nodes (D3 and D4 let's say) will work, as long as their computed hashed match those of D1 and D2 exactly.
+  When reusing the results of a calculation **C** for a new calculation **C'**, AiiDA simply makes a copy of the result nodes and links them up as usual.
 
-In order to ensure that the provenance graph with and without caching is the same,
-AiiDA creates both a new calculation node and a copy of the output data nodes as shown in :numref:`fig_caching`.
+.. note::
+
+    AiiDA uses the *hashes* of the input nodes **D1** and **D2** when searching the calculation cache.
+    I.e. if the input of **C'** were new nodes **D1'** and **D2'** with the same content (hash) as **D1**, **D2**, the cache would trigger as well.
+
 
 .. note:: Caching is **not** implemented at the WorkChain/workfunction level (see :ref:`caching_limitations` for details).
 
@@ -60,7 +59,7 @@ If a node of the same class with the same hash already exists in the database, t
 
 Use the :meth:`~aiida.orm.nodes.Node.get_hash` method to check the hash of any node.
 
-In order to figure out why a calculation is *not* being reused, the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` may be useful:
+In order to figure out why a calculation is *not* being reused, the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` method may be useful:
 
 .. ipython::
     :verbatim:
@@ -90,62 +89,24 @@ Configuration
 Class level
 ...........
 
-Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides control over caching at the level of specific calculation or data classes:
+Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides control over caching at the level of specific calculation class:
 
 .. code:: yaml
 
     profile-name:
       default: False
       enabled:
-        - aiida.calculations.plugins.templatereplacer.TemplatereplacerCalculation
-        - aiida.orm.nodes.data.str.Str
+        - aiida.calculations:quantumespresso.pw
       disabled:
-        - aiida.orm.nodes.data.float.Float
+        - aiida.calculations:templatereplacer
 
-In this example, caching is enabled for ``TemplatereplacerCalculation`` and ``Str``, and disabled for all other classes.
-Note that the fully qualified class import name (e.g., ``aiida.orm.nodes.data.str.Str``) must be provided, consisting of the module name and the class name.
-You can construct it by hand or (usually) get it directly from the string representation of the class
-(it is **not** the same as the type string stored in the database):
-
-.. ipython::
-    :verbatim:
-
-    In [1]: Str.__module__ + '.' + Str.__name__
-    Out[1]: 'aiida.orm.nodes.data.str.Str'
-
-    In [2]: str(Str)
-    Out[2]: "<class 'aiida.orm.nodes.data.str.Str'>"
-
+In this example, caching is disabled by default, but explicitly enabled for calculaions of the ``PwCalculation`` class, identified by the ``aiida.calculations:quantumespresso.pw`` entry point.
+It also shows how to disable caching for particular calculations (which has no effect here due to the profile-wide default).
 
 Node level
 ...........
 
-Even when caching is turned off for a given node type, you can manually enable caching by passing ``use_cache=True`` to the ``store`` method.
-
-.. ipython::
-    :verbatim:
-
-    In [1]: from __future__ import print_function
-
-    In [2]: from aiida.orm import Str
-
-    In [3]: n1 = Str('test string')
-
-    In [4]: n1.store()
-    Out[4]: u'test string'
-
-    In [5]: n2 = Str('test string')
-
-    In [6]: n2.store(use_cache=True)
-    Out[6]: u'test string'
-
-    In [7]: print('UUID of n1:', n1.uuid)
-    UUID of n1: 956109e1-4382-4240-a711-2a4f3b522122
-
-    In [8]: print('n2 is cached from:', n2.get_cache_source())
-    n2 is cached from: 956109e1-4382-4240-a711-2a4f3b522122
-
-When running a :class:`~aiida.engine.processes.CalcJob` through the :meth:`~aiida.engine.run` or :meth:`~aiida.engine.submit` functions, you can achieve the same effect using the :class:`~aiida.manage.caching.enable_caching` context manager:
+Even when caching is turned off for a given node type, you can enable it on a case-by-case basis by using the :class:`~aiida.manage.caching.enable_caching` context manager:
 
 .. code:: python
 
@@ -155,8 +116,7 @@ When running a :class:`~aiida.engine.processes.CalcJob` through the :meth:`~aiid
     with enable_caching(node_class=CalcJobNode):
        run(...)
 
-If you suspect a node is being reused in error (e.g. during development),
-it is also possible to manually *prevent* a specific node from being reused:
+If you suspect a node is being reused in error (e.g. during development), you can also manually *prevent* a specific node from being reused:
 
 1. Load one of the nodes you suspect to be a clone.
    Check that :meth:`~aiida.orm.nodes.Node.get_cache_source` returns a UUID.
@@ -187,6 +147,5 @@ Limitations
 #. The caching mechanism for calculations *should* trigger only when the inputs and the calculation to be performed are exactly the same.
    Edge cases where this assumption might be violated include cases where the calculation parser is in a different python module than the calculation and the developer made changes without updating the version number of the plugin.
 
-#. While caching saves unnecessary computations, the current implementation does not yet save disk space:
-   The output nodes of the cached calculation are full copies of the original outputs.
-   The plan is to add data deduplication as a global feature at the repository and database level (independent of caching).
+Finally, while caching saves unnecessary computations, it does not save disk space: The output nodes of the cached calculation are full copies of the original outputs.
+The plan is to add data deduplication as a global feature at the repository and database level (independent of caching).

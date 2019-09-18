@@ -32,7 +32,8 @@ If another calculation with the same hash is found to be already present in the 
   :height: 350px
 
   When reusing a cached calculation, AiiDA links up to the input nodes as usual, and copies both the calculation node **C** and its outputs **D3**.
-  While this sketch shows **C'** reuse the input nodes of **C'**, it is only the *content* of the input nodes (their hash) that matters.
+  Note that AiiDA uses the *hashes* of the input nodes to match the calculation **C'**  will reuse a calculation **C** whenever the *contents* of the input notes even if the While this sketch shows **C'** reuse the input nodes of **C**, it is only the *content* of the input nodes (their hash) that matters.
+  For calculation C' to be matched to the already completed calculation C one does not have to pass the exact same input nodes D1 and D2 when launching the calculation. Even completely "new" input nodes (D3 and D4 let's say) will work, as long as their computed hashed match those of D1 and D2 exactly.
 
 In order to ensure that the provenance graph with and without caching is the same,
 AiiDA creates both a new calculation node and a copy of the output data nodes as shown in :numref:`fig_caching`.
@@ -59,7 +60,7 @@ If a node of the same class with the same hash already exists in the database, t
 
 Use the :meth:`~aiida.orm.nodes.Node.get_hash` method to check the hash of any node.
 
-In order to figure out why a calculation is *not* being reused, the :meth:`._get_objects_to_hash() <aiida.orm.nodes.Node._get_objects_to_hash>` may be useful:
+In order to figure out why a calculation is *not* being reused, the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` may be useful:
 
 .. ipython::
     :verbatim:
@@ -157,7 +158,8 @@ When running a :class:`~aiida.engine.processes.CalcJob` through the :meth:`~aiid
 If you suspect a node is being reused in error (e.g. during development),
 it is also possible to manually *prevent* a specific node from being reused:
 
-1. For one of the cloned nodes, check that :meth:`~aiida.orm.nodes.Node.get_cache_source` returns a UUID.
+1. Load one of the nodes you suspect to be a clone.
+   Check that :meth:`~aiida.orm.nodes.Node.get_cache_source` returns a UUID.
    If it returns `None`, the node was not cloned.
 2. Clear the hashes of all nodes that are considered identical to this node:
 
@@ -173,18 +175,18 @@ it is also possible to manually *prevent* a specific node from being reused:
 Limitations
 -----------
 
-#. While caching saves unnecessary computations, the current implementation does not yet save disk space:
-   The output nodes of the cached calculation are full copies of the original outputs.
-   The plan is to add data deduplication as a global feature at the repository and database level (independent of caching).
-
-#. Workflow nodes are not cached. As explained below, in the current design this follows from the requirement that the provenance graph be independent of whether caching is enabled or not.
+#. Workflow nodes are not cached. In the current design this follows from the requirement that the provenance graph be independent of whether caching is enabled or not:
 
    * **Calculation nodes:** Calculation nodes can have data inputs and create new data nodes as outputs.
      In order to make it look as if a cloned calculation produced its own outputs, the output nodes are copied and linked as well.
    * **Workflow nodes:** Workflows differ from calculations in that they can *return* an input node or an output node created by a calculation.
      Since caching does not care about the *identity* of input nodes but only their *content*, it is not straightforward to figure out which node to return in a cached workflow.
 
-  For the moment, this limitation is acceptable since the runtime of AiiDA WorkChains is usually dominated by expensive calculations, which are covered by the current caching mechanism.
+   For the moment, this limitation is acceptable since the runtime of AiiDA WorkChains is usually dominated by expensive calculations, which are covered by the current caching mechanism.
 
 #. The caching mechanism for calculations *should* trigger only when the inputs and the calculation to be performed are exactly the same.
    Edge cases where this assumption might be violated include cases where the calculation parser is in a different python module than the calculation and the developer made changes without updating the version number of the plugin.
+
+#. While caching saves unnecessary computations, the current implementation does not yet save disk space:
+   The output nodes of the cached calculation are full copies of the original outputs.
+   The plan is to add data deduplication as a global feature at the repository and database level (independent of caching).

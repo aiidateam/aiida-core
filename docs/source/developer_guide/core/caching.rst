@@ -4,12 +4,12 @@ Caching: implementation details
 This section covers some details of the caching mechanism which are not discussed in the :ref:`user guide <caching>`.
 If you are developing a plugin and want to modify the caching behavior of your classes, we recommend you read :ref:`this section <caching_matches>` first.
 
-.. _devel_controlling_caching:
+.. _devel_controlling_hashing:
 
-Controlling caching
+Controlling hashing
 -------------------
 
-Below are some methods you can use to control caching when developing calculation and data classes:
+Below are some methods you can use to control how the hashes of calculation and data classes are computed:
 
 * To ignore specific attributes, a :py:class:`~aiida.orm.nodes.Node` subclass can have a ``_hash_ignored_attributes`` attribute.
   This is a list of attribute names, which are ignored when creating the hash.
@@ -18,22 +18,18 @@ Below are some methods you can use to control caching when developing calculatio
 * Pass a keyword argument to :meth:`~aiida.orm.nodes.Node.get_hash`.
   These are passed on to :meth:`~aiida.common.hashing.make_hash`.
 
-Additionally, there are two methods you can use to disable caching for particular nodes:
+.. _devel_controlling_caching:
+
+Controlling caching
+-------------------
+
+There are two methods you can use to disable caching for particular nodes:
 
 * The :meth:`~aiida.orm.nodes.Node.is_valid_cache` property determines whether a particular node can be used as a cache. This is used for example to disable caching from failed calculations.
 * Node classes have a ``_cachable`` attribute, which can be set to ``False`` to completely switch off caching for nodes of that class. This avoids performing queries for the hash altogether.
 
-Finally, an important remark on modifying the caching behaviour of your calculation and data classes.
-Cache matches can go wrong in two ways:
-
-* False negatives, where two nodes *should* have the same hash but do not
-* False positives, where two different nodes get the same hash by mistake
-
-False negatives are **highly preferrable** because they only increase the runtime of your calculations, while false positives can lead to wrong results.
-
-
-Disabling caching for ``WorkflowNode``
---------------------------------------
+The ``WorkflowNode`` example
+............................
 
 As discussed in the :ref:`user guide <caching_limitations>`, nodes which can have ``RETURN`` links cannot be cached.
 This is enforced on two levels:
@@ -42,3 +38,16 @@ This is enforced on two levels:
   This means that a :class:`~aiida.orm.nodes.process.workflow.workflow.WorkflowNode` will not be cached.
 * The ``_store_from_cache`` method, which is used to "clone" an existing node, will raise an error if the existing node has any ``RETURN`` links.
   This extra safe-guard prevents cases where a user might incorrectly override the ``_cachable`` property on a ``WorkflowNode`` subclass.
+
+Design guidelines
+-----------------
+
+When modifying the hashing/caching behaviour of your classes, keep in mind that cache matches can go wrong in two ways:
+
+* False negatives, where two nodes *should* have the same hash but do not
+* False positives, where two different nodes get the same hash by mistake
+
+False negatives are **highly preferrable** because they only increase the runtime of your calculations, while false positives can lead to wrong results.
+
+
+

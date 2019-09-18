@@ -45,7 +45,8 @@ AiiDA creates both a new calculation node and a copy of the output data nodes as
 How are nodes hashed?
 ---------------------
 
-By default (see also :ref:`devel_controlling_caching`), the hash of a Data node is computed from:
+*Hashing* is turned on by default, i.e. all nodes in AiiDA are hashed (see also :ref:`devel_controlling_hashing`).
+The hash of a Data node is computed from:
 
 * all attributes of the node, except the ``_updatable_attributes`` and ``_hash_ignored_attributes``
 * the ``__version__`` of the package which defined the node class

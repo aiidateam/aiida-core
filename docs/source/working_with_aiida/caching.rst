@@ -90,7 +90,7 @@ Configuration
 Class level
 ...........
 
-Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides control over caching at the level of specific calculation class:
+Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides control over caching at the level of specific calculations using their corresponding entry point strings (see the output of ``verdi plugin list aiida.calculations``):
 
 .. code:: yaml
 
@@ -104,18 +104,22 @@ Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides c
 In this example, caching is disabled by default, but explicitly enabled for calculaions of the ``PwCalculation`` class, identified by the ``aiida.calculations:quantumespresso.pw`` entry point.
 It also shows how to disable caching for particular calculations (which has no effect here due to the profile-wide default).
 
-Node level
-...........
+Instance level
+..............
 
-Even when caching is turned off for a given node type, you can enable it on a case-by-case basis by using the :class:`~aiida.manage.caching.enable_caching` context manager:
+Even when caching is turned off for a given calculation type, you can enable it on a case-by-case basis by using the :class:`~aiida.manage.caching.enable_caching` context manager for testing purposes:
 
 .. code:: python
 
     from aiida.manage.caching import enable_caching
     from aiida.engine import run
     from aiida.orm import CalcJobNode
-    with enable_caching(node_class=CalcJobNode):
+    with enable_caching(entry_point='aiida.calculations:templatereplacer'):
        run(...)
+
+.. note::
+
+   This works only with :py:class:`~aiida.engine.run`, not with :py:class:`~aiida.engine.submit`.
 
 If you suspect a node is being reused in error (e.g. during development), you can also manually *prevent* a specific node from being reused:
 
@@ -146,7 +150,7 @@ Limitations
    For the moment, this limitation is acceptable since the runtime of AiiDA WorkChains is usually dominated by expensive calculations, which are covered by the current caching mechanism.
 
 #. The caching mechanism for calculations *should* trigger only when the inputs and the calculation to be performed are exactly the same.
-   Edge cases where this assumption might be violated include cases where the calculation parser is in a different python module than the calculation and the developer made changes without updating the version number of the plugin.
+   This assumption might be violated e.g. when the calculation parser is in a different python module than the calculation, and the developer made changes without updating the version number of the plugin.
 
 Finally, while caching saves unnecessary computations, it does not save disk space: The output nodes of the cached calculation are full copies of the original outputs.
 The plan is to add data deduplication as a global feature at the repository and database level (independent of caching).

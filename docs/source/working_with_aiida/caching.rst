@@ -53,7 +53,7 @@ The hash of a Data node is computed from:
 * the content of the repository folder of the node
 * the UUID of the computer, if the node is associated with one
 
-The hash of a :class:`~aiida.orm.ProcessNode` will, on top of this, include the hashes of any of its input ``Data`` nodes.
+The hash of a :class:`~aiida.orm.ProcessNode` includes, on top of this, the hashes of any of its input ``Data`` nodes.
 
 Once a node is stored in the database, its hash is stored in the ``_aiida_hash`` extra, and this extra is used to find matching nodes.
 If a node of the same class with the same hash already exists in the database, this is considered a cache match.
@@ -150,7 +150,8 @@ Limitations
    For the moment, this limitation is acceptable since the runtime of AiiDA WorkChains is usually dominated by expensive calculations, which are covered by the current caching mechanism.
 
 #. The caching mechanism for calculations *should* trigger only when the inputs and the calculation to be performed are exactly the same.
-   This assumption might be violated e.g. when the calculation parser is in a different python module than the calculation, and the developer made changes without updating the version number of the plugin.
+   While AiiDA's hashes include the version of the python package containing the calculation/data classes, it cannot detect cases where the underlying python code was changed without increasing the version number.
+   Another edge case would be if the parser lives in a different python package than the calculation (calculation nodes store the name of the parser used but not the version of the package containing the parser).
 
 Finally, while caching saves unnecessary computations, it does not save disk space: The output nodes of the cached calculation are full copies of the original outputs.
 The plan is to add data deduplication as a global feature at the repository and database level (independent of caching).

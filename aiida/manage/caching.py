@@ -70,12 +70,18 @@ def _get_config(config_file):
         if key not in DEFAULT_CONFIG:
             raise ValueError("Configuration error: Invalid key '{}' in cache_config.yml".format(key))
 
-    # Add defaults where config is missing
+    # Add defaults where key is either completely missing or specifies no values in which case it will be `None`
     for key, default_config in DEFAULT_CONFIG.items():
-        config[key] = config.get(key, default_config)
+        if key not in config or config[key] is None:
+            config[key] = default_config
 
-    # Validate and load the entry point identifiers
+    # Validate the entry point identifiers
     for key in [ConfigKeys.ENABLED.value, ConfigKeys.DISABLED.value]:
+
+        # If the key is defined in the file but contains no values, it will be `None`
+        if config[key] is None:
+            continue
+
         for identifier in config[key]:
             if not is_valid_entry_point_string(identifier):
                 raise exceptions.ConfigurationError(

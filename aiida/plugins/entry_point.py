@@ -300,7 +300,7 @@ def is_valid_entry_point_string(entry_point_string):
     """
     try:
         group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
-    except (TypeError, ValueError):
+    except (AttributeError, ValueError):
         # Either `entry_point_string` is not a string or it does not contain the separator
         return False
 

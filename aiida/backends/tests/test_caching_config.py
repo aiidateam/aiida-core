@@ -15,10 +15,8 @@ import tempfile
 import unittest
 import yaml
 
-from aiida.calculations.plugins.templatereplacer import TemplatereplacerCalculation
 from aiida.manage.caching import configure, get_use_cache, enable_caching, disable_caching
 from aiida.manage.configuration import get_profile
-from aiida.orm import Bool, Float, Int
 
 
 class CacheConfigTest(unittest.TestCase):
@@ -29,8 +27,8 @@ class CacheConfigTest(unittest.TestCase):
         self.config_reference = {
             get_profile().name: {
                 'default': True,
-                'enabled': ['aiida.orm.Bool', 'aiida.orm.Float'],
-                'disabled': ['aiida.calculations.plugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.Bool']
+                'enabled': ['aiida.calculations:arithmetic.add'],
+                'disabled': ['aiida.calculations:templatereplacer']
             }
         }
         with tempfile.NamedTemporaryFile() as tmpf:
@@ -44,21 +42,22 @@ class CacheConfigTest(unittest.TestCase):
         self.assertTrue(get_use_cache())
 
     def test_caching_enabled(self):
-        self.assertFalse(get_use_cache(TemplatereplacerCalculation))
+        self.assertFalse(get_use_cache(identifier='aiida.calculations:templatereplacer'))
 
     def test_invalid_config(self):
-        self.assertRaises(ValueError, get_use_cache, Bool)
+        with self.assertRaises(TypeError):
+            get_use_cache(identifier=int)
 
     def test_contextmanager_enable_explicit(self):
-        with enable_caching(TemplatereplacerCalculation):
-            self.assertTrue(get_use_cache(TemplatereplacerCalculation))
+        with enable_caching(identifier='aiida.calculations:templatereplacer'):
+            self.assertTrue(get_use_cache(identifier='aiida.calculations:templatereplacer'))
 
     def test_contextmanager_disable_global(self):
         with disable_caching():
-            self.assertTrue(get_use_cache(Float))  # explicitly set, hence not overwritten
-            self.assertFalse(get_use_cache(Int))
+            self.assertTrue(get_use_cache(identifier='aiida.calculations:arithmetic.add'))  # explicitly set, hence not overwritten
+            self.assertFalse(get_use_cache(identifier='aiida.calculations:templatereplacer'))
 
     def test_disable_caching(self):
-        with disable_caching(Float):
-            self.assertFalse(get_use_cache(Float))
-        self.assertTrue(get_use_cache(Float))
+        with disable_caching(identifier='aiida.calculations:arithmetic.add'):
+            self.assertFalse(get_use_cache(identifier='aiida.calculations:arithmetic.add'))
+        self.assertTrue(get_use_cache(identifier='aiida.calculations:arithmetic.add'))

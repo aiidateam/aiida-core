@@ -11,7 +11,8 @@ There are numerous reasons why you may need to re-run calculations you’ve alre
 Since AiiDA stores the full provenance of each calculation, it can detect whether a calculation has been run before and reuse its outputs without wasting computational resources.
 This is what we mean by **caching** in AiiDA.
 
-Caching is **not enabled by default**. In order to enable caching for your AiiDA profile (here called ``aiida2``), place the following ``cache_config.yml`` file in your ``.aiida`` configuration folder:
+Caching is **not enabled by default**.
+In order to enable caching for your AiiDA profile (here called ``aiida2``), place the following ``cache_config.yml`` file in your ``.aiida`` configuration folder:
 
 .. code:: yaml
 
@@ -21,8 +22,7 @@ Caching is **not enabled by default**. In order to enable caching for your AiiDA
 From this point onwards, when you launch a new calculation, AiiDA will compare its hash (depending both on the type of calculation and its inputs, see :ref:`caching_matches`) against other calculations already present in your database.
 If another calculation with the same hash is found, AiiDA will reuse its results without repeating the actual calculation.
 
-In order to ensure that the provenance graph with and without caching is the same,
-AiiDA creates both a new calculation node and a copy of the output data nodes as shown in :numref:`fig_caching`.
+In order to ensure that the provenance graph with and without caching is the same, AiiDA creates both a new calculation node and a copy of the output data nodes as shown in :numref:`fig_caching`.
 
 .. _fig_caching:
 .. figure:: include/images/caching.png
@@ -46,14 +46,14 @@ How are nodes hashed?
 ---------------------
 
 *Hashing* is turned on by default, i.e. all nodes in AiiDA are hashed (see also :ref:`devel_controlling_hashing`).
-The hash of a Data node is computed from:
+The hash of a ``Data`` node is computed from:
 
 * all attributes of the node, except the ``_updatable_attributes`` and ``_hash_ignored_attributes``
 * the ``__version__`` of the package which defined the node class
 * the content of the repository folder of the node
 * the UUID of the computer, if the node is associated with one
 
-The hash of a :class:`~aiida.orm.ProcessNode` includes, on top of this, the hashes of any of its input ``Data`` nodes.
+The hash of a :class:`~aiida.orm.ProcessNode` includes, on top of this, the hashes of all of its input ``Data`` nodes.
 
 Once a node is stored in the database, its hash is stored in the ``_aiida_hash`` extra, and this extra is used to find matching nodes.
 If a node of the same class with the same hash already exists in the database, this is considered a cache match.
@@ -101,7 +101,7 @@ Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides c
       disabled:
         - aiida.calculations:templatereplacer
 
-In this example, caching is disabled by default, but explicitly enabled for calculaions of the ``PwCalculation`` class, identified by the ``aiida.calculations:quantumespresso.pw`` entry point.
+In this example, caching is disabled by default, but explicitly enabled for calculaions of the ``PwCalculation`` class, identified by the ``aiida.calculations:quantumespresso.pw`` entry point string.
 It also shows how to disable caching for particular calculations (which has no effect here due to the profile-wide default).
 
 Instance level
@@ -111,15 +111,15 @@ Even when caching is turned off for a given calculation type, you can enable it 
 
 .. code:: python
 
-    from aiida.manage.caching import enable_caching
     from aiida.engine import run
-    from aiida.orm import CalcJobNode
-    with enable_caching(entry_point='aiida.calculations:templatereplacer'):
+    from aiida.manage.caching import enable_caching
+    with enable_caching(identifier='aiida.calculations:templatereplacer'):
        run(...)
 
-.. note::
+.. warning::
 
-   This works only with :py:class:`~aiida.engine.run`, not with :py:class:`~aiida.engine.submit`.
+    This affects only the current python interpreter and won't change the behavior of the daemon workers.
+    This means that this technique is only useful when using :py:class:`~aiida.engine.run`, and **not** with :py:class:`~aiida.engine.submit`.
 
 If you suspect a node is being reused in error (e.g. during development), you can also manually *prevent* a specific node from being reused:
 

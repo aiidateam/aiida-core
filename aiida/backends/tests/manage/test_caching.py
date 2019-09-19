@@ -65,6 +65,9 @@ class CacheConfigTest(unittest.TestCase):
             yaml.dump(configuration, handle, encoding='utf-8')
             configure(config_file=handle.name)
 
+            # Check that `get_use_cache` also does not except
+            get_use_cache(identifier='aiida.calculations:templatereplacer')
+
     def test_invalid_enabled_disabled_directives(self):
         """Test that `configure` raises for invalid enable or disable directives."""
 

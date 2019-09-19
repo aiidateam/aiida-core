@@ -359,7 +359,7 @@ def main():
     else:
         # Launch the same calculations but with caching enabled -- these should be FINISHED immediately
         cached_calcs = []
-        with enable_caching(node_class=CalcJobNode):
+        with enable_caching(identifier='aiida.calculations:templatereplacer'):
             for counter in range(1, number_calculations + 1):
                 inputval = counter
                 calc, expected_result = run_calculation(code=code, counter=counter, inputval=inputval)

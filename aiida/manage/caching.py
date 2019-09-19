@@ -76,6 +76,11 @@ def _get_config(config_file):
 
     # Validate and load the entry point identifiers
     for key in [ConfigKeys.ENABLED.value, ConfigKeys.DISABLED.value]:
+
+        # If the key is defined in the file but contains no values, it will be `None`
+        if config[key] is None:
+            continue
+
         for identifier in config[key]:
             if not is_valid_entry_point_string(identifier):
                 raise exceptions.ConfigurationError(

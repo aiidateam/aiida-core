@@ -106,7 +106,6 @@
       "codecov==2.0.15",
       "futures; python_version=='2.7'",
       "pytest==4.3.0",
-      "pytest-cov==2.6.1",
       "aiida-export-migration-tests==0.7.0"
     ],
     "dev_precommit": [

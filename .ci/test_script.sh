@@ -39,7 +39,7 @@ case "$TEST_TYPE" in
         coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${CI_DIR}/test_daemon.py" || ( if which docker > /dev/null ; then docker ps -a ; docker exec torquesshmachine cat /var/log/syslog ; fi ; exit 1 )
 
         # Run the sphinxext tests, append to coverage file, do not create final report
-        pytest --cov aiida --cov-append --cov-report= -vv aiida/sphinxext/tests
+        coverage run --append -m pytest aiida/sphinxext/tests
 
         # Now, we run all the tests and we manually create the final report
         # Note that this is only the partial coverage for this backend

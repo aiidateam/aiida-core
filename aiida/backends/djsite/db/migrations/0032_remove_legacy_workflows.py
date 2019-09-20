@@ -65,7 +65,7 @@ def export_workflow_data(apps, _):
     }
 
     with NamedTemporaryFile(
-        prefix='legacy-workflows', suffix='.json', dir='.', delete=delete_on_close, mode='w+'
+        prefix='legacy-workflows', suffix='.json', dir='.', delete=delete_on_close, mode='wb'
     ) as handle:
         filename = handle.name
         json.dump(data, handle)

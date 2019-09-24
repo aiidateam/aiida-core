@@ -13,22 +13,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import sys
-
-import os
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID
 
 from aiida.common import exceptions
 from aiida.common.timezone import get_current_timezone
 from aiida.manage.configuration import get_profile, settings
-
-# Assumes that parent directory of aiida is root for
-# things like templates/, SQL/ etc.  If not, change what follows...
-
-AIIDA_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.split(AIIDA_DIR)[0]
-sys.path = [BASE_DIR] + sys.path
 
 try:
     PROFILE = get_profile()

@@ -95,7 +95,6 @@
         aiida/backends/tests/test_nodes.py|
         aiida/backends/tests/orm/data/test_remote.py|
         aiida/backends/tests/orm/utils/test_loaders.py|
-        aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|
         aiida/backends/tests/engine/test_class_loader.py|
         aiida/backends/tests/engine/test_daemon.py|
@@ -146,10 +145,6 @@
         aiida/schedulers/plugins/test_sge.py|
         aiida/schedulers/plugins/test_slurm.py|
         aiida/schedulers/plugins/test_torque.py|
-        aiida/sphinxext/tests/conftest.py|
-        aiida/sphinxext/tests/test_workchain.py|
-        aiida/sphinxext/tests/workchain_source/conf.py|
-        aiida/sphinxext/tests/workchain_source/demo_workchain.py|
         aiida/tools/data/array/kpoints/legacy.py|
         aiida/tools/data/array/kpoints/seekpath.py|
         aiida/tools/data/__init__.py|

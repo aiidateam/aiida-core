@@ -186,10 +186,14 @@ def validate_version():
     Check version number in setup.json and aiida-core/__init__.py and make sure
     they match.
     """
+    import pkgutil
+
     # Get version from python package
-    sys.path.insert(0, ROOT_DIR)
-    import aiida  # pylint: disable=wrong-import-position
-    version = aiida.__version__
+    loaders = [
+        module_loader for (module_loader, name, ispkg) in pkgutil.iter_modules(path=[ROOT_DIR])
+        if name == 'aiida' and ispkg
+    ]
+    version = loaders[0].find_module('aiida').load_module('aiida').__version__
 
     setup_content = get_setup_json()
     if version != setup_content['version']:

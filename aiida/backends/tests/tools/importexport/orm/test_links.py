@@ -35,9 +35,11 @@ class TestLinks(AiidaTestCase):
 
     def setUp(self):
         self.reset_database()
+        super(TestLinks, self).setUp()
 
     def tearDown(self):
         self.reset_database()
+        super(TestLinks, self).tearDown()
 
     @with_temp_dir
     def test_links_to_unknown_nodes(self, temp_dir):
@@ -116,6 +118,22 @@ class TestLinks(AiidaTestCase):
         and returns the nodes of the graph. It also returns various combinations
         of nodes that need to be extracted but also the final expected set of nodes
         (after adding the expected predecessors, desuccessors).
+
+        Graph::
+
+            data1 ---------------INPUT_WORK----------------+
+              |     data2 -INPUT_WORK-+                    |
+              |                       |                    |
+              |                       V                    V
+              +-------INPUT_WORK--> work1 --CALL_WORK--> work2 ----+
+              |                                            |       |
+              |              CALL_CALC---------------------+       |
+              |                  |            +-> data3 <-+        |
+              |                  V            |           |        |
+              +--INPUT_CALC--> calc1 --CREATE-+-> data4 <-+-----RETURN       +-> data5
+                                                    |                        |
+                                                INPUT_CALC--> calc2 --CREATE-+-> data6
+
         """
         if export_combination < 0 or export_combination > 9:
             return None
@@ -124,7 +142,7 @@ class TestLinks(AiidaTestCase):
             work_nodes = ['WorkflowNode', 'WorkflowNode']
 
         if calc_nodes is None:
-            calc_nodes = ['orm.CalculationNode', 'orm.CalculationNode']
+            calc_nodes = ['CalculationNode', 'CalculationNode']
 
         # Class mapping
         # "CalcJobNode" is left out, since it is special.
@@ -132,7 +150,7 @@ class TestLinks(AiidaTestCase):
             'WorkflowNode': orm.WorkflowNode,
             'WorkChainNode': orm.WorkChainNode,
             'WorkFunctionNode': orm.WorkFunctionNode,
-            'orm.CalculationNode': orm.CalculationNode,
+            'CalculationNode': orm.CalculationNode,
             'CalcFunctionNode': orm.CalcFunctionNode
         }
 
@@ -222,60 +240,6 @@ class TestLinks(AiidaTestCase):
         return graph_nodes, export_list[export_combination]
 
     @with_temp_dir
-    def test_data_create_reversed(self, temp_dir):
-        """Verify that create_reversed is respected when only exporting Data nodes."""
-        data_input = orm.Int(1).store()
-        data_output = orm.Int(2).store()
-
-        calc = orm.CalcJobNode()
-        calc.computer = self.computer
-        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-
-        calc.add_incoming(data_input, LinkType.INPUT_CALC, 'input')
-        calc.store()
-        data_output.add_incoming(calc, LinkType.CREATE, 'create')
-        calc.seal()
-
-        data_input_uuid = data_input.uuid
-        data_output_uuid = data_output.uuid
-        calc_uuid = calc.uuid
-
-        # Export with create_reversed True and False
-        export_file_false = os.path.join(temp_dir, 'export_false.tar.gz')
-        export_file_true = os.path.join(temp_dir, 'export_true.tar.gz')
-
-        export([data_output], outfile=export_file_false, silent=True, create_reversed=False)
-        export([data_output], outfile=export_file_true, silent=True, create_reversed=True)
-
-        # Check create_reversed = False
-        # Expected outcome: Only data_output is exported
-        self.reset_database()
-
-        import_data(export_file_false, silent=True)
-
-        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
-        self.assertEqual(builder.count(), 1, 'Expected a single Data node, but got {}'.format(builder.count()))
-        self.assertEqual(builder.all()[0][0], data_output_uuid)
-
-        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
-        self.assertEqual(builder.count(), 0, 'Expected no Calculation nodes, but got {}'.format(builder.count()))
-
-        # Check create_reversed = True (default)
-        # Expected outcome: All three Nodes are exported: data_input, calc, data_output
-        self.reset_database()
-
-        import_data(export_file_true, silent=True)
-
-        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
-        self.assertEqual(builder.count(), 2, 'Expected exactly two Data nodes, but got {}'.format(builder.count()))
-        for node_uuid in builder.iterall():
-            self.assertIn(node_uuid[0], [data_input_uuid, data_output_uuid])
-
-        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
-        self.assertEqual(builder.count(), 1, 'Expected a single Calculation node, but got {}'.format(builder.count()))
-        self.assertEqual(builder.all()[0][0], calc_uuid)
-
-    @with_temp_dir
     def test_complex_workflow_graph_links(self, temp_dir):
         """
         This test checks that all the needed links are correctly exported and
@@ -322,7 +286,7 @@ class TestLinks(AiidaTestCase):
         for export_conf in range(0, 9):
 
             _, (export_node, export_target) = self.construct_complex_graph(export_conf)
-            export_target_uuids = set(str(_.uuid) for _ in export_target)
+            export_target_uuids = set(_.uuid for _ in export_target)
 
             export_file = os.path.join(temp_dir, 'export.tar.gz')
             export([export_node], outfile=export_file, silent=True, overwrite=True)
@@ -335,11 +299,11 @@ class TestLinks(AiidaTestCase):
             # Get all the nodes of the database
             builder = orm.QueryBuilder()
             builder.append(orm.Node, project='uuid')
-            imported_node_uuids = set(str(_[0]) for _ in builder.all())
+            imported_node_uuids = set(_[0] for _ in builder.all())
 
             self.assertSetEqual(
                 export_target_uuids, imported_node_uuids,
-                'Problem in comparison of export node: ' + str(export_node_str) + '\n' + 'Expected set: ' +
+                'Problem in comparison of export node: ' + export_node_str + '\n' + 'Expected set: ' +
                 str(export_target_uuids) + '\n' + 'Imported set: ' + str(imported_node_uuids) + '\n' + 'Difference: ' +
                 str([_ for _ in export_target_uuids.symmetric_difference(imported_node_uuids)])
             )
@@ -406,63 +370,243 @@ class TestLinks(AiidaTestCase):
                     msg='Failed with c1={}, c2={}, w1={}, w2={}'.format(calcs[0], calcs[1], works[0], works[1])
                 )
 
+    @staticmethod
+    def prepare_link_flags_export(nodes_to_export, test_data):
+        """Helper function"""
+        from aiida.tools.importexport.common.config import LINK_FLAGS
+        rules = LINK_FLAGS.copy()
+        for rule in rules:
+            rules[rule] = False
+
+        for export_file, rule_changes, expected_nodes in test_data.values():
+            rules.update(rule_changes)
+            export(nodes_to_export[0], outfile=export_file, silent=True, **rules)
+
+            for node_type in nodes_to_export[1]:
+                if node_type in expected_nodes:
+                    expected_nodes[node_type].update(nodes_to_export[1][node_type])
+                else:
+                    expected_nodes[node_type] = nodes_to_export[1][node_type]
+
+    def link_flags_import_helper(self, test_data):
+        """Helper function"""
+        for test, (export_file, _, expected_nodes) in test_data.items():
+            self.reset_database()
+
+            import_data(export_file, silent=True)
+
+            nodes_util = {'work': orm.WorkflowNode, 'calc': orm.CalculationNode, 'data': orm.Data}
+            for node_type, node_cls in nodes_util.items():
+                if node_type in expected_nodes:
+                    builder = orm.QueryBuilder().append(node_cls, project='uuid')
+                    self.assertEqual(
+                        builder.count(), len(expected_nodes[node_type]),
+                        'Expected {} {} node(s), but got {}. Test: "{}"'.format(
+                            len(expected_nodes[node_type]), node_type, builder.count(), test
+                        )
+                    )
+                    for node_uuid in builder.iterall():
+                        self.assertIn(node_uuid[0], expected_nodes[node_type])
+
+    def link_flags_export_helper(self, name, all_nodes, temp_dir, nodes_to_export, flags, expected_nodes):  # pylint: disable=too-many-arguments
+        """Helper function"""
+        (calc_flag, work_flag) = flags
+        (export_types, nodes_to_export) = nodes_to_export
+        (expected_types, expected_nodes_temp) = expected_nodes
+
+        export_nodes_uuid = {_: set() for _ in export_types}
+        for node in nodes_to_export:
+            for node_type in export_nodes_uuid:
+                if node.startswith(node_type):
+                    export_nodes_uuid[node_type].update({all_nodes[node]['uuid']})
+        nodes_to_export = ([all_nodes[_]['node'] for _ in nodes_to_export], export_nodes_uuid)
+
+        expected_nodes = []
+        for expected_node_list in expected_nodes_temp:
+            expected_nodes_uuid = {_: set() for _ in expected_types}
+            for node in expected_node_list:
+                for node_type in expected_nodes_uuid:
+                    if node.startswith(node_type):
+                        expected_nodes_uuid[node_type].update({all_nodes[node]['uuid']})
+            expected_nodes.append(expected_nodes_uuid)
+
+        ret = {
+            '{}_follow_none'.format(name): (
+                os.path.join(temp_dir, '{}_none.aiida'.format(name)), {
+                    calc_flag: False,
+                    work_flag: False
+                }, expected_nodes[0]
+            ),
+            '{}_follow_only_calc'.format(name): (
+                os.path.join(temp_dir, '{}_calc.aiida'.format(name)), {
+                    calc_flag: True,
+                    work_flag: False
+                }, expected_nodes[1]
+            ),
+            '{}_follow_only_work'.format(name): (
+                os.path.join(temp_dir, '{}_work.aiida'.format(name)), {
+                    calc_flag: False,
+                    work_flag: True
+                }, expected_nodes[2]
+            ),
+            '{}_follow_only_all'.format(name): (
+                os.path.join(temp_dir, '{}_all.aiida'.format(name)), {
+                    calc_flag: True,
+                    work_flag: True
+                }, expected_nodes[3]
+            )
+        }
+
+        self.prepare_link_flags_export(nodes_to_export, ret)
+        return ret
+
     @with_temp_dir
-    def test_links_for_workflows(self, temp_dir):
+    def test_link_flags(self, temp_dir):
+        """Verify all link follow flags are working as intended.
+
+        Note: This does not test recursitivity.
+
+        Graph (from ``self.construct_complex_graph()``)::
+
+            data1 ---------------INPUT_WORK----------------+
+              |     data2 -INPUT_WORK-+                    |
+              |                       |                    |
+              |                       V                    V
+              +-------INPUT_WORK--> work1 --CALL_WORK--> work2 ----+
+              |                                            |       |
+              |              CALL_CALC---------------------+       |
+              |                  |            +-> data3 <-+        |
+              |                  V            |           |        |
+              +--INPUT_CALC--> calc1 --CREATE-+-> data4 <-+-----RETURN       +-> data5
+                                                    |                        |
+                                                INPUT_CALC--> calc2 --CREATE-+-> data6
+
         """
-        Check export flag `return_reversed=True`.
-        Check that CALL links are not followed in the export procedure,
-        and the only creation is followed for data::
+        graph_nodes, _ = self.construct_complex_graph()
+        # The first 6 are data nodes 1-6, then the two calc nodes, and finally the two work nodes.
+        nodes = {}
+        skip = 0
+        for node_type, i in [('data', 6), ('calc', 2), ('work', 2)]:
+            for j in range(i):
+                key = node_type + str(j + 1)
+                nodes[key] = {'node': graph_nodes[j + skip]}
+                nodes[key]['uuid'] = nodes[key]['node'].uuid
+            skip += i
 
-            _________       _______        _______
-           |         | INP |       | CALL |       |
-           | data_in | --> | work1 | <--- | work2 |
-           |_________|     |_______|      |_______|
-                               |
-                               v RETURN
-                           __________
-                          |          |
-                          | data_out |
-                          |__________|
+        # input links - forward
+        input_links_forward = self.link_flags_export_helper(
+            'input_links_forward',
+            nodes,
+            temp_dir,
+            nodes_to_export=(['data'], ['data1', 'data2', 'data4']),
+            flags=('input_calc_forward', 'input_work_forward'),
+            expected_nodes=(
+                ['calc', 'work'],
+                [
+                    [],  # calc: False, work: False
+                    ['calc1', 'calc2'],  # calc: True, work: False
+                    ['work1', 'work2'],  # calc: False, work: True
+                    ['calc1', 'calc2', 'work1', 'work2']  # calc: True, work: True
+                ]
+            )
+        )
 
-        """
-        work1 = orm.WorkflowNode()
-        work2 = orm.WorkflowNode().store()
-        data_in = orm.Int(1).store()
-        data_out = orm.Int(2).store()
+        # input links - backward
+        input_links_backward = self.link_flags_export_helper(
+            'input_links_backward',
+            nodes,
+            temp_dir,
+            nodes_to_export=(['calc', 'work'], ['calc1', 'calc2', 'work1', 'work2']),
+            flags=('input_calc_backward', 'input_work_backward'),
+            expected_nodes=(
+                ['data'],
+                [
+                    [],  # calc: False, work: False
+                    ['data1', 'data4'],  # calc: True, work: False
+                    ['data1', 'data2'],  # calc: False, work: True
+                    ['data1', 'data2', 'data4']  # calc: True, work: True
+                ]
+            )
+        )
 
-        work1.add_incoming(data_in, LinkType.INPUT_WORK, 'input_i1')
-        work1.add_incoming(work2, LinkType.CALL_WORK, 'call')
-        work1.store()
-        data_out.add_incoming(work1, LinkType.RETURN, 'returned')
+        # create/return links - forward
+        create_return_links_forward = self.link_flags_export_helper(
+            'create_return_links_forward',
+            nodes,
+            temp_dir,
+            nodes_to_export=(['calc', 'work'], ['calc1', 'calc2', 'work2']),
+            flags=('create_forward', 'return_forward'),
+            expected_nodes=(
+                ['data'],
+                [
+                    [],  # create: False, return: False
+                    ['data3', 'data4', 'data5', 'data6'],  # create: True, return: False
+                    ['data3', 'data4'],  # create: False, return: True
+                    ['data3', 'data4', 'data5', 'data6']  # create: True, return: True
+                ]
+            )
+        )
 
-        work1.seal()
-        work2.seal()
+        # create/return links - backward
+        create_return_links_backward = self.link_flags_export_helper(
+            'create_return_links_backward',
+            nodes,
+            temp_dir,
+            nodes_to_export=(['data'], ['data3', 'data4', 'data5', 'data6']),
+            flags=('create_backward', 'return_backward'),
+            expected_nodes=(
+                ['calc', 'work'],
+                [
+                    [],  # create: False, return: False
+                    ['calc1', 'calc2'],  # create: True, return: False
+                    ['work2'],  # create: False, return: True
+                    ['calc1', 'calc2', 'work2']  # create: True, return: True
+                ]
+            )
+        )
 
-        links_count_wanted = 2  # All 3 links, except CALL links (the CALL_WORK)
-        links_wanted = [
-            l for l in get_all_node_links() if l[3] not in (LinkType.CALL_WORK.value, LinkType.CALL_CALC.value)
-        ]
-        # Check all links except CALL links are retrieved
-        self.assertEqual(links_count_wanted, len(links_wanted))
+        # call links - forward
+        call_links_forward = self.link_flags_export_helper(
+            'call_links_forward',
+            nodes,
+            temp_dir,
+            nodes_to_export=(['work'], ['work1', 'work2']),
+            flags=('call_calc_forward', 'call_work_forward'),
+            expected_nodes=(
+                ['calc', 'work'],
+                [
+                    [],  # calc: False, work: False
+                    ['calc1'],  # calc: True, work: False
+                    ['work2'],  # calc: False, work: True
+                    ['calc1', 'work2']  # calc: True, work: True
+                ]
+            )
+        )
 
-        export_file_1 = os.path.join(temp_dir, 'export-1.tar.gz')
-        export_file_2 = os.path.join(temp_dir, 'export-2.tar.gz')
-        export([data_out], outfile=export_file_1, silent=True, return_reversed=True)
-        export([work1], outfile=export_file_2, silent=True, return_reversed=True)
+        # call links - backward
+        call_links_backward = self.link_flags_export_helper(
+            'call_links_backward',
+            nodes,
+            temp_dir,
+            nodes_to_export=(['calc', 'work'], ['calc1', 'work2']),
+            flags=('call_calc_backward', 'call_work_backward'),
+            expected_nodes=(
+                ['work'],
+                [
+                    [],  # calc: False, work: False
+                    ['work2'],  # calc: True, work: False
+                    ['work1'],  # calc: False, work: True
+                    ['work1', 'work2']  # calc: True, work: True
+                ]
+            )
+        )
 
-        self.reset_database()
-
-        import_data(export_file_1, silent=True)
-        import_links = get_all_node_links()
-
-        self.assertListEqual(sorted(links_wanted), sorted(import_links))
-        self.assertEqual(links_count_wanted, len(import_links))
-        self.reset_database()
-
-        import_data(export_file_2, silent=True)
-        import_links = get_all_node_links()
-        self.assertListEqual(sorted(links_wanted), sorted(import_links))
-        self.assertEqual(links_count_wanted, len(import_links))
+        self.link_flags_import_helper(input_links_forward)
+        self.link_flags_import_helper(input_links_backward)
+        self.link_flags_import_helper(create_return_links_forward)
+        self.link_flags_import_helper(create_return_links_backward)
+        self.link_flags_import_helper(call_links_forward)
+        self.link_flags_import_helper(call_links_backward)
 
     @with_temp_dir
     def test_double_return_links_for_workflows(self, temp_dir):
@@ -504,147 +648,6 @@ class TestLinks(AiidaTestCase):
         # Assert number of links, checking both RETURN links are included
         self.assertEqual(len(links_wanted), links_count)  # Before export
         self.assertEqual(len(links_in_db), links_count)  # After import
-
-    @with_temp_dir
-    def test_input_forward_flag(self, temp_dir):
-        """Test the 'input_forward' flag for export
-
-        Graph::
-
-            data_input* --INPUT_CALC--> calc --CREATE--> data_output
-
-        The starred Node will be exported.
-        """
-        data_input = orm.Int(1).store()
-        data_output = orm.Int(2).store()
-
-        calc = orm.CalcJobNode()
-        calc.computer = self.computer
-        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-
-        calc.add_incoming(data_input, LinkType.INPUT_CALC, 'input')
-        calc.store()
-        data_output.add_incoming(calc, LinkType.CREATE, 'create')
-        calc.seal()
-
-        data_input_uuid = data_input.uuid
-        data_output_uuid = data_output.uuid
-        calc_uuid = calc.uuid
-
-        # Export with input_forward True and False
-        export_file_true = os.path.join(temp_dir, 'export_true.tar.gz')
-        export_file_false = os.path.join(temp_dir, 'export_false.tar.gz')
-
-        export([data_input], outfile=export_file_true, silent=True, input_forward=True)
-        export([data_input], outfile=export_file_false, silent=True, input_forward=False)
-
-        # Check input_forward = True
-        # Expected outcome: All three Nodes are exported: data_input, calc, data_output
-        self.reset_database()
-
-        import_data(export_file_true, silent=True)
-
-        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
-        self.assertEqual(builder.count(), 2, 'Expected exactly two Data nodes, but got {}'.format(builder.count()))
-        for node_uuid in builder.iterall():
-            self.assertIn(node_uuid[0], [data_input_uuid, data_output_uuid])
-
-        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
-        self.assertEqual(builder.count(), 1, 'Expected a single Calculation node, but got {}'.format(builder.count()))
-        self.assertEqual(builder.all()[0][0], calc_uuid)
-
-        # Check input_forward = False (default)
-        # Expected outcome: Only data_input is exported
-        self.reset_database()
-
-        import_data(export_file_false, silent=True)
-
-        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
-        self.assertEqual(builder.count(), 1, 'Expected a single Data node, but got {}'.format(builder.count()))
-        self.assertEqual(builder.all()[0][0], data_input_uuid)
-
-        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
-        self.assertEqual(builder.count(), 0, 'Expected no Calculation nodes, but got {}'.format(builder.count()))
-
-    @with_temp_dir
-    def test_call_reversed_flag(self, temp_dir):
-        """Test the 'call_reversed' flag for export
-
-        Graph::
-
-            work --CALL_WORK--> work_called --CALL_CALC--> calc_called* --CREATE--> data_output
-              |                                                                          ^
-              |_________________________________RETURN___________________________________|
-
-        The starred Node will be exported.
-        """
-        work = orm.WorkFunctionNode().store()
-        work_called = orm.WorkFunctionNode()
-
-        calc_called = orm.CalcJobNode()
-        calc_called.computer = self.computer
-        calc_called.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-
-        data_output = orm.Int(1).store()
-
-        work_called.add_incoming(work, LinkType.CALL_WORK, 'call_work')
-        work_called.store()
-        calc_called.add_incoming(work_called, LinkType.CALL_CALC, 'call_calc')
-        calc_called.store()
-        data_output.add_incoming(calc_called, LinkType.CREATE, 'create_data')
-        data_output.add_incoming(work, LinkType.RETURN, 'return_data')
-
-        work.seal()
-        work_called.seal()
-        calc_called.seal()
-
-        work_uuid = work.uuid
-        work_called_uuid = work_called.uuid
-        calc_called_uuid = calc_called.uuid
-        data_output_uuid = data_output.uuid
-
-        # Export with call_reversed True and False
-        export_file_true = os.path.join(temp_dir, 'export_true.tar.gz')
-        export_file_false = os.path.join(temp_dir, 'export_false.tar.gz')
-
-        export([calc_called], outfile=export_file_true, silent=True, call_reversed=True)
-        export([calc_called], outfile=export_file_false, silent=True, call_reversed=False)
-
-        # Check call_reversed = True
-        # Expected outcome: All four Nodes are exported: work, work_called, calc_called, data_output
-        self.reset_database()
-
-        import_data(export_file_true, silent=True)
-
-        builder = orm.QueryBuilder().append(orm.WorkflowNode, project='uuid')
-        self.assertEqual(builder.count(), 2, 'Expected exactly two Workflow nodes, but got {}'.format(builder.count()))
-        for node_uuid in builder.iterall():
-            self.assertIn(node_uuid[0], [work_uuid, work_called_uuid])
-
-        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
-        self.assertEqual(builder.count(), 1, 'Expected a single Calculation node, but got {}'.format(builder.count()))
-        self.assertEqual(builder.all()[0][0], calc_called_uuid)
-
-        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
-        self.assertEqual(builder.count(), 1, 'Expected a single Data node, but got {}'.format(builder.count()))
-        self.assertEqual(builder.all()[0][0], data_output_uuid)
-
-        # Check call_reversed = False (default)
-        # Expected outcome: Only calc_called and data_output are exported
-        self.reset_database()
-
-        import_data(export_file_false, silent=True)
-
-        builder = orm.QueryBuilder().append(orm.WorkflowNode, project='uuid')
-        self.assertEqual(builder.count(), 0, 'Expected no Workflow nodes, but got {}'.format(builder.count()))
-
-        builder = orm.QueryBuilder().append(orm.CalcJobNode, project='uuid')
-        self.assertEqual(builder.count(), 1, 'Expected a single Calculation node, but got {}'.format(builder.count()))
-        self.assertEqual(builder.all()[0][0], calc_called_uuid)
-
-        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
-        self.assertEqual(builder.count(), 1, 'Expected a single Data node, but got {}'.format(builder.count()))
-        self.assertEqual(builder.all()[0][0], data_output_uuid)
 
     @with_temp_dir
     def test_dangling_link_to_existing_db_node(self, temp_dir):

@@ -15,7 +15,7 @@ from __future__ import print_function
 
 from aiida.orm import Computer, Group, GroupTypeString, Node, User, Log, Comment
 
-__all__ = ('EXPORT_VERSION',)
+__all__ = ('EXPORT_VERSION', 'LINK_FLAGS')
 
 # Current export version
 EXPORT_VERSION = '0.7'
@@ -25,6 +25,23 @@ DUPL_SUFFIX = ' (Imported #{})'
 
 # The name of the subfolder in which the node files are stored
 NODES_EXPORT_SUBFOLDER = 'nodes'
+
+# Default rules for following Links, when creating the graph of Nodes to export
+# Structure: key: <LinkType>_<direction-to-follow>, value: (<Follow?>, <Togglable?>)
+LINK_FLAGS = {
+    'input_calc_forward': (False, True),  # Togglable
+    'input_calc_backward': (True, False),
+    'create_forward': (True, False),
+    'create_backward': (True, True),  # Togglable
+    'return_forward': (True, False),
+    'return_backward': (False, True),  # Togglable
+    'input_work_forward': (False, True),  # Togglable
+    'input_work_backward': (True, False),
+    'call_calc_forward': (True, False),
+    'call_calc_backward': (False, True),  # Togglable
+    'call_work_forward': (True, False),
+    'call_work_backward': (False, True)  # Togglable
+}
 
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify

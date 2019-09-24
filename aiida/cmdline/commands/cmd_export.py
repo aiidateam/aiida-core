@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-arguments,import-error
+# pylint: disable=too-many-arguments,import-error,too-many-locals
 """`verdi export` command."""
 from __future__ import division
 from __future__ import print_function
@@ -24,6 +24,7 @@ from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils import echo
+from aiida.tools.importexport import LINK_FLAGS
 
 
 @verdi.group('export')
@@ -70,28 +71,40 @@ def inspect(archive, version, data, meta_data):
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
 @click.option(
-    '--input-forward/--no-input-forward',
-    default=False,
+    '--input-calc-forward/--no-input-calc-forward',
+    default=LINK_FLAGS['input_calc_forward'][0],
     show_default=True,
-    help='Follow forward INPUT links (recursively) when calculating the node set to export.'
+    help='Follow forward INPUT_CALC links (recursively) when calculating the node set to export.'
 )
 @click.option(
-    '--create-reversed/--no-create-reversed',
-    default=True,
+    '--input-work-forward/--no-input-work-forward',
+    default=LINK_FLAGS['input_work_forward'][0],
+    show_default=True,
+    help='Follow forward INPUT_WORK links (recursively) when calculating the node set to export.'
+)
+@click.option(
+    '--create-backward/--no-create-backward',
+    default=LINK_FLAGS['create_backward'][0],
     show_default=True,
     help='Follow reverse CREATE links (recursively) when calculating the node set to export.'
 )
 @click.option(
-    '--return-reversed/--no-return-reversed',
-    default=False,
+    '--return-backward/--no-return-backward',
+    default=LINK_FLAGS['return_backward'][0],
     show_default=True,
     help='Follow reverse RETURN links (recursively) when calculating the node set to export.'
 )
 @click.option(
-    '--call-reversed/--no-call-reversed',
-    default=False,
+    '--call-calc-backward/--no-call-calc-backward',
+    default=LINK_FLAGS['call_calc_backward'][0],
     show_default=True,
-    help='Follow reverse CALL links (recursively) when calculating the node set to export.'
+    help='Follow reverse CALL_CALC links (recursively) when calculating the node set to export.'
+)
+@click.option(
+    '--call-work-backward/--no-call-work-backward',
+    default=LINK_FLAGS['call_work_backward'][0],
+    show_default=True,
+    help='Follow reverse CALL_WORK links (recursively) when calculating the node set to export.'
 )
 @click.option(
     '--include-logs/--exclude-logs',
@@ -107,8 +120,8 @@ def inspect(archive, version, data, meta_data):
 )
 @decorators.with_dbenv()
 def create(
-    output_file, codes, computers, groups, nodes, archive_format, force, input_forward, create_reversed,
-    return_reversed, call_reversed, include_comments, include_logs
+    output_file, codes, computers, groups, nodes, archive_format, force, input_calc_forward, input_work_forward,
+    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs
 ):
     """
     Export parts of the AiiDA database to file for sharing.
@@ -133,10 +146,12 @@ def create(
         entities.extend(nodes)
 
     kwargs = {
-        'input_forward': input_forward,
-        'create_reversed': create_reversed,
-        'return_reversed': return_reversed,
-        'call_reversed': call_reversed,
+        'input_calc_forward': input_calc_forward,
+        'input_work_forward': input_work_forward,
+        'create_backward': create_backward,
+        'return_backward': return_backward,
+        'call_calc_backward': call_calc_backward,
+        'call_work_backward': call_work_backward,
         'include_comments': include_comments,
         'include_logs': include_logs,
         'overwrite': force

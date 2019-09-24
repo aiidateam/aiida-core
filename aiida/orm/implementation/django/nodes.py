@@ -213,7 +213,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
             value = clean_value(value)
 
         self._dbmodel.attributes[key] = value
-        self._flush_if_stored()
+        self._flush_if_stored({'attributes'})
 
     def set_attribute_many(self, attributes):
         """Set multiple attributes.
@@ -229,7 +229,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
             # We need to use `self.dbmodel` without the underscore, because otherwise the second iteration will refetch
             # what is in the database and we lose the initial changes.
             self.dbmodel.attributes[key] = value
-        self._flush_if_stored()
+        self._flush_if_stored({'attributes'})
 
     def reset_attributes(self, attributes):
         """Reset the attributes.
@@ -242,7 +242,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
             attributes = clean_value(attributes)
 
         self.dbmodel.attributes = attributes
-        self._flush_if_stored()
+        self._flush_if_stored({'attributes'})
 
     def delete_attribute(self, key):
         """Delete an attribute.
@@ -255,7 +255,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         except KeyError as exception:
             raise AttributeError('attribute `{}` does not exist'.format(exception))
         else:
-            self._flush_if_stored()
+            self._flush_if_stored({'attributes'})
 
     def delete_attribute_many(self, keys):
         """Delete multiple attributes.
@@ -271,12 +271,12 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         for key in keys:
             self.dbmodel.attributes.pop(key)
 
-        self._flush_if_stored()
+        self._flush_if_stored({'attributes'})
 
     def clear_attributes(self):
         """Delete all attributes."""
         self._dbmodel.attributes = {}
-        self._flush_if_stored()
+        self._flush_if_stored({'attributes'})
 
     def attributes_items(self):
         """Return an iterator over the attributes.
@@ -358,7 +358,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
             value = clean_value(value)
 
         self._dbmodel.extras[key] = value
-        self._flush_if_stored()
+        self._flush_if_stored({'extras'})
 
     def set_extra_many(self, extras):
         """Set multiple extras.
@@ -373,7 +373,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         for key, value in extras.items():
             self.dbmodel.extras[key] = value
 
-        self._flush_if_stored()
+        self._flush_if_stored({'extras'})
 
     def reset_extras(self, extras):
         """Reset the extras.
@@ -386,7 +386,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
             extras = clean_value(extras)
 
         self.dbmodel.extras = extras
-        self._flush_if_stored()
+        self._flush_if_stored({'extras'})
 
     def delete_extra(self, key):
         """Delete an extra.
@@ -399,7 +399,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         except KeyError as exception:
             raise AttributeError('extra `{}` does not exist'.format(exception))
         else:
-            self._flush_if_stored()
+            self._flush_if_stored({'extras'})
 
     def delete_extra_many(self, keys):
         """Delete multiple extras.
@@ -415,12 +415,12 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         for key in keys:
             self.dbmodel.extras.pop(key)
 
-        self._flush_if_stored()
+        self._flush_if_stored({'extras'})
 
     def clear_extras(self):
         """Delete all extras."""
         self._dbmodel.extras = {}
-        self._flush_if_stored()
+        self._flush_if_stored({'extras'})
 
     def extras_items(self):
         """Return an iterator over the extras.
@@ -438,9 +438,9 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         for key in self._dbmodel.extras:
             yield key
 
-    def _flush_if_stored(self):
+    def _flush_if_stored(self, fields=None):
         if self._dbmodel.is_saved():
-            self._dbmodel.save()
+            self._dbmodel._flush(fields)  # pylint: disable=protected-access
 
     def add_incoming(self, source, link_type, link_label):
         """Add a link of the given type from a given node to ourself.

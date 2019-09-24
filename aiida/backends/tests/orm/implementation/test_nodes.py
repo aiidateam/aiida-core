@@ -504,6 +504,28 @@ class TestBackendNode(AiidaTestCase):
         node.set_attribute_many(attributes)
         self.assertEqual(set(attributes), set(node.attributes_keys()))
 
+    def test_attribute_flush_specifically(self):
+        """Test that changing `attributes` only flushes that property and does not affect others like extras.
+
+        Regression fix for #3338
+        """
+        node = self.create_node().store()
+        extras = {'extra_one': 1, 'extra_two': 2}
+        node.set_extra_many(extras)
+        node.store()
+
+        # Load the stored node in memory in another instance and add another extra
+        reloaded = self.backend.nodes.get(node.pk)
+        reloaded.set_extra('extra_three', 3)
+
+        # The original memory instance should now not include `extra_three`. Changing an attribute should only flush
+        # the attributes and not the whole node state, which would override for example also the extras.
+        node.set_attribute('attribute_one', 1)
+
+        # Reload the node yet again and verify that the `extra_three` extra is still there
+        rereloaded = self.backend.nodes.get(node.pk)
+        self.assertIn('extra_three', rereloaded.extras.keys())
+
     def test_extras(self):
         """Test the `BackendNode.extras` property."""
         node = self.create_node()
@@ -729,3 +751,25 @@ class TestBackendNode(AiidaTestCase):
 
         node.set_extra_many(extras)
         self.assertEqual(set(extras), set(node.extras_keys()))
+
+    def test_extra_flush_specifically(self):
+        """Test that changing `extras` only flushes that property and does not affect others like attributes.
+
+        Regression fix for #3338
+        """
+        node = self.create_node().store()
+        attributes = {'attribute_one': 1, 'attribute_two': 2}
+        node.set_attribute_many(attributes)
+        node.store()
+
+        # Load the stored node in memory in another instance and add another attribute
+        reloaded = self.backend.nodes.get(node.pk)
+        reloaded.set_attribute('attribute_three', 3)
+
+        # The original memory instance should now not include `attribute_three`. Changing an extra should only flush
+        # the extras and not the whole node state, which would override for example also the attributes.
+        node.set_extra('extra_one', 1)
+
+        # Reload the node yet again and verify that the `attribute_three` attribute is still there
+        rereloaded = self.backend.nodes.get(node.pk)
+        self.assertIn('attribute_three', rereloaded.attributes.keys())

@@ -76,3 +76,30 @@ class TestCommonUtilities(AiidaTestCase):
         node.logger.warning(warning)
 
         self.assertIn(warning, get_process_function_report(node))
+
+    def test_print_process_info(self):
+        """Test the `print_process_info` method."""
+        from aiida.cmdline.utils.common import print_process_info
+        from aiida.common.utils import Capturing
+        from aiida.engine import Process
+
+        class TestProcessWithoutDocstring(Process):
+            # pylint: disable=missing-docstring
+
+            @classmethod
+            def define(cls, spec):
+                super(TestProcessWithoutDocstring, cls).define(spec)
+                spec.input('some_input')
+
+        class TestProcessWithDocstring(Process):
+            """Some docstring."""
+
+            @classmethod
+            def define(cls, spec):
+                super(TestProcessWithDocstring, cls).define(spec)
+                spec.input('some_input')
+
+        # We are just checking that the command does not except
+        with Capturing():
+            print_process_info(TestProcessWithoutDocstring)
+            print_process_info(TestProcessWithDocstring)

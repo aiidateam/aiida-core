@@ -83,6 +83,7 @@ Install the ``aiida-core`` python package:
 .. code-block:: bash
 
     pip install --pre aiida-core
+    reentry scan
 
 Set up your AiiDA profile:
 

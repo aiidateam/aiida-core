@@ -57,7 +57,6 @@ Install the ``aiida`` python package from `PyPI`_ using:
 .. code-block:: bash
 
     pip install --pre aiida
-    reentry scan
 
 .. note::
     If you are installing AiiDA in your system environment,
@@ -77,7 +76,6 @@ Alternatively, you can create a directory where to clone the AiiDA source code a
     cd <your_directory>
     git clone https://github.com/aiidateam/aiida-core
     pip install -e aiida-core
-    reentry scan
 
 
 .. _install_optional_dependencies:
@@ -101,6 +99,10 @@ In order to install any of these package groups, simply append them as a comma s
 
     sudo apt-get install libffi-dev libkrb5-dev
 
+AiiDA uses the `reentry <https://pypi.org/project/reentry/>`_ package to keep a fast cache of entry points for a snappy ``verdi`` cli.
+After installing AiiDA packages, always remember to update the reentry cache using::
+
+    reentry scan
 
 .. _setup_aiida:
 

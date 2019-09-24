@@ -375,6 +375,27 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
     return '\n'.join(report)
 
 
+def print_process_info(process):
+    """Print detailed information about a process class and its process specification.
+
+    :param process: a :py:class:`~aiida.engine.processes.process.Process` class
+    """
+    docstring = process.__doc__
+
+    if docstring is not None:
+        docstring = docstring.strip().split('\n')
+
+    if not docstring:
+        docstring = ['No description available']
+
+    click.secho('Description:\n', fg='red', bold=True)
+    for line in docstring:
+        click.echo('\t' + line.lstrip())
+    click.echo()
+
+    print_process_spec(process.spec())
+
+
 def print_process_spec(process_spec):
     """Print the process spec in a human-readable formatted way.
 
@@ -410,7 +431,7 @@ def print_process_spec(process_spec):
     max_width_type = max([len(entry[2]) for entry in inputs + outputs]) + 2
 
     if process_spec.inputs:
-        click.secho('Inputs', fg='red', bold=True)
+        click.secho('Inputs:', fg='red', bold=True)
     for entry in inputs:
         if entry[1] == 'required':
             click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
@@ -418,7 +439,7 @@ def print_process_spec(process_spec):
             click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
 
     if process_spec.outputs:
-        click.secho('Outputs', fg='red', bold=True)
+        click.secho('Outputs:', fg='red', bold=True)
     for entry in outputs:
         if entry[1] == 'required':
             click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
@@ -426,7 +447,7 @@ def print_process_spec(process_spec):
             click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
 
     if process_spec.exit_codes:
-        click.secho('Exit codes', fg='red', bold=True)
+        click.secho('Exit codes:', fg='red', bold=True)
     for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
         message = exit_code.message.capitalize()
         click.secho('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))

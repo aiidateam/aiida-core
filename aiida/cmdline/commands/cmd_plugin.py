@@ -31,7 +31,7 @@ def verdi_plugin():
 def plugin_list(entry_point_group, entry_point):
     """Display a list of all available plugins."""
     from aiida.common import EntryPointError
-    from aiida.cmdline.utils.common import print_process_spec
+    from aiida.cmdline.utils.common import print_process_info
     from aiida.engine import Process
     from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 
@@ -52,7 +52,7 @@ def plugin_list(entry_point_group, entry_point):
         else:
             try:
                 if issubclass(plugin, Process):
-                    print_process_spec(plugin.spec())
+                    print_process_info(plugin)
                 else:
                     echo.echo(str(plugin.get_description()))
             except (AttributeError, TypeError):

@@ -40,20 +40,28 @@ The plugin system was designed with the following goals in mind.
 Design guidelines
 ------------------
 
-* **Start simple.**: make use of existing classes like :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`, :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ... Write only what is necessary to pass information from and to AiiDA.
+ * **Start simple.**
+   Make use of existing classes like :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`, :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...
+   Write only what is necessary to pass information from and to AiiDA.
+ * **Don't break data provenance.**
+   Store *at least* what is needed for full reproducibility.
+ * **Parse what you want to query for.**
+   Make a list of which information to:
 
-* **Don't break data provenance.**: store *at least* what is needed for full reproducibility.
+     #. parse into the database for querying (:py:class:`~aiida.orm.nodes.data.dict.Dict`, ...)
+     #. store in files for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
+     #. leave on the remote computer (:py:class:`~aiida.orm.nodes.data.remote.RemoteData`, ...)
 
-* **Parse what you want to query for.**: make a list of which information to:
+ * **Expose the full functionality.**
+   Standardization is good but don't artificially limit the power of a code you are wrapping - or your users will get frustrated.
+   If the code can do it, there should be *some* way to do it with your plugin.
 
-  #. parse into the database for querying (:py:class:`~aiida.orm.nodes.data.dict.Dict`, ...)
-  #. store in files for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
-  #. leave on the remote computer (:py:class:`~aiida.orm.nodes.data.remote.RemoteData`, ...)
-
-* **Expose the full functionality.**: standardization is good but don't artificially limit the power of a code you are wrapping - or your users will get frustrated. If the code can do it, there should be *some* way to do it with your plugin.
+ * **Don't rely on AiiDA internals.**
+   AiiDA's `public python API<python_api_public_list>` includes anything that you can import via  ``from aiida.module import thing``.
+   Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, forcing you to update your plugin.
 
 
-What a plugin can do
+What a Plugin Can Do
 --------------------
 
 * Add new classes to AiiDA's unified interface, including:

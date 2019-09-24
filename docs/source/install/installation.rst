@@ -57,6 +57,7 @@ Install the ``aiida`` python package from `PyPI`_ using:
 .. code-block:: bash
 
     pip install --pre aiida
+    reentry scan
 
 .. note::
     If you are installing AiiDA in your system environment,
@@ -76,6 +77,7 @@ Alternatively, you can create a directory where to clone the AiiDA source code a
     cd <your_directory>
     git clone https://github.com/aiidateam/aiida-core
     pip install -e aiida-core
+    reentry scan
 
 
 .. _install_optional_dependencies:

@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Defines an rst directive to auto-document AiiDA workchains.
+Defines an rst directive to auto-document AiiDA calculation job.
 """
 
 from __future__ import division

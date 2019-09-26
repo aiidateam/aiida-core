@@ -122,8 +122,8 @@ class TestLinks(AiidaTestCase):
         Graph::
 
             data1 ---------------INPUT_WORK----------------+
+              |                                            |
               |     data2 -INPUT_WORK-+                    |
-              |                       |                    |
               |                       V                    V
               +-------INPUT_WORK--> work1 --CALL_WORK--> work2 ----+
               |                                            |       |
@@ -374,9 +374,14 @@ class TestLinks(AiidaTestCase):
     def prepare_link_flags_export(nodes_to_export, test_data):
         """Helper function"""
         from aiida.tools.importexport.common.config import LINK_FLAGS
-        rules = LINK_FLAGS.copy()
-        for rule in rules:
-            rules[rule] = False
+        rules = {}
+        togglable_link_rules = {
+            'input_calc_forward', 'create_backward', 'return_backward', 'input_work_forward', 'call_calc_backward',
+            'call_work_backward'
+        }
+        for rule in LINK_FLAGS:
+            if rule in togglable_link_rules:
+                rules[rule] = LINK_FLAGS[rule]
 
         for export_file, rule_changes, expected_nodes in test_data.values():
             rules.update(rule_changes)
@@ -400,13 +405,14 @@ class TestLinks(AiidaTestCase):
                 if node_type in expected_nodes:
                     builder = orm.QueryBuilder().append(node_cls, project='uuid')
                     self.assertEqual(
-                        builder.count(), len(expected_nodes[node_type]),
-                        'Expected {} {} node(s), but got {}. Test: "{}"'.format(
+                        builder.count(),
+                        len(expected_nodes[node_type]),
+                        msg='Expected {} {} node(s), but got {}. Test: "{}"'.format(
                             len(expected_nodes[node_type]), node_type, builder.count(), test
                         )
                     )
                     for node_uuid in builder.iterall():
-                        self.assertIn(node_uuid[0], expected_nodes[node_type])
+                        self.assertIn(node_uuid[0], expected_nodes[node_type], msg='Failed for test: "{}"'.format(test))
 
     def link_flags_export_helper(self, name, all_nodes, temp_dir, nodes_to_export, flags, expected_nodes):  # pylint: disable=too-many-arguments
         """Helper function"""
@@ -464,13 +470,11 @@ class TestLinks(AiidaTestCase):
     def test_link_flags(self, temp_dir):
         """Verify all link follow flags are working as intended.
 
-        Note: This does not test recursitivity.
-
         Graph (from ``self.construct_complex_graph()``)::
 
             data1 ---------------INPUT_WORK----------------+
+              |                                            |
               |     data2 -INPUT_WORK-+                    |
-              |                       |                    |
               |                       V                    V
               +-------INPUT_WORK--> work1 --CALL_WORK--> work2 ----+
               |                                            |       |
@@ -498,51 +502,16 @@ class TestLinks(AiidaTestCase):
             'input_links_forward',
             nodes,
             temp_dir,
-            nodes_to_export=(['data'], ['data1', 'data2', 'data4']),
+            nodes_to_export=(['data'], ['data1']),
             flags=('input_calc_forward', 'input_work_forward'),
             expected_nodes=(
-                ['calc', 'work'],
+                ['data', 'calc', 'work'],
                 [
-                    [],  # calc: False, work: False
-                    ['calc1', 'calc2'],  # calc: True, work: False
-                    ['work1', 'work2'],  # calc: False, work: True
-                    ['calc1', 'calc2', 'work1', 'work2']  # calc: True, work: True
-                ]
-            )
-        )
-
-        # input links - backward
-        input_links_backward = self.link_flags_export_helper(
-            'input_links_backward',
-            nodes,
-            temp_dir,
-            nodes_to_export=(['calc', 'work'], ['calc1', 'calc2', 'work1', 'work2']),
-            flags=('input_calc_backward', 'input_work_backward'),
-            expected_nodes=(
-                ['data'],
-                [
-                    [],  # calc: False, work: False
-                    ['data1', 'data4'],  # calc: True, work: False
-                    ['data1', 'data2'],  # calc: False, work: True
-                    ['data1', 'data2', 'data4']  # calc: True, work: True
-                ]
-            )
-        )
-
-        # create/return links - forward
-        create_return_links_forward = self.link_flags_export_helper(
-            'create_return_links_forward',
-            nodes,
-            temp_dir,
-            nodes_to_export=(['calc', 'work'], ['calc1', 'calc2', 'work2']),
-            flags=('create_forward', 'return_forward'),
-            expected_nodes=(
-                ['data'],
-                [
-                    [],  # create: False, return: False
-                    ['data3', 'data4', 'data5', 'data6'],  # create: True, return: False
-                    ['data3', 'data4'],  # create: False, return: True
-                    ['data3', 'data4', 'data5', 'data6']  # create: True, return: True
+                    [],  # calc: False, work: False (DEFAULT)
+                    ['calc1', 'data3', 'data4', 'calc2', 'data5', 'data6'],  # calc: True, work: False
+                    ['work1', 'data2', 'work2', 'calc1', 'data3', 'data4'],  # calc: False, work: True
+                    ['work1', 'data2', 'work2', 'calc1', 'data3', 'data4', 'calc2', 'data5',
+                     'data6']  # calc: True, work: True
                 ]
             )
         )
@@ -552,61 +521,62 @@ class TestLinks(AiidaTestCase):
             'create_return_links_backward',
             nodes,
             temp_dir,
-            nodes_to_export=(['data'], ['data3', 'data4', 'data5', 'data6']),
+            nodes_to_export=(['data'], ['data4', 'data5']),
             flags=('create_backward', 'return_backward'),
             expected_nodes=(
-                ['calc', 'work'],
+                ['data', 'calc', 'work'],
                 [
                     [],  # create: False, return: False
-                    ['calc1', 'calc2'],  # create: True, return: False
-                    ['work2'],  # create: False, return: True
-                    ['calc1', 'calc2', 'work2']  # create: True, return: True
+                    ['calc1', 'data3', 'data1', 'calc2', 'data6'],  # create: True, return: False (DEFAULT)
+                    ['work2', 'data1', 'calc1', 'data3'],  # create: False, return: True
+                    ['calc1', 'data3', 'data1', 'work2', 'calc2', 'data6']  # create: True, return: True
                 ]
             )
         )
 
-        # call links - forward
-        call_links_forward = self.link_flags_export_helper(
-            'call_links_forward',
+        # call links - backward (Exporting calc1)
+        # Not checking difference between (calc: False, work: False) and (calc: False, work: True),
+        # making this extra check below.
+        call_links_backward_calc1 = self.link_flags_export_helper(
+            'call_links_backward_calc1',
             nodes,
             temp_dir,
-            nodes_to_export=(['work'], ['work1', 'work2']),
-            flags=('call_calc_forward', 'call_work_forward'),
-            expected_nodes=(
-                ['calc', 'work'],
-                [
-                    [],  # calc: False, work: False
-                    ['calc1'],  # calc: True, work: False
-                    ['work2'],  # calc: False, work: True
-                    ['calc1', 'work2']  # calc: True, work: True
-                ]
-            )
-        )
-
-        # call links - backward
-        call_links_backward = self.link_flags_export_helper(
-            'call_links_backward',
-            nodes,
-            temp_dir,
-            nodes_to_export=(['calc', 'work'], ['calc1', 'work2']),
+            nodes_to_export=(['calc'], ['calc1']),
             flags=('call_calc_backward', 'call_work_backward'),
             expected_nodes=(
-                ['work'],
+                ['data', 'work'],
                 [
-                    [],  # calc: False, work: False
-                    ['work2'],  # calc: True, work: False
-                    ['work1'],  # calc: False, work: True
-                    ['work1', 'work2']  # calc: True, work: True
+                    ['data1', 'data3', 'data4'],  # calc: False, work: False (DEFAULT)
+                    ['data1', 'data3', 'data4', 'work2'],  # calc: True, work: False
+                    ['data1', 'data3', 'data4'],  # calc: False, work: True
+                    ['data1', 'data3', 'data4', 'work2', 'work1', 'data2']  # calc: True, work: True
+                ]
+            )
+        )
+
+        # call links - backward (Exporting work2)
+        # Extra, to check difference between (calc: False, work: False) and (calc: False, work: True)
+        call_links_backward_work2 = self.link_flags_export_helper(
+            'call_links_backward_work2',
+            nodes,
+            temp_dir,
+            nodes_to_export=(['work'], ['work2']),
+            flags=('call_calc_backward', 'call_work_backward'),
+            expected_nodes=(
+                ['data', 'calc', 'work'],
+                [
+                    ['data1', 'calc1', 'data3', 'data4'],  # calc: False, work: False (DEFAULT)
+                    ['data1', 'calc1', 'data3', 'data4'],  # calc: True, work: False
+                    ['data1', 'calc1', 'data3', 'data4', 'work1', 'data2'],  # calc: False, work: True
+                    ['data1', 'calc1', 'data3', 'data4', 'work1', 'data2']  # calc: True, work: True
                 ]
             )
         )
 
         self.link_flags_import_helper(input_links_forward)
-        self.link_flags_import_helper(input_links_backward)
-        self.link_flags_import_helper(create_return_links_forward)
         self.link_flags_import_helper(create_return_links_backward)
-        self.link_flags_import_helper(call_links_forward)
-        self.link_flags_import_helper(call_links_backward)
+        self.link_flags_import_helper(call_links_backward_calc1)
+        self.link_flags_import_helper(call_links_backward_work2)
 
     @with_temp_dir
     def test_double_return_links_for_workflows(self, temp_dir):

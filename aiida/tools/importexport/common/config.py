@@ -27,20 +27,20 @@ DUPL_SUFFIX = ' (Imported #{})'
 NODES_EXPORT_SUBFOLDER = 'nodes'
 
 # Default rules for following Links, when creating the graph of Nodes to export
-# Structure: key: <LinkType>_<direction-to-follow>, value: (<Follow?>, <Togglable?>)
+# Structure: key: <LinkType>_<direction-to-follow>, value: <Follow?>
 LINK_FLAGS = {
-    'input_calc_forward': (False, True),  # Togglable
-    'input_calc_backward': (True, False),
-    'create_forward': (True, False),
-    'create_backward': (True, True),  # Togglable
-    'return_forward': (True, False),
-    'return_backward': (False, True),  # Togglable
-    'input_work_forward': (False, True),  # Togglable
-    'input_work_backward': (True, False),
-    'call_calc_forward': (True, False),
-    'call_calc_backward': (False, True),  # Togglable
-    'call_work_forward': (True, False),
-    'call_work_backward': (False, True)  # Togglable
+    'input_calc_forward': False,  # Togglable
+    'input_calc_backward': True,
+    'create_forward': True,
+    'create_backward': True,  # Togglable
+    'return_forward': True,
+    'return_backward': False,  # Togglable
+    'input_work_forward': False,  # Togglable
+    'input_work_backward': True,
+    'call_calc_forward': True,
+    'call_calc_backward': False,  # Togglable
+    'call_work_forward': True,
+    'call_work_backward': False  # Togglable
 }
 
 # Giving names to the various entities. Attributes and links are not AiiDA

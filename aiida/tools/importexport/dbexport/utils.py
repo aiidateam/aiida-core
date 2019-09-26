@@ -343,48 +343,42 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
     where the Node types in bold symbolize the Node that is currently being exported, i.e.,
     it is this Node onto which the Link in question has been found.
 
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | **LinkType & Rule** | **From**            | **To**              |Follow (default)|Togglable|
-    +=====================+=====================+=====================+================+=========+
-    | INPUT_CALC_FORWARD  | **Data**            | CalculationNode     | False          | True    |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | INPUT_CALC_BACKWARD | Data                | **CalculationNode** | True           | False   |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | CREATE_FORWARD      | **CalculationNode** | Data                | True           | False   |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | CREATE_BACKWARD     | CalculationNode     | **Data**            | True           | True    |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | RETURN_FORWARD      | **WorkflowNode**    | Data                | True           | False   |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | RETURN_BACKWARD     | WorkflowNode        | **Data**            | False          | True    |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | INPUT_WORK_FORWARD  | **Data**            | WorkflowNode        | False          | True    |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | INPUT_WORK_BACKWARD | Data                | **WorkflowNode**    | True           | False   |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | CALL_CALC_FORWARD   | **WorkflowNode**    | CalculationNode     | True           | False   |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | CALL_CALC_BACKWARD  | WorkflowNode        | **CalculationNode** | False          | True    |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | CALL_WORK_FORWARD   | **WorkflowNode**    | WorkflowNode        | True           | False   |
-    +---------------------+---------------------+---------------------+----------------+---------+
-    | CALL_WORK_BACKWARD  | WorkflowNode        | **WorkflowNode**    | False          | True    |
-    +---------------------+---------------------+---------------------+----------------+---------+
+    +----------------------+---------------------+---------------------+----------------+---------+
+    |**LinkType_Direction**| **From**            | **To**              |Follow (default)|Togglable|
+    +======================+=====================+=====================+================+=========+
+    | INPUT_CALC_FORWARD   | **Data**            | CalculationNode     | False          | True    |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | INPUT_CALC_BACKWARD  | Data                | **CalculationNode** | True           | False   |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | CREATE_FORWARD       | **CalculationNode** | Data                | True           | False   |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | CREATE_BACKWARD      | CalculationNode     | **Data**            | True           | True    |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | RETURN_FORWARD       | **WorkflowNode**    | Data                | True           | False   |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | RETURN_BACKWARD      | WorkflowNode        | **Data**            | False          | True    |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | INPUT_WORK_FORWARD   | **Data**            | WorkflowNode        | False          | True    |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | INPUT_WORK_BACKWARD  | Data                | **WorkflowNode**    | True           | False   |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | CALL_CALC_FORWARD    | **WorkflowNode**    | CalculationNode     | True           | False   |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | CALL_CALC_BACKWARD   | WorkflowNode        | **CalculationNode** | False          | True    |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | CALL_WORK_FORWARD    | **WorkflowNode**    | WorkflowNode        | True           | False   |
+    +----------------------+---------------------+---------------------+----------------+---------+
+    | CALL_WORK_BACKWARD   | WorkflowNode        | **WorkflowNode**    | False          | True    |
+    +----------------------+---------------------+---------------------+----------------+---------+
 
     :param process_nodes: Set of :py:class:`~aiida.orm.nodes.process.process.ProcessNode` nodes.
     :param data_nodes: Set of :py:class:`~aiida.orm.nodes.data.data.Data` nodes.
 
     :param input_calc_forward: Follow INPUT_CALC links in the forward direction (recursively).
-    :param input_calc_backward: Follow INPUT_CALC links in the backward direction (recursively).
-    :param create_forward: Follow CREATE links in the forward direction (recursively).
     :param create_backward: Follow CREATE links in the backward direction (recursively).
-    :param return_forward: Follow RETURN links in the forward direction (recursively).
     :param return_backward: Follow RETURN links in the backward direction (recursively).
-    :param input_work_forward: Follow INPUT_WORK links in the forward direction (recursively).
-    :param input_work_backward: Follow INPUT_WORK links in the backward direction (recursively).
-    :param call_calc_forward: Follow CALL_CALC links in the forward direction (recursively).
+    :param input_work_forward: Follow INPUT_WORK links in the forward direction (recursively
     :param call_calc_backward: Follow CALL_CALC links in the backward direction (recursively).
-    :param call_work_forward: Follow CALL_WORK links in the forward direction (recursively).
     :param call_work_backward: Follow CALL_WORK links in the backward direction (recursively).
 
     :return: Set of retrieved Nodes and list of links information.
@@ -392,30 +386,27 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
     :raises `~aiida.tools.importexport.common.exceptions.ExportValidationError`: if wrong or too many kwargs are given.
     """
     from aiida.common.links import LinkType
-    from aiida.manage import configuration
     from aiida.orm import Data
     from aiida.tools.importexport.common.config import LINK_FLAGS
 
     # Initialization and set flags according to rules
     retrieved_nodes = set()
     links_uuid_dict = {}
-    follow_links_rules = {}
-    for link_rule, (follow, togglable) in LINK_FLAGS.items():
-        if link_rule in kwargs and not togglable:
-            profile = configuration.get_profile()
-            if not profile.is_test_profile:
-                togglable_link_rules = {name for name, (_, togglable) in LINK_FLAGS.items() if togglable}
-                raise exceptions.ExportValidationError(
-                    '{} is not a togglable rule. It is hard set to {}. '
-                    'Togglable rules: {}'.format(link_rule, follow, togglable_link_rules)
-                )
-        follow_links_rules[link_rule] = kwargs.pop(link_rule, follow)
+
+    togglable_link_rules = {
+        'input_calc_forward', 'create_backward', 'return_backward', 'input_work_forward', 'call_calc_backward',
+        'call_work_backward'
+    }
+    follow_links_rules = LINK_FLAGS.copy()
+    for link_rule_name in togglable_link_rules:
+        follow = kwargs.pop(link_rule_name, None)
+        if follow is not None:
+            follow_links_rules[link_rule_name] = follow
 
     if kwargs:
-        togglable_link_rules = {name for name, (_, togglable) in LINK_FLAGS.items() if togglable}
         raise exceptions.ExportValidationError(
-            'retrieve_linked_nodes received too many keyword arguments: {}. '.format(kwargs) +
-            'Only {} are accepted.'.format(togglable_link_rules)
+            'retrieve_linked_nodes received too many keyword arguments: {}. '
+            'Only {} are accepted.'.format(kwargs, togglable_link_rules)
         )
 
     # We repeat until there are no further nodes to be visited

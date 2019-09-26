@@ -17,13 +17,14 @@ In this simple case, therefore, in order to have a consistent provenance, whenev
 This is just one of the many rules that must be considered when trying to manually edit a provenance database.
 The key message to remember is that AiiDA will not only delete or export the nodes explicitly targeted by the user, but will also include any other nodes that are needed for keeping a consistent provenance in the resulting database.
 
-**It is also worth noting that if you do successive exports of partial information, AiiDA will be able to reconstruct links that might have been broken when dividing the data for export.**
-**So if you first where to export the previous graph, and then you exported the next section of your full database:**
+It is also worth noting that if you do successive exports of partial information, AiiDA will be able to reconstruct links that might have been broken when dividing the data for export.
+So if you first where to export the previous graph, and then you exported the next section of your full database:
 
 .. _delexp_example01b:
 .. figure:: include/images/delexp_example01b.png
 
-**Then AiiDA will be able to automatically identfy the shared node** |D_2| **and connect both sections back together.**
+Then AiiDA will be able to automatically identfy the shared node |D_2| and connect both sections back together during the import process.
+For this kind of recognition it doesn't matter which subgraph was exported first.
 
 In the following section we will explain in more detail the criteria for including other nodes and the corresponding traversal rules.
 
@@ -121,10 +122,9 @@ Workflows and Calculation Nodes
 -------------------------------
 
 Finally, we will consider the possible (call) links between processes.
-The results of a parent workflow depend critically on the subworkflows or calculations launched by it; therefore, in AiiDA when exporting a Workflow node we always traverse
-its ``forward`` ``call`` links (both ``call_calc`` and ``call_work``). Analogously,
-when deleting a process, the parent workflow that has called it (if present) will be deleted as well (by traversing a ``backward`` ``call_calc`` or ``call_work`` link). Since
-the traversal rules are applied recursively, this means that also the caller of the caller of the process will be deleted, and so on.
+The results of a parent workflow depend critically on the subworkflows or calculations launched by it; therefore, in AiiDA when exporting a Workflow node we always traverse its ``forward`` ``call`` links (both ``call_calc`` and ``call_work``).
+Analogously, when deleting a process, the parent workflow that has called it (if present) will be deleted as well (by traversing a ``backward`` ``call_calc`` or ``call_work`` link).
+Since the traversal rules are applied recursively, this means that also the caller of the caller of the process will be deleted, and so on.
 
 The possibility to follow ``call`` links in the other direction is available to the users,but disabled by default, i.e., when you export a process you will not necessarily export the logical provenance of the workflows calling it, and when deleting a workflow you won't necessarily delete all its subworkflows and called calculations.
 
@@ -176,8 +176,7 @@ To better illustrate this, we consider the following graph and we focus on the d
    :scale: 80%
 
 As you can see, |W_1| and |W_2| describe two similar but independent procedures (e.g., two tests run for the same research project), but launched by a single parent workflow |W_0|. It might be the case, therefore, that one would like to delete information from one of them without affecting the other (e.g., if one of the tests was later deemed unnecessary).
-In this particular case, just targeting |C_1| with the default behavior gives the following result, that is probably the desired final state of the database (in the following figures, the dash-circled node is the targeted one, and nodes highlighted in
-red are those that are eventually deleted):
+In this particular case, just targeting |C_1| with the default behavior gives the following result, that is probably the desired final state of the database (in the following figures, the dash-circled node is the targeted one, and nodes highlighted in red are those that are eventually deleted):
 
 .. _delexp_example02a:
 .. image:: include/images/delexp_example02-a00.png
@@ -207,8 +206,7 @@ The second workflow |W_2| would still be unaffected because there was no need to
    :scale: 80%
 
 But what if some of the child processes of |W_1| are workflows instead of calculations?
-The naive answer would be to enable ``call_work_forward=True`` as well. However, this will delete much more that you might want! In fact, since we are also deleting |W_0|, this last rule would also imply going through the ``call_work`` link between |W_0| and |W_2|, thus producing the following final undesired result, where most nodes have been
-deleted:
+The naive answer would be to enable ``call_work_forward=True`` as well. However, this will delete much more that you might want! In fact, since we are also deleting |W_0|, this last rule would also imply going through the ``call_work`` link between |W_0| and |W_2|, thus producing the following final undesired result, where most nodes have been deleted:
 
 .. _delexp_example02d:
 .. image:: include/images/delexp_example02-d00.png

@@ -140,7 +140,8 @@ def set_new_uuid(apps, _):
     Set new UUIDs for all logs
     """
     DbLog = apps.get_model('db', 'DbLog')
-    for log in DbLog.objects.all():
+    query_set = DbLog.objects.all()
+    for log in query_set.iterator():
         log.uuid = get_new_uuid()
         log.save(update_fields=['uuid'])
 
@@ -254,7 +255,8 @@ def clean_dblog_metadata(apps, _):
     import json
 
     DbLog = apps.get_model('db', 'DbLog')
-    for log in DbLog.objects.all():
+    query_set = DbLog.objects.all()
+    for log in query_set.iterator():
         met = json.loads(log.metadata)
         if 'objpk' in met:
             del met['objpk']
@@ -271,7 +273,8 @@ def enrich_dblog_metadata(apps, _):
     import json
 
     DbLog = apps.get_model('db', 'DbLog')
-    for log in DbLog.objects.all():
+    query_set = DbLog.objects.all()
+    for log in query_set.iterator():
         met = json.loads(log.metadata)
         if 'objpk' not in met:
             met['objpk'] = log.objpk

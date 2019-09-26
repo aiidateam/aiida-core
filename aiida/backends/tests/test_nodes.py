@@ -88,15 +88,6 @@ class TestNodeHashing(AiidaTestCase):
         n.set_attribute('c', c)
         return n
 
-    def test_simple_equal_nodes(self):
-        attributes = [(1.0, 1.1, 1.2), ({'a': 'b', 'c': 'd'}, [1, 2, 3], {4, 1, 2})]
-        for attr in attributes:
-            n1 = self.create_simple_node(*attr)
-            n2 = self.create_simple_node(*attr)
-            n1.store(use_cache=True)
-            n2.store(use_cache=True)
-            self.assertEqual(n1.uuid, n2.get_extra('_aiida_cached_from'))
-
     def test_node_uuid_hashing_for_querybuidler(self):
         """
         QueryBuilder results should be reusable and shouldn't brake hashing.
@@ -140,36 +131,6 @@ class TestNodeHashing(AiidaTestCase):
         assert (f1.list_object_names('path') == f2.list_object_names('path'))
         assert f1.get_hash() != f2.get_hash()
 
-    def test_simple_unequal_nodes(self):
-        attributes = [
-            [(1.0, 1.1, 1.2), (2.0, 1.1, 1.2)],
-            [(1e-14,), (2e-14,)],
-        ]
-        for attr1, attr2 in attributes:
-            n1 = self.create_simple_node(*attr1)
-            n2 = self.create_simple_node(*attr2)
-            n1.store()
-            n2.store(use_cache=True)
-            self.assertNotEquals(n1.uuid, n2.uuid)
-            self.assertFalse('_aiida_cached_from' in n2.extras)
-
-    def test_unequal_arrays(self):
-        import numpy as np
-        arrays = [(np.zeros(1001), np.zeros(1005)), (np.array([1, 2, 3]), np.array([2, 3, 4]))]
-
-        def create_arraydata(arr):
-            a = orm.ArrayData()
-            a.set_array('a', arr)
-            return a
-
-        for arr1, arr2 in arrays:
-            a1 = create_arraydata(arr1)
-            a1.store()
-            a2 = create_arraydata(arr2)
-            a2.store(use_cache=True)
-            self.assertNotEquals(a1.uuid, a2.uuid)
-            self.assertFalse('_aiida_cached_from' in a2.extras)
-
     def test_updatable_attributes(self):
         """
         Tests that updatable attributes are ignored.
@@ -180,41 +141,6 @@ class TestNodeHashing(AiidaTestCase):
         hash2 = node.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)
-
-
-class TestNodeHashing(AiidaTestCase):
-    """
-    Test that the source is taken from the expected node.
-
-    Important: these tests must run on an empty database.
-    """
-    @staticmethod
-    def create_folderdata_with_empty_file():
-        node = orm.FolderData()
-        with tempfile.NamedTemporaryFile() as handle:
-            node.put_object_from_filelike(handle, 'path/name')
-        return node
-
-    @staticmethod
-    def create_folderdata_with_empty_folder():
-        dirpath = tempfile.mkdtemp()
-        node = orm.FolderData()
-        node.put_object_from_tree(dirpath, 'path/name')
-        return node
-
-    def test_folder_same(self):
-        f1 = self.create_folderdata_with_empty_folder()
-        f2 = self.create_folderdata_with_empty_folder()
-        f1.store()
-        f2.store(use_cache=True)
-        assert f1.uuid == f2.get_extra('_aiida_cached_from')
-
-    def test_file_same(self):
-        f1 = self.create_folderdata_with_empty_file()
-        f2 = self.create_folderdata_with_empty_file()
-        f1.store()
-        f2.store(use_cache=True)
-        assert f1.uuid == f2.get_extra('_aiida_cached_from')
 
 
 class TestTransitiveNoLoops(AiidaTestCase):

@@ -15,6 +15,7 @@
     "Programming Language :: Python :: 2.7",
     "Programming Language :: Python :: 3.5",
     "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
     "Topic :: Scientific/Engineering"
   ],
   "install_requires": [
@@ -95,7 +96,8 @@
       "seekpath==1.8.4"
     ],
     "notebook": [
-      "jupyter==1.0.0"
+      "jupyter==1.0.0",
+      "notebook<6"
     ],
     "testing": [
       "unittest2==1.1.0; python_version<'3.5'",

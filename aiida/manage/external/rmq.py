@@ -138,6 +138,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         :param tag: the tag of the checkpoint to continue from
         """
         from aiida.common import exceptions
+        from aiida.engine import ProcessState
         from aiida.engine.exceptions import PastException
         from aiida.orm import load_node, Data
         from aiida.orm.utils import serialize
@@ -168,7 +169,20 @@ class ProcessLauncher(plumpy.ProcessLauncher):
 
             raise gen.Return(future.result())
 
-        result = yield super(ProcessLauncher, self)._continue(communicator, pid, nowait, tag)
+        try:
+            result = yield super(ProcessLauncher, self)._continue(communicator, pid, nowait, tag)
+        except Exception as exception:
+            # If the process state of the node has not yet been put to excepted, the exception was raised before the
+            # process instance could be reconstructed, for example when the process class could not be loaded, thereby
+            # circumventing the exception handling of the state machine. Raising this exception will then acknowledge
+            # the process task with RabbitMQ leaving an uncleaned node in the `CREATED` state for ever. Therefore we
+            # have to perform the node cleaning manually.
+            if not node.is_excepted:
+                node.logger.exception('failed to recreate the process instance in order to continue it')
+                node.set_exception(str(exception))
+                node.set_process_state(ProcessState.EXCEPTED)
+                node.seal()
+            raise
 
         # Ensure that the result is serialized such that communication thread won't have to do database operations
         try:

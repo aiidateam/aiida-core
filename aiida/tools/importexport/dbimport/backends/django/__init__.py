@@ -22,7 +22,6 @@ from itertools import chain
 import six
 
 from aiida.common import timezone, json
-from aiida.common.links import LinkType
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.utils import grouper, get_object_from_string
 from aiida.orm.utils.repository import Repository
@@ -490,7 +489,7 @@ def import_data_dj(
                 just_saved = {str(key): value for key, value in just_saved_queryset}
 
                 # Now I have the PKs, print the info
-                # Moreover, set the foreign_ids_reverse_mappings
+                # Moreover, add newly created Nodes to foreign_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.items():
                     import_entry_pk = import_new_entry_pks[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
@@ -509,16 +508,14 @@ def import_data_dj(
             links_to_store = []
 
             # Needed for fast checks of existing links
-            existing_links_raw = models.DbLink.objects.all().values_list('input', 'output', 'label', 'type')
+            existing_links_raw = models.DbLink.objects.all().values_list('input', 'output', 'label')
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 
-            # ~ print(foreign_ids_reverse_mappings)
-            dbnode_reverse_mappings = foreign_ids_reverse_mappings[NODE_ENTITY_NAME]
             for link in import_links:
                 try:
-                    in_id = dbnode_reverse_mappings[link['input']]
-                    out_id = dbnode_reverse_mappings[link['output']]
+                    in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
+                    out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
                 except KeyError:
                     if ignore_unknown_nodes:
                         continue
@@ -532,11 +529,10 @@ def import_data_dj(
                     existing_label = existing_links_labels[in_id, out_id]
                     if existing_label != link['label']:
                         raise exceptions.ImportValidationError(
-                            'Trying to rename an existing link name, stopping (in={}, out={}, old_label={}, '
+                            'Trying to rename an existing link name, stopping (in_id={}, out_id={}, old_label={}, '
                             'new_label={})'.format(in_id, out_id, existing_label, link['label'])
                         )
-                        # Do nothing, the link is already in place and has
-                        # the correct name
+                    # Else do nothing, the link is already in place and has the correct name
                 except KeyError:
                     try:
                         # We try to get the existing input of the link that
@@ -548,24 +544,20 @@ def import_data_dj(
                         # is the case of the RETURN links of workflows/
                         # workchains. If it is not this case, then it is
                         # an error.
+                        from aiida.common.links import LinkType
                         existing_input = existing_input_links[out_id, link['label']]
 
-                        if link['type'] != LinkType.RETURN:
+                        if link['type'] != LinkType.RETURN.value:
+                            existing_input_uuid = models.DbNode.objects.get(id=existing_input).uuid
                             raise exceptions.ImportValidationError(
-                                'There exists already an input link to node with UUID {} with label {} but it does not'
-                                ' come from the expected input with UUID {} but from a node with UUID {}.'.format(
-                                    link['output'], link['label'], link['input'], existing_input
-                                )
+                                'There already exists an input link to node with UUID {} with label "{}" '
+                                'but it does not come from the expected input with UUID {} but from a node with UUID {}'
+                                '.'.format(link['output'], link['label'], link['input'], existing_input_uuid)
                             )
                     except KeyError:
                         # New link
                         links_to_store.append(
-                            models.DbLink(
-                                input_id=in_id,
-                                output_id=out_id,
-                                label=link['label'],
-                                type=LinkType(link['type']).value
-                            )
+                            models.DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type'])
                         )
                         if 'Link' not in ret_dict:
                             ret_dict['Link'] = {'new': []}
@@ -587,7 +579,7 @@ def import_data_dj(
             for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
                 group_ = models.DbGroup.objects.get(uuid=groupuuid)
-                nodes_to_store = [dbnode_reverse_mappings[node_uuid] for node_uuid in groupnodes]
+                nodes_to_store = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][node_uuid] for node_uuid in groupnodes]
                 if nodes_to_store:
                     group_.dbnodes.add(*nodes_to_store)
 

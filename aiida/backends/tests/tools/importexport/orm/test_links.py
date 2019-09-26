@@ -675,3 +675,61 @@ class TestLinks(AiidaTestCase):
             msg='There should be a single StructureData, instead {} has been found'.format(builder.count())
         )
         self.assertEqual(builder.all()[0][0], struct_uuid)
+
+    @with_temp_dir
+    def test_multiple_post_return_links(self, temp_dir):
+        """Check extra RETURN links can be added to existing Nodes, when label is not unique"""
+        data = orm.Int(1).store()
+        calc = orm.CalculationNode().store()
+        work = orm.WorkflowNode().store()
+
+        data.add_incoming(calc, LinkType.CREATE, 'output_data')
+        data.add_incoming(work, LinkType.RETURN, 'output_data')
+
+        calc.seal()
+        work.seal()
+
+        data_uuid = data.uuid
+        calc_uuid = calc.uuid
+        work_uuid = work.uuid
+
+        data_provenance = os.path.join(temp_dir, 'data.aiida')
+        all_provenance = os.path.join(temp_dir, 'all.aiida')
+
+        export([data], outfile=data_provenance, silent=True, return_reversed=False)
+        export([data], outfile=all_provenance, silent=True, return_reversed=True)
+
+        # import data, import logic, make sure all is OK
+        self.reset_database()
+
+        import_data(data_provenance, silent=True)
+
+        no_of_work = orm.QueryBuilder().append(orm.WorkflowNode).count()
+        self.assertEqual(
+            no_of_work, 0, msg='{} WorkflowNode(s) was/were found, however, none should be present'.format(no_of_work)
+        )
+        nodes = orm.QueryBuilder().append(orm.Node, project='uuid')
+        self.assertEqual(
+            nodes.count(),
+            2,
+            msg='{} Node(s) was/were found, however, exactly two should be present'.format(no_of_work)
+        )
+        for node in nodes.iterall():
+            self.assertIn(node[0], [data_uuid, calc_uuid])
+
+        import_data(all_provenance, silent=True)
+
+        no_of_work = orm.QueryBuilder().append(orm.WorkflowNode).count()
+        self.assertEqual(
+            no_of_work,
+            1,
+            msg='{} WorkflowNode(s) was/were found, however, exactly one should be present'.format(no_of_work)
+        )
+        nodes = orm.QueryBuilder().append(orm.Node, project='uuid')
+        self.assertEqual(
+            nodes.count(),
+            3,
+            msg='{} Node(s) was/were found, however, exactly three should be present'.format(no_of_work)
+        )
+        for node in nodes.iterall():
+            self.assertIn(node[0], [data_uuid, calc_uuid, work_uuid])

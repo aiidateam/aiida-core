@@ -23,7 +23,6 @@ import six
 
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
-from aiida.common.links import LinkType
 from aiida.common.utils import get_object_from_string
 from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group
@@ -568,7 +567,7 @@ def import_data_sqla(
                     just_saved = dict()
 
                 # Now I have the PKs, print the info
-                # Moreover, set the foreign_ids_reverse_mappings
+                # Moreover, add newly created Nodes to foreign_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.items():
                     from uuid import UUID
                     if isinstance(unique_id, UUID):
@@ -595,11 +594,10 @@ def import_data_sqla(
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 
-            dbnode_reverse_mappings = foreign_ids_reverse_mappings[NODE_ENTITY_NAME]
             for link in import_links:
                 try:
-                    in_id = dbnode_reverse_mappings[link['input']]
-                    out_id = dbnode_reverse_mappings[link['output']]
+                    in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
+                    out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
                 except KeyError:
                     if ignore_unknown_nodes:
                         continue
@@ -613,11 +611,10 @@ def import_data_sqla(
                     existing_label = existing_links_labels[in_id, out_id]
                     if existing_label != link['label']:
                         raise exceptions.ImportValidationError(
-                            'Trying to rename an existing link name, stopping (in={}, out={}, old_label={}, '
+                            'Trying to rename an existing link name, stopping (in_id={}, out_id={}, old_label={}, '
                             'new_label={})'.format(in_id, out_id, existing_label, link['label'])
                         )
-                        # Do nothing, the link is already in place and has
-                        # the correct name
+                    # Else do nothing, the link is already in place and has the correct name
                 except KeyError:
                     try:
                         # We try to get the existing input of the link that
@@ -629,24 +626,22 @@ def import_data_sqla(
                         # is the case of the RETURN links of workflows/
                         # workchains. If it is not this case, then it is
                         # an error.
+                        from aiida.common.links import LinkType
                         existing_input = existing_input_links[out_id, link['label']]
 
-                        if link['type'] != LinkType.RETURN:
+                        if link['type'] != LinkType.RETURN.value:
+                            existing_input_uuid = str(
+                                session.query(DbNode.uuid).filter(DbNode.id == existing_input).all()[0][0]
+                            )
                             raise exceptions.ImportValidationError(
-                                'There exists already an input link to node with UUID {} with label {} but it does not'
-                                ' come from the expected input with UUID {} but from a node with UUID {}.'.format(
-                                    link['output'], link['label'], link['input'], existing_input
-                                )
+                                'There already exists an input link to node with UUID {} with label "{}" '
+                                'but it does not come from the expected input with UUID {} but from a node with UUID {}'
+                                '.'.format(link['output'], link['label'], link['input'], existing_input_uuid)
                             )
                     except KeyError:
                         # New link
                         links_to_store.append(
-                            DbLink(
-                                input_id=in_id,
-                                output_id=out_id,
-                                label=link['label'],
-                                type=LinkType(link['type']).value
-                            )
+                            DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type'])
                         )
                         if 'Link' not in ret_dict:
                             ret_dict['Link'] = {'new': []}
@@ -668,7 +663,9 @@ def import_data_sqla(
                 # # TODO: cache these to avoid too many queries
                 qb_group = QueryBuilder().append(Group, filters={'uuid': {'==': groupuuid}})
                 group_ = qb_group.first()[0]
-                nodes_ids_to_add = [dbnode_reverse_mappings[node_uuid] for node_uuid in groupnodes]
+                nodes_ids_to_add = [
+                    foreign_ids_reverse_mappings[NODE_ENTITY_NAME][node_uuid] for node_uuid in groupnodes
+                ]
                 qb_nodes = QueryBuilder().append(Node, filters={'id': {'in': nodes_ids_to_add}})
                 # Adding nodes to group avoiding the SQLA ORM to increase speed
                 nodes_to_add = [n[0].backend_entity for n in qb_nodes.all()]

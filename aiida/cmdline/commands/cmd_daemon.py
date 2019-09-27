@@ -63,7 +63,7 @@ def start(foreground, number):
 
     try:
         currenv = get_env_with_venv_bin()
-        subprocess.check_output(command, env=currenv, stderr=subprocess.STDOUT)
+        subprocess.check_output(command, env=currenv, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
     except subprocess.CalledProcessError as exception:
         click.secho('FAILED', fg='red', bold=True)
         echo.echo_critical(exception.output)
@@ -262,6 +262,10 @@ def start_circus(foreground, number):
             'virtualenv': client.virtualenv,
             'copy_env': True,
             'stdout_stream': {
+                'class': 'FileStream',
+                'filename': client.daemon_log_file,
+            },
+            'stderr_stream': {
                 'class': 'FileStream',
                 'filename': client.daemon_log_file,
             },

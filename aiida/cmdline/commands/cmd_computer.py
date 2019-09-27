@@ -394,7 +394,7 @@ def computer_disable(computer, user):
 
 
 @verdi_computer.command('list')
-@options.ALL(help='Show also disabled or unconfigured computers.')
+@options.ALL(help='Show also disabled computers.')
 @options.RAW(help='Show only the computer names, one per line.')
 @with_dbenv()
 def computer_list(all_entries, raw):
@@ -403,17 +403,18 @@ def computer_list(all_entries, raw):
 
     if not raw:
         echo.echo_info('List of configured computers')
+        echo.echo_info('Computers that are configured and ready to use are marked with an asterisk')
         echo.echo_info("Use 'verdi computer show COMPUTERNAME' to display more detailed information")
 
     computers = Computer.objects.all()
     user = User.objects.get_default()
 
-    if not computers:
+    if not computers and not raw:
         echo.echo_info("No computers configured yet. Use 'verdi computer setup'")
 
     sort = lambda computer: computer.name
     highlight = lambda comp: comp.is_user_configured(user) and comp.is_user_enabled(user)
-    hide = lambda comp: not (comp.is_user_configured(user) and comp.is_user_enabled(user)) and not all_entries
+    hide = lambda comp: comp.is_user_configured(user) and not comp.is_user_enabled(user) and not all_entries
     echo.echo_formatted_list(computers, ['name'], sort=sort, highlight=highlight, hide=hide)
 
 

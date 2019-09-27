@@ -506,14 +506,27 @@ class TestVerdiComputerCommands(AiidaTestCase):
         cls.comp.set_default_mpiprocs_per_machine(1)
         cls.comp.store()
 
+    @staticmethod
+    def create_new_computer(name):
+        """Create a new computer with the given `name`."""
+        computer = orm.Computer(
+            name=name,
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida')
+        computer.set_default_mpiprocs_per_machine(1)
+        computer.store()
+
+        return computer
+
     def setUp(self):
         """
         Prepare the computer and user
         """
         self.user = orm.User.objects.get_default()
 
-        # I need to configure the computer here; being 'local',
-        # there should not be any options asked here
+        # I need to configure the computer here; being 'local', there should not be any options asked here
         self.comp.configure()
 
         assert self.comp.is_user_configured(self.user), 'There was a problem configuring the test computer'
@@ -553,6 +566,37 @@ class TestVerdiComputerCommands(AiidaTestCase):
             self.assertIsNone(result.exception, result.output)
             # Something should be printed to stdout
             self.assertIsNotNone(result.output)
+
+    def test_computer_list_(self):
+        """Test the `--all` flag of  `verdi computer list`."""
+        name_configured = 'computer_configured'
+        name_unconfigured = 'computer_unconfigured'
+        name_disabled = 'computer_disabled'
+
+        computer_configured = self.create_new_computer(name_configured)
+        computer_unconfigured = self.create_new_computer(name_unconfigured)
+        computer_disabled = self.create_new_computer(name_disabled)
+
+        computer_configured.configure(self.user)
+        computer_disabled.configure(self.user)
+        computer_disabled.get_authinfo(self.user).enabled = False
+
+        # Without flags, only the configured and unconfigured computers should be shown
+        options = []
+        result = self.cli_runner.invoke(computer_list, options)
+        self.assertClickResultNoException(result)
+        self.assertIn(name_configured, result.output)
+        self.assertIn(name_unconfigured, result.output)
+        self.assertNotIn(name_disabled, result.output)
+
+        # Adding the `--all` flag should now also display the disabled machine
+        for flag in ['-a', '--all']:
+            options = [flag]
+            result = self.cli_runner.invoke(computer_list, options)
+            self.assertClickResultNoException(result)
+            self.assertIn(name_configured, result.output)
+            self.assertIn(name_unconfigured, result.output)
+            self.assertIn(name_disabled, result.output)
 
     def test_computer_show(self):
         """

@@ -567,19 +567,24 @@ class TestVerdiComputerCommands(AiidaTestCase):
             # Something should be printed to stdout
             self.assertIsNotNone(result.output)
 
-    def test_computer_list_(self):
+    def test_computer_list_filter_flags(self):
         """Test the `--all` flag of  `verdi computer list`."""
+        stranger = orm.User('other@user.com').store()
+
         name_configured = 'computer_configured'
         name_unconfigured = 'computer_unconfigured'
         name_disabled = 'computer_disabled'
+        name_stranger = 'computer_stranger'
 
         computer_configured = self.create_new_computer(name_configured)
         computer_unconfigured = self.create_new_computer(name_unconfigured)
         computer_disabled = self.create_new_computer(name_disabled)
+        computer_stranger = self.create_new_computer(name_stranger)
 
         computer_configured.configure(self.user)
         computer_disabled.configure(self.user)
         computer_disabled.get_authinfo(self.user).enabled = False
+        computer_stranger.configure(stranger)
 
         # Without flags, only the configured and unconfigured computers should be shown
         options = []
@@ -587,6 +592,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         self.assertClickResultNoException(result)
         self.assertIn(name_configured, result.output)
         self.assertIn(name_unconfigured, result.output)
+        self.assertIn(name_stranger, result.output)
         self.assertNotIn(name_disabled, result.output)
 
         # Adding the `--all` flag should now also display the disabled machine
@@ -594,9 +600,20 @@ class TestVerdiComputerCommands(AiidaTestCase):
             options = [flag]
             result = self.cli_runner.invoke(computer_list, options)
             self.assertClickResultNoException(result)
+            self.assertIn('* ' + name_configured, result.output)
+            self.assertIn(name_unconfigured, result.output)
+            self.assertIn(name_stranger, result.output)
+            self.assertIn(name_disabled, result.output)
+
+        # Adding the `--all` flag should now also display the disabled machine
+        for flag in ['-u', '--user']:
+            options = [flag, stranger.email]
+            result = self.cli_runner.invoke(computer_list, options)
+            self.assertClickResultNoException(result)
             self.assertIn(name_configured, result.output)
             self.assertIn(name_unconfigured, result.output)
-            self.assertIn(name_disabled, result.output)
+            self.assertIn('* ' + name_stranger, result.output)
+            self.assertIn(name_disabled, result.output)  # This machine is not disabled for `stranger` so should appear
 
     def test_computer_show(self):
         """

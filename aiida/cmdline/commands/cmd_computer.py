@@ -393,28 +393,33 @@ def computer_disable(computer, user):
         )
 
 
+def get_default_user():
+    from aiida.orm import User
+    return User.objects.get_default().email
+
+
 @verdi_computer.command('list')
+@options.USER(help='Show only computers configured for this user', default=get_default_user)
 @options.ALL(help='Show also disabled computers.')
 @options.RAW(help='Show only the computer names, one per line.')
 @with_dbenv()
-def computer_list(all_entries, raw):
+def computer_list(user, all_entries, raw):
     """List all available computers."""
-    from aiida.orm import Computer, User
+    from aiida.orm import Computer
 
     if not raw:
-        echo.echo_info('List of configured computers')
-        echo.echo_info('Computers that are configured and ready to use are marked with an asterisk')
+        echo.echo_info('List of computers')
+        echo.echo_info('Computers that are configured for the given user and ready to use are marked with an asterisk')
         echo.echo_info("Use 'verdi computer show COMPUTERNAME' to display more detailed information")
 
     computers = Computer.objects.all()
-    user = User.objects.get_default()
 
     if not computers and not raw:
         echo.echo_info("No computers configured yet. Use 'verdi computer setup'")
 
-    sort = lambda computer: computer.name
-    highlight = lambda comp: comp.is_user_configured(user) and comp.is_user_enabled(user)
-    hide = lambda comp: comp.is_user_configured(user) and not comp.is_user_enabled(user) and not all_entries
+    sort = lambda computer: (not computer.is_user_configured(user), computer.name)
+    highlight = lambda computer: computer.is_user_configured(user) and computer.is_user_enabled(user)
+    hide = lambda computer: computer.is_user_configured(user) and not computer.is_user_enabled(user) and not all_entries
     echo.echo_formatted_list(computers, ['name'], sort=sort, highlight=highlight, hide=hide)
 
 

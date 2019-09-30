@@ -171,6 +171,11 @@ Cookbook
 
     cookbook.rst
 
+=================
+Provenance Graphs
+=================
+.. toctree::
+    :maxdepth: 2
 
-
+    visualising_graphs/visualising_graphs
 

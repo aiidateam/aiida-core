@@ -74,28 +74,6 @@ For developers
     get_started/computers
     get_started/codes
 
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Concepts
-    :hidden:
-
-    concepts/provenance
-    concepts/processes
-    concepts/calculations
-    concepts/workflows
-
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Working with
-    :hidden:
-
-    working/processes
-    working/functions
-    working/calculations
-    working/workflows
-
 .. toctree::
     :maxdepth: 1
     :caption: Working with AiiDA
@@ -107,7 +85,40 @@ For developers
 
 .. toctree::
     :maxdepth: 1
-    :caption: For AiiDA developers
+    :caption: Terms and Concepts
+    :hidden:
+
+    concepts/provenance
+    concepts/processes
+    concepts/calculations
+    concepts/workflows
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Workflow development
+    :hidden:
+
+    working/processes
+    working/functions
+    working/calculations
+    working/workflows
+
+.. toctree::
+   :maxdepth: 1
+   :caption: AiiDA plugin development
+   :hidden:
+
+   developer_guide/plugins/index
+   developer_guide/devel_tutorial/code_plugin_float_sum
+   developer_guide/devel_tutorial/plugin_tests
+   developer_guide/devel_tutorial/cmdline_plugin
+   developer_guide/devel_tutorial/parser_warnings_policy
+   developer_guide/aiida_sphinxext
+
+.. toctree::
+    :maxdepth: 1
+    :caption: aiida-core development
     :hidden:
 
     developer_guide/core/internals
@@ -121,31 +132,10 @@ For developers
 
 .. toctree::
     :maxdepth: 1
-    :caption: Tutorials
-    :hidden:
-
-    tutorial/index
-
-
-.. toctree::
-    :maxdepth: 1
     :caption: API reference
     :hidden:
 
     apidoc/aiida
-
-.. toctree::
-   :maxdepth: 1
-   :caption: aiida-plugins [Section to be moved]
-   :hidden:
-
-
-   developer_guide/plugins/index
-   developer_guide/devel_tutorial/code_plugin_float_sum
-   developer_guide/devel_tutorial/plugin_tests
-   developer_guide/devel_tutorial/cmdline_plugin
-   developer_guide/devel_tutorial/parser_warnings_policy
-   developer_guide/aiida_sphinxext
 
 ***********
 How to cite

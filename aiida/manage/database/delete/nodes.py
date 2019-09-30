@@ -18,47 +18,47 @@ from aiida.cmdline.utils import echo
 
 
 def delete_nodes(
-    pks, verbosity=0, dry_run=False, force=False, forward_create=True, forward_calcs=False, forward_works=False
+    pks, verbosity=0, dry_run=False, force=False, create_forward=True, call_calc_forward=False, call_work_forward=False
 ):
     """
     Delete nodes by a list of pks.
 
-    This command will delete not only the specified nodes, but also the ones that
-    are linked to these and should be also deleted in order to keep a consistent
-    provenance according to the rules set here. In summary:
+    This command will delete not only the specified nodes, but also the ones that are
+    linked to these and should be also deleted in order to keep a consistent provenance
+    according to the rules explained in the concepts section of the documentation.
+    In summary:
 
-    1. If a DATA node is deleted, any other (process) nodes that are linked to
-       it must be deleted as well.
+    1. If a DATA node is deleted, any process nodes linked to it will also be deleted.
 
-    2. If a CALC node is deleted, any incoming WORK node (callers) will be deleted
-       as well whereas any incoming DATA node (inputs) will be kept. Outgoing DATA
-       nodes (outputs) will be deleted by default but this can be disabled.
+    2. If a CALC node is deleted, any incoming WORK node (callers) will be deleted as
+    well whereas any incoming DATA node (inputs) will be kept. Outgoing DATA nodes
+    (outputs) will be deleted by default but this can be disabled.
 
-    3. If a WORK node is deleted, any incoming WORK node (callers) will be deleted
-       as well, but all DATA nodes will be kept. Outgoing WORK or CALC nodes will
-       be kept by default, but deletion of either of both kind of connected nodes
-       can be enabled.
+    3. If a WORK node is deleted, any incoming WORK node (callers) will be deleted as
+    well, but all DATA nodes will be kept. Outgoing WORK or CALC nodes will be kept by
+    default, but deletion of either of both kind of connected nodes can be enabled.
 
-    These rules are 'recursive', so if a CALC node is deleted, then its output
-    DATA nodes will be deleted as well, and then any CALC node that may have
-    those as inputs, and so on.
+    These rules are 'recursive', so if a CALC node is deleted, then its output DATA
+    nodes will be deleted as well, and then any CALC node that may have those as
+    inputs, and so on.
 
     :param pks: a list of the PKs of the nodes to delete
     :param bool force: do not ask for confirmation to delete nodes.
     :param int verbosity: 0 prints nothing,
                           1 prints just sums and total,
                           2 prints individual nodes.
-    :param bool forward_create:
+    :param bool create_forward:
         This will delete all output data created by any deleted calculation.
-    :param bool forward_calcs:
-        This will also delete all calculations called by any workflow that is going to be deleted.
-        Note that when you delete a workflow, also all parent workflows are deleted (recursively).
-        Therefore, setting this flag to True may delete calculations that are 'unrelated' to what
-        has been chosen to be deleted, just because they are connected at some point in the
-        upwards provenance. Use with care, and it is advisable to never combine it with force.
-    :param bool forward_works:
-        This will also delete all calculations called by any workflow that is going to be deleted.
-        The same disclaimer as forward_calcs applies here as well.
+    :param bool call_calc_forward:
+        This will also delete all calculations called by any workflow that is going to
+        be deleted. Note that when you delete a workflow, also all parent workflows are
+        deleted (recursively). Therefore, setting this flag to True may delete
+        calculations that are 'unrelated' to what has been chosen to be deleted, just
+        because they are connected at some point in the upwards provenance. Use with
+        care, and it is advisable to never combine it with force.
+    :param bool call_work_forward:
+        This will also delete all calculations called by any workflow that is going to
+        be deleted. The same disclaimer as forward_calcs applies here as well.
     :param bool dry_run:
         Do not delete, a dry run, with statistics printed according to verbosity levels.
     :param bool force:
@@ -95,14 +95,14 @@ def delete_nodes(
     follow_downwards.append(LinkType.INPUT_CALC.value)
     follow_downwards.append(LinkType.INPUT_WORK.value)
 
-    if forward_calcs:
+    if create_forward:
+        follow_downwards.append(LinkType.CREATE.value)
+
+    if call_calc_forward:
         follow_downwards.append(LinkType.CALL_CALC.value)
 
-    if forward_works:
+    if call_work_forward:
         follow_downwards.append(LinkType.CALL_WORK.value)
-
-    if forward_create:
-        follow_downwards.append(LinkType.CREATE.value)
 
     links_upwards = {'type': {'in': follow_upwards}}
     links_downwards = {'type': {'in': follow_downwards}}

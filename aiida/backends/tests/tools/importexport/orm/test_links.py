@@ -682,9 +682,10 @@ class TestLinks(AiidaTestCase):
         data = orm.Int(1).store()
         calc = orm.CalculationNode().store()
         work = orm.WorkflowNode().store()
+        link_label = 'output_data'
 
-        data.add_incoming(calc, LinkType.CREATE, 'output_data')
-        data.add_incoming(work, LinkType.RETURN, 'output_data')
+        data.add_incoming(calc, LinkType.CREATE, link_label)
+        data.add_incoming(work, LinkType.RETURN, link_label)
 
         calc.seal()
         work.seal()
@@ -692,6 +693,7 @@ class TestLinks(AiidaTestCase):
         data_uuid = data.uuid
         calc_uuid = calc.uuid
         work_uuid = work.uuid
+        before_links = get_all_node_links()
 
         data_provenance = os.path.join(temp_dir, 'data.aiida')
         all_provenance = os.path.join(temp_dir, 'all.aiida')
@@ -699,15 +701,16 @@ class TestLinks(AiidaTestCase):
         export([data], outfile=data_provenance, silent=True, return_reversed=False)
         export([data], outfile=all_provenance, silent=True, return_reversed=True)
 
-        # import data, import logic, make sure all is OK
         self.reset_database()
 
+        # import data provenance
         import_data(data_provenance, silent=True)
 
         no_of_work = orm.QueryBuilder().append(orm.WorkflowNode).count()
         self.assertEqual(
             no_of_work, 0, msg='{} WorkflowNode(s) was/were found, however, none should be present'.format(no_of_work)
         )
+
         nodes = orm.QueryBuilder().append(orm.Node, project='uuid')
         self.assertEqual(
             nodes.count(),
@@ -717,6 +720,20 @@ class TestLinks(AiidaTestCase):
         for node in nodes.iterall():
             self.assertIn(node[0], [data_uuid, calc_uuid])
 
+        links = get_all_node_links()
+        self.assertEqual(
+            len(links),
+            1,
+            msg='Only a single Link (from Calc. to Data) is expected, '
+            'instead {} were found (in, out, label, type): {}'.format(len(links), links)
+        )
+        for from_uuid, to_uuid, found_label, found_type in links:
+            self.assertEqual(from_uuid, calc_uuid)
+            self.assertEqual(to_uuid, data_uuid)
+            self.assertEqual(found_label, link_label)
+            self.assertEqual(found_type, LinkType.CREATE.value)
+
+        # import data+logic provenance
         import_data(all_provenance, silent=True)
 
         no_of_work = orm.QueryBuilder().append(orm.WorkflowNode).count()
@@ -725,6 +742,7 @@ class TestLinks(AiidaTestCase):
             1,
             msg='{} WorkflowNode(s) was/were found, however, exactly one should be present'.format(no_of_work)
         )
+
         nodes = orm.QueryBuilder().append(orm.Node, project='uuid')
         self.assertEqual(
             nodes.count(),
@@ -733,3 +751,12 @@ class TestLinks(AiidaTestCase):
         )
         for node in nodes.iterall():
             self.assertIn(node[0], [data_uuid, calc_uuid, work_uuid])
+
+        links = get_all_node_links()
+        self.assertEqual(
+            len(links),
+            2,
+            msg='Exactly two Links are expected, instead {} were found '
+            '(in, out, label, type): {}'.format(len(links), links)
+        )
+        self.assertListEqual(links, before_links)

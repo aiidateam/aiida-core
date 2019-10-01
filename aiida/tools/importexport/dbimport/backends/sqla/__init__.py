@@ -23,9 +23,11 @@ import six
 
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
+from aiida.common.links import LinkType
 from aiida.common.utils import get_object_from_string
+from aiida.orm import QueryBuilder, Node, Group, WorkflowNode, CalculationNode, Data
+from aiida.orm.utils.links import link_triple_exists, validate_link
 from aiida.orm.utils.repository import Repository
-from aiida.orm import QueryBuilder, Node, Group
 
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
@@ -585,16 +587,13 @@ def import_data_sqla(
                 print('STORING NODE LINKS...')
             ## TODO: check that we are not creating input links of an already
             ##       existing node...
+            from aiida.backends.sqlalchemy.models.node import DbLink
+
             import_links = data['links_uuid']
             links_to_store = []
 
-            # Needed for fast checks of existing links
-            from aiida.backends.sqlalchemy.models.node import DbLink
-            existing_links_raw = session.query(DbLink.input_id, DbLink.output_id, DbLink.label).all()
-            existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
-            existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
-
             for link in import_links:
+                # Check for dangling Links within the, supposed, self-consistent archive
                 try:
                     in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
                     out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
@@ -604,48 +603,31 @@ def import_data_sqla(
                     else:
                         raise exceptions.ImportValidationError(
                             'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, '
-                            'out_uuid={}, label={})'.format(link['input'], link['output'], link['label'])
+                            'out_uuid={}, label={}, type={})'.format(
+                                link['input'], link['output'], link['label'], link['type']
+                            )
                         )
+
+                # Since backend specific Links (DbLink) are not validated upon creation, we will now validate them.
+                source = QueryBuilder().append(Node, filters={'id': in_id}, project='*').first()[0]
+                target = QueryBuilder().append(Node, filters={'id': out_id}, project='*').first()[0]
+                link_type = LinkType(link['type'])
+
+                # Check for existence of a triple link, i.e. unique triple.
+                # If it exists, then the link already exists, continue to next link, otherwise, validate link.
+                if link_triple_exists(source, target, link_type, link['label']):
+                    continue
 
                 try:
-                    existing_label = existing_links_labels[in_id, out_id]
-                    if existing_label != link['label']:
-                        raise exceptions.ImportValidationError(
-                            'Trying to rename an existing link name, stopping (in_id={}, out_id={}, old_label={}, '
-                            'new_label={})'.format(in_id, out_id, existing_label, link['label'])
-                        )
-                    # Else do nothing, the link is already in place and has the correct name
-                except KeyError:
-                    try:
-                        # We try to get the existing input of the link that
-                        # points to "out" and has label link['label'].
-                        # If there is no existing_input, it means that the
-                        # link doesn't exist and it has to be created. If
-                        # it exists, then the only case that we can have more
-                        # than one links with the same name entering a node
-                        # is the case of the RETURN links of workflows/
-                        # workchains. If it is not this case, then it is
-                        # an error.
-                        from aiida.common.links import LinkType
-                        existing_input = existing_input_links[out_id, link['label']]
+                    validate_link(source, target, link_type, link['label'])
+                except ValueError as why:
+                    raise exceptions.ImportValidationError('Error occurred during Link validation: {}'.format(why))
 
-                        if link['type'] != LinkType.RETURN.value:
-                            existing_input_uuid = str(
-                                session.query(DbNode.uuid).filter(DbNode.id == existing_input).all()[0][0]
-                            )
-                            raise exceptions.ImportValidationError(
-                                'There already exists an input link to node with UUID {} with label "{}" '
-                                'but it does not come from the expected input with UUID {} but from a node with UUID {}'
-                                '.'.format(link['output'], link['label'], link['input'], existing_input_uuid)
-                            )
-                    except KeyError:
-                        # New link
-                        links_to_store.append(
-                            DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type'])
-                        )
-                        if 'Link' not in ret_dict:
-                            ret_dict['Link'] = {'new': []}
-                        ret_dict['Link']['new'].append((in_id, out_id))
+                # New link
+                links_to_store.append(DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type']))
+                if 'Link' not in ret_dict:
+                    ret_dict['Link'] = {'new': []}
+                ret_dict['Link']['new'].append((in_id, out_id))
 
             # Store new links
             if links_to_store:

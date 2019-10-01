@@ -23,6 +23,7 @@ import six
 
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
+from aiida.common.links import LinkType, validate_link_label
 from aiida.common.utils import grouper, get_object_from_string
 from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group
@@ -507,12 +508,27 @@ def import_data_dj(
             import_links = data['links_uuid']
             links_to_store = []
 
-            # Needed for fast checks of existing links
-            existing_links_raw = models.DbLink.objects.all().values_list('input', 'output', 'label')
-            existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
-            existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
+            # Needed, since QueryBuilder does not yet work for recently saved Nodes
+            existing_links_raw = models.DbLink.objects.all().values_list('input', 'output', 'label', 'type')
+            existing_links = {(l[0], l[1], l[2]): l[3] for l in existing_links_raw}
+            existing_output_links = {(l[0], l[3]): (l[1], l[2]) for l in existing_links_raw}
+            existing_input_links = {(l[1], l[3]): (l[0], l[2]) for l in existing_links_raw}
+
+            CalculationNode = {'CalculationNode', 'CalcJobNode', 'CalcFunctionNode'}  # pylint: disable=invalid-name
+            WorkflowNode = {'WorkflowNode', 'WorkChainNode', 'WorkFunctionNode'}  # pylint: disable=invalid-name
+            Data = {'data'}  # pylint: disable=invalid-name
+
+            link_mapping = {
+                LinkType.CALL_CALC: (WorkflowNode, CalculationNode, 'unique_triple', 'unique'),
+                LinkType.CALL_WORK: (WorkflowNode, WorkflowNode, 'unique_triple', 'unique'),
+                LinkType.CREATE: (CalculationNode, Data, 'unique_pair', 'unique'),
+                LinkType.INPUT_CALC: (Data, CalculationNode, 'unique_triple', 'unique_pair'),
+                LinkType.INPUT_WORK: (Data, WorkflowNode, 'unique_triple', 'unique_pair'),
+                LinkType.RETURN: (WorkflowNode, Data, 'unique_pair', 'unique_triple'),
+            }
 
             for link in import_links:
+                # Check for dangling Links within the, supposed, self-consistent archive
                 try:
                     in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
                     out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
@@ -522,46 +538,80 @@ def import_data_dj(
                     else:
                         raise exceptions.ImportValidationError(
                             'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, '
-                            'out_uuid={}, label={})'.format(link['input'], link['output'], link['label'])
-                        )
-
-                try:
-                    existing_label = existing_links_labels[in_id, out_id]
-                    if existing_label != link['label']:
-                        raise exceptions.ImportValidationError(
-                            'Trying to rename an existing link name, stopping (in_id={}, out_id={}, old_label={}, '
-                            'new_label={})'.format(in_id, out_id, existing_label, link['label'])
-                        )
-                    # Else do nothing, the link is already in place and has the correct name
-                except KeyError:
-                    try:
-                        # We try to get the existing input of the link that
-                        # points to "out" and has label link['label'].
-                        # If there is no existing_input, it means that the
-                        # link doesn't exist and it has to be created. If
-                        # it exists, then the only case that we can have more
-                        # than one links with the same name entering a node
-                        # is the case of the RETURN links of workflows/
-                        # workchains. If it is not this case, then it is
-                        # an error.
-                        from aiida.common.links import LinkType
-                        existing_input = existing_input_links[out_id, link['label']]
-
-                        if link['type'] != LinkType.RETURN.value:
-                            existing_input_uuid = models.DbNode.objects.get(id=existing_input).uuid
-                            raise exceptions.ImportValidationError(
-                                'There already exists an input link to node with UUID {} with label "{}" '
-                                'but it does not come from the expected input with UUID {} but from a node with UUID {}'
-                                '.'.format(link['output'], link['label'], link['input'], existing_input_uuid)
+                            'out_uuid={}, label={}, type={})'.format(
+                                link['input'], link['output'], link['label'], link['type']
                             )
-                    except KeyError:
-                        # New link
-                        links_to_store.append(
-                            models.DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type'])
                         )
-                        if 'Link' not in ret_dict:
-                            ret_dict['Link'] = {'new': []}
-                        ret_dict['Link']['new'].append((in_id, out_id))
+
+                # Check if link already exists, skip if it does
+                # This is equivalent to an existing triple link (i.e. unique_triple from below)
+                existing_type = existing_links.get((in_id, out_id, link['label']), None)
+                if existing_type and existing_type == link['type']:
+                    continue
+
+                # Since backend specific Links (DbLink) are not validated upon creation, we will now validate them.
+                try:
+                    validate_link_label(link['label'])
+                except ValueError as why:
+                    raise exceptions.ImportValidationError('Error during Link label validation: {}'.format(why))
+
+                source = models.DbNode.objects.get(id=in_id)
+                target = models.DbNode.objects.get(id=out_id)
+
+                if source.uuid == target.uuid:
+                    raise exceptions.ImportValidationError('Cannot add a link to oneself')
+
+                link_type = LinkType(link['type'])
+                types_source, types_target, outdegree, indegree = link_mapping[link_type]
+
+                # Check if source Node is a valid type
+                for type_source in types_source:
+                    if type_source in source.node_type:
+                        break
+                else:
+                    raise exceptions.ImportValidationError(
+                        'Cannot add a {} link from {} to {}'.format(link_type, source.node_type, target.node_type)
+                    )
+
+                # Check if target Node is a valid type
+                for type_target in types_target:
+                    if type_target in target.node_type:
+                        break
+                else:
+                    raise exceptions.ImportValidationError(
+                        'Cannot add a {} link from {} to {}'.format(link_type, source.node_type, target.node_type)
+                    )
+
+                # If the outdegree is `unique` there cannot already be any other incoming link of that type
+                if outdegree == 'unique' and (in_id, link['type']) in existing_output_links:
+                    raise exceptions.ImportValidationError(
+                        'Node<{}> already has an outgoing {} link'.format(source.uuid, link_type)
+                    )
+
+                # If the indegree is `unique` there cannot already be any other incoming links of that type
+                if indegree == 'unique' and (out_id, link['type']) in existing_input_links:
+                    raise exceptions.ImportValidationError(
+                        'Node<{}> already has an incoming {} link'.format(target.uuid, link_type)
+                    )
+
+                # If the indegree is `unique_pair`,
+                # then the link labels for incoming links of this type should be unique
+                elif indegree == 'unique_pair' and (out_id, link['type']) in existing_input_links:
+                    (_, label) = existing_input_links[in_id, link['type']]
+                    if label == link['label']:
+                        raise exceptions.ImportValidationError(
+                            'Node<{}> already has an incoming {} link with label "{}"'.format(
+                                target.uuid, link_type, link['label']
+                            )
+                        )
+
+                # New link
+                links_to_store.append(
+                    models.DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type'])
+                )
+                if 'Link' not in ret_dict:
+                    ret_dict['Link'] = {'new': []}
+                ret_dict['Link']['new'].append((in_id, out_id))
 
             # Store new links
             if links_to_store:

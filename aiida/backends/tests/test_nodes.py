@@ -1951,7 +1951,7 @@ class TestNodeDeletion(AiidaTestCase):
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         uuids_check_existence = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
-        uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, pw0]]
+        uuids_check_deleted = [n.uuid for n in [doa, pca, pwa]]
         with Capturing():
             delete_nodes((pwa.pk,), verbosity=2, force=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)

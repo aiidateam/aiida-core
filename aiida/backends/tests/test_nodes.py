@@ -1720,7 +1720,7 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in (di, do)]
         uuids_check_deleted = [n.uuid for n in (c0, w1, w2)]
         with Capturing():
-            delete_nodes([c0.pk], verbosity=2, force=True, forward_create=False)
+            delete_nodes([c0.pk], verbosity=2, force=True, create_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # By default deleting a workflow should delete all upwards logical provenance
@@ -1747,7 +1747,7 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in (di,)]
         uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
         with Capturing():
-            delete_nodes([w2.pk], verbosity=2, force=True, forward_calcs=True, forward_works=True)
+            delete_nodes([w2.pk], verbosity=2, force=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # But you can also be more carefull and not delete the final data
@@ -1756,7 +1756,7 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in (di, do)]
         uuids_check_deleted = [n.uuid for n in (c0, w1, w2)]
         with Capturing():
-            delete_nodes([w2.pk], verbosity=2, force=True, forward_calcs=True, forward_works=True, forward_create=False)
+            delete_nodes([w2.pk], verbosity=2, force=True, call_calc_forward=True, call_work_forward=True, create_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # Or even keep all data provenance (calcs but not works)
@@ -1764,7 +1764,7 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in (di, do, c0)]
         uuids_check_deleted = [n.uuid for n in (w1, w2)]
         with Capturing():
-            delete_nodes([w2.pk], verbosity=2, force=True, forward_calcs=True, forward_works=True)
+            delete_nodes([w2.pk], verbosity=2, force=True, call_calc_forward=False, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
 
@@ -1842,22 +1842,22 @@ class TestNodeDeletion(AiidaTestCase):
             delete_nodes([pws.pk], verbosity=2, force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-        # Again, deleting with forward_calcs/works also deletes other parts of
+        # Again, deleting with call_calc/work_forward also deletes other parts of
         # the graph.
         di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
         uuids_check_existence = [n.uuid for n in (di1, di2, di3, di4)]
         uuids_check_deleted = [n.uuid for n in (do1, pws, pcs, pwm)]
         with Capturing():
-            delete_nodes([pcs.pk], verbosity=2, force=True, forward_calcs=True, forward_works=True)
+            delete_nodes([pcs.pk], verbosity=2, force=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
     def _create_indep2w_graph(self):
         """
         Creates a simple graph with one workflow handling two independent workflows
         (with one simple calculation each). It was designed and used mainly to point
-        out how the deletion behaviour works when setting forward_calls to true: in
-        this case if PWA is deleted, the somewhat independent PWB will be deleted as
-        well.
+        out how the deletion behaviour works when setting call_calc_forward to true:
+        in this case if PWA is deleted, the somewhat independent PWB will be deleted
+        as well.
 
         * PW0: master workflow, which calls both PWA and PWB.
         * PWA: it has a single call to PCA, with input DIA and output DOA.
@@ -1937,7 +1937,7 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in [dia, dib]]
         uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, dob, pcb, pwb, pw0]]
         with Capturing():
-            delete_nodes((pwa.pk,), verbosity=2, force=True, forward_calcs=True, forward_works=True)
+            delete_nodes((pwa.pk,), verbosity=2, force=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # If you want to keep the independent process, first delete the global
@@ -1947,13 +1947,13 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in [dia, doa, pca, pwa, dib, dob, pcb, pwb]]
         uuids_check_deleted = [n.uuid for n in [pw0]]
         with Capturing():
-            delete_nodes((pw0.pk,), verbosity=2, force=True, forward_calcs=False, forward_works=False)
+            delete_nodes((pw0.pk,), verbosity=2, force=True, call_calc_forward=False, call_work_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         uuids_check_existence = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
         uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, pw0]]
         with Capturing():
-            delete_nodes((pwa.pk,), verbosity=2, force=True, forward_calcs=True, forward_works=True)
+            delete_nodes((pwa.pk,), verbosity=2, force=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
 

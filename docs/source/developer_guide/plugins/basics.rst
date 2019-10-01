@@ -1,3 +1,5 @@
+.. _plugin_development:
+
 Basics
 ======
 

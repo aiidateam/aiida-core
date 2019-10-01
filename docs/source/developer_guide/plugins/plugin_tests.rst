@@ -1,7 +1,7 @@
 .. _plugin.testing:
 
-Writing tests for plugin
-========================
+Writing tests for a plugin
+==========================
 
 When developing a plugin it is important to write tests. The main concern of running
 tests is that the test environment has to be separated from the production environment

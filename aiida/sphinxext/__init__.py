@@ -15,14 +15,17 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import aiida
-from . import workchain
-
 
 def setup(app):
     """
     Setup function to add the extension classes / nodes to Sphinx.
     """
-    workchain.setup_aiida_workchain(app)
+    import aiida
+
+    from . import process, workchain, calcjob
+
+    process.setup_extension(app)
+    workchain.setup_extension(app)
+    calcjob.setup_extension(app)
 
     return {'version': aiida.__version__, 'parallel_read_safe': True}

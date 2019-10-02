@@ -157,7 +157,7 @@ def validate_link(source, target, link_type, link_label):
         # or stored, in which case, the new proposed link is a duplicate and thus illegal
         duplicate_link_triple = link_triple_exists(source, target, link_type, link_label)
 
-    # If the outdegree is `unique` there cannot already be any other incoming link of that type
+    # If the outdegree is `unique` there cannot already be any other outgoing link of that type
     if outdegree == 'unique' and source.get_outgoing(link_type=link_type, only_uuid=True).all():
         raise ValueError('node<{}> already has an outgoing {} link'.format(source.uuid, link_type))
 

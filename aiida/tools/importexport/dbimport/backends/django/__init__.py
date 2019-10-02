@@ -503,28 +503,28 @@ def import_data_dj(
 
             if not silent:
                 print('STORING NODE LINKS...')
-            ## TODO: check that we are not creating input links of an already
-            ##       existing node...
             import_links = data['links_uuid']
             links_to_store = []
 
             # Needed, since QueryBuilder does not yet work for recently saved Nodes
             existing_links_raw = models.DbLink.objects.all().values_list('input', 'output', 'label', 'type')
-            existing_links = {(l[0], l[1], l[2]): l[3] for l in existing_links_raw}
-            existing_output_links = {(l[0], l[3]): (l[1], l[2]) for l in existing_links_raw}
-            existing_input_links = {(l[1], l[3]): (l[0], l[2]) for l in existing_links_raw}
+            existing_links = {(l[0], l[1], l[2], l[3]) for l in existing_links_raw}
+            existing_outgoing_unique = {(l[0], l[3]) for l in existing_links_raw}
+            existing_outgoing_unique_pair = {(l[0], l[2], l[3]) for l in existing_links_raw}
+            existing_incoming_unique = {(l[1], l[3]) for l in existing_links_raw}
+            existing_incoming_unique_pair = {(l[1], l[2], l[3]) for l in existing_links_raw}
 
-            CalculationNode = {'CalculationNode', 'CalcJobNode', 'CalcFunctionNode'}  # pylint: disable=invalid-name
-            WorkflowNode = {'WorkflowNode', 'WorkChainNode', 'WorkFunctionNode'}  # pylint: disable=invalid-name
-            Data = {'data'}  # pylint: disable=invalid-name
+            calculation_node_types = 'process.calculation.'
+            workflow_node_types = 'process.workflow.'
+            data_node_types = 'data.'
 
             link_mapping = {
-                LinkType.CALL_CALC: (WorkflowNode, CalculationNode, 'unique_triple', 'unique'),
-                LinkType.CALL_WORK: (WorkflowNode, WorkflowNode, 'unique_triple', 'unique'),
-                LinkType.CREATE: (CalculationNode, Data, 'unique_pair', 'unique'),
-                LinkType.INPUT_CALC: (Data, CalculationNode, 'unique_triple', 'unique_pair'),
-                LinkType.INPUT_WORK: (Data, WorkflowNode, 'unique_triple', 'unique_pair'),
-                LinkType.RETURN: (WorkflowNode, Data, 'unique_pair', 'unique_triple'),
+                LinkType.CALL_CALC: (workflow_node_types, calculation_node_types, 'unique_triple', 'unique'),
+                LinkType.CALL_WORK: (workflow_node_types, workflow_node_types, 'unique_triple', 'unique'),
+                LinkType.CREATE: (calculation_node_types, data_node_types, 'unique_pair', 'unique'),
+                LinkType.INPUT_CALC: (data_node_types, calculation_node_types, 'unique_triple', 'unique_pair'),
+                LinkType.INPUT_WORK: (data_node_types, workflow_node_types, 'unique_triple', 'unique_pair'),
+                LinkType.RETURN: (workflow_node_types, data_node_types, 'unique_pair', 'unique_triple'),
             }
 
             for link in import_links:
@@ -545,8 +545,7 @@ def import_data_dj(
 
                 # Check if link already exists, skip if it does
                 # This is equivalent to an existing triple link (i.e. unique_triple from below)
-                existing_type = existing_links.get((in_id, out_id, link['label']), None)
-                if existing_type and existing_type == link['type']:
+                if (in_id, out_id, link['label'], link['type']) in existing_links:
                     continue
 
                 # Since backend specific Links (DbLink) are not validated upon creation, we will now validate them.
@@ -562,48 +561,57 @@ def import_data_dj(
                     raise exceptions.ImportValidationError('Cannot add a link to oneself')
 
                 link_type = LinkType(link['type'])
-                types_source, types_target, outdegree, indegree = link_mapping[link_type]
+                type_source, type_target, outdegree, indegree = link_mapping[link_type]
 
                 # Check if source Node is a valid type
-                for type_source in types_source:
-                    if type_source in source.node_type:
-                        break
-                else:
+                if not source.node_type.startswith(type_source):
                     raise exceptions.ImportValidationError(
                         'Cannot add a {} link from {} to {}'.format(link_type, source.node_type, target.node_type)
                     )
 
                 # Check if target Node is a valid type
-                for type_target in types_target:
-                    if type_target in target.node_type:
-                        break
-                else:
+                if not target.node_type.startswith(type_target):
                     raise exceptions.ImportValidationError(
                         'Cannot add a {} link from {} to {}'.format(link_type, source.node_type, target.node_type)
                     )
 
-                # If the outdegree is `unique` there cannot already be any other incoming link of that type
-                if outdegree == 'unique' and (in_id, link['type']) in existing_output_links:
+                # If the outdegree is `unique` there cannot already be any other outgoing link of that type,
+                # i.e., the source Node may not have a LinkType of current LinkType, going out, existing already.
+                if outdegree == 'unique' and (in_id, link['type']) in existing_outgoing_unique:
                     raise exceptions.ImportValidationError(
                         'Node<{}> already has an outgoing {} link'.format(source.uuid, link_type)
                     )
 
-                # If the indegree is `unique` there cannot already be any other incoming links of that type
-                if indegree == 'unique' and (out_id, link['type']) in existing_input_links:
+                # If the outdegree is `unique_pair`,
+                # then the link labels for outgoing links of this type should be unique,
+                # i.e., the source Node may not have a LinkType of current LinkType, going out,
+                # that also has the current Link label, existing already.
+                elif outdegree == 'unique_pair' and \
+                (in_id, link['label'], link['type']) in existing_outgoing_unique_pair:
+                    raise exceptions.ImportValidationError(
+                        'Node<{}> already has an incoming {} link with label "{}"'.format(
+                            target.uuid, link_type, link['label']
+                        )
+                    )
+
+                # If the indegree is `unique` there cannot already be any other incoming links of that type,
+                # i.e., the target Node may not have a LinkType of current LinkType, coming in, existing already.
+                if indegree == 'unique' and (out_id, link['type']) in existing_incoming_unique:
                     raise exceptions.ImportValidationError(
                         'Node<{}> already has an incoming {} link'.format(target.uuid, link_type)
                     )
 
                 # If the indegree is `unique_pair`,
-                # then the link labels for incoming links of this type should be unique
-                elif indegree == 'unique_pair' and (out_id, link['type']) in existing_input_links:
-                    (_, label) = existing_input_links[in_id, link['type']]
-                    if label == link['label']:
-                        raise exceptions.ImportValidationError(
-                            'Node<{}> already has an incoming {} link with label "{}"'.format(
-                                target.uuid, link_type, link['label']
-                            )
+                # then the link labels for incoming links of this type should be unique,
+                # i.e., the target Node may not have a LinkType of current LinkType, coming in
+                # that also has the current Link label, existing already.
+                elif indegree == 'unique_pair' and \
+                (out_id, link['label'], link['type']) in existing_incoming_unique_pair:
+                    raise exceptions.ImportValidationError(
+                        'Node<{}> already has an incoming {} link with label "{}"'.format(
+                            target.uuid, link_type, link['label']
                         )
+                    )
 
                 # New link
                 links_to_store.append(

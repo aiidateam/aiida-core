@@ -677,7 +677,7 @@ class TestLinks(AiidaTestCase):
         self.assertEqual(builder.all()[0][0], struct_uuid)
 
     @with_temp_dir
-    def test_multiple_post_return_links(self, temp_dir):
+    def test_multiple_post_return_links(self, temp_dir):  # pylint: disable=too-many-locals
         """Check extra RETURN links can be added to existing Nodes, when label is not unique"""
         data = orm.Int(1).store()
         calc = orm.CalculationNode().store()
@@ -698,8 +698,8 @@ class TestLinks(AiidaTestCase):
         data_provenance = os.path.join(temp_dir, 'data.aiida')
         all_provenance = os.path.join(temp_dir, 'all.aiida')
 
-        export([data], outfile=data_provenance, silent=True, return_reversed=False)
-        export([data], outfile=all_provenance, silent=True, return_reversed=True)
+        export([data], outfile=data_provenance, silent=True, return_backward=False)
+        export([data], outfile=all_provenance, silent=True, return_backward=True)
 
         self.reset_database()
 

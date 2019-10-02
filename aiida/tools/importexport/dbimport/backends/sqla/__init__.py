@@ -585,8 +585,6 @@ def import_data_sqla(
 
             if not silent:
                 print('STORING NODE LINKS...')
-            ## TODO: check that we are not creating input links of an already
-            ##       existing node...
             from aiida.backends.sqlalchemy.models.node import DbLink
 
             import_links = data['links_uuid']

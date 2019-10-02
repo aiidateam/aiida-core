@@ -759,4 +759,4 @@ class TestLinks(AiidaTestCase):
             msg='Exactly two Links are expected, instead {} were found '
             '(in, out, label, type): {}'.format(len(links), links)
         )
-        self.assertListEqual(links, before_links)
+        self.assertListEqual(sorted(links), sorted(before_links))

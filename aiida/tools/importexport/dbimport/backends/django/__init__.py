@@ -173,28 +173,17 @@ def import_data_dj(
         linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
         group_nodes = set(chain.from_iterable(six.itervalues(data['groups_uuid'])))
 
-        # I preload the nodes, I need to check each of them later, and I also
-        # store them in a reverse table
-        # I break up the query due to SQLite limitations..
-        relevant_db_nodes = {}
-        for group_ in grouper(999, linked_nodes):
-            relevant_db_nodes.update({n.uuid: n for n in models.DbNode.objects.filter(uuid__in=group_)})
-
-        db_nodes_uuid = set(relevant_db_nodes.keys())
-        # ~ dbnode_model = get_class_string(models.DbNode)
-        # ~ print(dbnode_model)
         if NODE_ENTITY_NAME in data['export_data']:
             import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
         else:
             import_nodes_uuid = set()
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
-        # the combined set of db_nodes_uuid and import_nodes_uuid was received from the staff
-        # actually referred to in export_data
-        unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(import_nodes_uuid)
+        # the set of import_nodes_uuid was received from the stuff actually referred to in export_data
+        unknown_nodes = linked_nodes.union(group_nodes) - import_nodes_uuid
 
         if unknown_nodes and not ignore_unknown_nodes:
-            raise exceptions.ImportValidationError(
+            raise exceptions.DanglingLinkError(
                 'The import file refers to {} nodes with unknown UUID, therefore it cannot be imported. Either first '
                 'import the unknown nodes, or export also the parents when exporting. The unknown UUIDs are:\n'
                 ''.format(len(unknown_nodes)) + '\n'.join('* {}'.format(uuid) for uuid in unknown_nodes)

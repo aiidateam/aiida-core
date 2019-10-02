@@ -179,26 +179,14 @@ def import_data_sqla(
         linked_nodes = set(x for x in linked_nodes if validate_uuid(x))
         group_nodes = set(x for x in group_nodes if validate_uuid(x))
 
-        # I preload the nodes, I need to check each of them later, and I also
-        # store them in a reverse table
-        # I break up the query due to SQLite limitations..
-        # relevant_db_nodes = {}
-        db_nodes_uuid = set()
         import_nodes_uuid = set()
-        if linked_nodes:
-            builder = QueryBuilder()
-            builder.append(Node, filters={'uuid': {'in': linked_nodes}}, project=['uuid'])
-            for res in builder.iterall():
-                db_nodes_uuid.add(res[0])
+        for value in data['export_data'].get(NODE_ENTITY_NAME, {}).values():
+            import_nodes_uuid.add(value['uuid'])
 
-        if NODE_ENTITY_NAME in data['export_data']:
-            for value in data['export_data'][NODE_ENTITY_NAME].values():
-                import_nodes_uuid.add(value['uuid'])
-
-        unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(import_nodes_uuid)
+        unknown_nodes = linked_nodes.union(group_nodes) - import_nodes_uuid
 
         if unknown_nodes and not ignore_unknown_nodes:
-            raise exceptions.ImportValidationError(
+            raise exceptions.DanglingLinkError(
                 'The import file refers to {} nodes with unknown UUID, therefore it cannot be imported. Either first '
                 'import the unknown nodes, or export also the parents when exporting. The unknown UUIDs are:\n'
                 ''.format(len(unknown_nodes)) + '\n'.join('* {}'.format(uuid) for uuid in unknown_nodes)

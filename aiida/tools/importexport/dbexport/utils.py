@@ -285,11 +285,11 @@ def _retrieve_linked_nodes_query(current_node, input_type, output_type, directio
     :param current_node: The current Node's PK.
     :type current_node: int
 
-    :param input_type: ORM Node class
+    :param input_type: Source Node class for Link
     :type input_type: :py:class:`~aiida.orm.nodes.data.data.Data`,
         :py:class:`~aiida.orm.nodes.process.process.ProcessNode`.
 
-    :param output_type: ORM Node class
+    :param output_type: Target Node class for Link
     :type output_type: :py:class:`~aiida.orm.nodes.data.data.Data`,
         :py:class:`~aiida.orm.nodes.process.process.ProcessNode`.
 
@@ -303,12 +303,15 @@ def _retrieve_linked_nodes_query(current_node, input_type, output_type, directio
     """
     found_nodes = set()
     links_uuid_dict = {}
+    filters_input = {}
+    filters_output = {}
 
-    get_current_node = {'id': current_node}
-    filters_input = get_current_node if direction == 'forward' else {}
-    filters_output = get_current_node if direction == 'backward' else {}
-    if filters_input == filters_output:
-        raise exceptions.ExportValidationError("direction must be either 'forward' or 'backward'")
+    if direction == 'forward':
+        filters_input['id'] = current_node
+    elif direction == 'backward':
+        filters_output['id'] = current_node
+    else:
+        raise exceptions.ExportValidationError('direction must be either "forward" or "backward"')
 
     builder = QueryBuilder()
     builder.append(input_type, project=['uuid', 'id'], tag='input', filters=filters_input)
@@ -371,8 +374,8 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
     | CALL_WORK_BACKWARD   | WorkflowNode        | **WorkflowNode**    | False          | True    |
     +----------------------+---------------------+---------------------+----------------+---------+
 
-    :param process_nodes: Set of :py:class:`~aiida.orm.nodes.process.process.ProcessNode` nodes.
-    :param data_nodes: Set of :py:class:`~aiida.orm.nodes.data.data.Data` nodes.
+    :param process_nodes: Set of :py:class:`~aiida.orm.nodes.process.process.ProcessNode` node PKs.
+    :param data_nodes: Set of :py:class:`~aiida.orm.nodes.data.data.Data` node PKs.
 
     :param input_calc_forward: Follow INPUT_CALC links in the forward direction (recursively).
     :param create_backward: Follow CREATE links in the backward direction (recursively).

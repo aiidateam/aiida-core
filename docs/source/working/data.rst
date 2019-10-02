@@ -45,11 +45,10 @@ Therefore, we have to override the constructor :meth:`~aiida.orm.nodes.node.Node
     class NewData(Data)
         """A new data type that wraps a single value."""
 
-        attribute_name = 'value'
-
         def __init__(self, **kwargs)
-            value = kwargs.pop(self.attribute_name)
+            value = kwargs.pop('value')
             super(NewData, self).__init__(**kwargs)
+            self.set_attribute('value', value)
 
 .. warning::
 
@@ -57,7 +56,6 @@ Therefore, we have to override the constructor :meth:`~aiida.orm.nodes.node.Node
 
 Before calling the construtor of the base class, we have to remove the ``value`` keyword from the keyword arguments ``kwargs``, because the base class will not expect it and will raise an exception if left in the keyword arguments.
 The final step is to actually *store* the value that is passed by the caller of the constructor.
-The previous snippet removes it from the ``kwargs`` but then does not do anything with it.
 A new node has two locations to permanently store any of its properties:
 
 * the database
@@ -66,41 +64,26 @@ A new node has two locations to permanently store any of its properties:
 The section on :ref:`design guidelines<working_data_design_guidelines>` will go into more detail what the advantages and disadvantages of each option are and when to use which.
 For now, since we are storing only a single value, the easiest and best option is to use the database.
 Each node has *attributes* that can store any key-value pair, as long as the value is JSON serializable.
-We can use these attributes to store the ``value`` of our ``NewData`` data type:
+By adding the value to the node's attributes, they will be queryable in the database once an instance of the ``NewData`` node is stored.
 
 .. code:: python
 
-    from aiida.orm import Data
+    node = NewData(value=5)   # Creating new node instance in memory
+    node.set_attribute('value', 6)  # While in memory, node attributes can be changed
+    node.store()  # Storing node instance in the database
 
-    class NewData(Data)
-        """A new data type that wraps a single value."""
-
-        attribute_name = 'value'
-
-        def __init__(self, **kwargs)
-            value = kwargs.pop(self.attribute_name)
-            super(NewData, self).__init__(**kwargs)
-            self.set_attribute(self.attribute_name, value)
-
-By adding the value to the node's attributes, after the node itself has been stored, it will be permanently recorded in the database.
-Creating an instance of the ``NewData`` data type and storing it is now very easy:
-
-.. code:: python
-
-    node = Data(value=5)
-    node.store()
-
+After storing the node instance in the database, its attributes are frozen, and ``node.set_attribute('value', 7)`` will fail.
 By storing the ``value`` in the attributes of the node instance, we ensure that that ``value`` can be retrieved even when the node is reloaded at a later point in time.
 
 Besides making sure that the content of a data node is stored in the database or file repository, the data type class can also provide useful methods for users to retrieve that data.
-For example, with the current state of the ``NewData`` class in the last example, if a user were to load a stored ``NewData`` node and wanted to retrieve the ``value`` that it contains, they would have to do something like:
+For example, with the current state of the ``NewData`` class, in order to retrieve the ``value`` of a stored ``NewData`` node, one needs to do:
 
 .. code:: python
 
     node = load_node(<IDENTIFIER>)
-    node.get_attribute(NewData.attribute_name)
+    node.get_attribute('value')
 
-In other words, the user of the ``NewData`` class needs to know that the ``value`` is stored as an attribute with a name given by the class-attribute ``attribute_name``.
+In other words, the user of the ``NewData`` class needs to know that the ``value`` is stored as an attribute with the name 'value'.
 This is not easy to remember and therefore not very user-friendly.
 Since the ``NewData`` type is a class, we can give it useful methods.
 Let's introduce one that will return the value that was stored for it:
@@ -112,12 +95,10 @@ Let's introduce one that will return the value that was stored for it:
     class NewData(Data)
         """A new data type that wraps a single value."""
 
-        attribute_name = 'value'
-
         @property
         def value(self):
             """Return the value stored for this instance."""
-            return self.get_attribute(self.attribute_name)
+            return self.get_attribute('value')
 
 The addition of the instance property ``value`` makes retrieving the value of a ``NewData`` node a lot easier:
 
@@ -126,7 +107,48 @@ The addition of the instance property ``value`` makes retrieving the value of a 
     node = load_node(<IDENTIFIER)
     value = node.value
 
-The new data type we have just implemented is of course trivial and not very useful, but the concept is flexible and can be easily applied to more complex use-cases.
+As said before, in addition to their attributes, data types can also store their properties in the file repository.
+Imagine a data type that needs to wrap a single text file.
+
+.. code:: python
+
+    import os
+    from aiida.orm import Data
+
+
+    class TextFileData(Data):
+        """Data class that can be used to wrap a single text file by storing it in its file repository."""
+
+        def __init__(self, filepath, **kwargs):
+            """Construct a new instance and set the contents to that of the file.
+
+            :param file: an absolute filepath of the file to wrap
+            """
+            super(TextFileData, self).__init__(**kwargs)
+
+            filename = os.path.basename(filepath)  # Get the filename from the absolute path
+            self.put_object_from_file(filepath, filename)  # Store the file in the repository under the given filename
+            self.set_attribute('filename', filename)  # Store in the attributes what the filename is
+
+        def get_content(self):
+            """Return the content of the single file stored for this data node.
+
+            :return: the content of the file as a string
+            """
+            filename = self.get_attribute('filename')
+            return self.get_object_content(filename)
+
+To create a new instance of this data type and get its content:
+
+.. code:: python
+
+    node = TextFileData(filepath='/some/absolute/path/to/file.txt')
+    node.get_content()  # This will return the content of the file
+
+This example is a simplified version of the :class:`~aiida.orm.nodes.data.singlefile.SinglefileData` data class that ships with `aiida-core`.
+If this happens to be your use case (or very close to it), it is of course better to use that class, or you can sub class it and adapt it where needed.
+
+The two new data types we have just implemented are of course trivial and not very useful, but the concepts are flexible and can easily be applied to more complex use-cases.
 The following section will provide useful guidelines on how to optimally design new data types.
 
 
@@ -139,10 +161,9 @@ Database or repository?
 -----------------------
 
 When deciding where to store a property of a data type, one has to choose between the database and the file repository.
-The database will make the property queryable and relatively quickly accessible.
+The database will make it possible to search in the provenance graph based on criteria based on the property, e.g. all ``NewData`` nodes where the property is greater than 0.
 The downside is that storing too much information in the database can make it sluggish.
 Therefore, big data (think large files), whose content does not necessarily need to be queried for, is better stored in the file repository.
 Of course a data type may need to store multiple properties of varying character, but both storage locations can safely be used in parellel.
 When choosing the database as the storage location, the properties should be stored using the node *attributes*.
 To set and retrieve them, use the attribute methods of the :class:`~aiida.orm.nodes.node.Node` class.
-A node's attribute is what "defines" it, which is exactly why they should be used to store these properties and why they become immutable after the node is stored.

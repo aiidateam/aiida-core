@@ -200,7 +200,9 @@ class Config(object):  # pylint: disable=too-many-public-methods
         from aiida.common import exceptions
 
         if not name and not self.default_profile_name:
-            raise exceptions.ProfileConfigurationError('no default profile defined')
+            raise exceptions.ProfileConfigurationError(
+                'no default profile defined: {}\n{}'.format(self._default_profile, self.dictionary)
+            )
 
         if not name:
             name = self.default_profile_name

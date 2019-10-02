@@ -24,7 +24,10 @@ BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as it
 # This is used (and should be set to true) for the correct compilation of the documentation on readthedocs
 IN_RT_DOC_MODE = False
 
-__all__ = (config.__all__ + options.__all__ + profile.__all__ + ('get_config', 'get_config_option', 'load_profile'))
+__all__ = (
+    config.__all__ + options.__all__ + profile.__all__ +
+    ('get_config', 'get_config_option', 'load_profile', 'reset_config')
+)
 
 
 def load_profile(profile=None):
@@ -89,23 +92,25 @@ def load_config(create=False):
         # The following is a dummy config.json configuration that it is used for the
         # proper compilation of the documentation on readthedocs.
         from aiida.manage.external.postgres import DEFAULT_DBINFO
-        return ({
-            'default_profile': 'default',
-            'profiles': {
-                'default': {
-                    'AIIDADB_ENGINE': 'postgresql_psycopg2',
-                    'AIIDADB_BACKEND': 'django',
-                    'AIIDADB_HOST': DEFAULT_DBINFO['host'],
-                    'AIIDADB_PORT': DEFAULT_DBINFO['port'],
-                    'AIIDADB_NAME': 'aiidadb',
-                    'AIIDADB_PASS': '123',
-                    'default_user_email': 'aiida@epfl.ch',
-                    'TIMEZONE': 'Europe/Zurich',
-                    'AIIDADB_REPOSITORY_URI': 'file:///repository',
-                    'AIIDADB_USER': 'aiida'
+        return Config(
+            '/dev/null', {
+                'default_profile': 'default',
+                'profiles': {
+                    'default': {
+                        'AIIDADB_ENGINE': 'postgresql_psycopg2',
+                        'AIIDADB_BACKEND': 'django',
+                        'AIIDADB_HOST': DEFAULT_DBINFO['host'],
+                        'AIIDADB_PORT': DEFAULT_DBINFO['port'],
+                        'AIIDADB_NAME': 'aiidadb',
+                        'AIIDADB_PASS': '123',
+                        'default_user_email': 'aiida@epfl.ch',
+                        'TIMEZONE': 'Europe/Zurich',
+                        'AIIDADB_REPOSITORY_URI': 'file:///tmp/repository',
+                        'AIIDADB_USER': 'aiida'
+                    }
                 }
             }
-        })
+        )
 
     filepath = os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
 
@@ -149,6 +154,16 @@ def reset_profile():
     BACKEND_UUID = None
 
 
+def reset_config():
+    """Reset the globally loaded config.
+
+    .. warning:: This is experimental functionality and should for now be used only internally. If the reset is unclean
+        weird unknown side-effects may occur that end up corrupting or destroying data.
+    """
+    global CONFIG
+    CONFIG = None
+
+
 def get_config(create=False):
     """Return the current configuration.
 
@@ -159,7 +174,6 @@ def get_config(create=False):
 
     :param create: if True, will create the configuration file if it does not already exist
     :type create: bool
-
 
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`

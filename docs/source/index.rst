@@ -117,7 +117,6 @@ For developers
    developer_guide/plugins/plugin_tests
    developer_guide/plugins/publish
    developer_guide/plugins/update_plugin
-   developer_guide/plugins/plugin_system
 
 .. toctree::
     :maxdepth: 1

@@ -108,7 +108,7 @@ def import_data_sqla(
     :raises `~aiida.tools.importexport.common.exceptions.ImportUniquenessError`: if a new unique entity can not be
         created.
     """
-    from aiida.backends.sqlalchemy.models.node import DbNode
+    from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
     from aiida.backends.sqlalchemy.utils import flag_modified
 
     # This is the export version expected by this function
@@ -585,10 +585,8 @@ def import_data_sqla(
 
             if not silent:
                 print('STORING NODE LINKS...')
-            from aiida.backends.sqlalchemy.models.node import DbLink
 
             import_links = data['links_uuid']
-            links_to_store = []
 
             for link in import_links:
                 # Check for dangling Links within the, supposed, self-consistent archive
@@ -622,19 +620,13 @@ def import_data_sqla(
                     raise exceptions.ImportValidationError('Error occurred during Link validation: {}'.format(why))
 
                 # New link
-                links_to_store.append(DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type']))
+                session.add(DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type']))
                 if 'Link' not in ret_dict:
                     ret_dict['Link'] = {'new': []}
                 ret_dict['Link']['new'].append((in_id, out_id))
 
-            # Store new links
-            if links_to_store:
-                if not silent:
-                    print('   ({} new links...)'.format(len(links_to_store)))
-                session.add_all(links_to_store)
-            else:
-                if not silent:
-                    print('   (0 new links...)')
+            if not silent:
+                print('   ({} new links...)'.format(len(ret_dict.get('Link', {}).get('new', []))))
 
             if not silent:
                 print('STORING GROUP ELEMENTS...')

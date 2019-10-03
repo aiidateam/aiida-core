@@ -621,6 +621,13 @@ def import_data_dj(
                     ret_dict['Link'] = {'new': []}
                 ret_dict['Link']['new'].append((in_id, out_id))
 
+                # Add new Link to sets of existing Links 'input PK', 'output PK', 'label', 'type'
+                existing_links.add((in_id, out_id, link['label'], link['type']))
+                existing_outgoing_unique.add((in_id, link['type']))
+                existing_outgoing_unique_pair.add((in_id, link['label'], link['type']))
+                existing_incoming_unique.add((out_id, link['type']))
+                existing_incoming_unique_pair.add((out_id, link['label'], link['type']))
+
             # Store new links
             if links_to_store:
                 if not silent:

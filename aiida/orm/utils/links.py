@@ -157,17 +157,17 @@ def validate_link(source, target, link_type, link_label):
         # or stored, in which case, the new proposed link is a duplicate and thus illegal
         duplicate_link_triple = link_triple_exists(source, target, link_type, link_label)
 
-    # If the outdegree is `unique` there cannot already be any other incoming links of that type
+    # If the outdegree is `unique` there cannot already be any other outgoing link of that type
     if outdegree == 'unique' and source.get_outgoing(link_type=link_type, only_uuid=True).all():
         raise ValueError('node<{}> already has an outgoing {} link'.format(source.uuid, link_type))
 
-    # If the outdegree is `unique_pair` than the link labels for outgoing links of this type should be unique
+    # If the outdegree is `unique_pair`, then the link labels for outgoing links of this type should be unique
     elif outdegree == 'unique_pair' and source.get_outgoing(
             link_type=link_type, only_uuid=True, link_label_filter=link_label).all():
         raise ValueError('node<{}> already has an outgoing {} link with label "{}"'.format(
-            target.uuid, link_type, link_label))
+            source.uuid, link_type, link_label))
 
-    # If the outdegree is `unique_triple` than the link triples of link type, link label and target should be unique
+    # If the outdegree is `unique_triple`, then the link triples of link type, link label and target should be unique
     elif outdegree == 'unique_triple' and duplicate_link_triple:
         raise ValueError('node<{}> already has an outgoing {} link with label "{}" from node<{}>'.format(
             source.uuid, link_type, link_label, target.uuid))
@@ -176,13 +176,13 @@ def validate_link(source, target, link_type, link_label):
     if indegree == 'unique' and target.get_incoming(link_type=link_type, only_uuid=True).all():
         raise ValueError('node<{}> already has an incoming {} link'.format(target.uuid, link_type))
 
-    # If the indegree is `unique_pair` than the link labels for incoming links of this type should be unique
+    # If the indegree is `unique_pair`, then the link labels for incoming links of this type should be unique
     elif indegree == 'unique_pair' and target.get_incoming(
             link_type=link_type, link_label_filter=link_label, only_uuid=True).all():
         raise ValueError('node<{}> already has an incoming {} link with label "{}"'.format(
             target.uuid, link_type, link_label))
 
-    # If the indegree is `unique_triple` than the link triples of link type, link label and source should be unique
+    # If the indegree is `unique_triple`, then the link triples of link type, link label and source should be unique
     elif indegree == 'unique_triple' and duplicate_link_triple:
         raise ValueError('node<{}> already has an incoming {} link with label "{}" from node<{}>'.format(
             target.uuid, link_type, link_label, source.uuid))

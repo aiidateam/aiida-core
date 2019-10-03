@@ -15,6 +15,7 @@ Use ``verdi export create`` to export a selection of nodes, codes, groups, users
   By default, comments and logs are also added for each exported node.
   These may be excluded using the proper flags.
   There are several other options to export specific parts of the provenance graph, starting from the selection.
+  For more information about this please read the :ref:`corresponding subsection<consistency>` of the :ref:`Provenance section<concepts_provenance>`.
 * **File content:** The export file contains all information pertaining to the exported nodes: both the information stored in the database and files stored in the AiiDA repository.
 * **Compression:** By default, the export file is compressed using gzip, creating a tar ball (tar.gz).
   It is also possible to create a compressed or uncompressed zip file.

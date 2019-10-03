@@ -701,7 +701,7 @@ Working with edges
 
 Another feature that had to be added are projections, filters and labels on
 the edges of the graphs, that is to say, links or paths between nodes.
-It works the same way, just that the keyword is preceded by '*link*'.
+It works the same way, just that the keyword is preceded by '*edge*'.
 Let's take the above example, but put a filter on the label of the link and project the link label::
 
     qb = QueryBuilder()

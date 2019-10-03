@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Defines an rst directive to auto-document AiiDA workchains.
+Defines an rst directive to auto-document AiiDA calculation job.
 """
 
 from __future__ import division
@@ -19,22 +19,22 @@ from .process import AiidaProcessDocumenter, AiidaProcessDirective
 
 
 def setup_extension(app):
-    app.add_directive_to_domain('py', AiidaWorkChainDocumenter.directivetype, AiidaWorkchainDirective)
-    app.add_autodocumenter(AiidaWorkChainDocumenter)
+    app.add_directive_to_domain('py', AiidaCalcJobDocumenter.directivetype, AiidaCalcJobDirective)
+    app.add_autodocumenter(AiidaCalcJobDocumenter)
 
 
-class AiidaWorkChainDocumenter(AiidaProcessDocumenter):
-    """Sphinx Documenter class for AiiDA WorkChains."""
-    directivetype = 'aiida-workchain'
-    objtype = 'workchain'
+class AiidaCalcJobDocumenter(AiidaProcessDocumenter):
+    """Sphinx Documenter for AiiDA CalcJobs."""
+    directivetype = 'aiida-calcjob'
+    objtype = 'calcjob'
     priority = 20
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
-        from aiida.engine import WorkChain
-        return issubclass(cls, WorkChain)
+        from aiida.engine import CalcJob
+        return issubclass(cls, CalcJob)
 
 
-class AiidaWorkchainDirective(AiidaProcessDirective):
-    signature = 'WorkChain'
-    annotation = 'workchain'
+class AiidaCalcJobDirective(AiidaProcessDirective):
+    signature = 'CalcJob'
+    annotation = 'calcjob'

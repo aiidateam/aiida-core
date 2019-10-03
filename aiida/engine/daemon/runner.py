@@ -23,9 +23,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def start_daemon():
-    """
-    Start a daemon runner for the currently configured profile
-    """
+    """Start a daemon runner for the currently configured profile."""
     daemon_client = get_daemon_client()
     configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
 

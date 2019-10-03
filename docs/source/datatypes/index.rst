@@ -70,7 +70,6 @@ StructureData
 * **What is stored in the file repository**: ---
 * **Additional functionality**:
 
-  * :ref:`Examples of usage<structure_tutorial>`
   * :ref:`Export to a number of formats (xsf, cif, ...)<ExportDataNodes>`
 
 UpfData

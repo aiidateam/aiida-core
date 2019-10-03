@@ -63,7 +63,7 @@ class BackupSetup(object):
         # Setting the oldest backup timestamp
         oldest_object_bk = utils.ask_question(
             'Please provide the oldest backup timestamp '
-            '(e.g. 2014-07-18 13:54:53.688484+00:00). ', datetime.datetime, True
+            '(e.g. 2014-07-18 13:54:53.688484+00:00): ', datetime.datetime, True
         )
 
         if oldest_object_bk is None:
@@ -76,12 +76,12 @@ class BackupSetup(object):
 
         # Setting the days_to_backup
         backup_variables[AbstractBackup.DAYS_TO_BACKUP_KEY
-                        ] = utils.ask_question('Please provide the number of days to backup.', int, True)
+                        ] = utils.ask_question('Please provide the number of days to backup: ', int, True)
 
         # Setting the end date
         end_date_of_backup_key = utils.ask_question(
-            'Please provide the end date of the backup ' + '(e.g. 2014-07-18 13:54:53.688484+00:00).',
-            datetime.datetime, True
+            'Please provide the end date of the backup (e.g. 2014-07-18 13:54:53.688484+00:00): ', datetime.datetime,
+            True
         )
         if end_date_of_backup_key is None:
             backup_variables[AbstractBackup.END_DATE_OF_BACKUP_KEY] = None
@@ -90,11 +90,11 @@ class BackupSetup(object):
 
         # Setting the backup periodicity
         backup_variables[AbstractBackup.PERIODICITY_KEY
-                        ] = utils.ask_question('Please periodicity (in days).', int, False)
+                        ] = utils.ask_question('Please provide the periodicity (in days): ', int, False)
 
         # Setting the backup threshold
         backup_variables[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY
-                        ] = utils.ask_question('Please provide the backup threshold (in hours).', int, False)
+                        ] = utils.ask_question('Please provide the backup threshold (in hours): ', int, False)
 
         return backup_variables
 
@@ -182,7 +182,7 @@ class BackupSetup(object):
         # Copy the sample configuration file to the backup folder
         try:
             shutil.copy(template_conf_path, conf_backup_folder_abs)
-        except Exception:
+        except OSError:
             self._logger.error(
                 'Error copying the file %s to the directory %s', template_conf_path, conf_backup_folder_abs
             )
@@ -190,7 +190,7 @@ class BackupSetup(object):
 
         if utils.query_yes_no(
             'A sample configuration file was copied to {}. '
-            'Would you like to '.format(conf_backup_folder_abs) + 'see the configuration parameters explanation?',
+            'Would you like to see the configuration parameters explanation?'.format(conf_backup_folder_abs),
             default='yes'
         ):
             self.print_info()
@@ -199,7 +199,7 @@ class BackupSetup(object):
         final_conf_filepath = os.path.join(conf_backup_folder_abs, self._backup_info_filename)
 
         # If the backup parameters are configured now
-        if utils.query_yes_no('Would you like to configure the backup ' + 'configuration file now?', default='yes'):
+        if utils.query_yes_no('Would you like to configure the backup configuration file now?', default='yes'):
 
             # Ask questions to properly setup the backup variables
             backup_variables = self.construct_backup_variables(file_backup_folder_abs)
@@ -253,7 +253,7 @@ backup_inst.run()
             self._logger.error('Problem setting the right permissions to the script %s.', script_path)
             raise
 
-        sys.stdout.write('Backup setup completed.')
+        sys.stdout.write('Backup setup completed.\n')
 
 
 if __name__ == '__main__':

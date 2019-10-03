@@ -253,8 +253,7 @@ class AbstractBackup(object):
         ):
             backup_end_for_this_round = self._internal_end_date_of_backup
 
-        # If the end of the backup is after then current time,
-        # adapt the end accordingly
+        # If the end of the backup is after the current time, adapt the end accordingly
         now_timestamp = datetime.datetime.now(dtimezone.get_current_timezone())
         if backup_end_for_this_round > now_timestamp:
             self._logger.info(

@@ -86,27 +86,27 @@ def delete_nodes(
             echo.echo('Nothing to delete')
         return
 
-    follow_upwards = []
-    follow_upwards.append(LinkType.CREATE.value)
-    follow_upwards.append(LinkType.RETURN.value)
-    follow_upwards.append(LinkType.CALL_CALC.value)
-    follow_upwards.append(LinkType.CALL_WORK.value)
+    follow_backwards = []
+    follow_backwards.append(LinkType.CREATE.value)
+    follow_backwards.append(LinkType.RETURN.value)
+    follow_backwards.append(LinkType.CALL_CALC.value)
+    follow_backwards.append(LinkType.CALL_WORK.value)
 
-    follow_downwards = []
-    follow_downwards.append(LinkType.INPUT_CALC.value)
-    follow_downwards.append(LinkType.INPUT_WORK.value)
+    follow_fowards = []
+    follow_fowards.append(LinkType.INPUT_CALC.value)
+    follow_fowards.append(LinkType.INPUT_WORK.value)
 
     if create_forward:
-        follow_downwards.append(LinkType.CREATE.value)
+        follow_fowards.append(LinkType.CREATE.value)
 
     if call_calc_forward:
-        follow_downwards.append(LinkType.CALL_CALC.value)
+        follow_fowards.append(LinkType.CALL_CALC.value)
 
     if call_work_forward:
-        follow_downwards.append(LinkType.CALL_WORK.value)
+        follow_fowards.append(LinkType.CALL_WORK.value)
 
-    links_upwards = {'type': {'in': follow_upwards}}
-    links_downwards = {'type': {'in': follow_downwards}}
+    links_backwards = {'type': {'in': follow_backwards}}
+    links_fowards = {'type': {'in': follow_fowards}}
 
     operational_set = set().union(set(starting_pks))
     accumulator_set = set().union(set(starting_pks))
@@ -121,11 +121,11 @@ def delete_nodes(
             filters={'id': {
                 '!in': accumulator_set
             }},
-            edge_filters=links_downwards,
+            edge_filters=links_fowards,
             with_incoming='sources',
             project='id'
         )
-        new_pks_set = new_pks_set.union(set(i for i, in query_nodes.iterall()))
+        new_pks_set.update(i for i, in query_nodes.iterall())
 
         query_nodes = QueryBuilder()
         query_nodes.append(Node, filters={'id': {'in': operational_set}}, tag='sources')
@@ -134,14 +134,14 @@ def delete_nodes(
             filters={'id': {
                 '!in': accumulator_set
             }},
-            edge_filters=links_upwards,
+            edge_filters=links_backwards,
             with_outgoing='sources',
             project='id'
         )
-        new_pks_set = new_pks_set.union(set(i for i, in query_nodes.iterall()))
+        new_pks_set.update(i for i, in query_nodes.iterall())
 
         operational_set = new_pks_set.difference(accumulator_set)
-        accumulator_set = new_pks_set.union(accumulator_set)
+        accumulator_set.update(new_pks_set)
 
     pks_set_to_delete = accumulator_set
 
@@ -184,11 +184,11 @@ def delete_nodes(
     repositories = [load_node(pk)._repository for pk in pks_set_to_delete]  # pylint: disable=protected-access
 
     if verbosity > 0:
-        echo.echo('I am starting node deletion.')
+        echo.echo('Starting node deletion...')
     delete_nodes_and_connections(pks_set_to_delete)
 
     if verbosity > 0:
-        echo.echo('I have finished node deletion and I am starting folder deletion.')
+        echo.echo('Nodes deleted from database, deleting files from the repository now...')
 
     # If we are here, we managed to delete the entries from the DB.
     # I can now delete the folders
@@ -196,4 +196,4 @@ def delete_nodes(
         repository.erase(force=True)
 
     if verbosity > 0:
-        echo.echo('I have finished folder deletion. Deletion completed.')
+        echo.echo('Deletion completed.')

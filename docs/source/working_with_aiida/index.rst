@@ -179,3 +179,12 @@ Provenance Graphs
 
     visualising_graphs/visualising_graphs
 
+
+==============
+Deleting Nodes
+==============
+.. toctree::
+    :maxdepth: 2
+
+    deleting_nodes.rst
+

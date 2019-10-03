@@ -93,12 +93,12 @@ For developers
     concepts/calculations
     concepts/workflows
 
-
 .. toctree::
     :maxdepth: 1
     :caption: Workflow development
     :hidden:
 
+    working/data
     working/processes
     working/functions
     working/calculations
@@ -109,16 +109,17 @@ For developers
    :caption: AiiDA plugin development
    :hidden:
 
-   developer_guide/plugins/index
-   developer_guide/devel_tutorial/code_plugin_float_sum
-   developer_guide/devel_tutorial/plugin_tests
-   developer_guide/devel_tutorial/cmdline_plugin
-   developer_guide/devel_tutorial/parser_warnings_policy
-   developer_guide/aiida_sphinxext
+   developer_guide/plugins/basics
+   developer_guide/plugins/quickstart
+   developer_guide/plugins/entry_points
+   developer_guide/plugins/documenting
+   developer_guide/plugins/plugin_tests
+   developer_guide/plugins/publish
+   developer_guide/plugins/update_plugin
 
 .. toctree::
     :maxdepth: 1
-    :caption: aiida-core development
+    :caption: AiiDA core development
     :hidden:
 
     developer_guide/core/internals
@@ -128,6 +129,7 @@ For developers
     developer_guide/core/caching
     developer_guide/core/plugin_system
     developer_guide/tools/sphinx_cheatsheet
+    developer_guide/tools/visual_aids
     developer_guide/design/changes
 
 .. toctree::

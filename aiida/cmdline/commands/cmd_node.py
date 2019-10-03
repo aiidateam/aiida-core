@@ -288,13 +288,19 @@ class NodeTreePrinter(object):
 @arguments.NODES('nodes', required=True)
 @options.VERBOSE()
 @options.DRY_RUN()
-@click.option('-c', '--follow-calls', is_flag=True, help='Follow call links forwards when deleting.')
-# Commenting also the option for follow returns. This is dangerous for the inexperienced user.
-# @click.option('-r', '--follow-returns', is_flag=True, help='follow return links forwards when deleting')
 @click.option('--force', is_flag=True, default=False, help='Do not ask for confirmation.')
+@click.option('--create-forward', is_flag=True, default=True, help='Follow CREATE links forwards when deleting.')
+@click.option('--call-calc-forward', is_flag=True, default=False, help='Follow CALL_CALC links forwards when deleting.')
+@click.option('--call-work-forward', is_flag=True, default=False, help='Follow CALL_WORK links forwards when deleting.')
 @with_dbenv()
-def node_delete(nodes, follow_calls, dry_run, verbose, force):
-    """Delete nodes and everything that originates from them."""
+def node_delete(nodes, dry_run, verbose, force, create_forward, call_calc_forward, call_work_forward):  # pylint: disable=too-many-arguments
+    """
+    Delete nodes from the database.
+
+    Please notice that this will not only delete the nodes explicitly provided
+    via the command line, but will also include the nodes necessary to keep a
+    consistent provenance acording to the rules outlined in the documentation.
+    """
     from aiida.manage.database.delete.nodes import delete_nodes
 
     verbosity = 1
@@ -305,7 +311,15 @@ def node_delete(nodes, follow_calls, dry_run, verbose, force):
 
     node_pks_to_delete = [node.pk for node in nodes]
 
-    delete_nodes(node_pks_to_delete, follow_calls=follow_calls, dry_run=dry_run, verbosity=verbosity, force=force)
+    delete_nodes(
+        node_pks_to_delete,
+        dry_run=dry_run,
+        verbosity=verbosity,
+        force=force,
+        create_forward=create_forward,
+        call_calc_forward=call_calc_forward,
+        call_work_forward=call_work_forward
+    )
 
 
 @verdi_node.command('rehash')

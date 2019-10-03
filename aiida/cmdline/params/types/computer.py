@@ -13,7 +13,10 @@ Module for the custom click param type computer
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from click.types import StringParamType
+
+from ...utils import decorators
 from .identifier import IdentifierParamType
 
 
@@ -34,6 +37,14 @@ class ComputerParamType(IdentifierParamType):
         """
         from aiida.orm.utils.loaders import ComputerEntityLoader
         return ComputerEntityLoader
+
+    @decorators.with_dbenv()
+    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument
+        """Return possible completions based on an incomplete value.
+
+        :returns: list of tuples of valid entry points (matching incomplete) and a description
+        """
+        return [(option, '') for option, in self.orm_class_loader.get_options(incomplete, project='name')]
 
 
 class ShebangParamType(StringParamType):

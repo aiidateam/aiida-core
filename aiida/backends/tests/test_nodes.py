@@ -1686,7 +1686,7 @@ class TestNodeDeletion(AiidaTestCase):
         """
 
         # By default deleting input data should eliminate everything that it
-        # generated downwards.
+        # generated forwards.
         di, do, c0, w1, w2 = self._create_minimal_graph()
         uuids_check_existence = [n.uuid for n in ()]
         uuids_check_deleted = [n.uuid for n in (di, do, c0, w1, w2)]
@@ -1695,8 +1695,8 @@ class TestNodeDeletion(AiidaTestCase):
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # By default deleting output data should eliminate the creating calcs and
-        # returning workflows (and upwards logic should be eliminated but not the
-        # upwards data)
+        # returning workflows (and backwards logic should be eliminated but not the
+        # backwards data)
         di, do, c0, w1, w2 = self._create_minimal_graph()
         uuids_check_existence = [n.uuid for n in (di,)]
         uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
@@ -1705,7 +1705,7 @@ class TestNodeDeletion(AiidaTestCase):
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # By default deleting a calculation should eliminate its output data but
-        # keep any inputs, and eliminate all logical upwards provenance.
+        # keep any inputs, and eliminate all logical backwards provenance.
         di, do, c0, w1, w2 = self._create_minimal_graph()
         uuids_check_existence = [n.uuid for n in (di,)]
         uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
@@ -1722,8 +1722,8 @@ class TestNodeDeletion(AiidaTestCase):
             delete_nodes([c0.pk], force=True, create_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-        # By default deleting a workflow should delete all upwards logical provenance
-        # but not downwards provenance, and should not affect input or output data.
+        # By default deleting a workflow should delete all backwards logical provenance
+        # but not forwards provenance, and should not affect input or output data.
         #  > deleting w1 only deletes w2.
         #  > deleting w2 doesn't affect anything else.
         di, do, c0, w1, w2 = self._create_minimal_graph()
@@ -1741,7 +1741,7 @@ class TestNodeDeletion(AiidaTestCase):
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # You can also delete all generated stuff by a workflow by activating
-        # the keyword to go downwards (THIS MAY DELETE ALL YOUR STUFF)
+        # the keyword to go forwards (THIS MAY DELETE ALL YOUR STUFF)
         di, do, c0, w1, w2 = self._create_minimal_graph()
         uuids_check_existence = [n.uuid for n in (di,)]
         uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
@@ -1994,7 +1994,7 @@ class TestNodeDeletion(AiidaTestCase):
         """
 
         # By default deleting input data should eliminate everything that it
-        # generated downwards.
+        # generated forwards.
         node_list = self._create_long_graph()
 
         uuids_check_existence = [n.uuid for n in node_list[:3]]

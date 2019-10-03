@@ -54,7 +54,7 @@ def delete_nodes(
         be deleted. Note that when you delete a workflow, also all parent workflows are
         deleted (recursively). Therefore, setting this flag to True may delete
         calculations that are 'unrelated' to what has been chosen to be deleted, just
-        because they are connected at some point in the upwards provenance. Use with
+        because they are connected at some point in the backwards provenance. Use with
         care, and it is advisable to never combine it with force.
     :param bool call_work_forward:
         This will also delete all workflows called by any workflow that is going to
@@ -92,21 +92,21 @@ def delete_nodes(
     follow_backwards.append(LinkType.CALL_CALC.value)
     follow_backwards.append(LinkType.CALL_WORK.value)
 
-    follow_fowards = []
-    follow_fowards.append(LinkType.INPUT_CALC.value)
-    follow_fowards.append(LinkType.INPUT_WORK.value)
+    follow_forwards = []
+    follow_forwards.append(LinkType.INPUT_CALC.value)
+    follow_forwards.append(LinkType.INPUT_WORK.value)
 
     if create_forward:
-        follow_fowards.append(LinkType.CREATE.value)
+        follow_forwards.append(LinkType.CREATE.value)
 
     if call_calc_forward:
-        follow_fowards.append(LinkType.CALL_CALC.value)
+        follow_forwards.append(LinkType.CALL_CALC.value)
 
     if call_work_forward:
-        follow_fowards.append(LinkType.CALL_WORK.value)
+        follow_forwards.append(LinkType.CALL_WORK.value)
 
     links_backwards = {'type': {'in': follow_backwards}}
-    links_fowards = {'type': {'in': follow_fowards}}
+    links_forwards = {'type': {'in': follow_forwards}}
 
     operational_set = set().union(set(starting_pks))
     accumulator_set = set().union(set(starting_pks))
@@ -121,7 +121,7 @@ def delete_nodes(
             filters={'id': {
                 '!in': accumulator_set
             }},
-            edge_filters=links_fowards,
+            edge_filters=links_forwards,
             with_incoming='sources',
             project='id'
         )

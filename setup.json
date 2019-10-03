@@ -83,6 +83,7 @@
       "docutils==0.14",
       "Jinja2==2.10.1",
       "MarkupSafe==1.1.1",
+      "prompt-toolkit==1.0.16",
       "sphinx-rtd-theme==0.4.3",
       "sphinxcontrib-contentui==0.2.2"
     ],

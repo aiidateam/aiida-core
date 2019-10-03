@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=fixme,protected-access,too-many-branches,too-many-locals,too-many-statements,too-many-arguments
+# pylint: disable=fixme,too-many-branches,too-many-locals,too-many-statements,too-many-arguments
 """Provides export functionalities."""
 from __future__ import division
 from __future__ import print_function
@@ -17,11 +17,9 @@ import os
 import tarfile
 import time
 
-from aiida import get_version
+from aiida import get_version, orm
 from aiida.common import json
-from aiida.common.folders import RepositoryFolder, SandboxFolder
-from aiida.common.links import LinkType
-from aiida.orm import QueryBuilder, Node, Data, Group, Log, Comment, Computer, ProcessNode
+from aiida.common.folders import RepositoryFolder
 from aiida.orm.utils.repository import Repository
 
 from aiida.tools.importexport.common import exceptions
@@ -34,7 +32,7 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
-    check_licences, fill_in_query, serialize_dict, check_process_nodes_sealed
+    check_licences, fill_in_query, serialize_dict, check_process_nodes_sealed, retrieve_linked_nodes
 )
 
 from .zip import ZipFolder
@@ -43,49 +41,23 @@ __all__ = ('export', 'export_zip')
 
 
 def export_zip(what, outfile='testzip', overwrite=False, silent=False, use_compression=True, **kwargs):
-    """Export in a zipped folder"""
-    if not overwrite and os.path.exists(outfile):
-        raise exceptions.ArchiveExportError("the output file '{}' already exists".format(outfile))
-
-    time_start = time.time()
-    with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
-        export_tree(what, folder=folder, silent=silent, **kwargs)
-    if not silent:
-        print('File written in {:10.3g} s.'.format(time.time() - time_start))
-
-
-def export_tree(
-    what,
-    folder,
-    allowed_licenses=None,
-    forbidden_licenses=None,
-    silent=False,
-    input_forward=False,
-    create_reversed=True,
-    return_reversed=False,
-    call_reversed=False,
-    include_comments=True,
-    include_logs=True
-):
-    """Export the entries passed in the 'what' list to a file tree.
+    """Export in a zipped folder
 
     :param what: a list of entity instances; they can belong to different models/entities.
     :type what: list
 
-    :param folder: a temporary folder to build the archive before compression.
-    :type folder: :py:class:`~aiida.common.folders.Folder`
+    :param outfile: the filename (possibly including the absolute path) of the file on which to export.
+    :type outfile: str
 
-    :param input_forward: Follow forward INPUT links (recursively) when calculating the node set to export.
-    :type input_forward: bool
+    :param overwrite: if True, overwrite the output file without asking, if it exists. If False, raise an
+        :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError` if the output file already exists.
+    :type overwrite: bool
 
-    :param create_reversed: Follow reversed CREATE links (recursively) when calculating the node set to export.
-    :type create_reversed: bool
+    :param silent: suppress prints.
+    :type silent: bool
 
-    :param return_reversed: Follow reversed RETURN links (recursively) when calculating the node set to export.
-    :type return_reversed: bool
-
-    :param call_reversed: Follow reversed CALL links (recursively) when calculating the node set to export.
-    :type call_reversed: bool
+    :param use_compression: Whether or not to compress the zip file.
+    :type use_compression: bool
 
     :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
         list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
@@ -105,8 +77,94 @@ def export_tree(
         Default: True, *include* logs in export.
     :type include_logs: bool
 
+    :param input_calc_forward: Follow forward INPUT_CALC links (recursively) when calculating the node set to export.
+    :type input_calc_forward: bool
+
+    :param create_backward: Follow reversed CREATE links (recursively) when calculating the node set to export.
+    :type create_backward: bool
+
+    :param return_backward: Follow reversed RETURN links (recursively) when calculating the node set to export.
+    :type return_backward: bool
+
+    :param input_work_forward: Follow forward INPUT_WORK links (recursively) when calculating the node set to export.
+    :type input_work_forward: bool
+
+    :param call_calc_backward: Follow reversed CALL_CALC links (recursively) when calculating the node set to export.
+    :type call_calc_backward: bool
+
+    :param call_work_backward: Follow reversed CALL_WORK links (recursively) when calculating the node set to export.
+    :type call_work_backward: bool
+
+    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
+        exporting.
+    :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
+    """
+    if not overwrite and os.path.exists(outfile):
+        raise exceptions.ArchiveExportError("the output file '{}' already exists".format(outfile))
+
+    time_start = time.time()
+    with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
+        export_tree(what, folder=folder, silent=silent, **kwargs)
+    if not silent:
+        print('File written in {:10.3g} s.'.format(time.time() - time_start))
+
+
+def export_tree(
+    what,
+    folder,
+    allowed_licenses=None,
+    forbidden_licenses=None,
+    silent=False,
+    include_comments=True,
+    include_logs=True,
+    **kwargs
+):
+    """Export the entries passed in the 'what' list to a file tree.
+
+    :param what: a list of entity instances; they can belong to different models/entities.
+    :type what: list
+
+    :param folder: a temporary folder to build the archive before compression.
+    :type folder: :py:class:`~aiida.common.folders.Folder`
+
+    :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
+        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+        otherwise.
+    :type allowed_licenses: list
+
+    :param forbidden_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
+        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+        otherwise.
+    :type forbidden_licenses: list
+
     :param silent: suppress prints.
     :type silent: bool
+
+    :param include_comments: In-/exclude export of comments for given node(s) in ``what``.
+        Default: True, *include* comments in export (as well as relevant users).
+    :type include_comments: bool
+
+    :param include_logs: In-/exclude export of logs for given node(s) in ``what``.
+        Default: True, *include* logs in export.
+    :type include_logs: bool
+
+    :param input_calc_forward: Follow forward INPUT_CALC links (recursively) when calculating the node set to export.
+    :type input_calc_forward: bool
+
+    :param create_backward: Follow reversed CREATE links (recursively) when calculating the node set to export.
+    :type create_backward: bool
+
+    :param return_backward: Follow reversed RETURN links (recursively) when calculating the node set to export.
+    :type return_backward: bool
+
+    :param input_work_forward: Follow forward INPUT_WORK links (recursively) when calculating the node set to export.
+    :type input_work_forward: bool
+
+    :param call_calc_backward: Follow reversed CALL_CALC links (recursively) when calculating the node set to export.
+    :type call_calc_backward: bool
+
+    :param call_work_backward: Follow reversed CALL_WORK links (recursively) when calculating the node set to export.
+    :type call_work_backward: bool
 
     :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
         exporting.
@@ -118,8 +176,6 @@ def export_tree(
     all_fields_info, unique_identifiers = get_all_fields_info()
 
     # The set that contains the nodes ids of the nodes that should be exported
-    to_be_exported = set()
-
     given_data_entry_ids = set()
     given_calculation_entry_ids = set()
     given_group_entry_ids = set()
@@ -135,15 +191,15 @@ def export_tree(
         # entry_class_string = get_class_string(entry)
         # Now a load the backend-independent name into entry_entity_name, e.g. Node!
         # entry_entity_name = schema_to_entity_names(entry_class_string)
-        if issubclass(entry.__class__, Group):
+        if issubclass(entry.__class__, orm.Group):
             given_group_entry_ids.add(entry.id)
             given_groups.add(entry)
-        elif issubclass(entry.__class__, Node):
-            if issubclass(entry.__class__, Data):
+        elif issubclass(entry.__class__, orm.Node):
+            if issubclass(entry.__class__, orm.Data):
                 given_data_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, ProcessNode):
+            elif issubclass(entry.__class__, orm.ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
-        elif issubclass(entry.__class__, Computer):
+        elif issubclass(entry.__class__, orm.Computer):
             given_computer_entry_ids.add(entry.pk)
         else:
             raise exceptions.ArchiveExportError(
@@ -153,199 +209,34 @@ def export_tree(
     # Add all the nodes contained within the specified groups
     for group in given_groups:
         for entry in group.nodes:
-            if issubclass(entry.__class__, Data):
+            if issubclass(entry.__class__, orm.Data):
                 given_data_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, ProcessNode):
+            elif issubclass(entry.__class__, orm.ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
 
     # We will iteratively explore the AiiDA graph to find further nodes that
     # should also be exported.
+    # At the same time, we will create the links_uuid list of dicts to be exported
 
-    # We repeat until there are no further nodes to be visited
-    while given_calculation_entry_ids or given_data_entry_ids:
+    if not silent:
+        print('RETRIEVING LINKED NODES AND STORING LINKS...')
 
-        # If is is a calculation node
-        if given_calculation_entry_ids:
-            curr_node_id = given_calculation_entry_ids.pop()
-            # If it is already visited continue to the next node
-            if curr_node_id in to_be_exported:
-                continue
-            # Otherwise say that it is a node to be exported
-            else:
-                to_be_exported.add(curr_node_id)
-
-            # INPUT(Data, ProcessNode) - Reversed
-            builder = QueryBuilder()
-            builder.append(Data, tag='predecessor', project=['id'])
-            builder.append(
-                ProcessNode,
-                with_incoming='predecessor',
-                filters={'id': {
-                    '==': curr_node_id
-                }},
-                edge_filters={'type': {
-                    'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]
-                }}
-            )
-            res = {_[0] for _ in builder.all()}
-            given_data_entry_ids.update(res - to_be_exported)
-
-            # INPUT(Data, ProcessNode) - Forward
-            if input_forward:
-                builder = QueryBuilder()
-                builder.append(Data, tag='predecessor', project=['id'], filters={'id': {'==': curr_node_id}})
-                builder.append(
-                    ProcessNode,
-                    with_incoming='predecessor',
-                    edge_filters={'type': {
-                        'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]
-                    }}
-                )
-                res = {_[0] for _ in builder.all()}
-                given_data_entry_ids.update(res - to_be_exported)
-
-            # CREATE/RETURN(ProcessNode, Data) - Forward
-            builder = QueryBuilder()
-            builder.append(ProcessNode, tag='predecessor', filters={'id': {'==': curr_node_id}})
-            builder.append(
-                Data,
-                with_incoming='predecessor',
-                project=['id'],
-                edge_filters={'type': {
-                    'in': [LinkType.CREATE.value, LinkType.RETURN.value]
-                }}
-            )
-            res = {_[0] for _ in builder.all()}
-            given_data_entry_ids.update(res - to_be_exported)
-
-            # CREATE(ProcessNode, Data) - Reversed
-            if create_reversed:
-                builder = QueryBuilder()
-                builder.append(ProcessNode, tag='predecessor')
-                builder.append(
-                    Data,
-                    with_incoming='predecessor',
-                    project=['id'],
-                    filters={'id': {
-                        '==': curr_node_id
-                    }},
-                    edge_filters={'type': {
-                        'in': [LinkType.CREATE.value]
-                    }}
-                )
-                res = {_[0] for _ in builder.all()}
-                given_data_entry_ids.update(res - to_be_exported)
-
-            # RETURN(ProcessNode, Data) - Reversed
-            if return_reversed:
-                builder = QueryBuilder()
-                builder.append(ProcessNode, tag='predecessor')
-                builder.append(
-                    Data,
-                    with_incoming='predecessor',
-                    project=['id'],
-                    filters={'id': {
-                        '==': curr_node_id
-                    }},
-                    edge_filters={'type': {
-                        'in': [LinkType.RETURN.value]
-                    }}
-                )
-                res = {_[0] for _ in builder.all()}
-                given_data_entry_ids.update(res - to_be_exported)
-
-            # CALL(ProcessNode, ProcessNode) - Forward
-            builder = QueryBuilder()
-            builder.append(ProcessNode, tag='predecessor', filters={'id': {'==': curr_node_id}})
-            builder.append(
-                ProcessNode,
-                with_incoming='predecessor',
-                project=['id'],
-                edge_filters={'type': {
-                    'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]
-                }}
-            )
-            res = {_[0] for _ in builder.all()}
-            given_calculation_entry_ids.update(res - to_be_exported)
-
-            # CALL(ProcessNode, ProcessNode) - Reversed
-            if call_reversed:
-                builder = QueryBuilder()
-                builder.append(ProcessNode, tag='predecessor')
-                builder.append(
-                    ProcessNode,
-                    with_incoming='predecessor',
-                    project=['id'],
-                    filters={'id': {
-                        '==': curr_node_id
-                    }},
-                    edge_filters={'type': {
-                        'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]
-                    }}
-                )
-                res = {_[0] for _ in builder.all()}
-                given_calculation_entry_ids.update(res - to_be_exported)
-
-        # If it is a Data node
-        else:
-            curr_node_id = given_data_entry_ids.pop()
-            # If it is already visited continue to the next node
-            if curr_node_id in to_be_exported:
-                continue
-            # Otherwise say that it is a node to be exported
-            else:
-                to_be_exported.add(curr_node_id)
-
-            # Case 2:
-            # CREATE(ProcessNode, Data) - Reversed
-            if create_reversed:
-                builder = QueryBuilder()
-                builder.append(ProcessNode, tag='predecessor', project=['id'])
-                builder.append(
-                    Data,
-                    with_incoming='predecessor',
-                    filters={'id': {
-                        '==': curr_node_id
-                    }},
-                    edge_filters={'type': {
-                        'in': [LinkType.CREATE.value]
-                    }}
-                )
-                res = {_[0] for _ in builder.all()}
-                given_calculation_entry_ids.update(res - to_be_exported)
-
-            # Case 3:
-            # RETURN(ProcessNode, Data) - Reversed
-            if return_reversed:
-                builder = QueryBuilder()
-                builder.append(ProcessNode, tag='predecessor', project=['id'])
-                builder.append(
-                    Data,
-                    with_incoming='predecessor',
-                    filters={'id': {
-                        '==': curr_node_id
-                    }},
-                    edge_filters={'type': {
-                        'in': [LinkType.RETURN.value]
-                    }}
-                )
-                res = {_[0] for _ in builder.all()}
-                given_calculation_entry_ids.update(res - to_be_exported)
+    to_be_exported, links_uuid = retrieve_linked_nodes(given_calculation_entry_ids, given_data_entry_ids, **kwargs)
 
     ## Universal "entities" attributed to all types of nodes
     # Logs
     if include_logs and to_be_exported:
         # Get related log(s) - universal for all nodes
-        builder = QueryBuilder()
-        builder.append(Log, filters={'dbnode_id': {'in': to_be_exported}}, project=['id'])
+        builder = orm.QueryBuilder()
+        builder.append(orm.Log, filters={'dbnode_id': {'in': to_be_exported}}, project='id')
         res = {_[0] for _ in builder.all()}
         given_log_entry_ids.update(res)
 
     # Comments
     if include_comments and to_be_exported:
         # Get related log(s) - universal for all nodes
-        builder = QueryBuilder()
-        builder.append(Comment, filters={'dbnode_id': {'in': to_be_exported}}, project=['id'])
+        builder = orm.QueryBuilder()
+        builder.append(orm.Comment, filters={'dbnode_id': {'in': to_be_exported}}, project='id')
         res = {_[0] for _ in builder.all()}
         given_comment_entry_ids.update(res)
 
@@ -391,7 +282,7 @@ def export_tree(
         elif given_entity == COMMENT_ENTITY_NAME:
             entry_ids_to_add = given_comment_entry_ids
 
-        builder = QueryBuilder()
+        builder = orm.QueryBuilder()
         builder.append(
             entity_names_to_entities[given_entity],
             filters={'id': {
@@ -406,8 +297,8 @@ def export_tree(
     # TODO (Spyros) To see better! Especially for functional licenses
     # Check the licenses of exported data.
     if allowed_licenses is not None or forbidden_licenses is not None:
-        builder = QueryBuilder()
-        builder.append(Node, project=['id', 'attributes.source.license'], filters={'id': {'in': to_be_exported}})
+        builder = orm.QueryBuilder()
+        builder.append(orm.Node, project=['id', 'attributes.source.license'], filters={'id': {'in': to_be_exported}})
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
         node_licenses = list((a, b) for [a, b] in builder.all() if b is not None)
         check_licences(node_licenses, allowed_licenses, forbidden_licenses)
@@ -454,9 +345,9 @@ def export_tree(
                 except KeyError:
                     export_data[current_entity] = temp_d2
 
-    ######################################
-    # Manually manage links and attributes
-    ######################################
+    #######################################
+    # Manually manage attributes and extras
+    #######################################
     # I use .get because there may be no nodes to export
     all_nodes_pk = list()
     if NODE_ENTITY_NAME in export_data:
@@ -474,228 +365,19 @@ def export_tree(
             )
         )
 
-    ## ATTRIBUTES
+    # ATTRIBUTES and EXTRAS
     if not silent:
-        print('STORING NODE ATTRIBUTES...')
+        print('STORING NODE ATTRIBUTES AND EXTRAS...')
     node_attributes = {}
-
-    # A second QueryBuilder query to get the attributes. See if this can be optimized
-    if all_nodes_pk:
-        all_nodes_query = QueryBuilder()
-        all_nodes_query.append(Node, filters={'id': {'in': all_nodes_pk}}, project=['*'])
-        for res in all_nodes_query.iterall():
-            node_attributes[str(res[0].pk)] = res[0].attributes
-
-    ## EXTRAS
-    if not silent:
-        print('STORING NODE EXTRAS...')
     node_extras = {}
 
-    # A second QueryBuilder query to get the extras. See if this can be optimized
+    # A second QueryBuilder query to get the attributes and extras. See if this can be optimized
     if all_nodes_pk:
-        all_nodes_query = QueryBuilder()
-        all_nodes_query.append(Node, filters={'id': {'in': all_nodes_pk}}, project=['*'])
-        for res in all_nodes_query.iterall():
-            node_extras[str(res[0].pk)] = res[0].extras
-
-    if not silent:
-        print('STORING NODE LINKS...')
-
-    links_uuid_dict = dict()
-    if all_nodes_pk:
-        # INPUT (Data, ProcessNode) - Forward, by the ProcessNode node
-        if input_forward:
-            # INPUT (Data, ProcessNode)
-            links_qb = QueryBuilder()
-            links_qb.append(Data, project=['uuid'], tag='input', filters={'id': {'in': all_nodes_pk}})
-            links_qb.append(
-                ProcessNode,
-                project=['uuid'],
-                tag='output',
-                edge_filters={'type': {
-                    'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]
-                }},
-                edge_project=['label', 'type'],
-                with_incoming='input'
-            )
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type': str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-
-        # INPUT (Data, ProcessNode) - Backward, by the ProcessNode node
-        links_qb = QueryBuilder()
-        links_qb.append(Data, project=['uuid'], tag='input')
-        links_qb.append(
-            ProcessNode,
-            project=['uuid'],
-            tag='output',
-            filters={'id': {
-                'in': all_nodes_pk
-            }},
-            edge_filters={'type': {
-                'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]
-            }},
-            edge_project=['label', 'type'],
-            with_incoming='input'
-        )
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type': str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-
-        # CREATE (ProcessNode, Data) - Forward, by the ProcessNode node
-        links_qb = QueryBuilder()
-        links_qb.append(ProcessNode, project=['uuid'], tag='input', filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(
-            Data,
-            project=['uuid'],
-            tag='output',
-            edge_filters={'type': {
-                '==': LinkType.CREATE.value
-            }},
-            edge_project=['label', 'type'],
-            with_incoming='input'
-        )
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type': str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-
-        # CREATE (ProcessNode, Data) - Backward, by the Data node
-        if create_reversed:
-            links_qb = QueryBuilder()
-            links_qb.append(ProcessNode, project=['uuid'], tag='input', filters={'id': {'in': all_nodes_pk}})
-            links_qb.append(
-                Data,
-                project=['uuid'],
-                tag='output',
-                edge_filters={'type': {
-                    '==': LinkType.CREATE.value
-                }},
-                edge_project=['label', 'type'],
-                with_incoming='input'
-            )
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type': str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-
-        # RETURN (ProcessNode, Data) - Forward, by the ProcessNode node
-        links_qb = QueryBuilder()
-        links_qb.append(ProcessNode, project=['uuid'], tag='input', filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(
-            Data,
-            project=['uuid'],
-            tag='output',
-            edge_filters={'type': {
-                '==': LinkType.RETURN.value
-            }},
-            edge_project=['label', 'type'],
-            with_incoming='input'
-        )
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type': str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-
-        # RETURN (ProcessNode, Data) - Backward, by the Data node
-        if return_reversed:
-            links_qb = QueryBuilder()
-            links_qb.append(ProcessNode, project=['uuid'], tag='input')
-            links_qb.append(
-                Data,
-                project=['uuid'],
-                tag='output',
-                filters={'id': {
-                    'in': all_nodes_pk
-                }},
-                edge_filters={'type': {
-                    '==': LinkType.RETURN.value
-                }},
-                edge_project=['label', 'type'],
-                with_incoming='input'
-            )
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type': str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-
-        # CALL (ProcessNode [caller], ProcessNode [called]) - Forward, by
-        # the ProcessNode node
-        links_qb = QueryBuilder()
-        links_qb.append(ProcessNode, project=['uuid'], tag='input', filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(
-            ProcessNode,
-            project=['uuid'],
-            tag='output',
-            edge_filters={'type': {
-                'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]
-            }},
-            edge_project=['label', 'type'],
-            with_incoming='input'
-        )
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type': str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-
-        # CALL (ProcessNode [caller], ProcessNode [called]) - Backward,
-        # by the ProcessNode [called] node
-        if call_reversed:
-            links_qb = QueryBuilder()
-            links_qb.append(ProcessNode, project=['uuid'], tag='input')
-            links_qb.append(
-                ProcessNode,
-                project=['uuid'],
-                tag='output',
-                filters={'id': {
-                    'in': all_nodes_pk
-                }},
-                edge_filters={'type': {
-                    'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]
-                }},
-                edge_project=['label', 'type'],
-                with_incoming='input'
-            )
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type': str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-
-    links_uuid = list(links_uuid_dict.values())
+        all_nodes_query = orm.QueryBuilder()
+        all_nodes_query.append(orm.Node, filters={'id': {'in': all_nodes_pk}}, project=['id', 'attributes', 'extras'])
+        for res_pk, res_attributes, res_extras in all_nodes_query.iterall():
+            node_attributes[str(res_pk)] = res_attributes
+            node_extras[str(res_pk)] = res_extras
 
     if not silent:
         print('STORING GROUP ELEMENTS...')
@@ -703,7 +385,7 @@ def export_tree(
     # If a group is in the exported date, we export the group/node correlation
     if GROUP_ENTITY_NAME in export_data:
         for curr_group in export_data[GROUP_ENTITY_NAME]:
-            group_uuid_qb = QueryBuilder()
+            group_uuid_qb = orm.QueryBuilder()
             group_uuid_qb.append(
                 entity_names_to_entities[GROUP_ENTITY_NAME],
                 filters={'id': {
@@ -770,8 +452,8 @@ def export_tree(
     # If there are no nodes, there are no repository files to store
     if all_nodes_pk:
         # Large speed increase by not getting the node itself and looping in memory in python, but just getting the uuid
-        uuid_query = QueryBuilder()
-        uuid_query.append(Node, filters={'id': {'in': all_nodes_pk}}, project=['uuid'])
+        uuid_query = orm.QueryBuilder()
+        uuid_query.append(orm.Node, filters={'id': {'in': all_nodes_pk}}, project=['uuid'])
         for res in uuid_query.all():
             uuid = str(res[0])
             sharded_uuid = export_shard_uuid(uuid)
@@ -780,7 +462,7 @@ def export_tree(
             thisnodefolder = nodesubfolder.get_subfolder(sharded_uuid, create=False, reset_limit=True)
 
             # Make sure the node's repository folder was not deleted
-            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)
+            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
             if not src.exists():
                 raise exceptions.ArchiveExportError(
                     'Unable to find the repository folder for Node with UUID={} in the local repository'.format(uuid)
@@ -803,20 +485,8 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
         :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError` if the output file already exists.
     :type overwrite: bool
 
-    :param folder: a temporary folder to build the archive before compression.
-    :type folder: :py:class:`~aiida.common.folders.Folder`
-
-    :param input_forward: Follow forward INPUT links (recursively) when calculating the node set to export.
-    :type input_forward: bool
-
-    :param create_reversed: Follow reversed CREATE links (recursively) when calculating the node set to export.
-    :type create_reversed: bool
-
-    :param return_reversed: Follow reversed RETURN links (recursively) when calculating the node set to export.
-    :type return_reversed: bool
-
-    :param call_reversed: Follow reversed CALL links (recursively) when calculating the node set to export.
-    :type call_reversed: bool
+    :param silent: suppress prints.
+    :type silent: bool
 
     :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
         list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
@@ -836,13 +506,30 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
         Default: True, *include* logs in export.
     :type include_logs: bool
 
-    :param silent: suppress prints.
-    :type silent: bool
+    :param input_calc_forward: Follow forward INPUT_CALC links (recursively) when calculating the node set to export.
+    :type input_calc_forward: bool
+
+    :param create_backward: Follow reversed CREATE links (recursively) when calculating the node set to export.
+    :type create_backward: bool
+
+    :param return_backward: Follow reversed RETURN links (recursively) when calculating the node set to export.
+    :type return_backward: bool
+
+    :param input_work_forward: Follow forward INPUT_WORK links (recursively) when calculating the node set to export.
+    :type input_work_forward: bool
+
+    :param call_calc_backward: Follow reversed CALL_CALC links (recursively) when calculating the node set to export.
+    :type call_calc_backward: bool
+
+    :param call_work_backward: Follow reversed CALL_WORK links (recursively) when calculating the node set to export.
+    :type call_work_backward: bool
 
     :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
         exporting.
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
+    from aiida.common.folders import SandboxFolder
+
     if not overwrite and os.path.exists(outfile):
         raise exceptions.ArchiveExportError("The output file '{}' already exists".format(outfile))
 

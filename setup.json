@@ -74,7 +74,8 @@
       "sqlalchemy-migrate==0.12.0",
       "marshmallow-sqlalchemy==0.16.0",
       "itsdangerous==1.1.0",
-      "python-memcached==1.59"
+      "python-memcached==1.59",
+      "seekpath==1.9.3"
     ],
     "docs": [
       "Sphinx==1.8.4",
@@ -82,6 +83,7 @@
       "docutils==0.14",
       "Jinja2==2.10.1",
       "MarkupSafe==1.1.1",
+      "prompt-toolkit==1.0.16",
       "sphinx-rtd-theme==0.4.3",
       "sphinxcontrib-contentui==0.2.2"
     ],
@@ -93,7 +95,7 @@
       "PyMySQL==0.9.3",
       "PyCifRW==4.2.1; python_version < '3'",
       "PyCifRW==4.4; python_version >= '3'",
-      "seekpath==1.8.4"
+      "seekpath==1.9.3"
     ],
     "notebook": [
       "jupyter==1.0.0",

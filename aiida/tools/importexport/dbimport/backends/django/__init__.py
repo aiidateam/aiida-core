@@ -22,8 +22,8 @@ from itertools import chain
 import six
 
 from aiida.common import timezone, json
-from aiida.common.links import LinkType
 from aiida.common.folders import SandboxFolder, RepositoryFolder
+from aiida.common.links import LinkType, validate_link_label
 from aiida.common.utils import grouper, get_object_from_string
 from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group
@@ -173,28 +173,17 @@ def import_data_dj(
         linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
         group_nodes = set(chain.from_iterable(six.itervalues(data['groups_uuid'])))
 
-        # I preload the nodes, I need to check each of them later, and I also
-        # store them in a reverse table
-        # I break up the query due to SQLite limitations..
-        relevant_db_nodes = {}
-        for group_ in grouper(999, linked_nodes):
-            relevant_db_nodes.update({n.uuid: n for n in models.DbNode.objects.filter(uuid__in=group_)})
-
-        db_nodes_uuid = set(relevant_db_nodes.keys())
-        # ~ dbnode_model = get_class_string(models.DbNode)
-        # ~ print(dbnode_model)
         if NODE_ENTITY_NAME in data['export_data']:
             import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
         else:
             import_nodes_uuid = set()
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
-        # the combined set of db_nodes_uuid and import_nodes_uuid was received from the staff
-        # actually referred to in export_data
-        unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(import_nodes_uuid)
+        # the set of import_nodes_uuid was received from the stuff actually referred to in export_data
+        unknown_nodes = linked_nodes.union(group_nodes) - import_nodes_uuid
 
         if unknown_nodes and not ignore_unknown_nodes:
-            raise exceptions.ImportValidationError(
+            raise exceptions.DanglingLinkError(
                 'The import file refers to {} nodes with unknown UUID, therefore it cannot be imported. Either first '
                 'import the unknown nodes, or export also the parents when exporting. The unknown UUIDs are:\n'
                 ''.format(len(unknown_nodes)) + '\n'.join('* {}'.format(uuid) for uuid in unknown_nodes)
@@ -501,7 +490,7 @@ def import_data_dj(
                 just_saved = {str(key): value for key, value in just_saved_queryset}
 
                 # Now I have the PKs, print the info
-                # Moreover, set the foreign_ids_reverse_mappings
+                # Moreover, add newly created Nodes to foreign_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.items():
                     import_entry_pk = import_new_entry_pks[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
@@ -514,73 +503,130 @@ def import_data_dj(
 
             if not silent:
                 print('STORING NODE LINKS...')
-            ## TODO: check that we are not creating input links of an already
-            ##       existing node...
             import_links = data['links_uuid']
             links_to_store = []
 
-            # Needed for fast checks of existing links
+            # Needed, since QueryBuilder does not yet work for recently saved Nodes
             existing_links_raw = models.DbLink.objects.all().values_list('input', 'output', 'label', 'type')
-            existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
-            existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
+            existing_links = {(l[0], l[1], l[2], l[3]) for l in existing_links_raw}
+            existing_outgoing_unique = {(l[0], l[3]) for l in existing_links_raw}
+            existing_outgoing_unique_pair = {(l[0], l[2], l[3]) for l in existing_links_raw}
+            existing_incoming_unique = {(l[1], l[3]) for l in existing_links_raw}
+            existing_incoming_unique_pair = {(l[1], l[2], l[3]) for l in existing_links_raw}
 
-            # ~ print(foreign_ids_reverse_mappings)
-            dbnode_reverse_mappings = foreign_ids_reverse_mappings[NODE_ENTITY_NAME]
+            calculation_node_types = 'process.calculation.'
+            workflow_node_types = 'process.workflow.'
+            data_node_types = 'data.'
+
+            link_mapping = {
+                LinkType.CALL_CALC: (workflow_node_types, calculation_node_types, 'unique_triple', 'unique'),
+                LinkType.CALL_WORK: (workflow_node_types, workflow_node_types, 'unique_triple', 'unique'),
+                LinkType.CREATE: (calculation_node_types, data_node_types, 'unique_pair', 'unique'),
+                LinkType.INPUT_CALC: (data_node_types, calculation_node_types, 'unique_triple', 'unique_pair'),
+                LinkType.INPUT_WORK: (data_node_types, workflow_node_types, 'unique_triple', 'unique_pair'),
+                LinkType.RETURN: (workflow_node_types, data_node_types, 'unique_pair', 'unique_triple'),
+            }
+
             for link in import_links:
+                # Check for dangling Links within the, supposed, self-consistent archive
                 try:
-                    in_id = dbnode_reverse_mappings[link['input']]
-                    out_id = dbnode_reverse_mappings[link['output']]
+                    in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
+                    out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
                 except KeyError:
                     if ignore_unknown_nodes:
                         continue
                     else:
                         raise exceptions.ImportValidationError(
                             'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, '
-                            'out_uuid={}, label={})'.format(link['input'], link['output'], link['label'])
+                            'out_uuid={}, label={}, type={})'.format(
+                                link['input'], link['output'], link['label'], link['type']
+                            )
                         )
 
+                # Check if link already exists, skip if it does
+                # This is equivalent to an existing triple link (i.e. unique_triple from below)
+                if (in_id, out_id, link['label'], link['type']) in existing_links:
+                    continue
+
+                # Since backend specific Links (DbLink) are not validated upon creation, we will now validate them.
                 try:
-                    existing_label = existing_links_labels[in_id, out_id]
-                    if existing_label != link['label']:
-                        raise exceptions.ImportValidationError(
-                            'Trying to rename an existing link name, stopping (in={}, out={}, old_label={}, '
-                            'new_label={})'.format(in_id, out_id, existing_label, link['label'])
-                        )
-                        # Do nothing, the link is already in place and has
-                        # the correct name
-                except KeyError:
-                    try:
-                        # We try to get the existing input of the link that
-                        # points to "out" and has label link['label'].
-                        # If there is no existing_input, it means that the
-                        # link doesn't exist and it has to be created. If
-                        # it exists, then the only case that we can have more
-                        # than one links with the same name entering a node
-                        # is the case of the RETURN links of workflows/
-                        # workchains. If it is not this case, then it is
-                        # an error.
-                        existing_input = existing_input_links[out_id, link['label']]
+                    validate_link_label(link['label'])
+                except ValueError as why:
+                    raise exceptions.ImportValidationError('Error during Link label validation: {}'.format(why))
 
-                        if link['type'] != LinkType.RETURN:
-                            raise exceptions.ImportValidationError(
-                                'There exists already an input link to node with UUID {} with label {} but it does not'
-                                ' come from the expected input with UUID {} but from a node with UUID {}.'.format(
-                                    link['output'], link['label'], link['input'], existing_input
-                                )
-                            )
-                    except KeyError:
-                        # New link
-                        links_to_store.append(
-                            models.DbLink(
-                                input_id=in_id,
-                                output_id=out_id,
-                                label=link['label'],
-                                type=LinkType(link['type']).value
-                            )
+                source = models.DbNode.objects.get(id=in_id)
+                target = models.DbNode.objects.get(id=out_id)
+
+                if source.uuid == target.uuid:
+                    raise exceptions.ImportValidationError('Cannot add a link to oneself')
+
+                link_type = LinkType(link['type'])
+                type_source, type_target, outdegree, indegree = link_mapping[link_type]
+
+                # Check if source Node is a valid type
+                if not source.node_type.startswith(type_source):
+                    raise exceptions.ImportValidationError(
+                        'Cannot add a {} link from {} to {}'.format(link_type, source.node_type, target.node_type)
+                    )
+
+                # Check if target Node is a valid type
+                if not target.node_type.startswith(type_target):
+                    raise exceptions.ImportValidationError(
+                        'Cannot add a {} link from {} to {}'.format(link_type, source.node_type, target.node_type)
+                    )
+
+                # If the outdegree is `unique` there cannot already be any other outgoing link of that type,
+                # i.e., the source Node may not have a LinkType of current LinkType, going out, existing already.
+                if outdegree == 'unique' and (in_id, link['type']) in existing_outgoing_unique:
+                    raise exceptions.ImportValidationError(
+                        'Node<{}> already has an outgoing {} link'.format(source.uuid, link_type)
+                    )
+
+                # If the outdegree is `unique_pair`,
+                # then the link labels for outgoing links of this type should be unique,
+                # i.e., the source Node may not have a LinkType of current LinkType, going out,
+                # that also has the current Link label, existing already.
+                elif outdegree == 'unique_pair' and \
+                (in_id, link['label'], link['type']) in existing_outgoing_unique_pair:
+                    raise exceptions.ImportValidationError(
+                        'Node<{}> already has an incoming {} link with label "{}"'.format(
+                            target.uuid, link_type, link['label']
                         )
-                        if 'Link' not in ret_dict:
-                            ret_dict['Link'] = {'new': []}
-                        ret_dict['Link']['new'].append((in_id, out_id))
+                    )
+
+                # If the indegree is `unique` there cannot already be any other incoming links of that type,
+                # i.e., the target Node may not have a LinkType of current LinkType, coming in, existing already.
+                if indegree == 'unique' and (out_id, link['type']) in existing_incoming_unique:
+                    raise exceptions.ImportValidationError(
+                        'Node<{}> already has an incoming {} link'.format(target.uuid, link_type)
+                    )
+
+                # If the indegree is `unique_pair`,
+                # then the link labels for incoming links of this type should be unique,
+                # i.e., the target Node may not have a LinkType of current LinkType, coming in
+                # that also has the current Link label, existing already.
+                elif indegree == 'unique_pair' and \
+                (out_id, link['label'], link['type']) in existing_incoming_unique_pair:
+                    raise exceptions.ImportValidationError(
+                        'Node<{}> already has an incoming {} link with label "{}"'.format(
+                            target.uuid, link_type, link['label']
+                        )
+                    )
+
+                # New link
+                links_to_store.append(
+                    models.DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type'])
+                )
+                if 'Link' not in ret_dict:
+                    ret_dict['Link'] = {'new': []}
+                ret_dict['Link']['new'].append((in_id, out_id))
+
+                # Add new Link to sets of existing Links 'input PK', 'output PK', 'label', 'type'
+                existing_links.add((in_id, out_id, link['label'], link['type']))
+                existing_outgoing_unique.add((in_id, link['type']))
+                existing_outgoing_unique_pair.add((in_id, link['label'], link['type']))
+                existing_incoming_unique.add((out_id, link['type']))
+                existing_incoming_unique_pair.add((out_id, link['label'], link['type']))
 
             # Store new links
             if links_to_store:
@@ -598,7 +644,7 @@ def import_data_dj(
             for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
                 group_ = models.DbGroup.objects.get(uuid=groupuuid)
-                nodes_to_store = [dbnode_reverse_mappings[node_uuid] for node_uuid in groupnodes]
+                nodes_to_store = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][node_uuid] for node_uuid in groupnodes]
                 if nodes_to_store:
                     group_.dbnodes.add(*nodes_to_store)
 

@@ -257,10 +257,21 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
     load_profile(config.default_profile_name)
     get_manager().get_backend()
 else:
-    # Back-end settings for readthedocs online documentation.
     from aiida.manage import configuration
+    from aiida.manage.configuration import load_profile, reset_config
+    from aiida.manage.manager import get_manager
+
+    # Set the global variable to trigger shortcut behavior in `aiida.manager.configuration.load_config`
     configuration.IN_RT_DOC_MODE = True
-    configuration.BACKEND = 'django'
+
+    # First need to reset the config, because an empty one will have been loaded when `aiida` module got imported
+    reset_config()
+
+    # Load the profile: this will first load the config, which will be the dummy one for RTD purposes
+    load_profile()
+
+    # Finally load the database backend but without checking the schema because there is no actual database
+    get_manager()._load_backend(schema_check=False)
 
 
 def run_apidoc(_):

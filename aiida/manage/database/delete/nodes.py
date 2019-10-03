@@ -57,10 +57,11 @@ def delete_nodes(
         because they are connected at some point in the upwards provenance. Use with
         care, and it is advisable to never combine it with force.
     :param bool call_work_forward:
-        This will also delete all calculations called by any workflow that is going to
+        This will also delete all workflows called by any workflow that is going to
         be deleted. The same disclaimer as forward_calcs applies here as well.
     :param bool dry_run:
-        Do not delete, a dry run, with statistics printed according to verbosity levels.
+        Just perform a dry run and do not delete anything. Print statistics according
+        to the verbosity level set.
     :param bool force:
         Do not ask for confirmation to delete nodes.
     """

@@ -516,13 +516,13 @@ class TestVerdiDelete(AiidaTestCase):
             for an_option in options:
                 run_options.append(an_option)
             result = self.cli_runner.invoke(cmd_node.node_delete, run_options)
-            self.assertIsNone(result.exception, result.output)
+            self.assertClickResultNoException(result)
 
         # To delete the created node
         run_options = [str(newnodepk)]
         run_options.append('--force')
         result = self.cli_runner.invoke(cmd_node.node_delete, run_options)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
 
         with self.assertRaises(NotExistent):
             orm.load_node(newnodepk)

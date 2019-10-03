@@ -507,7 +507,7 @@ Below is a list with all available subcommands.
     Commands:
       attributes   Show the attributes of one or more nodes.
       comment      Inspect, create and manage node comments.
-      delete       Delete the selected nodes along with some aditional nodes...
+      delete       Delete nodes from the database.
       description  View or set the description of one or more nodes.
       extras       Show the extras of one or more nodes.
       graph        Create visual representations of the provenance graph.

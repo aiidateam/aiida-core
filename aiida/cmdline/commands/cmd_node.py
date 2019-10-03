@@ -289,13 +289,18 @@ class NodeTreePrinter(object):
 @options.VERBOSE()
 @options.DRY_RUN()
 @click.option('--force', is_flag=True, default=False, help='Do not ask for confirmation.')
-@click.option('--create-forward', is_flag=True, default=True, help='Follow create links forwards when deleting.')
-@click.option('--call-calc-forward', is_flag=True, default=False, help='Follow call_calc links forwards when deleting.')
-@click.option('--call-work-forward', is_flag=True, default=False, help='Follow call_work links forwards when deleting.')
+@click.option('--create-forward', is_flag=True, default=True, help='Follow CREATE links forwards when deleting.')
+@click.option('--call-calc-forward', is_flag=True, default=False, help='Follow CALL_CALC links forwards when deleting.')
+@click.option('--call-work-forward', is_flag=True, default=False, help='Follow CALL_WORK links forwards when deleting.')
 @with_dbenv()
 def node_delete(nodes, dry_run, verbose, force, create_forward, call_calc_forward, call_work_forward):  # pylint: disable=too-many-arguments
-    """Delete the selected nodes along with some aditional nodes that are needed to keep
-    a consistent provenance as explained in the concepts section of the documentation."""
+    """
+    Delete nodes from the database.
+
+    Please notice that this will not only delete the nodes explicitly provided
+    via the command line, but will also include the nodes necessary to keep a
+    consistent provenance acording to the rules outlined in the documentation.
+    """
     from aiida.manage.database.delete.nodes import delete_nodes
 
     verbosity = 1

@@ -1848,22 +1848,26 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence = [n.uuid for n in (di1, di2, di3, di4)]
         uuids_check_deleted = [n.uuid for n in (do1, pws, pcs, pwm)]
         with Capturing():
-            delete_nodes([pcs.pk], verbosity=2, force=True, call_calc_forward=True, call_work_forward=True)
+            delete_nodes([pws.pk], verbosity=2, force=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
     def _create_indep2w_graph(self):
         """
         Creates a simple graph with one workflow handling two independent workflows
         (with one simple calculation each). It was designed and used mainly to point
-        out how the deletion behaviour works when setting call_calc_forward to true:
-        in this case if PWA is deleted, the somewhat independent PWB will be deleted
-        as well.
+        out how the deletion behaviour works when setting call_work_forward to true:
+        in this case if PWA is deleted, the somewhat independent PWB will also be
+        deleted. Even worse, if call_calc_forward was also enabled, even the data
+        provenance controlled by PWB (PCB and DOB) would be deleted as well.
+        The graph is composed of the following nodes:
 
         * PW0: master workflow, which calls both PWA and PWB.
         * PWA: it has a single call to PCA, with input DIA and output DOA.
         * PWB: it has a single call to PCB, with input DIB and output DOB.
 
-        This should look something like this::
+        This should look something like this (you can find a nicer version of
+        this graph in the documentation, as it is the same used to explain the
+        consistency rules)::
 
               +-------------------------------------+   +-------------------------------------+
               |     inwork                          |   |                          inwork     |
@@ -1970,7 +1974,7 @@ class TestNodeDeletion(AiidaTestCase):
         """
 
         old_data = orm.Data().store()
-        node_list_id = [old_data.id]
+        node_list = [old_data]
 
         for ii in range(20):
             new_calc = orm.CalculationNode()
@@ -1978,13 +1982,9 @@ class TestNodeDeletion(AiidaTestCase):
             new_calc.add_incoming(old_data, link_type=LinkType.INPUT_CALC, link_label='inp' + str(ii))
             new_calc.store()
             new_data.add_incoming(new_calc, link_type=LinkType.CREATE, link_label='out' + str(ii))
-            node_list_id.append(new_calc.id)
-            node_list_id.append(new_data.id)
-            old_data = orm.load_node(new_data.id)
-
-        node_list = []
-        for node_id in node_list_id:
-            node_list.append(orm.load_node(node_id))
+            node_list.append(new_calc)
+            node_list.append(new_data)
+            old_data = new_data
 
         return node_list
 

@@ -15,8 +15,6 @@ from __future__ import absolute_import
 import unittest
 import mock
 
-from pgtest.pgtest import PGTest
-
 from aiida.manage.external.postgres import Postgres
 
 
@@ -30,6 +28,8 @@ class PostgresTest(unittest.TestCase):
 
     def setUp(self):
         """Set up a temporary database cluster for testing potentially destructive operations"""
+        from pgtest.pgtest import PGTest
+
         self.pg_test = PGTest()
         self.dbuser = 'aiida'
         self.dbpass = 'password'

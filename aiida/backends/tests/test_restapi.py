@@ -156,7 +156,7 @@ class RESTApiTestCase(AiidaTestCase):
         computer_projections = ['id', 'uuid', 'name', 'hostname', 'transport_type', 'scheduler_type']
         computers = orm.QueryBuilder().append(orm.Computer, tag='comp', project=computer_projections).order_by({
             'comp': [{
-                'name': {
+                'id': {
                     'order': 'asc'
                 }
             }]
@@ -661,11 +661,11 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         url parameters: id, limit and offset
         """
-        node_pk = self.get_dummy_data()['computers'][0]['name']
+        node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
             self,
             'computers',
-            '/computers?name>' + str(node_pk) + '&limit=2&offset=3&orderby=name',
+            '/computers?id>' + str(node_pk) + '&limit=2&offset=3&orderby=+id',
             expected_list_ids=[4]
         )
 

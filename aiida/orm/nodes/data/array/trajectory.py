@@ -739,7 +739,7 @@ class TrajectoryData(ArrayData):
 
         try:
             if self.get_attribute('units|positions') in ('bohr', 'atomic'):
-                from aiida.common.constants import bohr_to_ang
+                bohr_to_ang = 0.52917720859
                 positions *= bohr_to_ang
         except KeyError:
             pass

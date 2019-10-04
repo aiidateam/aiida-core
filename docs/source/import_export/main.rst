@@ -64,28 +64,28 @@ Let's have a look at the contents of ``metadata.json``:
       "aiida_version": "1.0.0",
       "export_parameters": {
         "link_follow_rules": {
-          "input_calc_forward': False,
-          "input_calc_backward': True,
-          "create_forward': True,
-          "create_backward': True,
-          "return_forward': True,
-          "return_backward': False,
-          "input_work_forward': False,
-          "input_work_backward': True,
-          "call_calc_forward': True,
-          "call_calc_backward': False,
-          "call_work_forward': True,
-          "call_work_backward': False
+          "input_calc_forward": false,
+          "input_calc_backward": true,
+          "create_forward": true,
+          "create_backward": true,
+          "return_forward": true,
+          "return_backward": false,
+          "input_work_forward": false,
+          "input_work_backward": true,
+          "call_calc_forward": true,
+          "call_calc_backward": false,
+          "call_work_forward": true,
+          "call_work_backward": false
         },
         "original_entities": {
           "Node": ["1024e35e-166b-4104-95f6-c1706df4ce15"]
         },
         "license_info": {
-          "allowed_licenses": None,
+          "allowed_licenses": null,
           "forbidden_licenses": "Function valid_licenses was used to check for forbidden licenses"
         },
-        "include_comments": True,
-        "include_logs": False
+        "include_comments": true,
+        "include_logs": false
       },
       "unique_identifiers": {
         "Computer": "uuid",

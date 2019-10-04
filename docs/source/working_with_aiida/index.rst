@@ -2,10 +2,15 @@
 Command line interface
 ======================
 
-The main way of interacting with AiiDA is through a command line interface tool called ``verdi``.
-Below you will find an overview of all the commands that are available with a link to a more detailed explanation of their usage and available parameters.
-But before you dive in, take a few minutes to read the :ref:`general concepts<cli_concepts>` that apply to the entire interface of ``verdi``.
-This will make understanding and using ``verdi`` a lot easier!
+One way of interacting with AiiDA is through the ``verdi`` command line interface (CLI).
+
+Before checking out the individual commands below, start with a brief look at the :ref:`general concepts<cli_concepts>` that apply across all commands.
+
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+
+    ../verdi/verdi_user_guide.rst
 
 .. _verdi_overview:
 
@@ -38,10 +43,6 @@ This will make understanding and using ``verdi`` a lot easier!
 
 .. END_OF_VERDI_OVERVIEW_MARKER
 
-.. toctree::
-    :maxdepth: 4
-
-    ../verdi/verdi_user_guide.rst
 
 
 ==========
@@ -58,11 +59,8 @@ Python API
 Scripting
 =========
 
-While many common functionalities are provided by either command-line tools
-(via ``verdi``) or the web interface, for fine tuning (or automatization)
-it is useful to directly access the python objects and call their methods.
-This is possible in two ways, either via an interactive shell, or writing and
-running a script. Both methods are described below.
+While the ``verdi`` CLI provides shortcuts for many common tasks, the AiiDA python API provides full access to the underlying AiiDA python objects and their methods.
+This is possible via the interactive ``verdi shell`` and via python scripts:
 
 .. toctree::
     :maxdepth: 4
@@ -173,6 +171,20 @@ Cookbook
 
     cookbook.rst
 
+=================
+Provenance Graphs
+=================
+.. toctree::
+    :maxdepth: 2
+
+    visualising_graphs/visualising_graphs
 
 
+==============
+Deleting Nodes
+==============
+.. toctree::
+    :maxdepth: 2
+
+    deleting_nodes.rst
 

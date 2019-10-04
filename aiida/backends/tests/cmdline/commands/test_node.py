@@ -477,3 +477,52 @@ class TestVerdiRehash(AiidaTestCase):
         options = ['-f', '-e', 'aiida.data.structure']
         result = self.cli_runner.invoke(cmd_node.rehash, options)
         self.assertIsNotNone(result.exception)
+
+
+class TestVerdiDelete(AiidaTestCase):
+    """
+    Tests for the ``verdi node delete`` command.
+    These test do not test the delete functionality, just that the command internal
+    logic does not create any problems before the call to the function.
+    For the actual functionality, see:
+    * source: manage.database.delete.nodes.py
+    * test: backends.tests.test_nodes.py
+    """
+
+    def setUp(self):
+        self.cli_runner = CliRunner()
+
+    def test_basics(self):
+        """
+        Testing the correct translation for the `--force` and `--verbose` options.
+        This just checks that the calls do not except and that in all cases with the
+        force flag there is no messages.
+        """
+        from aiida.common.exceptions import NotExistent
+
+        newnode = orm.Data().store()
+        newnodepk = newnode.pk
+        options_list = []
+        options_list.append(['--create-forward'])
+        options_list.append(['--call-calc-forward'])
+        options_list.append(['--call-work-forward'])
+        options_list.append(['--force'])
+        options_list.append(['--verbose'])
+        options_list.append(['--verbose', '--force'])
+
+        for options in options_list:
+            run_options = [str(newnodepk)]
+            run_options.append('--dry-run')
+            for an_option in options:
+                run_options.append(an_option)
+            result = self.cli_runner.invoke(cmd_node.node_delete, run_options)
+            self.assertClickResultNoException(result)
+
+        # To delete the created node
+        run_options = [str(newnodepk)]
+        run_options.append('--force')
+        result = self.cli_runner.invoke(cmd_node.node_delete, run_options)
+        self.assertClickResultNoException(result)
+
+        with self.assertRaises(NotExistent):
+            orm.load_node(newnodepk)

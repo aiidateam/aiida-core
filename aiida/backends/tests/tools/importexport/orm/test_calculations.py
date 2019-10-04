@@ -58,7 +58,7 @@ class TestCalculations(AiidaTestCase):
         not_wanted_uuids = [v.uuid for v in (b, c, d)]
         # At this point we export the generated data
         filename1 = os.path.join(temp_dir, 'export1.tar.gz')
-        export([res], outfile=filename1, silent=True, return_reversed=True)
+        export([res], outfile=filename1, silent=True, return_backward=True)
         self.clean_db()
         self.insert_data()
         import_data(filename1, silent=True)

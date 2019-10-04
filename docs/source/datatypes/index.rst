@@ -25,7 +25,7 @@ the methods provided, how to access them, and so on.
 
 If you need to work with some specific type of data, first check the list of data types/plugins
 below, and if you don't find what you need, give a look to
-:ref:`how to write a new data plugin <DevelopDataPluginTutorialFloat>`.
+:ref:`how to write a new data plugin <working_data_creating_new_types>`.
 
 Base types
 ++++++++++
@@ -70,7 +70,6 @@ StructureData
 * **What is stored in the file repository**: ---
 * **Additional functionality**:
 
-  * :ref:`Examples of usage<structure_tutorial>`
   * :ref:`Export to a number of formats (xsf, cif, ...)<ExportDataNodes>`
 
 UpfData

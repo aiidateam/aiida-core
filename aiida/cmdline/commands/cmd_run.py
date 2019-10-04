@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import contextlib
-import os
 import sys
 
 import click
@@ -109,8 +108,6 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
             # Must add also argv[0]
             new_argv = [scriptname] + list(varargs)
             with update_environment(new_argv=new_argv):
-                # Add local folder to sys.path
-                sys.path.insert(0, os.path.abspath(os.curdir))
                 # Compile the script for execution and pass it to exec with the globals_dict
                 exec(compile(handle.read(), scriptname, 'exec', dont_inherit=True), globals_dict)  # yapf: disable # pylint: disable=exec-used
         except SystemExit:  # pylint: disable=try-except-raise

@@ -15,6 +15,7 @@
     "Programming Language :: Python :: 2.7",
     "Programming Language :: Python :: 3.5",
     "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
     "Topic :: Scientific/Engineering"
   ],
   "install_requires": [
@@ -73,7 +74,8 @@
       "sqlalchemy-migrate==0.12.0",
       "marshmallow-sqlalchemy==0.16.0",
       "itsdangerous==1.1.0",
-      "python-memcached==1.59"
+      "python-memcached==1.59",
+      "seekpath==1.9.3"
     ],
     "docs": [
       "Sphinx==1.8.4",
@@ -92,24 +94,26 @@
       "PyMySQL==0.9.3",
       "PyCifRW==4.2.1; python_version < '3'",
       "PyCifRW==4.4; python_version >= '3'",
-      "seekpath==1.8.4"
+      "seekpath==1.9.3"
     ],
     "notebook": [
-      "jupyter==1.0.0"
+      "jupyter==1.0.0",
+      "notebook<6"
     ],
     "testing": [
       "unittest2==1.1.0; python_version<'3.5'",
-      "pgtest==1.2.0",
+      "pgtest==1.3.1",
       "pg8000<1.13.0",
       "sqlalchemy-diff==0.1.3",
       "coverage==4.5.2",
       "codecov==2.0.15",
       "futures; python_version=='2.7'",
       "pytest==4.3.0",
-      "pytest-cov==2.6.1",
       "aiida-export-migration-tests==0.7.0"
     ],
     "dev_precommit": [
+      "astroid==1.6.6; python_version<'3.0'",
+      "astroid==2.2.5; python_version>='3.0'",
       "pre-commit==1.17.0",
       "yapf==0.28.0",
       "prospector==1.1.7",

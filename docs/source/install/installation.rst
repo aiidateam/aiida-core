@@ -99,6 +99,10 @@ In order to install any of these package groups, simply append them as a comma s
 
     sudo apt-get install libffi-dev libkrb5-dev
 
+AiiDA uses the `reentry <https://pypi.org/project/reentry/>`_ package to keep a fast cache of entry points for a snappy ``verdi`` cli.
+After installing AiiDA packages, always remember to update the reentry cache using::
+
+    reentry scan
 
 .. _setup_aiida:
 

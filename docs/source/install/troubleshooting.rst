@@ -21,7 +21,7 @@ If all services are up and running and you are still experiencing problems, cons
 Installation phase
 ------------------
 
-* [**numpy dependency**] On a clean Ubuntu 16.04 install the pip install command ``pip install -e aiida-core``
+* [**numpy dependency**] On a clean Ubuntu 16.04 install the pip install command ``pip install -e aiida-core`` or ``pip install aiida``
   may fail due to a problem with dependencies on the ``numpy`` package. In this case
   you may be presented with a message like the following::
 
@@ -34,7 +34,11 @@ Installation phase
 
   followed by executing the original install command once more::
 
-    pip install -e .
+    pip install -e aiida-core
+
+  or::
+
+    pip install aiida
 
   This should fix the dependency error.
 

@@ -78,11 +78,11 @@ Create and activate a virtual environment:
     virtualenv ~/.virtualenvs/aiida
     source ~/.virtualenvs/aiida/bin/activate
 
-Install the ``aiida-core`` python package:
+Install the ``aiida`` python package:
 
 .. code-block:: bash
 
-    pip install --pre aiida-core
+    pip install aiida
     reentry scan
 
 Set up your AiiDA profile:

@@ -56,7 +56,7 @@ Install the ``aiida`` python package from `PyPI`_ using:
 
 .. code-block:: bash
 
-    pip install --pre aiida
+    pip install aiida
 
 .. note::
     If you are installing AiiDA in your system environment,
@@ -70,12 +70,14 @@ This will install the ``aiida-core`` package along with the four base plugins:
     * ``aiida-nwchem``
     * ``aiida-quantumespresso``
 
-Alternatively, you can create a directory where to clone the AiiDA source code and install AiiDA from source::
+Alternatively, you can create a directory where to clone the AiiDA Core source code and install AiiDA from source::
 
-    mkdir <your_directory>
-    cd <your_directory>
-    git clone https://github.com/aiidateam/aiida-core
-    pip install -e aiida-core
+    (aiida) $ mkdir <your_directory>
+    (aiida) $ cd <your_directory>
+    (aiida) $ git clone https://github.com/aiidateam/aiida-core
+    (aiida) $ pip install -e aiida-core
+
+Note, this will not install the base plugins mentioned above.
 
 
 .. _install_optional_dependencies:

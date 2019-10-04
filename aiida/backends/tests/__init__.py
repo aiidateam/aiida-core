@@ -38,8 +38,6 @@ DB_TEST_LIST = {
     },
     # Must be always defined (in the worst case, an empty dict)
     'common': {
-        'backup_script': ['aiida.backends.tests.test_backup_script'],
-        'backup_setup_script': ['aiida.backends.tests.test_backup_setup_script'],
         'base_dataclasses': ['aiida.backends.tests.test_base_dataclasses'],
         'calculation_node': ['aiida.backends.tests.test_calculation_node'],
         'cmdline.commands.calcjob': ['aiida.backends.tests.cmdline.commands.test_calcjob'],
@@ -107,6 +105,8 @@ DB_TEST_LIST = {
         'engine.work_chain': ['aiida.backends.tests.engine.test_work_chain'],
         'engine.workfunctions': ['aiida.backends.tests.engine.test_workfunctions'],
         'generic': ['aiida.backends.tests.test_generic'],
+        'manage.backup.backup_script': ['aiida.backends.tests.manage.backup.test_backup_script'],
+        'manage.backup.backup_setup_script': ['aiida.backends.tests.manage.backup.test_backup_setup_script'],
         'manage.caching.': ['aiida.backends.tests.manage.test_caching'],
         'manage.configuration.config.': ['aiida.backends.tests.manage.configuration.test_config'],
         'manage.configuration.migrations.': ['aiida.backends.tests.manage.configuration.migrations.test_migrations'],

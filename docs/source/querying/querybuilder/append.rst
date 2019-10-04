@@ -305,7 +305,7 @@ Some more examples::
     qb = QueryBuilder()
     qb.append(CalcJobNode, tag='calc')
     qb.append(StructureData, with_outgoing='calc')
-    qb.append(DictData, with_outgoing='calc')
+    qb.append(Dict, with_outgoing='calc')
 
     # Filtering the remote data instance by the computer it ran on (name)
     qb = QueryBuilder()
@@ -700,15 +700,14 @@ Working with edges
 ++++++++++++++++++
 
 Another feature that had to be added are projections, filters and labels on
-the edges of the graphs, that is to say links or paths between nodes.
-It works the same way, just that the keyword is preceeded by '*link*'.
+the edges of the graphs, that is to say, links or paths between nodes.
+It works the same way, just that the keyword is preceded by '*edge*'.
 Let's take the above example, but put a filter on the label of the link and project the link label::
 
     qb = QueryBuilder()
     qb.append(
             CalcJobNode,
-            filters={'ctime':{'>': now - timedelta(days=3)}},
-            project={'id':{'func':'count'}}
+            project='id'
         )
     qb.append(
             Dict,
@@ -749,7 +748,6 @@ You can also limit the number of rows returned with the method *limit*::
     qb = QueryBuilder()
     qb.append(
         CalcJobNode,
-        filters={'ctime':{'>': now - timedelta(days=3)}},
         project=['*']
     )
     qb.append(

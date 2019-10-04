@@ -16,7 +16,7 @@ Before starting to write a query, it helps to:
     Nodes of an AiiDA graph (vertices) are connected with links (edges).
     A *Node* can be either input or output of another *Node*, but also an
     ancestor or a descendant.
-*   know what how you want to filter the result.
+*   know how you want to filter the result.
 
 Once you are clear about what you want and how you can get it,
 the QueryBuilder will build an SQL-query for you.

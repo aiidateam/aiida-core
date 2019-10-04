@@ -750,7 +750,6 @@ class QueryBuilder(object):
                         spec_to_function_map.append(key)
             joining_keyword = kwargs.pop('joining_keyword', None)
             joining_value = kwargs.pop('joining_value', None)
-
             for key, val in kwargs.items():
                 if key not in spec_to_function_map:
                     raise InputValidationError(
@@ -765,27 +764,28 @@ class QueryBuilder(object):
                                                ''.format(joining_keyword, key))
                 else:
                     joining_keyword = key
-                    joining_value = self._get_tag_from_specification(val)
+                    if joining_keyword == 'direction':
+                        if not isinstance(val, int):
+                            raise InputValidationError('direction=n expects n to be an integer')
+                        try:
+                            if val < 0:
+                                joining_keyword = 'with_outgoing'
+                            elif val > 0:
+                                joining_keyword = 'with_incoming'
+                            else:
+                                raise InputValidationError('direction=0 is not valid')
+                            joining_value = self._path[-abs(val)]['tag']
+                        except IndexError as exc:
+                            raise InputValidationError('You have specified a non-existent entity with\n'
+                                                       'direction={}\n'
+                                                       '{}\n'.format(joining_value, exc))
+                    else:
+                        joining_value = self._get_tag_from_specification(val)
             # the default is that this vertice is 'with_incoming' as the previous one
             if joining_keyword is None and len(self._path) > 0:
                 joining_keyword = 'with_incoming'
                 joining_value = self._path[-1]['tag']
 
-            if joining_keyword == 'direction':
-                if not isinstance(joining_value, int):
-                    raise InputValidationError('direction=n expects n to be an integer')
-                try:
-                    if joining_value < 0:
-                        joining_keyword = 'with_outgoing'
-                    elif joining_value > 0:
-                        joining_keyword = 'with_incoming'
-                    else:
-                        raise InputValidationError('direction=0 is not valid')
-                    joining_value = self._path[-abs(joining_value)]['tag']
-                except IndexError as exc:
-                    raise InputValidationError('You have specified a non-existent entity with\n'
-                                               'direction={}\n'
-                                               '{}\n'.format(joining_value, exc))
 
         except Exception as e:
             if self._debug:

@@ -663,10 +663,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
-            self,
-            'computers',
-            '/computers?id>' + str(node_pk) + '&limit=2&offset=3&orderby=+id',
-            expected_list_ids=[4]
+            self, 'computers', '/computers?id>' + str(node_pk) + '&limit=2&offset=3&orderby=+id', expected_list_ids=[4]
         )
 
     def test_computers_mixed2(self):

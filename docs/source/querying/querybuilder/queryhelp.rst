@@ -10,7 +10,7 @@ JSON or in the database and use it over and over.
 Using the queryhelp, you have to specify the path, the filter and projections beforehand and
 instantiate the QueryBuilder with that dictionary::
 
-    qb = Querybuilder(**queryhelp)
+    qb = QueryBuilder(**queryhelp)
 
 What do you have to specify:
 
@@ -18,7 +18,7 @@ What do you have to specify:
     Here, the user specifies the path along which to join tables as a list,
     each list item being a vertice in your path.
     You can define the vertice in two ways:
-    The first is to give the Aiida-class::
+    The first is to give the AiiDA-class::
 
         queryhelp = {
             'path':[Data]
@@ -31,20 +31,6 @@ What do you have to specify:
                 {'cls': Data}
             ]
         }
-
-    Another way is to give the polymorphic identity of this class, in our case stored in type::
-
-        queryhelp = {
-            'path':[
-                {'type':"data."}
-            ]
-        }
-
-    .. note::
-        In Aiida, polymorphism is not strictly enforced, but
-        done with *type* specification.
-        Type-discrimination when querying is achieved by attaching a filter on the
-        type every time a subclass of Node is given.
 
     Each node has to have a unique tag.
     If not given, the tag is chosen to be equal to the name of the class.
@@ -101,13 +87,17 @@ What do you have to specify:
         value of 2 to the table defined 2 indices above.
         The two following queryhelps yield the same  query::
 
+
+            from aiida.orm import TrajectoryData
+            from aiida_quantumespresso.calculations.pw import PwCalculation
+            from aiida.orm import Dict
             qh1 = {
                 'path':[
                     {
                         'cls':PwCalculation
                     },
                     {
-                        'cls':Trajectory
+                        'cls':TrajectoryData
                     },
                     {
                         'cls':Dict,
@@ -124,7 +114,7 @@ What do you have to specify:
                         'cls':PwCalculation
                     },
                     {
-                        'cls':Trajectory
+                        'cls':TrajectoryData
                     },
                     {
                         'cls':Dict,
@@ -139,16 +129,16 @@ What do you have to specify:
                 'path':[
                     Dict,
                     PwCalculation,
-                    Trajectory,
+                    TrajectoryData,
                 ]
             }
 
 *   Project: Determing which columns the query will return::
 
         queryhelp = {
-            'path':[Relax],
+            'path':[PwCalculation],
             'project':{
-                Relax:['state', 'id'],
+                PwCalculation:['user_id', 'id'],
             }
         }
 
@@ -157,15 +147,15 @@ What do you have to specify:
 
         queryhelp = {
             'path':[
-                Relax,
+                PwCalculation,
                 StructureData,
             ],
             'project':{
-                Relax:['state', 'id'],
+                PwCalculation:['state', 'id'],
             }
         }
 
-    Returns the state and the id of all instances of Relax
+    Returns the state and the id of all instances of ``PwCalculation``
     where a structures is linked as output of a relax-calculation.
     The strings that you pass have to be name of the columns.
     If you pass a star ('*'),
@@ -174,136 +164,24 @@ What do you have to specify:
 *   Filters:
     What if you want not every structure,
     but only the ones that were added
-    after a certain time `t` and have an id higher than 50::
+    after a certain time (say last 4 days) and have an id higher than 50::
+
+        from aiida.common import timezone
+        from datetime import timedelta
 
         queryhelp = {
             'path':[
-                {'cls':Relax}, # Relaxation with structure as output
+                {'cls':PwCalculation}, # PwCalculation with structure as output
                 {'cls':StructureData}
             ],
             'filters':{
                 StructureData:{
-                    'time':{'>': t},
+                    'ctime':{'>':  timezone.now() - timedelta(days=4)},
                     'id':{'>': 50}
                 }
             }
         }
 
-.. ~     With the key 'filters', we instruct the querybuilder to
-.. ~     build filters and attach them to the query.
-.. ~     Filters are passed as dictionaries.
-.. ~     In each key-value pair, the key is the column-name
-.. ~     (as a string) to filter on.
-.. ~     The value is another dictionary,
-.. ~     where the operator is a key and the value is the
-.. ~     value to check against.
-.. ~
-.. ~     .. note:: This follows (in some way) the MongoDB-syntax.
-.. ~
-.. ~     But what if the user wants to filter
-.. ~     by key-value pairs defined inside the structure?
-.. ~     In that case,
-.. ~     simply specify the path with the dot (`.`) being a separator.
-.. ~     If you want to get to the volume of the structure,
-.. ~     stored in the attributes, you can specify::
-.. ~
-.. ~         queryhelp = {
-.. ~             'path':[{'cls':StructureData}],  # or 'path':[StructureData]
-.. ~             'filters':{
-.. ~                 'attributes.volume': {'<':6.0}
-.. ~             }
-.. ~         }
-.. ~
-.. ~     The above queryhelp would build a query
-.. ~     that returns all structures with a volume below 6.0.
-.. ~
-.. ~     .. note::
-.. ~         A big advantage of SQLAlchemy is that it support
-.. ~         the storage of jsons.
-.. ~         It is convenient to dump the structure-data
-.. ~         into a json and store that as a column.
-.. ~         The querybuilder needs to be told how to query the json.
-.. ~
-.. ~ Let's get to a really complex use-case,
-.. ~ where we need to reconstruct a workflow:
-.. ~
-.. ~ #.  The MD-simulation with the parameters and structure used as input
-.. ~ #.  The trajectory that was returned as an output
-.. ~ #.  We are only interested in calculations with a convergence threshold
-.. ~     smaller than 1e-5 and cutoff larger 60 (stored in the parameters)
-.. ~ #.  In the parameters, we only want to load the temperature
-.. ~ #.  The MD simulation has to be in state "parsing" or "finished"
-.. ~ #.  We want the length of the trajectory
-.. ~ #.  We filter for structures that:
-.. ~
-.. ~     *   Have any lattice vector smaller than 3.0 or between 5.0 and 7.0
-.. ~     *   Contain Nitrogen
-.. ~     *   Have 4 atoms
-.. ~     *   Have less than 3 types of atoms (elements)
-.. ~
-.. ~ This would be the queryhelp::
-.. ~
-.. ~     queryhelp =  {
-.. ~         'path':[
-.. ~             Dict,
-.. ~             {'cls':PwCalculation, 'tag':'md'},
-.. ~             {'cls':Trajectory},
-.. ~             {'cls':StructureData, 'with_outgoing':'md'},
-.. ~             {'cls':Relax, 'with_outgoing':StructureData},
-.. ~             {'cls':StructureData,'tag':'struc2','with_outgoing':Relax}
-.. ~         ],
-.. ~         'project':{
-.. ~             Dict:{'attributes.IONS.tempw':{'cast':'f'}},
-.. ~             'md':['id', 'time'],
-.. ~             Trajectory:['id', 'attributes.length'],
-.. ~             StructureData:'*',
-.. ~             'struc2':['*']    # equivalent, the two!
-.. ~         },
-.. ~         'filters':{
-.. ~             Dict:{
-.. ~                 'attributes.SYSTEM.econv':{'<':1e-5},
-.. ~                 'attributes.SYSTEM.ecut':{'>':60},
-.. ~             },
-.. ~             'md':{
-.. ~                 'state':{'in':['PARSING', 'FINISHED']},
-.. ~             },
-.. ~             StructureData:{
-.. ~                 'or':[
-.. ~                     {
-.. ~                         'attributes.cell.0.0':{
-.. ~                             'or':[
-.. ~                                 {'<':3.0},
-.. ~                                 {'>':5., '<':7.}
-.. ~                             ]
-.. ~                         },
-.. ~                     },
-.. ~                     {
-.. ~                         'attributes.cell.1.1':{
-.. ~                             'or':[
-.. ~                                 {'<':3.0},
-.. ~                                 {'>':5., '<':7.}
-.. ~                             ]
-.. ~                         },
-.. ~                     },
-.. ~                     {
-.. ~                         'attributes.cell.2.2':{
-.. ~                             'or':[
-.. ~                                 {'<':3.0},
-.. ~                                 {'>':5., '<':7.}
-.. ~                             ]
-.. ~                         },
-.. ~                     },
-.. ~                 ],
-.. ~                 'attributes.sites':{
-.. ~                     'of_length':4
-.. ~                 },
-.. ~                 'attributes.kinds':{
-.. ~                     'shorter':3,
-.. ~                     'has_key':'N',
-.. ~                 }
-.. ~             }
-.. ~         }
-.. ~     }
 
 
 If you want to include filters and projections on links between nodes, you
@@ -312,78 +190,53 @@ Let's take an example that we had and add a few filters on the link::
 
     queryhelp = {
         'path':[
-            {'cls':Relax, 'tag':'relax'}, # Relaxation with structure as output
+            {'cls':PwCalculation, 'tag':'relax'}, # PwCalculation with structure as output
             {'cls':StructureData, 'tag':'structure'}
         ],
         'filters':{
             'structure':{
-                'time':{'>': t},
                 'id':{'>': 50}
             },
             'relax--structure':{
-                'time':{'>': t},
                 'label':{'like':'output_%'},
             }
         },
         'project':{
             'relax--structure':['label'],
             'structure':['label'],
-            'relax':['label', 'state'],
+            'relax':['label', 'uuid'],
         }
     }
+
 
 Notice that the tag for the link, by default, is the tag of the two connecting
-nodes delimited by two dashes '--'.
-The order does not matter, the following queryhelp would results in the same query::
+nodes delimited by two dashes '--' and the order DOES matter.
 
-    queryhelp = {
-        'path':[
-            {'cls':Relax, 'tag':'relax'},         # Relaxation with structure as output
-            {'cls':StructureData, 'tag':'structure'}
-        ],
-        'filters':{
-            'structure':{
-                'time':{'>': t},
-                'id':{'>': 50}
-            },
-            'relax--structure':{
-                'time':{'>': t},
-                'label':{'like':'output_%'},
-            }
-        },
-        'project':{
-            'relax--structure':['label'],
-            'structure':['label'],
-            'relax':['label', 'state'],
-        }
-    }
 
 If you dislike that way to tag the link, you can choose the tag for the edge in the
 path when definining the entity to join using ``edge_tag``::
 
     queryhelp = {
         'path':[
-            {'cls':Relax, 'label':'relax'},         # Relaxation with structure as output
+            {'cls':PwCalculation, 'tag':'relax'},         # Relaxation with structure as output
             {
                 'cls':StructureData,
-                'label':'structure',
+                'tag':'structure',
                 'edge_tag':'ThisIsMyLinkTag'     # Definining the link tag
             }
         ],
         'filters':{
             'structure':{
-                'time':{'>': t},
                 'id':{'>': 50}
             },
             'ThisIsMyLinkTag':{                  # Using this link tag
-                'time':{'>': t},
                 'label':{'like':'output_%'},
             }
         },
         'project':{
             'ThisIsMyLinkTag':['label'],
             'structure':['label'],
-            'relax':['label', 'state'],
+            'relax':['label', 'uuid'],
         }
     }
 

@@ -12,8 +12,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import pytest
-
 from aiida.backends.testbase import AiidaTestCase
 from aiida.plugins import DbImporterFactory
 
@@ -38,6 +36,8 @@ class TestMaterialsProject(AiidaTestCase):
         Test if Materials Project rejects an invalid API key and that we catch the error.
         Please enable the test in the profile configurator.
         """
+        import pytest
+
         importer_class = DbImporterFactory('materialsproject')
         importer_parameters = {'api_key': 'thisisawrongkey'}
 

@@ -32,7 +32,7 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
-    check_licences, fill_in_query, serialize_dict, check_process_nodes_sealed, retrieve_linked_nodes
+    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, retrieve_linked_nodes
 )
 
 from .zip import ZipFolder
@@ -170,10 +170,14 @@ def export_tree(
         exporting.
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
+    from collections import defaultdict
+
     if not silent:
         print('STARTING EXPORT...')
 
     all_fields_info, unique_identifiers = get_all_fields_info()
+
+    original_entities = defaultdict(list)
 
     # The set that contains the nodes ids of the nodes that should be exported
     given_data_entry_ids = set()
@@ -195,16 +199,20 @@ def export_tree(
             given_group_entry_ids.add(entry.id)
             given_groups.add(entry)
         elif issubclass(entry.__class__, orm.Node):
+            original_entities[NODE_ENTITY_NAME].append(entry.uuid)
             if issubclass(entry.__class__, orm.Data):
                 given_data_entry_ids.add(entry.pk)
             elif issubclass(entry.__class__, orm.ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
         elif issubclass(entry.__class__, orm.Computer):
+            original_entities[COMPUTER_ENTITY_NAME].append(entry.uuid)
             given_computer_entry_ids.add(entry.pk)
         else:
             raise exceptions.ArchiveExportError(
                 'I was given {} ({}), which is not a Node, Computer, or Group instance'.format(entry, type(entry))
             )
+
+    original_entities[GROUP_ENTITY_NAME] = [_.uuid for _ in given_groups]
 
     # Add all the nodes contained within the specified groups
     for group in given_groups:
@@ -221,7 +229,9 @@ def export_tree(
     if not silent:
         print('RETRIEVING LINKED NODES AND STORING LINKS...')
 
-    to_be_exported, links_uuid = retrieve_linked_nodes(given_calculation_entry_ids, given_data_entry_ids, **kwargs)
+    to_be_exported, links_uuid, link_follow_rules = retrieve_linked_nodes(
+        given_calculation_entry_ids, given_data_entry_ids, **kwargs
+    )
 
     ## Universal "entities" attributed to all types of nodes
     # Logs
@@ -301,7 +311,7 @@ def export_tree(
         builder.append(orm.Node, project=['id', 'attributes.source.license'], filters={'id': {'in': to_be_exported}})
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
         node_licenses = list((a, b) for [a, b] in builder.all() if b is not None)
-        check_licences(node_licenses, allowed_licenses, forbidden_licenses)
+        check_licenses(node_licenses, allowed_licenses, forbidden_licenses)
 
     ############################################################
     ##### Start automatic recursive export data generation #####
@@ -425,10 +435,10 @@ def export_tree(
         'node_extras': node_extras,
         'export_data': export_data,
         'links_uuid': links_uuid,
-        'groups_uuid': groups_uuid,
+        'groups_uuid': groups_uuid
     }
 
-    # N.B. We're really calling zipfolder.open
+    # N.B. We're really calling zipfolder.open (if exporting a zipfile)
     with folder.open('data.json', mode='w') as fhandle:
         # fhandle.write(json.dumps(data, cls=UUIDEncoder))
         fhandle.write(json.dumps(data))
@@ -436,11 +446,24 @@ def export_tree(
     # Add proper signature to unique identifiers & all_fields_info
     # Ignore if a key doesn't exist in any of the two dictionaries
 
+    license_info = {'allowed_licenses': allowed_licenses, 'forbidden_licenses': forbidden_licenses}
+    for name, value in license_info.items():
+        if value and not isinstance(value, list):
+            # The value is a function (can either be a function, a list or None)
+            license_info[name] = 'Function {} was used to check for {}'.format(value, name.replace('_', ' '))
+
     metadata = {
         'aiida_version': get_version(),
         'export_version': EXPORT_VERSION,
         'all_fields_info': all_fields_info,
         'unique_identifiers': unique_identifiers,
+        'export_parameters': {
+            'link_follow_rules': link_follow_rules,
+            'original_entities': original_entities,
+            'license_info': license_info,
+            'include_comments': include_comments,
+            'include_logs': include_logs
+        }
     }
 
     with folder.open('metadata.json', 'w') as fhandle:

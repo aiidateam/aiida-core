@@ -123,7 +123,6 @@
         aiida/orm/nodes/data/orbital.py|
         aiida/orm/nodes/data/remote.py|
         aiida/orm/nodes/data/structure.py|
-        aiida/orm/nodes/data/upf.py|
         aiida/orm/utils/remote.py|
         aiida/parsers/plugins/arithmetic/add.py|
         aiida/parsers/plugins/templatereplacer/doubler.py|

@@ -18,6 +18,9 @@ case "$TEST_TYPE" in
         ;;
     tests)
 
+        # Test the loading time of `verdi` to ensure the database environment is not loaded
+        "${CI_DIR}/test_verdi_load_time.sh"
+
         # Add the .ci folder to the python path so workchains within it can be found by the daemon
         export PYTHONPATH="${PYTHONPATH}:${CI_DIR}"
 

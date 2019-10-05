@@ -15,13 +15,11 @@ from __future__ import print_function
 import click
 
 from aiida.cmdline.utils import echo
+from aiida.common import InternalError
 
 
-def delete_nodes(
-    pks, verbosity=0, dry_run=False, force=False, create_forward=True, call_calc_forward=False, call_work_forward=False
-):
-    """
-    Delete nodes by a list of pks.
+def delete_nodes(pks, verbosity=0, dry_run=False, force=False, **kwargs):
+    """Delete nodes by a list of pks.
 
     This command will delete not only the specified nodes, but also the ones that are
     linked to these and should be also deleted in order to keep a consistent provenance
@@ -47,18 +45,9 @@ def delete_nodes(
     :param int verbosity: 0 prints nothing,
                           1 prints just sums and total,
                           2 prints individual nodes.
-    :param bool create_forward:
-        This will delete all output data created by any deleted calculation.
-    :param bool call_calc_forward:
-        This will also delete all calculations called by any workflow that is going to
-        be deleted. Note that when you delete a workflow, also all parent workflows are
-        deleted (recursively). Therefore, setting this flag to True may delete
-        calculations that are 'unrelated' to what has been chosen to be deleted, just
-        because they are connected at some point in the backwards provenance. Use with
-        care, and it is advisable to never combine it with force.
-    :param bool call_work_forward:
-        This will also delete all workflows called by any workflow that is going to
-        be deleted. The same disclaimer as forward_calcs applies here as well.
+
+    :param kwargs: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
+        are toggleable and what the defaults are.
     :param bool dry_run:
         Just perform a dry run and do not delete anything. Print statistics according
         to the verbosity level set.
@@ -68,7 +57,7 @@ def delete_nodes(
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
     from aiida.backends.utils import delete_nodes_and_connections
     from aiida.common import exceptions
-    from aiida.common.links import LinkType
+    from aiida.common.links import GraphTraversalRules
     from aiida.orm import Node, QueryBuilder, load_node
 
     starting_pks = []
@@ -86,24 +75,25 @@ def delete_nodes(
             echo.echo('Nothing to delete')
         return
 
-    follow_backwards = []
-    follow_backwards.append(LinkType.CREATE.value)
-    follow_backwards.append(LinkType.RETURN.value)
-    follow_backwards.append(LinkType.CALL_CALC.value)
-    follow_backwards.append(LinkType.CALL_WORK.value)
-
     follow_forwards = []
-    follow_forwards.append(LinkType.INPUT_CALC.value)
-    follow_forwards.append(LinkType.INPUT_WORK.value)
+    follow_backwards = []
 
-    if create_forward:
-        follow_forwards.append(LinkType.CREATE.value)
+    # Create the dictionary with graph traversal rules to be used in determing complete node set to be exported
+    for name, rule in GraphTraversalRules.DELETE.value.items():
 
-    if call_calc_forward:
-        follow_forwards.append(LinkType.CALL_CALC.value)
+        # Check that rules that are not toggleable are not specified in the keyword arguments
+        if not rule.toggleable and name in kwargs:
+            raise exceptions.ExportValidationError('traversal rule {} is not toggleable'.format(name))
 
-    if call_work_forward:
-        follow_forwards.append(LinkType.CALL_WORK.value)
+        follow = kwargs.pop(name, rule.default)
+
+        if follow:
+            if rule.direction == 'forward':
+                follow_forwards.append(rule.link_type.value)
+            elif rule.direction == 'backward':
+                follow_backwards.append(rule.link_type.value)
+            else:
+                raise InternalError('unrecognized direction `{}` for graph traversal rule'.format(rule.direction))
 
     links_backwards = {'type': {'in': follow_backwards}}
     links_forwards = {'type': {'in': follow_forwards}}

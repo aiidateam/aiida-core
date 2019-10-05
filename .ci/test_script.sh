@@ -17,9 +17,20 @@ case "$TEST_TYPE" in
         SPHINXOPTS="-nW" make -C docs
         ;;
     tests)
+        VERDI=`which verdi`
+
+        # The `check-load-time` command will check for indicators that typically slow down the `verdi` command
+        coverage run -a $VERDI devel check-load-time
 
         # Test the loading time of `verdi` to ensure the database environment is not loaded
+        set +e
         "${CI_DIR}/test_verdi_load_time.sh"
+
+        # If the load time test failed, only exit if we are on travis
+        if [ $? -gt 0 ] && [ -n "${TRAVIS}" ]; then
+            exit 2
+        fi
+        set -e
 
         # Add the .ci folder to the python path so workchains within it can be found by the daemon
         export PYTHONPATH="${PYTHONPATH}:${CI_DIR}"
@@ -32,7 +43,6 @@ case "$TEST_TYPE" in
         coverage run -a "${CI_DIR}/test_plugin_testcase.py"
 
         # Run verdi devel tests
-        VERDI=`which verdi`
         coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} devel tests -v
 
         # Run the daemon tests using docker

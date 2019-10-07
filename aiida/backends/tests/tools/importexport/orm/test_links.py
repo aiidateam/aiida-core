@@ -373,19 +373,14 @@ class TestLinks(AiidaTestCase):
     @staticmethod
     def prepare_link_flags_export(nodes_to_export, test_data):
         """Helper function"""
-        from aiida.tools.importexport.common.config import LINK_FLAGS
-        rules = {}
-        togglable_link_rules = {
-            'input_calc_forward', 'create_backward', 'return_backward', 'input_work_forward', 'call_calc_backward',
-            'call_work_backward'
-        }
-        for rule in LINK_FLAGS:
-            if rule in togglable_link_rules:
-                rules[rule] = LINK_FLAGS[rule]
+        from aiida.common.links import GraphTraversalRules
+
+        export_rules = GraphTraversalRules.EXPORT.value
+        traversal_rules = {name: rule.default for name, rule in export_rules.items() if rule.toggleable}
 
         for export_file, rule_changes, expected_nodes in test_data.values():
-            rules.update(rule_changes)
-            export(nodes_to_export[0], outfile=export_file, silent=True, **rules)
+            traversal_rules.update(rule_changes)
+            export(nodes_to_export[0], outfile=export_file, silent=True, **traversal_rules)
 
             for node_type in nodes_to_export[1]:
                 if node_type in expected_nodes:

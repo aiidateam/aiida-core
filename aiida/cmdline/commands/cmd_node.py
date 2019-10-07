@@ -11,16 +11,18 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 import tabulate
 
-from aiida.common import exceptions
-from aiida.common import timezone
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common import exceptions
+from aiida.common import timezone
+from aiida.common.links import GraphTraversalRules
 
 
 @verdi.group('node')
@@ -288,18 +290,14 @@ class NodeTreePrinter(object):
 @arguments.NODES('nodes', required=True)
 @options.VERBOSE()
 @options.DRY_RUN()
-@click.option('--force', is_flag=True, default=False, help='Do not ask for confirmation.')
-@click.option('--create-forward', is_flag=True, default=True, help='Follow CREATE links forwards when deleting.')
-@click.option('--call-calc-forward', is_flag=True, default=False, help='Follow CALL_CALC links forwards when deleting.')
-@click.option('--call-work-forward', is_flag=True, default=False, help='Follow CALL_WORK links forwards when deleting.')
+@options.FORCE()
+@options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(nodes, dry_run, verbose, force, create_forward, call_calc_forward, call_work_forward):  # pylint: disable=too-many-arguments
-    """
-    Delete nodes from the database.
+def node_delete(nodes, dry_run, verbose, force, **kwargs):
+    """Delete nodes from the database.
 
-    Please notice that this will not only delete the nodes explicitly provided
-    via the command line, but will also include the nodes necessary to keep a
-    consistent provenance acording to the rules outlined in the documentation.
+    Please note that this will not only delete the nodes explicitly provided via the command line, but will also include
+    the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
     """
     from aiida.manage.database.delete.nodes import delete_nodes
 
@@ -311,15 +309,7 @@ def node_delete(nodes, dry_run, verbose, force, create_forward, call_calc_forwar
 
     node_pks_to_delete = [node.pk for node in nodes]
 
-    delete_nodes(
-        node_pks_to_delete,
-        dry_run=dry_run,
-        verbosity=verbosity,
-        force=force,
-        create_forward=create_forward,
-        call_calc_forward=call_calc_forward,
-        call_work_forward=call_work_forward
-    )
+    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force, **kwargs)
 
 
 @verdi_node.command('rehash')

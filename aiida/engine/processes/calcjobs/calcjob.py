@@ -50,9 +50,11 @@ class CalcJob(Process):
     def define(cls, spec):
         # yapf: disable
         super(CalcJob, cls).define(spec)
-        spec.input('code', valid_type=orm.Code, help='The Code to use for this job.')
+        spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
         spec.input('metadata.dry_run', valid_type=bool, default=False,
-            help='When set to True will prepare the calculation job for submission but not actually launch it.')
+            help='When set to `True` will prepare the calculation job for submission but not actually launch it.')
+        spec.input('metadata.computer', valid_type=orm.Computer, required=False,
+            help='When using a "local" code, set the computer on which the calculation should be run.')
         spec.input_namespace('{}.{}'.format(spec.metadata_key, spec.options_key), required=False)
         spec.input('metadata.options.input_filename', valid_type=six.string_types, required=False,
             help='Filename to which the input for the code that is to be run will be written.')
@@ -79,8 +81,6 @@ class CalcJob(Process):
             help='Set the account to use in for the queue on the remote computer')
         spec.input('metadata.options.qos', valid_type=six.string_types, required=False,
             help='Set the quality of service to use in for the queue on the remote computer')
-        spec.input('metadata.options.computer', valid_type=orm.Computer, required=False,
-            help='Set the computer to be used by the calculation')
         spec.input('metadata.options.withmpi', valid_type=bool, default=False,
             help='Set the calculation to use mpi',)
         spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), default=[],

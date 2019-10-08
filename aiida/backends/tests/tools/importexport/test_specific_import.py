@@ -329,3 +329,36 @@ class TestSpecificImport(AiidaTestCase):
                 msg='The wrong UUID was found for the imported {}: '
                 '{}. It should have been: {}'.format(variant, imported_node_uuid, node_uuid)
             )
+
+    def test_import_folder(self):
+        """Verify a pre-extracted archive (aka. a folder with the archive structure) can be imported.
+
+        It is important to check that the source directory or any of its contents are not deleted after import.
+        """
+        from aiida.common.folders import SandboxFolder
+        from aiida.backends.tests.utils.archives import get_archive_file
+        from aiida.tools.importexport.common.archive import extract_zip
+
+        archive = get_archive_file('arithmetic.add.aiida', filepath='calcjob')
+
+        with SandboxFolder() as temp_dir:
+            extract_zip(archive, temp_dir, silent=True)
+
+            # Make sure the JSON files and the nodes subfolder was correctly extracted (is present),
+            # then try to import it by passing the extracted folder to the import function.
+            for name in {'metadata.json', 'data.json', 'nodes'}:
+                self.assertTrue(os.path.exists(os.path.join(temp_dir.abspath, name)))
+
+            # Get list of all folders in extracted archive
+            org_folders = []
+            for dirpath, dirnames, _ in os.walk(temp_dir.abspath):
+                org_folders += [os.path.join(dirpath, dirname) for dirname in dirnames]
+
+            import_data(temp_dir.abspath, silent=True)
+
+            # Check nothing from the source was deleted
+            src_folders = []
+            for dirpath, dirnames, _ in os.walk(temp_dir.abspath):
+                src_folders += [os.path.join(dirpath, dirname) for dirname in dirnames]
+            self.maxDiff = None  # pylint: disable=invalid-name
+            self.assertListEqual(org_folders, src_folders)

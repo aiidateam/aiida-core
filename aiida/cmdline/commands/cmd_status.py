@@ -14,11 +14,24 @@ from __future__ import absolute_import
 
 import sys
 
+import logging
 from enum import IntEnum
+from contextlib import contextmanager
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from ..utils.echo import ExitCode
+
+
+@contextmanager
+def set_log_level(logger, level):
+    "Temporarily adjust the log-level of logger."
+    current_log_level = logger.level
+    logger.setLevel(level)
+    try:
+        yield
+    finally:
+        logger.setLevel(current_log_level)
 
 
 class ServiceStatus(IntEnum):
@@ -90,8 +103,9 @@ def verdi_status():
     # getting the rmq status
     try:
         with Capturing(capture_stderr=True):
-            comm = manager.create_communicator(with_orm=False)
-            comm.stop()
+            with set_log_level(logging.getLogger('kiwipy'), logging.CRITICAL):
+                comm = manager.create_communicator(with_orm=False)
+                comm.stop()
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'rabbitmq', 'Unable to connect to rabbitmq', exception=exc)
         exit_code = ExitCode.CRITICAL

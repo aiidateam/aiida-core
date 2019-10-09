@@ -93,6 +93,25 @@ class TestCalcJob(AiidaTestCase):
         with self.assertRaises(TypeError):
             launch.run(SimpleCalcJob, code=self.code, metadata={'options': orm.Dict(dict={'a': 1})})
 
+    def test_computer(self):
+        """Test passing an explicit `computer` in the `metadata`."""
+        inputs = {
+            'code': self.code,
+            'x': orm.Int(1),
+            'y': orm.Int(2),
+            'metadata': {
+                'computer': self.code.computer,
+                'options': {
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    },
+                }
+            }
+        }
+
+        ArithmeticAddCalculation(inputs=inputs)
+
     def test_invalid_parser_name(self):
         """Passing an invalid parser name should already stop during input validation."""
         inputs = {

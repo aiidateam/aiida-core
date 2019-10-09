@@ -282,7 +282,6 @@ class Code(Data):
             if not self.get_local_executable():
                 raise ValidationError('You have to set which file is the local executable '
                                       'using the set_exec_filename() method')
-                # c[1] is True if the element is a file
             if self.get_local_executable() not in self.list_object_names():
                 raise ValidationError("The local executable '{}' is not in the list of "
                                       'files of this code'.format(self.get_local_executable()))
@@ -453,28 +452,29 @@ class Code(Data):
             return self.get_remote_exec_path()
 
     def get_builder(self):
-        """
-        Create and return a new ProcessBuilder for the default Calculation
-        plugin, as obtained by the self.get_input_plugin_name() method.
+        """Create and return a new `ProcessBuilder` for the `CalcJob` class of the plugin configured for this code.
 
-        :note: it also sets the ``builder.code`` value.
+        The configured calculation plugin class is defined by the `get_input_plugin_name` method.
 
+        .. note:: it also sets the ``builder.code`` value.
+
+        :return: a `ProcessBuilder` instance with the `code` input already populated with ourselves
         :raise aiida.common.EntryPointError: if the specified plugin does not exist.
         :raise ValueError: if no default plugin was specified.
-
-        :return:
         """
         from aiida.plugins import CalculationFactory
+
         plugin_name = self.get_input_plugin_name()
+
         if plugin_name is None:
-            raise ValueError('You did not specify a default input plugin for this code')
+            raise ValueError('no default calculation input plugin specified for this code')
+
         try:
-            C = CalculationFactory(plugin_name)
+            process_class = CalculationFactory(plugin_name)
         except EntryPointError:
             raise EntryPointError('the calculation entry point `{}` could not be loaded'.format(plugin_name))
 
-        builder = C.get_builder()
-        # Setup the code already
+        builder = process_class.get_builder()
         builder.code = self
 
         return builder

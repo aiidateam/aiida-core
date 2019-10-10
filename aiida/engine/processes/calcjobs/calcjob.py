@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import six
 
 import plumpy
@@ -25,6 +26,69 @@ from ..process_spec import CalcJobProcessSpec
 from .tasks import Waiting, UPLOAD_COMMAND
 
 __all__ = ('CalcJob',)
+
+
+def validate_calc_job(inputs):
+    """Validate the entire set of inputs passed to the `CalcJob` constructor.
+
+    Reasons that will cause this validation to raise an `InputValidationError`:
+
+     * No `Computer` has been specified, neither directly in `metadata.computer` nor indirectly through the `Code` input
+     * The specified computer is not stored
+     * The `Computer` specified in `metadata.computer` is not the same as that of the specified `Code`
+     * The `metadata.options.parser_name` does not correspond to a loadable `Parser` class.
+     * The `metadata.options.resources` are invalid for the `Scheduler` of the specified `Computer`.
+
+    :raises `~aiida.common.exceptions.InputValidationError`: if inputs are invalid
+    """
+    from aiida.plugins import ParserFactory
+
+    code = inputs['code']
+    computer_from_code = code.computer
+    computer_from_metadata = inputs['metadata'].get('computer', None)
+
+    if not computer_from_code and not computer_from_metadata:
+        raise exceptions.InputValidationError('no computer has been specified in `metadata.computer` nor via `code`.')
+
+    if computer_from_code and not computer_from_code.is_stored:
+        raise exceptions.InputValidationError('the Computer<{}> is not stored'.format(computer_from_code))
+
+    if computer_from_metadata and not computer_from_metadata.is_stored:
+        raise exceptions.InputValidationError('the Computer<{}> is not stored'.format(computer_from_metadata))
+
+    if computer_from_code and computer_from_metadata and computer_from_code.uuid != computer_from_metadata.uuid:
+        raise exceptions.InputValidationError(
+            'Computer<{}> explicitly defined in `metadata.computer is different from '
+            'Computer<{}> which is the computer of Code<{}> defined as the `code` input.'.format(
+                computer_from_metadata, computer_from_code, code
+            )
+        )
+
+    # At this point at least one computer is defined and if both they are the same so we just pick one
+    computer = computer_from_metadata if computer_from_metadata else computer_from_code
+
+    options = inputs['metadata'].get('options', {})
+    parser_name = options.get('parser_name', None)
+    resources = options.get('resources', None)
+
+    if parser_name is not None:
+        try:
+            ParserFactory(parser_name)
+        except exceptions.EntryPointError as exception:
+            raise exceptions.InputValidationError('invalid parser specified: {}'.format(exception))
+
+    scheduler = computer.get_scheduler()  # pylint: disable=no-member
+    def_cpus_machine = computer.get_default_mpiprocs_per_machine()  # pylint: disable=no-member
+
+    if def_cpus_machine is not None:
+        resources['default_mpiprocs_per_machine'] = def_cpus_machine
+
+    try:
+        scheduler.create_job_resource(**resources)
+    except (TypeError, ValueError) as exception:
+        raise exceptions.InputValidationError(
+            'invalid resources for the scheduler of the specified computer<{}>: {}'.format(computer, exception)
+        )
 
 
 class CalcJob(Process):
@@ -50,6 +114,7 @@ class CalcJob(Process):
     def define(cls, spec):
         # yapf: disable
         super(CalcJob, cls).define(spec)
+        spec.inputs.validator = validate_calc_job
         spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
         spec.input('metadata.dry_run', valid_type=bool, default=False,
             help='When set to `True` will prepare the calculation job for submission but not actually launch it.')
@@ -208,8 +273,7 @@ class CalcJob(Process):
         raise NotImplementedError
 
     def parse(self, retrieved_temporary_folder=None):
-        """
-        Parse a retrieved job calculation.
+        """Parse a retrieved job calculation.
 
         This is called once it's finished waiting for the calculation to be finished and the data has been retrieved.
         """
@@ -233,15 +297,12 @@ class CalcJob(Process):
         return exit_code
 
     def presubmit(self, folder):
-        """
-        Prepares the calculation folder with all inputs, ready to be copied to the cluster.
+        """Prepares the calculation folder with all inputs, ready to be copied to the cluster.
 
-        :param folder: a SandboxFolder, empty in input, that will be filled with
-          calculation input files and the scheduling script.
+        :param folder: a SandboxFolder that can be used to write calculation input files and the scheduling script.
         :type folder: :class:`aiida.common.folders.Folder`
 
-        :return calcinfo: the CalcInfo object containing the information
-            needed by the daemon to handle operations.
+        :return calcinfo: the CalcInfo object containing the information needed by the daemon to handle operations.
         :rtype calcinfo: :class:`aiida.common.CalcInfo`
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches

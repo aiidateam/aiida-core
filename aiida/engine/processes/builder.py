@@ -31,8 +31,7 @@ class ProcessBuilderNamespace(collections.MutableMapping):
     """
 
     def __init__(self, port_namespace):
-        """
-        Dynamically construct the get and set properties for the ports of the given port namespace
+        """Dynamically construct the get and set properties for the ports of the given port namespace
 
         For each port in the given port namespace a get and set property will be constructed dynamically
         and added to the ProcessBuilderNamespace. The docstring for these properties will be defined
@@ -73,9 +72,10 @@ class ProcessBuilderNamespace(collections.MutableMapping):
             setattr(self.__class__, name, getter)
 
     def __setattr__(self, attr, value):
-        """
-        Any attributes without a leading underscore being set correspond to inputs and should hence
-        be validated with respect to the corresponding input port from the process spec
+        """Set an input value for the given port `attr`.
+
+        .. note:: Any attributes without a leading underscore being set correspond to inputs and should hence be
+            validated with respect to the corresponding input port from the process spec
 
         :param attr: attribute
         :type attr: str
@@ -153,9 +153,13 @@ class ProcessBuilder(ProcessBuilderNamespace):
     """A process builder that helps setting up the inputs for creating a new process."""
 
     def __init__(self, process_class):
+        """Construct a `ProcessBuilder` instance for the given `Process` class.
+
+        :param process_class: the `Process` subclass
+        """
         self._process_class = process_class
         self._process_spec = self._process_class.spec()
-        super(ProcessBuilder, self).__init__(port_namespace=self._process_spec.inputs)
+        super(ProcessBuilder, self).__init__(self._process_spec.inputs)
 
     @property
     def process_class(self):

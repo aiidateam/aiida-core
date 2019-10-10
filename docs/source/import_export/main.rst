@@ -63,7 +63,7 @@ Let's have a look at the contents of ``metadata.json``:
       "export_version": "0.7",
       "aiida_version": "1.0.0",
       "export_parameters": {
-        "link_follow_rules": {
+        "graph_traversal_rules": {
           "input_calc_forward": false,
           "input_calc_backward": true,
           "create_forward": true,
@@ -77,12 +77,8 @@ Let's have a look at the contents of ``metadata.json``:
           "call_work_forward": true,
           "call_work_backward": false
         },
-        "original_entities": {
+        "entities_starting_set": {
           "Node": ["1024e35e-166b-4104-95f6-c1706df4ce15"]
-        },
-        "license_info": {
-          "allowed_licenses": null,
-          "forbidden_licenses": "Function valid_licenses was used to check for forbidden licenses"
         },
         "include_comments": true,
         "include_logs": false

@@ -46,6 +46,8 @@ RUN apt-get update \
     dvipng \
     dvidvi \
     graphviz \
+    bc \
+    time \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean all
 

@@ -52,7 +52,7 @@ def instantiate_process(runner, process, *args, **inputs):
     if isinstance(process, ProcessBuilder):
         builder = process
         process_class = builder.process_class
-        inputs.update(**builder)
+        inputs.update(**builder._inputs(prune=True))  # pylint: disable=protected-access
     elif issubclass(process, Process):
         process_class = process
     else:

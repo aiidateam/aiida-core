@@ -388,29 +388,23 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
 
     :raises `~aiida.tools.importexport.common.exceptions.ExportValidationError`: if wrong or too many kwargs are given.
     """
-    from aiida.common.links import LinkType
+    from aiida.common.links import LinkType, GraphTraversalRules
     from aiida.orm import Data
-    from aiida.tools.importexport.common.config import LINK_FLAGS
 
     # Initialization and set flags according to rules
     retrieved_nodes = set()
     links_uuid_dict = {}
+    traversal_rules = {}
 
-    togglable_link_rules = {
-        'input_calc_forward', 'create_backward', 'return_backward', 'input_work_forward', 'call_calc_backward',
-        'call_work_backward'
-    }
-    follow_links_rules = LINK_FLAGS.copy()
-    for link_rule_name in togglable_link_rules:
-        follow = kwargs.pop(link_rule_name, None)
-        if follow is not None:
-            follow_links_rules[link_rule_name] = follow
+    # Create the dictionary with graph traversal rules to be used in determing complete node set to be exported
+    for name, rule in GraphTraversalRules.EXPORT.value.items():
 
-    if kwargs:
-        raise exceptions.ExportValidationError(
-            'retrieve_linked_nodes received too many keyword arguments: {}. '
-            'Only {} are accepted.'.format(kwargs, togglable_link_rules)
-        )
+        # Check that rules that are not toggleable are not specified in the keyword arguments
+        if not rule.toggleable and name in kwargs:
+            raise exceptions.ExportValidationError('traversal rule {} is not toggleable'.format(name))
+
+        # Use the rule value passed in the keyword arguments, or if not the case, use the default
+        traversal_rules[name] = kwargs.pop(name, rule.default)
 
     # We repeat until there are no further nodes to be visited
     while process_nodes or data_nodes:
@@ -426,7 +420,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 retrieved_nodes.add(current_node_pk)
 
             # INPUT_CALC(Data, CalculationNode) - Backward
-            if follow_links_rules['input_calc_backward']:
+            if traversal_rules['input_calc_backward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=Data,
@@ -438,7 +432,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 links_uuid_dict.update(links_uuids)
 
             # CREATE(CalculationNode, Data) - Forward
-            if follow_links_rules['create_forward']:
+            if traversal_rules['create_forward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=ProcessNode,
@@ -450,7 +444,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 links_uuid_dict.update(links_uuids)
 
             # RETURN(WorkflowNode, Data) - Forward
-            if follow_links_rules['return_forward']:
+            if traversal_rules['return_forward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=ProcessNode,
@@ -462,7 +456,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 links_uuid_dict.update(links_uuids)
 
             # INPUT_WORK(Data, WorkflowNode) - Backward
-            if follow_links_rules['input_work_backward']:
+            if traversal_rules['input_work_backward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=Data,
@@ -474,7 +468,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 links_uuid_dict.update(links_uuids)
 
             # CALL_CALC(WorkflowNode, CalculationNode) - Forward
-            if follow_links_rules['call_calc_forward']:
+            if traversal_rules['call_calc_forward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=ProcessNode,
@@ -486,7 +480,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 links_uuid_dict.update(links_uuids)
 
             # CALL_CALC(WorkflowNode, CalculationNode) - Backward
-            if follow_links_rules['call_calc_backward']:
+            if traversal_rules['call_calc_backward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=ProcessNode,
@@ -498,7 +492,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 links_uuid_dict.update(links_uuids)
 
             # CALL_WORK(WorkflowNode, WorkflowNode) - Forward
-            if follow_links_rules['call_work_forward']:
+            if traversal_rules['call_work_forward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=ProcessNode,
@@ -510,7 +504,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 links_uuid_dict.update(links_uuids)
 
             # CALL_WORK(WorkflowNode, WorkflowNode) - Backward
-            if follow_links_rules['call_work_backward']:
+            if traversal_rules['call_work_backward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=ProcessNode,
@@ -532,7 +526,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 retrieved_nodes.add(current_node_pk)
 
             # INPUT_CALC(Data, CalculationNode) - Forward
-            if follow_links_rules['input_calc_forward']:
+            if traversal_rules['input_calc_forward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=Data,
@@ -544,7 +538,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 links_uuid_dict.update(links_uuids)
 
             # CREATE(CalculationNode, Data) - Backward
-            if follow_links_rules['create_backward']:
+            if traversal_rules['create_backward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=ProcessNode,
@@ -556,7 +550,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 links_uuid_dict.update(links_uuids)
 
             # RETURN(WorkflowNode, Data) - Backward
-            if follow_links_rules['return_backward']:
+            if traversal_rules['return_backward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=ProcessNode,
@@ -568,7 +562,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 links_uuid_dict.update(links_uuids)
 
             # INPUT_WORK(Data, WorkflowNode) - Forward
-            if follow_links_rules['input_work_forward']:
+            if traversal_rules['input_work_forward']:
                 links_uuids, found_nodes = _retrieve_linked_nodes_query(
                     current_node_pk,
                     input_type=Data,

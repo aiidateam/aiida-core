@@ -77,23 +77,8 @@ def export_zip(what, outfile='testzip', overwrite=False, silent=False, use_compr
         Default: True, *include* logs in export.
     :type include_logs: bool
 
-    :param input_calc_forward: Follow forward INPUT_CALC links (recursively) when calculating the node set to export.
-    :type input_calc_forward: bool
-
-    :param create_backward: Follow reversed CREATE links (recursively) when calculating the node set to export.
-    :type create_backward: bool
-
-    :param return_backward: Follow reversed RETURN links (recursively) when calculating the node set to export.
-    :type return_backward: bool
-
-    :param input_work_forward: Follow forward INPUT_WORK links (recursively) when calculating the node set to export.
-    :type input_work_forward: bool
-
-    :param call_calc_backward: Follow reversed CALL_CALC links (recursively) when calculating the node set to export.
-    :type call_calc_backward: bool
-
-    :param call_work_backward: Follow reversed CALL_WORK links (recursively) when calculating the node set to export.
-    :type call_work_backward: bool
+    :param kwargs: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
+        are toggleable and what the defaults are.
 
     :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
         exporting.
@@ -148,23 +133,8 @@ def export_tree(
         Default: True, *include* logs in export.
     :type include_logs: bool
 
-    :param input_calc_forward: Follow forward INPUT_CALC links (recursively) when calculating the node set to export.
-    :type input_calc_forward: bool
-
-    :param create_backward: Follow reversed CREATE links (recursively) when calculating the node set to export.
-    :type create_backward: bool
-
-    :param return_backward: Follow reversed RETURN links (recursively) when calculating the node set to export.
-    :type return_backward: bool
-
-    :param input_work_forward: Follow forward INPUT_WORK links (recursively) when calculating the node set to export.
-    :type input_work_forward: bool
-
-    :param call_calc_backward: Follow reversed CALL_CALC links (recursively) when calculating the node set to export.
-    :type call_calc_backward: bool
-
-    :param call_work_backward: Follow reversed CALL_WORK links (recursively) when calculating the node set to export.
-    :type call_work_backward: bool
+    :param kwargs: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
+        are toggleable and what the defaults are.
 
     :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
         exporting.
@@ -522,23 +492,8 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
         Default: True, *include* logs in export.
     :type include_logs: bool
 
-    :param input_calc_forward: Follow forward INPUT_CALC links (recursively) when calculating the node set to export.
-    :type input_calc_forward: bool
-
-    :param create_backward: Follow reversed CREATE links (recursively) when calculating the node set to export.
-    :type create_backward: bool
-
-    :param return_backward: Follow reversed RETURN links (recursively) when calculating the node set to export.
-    :type return_backward: bool
-
-    :param input_work_forward: Follow forward INPUT_WORK links (recursively) when calculating the node set to export.
-    :type input_work_forward: bool
-
-    :param call_calc_backward: Follow reversed CALL_CALC links (recursively) when calculating the node set to export.
-    :type call_calc_backward: bool
-
-    :param call_work_backward: Follow reversed CALL_WORK links (recursively) when calculating the node set to export.
-    :type call_work_backward: bool
+    :param kwargs: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
+        are toggleable and what the defaults are.
 
     :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
         exporting.

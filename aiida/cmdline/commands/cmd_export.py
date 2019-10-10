@@ -24,7 +24,7 @@ from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils import echo
-from aiida.tools.importexport import LINK_FLAGS
+from aiida.common.links import GraphTraversalRules
 
 
 @verdi.group('export')
@@ -70,42 +70,7 @@ def inspect(archive, version, data, meta_data):
 @options.NODES()
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
-@click.option(
-    '--input-calc-forward/--no-input-calc-forward',
-    default=LINK_FLAGS['input_calc_forward'],
-    show_default=True,
-    help='Follow forward INPUT_CALC links (recursively) when calculating the node set to export.'
-)
-@click.option(
-    '--input-work-forward/--no-input-work-forward',
-    default=LINK_FLAGS['input_work_forward'],
-    show_default=True,
-    help='Follow forward INPUT_WORK links (recursively) when calculating the node set to export.'
-)
-@click.option(
-    '--create-backward/--no-create-backward',
-    default=LINK_FLAGS['create_backward'],
-    show_default=True,
-    help='Follow reverse CREATE links (recursively) when calculating the node set to export.'
-)
-@click.option(
-    '--return-backward/--no-return-backward',
-    default=LINK_FLAGS['return_backward'],
-    show_default=True,
-    help='Follow reverse RETURN links (recursively) when calculating the node set to export.'
-)
-@click.option(
-    '--call-calc-backward/--no-call-calc-backward',
-    default=LINK_FLAGS['call_calc_backward'],
-    show_default=True,
-    help='Follow reverse CALL_CALC links (recursively) when calculating the node set to export.'
-)
-@click.option(
-    '--call-work-backward/--no-call-work-backward',
-    default=LINK_FLAGS['call_work_backward'],
-    show_default=True,
-    help='Follow reverse CALL_WORK links (recursively) when calculating the node set to export.'
-)
+@options.graph_traversal_rules(GraphTraversalRules.EXPORT.value)
 @click.option(
     '--include-logs/--exclude-logs',
     default=True,

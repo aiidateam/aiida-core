@@ -573,4 +573,4 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 process_nodes.update(found_nodes - retrieved_nodes)
                 links_uuid_dict.update(links_uuids)
 
-    return retrieved_nodes, list(links_uuid_dict.values()), follow_links_rules
+    return retrieved_nodes, list(links_uuid_dict.values()), traversal_rules

@@ -147,7 +147,7 @@ def export_tree(
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
-    entities_starting_set = defaultdict(list)
+    entities_starting_set = defaultdict(set)
 
     # The set that contains the nodes ids of the nodes that should be exported
     given_data_entry_ids = set()
@@ -166,17 +166,17 @@ def export_tree(
         # Now a load the backend-independent name into entry_entity_name, e.g. Node!
         # entry_entity_name = schema_to_entity_names(entry_class_string)
         if issubclass(entry.__class__, orm.Group):
-            entities_starting_set[GROUP_ENTITY_NAME].append(entry.uuid)
+            entities_starting_set[GROUP_ENTITY_NAME].add(entry.uuid)
             given_group_entry_ids.add(entry.id)
             given_groups.add(entry)
         elif issubclass(entry.__class__, orm.Node):
-            entities_starting_set[NODE_ENTITY_NAME].append(entry.uuid)
+            entities_starting_set[NODE_ENTITY_NAME].add(entry.uuid)
             if issubclass(entry.__class__, orm.Data):
                 given_data_entry_ids.add(entry.pk)
             elif issubclass(entry.__class__, orm.ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
         elif issubclass(entry.__class__, orm.Computer):
-            entities_starting_set[COMPUTER_ENTITY_NAME].append(entry.uuid)
+            entities_starting_set[COMPUTER_ENTITY_NAME].add(entry.uuid)
             given_computer_entry_ids.add(entry.pk)
         else:
             raise exceptions.ArchiveExportError(
@@ -186,11 +186,14 @@ def export_tree(
     # Add all the nodes contained within the specified groups
     for group in given_groups:
         for entry in group.nodes:
-            entities_starting_set[NODE_ENTITY_NAME].append(entry.uuid)
+            entities_starting_set[NODE_ENTITY_NAME].add(entry.uuid)
             if issubclass(entry.__class__, orm.Data):
                 given_data_entry_ids.add(entry.pk)
             elif issubclass(entry.__class__, orm.ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
+
+    for entity, entity_set in entities_starting_set.items():
+        entities_starting_set[entity] = list(entity_set)
 
     # We will iteratively explore the AiiDA graph to find further nodes that
     # should also be exported.

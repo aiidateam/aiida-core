@@ -12,7 +12,7 @@
 import click
 
 from aiida.cmdline.utils import echo
-from aiida.common import InternalError
+from aiida.common.exceptions import InternalError
 
 
 def delete_nodes(pks, verbosity=0, dry_run=False, force=False, **kwargs):
@@ -56,6 +56,7 @@ def delete_nodes(pks, verbosity=0, dry_run=False, force=False, **kwargs):
     from aiida.common import exceptions
     from aiida.common.links import GraphTraversalRules
     from aiida.orm import Node, QueryBuilder, load_node
+    from aiida.tools.graph.graph_traversers import exhaustive_traverser
 
     starting_pks = []
     for pk in pks:
@@ -72,65 +73,20 @@ def delete_nodes(pks, verbosity=0, dry_run=False, force=False, **kwargs):
             echo.echo('Nothing to delete')
         return
 
-    follow_forwards = []
-    follow_backwards = []
-
     # Create the dictionary with graph traversal rules to be used in determing complete node set to be exported
+    traverse_rules = {}
     for name, rule in GraphTraversalRules.DELETE.value.items():
 
         # Check that rules that are not toggleable are not specified in the keyword arguments
         if not rule.toggleable and name in kwargs:
-            raise exceptions.ExportValidationError('traversal rule {} is not toggleable'.format(name))
+            raise InternalError('traversal rule {} is not toggleable when deleting'.format(name))
 
-        follow = kwargs.pop(name, rule.default)
+        traverse_rules[name] = kwargs.pop(name, rule.default)
 
-        if follow:
-            if rule.direction == 'forward':
-                follow_forwards.append(rule.link_type.value)
-            elif rule.direction == 'backward':
-                follow_backwards.append(rule.link_type.value)
-            else:
-                raise InternalError('unrecognized direction `{}` for graph traversal rule'.format(rule.direction))
+    if kwargs:
+        raise InternalError('extra keywords found: {}'.format(**kwargs))
 
-    links_backwards = {'type': {'in': follow_backwards}}
-    links_forwards = {'type': {'in': follow_forwards}}
-
-    operational_set = set().union(set(starting_pks))
-    accumulator_set = set().union(set(starting_pks))
-
-    while operational_set:
-        new_pks_set = set()
-
-        query_nodes = QueryBuilder()
-        query_nodes.append(Node, filters={'id': {'in': operational_set}}, tag='sources')
-        query_nodes.append(
-            Node,
-            filters={'id': {
-                '!in': accumulator_set
-            }},
-            edge_filters=links_forwards,
-            with_incoming='sources',
-            project='id'
-        )
-        new_pks_set.update(i for i, in query_nodes.iterall())
-
-        query_nodes = QueryBuilder()
-        query_nodes.append(Node, filters={'id': {'in': operational_set}}, tag='sources')
-        query_nodes.append(
-            Node,
-            filters={'id': {
-                '!in': accumulator_set
-            }},
-            edge_filters=links_backwards,
-            with_outgoing='sources',
-            project='id'
-        )
-        new_pks_set.update(i for i, in query_nodes.iterall())
-
-        operational_set = new_pks_set.difference(accumulator_set)
-        accumulator_set.update(new_pks_set)
-
-    pks_set_to_delete = accumulator_set
+    pks_set_to_delete = exhaustive_traverser(starting_pks, **traverse_rules)
 
     if verbosity > 0:
         echo.echo(

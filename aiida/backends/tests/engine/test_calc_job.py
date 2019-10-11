@@ -13,7 +13,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import copy
-import unittest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -122,7 +121,6 @@ class TestCalcJob(AiidaTestCase):
         self.assertTrue(process.node.is_stored)
         self.assertEqual(process.node.computer.uuid, self.remote_code.computer.uuid)
 
-    @unittest.skip('Reenable when #3412 is addressed.')
     def test_remote_code_unstored_computer(self):
         """Test launching a `CalcJob` with an unstored computer which should raise."""
         inputs = copy.deepcopy(self.inputs)

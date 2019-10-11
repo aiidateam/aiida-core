@@ -41,9 +41,9 @@ def exhaustive_traverser(starting_pks, **kwargs):
         if name not in kwargs:
             raise exceptions.ValidationError('traversal rule {} was not provided'.format(name))
 
-        follow = kwargs.pop(name, rule.default)
+        follow = kwargs.pop(name)
         if not isinstance(follow, bool):
-            raise ValueError('the value of rule {} must be boolean, but it is {}'.format(name, follow))
+            raise ValueError('the value of rule {} must be boolean, but it is: {}'.format(name, follow))
 
         if follow:
             if rule.direction == 'forward':
@@ -56,7 +56,7 @@ def exhaustive_traverser(starting_pks, **kwargs):
                 )
 
     if kwargs:
-        raise exceptions.ValidationError('unrecognized keywords:'.format(**kwargs))
+        raise exceptions.ValidationError('unrecognized keywords: {}'.format(', '.join(kwargs.keys())))
 
     links_backwards = {'type': {'in': follow_backwards}}
     links_forwards = {'type': {'in': follow_forwards}}

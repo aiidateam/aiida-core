@@ -343,8 +343,11 @@ class TestExhaustiveTraverser(AiidaTestCase):
         newlink['node_o'] = pkc0
         connection_links.append(newlink)
 
-        for rule1 in GraphTraversalRules.DELETE.value:
-            for rule2 in GraphTraversalRules.DELETE.value:
+        rules_list = GraphTraversalRules.DELETE.value.copy()
+
+        for rule1 in list(rules_list):
+            rules_list.pop(rule1)
+            for rule2 in rules_list:
                 for node_zero in node_list:
 
                     traverser_rules[rule1] = True
@@ -415,3 +418,39 @@ class TestExhaustiveTraverser(AiidaTestCase):
         self.assertEqual(obtained_nodes, expected_nodes)
         traverser_rules['input_work_backward'] = False
         traverser_rules['return_backward'] = False
+
+    def test_traversal_errors(self):
+        """
+        This will test the errors of the traversers.
+        """
+        from aiida.common.links import GraphTraversalRules
+        from aiida.common.exceptions import ValidationError, NotExistent
+
+        from aiida import orm
+
+        # This uses the delete dict because it has the same names as the export dict,
+        # which is all this test needs
+        traverser_rules = {}
+        for name in GraphTraversalRules.DELETE.value:
+            traverser_rules[name] = False
+
+        test_node = orm.Data().store()
+
+        false_node = -1
+        with self.assertRaises(NotExistent):
+            exhaustive_traverser([false_node], **traverser_rules)
+
+        del traverser_rules['return_forward']
+        with self.assertRaises(ValidationError):
+            exhaustive_traverser([test_node], **traverser_rules)
+        traverser_rules['return_forward'] = False
+
+        traverser_rules['return_forward'] = 1984
+        with self.assertRaises(ValueError):
+            exhaustive_traverser([test_node], **traverser_rules)
+        traverser_rules['return_forward'] = False
+
+        traverser_rules['false_rule'] = False
+        with self.assertRaises(ValidationError):
+            exhaustive_traverser([test_node], **traverser_rules)
+        del traverser_rules['false_rule']

@@ -32,7 +32,7 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
-    check_licences, fill_in_query, serialize_dict, check_process_nodes_sealed, retrieve_linked_nodes
+    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, retrieve_linked_nodes
 )
 
 from .zip import ZipFolder
@@ -140,10 +140,14 @@ def export_tree(
         exporting.
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
+    from collections import defaultdict
+
     if not silent:
         print('STARTING EXPORT...')
 
     all_fields_info, unique_identifiers = get_all_fields_info()
+
+    entities_starting_set = defaultdict(set)
 
     # The set that contains the nodes ids of the nodes that should be exported
     given_data_entry_ids = set()
@@ -162,14 +166,17 @@ def export_tree(
         # Now a load the backend-independent name into entry_entity_name, e.g. Node!
         # entry_entity_name = schema_to_entity_names(entry_class_string)
         if issubclass(entry.__class__, orm.Group):
+            entities_starting_set[GROUP_ENTITY_NAME].add(entry.uuid)
             given_group_entry_ids.add(entry.id)
             given_groups.add(entry)
         elif issubclass(entry.__class__, orm.Node):
+            entities_starting_set[NODE_ENTITY_NAME].add(entry.uuid)
             if issubclass(entry.__class__, orm.Data):
                 given_data_entry_ids.add(entry.pk)
             elif issubclass(entry.__class__, orm.ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
         elif issubclass(entry.__class__, orm.Computer):
+            entities_starting_set[COMPUTER_ENTITY_NAME].add(entry.uuid)
             given_computer_entry_ids.add(entry.pk)
         else:
             raise exceptions.ArchiveExportError(
@@ -179,10 +186,14 @@ def export_tree(
     # Add all the nodes contained within the specified groups
     for group in given_groups:
         for entry in group.nodes:
+            entities_starting_set[NODE_ENTITY_NAME].add(entry.uuid)
             if issubclass(entry.__class__, orm.Data):
                 given_data_entry_ids.add(entry.pk)
             elif issubclass(entry.__class__, orm.ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
+
+    for entity, entity_set in entities_starting_set.items():
+        entities_starting_set[entity] = list(entity_set)
 
     # We will iteratively explore the AiiDA graph to find further nodes that
     # should also be exported.
@@ -191,7 +202,9 @@ def export_tree(
     if not silent:
         print('RETRIEVING LINKED NODES AND STORING LINKS...')
 
-    to_be_exported, links_uuid = retrieve_linked_nodes(given_calculation_entry_ids, given_data_entry_ids, **kwargs)
+    to_be_exported, links_uuid, graph_traversal_rules = retrieve_linked_nodes(
+        given_calculation_entry_ids, given_data_entry_ids, **kwargs
+    )
 
     ## Universal "entities" attributed to all types of nodes
     # Logs
@@ -271,7 +284,7 @@ def export_tree(
         builder.append(orm.Node, project=['id', 'attributes.source.license'], filters={'id': {'in': to_be_exported}})
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
         node_licenses = list((a, b) for [a, b] in builder.all() if b is not None)
-        check_licences(node_licenses, allowed_licenses, forbidden_licenses)
+        check_licenses(node_licenses, allowed_licenses, forbidden_licenses)
 
     ############################################################
     ##### Start automatic recursive export data generation #####
@@ -395,10 +408,10 @@ def export_tree(
         'node_extras': node_extras,
         'export_data': export_data,
         'links_uuid': links_uuid,
-        'groups_uuid': groups_uuid,
+        'groups_uuid': groups_uuid
     }
 
-    # N.B. We're really calling zipfolder.open
+    # N.B. We're really calling zipfolder.open (if exporting a zipfile)
     with folder.open('data.json', mode='w') as fhandle:
         # fhandle.write(json.dumps(data, cls=UUIDEncoder))
         fhandle.write(json.dumps(data))
@@ -411,6 +424,12 @@ def export_tree(
         'export_version': EXPORT_VERSION,
         'all_fields_info': all_fields_info,
         'unique_identifiers': unique_identifiers,
+        'export_parameters': {
+            'graph_traversal_rules': graph_traversal_rules,
+            'entities_starting_set': entities_starting_set,
+            'include_comments': include_comments,
+            'include_logs': include_logs
+        }
     }
 
     with folder.open('metadata.json', 'w') as fhandle:

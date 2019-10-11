@@ -102,7 +102,7 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag
         fill_in_query(partial_query, current_entity_str, ref_model_name, new_tag_suffixes)
 
 
-def check_licences(node_licenses, allowed_licenses, forbidden_licenses):
+def check_licenses(node_licenses, allowed_licenses, forbidden_licenses):
     """Check licenses"""
     from aiida.common.exceptions import LicensingException
     from inspect import isfunction
@@ -384,7 +384,7 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
     :param call_calc_backward: Follow CALL_CALC links in the backward direction (recursively).
     :param call_work_backward: Follow CALL_WORK links in the backward direction (recursively).
 
-    :return: Set of retrieved Nodes and list of links information.
+    :return: Set of retrieved Nodes, list of links information, and updated dict of LINK_FLAGS.
 
     :raises `~aiida.tools.importexport.common.exceptions.ExportValidationError`: if wrong or too many kwargs are given.
     """
@@ -573,4 +573,4 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
                 process_nodes.update(found_nodes - retrieved_nodes)
                 links_uuid_dict.update(links_uuids)
 
-    return retrieved_nodes, list(links_uuid_dict.values())
+    return retrieved_nodes, list(links_uuid_dict.values()), traversal_rules

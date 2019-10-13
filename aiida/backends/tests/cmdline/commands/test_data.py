@@ -862,7 +862,7 @@ class TestVerdiDataUpf(AiidaTestCase):
     def upload_family(self):
         options = [self.filepath_pseudos, 'test_group', 'test description']
         res = self.cli_runner.invoke(cmd_upf.upf_uploadfamily, options, catch_exceptions=False)
-        self.assertIn(b'UPF files found: 3', res.stdout_bytes, 'The string "UPF files found: 3" was not found in the'
+        self.assertIn(b'UPF files found: 4', res.stdout_bytes, 'The string "UPF files found: 4" was not found in the'
                                                                ' output of verdi data upf uploadfamily')
 
     def test_uploadfamilyhelp(self):
@@ -893,6 +893,9 @@ class TestVerdiDataUpf(AiidaTestCase):
                       'Sub-command verdi data upf exportfamily --help failed.')
         self.assertIn(b'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
                       'Sub-command verdi data upf exportfamily --help failed.')
+        self.assertIn(b'C_pbe_v1.2.uspp.F.UPF', output,
+                      'Sub-command verdi data upf exportfamily --help failed.')
+
 
     def test_listfamilieshelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'listfamilies', '--help'])

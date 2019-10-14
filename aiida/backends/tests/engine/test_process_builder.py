@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from collections import MutableMapping
+from collections import Mapping, MutableMapping
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -33,6 +33,38 @@ class TestWorkChain(WorkChain):
         spec.input('name_spaced', valid_type=orm.Str, help='Not actually a namespaced port')
         spec.input('boolean', valid_type=orm.Bool, help='A pointless boolean')
         spec.input('default', valid_type=orm.Int, default=orm.Int(DEFAULT_INT).store())
+
+
+class TestLazyProcessNamespace(Process):
+    """Process with basic nested namespaces to test "pruning" of empty nested namespaces from the builder."""
+
+    @classmethod
+    def define(cls, spec):
+        super(TestLazyProcessNamespace, cls).define(spec)
+        spec.input_namespace('namespace')
+        spec.input_namespace('namespace.nested')
+        spec.input('namespace.nested.bird')
+        spec.input('namespace.a')
+        spec.input('namespace.c')
+
+
+class MappingData(Mapping, orm.Data):
+    """Data sub class that is also a `Mapping`."""
+
+    def __init__(self, data=None):
+        super(MappingData, self).__init__()
+        if data is None:
+            data = {}
+        self._data = data
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self):
+        return len(self._data)
 
 
 class TestProcessBuilder(AiidaTestCase):
@@ -60,6 +92,40 @@ class TestProcessBuilder(AiidaTestCase):
     def tearDown(self):
         super(TestProcessBuilder, self).tearDown()
         self.assertIsNone(Process.current())
+
+    def test_builder_inputs(self):
+        """Test the `ProcessBuilder._inputs` method to get the inputs with and without `prune` set to True."""
+        builder = TestLazyProcessNamespace.get_builder()
+
+        # When no inputs are specified specifically, `prune=True` should get rid of completely empty namespaces
+        self.assertEqual(builder._inputs(prune=False), {'namespace': {'nested': {}}, 'metadata': {}})
+        self.assertEqual(builder._inputs(prune=True), {})
+
+        # With a specific input in `namespace` the case of `prune=True` should now only remove `metadata`
+        integer = orm.Int(DEFAULT_INT)
+        builder = TestLazyProcessNamespace.get_builder()
+        builder.namespace.a = integer
+        self.assertEqual(builder._inputs(prune=False), {'namespace': {'a': integer, 'nested': {}}, 'metadata': {}})
+        self.assertEqual(builder._inputs(prune=True), {'namespace': {'a': integer}})
+
+        # A value that is a `Node` instance but also happens to be an "empty mapping" should not be pruned
+        empty_node = MappingData()
+        builder = TestLazyProcessNamespace.get_builder()
+        builder.namespace.a = empty_node
+        self.assertEqual(builder._inputs(prune=False), {'namespace': {'a': empty_node, 'nested': {}}, 'metadata': {}})
+        self.assertEqual(builder._inputs(prune=True), {'namespace': {'a': empty_node}})
+
+        # Verify that empty lists are considered as a "value" and are not pruned
+        builder = TestLazyProcessNamespace.get_builder()
+        builder.namespace.c = list()
+        self.assertEqual(builder._inputs(prune=False), {'namespace': {'c': [], 'nested': {}}, 'metadata': {}})
+        self.assertEqual(builder._inputs(prune=True), {'namespace': {'c': []}})
+
+        # Verify that empty lists, even in doubly nested namespace are considered as a "value" and are not pruned
+        builder = TestLazyProcessNamespace.get_builder()
+        builder.namespace.nested.bird = list()
+        self.assertEqual(builder._inputs(prune=False), {'namespace': {'nested': {'bird': []}}, 'metadata': {}})
+        self.assertEqual(builder._inputs(prune=True), {'namespace': {'nested': {'bird': []}}})
 
     def test_process_builder_attributes(self):
         """Check that the builder has all the input ports of the process class as attributes."""

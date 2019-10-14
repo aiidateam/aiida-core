@@ -60,8 +60,29 @@ Let's have a look at the contents of ``metadata.json``:
 .. code-block:: json
 
     {
-      "export_version": "0.6",
+      "export_version": "0.7",
       "aiida_version": "1.0.0",
+      "export_parameters": {
+        "graph_traversal_rules": {
+          "input_calc_forward": false,
+          "input_calc_backward": true,
+          "create_forward": true,
+          "create_backward": true,
+          "return_forward": true,
+          "return_backward": false,
+          "input_work_forward": false,
+          "input_work_backward": true,
+          "call_calc_forward": true,
+          "call_calc_backward": false,
+          "call_work_forward": true,
+          "call_work_backward": false
+        },
+        "entities_starting_set": {
+          "Node": ["1024e35e-166b-4104-95f6-c1706df4ce15"]
+        },
+        "include_comments": true,
+        "include_logs": false
+      },
       "unique_identifiers": {
         "Computer": "uuid",
         "Group": "uuid",
@@ -186,10 +207,10 @@ A sample of the ``data.json`` file follows:
     {
       "links_uuid": [
         {
-          "output": "c208c9da-23b4-4c32-8f99-f9141ab28363",
-          "label": "parent_calc_folder",
-          "input": "eaaa114d-3d5b-42eb-a269-cf0e7a3a935d",
-          "type": "inputlink"
+          "output": "1024e35e-166b-4104-95f6-c1706df4ce15",
+          "label": "parameters",
+          "input": "628ba258-ccc1-47bf-bab7-8aee64b563ea",
+          "type": "input_calc"
         }
       ],
       "export_data": {
@@ -248,7 +269,7 @@ A sample of the ``data.json`` file follows:
             "ctime": "2016-08-21T11:56:05.501162",
             "mtime": "2016-08-21T11:56:05.501697",
             "content": "vc-relax calculation with cold smearing",
-            "dbnode": 5921143,
+            "dbnode": 20063,
             "user": 2
           }
         }
@@ -295,13 +316,16 @@ A sample of the ``data.json`` file follows:
             "default_mpiprocs_per_machine": 8
           },
           "remote_workdir": "/scratch/aiida/aiida_run/10/24/e35e-166b-4104-95f6-c1706df4ce15",
-          "state": "FINISHED",
+          "process_state": "finished",
           "max_wallclock_seconds": 900,
           "retrieve_singlefile_list": [],
-          "scheduler_lastchecktime": "2015-10-02T20:30:36.481951",
-          "job_id": "13489"
-        },
-        "6480111": {}
+          "scheduler_lastchecktime": "2015-10-02T20:30:36.481951+00:00",
+          "job_id": "13489",
+          "exit_status": 0,
+          "process_status": null,
+          "process_label": "vc-relax",
+          "sealed": true
+        }
       },
       "node_extras": {
         "5921143": {},

@@ -684,7 +684,7 @@ class BandsData(KpointsData):
             return_text.append('')
             return_text.append('')
 
-        return ('\n'.join(return_text)).encode('utf-8'), {}
+        return '\n'.join(return_text).encode('utf-8'), {}
 
     def _matplotlib_get_dict(self,
                              main_file_name='',
@@ -964,7 +964,7 @@ class BandsData(KpointsData):
         script.append(u'plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
 
         script_data = u'\n'.join(script) + u'\n'
-        extra_files = {dat_filename: raw_data.encode('utf-8')}
+        extra_files = {dat_filename: raw_data}
 
         return script_data.encode('utf-8'), extra_files
 

@@ -146,43 +146,6 @@ class CalcJobNode(CalculationNode):
 
         return builder
 
-    def _validate(self):
-        """
-        Verify if all the input nodes are present and valid.
-
-        :raise: ValidationError: if invalid parameters are found.
-        """
-        super(CalcJobNode, self)._validate()
-
-        if self.computer is None:
-            raise exceptions.ValidationError('no computer was specified')
-
-        try:
-            parser_class = self.get_parser_class()
-        except exceptions.EntryPointError as exception:
-            raise exceptions.ValidationError('invalid parser specified: {}'.format(exception))
-
-        try:
-            # Since a parser is not required to be set, so `get_parser_class` will return `None` in that case
-            if parser_class is not None:
-                parser_class(self)
-        except TypeError as exception:
-            raise exceptions.ValidationError('invalid parser specified: {}'.format(exception))
-
-        resources = self.get_option('resources')
-        scheduler = self.computer.get_scheduler()  # pylint: disable=no-member
-        def_cpus_machine = self.computer.get_default_mpiprocs_per_machine()  # pylint: disable=no-member
-
-        if def_cpus_machine is not None:
-            resources['default_mpiprocs_per_machine'] = def_cpus_machine
-
-        try:
-            scheduler.create_job_resource(**resources)
-        except (TypeError, ValueError) as exc:
-            raise exceptions.ValidationError(
-                'Invalid resources for the scheduler of the specified computer: {}'.format(exc)
-            )
-
     @property
     def _raw_input_folder(self):
         """

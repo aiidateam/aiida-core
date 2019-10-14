@@ -225,7 +225,7 @@ class Repository(object):
 
         folder = self._get_base_folder()
 
-        if os.sep in key:
+        while os.sep in key:
             basepath, key = key.split(os.sep, 1)
             folder = folder.get_subfolder(basepath, create=True)
 

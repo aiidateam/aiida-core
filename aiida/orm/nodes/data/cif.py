@@ -732,22 +732,18 @@ class CifData(SinglefileData):
 
         return result['structure']
 
-    # pylint: disable=unused-argument
-    def _prepare_cif(self, main_file_name=''):
-        """
-        Return CIF string of CifData object.
+    def _prepare_cif(self, **kwargs):  # pylint: disable=unused-argument
+        """Return CIF string of CifData object.
 
-        If parsed values are present, a CIF string is created
-        and written to file.
-        If no parsed values are present, the CIF string is read
-        from file.
+        If parsed values are present, a CIF string is created and written to file. If no parsed values are present, the
+        CIF string is read from file.
         """
         if self._values and not self.is_stored:
             # Note: this overwrites the CIF file!
             self.set_values(self._values)
 
-        with self.open() as handle:
-            return handle.read().encode('utf-8'), {}
+        with self.open(mode='rb') as handle:
+            return handle.read(), {}
 
     def _get_object_ase(self):
         """

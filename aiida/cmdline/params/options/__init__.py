@@ -22,9 +22,9 @@ from .overridable import OverridableOption
 from .config import ConfigFileOption
 
 __all__ = (
-    'PROFILE', 'CALCULATION', 'CALCULATIONS', 'CODE', 'CODES', 'COMPUTER', 'COMPUTERS', 'DATUM', 'DATA', 'GROUP',
-    'GROUPS', 'NODE', 'NODES', 'FORCE', 'SILENT', 'VISUALIZATION_FORMAT', 'INPUT_FORMAT', 'EXPORT_FORMAT',
-    'ARCHIVE_FORMAT', 'NON_INTERACTIVE', 'DRY_RUN', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_LAST_NAME',
+    'graph_traversal_rules', 'PROFILE', 'CALCULATION', 'CALCULATIONS', 'CODE', 'CODES', 'COMPUTER', 'COMPUTERS',
+    'DATUM', 'DATA', 'GROUP', 'GROUPS', 'NODE', 'NODES', 'FORCE', 'SILENT', 'VISUALIZATION_FORMAT', 'INPUT_FORMAT',
+    'EXPORT_FORMAT', 'ARCHIVE_FORMAT', 'NON_INTERACTIVE', 'DRY_RUN', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_LAST_NAME',
     'USER_INSTITUTION', 'BACKEND', 'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME', 'REPOSITORY_PATH',
     'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PREPEND_TEXT', 'APPEND_TEXT', 'LABEL', 'DESCRIPTION', 'INPUT_PLUGIN',
     'CALC_JOB_STATE', 'PROCESS_STATE', 'EXIT_STATUS', 'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS',
@@ -54,6 +54,23 @@ def active_process_states():
         ProcessState.WAITING.value,
         ProcessState.RUNNING.value,
     ])
+
+
+def graph_traversal_rules(rules):
+    """Apply the graph traversal rule options to the command."""
+
+    def decorator(command):
+        """Only apply to traversal rules if they are toggleable."""
+        for name, traversal_rule in sorted(rules.items(), reverse=True):
+            if traversal_rule.toggleable:
+                option_name = name.replace('_', '-')
+                option_label = '--{option_name}/--no-{option_name}'.format(option_name=option_name)
+                help_string = 'Toggle the {} graph traversal rule used in computing the complete node set.'.format(name)
+                click.option(option_label, default=traversal_rule.default, show_default=True, help=help_string)(command)
+
+        return command
+
+    return decorator
 
 
 PROFILE = OverridableOption(

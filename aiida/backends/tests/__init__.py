@@ -117,6 +117,7 @@ DB_TEST_LIST = {
         'orm.authinfos': ['aiida.backends.tests.orm.test_authinfos'],
         'orm.comments': ['aiida.backends.tests.orm.test_comments'],
         'orm.computers': ['aiida.backends.tests.orm.test_computers'],
+        'orm.data.data': ['aiida.backends.tests.orm.data.test_data'],
         'orm.data.dict': ['aiida.backends.tests.orm.data.test_dict'],
         'orm.data.folder': ['aiida.backends.tests.orm.data.test_folder'],
         'orm.data.kpoints': ['aiida.backends.tests.orm.data.test_kpoints'],

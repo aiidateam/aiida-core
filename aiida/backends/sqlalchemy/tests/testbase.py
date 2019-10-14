@@ -23,23 +23,27 @@ from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
 class SqlAlchemyTests(AiidaTestImplementation):
 
     connection = None
-    test_session = None
+    _backend = None
 
     def setUpClass_method(self):
-        from aiida.backends.sqlalchemy import get_scoped_session
-
-        if self.test_session is None:
-            # Should we use reset_session?
-            self.test_session = get_scoped_session()
-
         self.clean_db()
-        self.backend = SqlaBackend()
+
+    def tearDownClass_method(self):
+        """Backend-specific tasks for tearing down the test environment."""
 
     def setUp_method(self):
         pass
 
     def tearDown_method(self):
         pass
+
+    @property
+    def backend(self):
+        if self._backend is None:
+            from aiida.manage.manager import get_manager
+            self._backend = get_manager().get_backend()
+
+        return self._backend
 
     def clean_db(self):
         from sqlalchemy.sql import table
@@ -53,20 +57,13 @@ class SqlAlchemyTests(AiidaTestImplementation):
         DbUser = table('db_dbuser')
         DbComputer = table('db_dbcomputer')
 
-        self.test_session.execute(DbGroupNodes.delete())
-        self.test_session.execute(DbGroup.delete())
-        self.test_session.execute(DbLog.delete())
-        self.test_session.execute(DbLink.delete())
-        self.test_session.execute(DbNode.delete())
-        self.test_session.execute(DbAuthInfo.delete())
-        self.test_session.execute(DbComputer.delete())
-        self.test_session.execute(DbUser.delete())
-
-        self.test_session.commit()
-
-    def tearDownClass_method(self):
-        """
-        Backend-specific tasks for tearing down the test environment.
-        """
-        self.test_session.close()
-        self.test_session = None
+        with self.backend.transaction() as session:
+            session.execute(DbGroupNodes.delete())
+            session.execute(DbGroup.delete())
+            session.execute(DbLog.delete())
+            session.execute(DbLink.delete())
+            session.execute(DbNode.delete())
+            session.execute(DbAuthInfo.delete())
+            session.execute(DbComputer.delete())
+            session.execute(DbUser.delete())
+            session.commit()

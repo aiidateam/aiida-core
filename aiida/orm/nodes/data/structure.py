@@ -1058,7 +1058,7 @@ class StructureData(Data):
 
         return_dict = {'s': [cell_json], 'm': [{'a': atoms_json}], 'units': '&Aring;'}
 
-        return json.dumps(return_dict), {}
+        return json.dumps(return_dict).encode('utf-8'), {}
 
     def _prepare_xyz(self, main_file_name=''):
         """

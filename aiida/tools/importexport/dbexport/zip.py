@@ -139,19 +139,19 @@ class ZipFolder(object):
         if not overwrite and self.exists(base_filename):
             raise IOError('destination already exists: {}'.format(base_filename))
 
-        # print src, filename
         if os.path.isdir(src):
             for dirpath, dirnames, filenames in os.walk(src):
                 relpath = os.path.relpath(dirpath, src)
                 if not dirnames and not filenames:
                     real_src = dirpath
-                    real_dest = os.path.join(base_filename, relpath) + '/'
+                    real_dest = os.path.join(base_filename, relpath) + os.path.sep
                     if not self.exists(real_dest):
                         self._zipfile.write(real_src, real_dest)
                 else:
                     for fname in dirnames + filenames:
                         real_src = os.path.join(dirpath, fname)
                         real_dest = os.path.join(base_filename, relpath, fname)
-                        self._zipfile.write(real_src, real_dest)
+                        if not self.exists(real_dest):
+                            self._zipfile.write(real_src, real_dest)
         else:
             self._zipfile.write(src, base_filename)

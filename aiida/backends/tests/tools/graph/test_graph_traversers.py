@@ -90,7 +90,7 @@ class TestExhaustiveTraverser(AiidaTestCase):
         # This uses the delete dict because it has the same names as the export dict,
         # which is all this test needs
         traverser_rules = {}
-        for name in GraphTraversalRules.DELETE.value:
+        for name in list(GraphTraversalRules.DELETE.value.keys()):
             traverser_rules[name] = False
 
         data_i, data_o, calc_0, work_1, work_2 = self._create_minimal_graph()
@@ -169,7 +169,7 @@ class TestExhaustiveTraverser(AiidaTestCase):
         # This uses the delete dict because it has the same names as the export dict,
         # which is all this test needs
         traverser_rules = {}
-        for name in GraphTraversalRules.DELETE.value:
+        for name in list(GraphTraversalRules.DELETE.value.keys()):
             traverser_rules[name] = False
 
         data_i, data_o, calc_0, work_1, work_2 = self._create_minimal_graph()
@@ -274,7 +274,7 @@ class TestExhaustiveTraverser(AiidaTestCase):
         # This uses the delete dict because it has the same names as the export dict,
         # which is all this test needs
         traverser_rules = {}
-        for name in GraphTraversalRules.DELETE.value:
+        for name in list(GraphTraversalRules.DELETE.value.keys()):
             traverser_rules[name] = False
 
         data_i, data_o, calc_0, work_1, work_2 = self._create_minimal_graph()
@@ -345,11 +345,10 @@ class TestExhaustiveTraverser(AiidaTestCase):
 
         rules_list = GraphTraversalRules.DELETE.value.copy()
 
-        for rule1 in list(rules_list):
+        for rule1 in list(rules_list.keys()):
             rules_list.pop(rule1)
-            for rule2 in rules_list:
+            for rule2 in list(rules_list.keys()):
                 for node_zero in node_list:
-
                     traverser_rules[rule1] = True
                     traverser_rules[rule2] = True
                     expected_nodes = self._mini_traverser(node_zero, rule1, rule2, connection_links)
@@ -369,7 +368,7 @@ class TestExhaustiveTraverser(AiidaTestCase):
         from aiida import orm
 
         traverser_rules = {}
-        for name in GraphTraversalRules.DELETE.value:
+        for name in list(GraphTraversalRules.DELETE.value.keys()):
             traverser_rules[name] = False
 
         data_take = orm.Data().store()
@@ -431,7 +430,7 @@ class TestExhaustiveTraverser(AiidaTestCase):
         # This uses the delete dict because it has the same names as the export dict,
         # which is all this test needs
         traverser_rules = {}
-        for name in GraphTraversalRules.DELETE.value:
+        for name in list(GraphTraversalRules.DELETE.value.keys()):
             traverser_rules[name] = False
 
         test_node = orm.Data().store()

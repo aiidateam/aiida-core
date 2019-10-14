@@ -57,6 +57,14 @@ class TestData(AiidaTestCase):
             instance.set_trajectory(stepids=stepids, cells=cells, symbols=['H'], positions=positions, times=times)
             return instance
 
+        if data_class is orm.UpfData:
+            filepath_base = os.path.abspath(
+                os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos')
+            )
+            filepath_carbon = os.path.join(filepath_base, 'C_pbe_v1.2.uspp.F.UPF')
+            instance = data_class(file=filepath_carbon)
+            return instance
+
         raise RuntimeError(
             'no instance generator implemented for class `{}`. If you have added a `_prepare_*` method '
             'for this data class, add a generator of a dummy instance here'.format(data_class)

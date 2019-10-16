@@ -240,7 +240,7 @@ class NodeTreePrinter(object):
     """Utility functions for printing node trees."""
 
     @classmethod
-    def print_node_tree(cls, node, max_depth, follow_links=None):
+    def print_node_tree(cls, node, max_depth, follow_links=()):
         """Top-level function for printing node tree."""
         from ete3 import Tree
         from aiida.cmdline.utils.common import get_node_summary
@@ -256,13 +256,12 @@ class NodeTreePrinter(object):
         return link_triple.node.ctime
 
     @classmethod
-    def _build_tree(cls, node, show_pk=True, max_depth=None, follow_links=None, depth=0):
+    def _build_tree(cls, node, show_pk=True, max_depth=None, follow_links=(), depth=0):
         """Return string with tree."""
         if max_depth is not None and depth > max_depth:
             return None
 
         children = []
-        # pylint: disable=unused-variable
         for entry in sorted(node.get_outgoing(link_type=follow_links).all(), key=cls._ctime):
             child_str = cls._build_tree(
                 entry.node, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1

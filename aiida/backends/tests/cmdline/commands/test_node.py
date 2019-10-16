@@ -21,6 +21,7 @@ from click.testing import CliRunner
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_node
+from aiida.common.utils import Capturing
 
 
 def get_result_lines(result):
@@ -59,10 +60,19 @@ class TestVerdiNode(AiidaTestCase):
 
     def test_node_tree(self):
         """Test `verdi node tree`"""
-        node = orm.Data().store()
-        options = [str(node.pk)]
+        options = [str(self.node.pk)]
         result = self.cli_runner.invoke(cmd_node.tree, options)
         self.assertClickResultNoException(result)
+
+    def test_node_tree_printer(self):
+        """Test the `NodeTreePrinter` utility."""
+        from aiida.cmdline.commands.cmd_node import NodeTreePrinter
+
+        with Capturing():
+            NodeTreePrinter.print_node_tree(self.node, max_depth=1)
+
+        with Capturing():
+            NodeTreePrinter.print_node_tree(self.node, max_depth=1, follow_links=())
 
     def test_node_attributes(self):
         """Test verdi node attributes"""

@@ -15,7 +15,7 @@ Once instanciated both ``Api`` and ``App`` classes into, say, ``app`` and ``api`
 these two objects have to be coupled by adding ``app`` as one of the attributes of ``api``.
 As we will see in a moment, we provide a function that, besides other things, does exactly this.
 
-In a Flask API the resources, e.g. *Nodes*, *Kpoints*,
+In a Flask API the resources, e.g. *Nodes*, *ProcessNodes*,
 etc., are represented by ``flask_restful.Resource``-derived classes.
 
 If you need to include additional endpoints besides those built in the AiiDA REST API you should:
@@ -122,7 +122,7 @@ Let's assume you've put the code in the file ``example.py``, reading:
     if __name__ == '__main__':
         """
         Run the app with the provided options. For example:
-        python example.py --host=127.0.0.2 --port=6000
+        python example.py --hostname=127.0.0.2 --port=6000
         """
 
         load_profile()
@@ -238,7 +238,7 @@ In fact, the general form of ``__init__()`` is meant to be:
 
             ...
 
-In the example, indeed, the only characteristic line is_flag
+In the example, indeed, the only characteristic line is
 :python:`self.add_resource(NewResource, '/new-endpoint/', strict_slashes=False)`.
 Anyway, the method ``add_resource()`` is defined and documented in `Flask <http://flask.pocoo.org/docs/>`_.
 
@@ -282,7 +282,7 @@ Finally, the ``main`` code configures and runs the API:
         load_profile()
         newendpoint()
 
-The `click package <https://click.palletsprojects.com/en/7.x/>` is used to provide a
+The `click package <https://click.palletsprojects.com/en/7.x/>`_ is used to provide a
 a nice command line interface to process the options and handle the default values to
 pass to the ``newendpoint`` function.
 
@@ -300,7 +300,7 @@ It requires as inputs:
 
     - positional arguments representing the command-line arguments/options,
       passed by the click function. Types, defaults and help strings can be set in
-      the ``@click.option`` definitions, and will be handled by the command line call
+      the ``@click.option`` definitions, and will be handled by the command line call.
 
 
 You should know few more things before using the script:
@@ -336,11 +336,11 @@ Let us first ask for the latest created node through the GET method:
 
 .. code-block:: bash
 
-    curl http://127.0.0.2:6000/api/v3/new-endpoint/ -X GET
+    curl http://127.0.0.2:6000/api/v4/new-endpoint/ -X GET
 
 The form of the output (and only the form) should resemble
 
-.. code-block:: bash
+.. code-block:: python
 
     {
         "attributes": {
@@ -356,11 +356,11 @@ structure of the attributes field will be in general very different.
 
 Now, let us create a node through the POST method, and check it again through GET:
 
-.. code-block:: bash
+.. code-block:: python
 
-    curl http://127.0.0.2:6000/api/v3/new-endpoint/ -X POST
+    curl http://127.0.0.2:6000/api/v4/new-endpoint/ -X POST
     {"id": 410618}
-    curl http://127.0.0.2:6000/api/v3/new-endpoint/ -X GET
+    curl http://127.0.0.2:6000/api/v4/new-endpoint/ -X GET
     {
         "attributes": {
             "property1": "spam",

@@ -8,7 +8,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""" Validate consistency of versions and dependencies.
+"""Validate consistency of versions and dependencies.
 
 Validates consistency of setup.json and
 
@@ -39,10 +39,36 @@ FILEPATH_TOML = os.path.join(ROOT_DIR, FILENAME_TOML)
 
 def get_setup_json():
     """Return the `setup.json` as a python dictionary """
-    with open(FILEPATH_SETUP_JSON, 'r') as fil:
-        setup_json = json.load(fil, object_pairs_hook=OrderedDict)
+    with io.open(FILEPATH_SETUP_JSON, 'r') as fil:
+        return json.load(fil, object_pairs_hook=OrderedDict)
 
-    return setup_json
+
+def write_setup_json(data):
+    """Write the contents of `data` to the `setup.json`.
+
+    If an exception is encountered during writing, the old content is restored.
+
+    :param data: the dictionary to write to the `setup.json`
+    """
+    backup = get_setup_json()
+
+    try:
+        dump_setup_json(data)
+    except Exception:  # pylint: disable=broad-except
+        dump_setup_json(backup)
+
+
+def dump_setup_json(data):
+    """Write the contents of `data` to the `setup.json`.
+
+    .. warning:: If the writing of the file excepts, the current file will be overwritten and will be left in an
+        incomplete state. To write with a backup safety use the `write_setup_json` function instead.
+
+    :param data: the dictionary to write to the `setup.json`
+    """
+    with io.open(FILEPATH_SETUP_JSON, 'w') as handle:
+        # Write with indentation of two spaces and explicitly define separators to not have spaces at end of lines
+        return json.dump(data, handle, indent=2, separators=(',', ': '))
 
 
 def determine_block_positions(lines, block_start_marker, block_end_marker):
@@ -183,8 +209,7 @@ def validate_verdi_documentation():
 def validate_version():
     """Check that version numbers match.
 
-    Check version number in setup.json and aiida-core/__init__.py and make sure
-    they match.
+    Check version number in setup.json and aiida-core/__init__.py and make sure they match.
     """
     import pkgutil
 
@@ -203,18 +228,14 @@ def validate_version():
         click.echo("Updating version in '{}' to: {}".format(FILENAME_SETUP_JSON, version))
 
         setup_content['version'] = version
-        with open(FILEPATH_SETUP_JSON, 'w') as fil:
-            # Write with indentation of two spaces and explicitly define separators to not have spaces at end of lines
-            json.dump(setup_content, fil, indent=2, separators=(',', ': '))
+        write_setup_json(setup_content)
 
         sys.exit(1)
 
 
 @cli.command('toml')
 def validate_pyproject():
-    """
-    Ensure that the version of reentry in setup.json and pyproject.toml are identical
-    """
+    """Ensure that the version of reentry in setup.json and pyproject.toml are identical."""
     reentry_requirement = None
     for requirement in get_setup_json()['install_requires']:
         if 'reentry' in requirement:
@@ -226,7 +247,7 @@ def validate_pyproject():
         sys.exit(1)
 
     try:
-        with open(FILEPATH_TOML, 'r') as handle:
+        with io.open(FILEPATH_TOML, 'r') as handle:
             toml_string = handle.read()
     except IOError as exception:
         click.echo('Could not read the required file: {}'.format(FILEPATH_TOML), err=True)
@@ -256,14 +277,11 @@ def validate_pyproject():
 
 @cli.command('conda')
 def update_environment_yml():
-    """
-    Updates environment.yml file for conda.
-    """
+    """Update `environment.yml` file for conda."""
     import yaml
     import re
 
-    # needed for ordered dict, see
-    # https://stackoverflow.com/a/52621703
+    # needed for ordered dict, see https://stackoverflow.com/a/52621703
     yaml.add_representer(
         OrderedDict,
         lambda self, data: yaml.representer.SafeRepresenter.represent_dict(self, data.items()),
@@ -294,8 +312,8 @@ def update_environment_yml():
 
     environment_filename = 'environment.yml'
     file_path = os.path.join(ROOT_DIR, environment_filename)
-    with open(file_path, 'w') as env_file:
-        env_file.write('# Usage: conda env create -n myenvname -f environment.yml python=3.6\n')
+    with io.open(file_path, 'w') as env_file:
+        env_file.write(u'# Usage: conda env create -n myenvname -f environment.yml python=3.6\n')
         yaml.safe_dump(
             environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True
         )

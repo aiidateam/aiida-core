@@ -361,3 +361,72 @@ def group_copy(source_group, destination_group):
     # Copy nodes
     dest_group.add_nodes(list(source_group.nodes))
     echo.echo_success('Nodes copied from group<{}> to group<{}>'.format(source_group.label, dest_group.label))
+
+
+@verdi_group.group('path')
+def verdi_group_path():
+    """Inspect groups of nodes, with delimited label paths."""
+
+
+@verdi_group_path.command('ls')
+@click.argument('path', type=click.STRING, required=False)
+@click.option('-R', '--recursive', is_flag=True, default=False, help='Recursively list sub-paths encountered')
+@click.option('-l', '--long', 'as_table', is_flag=True, default=False, help='List as a table, with sub-group count')
+@click.option(
+    '-d', '--with-description', 'with_description', is_flag=True, default=False, help='Show also the group description'
+)
+@click.option(
+    '--no-virtual',
+    'no_virtual',
+    is_flag=True,
+    default=False,
+    help='Only show paths that fully correspond to an existing group'
+)
+@click.option(
+    '-t',
+    '--type',
+    'group_type',
+    type=types.LazyChoice(valid_group_type_strings),
+    default=user_defined_group,
+    help='Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to '
+    'specify aiida-internal type'
+)
+@click.option('--no-warn', is_flag=True, default=False, help='Do not issue a warning if any paths are invalid.')
+@with_dbenv()
+def group_path_ls(path, recursive, as_table, no_virtual, group_type, with_description, no_warn):
+    # pylint: disable=too-many-arguments
+    """Show a list of existing group paths."""
+    from aiida.tools.groups.paths import GroupPath, InvalidPath
+
+    try:
+        path = GroupPath(path or '', type_string=group_type, warn_invalid_child=not no_warn)
+    except InvalidPath as err:
+        echo.echo_critical(str(err))
+
+    if recursive:
+        children = path.walk()
+    else:
+        children = path.children
+
+    if as_table or with_description:
+        from tabulate import tabulate
+        headers = ['Path', 'Sub-Groups']
+        if with_description:
+            headers.append('Description')
+        rows = []
+        for child in sorted(children):
+            if no_virtual and child.is_virtual:
+                continue
+            row = [
+                child.path if child.is_virtual else click.style(child.path, bold=True),
+                len([c for c in child.walk() if not c.is_virtual])
+            ]
+            if with_description:
+                row.append('-' if child.is_virtual else child.get_group().description)
+            rows.append(row)
+        echo.echo(tabulate(rows, headers=headers))
+    else:
+        for child in sorted(children):
+            if no_virtual and child.is_virtual:
+                continue
+            echo.echo(child.path, bold=not child.is_virtual)

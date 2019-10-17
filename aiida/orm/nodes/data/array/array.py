@@ -118,7 +118,7 @@ class ArrayData(Data):
 
             # Open a handle in binary read mode as the arrays are written as binary files as well
             with self.open(filename, mode='rb') as handle:
-                return numpy.load(handle)
+                return numpy.load(handle, allow_pickle=False)
 
         # Return with proper caching if the node is stored, otherwise always re-read from disk
         if not self.is_stored:

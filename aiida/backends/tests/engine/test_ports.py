@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine.processes.ports import InputPort, PortNamespace
+from aiida.orm import Dict
 
 
 class TestInputPort(AiidaTestCase):
@@ -85,3 +86,15 @@ class TestPortNamespace(AiidaTestCase):
         for port_name in illegal_port_names:
             with self.assertRaises(ValueError):
                 port_namespace[port_name] = port
+
+    def test_serialize_type_check(self):
+        """Test that `serialize` will include full port namespace in exception message."""
+        base_namespace = 'base'
+        nested_namespace = 'some.nested.namespace'
+        port_namespace = PortNamespace(base_namespace)
+        port_namespace.create_port_namespace(nested_namespace)
+
+        # pylint: disable=deprecated-method
+        # The `assertRaisesRegexp` method is deprecated in python 3 but assertRaisesRegex` does not exist in python 2
+        with self.assertRaisesRegexp(TypeError, '.*{}.*{}.*'.format(base_namespace, nested_namespace)):
+            port_namespace.serialize({'some': {'nested': {'namespace': {Dict()}}}})

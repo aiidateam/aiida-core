@@ -165,7 +165,7 @@ class ArrayData(Data):
 
         # Write the array to a temporary file, and then add it to the repository of the node
         with tempfile.NamedTemporaryFile() as handle:
-            numpy.save(handle, array)
+            numpy.save(handle, array, allow_pickle=False)
 
             # Flush and rewind the handle, otherwise the command to store it in the repo will write an empty file
             handle.flush()

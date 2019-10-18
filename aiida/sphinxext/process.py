@@ -126,7 +126,7 @@ class AiidaProcessDirective(Directive):
         from aiida.engine.processes.ports import InputPort, PortNamespace
 
         if not port_namespace:
-            return
+            return None
         result = nodes.bullet_list(bullet='*')
         for name, port in sorted(port_namespace.items()):
             item = nodes.list_item()

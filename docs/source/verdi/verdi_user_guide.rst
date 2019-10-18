@@ -390,7 +390,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      create   Export parts of the AiiDA database to file for sharing.
+      create   Export subsets of the provenance graph to file for sharing.
       inspect  Inspect contents of an exported archive without importing it.
       migrate  Migrate an old export archive file to the most recent format.
 
@@ -508,7 +508,7 @@ Below is a list with all available subcommands.
     Commands:
       attributes   Show the attributes of one or more nodes.
       comment      Inspect, create and manage node comments.
-      delete       Delete nodes from the database.
+      delete       Delete nodes from the provenance graph.
       description  View or set the description of one or more nodes.
       extras       Show the extras of one or more nodes.
       graph        Create visual representations of the provenance graph.

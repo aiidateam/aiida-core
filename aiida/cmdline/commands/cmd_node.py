@@ -293,10 +293,11 @@ class NodeTreePrinter(object):
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
 def node_delete(nodes, dry_run, verbose, force, **kwargs):
-    """Delete nodes from the database.
+    """Delete nodes from the provenance graph.
 
-    Please note that this will not only delete the nodes explicitly provided via the command line, but will also include
+    This will not only delete the nodes explicitly provided via the command line, but will also include
     the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
+    You can modify some of those rules using options of this command.
     """
     from aiida.manage.database.delete.nodes import delete_nodes
 

@@ -78,8 +78,6 @@
         aiida/backends/sqlalchemy/utils.py|
         aiida/backends/testbase.py|
         aiida/backends/testimplbase.py|
-        aiida/backends/tests/test_backup_script.py|
-        aiida/backends/tests/test_backup_setup_script.py|
         aiida/backends/tests/test_base_dataclasses.py|
         aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/commands/test_comment.py|
@@ -95,7 +93,6 @@
         aiida/backends/tests/test_nodes.py|
         aiida/backends/tests/orm/data/test_remote.py|
         aiida/backends/tests/orm/utils/test_loaders.py|
-        aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|
         aiida/backends/tests/engine/test_class_loader.py|
         aiida/backends/tests/engine/test_daemon.py|
@@ -114,7 +111,6 @@
         aiida/common/datastructures.py|
         aiida/engine/daemon/execmanager.py|
         aiida/engine/processes/calcjobs/tasks.py|
-        aiida/manage/backup/backup_base.py|
         aiida/orm/autogroup.py|
         aiida/orm/querybuilder.py|
         aiida/orm/nodes/data/array/bands.py|
@@ -124,7 +120,6 @@
         aiida/orm/nodes/data/orbital.py|
         aiida/orm/nodes/data/remote.py|
         aiida/orm/nodes/data/structure.py|
-        aiida/orm/nodes/data/upf.py|
         aiida/orm/utils/remote.py|
         aiida/parsers/plugins/arithmetic/add.py|
         aiida/parsers/plugins/templatereplacer/doubler.py|
@@ -146,11 +141,7 @@
         aiida/schedulers/plugins/test_sge.py|
         aiida/schedulers/plugins/test_slurm.py|
         aiida/schedulers/plugins/test_torque.py|
-        aiida/sphinxext/tests/conftest.py|
-        aiida/sphinxext/tests/test_workchain.py|
         aiida/sphinxext/tests/workchain_source/conf.py|
-        aiida/sphinxext/tests/workchain_source/demo_workchain.py|
-        aiida/sphinxext/workchain.py|
         aiida/tools/data/array/kpoints/legacy.py|
         aiida/tools/data/array/kpoints/seekpath.py|
         aiida/tools/data/__init__.py|

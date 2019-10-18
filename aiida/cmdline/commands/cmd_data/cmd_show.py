@@ -61,13 +61,13 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
     import subprocess
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+b') as handle:
         for trajectory in trajectory_list:
-            tmpf.write(trajectory._exportcontent('cif', **kwargs)[0])
-        tmpf.flush()
+            handle.write(trajectory._exportcontent('cif', **kwargs)[0])
+        handle.flush()
 
         try:
-            subprocess.check_output([exec_name, tmpf.name])
+            subprocess.check_output([exec_name, handle.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
             echo.echo_info('the call to {} ended with an error.'.format(exec_name))
@@ -93,7 +93,7 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
     obj = object_list[0]
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile(mode='w+', suffix='.xsf') as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+b', suffix='.xsf') as tmpf:
         tmpf.write(obj._exportcontent('xsf', **kwargs)[0])
         tmpf.flush()
 
@@ -154,7 +154,7 @@ def _show_vesta(exec_name, structure_list):
     import subprocess
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile(mode='w+', suffix='.cif') as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+b', suffix='.cif') as tmpf:
         for structure in structure_list:
             tmpf.write(structure._exportcontent('cif')[0])
         tmpf.flush()
@@ -186,7 +186,7 @@ def _show_vmd(exec_name, structure_list):
     structure = structure_list[0]
 
     # pylint: disable=protected-access
-    with tempfile.NamedTemporaryFile(mode='w+', suffix='.xsf') as tmpf:
+    with tempfile.NamedTemporaryFile(mode='w+b', suffix='.xsf') as tmpf:
         tmpf.write(structure._exportcontent('xsf')[0])
         tmpf.flush()
 
@@ -224,7 +224,7 @@ def _show_xmgrace(exec_name, list_bands):
             'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % max_num_agr_colors)
         )
         # write a tempfile
-        tempf = tempfile.NamedTemporaryFile('w+', suffix='.agr')
+        tempf = tempfile.NamedTemporaryFile('w+b', suffix='.agr')
         tempf.write(text)
         tempf.flush()
         list_files.append(tempf)

@@ -552,6 +552,64 @@ class TestQueryBuilder(AiidaTestCase):
             ['StructureData_1--ProcessNode_1', 'ProcessNode_1--StructureData_2', 'ProcessNode_1--Dict_1']
         )
 
+    def test_direction_keyword(self):
+        """
+        The direction keyword is a special case with the QueryBuilder append
+        method, so some tests are good.
+        """
+        d1, d2, d3, d4 = [orm.Data().store() for _ in range(4)]
+        c1, c2 = [orm.CalculationNode() for _ in range(2)]
+        c1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link_d1c1')
+        c1.store()
+        d2.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d2')
+        d4.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d4')
+        c2.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link_d2c2')
+        c2.store()
+        d3.add_incoming(c2, link_type=LinkType.CREATE, link_label='link_c2d3')
+
+        # testing direction=1 for d1, which should return the outgoing
+        qb = orm.QueryBuilder()
+        qb.append(orm.Data, filters={'id': d1.id})
+        qb.append(orm.CalculationNode, direction=1, project='id')
+        res1 = {_ for _, in qb.all()}
+
+        qb = orm.QueryBuilder()
+        qb.append(orm.Data, filters={'id': d1.id}, tag='data')
+        qb.append(orm.CalculationNode, with_incoming='data', project='id')
+        res2 = {_ for _, in qb.all()}
+
+        self.assertEqual(res1, res2)
+        self.assertEqual(res1, {c1.id})
+
+        # testing direction=-1, which should return the incoming
+        qb = orm.QueryBuilder()
+        qb.append(orm.Data, filters={'id': d2.id})
+        qb.append(orm.CalculationNode, direction=-1, project='id')
+        res1 = {_ for _, in qb.all()}
+
+        qb = orm.QueryBuilder()
+        qb.append(orm.Data, filters={'id': d2.id}, tag='data')
+        qb.append(orm.CalculationNode, with_outgoing='data', project='id')
+        res2 = {_ for _, in qb.all()}
+        self.assertEqual(res1, res2)
+        self.assertEqual(res1, {c1.id})
+
+        # testing direction higher than 1
+        qb = orm.QueryBuilder()
+        qb.append(orm.CalculationNode, tag='c1', filters={'id': c1.id})
+        qb.append(orm.Data, with_incoming='c1', tag='d2or4')
+        qb.append(orm.CalculationNode, tag='c2', with_incoming='d2or4')
+        qb.append(orm.Data, tag='d3', with_incoming='c2', project='id')
+        qh = qb.get_json_compatible_queryhelp()  # saving query for later
+        qb.append(orm.Data, direction=-4, project='id')
+        res1 = {item[1] for item in qb.all()}
+        self.assertEqual(res1, {d1.id})
+
+        qb = orm.QueryBuilder(**qh)
+        qb.append(orm.Data, direction=4, project='id')
+        res2 = {item[1] for item in qb.all()}
+        self.assertEqual(res2, {d2.id, d4.id})
+
 
 class TestQueryHelp(AiidaTestCase):
 

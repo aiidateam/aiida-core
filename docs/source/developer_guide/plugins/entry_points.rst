@@ -194,11 +194,10 @@ Usage::
 ``aiida.cmdline``
 -----------------
 
-For subcommands to verdi commands like ``verdi data mydata``. This was previously not possible to achieve without editing aiida source code directly. AiiDA expects each entry point to be either a ``click.Command`` or ``click.CommandGroup``.
-
+For subcommands to verdi commands like ``verdi data mydata``.
 Plugin support for commands is possible due to using `click`_.
+AiiDA expects each entry point to be either a ``click.Command`` or ``click.CommandGroup``.
 
-.. note:: In aiida-0.9, the subcommand in question is not yet exposed to ``verdi``. There is a `aiida-verdi`_ package that is being developed to implement such functionality (experimental yet). The command will then be called ``verdi-exp data mydata`` instead.
 
 Spec::
 

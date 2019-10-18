@@ -300,10 +300,8 @@ def is_valid_entry_point_string(entry_point_string):
     """
     try:
         group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
-    except ValueError:
+    except (AttributeError, ValueError):
+        # Either `entry_point_string` is not a string or it does not contain the separator
         return False
 
-    if group in entry_point_group_to_module_path_map:
-        return True
-    else:
-        return False
+    return group in entry_point_group_to_module_path_map

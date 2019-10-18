@@ -180,25 +180,17 @@ def calc_info(node):
     if not isinstance(node, ProcessNode):
         raise TypeError('Unknown type: {}'.format(type(node)))
 
-    if isinstance(node, WorkChainNode):
-        plabel = node.process_label
-        pstate = node.process_state.value.capitalize()
-        exit_status = node.exit_status
-        winfo = node.stepper_state_info
+    process_label = node.process_label
+    process_state = node.process_state.value.capitalize()
+    exit_status = node.exit_status
 
-        if winfo is None:
-            string = u'{}<{}> {}'.format(plabel, node.pk, pstate)
-        else:
-            string = u'{}<{}> {} [{}]'.format(plabel, node.pk, pstate, winfo)
-
+    if exit_status is not None:
+        string = u'{}<{}> {} [{}]'.format(process_label, node.pk, process_state, exit_status)
     else:
-        plabel = node.process_label
-        pstate = node.process_state.value.capitalize()
-        exit_status = node.exit_status
-        if exit_status is not None:
-            string = u'{}<{}> {} [{}]'.format(plabel, node.pk, pstate, exit_status)
-        else:
-            string = u'{}<{}> {}'.format(plabel, node.pk, pstate)
+        string = u'{}<{}> {}'.format(process_label, node.pk, process_state)
+
+    if isinstance(node, WorkChainNode) and node.stepper_state_info:
+        string += u' [{}]'.format(node.stepper_state_info)
 
     return string
 

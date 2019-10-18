@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-arguments,import-error
+# pylint: disable=too-many-arguments,import-error,too-many-locals
 """`verdi export` command."""
 from __future__ import division
 from __future__ import print_function
@@ -24,6 +24,7 @@ from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils import echo
+from aiida.common.links import GraphTraversalRules
 
 
 @verdi.group('export')
@@ -69,30 +70,7 @@ def inspect(archive, version, data, meta_data):
 @options.NODES()
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
-@click.option(
-    '--input-forward/--no-input-forward',
-    default=False,
-    show_default=True,
-    help='Follow forward INPUT links (recursively) when calculating the node set to export.'
-)
-@click.option(
-    '--create-reversed/--no-create-reversed',
-    default=True,
-    show_default=True,
-    help='Follow reverse CREATE links (recursively) when calculating the node set to export.'
-)
-@click.option(
-    '--return-reversed/--no-return-reversed',
-    default=False,
-    show_default=True,
-    help='Follow reverse RETURN links (recursively) when calculating the node set to export.'
-)
-@click.option(
-    '--call-reversed/--no-call-reversed',
-    default=False,
-    show_default=True,
-    help='Follow reverse CALL links (recursively) when calculating the node set to export.'
-)
+@options.graph_traversal_rules(GraphTraversalRules.EXPORT.value)
 @click.option(
     '--include-logs/--exclude-logs',
     default=True,
@@ -107,14 +85,17 @@ def inspect(archive, version, data, meta_data):
 )
 @decorators.with_dbenv()
 def create(
-    output_file, codes, computers, groups, nodes, archive_format, force, input_forward, create_reversed,
-    return_reversed, call_reversed, include_comments, include_logs
+    output_file, codes, computers, groups, nodes, archive_format, force, input_calc_forward, input_work_forward,
+    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs
 ):
     """
-    Export parts of the AiiDA database to file for sharing.
+    Export subsets of the provenance graph to file for sharing.
 
-    Various entities can be exported, such as Codes, Computers, Groups, Nodes,
-    Comments, Logs, ...
+    Besides Nodes of the provenance graph, you can export Groups, Codes, Computers, Comments and Logs.
+
+    By default, the export file will include not only the entities explicitly provided via the command line but also
+    their provenance, according to the rules outlined in the documentation.
+    You can modify some of those rules using options of this command.
     """
     from aiida.tools.importexport import export, export_zip
 
@@ -133,10 +114,12 @@ def create(
         entities.extend(nodes)
 
     kwargs = {
-        'input_forward': input_forward,
-        'create_reversed': create_reversed,
-        'return_reversed': return_reversed,
-        'call_reversed': call_reversed,
+        'input_calc_forward': input_calc_forward,
+        'input_work_forward': input_work_forward,
+        'create_backward': create_backward,
+        'return_backward': return_backward,
+        'call_calc_backward': call_calc_backward,
+        'call_work_backward': call_work_backward,
         'include_comments': include_comments,
         'include_logs': include_logs,
         'overwrite': force

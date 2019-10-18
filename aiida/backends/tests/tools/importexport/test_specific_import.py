@@ -17,6 +17,8 @@ import os
 import shutil
 import tempfile
 
+import unittest
+
 import numpy as np
 
 from aiida import orm
@@ -268,3 +270,95 @@ class TestSpecificImport(AiidaTestCase):
         self.assertIn(
             'Unable to find the repository folder for Node with UUID={}'.format(node_uuid), str(exc.exception)
         )
+
+    @unittest.skip('Reenable when issue #3199 is solve (PR #3242): Fix `extract_tree`')
+    @with_temp_dir
+    def test_empty_repo_folder_export(self, temp_dir):
+        """Check a Node's empty repository folder is exported properly"""
+        from aiida.common.folders import Folder
+        from aiida.tools.importexport.dbexport import export_zip, export_tree
+
+        node = orm.Dict().store()
+        node_uuid = node.uuid
+
+        node_repo = RepositoryFolder(section=Repository._section_name, uuid=node_uuid)  # pylint: disable=protected-access
+        self.assertTrue(
+            node_repo.exists(), msg='Newly created and stored Node should have had an existing repository folder'
+        )
+        for filename, is_file in node_repo.get_content_list(only_paths=False):
+            abspath_filename = os.path.join(node_repo.abspath, filename)
+            if is_file:
+                os.remove(abspath_filename)
+            else:
+                shutil.rmtree(abspath_filename, ignore_errors=False)
+        self.assertFalse(
+            node_repo.get_content_list(),
+            msg='Repository folder should be empty, instead the following was found: {}'.format(
+                node_repo.get_content_list()
+            )
+        )
+
+        archive_variants = {
+            'archive folder': os.path.join(temp_dir, 'export_tree'),
+            'tar archive': os.path.join(temp_dir, 'export.tar.gz'),
+            'zip archive': os.path.join(temp_dir, 'export.zip')
+        }
+
+        export_tree([node], folder=Folder(archive_variants['archive folder']), silent=True)
+        export([node], outfile=archive_variants['tar archive'], silent=True)
+        export_zip([node], outfile=archive_variants['zip archive'], silent=True)
+
+        for variant, filename in archive_variants.items():
+            self.reset_database()
+            node_count = orm.QueryBuilder().append(orm.Dict, project='uuid').count()
+            self.assertEqual(node_count, 0, msg='After DB reset {} Dict Nodes was (wrongly) found'.format(node_count))
+
+            import_data(filename, silent=True)
+            builder = orm.QueryBuilder().append(orm.Dict, project='uuid')
+            imported_node_count = builder.count()
+            self.assertEqual(
+                imported_node_count,
+                1,
+                msg='After {} import a single Dict Node should have been found, '
+                'instead {} was/were found'.format(variant, imported_node_count)
+            )
+            imported_node_uuid = builder.all()[0][0]
+            self.assertEqual(
+                imported_node_uuid,
+                node_uuid,
+                msg='The wrong UUID was found for the imported {}: '
+                '{}. It should have been: {}'.format(variant, imported_node_uuid, node_uuid)
+            )
+
+    def test_import_folder(self):
+        """Verify a pre-extracted archive (aka. a folder with the archive structure) can be imported.
+
+        It is important to check that the source directory or any of its contents are not deleted after import.
+        """
+        from aiida.common.folders import SandboxFolder
+        from aiida.backends.tests.utils.archives import get_archive_file
+        from aiida.tools.importexport.common.archive import extract_zip
+
+        archive = get_archive_file('arithmetic.add.aiida', filepath='calcjob')
+
+        with SandboxFolder() as temp_dir:
+            extract_zip(archive, temp_dir, silent=True)
+
+            # Make sure the JSON files and the nodes subfolder was correctly extracted (is present),
+            # then try to import it by passing the extracted folder to the import function.
+            for name in {'metadata.json', 'data.json', 'nodes'}:
+                self.assertTrue(os.path.exists(os.path.join(temp_dir.abspath, name)))
+
+            # Get list of all folders in extracted archive
+            org_folders = []
+            for dirpath, dirnames, _ in os.walk(temp_dir.abspath):
+                org_folders += [os.path.join(dirpath, dirname) for dirname in dirnames]
+
+            import_data(temp_dir.abspath, silent=True)
+
+            # Check nothing from the source was deleted
+            src_folders = []
+            for dirpath, dirnames, _ in os.walk(temp_dir.abspath):
+                src_folders += [os.path.join(dirpath, dirname) for dirname in dirnames]
+            self.maxDiff = None  # pylint: disable=invalid-name
+            self.assertListEqual(org_folders, src_folders)

@@ -42,7 +42,10 @@ class TestUpfParser(AiidaTestCase):
         self.temp_dir = tempfile.mkdtemp()
 
     def tearDown(self):
-        """Destroy the temporary directory created."""
+        """Delete all groups and destroy the temporary directory created."""
+        for group in orm.Group.objects.find(filters={'type_string': orm.GroupTypeString.UPFGROUP_TYPE.value}):
+            orm.Group.objects.delete(group.pk)
+
         try:
             shutil.rmtree(self.temp_dir)
         except OSError as exception:
@@ -52,6 +55,17 @@ class TestUpfParser(AiidaTestCase):
                 os.remove(self.temp_dir)
             else:
                 raise IOError(exception)
+
+    def test_get_upf_family_names(self):
+        """Test the `UpfData.get_upf_family_names` method."""
+        label = 'family'
+
+        family, _ = orm.Group.objects.get_or_create(label=label, type_string=orm.GroupTypeString.UPFGROUP_TYPE.value)
+        family.add_nodes([self.pseudo_barium])
+        family.store()
+
+        self.assertEqual({group.label for group in orm.UpfData.get_upf_groups()}, {label})
+        self.assertEqual(self.pseudo_barium.get_upf_family_names(), [label])
 
     def test_get_upf_groups(self):
         """Test the `UpfData.get_upf_groups` class method."""

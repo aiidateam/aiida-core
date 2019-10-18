@@ -11,6 +11,8 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+import sys
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -57,6 +59,31 @@ def get_valid_test_paths():
     return valid_test_paths
 
 
+@verdi_devel.command('check-load-time')
+def devel_check_load_time():
+    """Check for common indicators that slowdown `verdi`.
+
+    Check for environment properties that negatively affect the responsiveness of the `verdi` command line interface.
+    Known pathways that increase load time:
+
+        * the database environment is loaded when it doesn't need to be
+        * the `aiida.orm` module is imported when it doesn't need to be
+
+    If either of these conditions are true, the command will raise a critical error
+    """
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+
+    if manager.backend_loaded:
+        echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
+
+    if 'aiida.orm' in sys.modules:
+        echo.echo_critical('potential `verdi` speed problem: `aiida.orm` module is imported.')
+
+    echo.echo_success('no issues detected')
+
+
 @verdi_devel.command('run_daemon')
 @decorators.with_dbenv()
 def devel_run_daemon():
@@ -72,7 +99,6 @@ def devel_run_daemon():
 def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """Run the unittest suite or parts of it."""
     import os
-    import sys
     import unittest
 
     import aiida

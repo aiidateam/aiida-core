@@ -319,130 +319,10 @@ Options
 -------
 In addition to the common metadata inputs, such as ``label`` and ``description``, that all processes have, the :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` has an additonal input called ``options``.
 These options allow to subtly change the behavior of the calculation job, for example which parser should be used once it is finished and special scheduler directives.
-The full list of available options are as follows:
+The full list of available options are documented below as part of the ``CalcJob`` interface:
 
-    * :ref:`parser_name<working_calcjobs_options_parser_name>`
-    * :ref:`input_filename<working_calcjobs_options_input_filename>`
-    * :ref:`output_filename<working_calcjobs_options_output_filename>`
-    * :ref:`scheduler_stdout<working_calcjobs_options_scheduler_stdout>`
-    * :ref:`scheduler_stderr<working_calcjobs_options_scheduler_stderr>`
-    * :ref:`resources<working_calcjobs_options_resources>`
-    * :ref:`max_wallclock_seconds<working_calcjobs_options_max_wallclock_seconds>`
-    * :ref:`custom_scheduler_commands<working_calcjobs_options_custom_scheduler_commands>`
-    * :ref:`queue_name<working_calcjobs_options_queue_name>`
-    * :ref:`account<working_calcjobs_options_account>`
-    * :ref:`qos<working_calcjobs_options_qos>`
-    * :ref:`computer<working_calcjobs_options_computer>`
-    * :ref:`withmpi<working_calcjobs_options_withmpi>`
-    * :ref:`mpirun_extra_params<working_calcjobs_options_mpirun_extra_params>`
-    * :ref:`import_sys_environment<working_calcjobs_options_import_sys_environment>`
-    * :ref:`environment_variables<working_calcjobs_options_environment_variables>`
-    * :ref:`priority<working_calcjobs_options_priority>`
-    * :ref:`max_memory_kb<working_calcjobs_options_max_memory_kb>`
-    * :ref:`prepend_text<working_calcjobs_options_prepend_text>`
-    * :ref:`append_text<working_calcjobs_options_append_text>`
-
-More detailed information about their usage, follows below.
-
-.. _working_calcjobs_options_parser_name:
-
-``parser_name``
-~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_input_filename:
-
-``input_filename``
-~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_output_filename:
-
-``output_filename``
-~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_scheduler_stdout:
-
-``scheduler_stdout``
-~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_scheduler_stderr:
-
-``scheduler_stderr``
-~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_resources:
-
-``resources``
-~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_max_wallclock_seconds:
-
-``max_wallclock_seconds``
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_custom_scheduler_commands:
-
-``custom_scheduler_commands``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_queue_name:
-
-``queue_name``
-~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_account:
-
-``account``
-~~~~~~~~~~~
-
-.. _working_calcjobs_options_qos:
-
-``qos``
-~~~~~~~
-
-.. _working_calcjobs_options_computer:
-
-``computer``
-~~~~~~~~~~~~
-
-.. _working_calcjobs_options_withmpi:
-
-``withmpi``
-~~~~~~~~~~~
-
-.. _working_calcjobs_options_mpirun_extra_params:
-
-``mpirun_extra_params``
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_import_sys_environment:
-
-``import_sys_environment``
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_environment_variables:
-
-``environment_variables``
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_priority:
-
-``priority``
-~~~~~~~~~~~~
-
-.. _working_calcjobs_options_max_memory_kb:
-
-``max_memory_kb``
-~~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_prepend_text:
-
-``prepend_text``
-~~~~~~~~~~~~~~~~
-
-.. _working_calcjobs_options_append_text:
-
-``append_text``
-~~~~~~~~~~~~~~~
+.. aiida-calcjob:: CalcJob
+    :module: aiida.engine.processes.calcjobs
 
 
 .. _working_calcjobs_launch:
@@ -511,7 +391,7 @@ Parsing
 The previous sections explained in detail how the execution of an external executable is wrapped by the ``CalcJob`` class to make it runnable by AiiDA's engine.
 From the first steps of preparing the input files on the remote machine, to retrieving the relevant files and storing them in a :py:class:`~aiida.orm.nodes.data.folder.FolderData` node, that is attached as the ``retrieved`` output.
 This is the last *required* step for a ``CalcJob`` to terminate, but often we would *like* to parse the raw output and attach them as queryable output nodes to the calculation job node.
-To automatically trigger the parsing of a calculation job after its output has been retrieved, is to specify the :ref:`parser name option<working_calcjobs_options_parser_name>`.
+To automatically trigger the parsing of a calculation job after its output has been retrieved, is to specify the :ref:`parser name option<working_calcjobs_options>`.
 If the engine find this option specified, it will load the corresponding parser class, which should be a sub class of :py:class:`~aiida.parsers.parser.Parser` and calls its :py:meth:`~aiida.parsers.parser.Parser.parse` method.
 
 To explain the interface of the ``Parser`` class and the ``parse`` method, let's take the :py:class:`~aiida.parsers.plugins.arithmetic.add.ArithmeticAddParser` as an example.

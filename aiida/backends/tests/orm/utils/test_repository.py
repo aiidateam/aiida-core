@@ -29,6 +29,9 @@ class TestRepository(AiidaTestCase):
         self.tempdir = tempfile.mkdtemp()
         self.tree = {
             'subdir': {
+                'nested': {
+                    'deep.txt': u'Content does not matter',
+                },
                 'a.txt': u'Content of file A\nWith some newlines',
                 'b.txt': u'Content of file B without newline',
             },
@@ -71,6 +74,15 @@ class TestRepository(AiidaTestCase):
     def test_put_object_from_filelike(self):
         """Test the `put_object_from_filelike` method."""
         key = os.path.join('subdir', 'a.txt')
+        filepath = os.path.join(self.tempdir, key)
+        content = self.get_file_content(key)
+
+        with io.open(filepath, 'r') as handle:
+            node = Node()
+            node.put_object_from_filelike(handle, key)
+            self.assertEqual(node.get_object_content(key), content)
+
+        key = os.path.join('subdir', 'nested', 'deep.txt')
         filepath = os.path.join(self.tempdir, key)
         content = self.get_file_content(key)
 

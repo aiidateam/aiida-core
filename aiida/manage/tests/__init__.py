@@ -19,8 +19,6 @@ import shutil
 from os import path
 from contextlib import contextmanager
 
-from pgtest.pgtest import PGTest
-
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common import exceptions
 from aiida.manage import configuration
@@ -257,6 +255,8 @@ class TemporaryProfileManager(ProfileManager):
 
         :param pgtest: a dictionary containing input to PGTest()
         """
+        from pgtest.pgtest import PGTest
+
         if self.pg_cluster is not None:
             raise TestManagerError(
                 'Running temporary postgresql cluster detected.' + 'Use destroy_all() before creating a new cluster.'

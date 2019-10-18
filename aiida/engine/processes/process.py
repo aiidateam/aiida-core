@@ -654,6 +654,8 @@ class Process(plumpy.Process):
                 self.node.label = metadata
             elif name == 'description':
                 self.node.description = metadata
+            elif name == 'computer':
+                self.node.computer = metadata
             elif name == 'options':
                 for option_name, option_value in metadata.items():
                     self.node.set_option(option_name, option_value)

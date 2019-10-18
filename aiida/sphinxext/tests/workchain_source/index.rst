@@ -11,13 +11,13 @@ This is a demo documentation to show off the features of the ``sphinx-aiida`` ex
     :module: demo_workchain
 
 
-You can use the ``:hide-unstored-inputs:`` option to not show the inputs which are not stored in the DB:
+If you want to hide the inputs that are not stored as nodes in the database, use the ``:hide-unstored-inputs:`` option.
 
 .. aiida-workchain:: DemoWorkChain
     :module: demo_workchain
     :hide-nondb-inputs:
 
-The command is also hooked into ``sphinx.ext.autodoc``, so you can also use that.
+The command is also hooked into ``sphinx.ext.autodoc``, so AiiDA processes will be properly documented using ``.. automodule::`` as well.
 
 .. automodule:: demo_workchain
     :members:

@@ -66,7 +66,7 @@ Math formulas can be added as follows :math:`<g_i|`, see `the Sphinx documentati
 Cross Reference Docs
 ====================
 
-Here is an example of a reference to :ref:`structure_tutorial` which is on *another page*.
+Here is an example of a reference to :ref:`concepts_provenance` which is on *another page*.
 
 Here, :ref:`self-reference`, is an example of a reference to something on the same page.
 

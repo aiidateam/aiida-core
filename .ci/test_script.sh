@@ -17,6 +17,20 @@ case "$TEST_TYPE" in
         SPHINXOPTS="-nW" make -C docs
         ;;
     tests)
+        VERDI=`which verdi`
+
+        # The `check-load-time` command will check for indicators that typically slow down the `verdi` command
+        coverage run -a $VERDI devel check-load-time
+
+        # Test the loading time of `verdi` to ensure the database environment is not loaded
+        set +e
+        "${CI_DIR}/test_verdi_load_time.sh"
+
+        # If the load time test failed, only exit if we are on travis
+        if [ $? -gt 0 ] && [ -n "${TRAVIS}" ]; then
+            exit 2
+        fi
+        set -e
 
         # Add the .ci folder to the python path so workchains within it can be found by the daemon
         export PYTHONPATH="${PYTHONPATH}:${CI_DIR}"
@@ -31,7 +45,6 @@ case "$TEST_TYPE" in
         pytest --cov aiida --cov-append --cov-report= -vv "${CI_DIR}/pytest"
 
         # Run verdi devel tests
-        VERDI=`which verdi`
         coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} devel tests -v
 
         # Run the daemon tests using docker
@@ -41,7 +54,7 @@ case "$TEST_TYPE" in
         coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${CI_DIR}/test_daemon.py" || ( if which docker > /dev/null ; then docker ps -a ; docker exec torquesshmachine cat /var/log/syslog ; fi ; exit 1 )
 
         # Run the sphinxext tests, append to coverage file, do not create final report
-        pytest --cov aiida --cov-append --cov-report= -vv aiida/sphinxext/tests
+        coverage run --append -m pytest aiida/sphinxext/tests
 
         # Now, we run all the tests and we manually create the final report
         # Note that this is only the partial coverage for this backend

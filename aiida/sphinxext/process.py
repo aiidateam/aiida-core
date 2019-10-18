@@ -125,6 +125,8 @@ class AiidaProcessDirective(Directive):
         """
         from aiida.engine.processes.ports import InputPort, PortNamespace
 
+        if not port_namespace:
+            return
         result = nodes.bullet_list(bullet='*')
         for name, port in sorted(port_namespace.items()):
             item = nodes.list_item()
@@ -139,7 +141,17 @@ class AiidaProcessDirective(Directive):
                 if port.help is not None:
                     item += nodes.Text(' -- ')
                     item.extend(publish_doctree(port.help)[0].children)
-                item += self.build_portnamespace_doctree(port)
+                sub_doctree = self.build_portnamespace_doctree(port)
+                if sub_doctree:
+                    # This is a workaround because this extension doesn't work with Python2.
+                    try:
+                        from sphinxcontrib.details.directive import details, summary
+                        sub_item = details()
+                        sub_item += summary(text='Namespace Ports')
+                        sub_item += sub_doctree
+                    except ImportError:
+                        sub_item = sub_doctree
+                    item += sub_item
             else:
                 raise NotImplementedError
             result += item

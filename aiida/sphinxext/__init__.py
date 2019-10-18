@@ -15,6 +15,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from sphinx.errors import ExtensionError
 
 def setup(app):
     """
@@ -23,6 +24,11 @@ def setup(app):
     import aiida
 
     from . import process, workchain, calcjob
+    try:
+        app.setup_extension('sphinxcontrib.details.directive')
+    # This is a workaround because this extension doesn't work with Python2.
+    except ExtensionError:
+        pass
 
     process.setup_extension(app)
     workchain.setup_extension(app)

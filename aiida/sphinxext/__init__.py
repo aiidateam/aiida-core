@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 from sphinx.errors import ExtensionError
 
+
 def setup(app):
     """
     Setup function to add the extension classes / nodes to Sphinx.

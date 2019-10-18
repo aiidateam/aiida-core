@@ -83,7 +83,8 @@
       "markupsafe==1.1.1",
       "pygments==2.4.2",
       "sphinx-rtd-theme==0.4.3",
-      "sphinx==1.8.5",
+      "sphinx==1.8.5; python_version<'3'",
+      "sphinx==2.2.0; python_version>='3.0'",
       "sphinxcontrib-contentui==0.2.2",
       "sphinxcontrib-details-directive==0.1.0; python_version>='3.0'"
     ],

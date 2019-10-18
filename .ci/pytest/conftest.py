@@ -8,8 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-For pytest
-This file should be put into the root directory of the package to make
+For pytest, put this file in the root directory of the package to make
 the fixtures available to all tests.
 """
 from __future__ import division

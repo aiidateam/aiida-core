@@ -26,7 +26,7 @@ from aiida.manage.configuration.settings import create_instance_directories
 from aiida.manage.manager import get_manager, reset_manager
 from aiida.manage.external.postgres import Postgres
 
-__all__ = ('TestManager', 'TestManagerError', '_GLOBAL_TEST_MANAGER')
+__all__ = ('TestManager', 'TestManagerError', 'ProfileManager', 'TemporaryProfileManager', '_GLOBAL_TEST_MANAGER')
 
 _DEFAULT_PROFILE_INFO = {
     'name': 'test_profile',
@@ -62,6 +62,9 @@ class TestManager(object):
 
     Uses either ProfileManager for wrapping an existing profile or TemporaryProfileManager for setting up a complete
     temporary AiiDA environment.
+
+    For usage with pytest, see :py:class:`~aiida.manage.tests.pytest_fixtures`.
+    For usage with unittest, see :py:class:`~aiida.manage.tests.unittest_classes`.
     """
 
     def __init__(self):
@@ -169,7 +172,7 @@ class TemporaryProfileManager(ProfileManager):
     Manage the life cycle of a completely separated and temporary AiiDA environment.
 
      * No profile / database setup required
-     * Tests run via the TestManager never pollute the user's working environment
+     * Tests run via the TemporaryProfileManager never pollute the user's working environment
 
     Filesystem:
 
@@ -192,7 +195,7 @@ class TemporaryProfileManager(ProfileManager):
 
     Example::
 
-        tests = TestManager()
+        tests = TemporaryProfileManager(backend=backend)
         tests.create_aiida_db()  # set up only the database
         tests.create_profile()  # set up a profile (creates the db too if necessary)
 
@@ -208,8 +211,6 @@ class TemporaryProfileManager(ProfileManager):
         tests.destroy_all()
         # everything cleaned up
 
-    For usage with pytest, see :py:class:`~aiida.manage.tests.pytest_fixtures`.
-    For usage with unittest, see :py:class:`~aiida.manage.tests.unittest_classes`.
     """
 
     _test_case = None
@@ -421,6 +422,9 @@ _GLOBAL_TEST_MANAGER = TestManager()
 @contextmanager
 def test_manager(backend=BACKEND_DJANGO, pgtest=None):
     """ Context manager for TestManager objects.
+
+    Sets up temporary AiiDA environment for testing or resuses existing environment,
+    if AIIDA_TEST_PROFILE=<profile_name> environment variable is specified.
 
     Example unittest test runner::
 

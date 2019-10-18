@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import os
 import unittest
 import warnings
+import sys
 
 from pgtest import pgtest
 
@@ -25,8 +26,10 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
     """Test the TemporaryProfileManager class"""
 
     def setUp(self):
-        # tell unittest not to warn about running processes
-        warnings.simplefilter('ignore', ResourceWarning)
+        if sys.version_info[0] >= 3:
+            # tell unittest not to warn about running processes
+            warnings.simplefilter('ignore', ResourceWarning)  # pylint: disable=no-member
+
         self.backend = get_test_backend()
         self.profile_manager = TemporaryProfileManager(backend=self.backend)
 

@@ -118,7 +118,7 @@ class ArrayData(Data):
 
             # Open a handle in binary read mode as the arrays are written as binary files as well
             with self.open(filename, mode='rb') as handle:
-                return numpy.load(handle)
+                return numpy.load(handle, allow_pickle=False)
 
         # Return with proper caching if the node is stored, otherwise always re-read from disk
         if not self.is_stored:
@@ -165,7 +165,7 @@ class ArrayData(Data):
 
         # Write the array to a temporary file, and then add it to the repository of the node
         with tempfile.NamedTemporaryFile() as handle:
-            numpy.save(handle, array)
+            numpy.save(handle, array, allow_pickle=False)
 
             # Flush and rewind the handle, otherwise the command to store it in the repo will write an empty file
             handle.flush()

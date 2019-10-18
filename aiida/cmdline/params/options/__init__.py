@@ -33,6 +33,21 @@ __all__ = (
     'WITH_ELEMENTS_EXCLUSIVE'
 )
 
+TRAVERSAL_RULE_HELP_STRING = {
+    'call_calc_backward': 'CALL links to calculations backwards',
+    'call_calc_forward': 'CALL links to calculations forwards',
+    'call_work_backward': 'CALL links to workflows backwards',
+    'call_work_forward': 'CALL links to workflows forwards',
+    'input_calc_backward': 'INPUT links to calculations backwards',
+    'input_calc_forward': 'INPUT links to calculations forwards',
+    'input_work_backward': 'INPUT links to workflows backwards',
+    'input_work_forward': 'INPUT links to workflows forwards',
+    'return_backward': 'RETURN links backwards',
+    'return_forward': 'RETURN links forwards',
+    'create_backward': 'CREATE links backwards',
+    'create_forward': 'CREATE links forwards',
+}
+
 
 def valid_process_states():
     """Return a list of valid values for the ProcessState enum."""
@@ -65,7 +80,7 @@ def graph_traversal_rules(rules):
             if traversal_rule.toggleable:
                 option_name = name.replace('_', '-')
                 option_label = '--{option_name}/--no-{option_name}'.format(option_name=option_name)
-                help_string = 'Toggle the {} graph traversal rule used in computing the complete node set.'.format(name)
+                help_string = 'Whether to expand the node set by following {}.'.format(TRAVERSAL_RULE_HELP_STRING[name])
                 click.option(option_label, default=traversal_rule.default, show_default=True, help=help_string)(command)
 
         return command

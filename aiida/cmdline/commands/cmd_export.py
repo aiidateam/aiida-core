@@ -91,7 +91,7 @@ def create(
     """
     Export subsets of the provenance graph to file for sharing.
 
-    Besides Nodes of the provenance graph, you can export Groups, Codes, Computers, Comments, Logs and more.
+    Besides Nodes of the provenance graph, you can export Groups, Codes, Computers, Comments and Logs.
 
     By default, the export file will include not only the entities explicitly provided via the command line but also
     their provenance, according to the rules outlined in the documentation.

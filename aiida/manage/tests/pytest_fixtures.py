@@ -13,7 +13,7 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
  * aiida_profile
  * clear_database
  * aiida_localhost
- * aiida_code_factory
+ * aiida_local_code_factory
 
 """
 from __future__ import division
@@ -74,7 +74,7 @@ def aiida_localhost(tempdir):  # pylint: disable=redefined-outer-name
 
       def test_1(aiida_localhost):
           name = aiida_localhost.get_name()
-          # proceed to set up code or use 'aiida_code_factory' instead
+          # proceed to set up code or use 'aiida_local_code_factory' instead
 
 
     :return: The computer node
@@ -103,15 +103,15 @@ def aiida_localhost(tempdir):  # pylint: disable=redefined-outer-name
 
 
 @pytest.fixture(scope='function')
-def aiida_code_factory(aiida_localhost):  # pylint: disable=redefined-outer-name
+def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-outer-name
     """Get an AiiDA code on localhost.
 
     Searches in the PATH for a given executable and creates an AiiDA code with provided entry point.
 
     Usage::
 
-      def test_1(aiida_code_factory):
-          code = aiida_code_factory('pw.x', 'quantumespresso.pw')
+      def test_1(aiida_local_code_factory):
+          code = aiida_local_code_factory('pw.x', 'quantumespresso.pw')
           # use code for testing ...
 
     :return: A function get_code(executable, entry_point) that returns the Code node.
@@ -131,10 +131,11 @@ def aiida_code_factory(aiida_localhost):  # pylint: disable=redefined-outer-name
         from aiida.common.files import which
         from aiida.common.exceptions import NotExistent
 
-        executable_path = which(executable)
         try:
-            code = Code.get_from_string('{}@{}'.format(executable_path, computer.get_name()))
+            codes = Code.objects.find(filters={'label': executable})  # pylint: disable=no-member
+            code = codes[0]
         except NotExistent:
+            executable_path = which(executable)
             code = Code(
                 input_plugin_name=entry_point,
                 remote_computer_exec=[computer, executable_path],

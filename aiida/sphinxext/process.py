@@ -133,7 +133,7 @@ class AiidaProcessDirective(Directive):
             if _is_non_db(port) and self.HIDE_UNSTORED_INPUTS_FLAG in self.options:
                 continue
             if isinstance(port, (InputPort, OutputPort)):
-                item += self.build_port_paragraph(name, port)
+                item.extend(self.build_port_content(name, port))
             elif isinstance(port, PortNamespace):
                 item += addnodes.literal_strong(text=name)
                 item += nodes.Text(', ')
@@ -157,25 +157,25 @@ class AiidaProcessDirective(Directive):
             result += item
         return result
 
-    def build_port_paragraph(self, name, port):
+    def build_port_content(self, name, port):
         """
-        Build the paragraph that describes a single port.
+        Build the content that describes a single port.
         """
-        paragraph = nodes.paragraph()
-        paragraph += addnodes.literal_strong(text=name)
-        paragraph += nodes.Text(', ')
-        paragraph += nodes.emphasis(text=self.format_valid_types(port.valid_type))
-        paragraph += nodes.Text(', ')
-        paragraph += nodes.Text('required' if port.required else 'optional')
+        res = []
+        res.append(addnodes.literal_strong(text=name))
+        res.append(nodes.Text(', '))
+        res.append(nodes.emphasis(text=self.format_valid_types(port.valid_type)))
+        res.append(nodes.Text(', '))
+        res.append(nodes.Text('required' if port.required else 'optional'))
         if _is_non_db(port):
-            paragraph += nodes.Text(', ')
-            paragraph += nodes.emphasis(text='non_db')
+            res.append(nodes.Text(', '))
+            res.append(nodes.emphasis(text='non_db'))
         if port.help:
-            paragraph += nodes.Text(' -- ')
+            res.append(nodes.Text(' -- '))
             # publish_doctree returns <document: <paragraph...>>.
             # Here we only want the content (children) of the paragraph.
-            paragraph.extend(publish_doctree(port.help)[0].children)
-        return paragraph
+            res.extend(publish_doctree(port.help)[0].children)
+        return res
 
     @staticmethod
     def format_valid_types(valid_type):

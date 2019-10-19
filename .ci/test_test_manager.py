@@ -28,7 +28,7 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
     def setUp(self):
         if sys.version_info[0] >= 3:
             # tell unittest not to warn about running processes
-            warnings.simplefilter('ignore', ResourceWarning)  # pylint: disable=no-member
+            warnings.simplefilter('ignore', ResourceWarning)  # pylint: disable=no-member,undefined-variable
 
         self.backend = get_test_backend()
         self.profile_manager = TemporaryProfileManager(backend=self.backend)

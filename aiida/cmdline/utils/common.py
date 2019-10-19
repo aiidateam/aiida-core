@@ -80,8 +80,7 @@ def print_last_process_state_change(process_type=None):
 
 
 def get_node_summary(node):
-    """
-    Return a multi line string with a pretty formatted summary of a Node
+    """Return a multi line string with a pretty formatted summary of a Node.
 
     :param node: a Node instance
     :return: a string summary of the node
@@ -91,29 +90,35 @@ def get_node_summary(node):
 
     table_headers = ['Property', 'Value']
     table = []
-    table.append(['type', node.__class__.__name__])
+
+    if isinstance(node, ProcessNode):
+        table.append(['type', node.process_label])
+
+        try:
+            process_state = ProcessState(node.process_state)
+        except (AttributeError, ValueError):
+            pass
+        else:
+            process_state_string = process_state.value.capitalize()
+
+            if process_state == ProcessState.FINISHED and node.exit_message:
+                table.append(['state', '{} [{}] {}'.format(process_state_string, node.exit_status, node.exit_message)])
+            elif process_state == ProcessState.FINISHED:
+                table.append(['state', '{} [{}]'.format(process_state_string, node.exit_status)])
+            elif process_state == ProcessState.EXCEPTED:
+                table.append(['state', '{} <{}>'.format(process_state_string, node.exception)])
+            else:
+                table.append(['state', process_state_string])
+
+    else:
+        table.append(['type', node.__class__.__name__])
+
     table.append(['pk', str(node.pk)])
     table.append(['uuid', str(node.uuid)])
     table.append(['label', node.label])
     table.append(['description', node.description])
     table.append(['ctime', node.ctime])
     table.append(['mtime', node.mtime])
-
-    if issubclass(node.__class__, ProcessNode):
-        try:
-            process_state = node.process_state
-        except AttributeError:
-            process_state = None
-
-        try:
-            table.append(['process state', ProcessState(process_state).value.capitalize()])
-        except ValueError:
-            table.append(['process state', process_state])
-
-        try:
-            table.append(['exit status', node.exit_status])
-        except AttributeError:
-            table.append(['exit status', None])
 
     try:
         computer = node.computer

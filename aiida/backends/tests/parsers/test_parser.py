@@ -109,9 +109,12 @@ class TestParser(AiidaTestCase):
         retrieved.store()
         retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
-        result, node = ArithmeticAddParser.parse_from_node(node)
+        result, calcfunction = ArithmeticAddParser.parse_from_node(node)
 
         self.assertIsInstance(result['sum'], orm.Int)
         self.assertEqual(result['sum'].value, summed)
-        self.assertIsInstance(node, orm.CalcFunctionNode)
-        self.assertEqual(node.exit_status, 0)
+        self.assertIsInstance(calcfunction, orm.CalcFunctionNode)
+        self.assertEqual(calcfunction.exit_status, 0)
+
+        # Verify that the `retrieved_temporary_folder` keyword can be passed, there is no validation though
+        result, calcfunction = ArithmeticAddParser.parse_from_node(node, retrieved_temporary_folder='/some/path')

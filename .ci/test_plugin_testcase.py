@@ -31,10 +31,15 @@ class PluginTestCase1(PluginTestCase):
     """
 
     def setUp(self):
+        #import pdb; pdb.set_trace()
         self.temp_dir = tempfile.mkdtemp()
         self.data = self.get_data()
         self.data_pk = self.data.pk
         self.computer = self.get_computer(temp_dir=self.temp_dir)
+
+    def tearDown(self):
+        super(PluginTestCase1, self).tearDown()
+        shutil.rmtree(self.temp_dir)
 
     @staticmethod
     def get_data():
@@ -66,22 +71,30 @@ class PluginTestCase1(PluginTestCase):
 
     def test_data_loaded(self):
         """
-        Check that the data is indeed in the DB when calling load_node
+        Check that the data node is indeed in the DB when calling load_node
         """
         from aiida import orm
         self.assertEqual(orm.load_node(self.data_pk).uuid, self.data.uuid)
+
+    def test_computer_loaded(self):
+        """
+        Check that the computer is indeed in the DB when calling load_node
+
+        Note: Important to have at least two test functions in order to verify things
+        work after resetting the DB.
+        """
+        from aiida import orm
         self.assertEqual(orm.Computer.objects.get(name='localhost').uuid, self.computer.uuid)
 
     def test_tear_down(self):
         """
         Check that after tearing down, the previously stored nodes
-        are not there anymore. Then remove the temporary folder.
+        are not there anymore.
         """
         from aiida.orm import load_node
-        super(PluginTestCase1, self).tearDown()
+        super(PluginTestCase1, self).tearDown()  # reset DB
         with self.assertRaises(Exception):
             load_node(self.data_pk)
-        shutil.rmtree(self.temp_dir)
 
 
 class PluginTestCase2(PluginTestCase):

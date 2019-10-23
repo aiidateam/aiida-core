@@ -23,7 +23,7 @@ from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common import exceptions
 from aiida.manage import configuration
 from aiida.manage.configuration.settings import create_instance_directories
-from aiida.manage.manager import get_manager, reset_manager
+from aiida.manage import manager
 from aiida.manage.external.postgres import Postgres
 
 __all__ = ('TestManager', 'TestManagerError', 'ProfileManager', 'TemporaryProfileManager', '_GLOBAL_TEST_MANAGER')
@@ -98,6 +98,7 @@ class TestManager(object):
             raise TestManagerError('Profile manager already loaded.')
 
         self._manager = ProfileManager(profile_name=profile)
+        self._manager.init_db()
 
     def has_profile_open(self):
         return self._manager and self._manager.has_profile_open()
@@ -126,20 +127,14 @@ class ProfileManager(object):
         from aiida.backends.testbase import check_if_tests_can_run
 
         self._profile = None
+        self._user = None
+
         try:
             self._profile = load_profile(profile_name)
-            get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+            manager.get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
         except Exception:
             raise TestManagerError('Unable to load test profile \'{}\'.'.format(profile_name))
         check_if_tests_can_run()
-
-        # Create a default user if missing
-        from aiida.orm import User
-        from aiida.cmdline.commands.cmd_user import set_default_user
-        if not User.objects.get_default():
-            user = User(**get_user_dict(_DEFAULT_PROFILE_INFO))
-            user.store()
-            set_default_user(self._profile, user)
 
         self._select_db_test_case(backend=self._profile.database_backend)
 
@@ -158,7 +153,29 @@ class ProfileManager(object):
             self._test_case.test_session = get_scoped_session()
 
     def reset_db(self):
-        self._test_case.clean_db()
+        self._test_case.clean_db()  # will drop all users
+        manager.reset_manager()
+        self.init_db()
+
+    def init_db(self):
+        """Initialise the database state for running of tests.
+
+        Adds default user if necessary.
+        """
+        from aiida.orm import User
+        from aiida.cmdline.commands.cmd_user import set_default_user
+
+        if not User.objects.get_default():
+            user_dict = get_user_dict(_DEFAULT_PROFILE_INFO)
+            try:
+                user = User(**user_dict)
+                user.store()
+            except exceptions.IntegrityError:
+                # The user already exists, no problem
+                user = User.objects.get(**user_dict)
+
+            set_default_user(self._profile, user)
+            User.objects.reset()  # necessary to pick up new default user
 
     def has_profile_open(self):
         return self._profile is not None
@@ -225,7 +242,6 @@ class TemporaryProfileManager(ProfileManager):
         self.pg_cluster = None
         self.postgres = None
         self._profile = None
-        self._user = None
         self._has_test_db = False
         self._backup = {}
         self._backup['config'] = configuration.CONFIG
@@ -311,39 +327,11 @@ class TemporaryProfileManager(ProfileManager):
         self._profile = profile
 
         load_profile(profile_name)
-        backend = get_manager()._load_backend(schema_check=False)
+        backend = manager.get_manager()._load_backend(schema_check=False)
         backend.migrate()
-
-        # add a default user for the new profile
-        from aiida.orm import User
-        from aiida.cmdline.commands.cmd_user import set_default_user
-        user = User(**get_user_dict(self.profile_info))
-        user.store()
-        set_default_user(profile, user)
-        self._user = user
 
         self._select_db_test_case(backend=self._profile.database_backend)
         self.init_db()
-
-    def reset_db(self):
-        """Cleans all data from the database between tests"""
-        self._test_case.clean_db()
-        reset_manager()
-        self.init_db()
-
-    @staticmethod
-    def init_db():
-        """Initialise the database state"""
-        configuration.reset_profile()
-        configuration.load_profile()
-
-        # Create the default user
-        from aiida import orm
-        try:
-            orm.User(email=get_manager().get_profile().default_user).store()
-        except exceptions.IntegrityError:
-            # The default user already exists, no problem
-            pass
 
     def repo_ok(self):
         return bool(self.repo and path.isdir(path.dirname(self.repo)))
@@ -443,12 +431,14 @@ def test_manager(backend=BACKEND_DJANGO, pgtest=None):
     :param pgtest: a dictionary of arguments to be passed to PGTest() for starting the postgresql cluster,
        e.g. {'pg_ctl': '/somepath/pg_ctl'}. Should usually not be necessary.
     """
+    from aiida.common.utils import Capturing
     try:
         if not _GLOBAL_TEST_MANAGER.has_profile_open():
             if get_test_profile():
                 _GLOBAL_TEST_MANAGER.use_profile(profile=get_test_profile())
             else:
-                _GLOBAL_TEST_MANAGER.use_temporary_profile(backend=backend, pgtest=pgtest)
+                with Capturing():  # capture output of AiiDA DB setup
+                    _GLOBAL_TEST_MANAGER.use_temporary_profile(backend=backend, pgtest=pgtest)
         yield _GLOBAL_TEST_MANAGER
     finally:
         _GLOBAL_TEST_MANAGER.destroy_all()

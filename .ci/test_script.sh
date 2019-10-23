@@ -44,7 +44,7 @@ case "$TEST_TYPE" in
         # append to coverage file, do not create final report
         pytest --cov=aiida --cov-append --cov-report= "${CI_DIR}/pytest"
         # rerun tests with existing profile
-        #TEST_AIIDA_PROFILE=test_${TEST_AIIDA_BACKEND} pytest --cov=aiida --cov-append --cov-report= "${CI_DIR}/pytest"
+        TEST_AIIDA_PROFILE=test_${TEST_AIIDA_BACKEND} pytest --cov=aiida --cov-append --cov-report= "${CI_DIR}/pytest"
 
         # Run verdi devel tests
         coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} devel tests -v

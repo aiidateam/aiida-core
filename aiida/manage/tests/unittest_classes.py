@@ -81,7 +81,5 @@ class TestRunner(unittest.runner.TextTestRunner):
         :param tests: A suite of tests, as returned e.g. by :py:meth:`unittest.TestLoader.discover`
         :param backend: Database backend to be used.
         """
-        from aiida.common.utils import Capturing
-        with Capturing():
-            with test_manager(backend=backend or get_test_backend()):
-                return super(TestRunner, self).run(suite)
+        with test_manager(backend=backend or get_test_backend()):
+            return super(TestRunner, self).run(suite)

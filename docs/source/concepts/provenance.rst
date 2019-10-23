@@ -248,7 +248,8 @@ Data and Workflow Nodes
 The behavior when considering ``input_work`` links is exactly the same as when considering ``input_calc`` links for the same reasons.
 The case for ``return`` links is partially similar to the one for ``create`` one.
 Indeed, it isn't desirable to have a resulting database with missing outputs, so when exporting a workflow the returned data nodes will also be included (and when deleting a data node, the returning workflow will also be removed).
-However, when exporting a returned node, the default behavior is *not* to include the logical provenance of the workflows that returned it (equivalently, when targeting a workflow node for deletion, the algorithm will not traverse the ``return`` links to include also the returned data nodes - actually, this goal can be achieved in a different way following instead ``call`` and ``create`` links, as explained below).
+However, when exporting a returned node, the default behavior is *not* to traverse backwards through the ``return`` links, since a data node might be returned by several unrelated workflows (representing selection procedures for other studies, for example) that are unrelated to its creation.
+The workflow responsible for coordinating its creation will be included in the export, not directly, but through the chain effect of including the creating calculation (through ``create_backward``) and then including its calling workflows (through ``call_calc_backward`` and ``call_work_backward``, see next sections).
 
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
 | Illustrative diagram (explicitly targeted     | Name of Rule            | Behavior when exporting target node                 | Behavior when deleting target node                 |
@@ -281,7 +282,8 @@ The results of a parent workflow depend critically on the subworkflows or calcul
 Analogously, when deleting a process, the parent workflow that has called it (if present) will be deleted as well (by traversing a ``backward`` ``call_calc`` or ``call_work`` link).
 Since the traversal rules are applied recursively, this means that also the caller of the caller of the process will be deleted, and so on.
 
-The possibility to follow ``call`` links in the other direction is available to the users,but disabled by default, i.e., when you export a process you will not necessarily export the logical provenance of the workflows calling it, and when deleting a workflow you won't necessarily delete all its subworkflows and called calculations.
+The possibility to follow ``call`` links in the other direction is enabled by default when exporting (thus including the whole logical provenance which contains the generating data provenance) and disabled by default when deleting (thus protecting the underlying procedures of targetted workflows).
+This default behaviors can be changed by the user in cases such as when wanting to export only the data provenance (thus sharing enough information to ensure reproducibility, but keeping private some aspects related to their own work schemas and criteria) or wanting to easily delete whole workflows that they no longer need to keep (although one should always be extremely careful in this case, see below).
 
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
 | Illustrative diagram (explicitly targeted     | Name of Rule            | Behavior when exporting target node                 | Behavior when deleting target node                 |
@@ -290,14 +292,14 @@ The possibility to follow ``call`` links in the other direction is available to 
 | .. image:: include/images/delexp_caseWC1.png  | ``call_calc_forward``   | - Fixed Value: ``True``                             | - Default Value: ``False`` [#f03]_                 |
 |    :scale: 60%                                |                         | - Linked node **will always** be exported.          | - Linked node **won't** be deleted **by default**. |
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
-| .. image:: include/images/delexp_caseWC2.png  | ``call_calc_backward``  | - Default Value: ``False``                          | - Fixed Value: ``True``                            |
-|    :scale: 60%                                |                         | - Linked node **won't** be exported **by default**. | - Linked node **will always** be deleted.          |
+| .. image:: include/images/delexp_caseWC2.png  | ``call_calc_backward``  | - Default Value: ``True``                           | - Fixed Value: ``True``                            |
+|    :scale: 60%                                |                         | - Linked node **will** be exported **by default**.  | - Linked node **will always** be deleted.          |
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
 | .. image:: include/images/delexp_caseWW1.png  | ``call_work_forward``   | - Fixed Value: ``True``                             | - Default Value: ``False``  [#f03]_                |
 |    :scale: 60%                                |                         | - Linked node **will always** be exported.          | - Linked node **won't** be deleted **by default**. |
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
-| .. image:: include/images/delexp_caseWW2.png  | ``call_work_backward``  | - Default Value: ``False``.                         | - Fixed Value: ``True``                            |
-|    :scale: 60%                                |                         | - Linked node **won't** be exported **by default**. | - Linked node **will always** be deleted.          |
+| .. image:: include/images/delexp_caseWW2.png  | ``call_work_backward``  | - Default Value: ``True``.                          | - Fixed Value: ``True``                            |
+|    :scale: 60%                                |                         | - Linked node **will** be exported **by default**.  | - Linked node **will always** be deleted.          |
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
 
 .. [#f03]
@@ -320,11 +322,10 @@ Let us first focus on the data provenance only (i.e., only ``input_calc`` and ``
 The consequence of these two together is a "chain reaction" in which every node that can be traced back through the data provenance to any of the initial targeted nodes will end up being deleted as well.
 The reciprocal is true for the export: the default behavior is that every ancestor will also be exported by default (because ``create_backward`` is ``True`` by default and ``input_calc_backward`` is always ``True``).
 
-On the other hand, when considering the connection between data provenance and logical provenance, it is important to notice that, by default, AiiDA will always prioritize the former over the latter.
-Thus, it will protect data nodes and calculation nodes when deleting workflow nodes, and it will leave behind workflow nodes when exporting data nodes or calculation nodes.
-
-Enabling the optional rules in these cases overrides this default behavior.
-To better illustrate this, we consider the following graph and we focus on the deletion feature only (similar considerations apply when exporting):
+In regards to the connection between data provenance and logical provenance, the most important thing to consider is how the default settings of ``call_calc_forward=False``
+and ``call_work_forward=False`` protect the data provenance not specifically targetted by the user from deletion.
+This is an important aspect to understand, specially when customizing this directives, since enabling the optional rules and overriding this default behavior can potentially lead to undesired and irreversible results.
+To better illustrate this, we consider the following graph:
 
 .. _delexp_example02:
 .. image:: include/images/delexp_example02.png

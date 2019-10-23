@@ -76,9 +76,9 @@ class GraphTraversalRules(Enum):
         'input_work_forward': GraphTraversalRule(LinkType.INPUT_WORK, 'forward', True, False),
         'input_work_backward': GraphTraversalRule(LinkType.INPUT_WORK, 'backward', False, True),
         'call_calc_forward': GraphTraversalRule(LinkType.CALL_CALC, 'forward', False, True),
-        'call_calc_backward': GraphTraversalRule(LinkType.CALL_CALC, 'backward', True, False),
+        'call_calc_backward': GraphTraversalRule(LinkType.CALL_CALC, 'backward', True, True),
         'call_work_forward': GraphTraversalRule(LinkType.CALL_WORK, 'forward', False, True),
-        'call_work_backward': GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, False)
+        'call_work_backward': GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, True)
     }
 
 

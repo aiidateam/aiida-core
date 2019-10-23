@@ -121,6 +121,11 @@ class TestProcessFunction(AiidaTestCase):
         super(TestProcessFunction, self).tearDown()
         self.assertIsNone(Process.current())
 
+    def test_properties(self):
+        """Test that the `is_process_function` attributes is set."""
+        self.assertEqual(self.function_return_input.is_process_function, True)
+        self.assertEqual(self.function_return_true.is_process_function, True)
+
     def test_plugin_version(self):
         """Test the version attributes of a process function."""
         from aiida import __version__ as version_core

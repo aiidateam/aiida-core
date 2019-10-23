@@ -203,7 +203,7 @@ def is_process_function(function):
     :returns: True if the function is a wrapped process function, False otherwise
     """
     try:
-        return function.is_process_function
+        return function.is_process_function is True
     except AttributeError:
         return False
 

@@ -122,9 +122,11 @@ class TestProcessFunction(AiidaTestCase):
         self.assertIsNone(Process.current())
 
     def test_properties(self):
-        """Test that the `is_process_function` attributes is set."""
+        """Test that the `is_process_function` and `node_class` attributes are set."""
         self.assertEqual(self.function_return_input.is_process_function, True)
+        self.assertEqual(self.function_return_input.node_class, orm.WorkFunctionNode)
         self.assertEqual(self.function_return_true.is_process_function, True)
+        self.assertEqual(self.function_return_true.node_class, orm.CalcFunctionNode)
 
     def test_plugin_version(self):
         """Test the version attributes of a process function."""

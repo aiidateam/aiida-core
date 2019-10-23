@@ -68,6 +68,34 @@ entry_point_group_to_module_path_map = {
 }
 
 
+def validate_registered_entry_points():
+    """Validate all registered entry points by loading them with the corresponding factory.
+
+    :raises EntryPointError: if any of the registered entry points cannot be loaded. This can happen if:
+        * The entry point cannot uniquely be resolved
+        * The resource registered at the entry point cannot be imported
+        * The resource's type is incompatible with the entry point group that it is defined in.
+
+    """
+    from . import factories
+
+    factory_mapping = {
+        'aiida.calculations': factories.CalculationFactory,
+        'aiida.data': factories.DataFactory,
+        'aiida.parsers': factories.ParserFactory,
+        'aiida.schedulers': factories.SchedulerFactory,
+        'aiida.transports': factories.TransportFactory,
+        'aiida.tools.dbimporters': factories.DbImporterFactory,
+        'aiida.tools.data.orbital': factories.OrbitalFactory,
+        'aiida.workflows': factories.WorkflowFactory,
+    }
+
+    for entry_point_group, factory in factory_mapping.items():
+        entry_points = get_entry_points(entry_point_group)
+        for entry_point in entry_points:
+            factory(entry_point.name)
+
+
 def format_entry_point_string(group, name, fmt=EntryPointFormat.FULL):
     """
     Format an entry point string for a given entry point group and name, based on the specified format

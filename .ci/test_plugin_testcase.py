@@ -89,9 +89,9 @@ class PluginTestCase2(PluginTestCase):
     Second PluginTestCase.
     """
 
-    def test_stupid(self):
+    def test_dummy(self):
         """
-        Dummy test for 2nd plugin testcase class.
+        Dummy test for 2nd PluginTestCase class.
 
         Just making sure that setup/teardown is safe for
         multiple testcase classes (this was broken in #1425).

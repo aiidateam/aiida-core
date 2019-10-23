@@ -141,11 +141,11 @@ class ProfileManager(object):
             user.store()
             set_default_user(self._profile, user)
 
-        self._create_test_case(backend=self._profile.database_backend)
+        self._select_db_test_case(backend=self._profile.database_backend)
 
-    def _create_test_case(self, backend):
+    def _select_db_test_case(self, backend):
         """
-        Selects tests case for the correct backend.
+        Selects tests case for the correct database backend.
         """
         if backend == BACKEND_DJANGO:
             from aiida.backends.djsite.db.testbase import DjangoTests
@@ -277,7 +277,7 @@ class TemporaryProfileManager(ProfileManager):
         """
         if configuration.PROFILE is not None:
             raise TestManagerError('AiiDA dbenv can not be loaded while creating a tests db environment')
-        if self.pg_cluster is not None:
+        if self.pg_cluster is None:
             self.create_db_cluster(pgtest)
         self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.dbinfo)
         self.dbinfo = self.postgres.dbinfo.copy()
@@ -322,7 +322,7 @@ class TemporaryProfileManager(ProfileManager):
         set_default_user(profile, user)
         self._user = user
 
-        self._create_test_case(backend=self._profile.database_backend)
+        self._select_db_test_case(backend=self._profile.database_backend)
         self.init_db()
 
     def reset_db(self):
@@ -413,7 +413,7 @@ class TemporaryProfileManager(ProfileManager):
             configuration.PROFILE = self._backup['profile']
 
     def has_profile_open(self):
-        return self._profile is None
+        return self._profile is not None
 
 
 _GLOBAL_TEST_MANAGER = TestManager()
@@ -423,8 +423,14 @@ _GLOBAL_TEST_MANAGER = TestManager()
 def test_manager(backend=BACKEND_DJANGO, pgtest=None):
     """ Context manager for TestManager objects.
 
-    Sets up temporary AiiDA environment for testing or resuses existing environment,
-    if AIIDA_TEST_PROFILE=<profile_name> environment variable is specified.
+    Sets up temporary AiiDA environment for testing or reuses existing environment,
+    if `AIIDA_TEST_PROFILE` environment variable is set.
+
+    Example pytest fixture::
+
+        def aiida_profile():
+            with test_manager(backend) as test_mgr:
+                yield fixture_mgr
 
     Example unittest test runner::
 
@@ -432,11 +438,6 @@ def test_manager(backend=BACKEND_DJANGO, pgtest=None):
             # ready for tests
         # everything cleaned up
 
-    Example pytest fixture::
-
-        def aiida_profile():
-            with test_manager(backend) as test_mgr:
-                yield fixture_mgr
 
     :param backend: database backend, either BACKEND_SQLA or BACKEND_DJANGO
     :param pgtest: a dictionary of arguments to be passed to PGTest() for starting the postgresql cluster,

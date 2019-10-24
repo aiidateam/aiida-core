@@ -12,6 +12,8 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+import importlib
 import logging
 import traceback
 
@@ -24,12 +26,34 @@ __all__ = ('AiiDAPersister', 'ObjectLoader', 'get_object_loader')
 LOGGER = logging.getLogger(__name__)
 OBJECT_LOADER = None
 
-ObjectLoader = plumpy.DefaultObjectLoader
+
+class ObjectLoader(plumpy.DefaultObjectLoader):
+    """Custom object loader for `aiida-core`."""
+
+    def load_object(self, identifier):
+        """Attempt to load the object identified by the given `identifier`.
+
+        .. note:: We override the `plumpy.DefaultObjectLoader` to be able to throw an `ImportError` instead of a
+            `ValueError` which in the context of `aiida-core` is not as apt, since we are loading classes.
+
+        :param identifier: concatenation of module and resource name
+        :return: loaded object
+        :raises ImportError: if the object cannot be loaded
+        """
+        module, name = identifier.split(':')
+        try:
+            module = importlib.import_module(module)
+        except ImportError:
+            raise ImportError("module '{}' from identifier '{}' could not be loaded".format(module, identifier))
+
+        try:
+            return getattr(module, name)
+        except AttributeError:
+            raise ImportError("object '{}' from identifier '{}' could not be loaded".format(name, identifier))
 
 
 def get_object_loader():
-    """
-    Get the global AiiDA object loader
+    """Return the global AiiDA object loader.
 
     :return: The global object loader
     :rtype: :class:`plumpy.ObjectLoader`
@@ -41,14 +65,10 @@ def get_object_loader():
 
 
 class AiiDAPersister(plumpy.Persister):
-    """
-    This node is responsible to taking saved process instance states and
-    persisting them to the database.
-    """
+    """Persister to take saved process instance states and persisting them to the database."""
 
     def save_checkpoint(self, process, tag=None):
-        """
-        Persist a Process instance
+        """Persist a Process instance.
 
         :param process: :class:`aiida.engine.Process`
         :param tag: optional checkpoint identifier to allow distinguishing multiple checkpoints for the same process
@@ -61,7 +81,7 @@ class AiiDAPersister(plumpy.Persister):
 
         try:
             bundle = plumpy.Bundle(process, plumpy.LoadSaveContext(loader=get_object_loader()))
-        except ValueError:
+        except ImportError:
             # Couldn't create the bundle
             raise plumpy.PersistenceError(
                 "Failed to create a bundle for '{}': {}".format(process, traceback.format_exc())
@@ -77,8 +97,7 @@ class AiiDAPersister(plumpy.Persister):
         return bundle
 
     def load_checkpoint(self, pid, tag=None):
-        """
-        Load a process from a persisted checkpoint by its process id
+        """Load a process from a persisted checkpoint by its process id.
 
         :param pid: the process id of the :class:`plumpy.Process`
         :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
@@ -114,26 +133,20 @@ class AiiDAPersister(plumpy.Persister):
         return bundle
 
     def get_checkpoints(self):
-        """
-        Return a list of all the current persisted process checkpoints
-        with each element containing the process id and optional checkpoint tag
+        """Return a list of all the current persisted process checkpoints
 
-        :return: list of PersistedCheckpoint tuples
+        :return: list of PersistedCheckpoint tuples with element containing the process id and optional checkpoint tag.
         """
 
     def get_process_checkpoints(self, pid):
-        """
-        Return a list of all the current persisted process checkpoints for the
-        specified process with each element containing the process id and
-        optional checkpoint tag
+        """Return a list of all the current persisted process checkpoints for the specified process.
 
         :param pid: the process pid
-        :return: list of PersistedCheckpoint tuples
+        :return: list of PersistedCheckpoint tuples with element containing the process id and optional checkpoint tag.
         """
 
     def delete_checkpoint(self, pid, tag=None):
-        """
-        Delete a persisted process checkpoint, where no error will be raised if the checkpoint does not exist
+        """Delete a persisted process checkpoint, where no error will be raised if the checkpoint does not exist.
 
         :param pid: the process id of the :class:`plumpy.Process`
         :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
@@ -144,8 +157,7 @@ class AiiDAPersister(plumpy.Persister):
         calc.delete_checkpoint()
 
     def delete_process_checkpoints(self, pid):
-        """
-        Delete all persisted checkpoints related to the given process id
+        """Delete all persisted checkpoints related to the given process id.
 
         :param pid: the process id of the :class:`aiida.engine.processes.process.Process`
         """

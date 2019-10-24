@@ -129,20 +129,17 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
         """
         from aiida.orm import Code
         from aiida.common.files import which
-        from aiida.common.exceptions import NotExistent
 
-        try:
-            codes = Code.objects.find(filters={'label': executable})  # pylint: disable=no-member
-            code = codes[0]
-        except NotExistent:
-            executable_path = which(executable)
-            code = Code(
-                input_plugin_name=entry_point,
-                remote_computer_exec=[computer, executable_path],
-            )
-            code.label = executable
-            code.store()
+        codes = Code.objects.find(filters={'label': executable})  # pylint: disable=no-member
+        if codes:
+            return codes[0]
 
-        return code
+        executable_path = which(executable)
+        code = Code(
+            input_plugin_name=entry_point,
+            remote_computer_exec=[computer, executable_path],
+        )
+        code.label = executable
+        return code.store()
 
     return get_code

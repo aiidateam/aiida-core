@@ -32,15 +32,8 @@ class KpointsDataTranslator(DataTranslator):
 
     _result_type = __label__
 
-    def __init__(self, **kwargs):
-        """
-        Initialise the parameters.
-        Create the basic query_help
-        """
-        super(KpointsDataTranslator, self).__init__(Class=self.__class__, **kwargs)
-
     @staticmethod
-    def get_visualization_data(node, visformat=None):
+    def get_derived_properties(node):
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         """
 
@@ -49,8 +42,8 @@ class KpointsDataTranslator(DataTranslator):
 
         Strategy: For the time being rely on the function implemented in
         seekpath to calculate brillouin zone faces, and triangulate them. The
-        other fielsd of the response are retrieved
-        by ordniary kpointsdata methods, except the logic to create an list
+        other fields of the response are retrieved
+        by ordinary kpointsdata methods, except the logic to create a list
         of explicit keypoints from the mesh and the cell vectors.
         """
 
@@ -85,37 +78,26 @@ class KpointsDataTranslator(DataTranslator):
             explicit_kpoints_rel = node.get_kpoints_mesh(print_list=True)
 
         # Initialize response
-        json_visualization = {}
+        response = {}
 
         # First dump out the kpoints in relative coordinates (which are
         # always available)
-        json_visualization['explicit_kpoints_rel'] = \
-            explicit_kpoints_rel.tolist()
+        response['explicit_kpoints_rel'] = explicit_kpoints_rel.tolist()
 
         # For kpoints objects that have an explicit list of kpoints we can
         # construct BZ and return an explicit list of kpoint coordinates
         if has_cell:
-            # Retrieve b1, b2, b3 and add them to the json
+            # Retrieve b1, b2, b3
             (coords1, coords2, coords3) = (cell[0], cell[1], cell[2])
-
-            json_visualization['b1'] = coords1.tolist()
-            json_visualization['b2'] = coords2.tolist()
-            json_visualization['b3'] = coords3.tolist()
-
-            json_visualization['reciprocal_vectors_unit'] = u'1/\u212b'
 
             # Get BZ faces and add them to the json. Fields: faces,
             # triangles, triangle_vertices. Most probably only faces is needed.
             from seekpath.brillouinzone.brillouinzone import get_BZ  # pylint: disable=import-error,no-name-in-module
-            json_visualization['faces_data'] = get_BZ(coords1, coords2, coords3)
+            response['faces_data'] = get_BZ(coords1, coords2, coords3)
 
             # Provide kpoints cooridnates in absolute units ...
             explicit_kpoints_abs = np.dot(explicit_kpoints_rel, cell)
-            json_visualization['explicit_kpoints_abs'] = \
-                explicit_kpoints_abs.tolist()
-
-            # ... and units!
-            json_visualization['kpoints_abs_unit'] = u'1/\u212b'
+            response['explicit_kpoints_abs'] = explicit_kpoints_abs.tolist()
 
         # Add labels field
         has_labels = False
@@ -135,8 +117,8 @@ class KpointsDataTranslator(DataTranslator):
                         path.append([old_label, label])
                     old_label = label
 
-                json_visualization['kpoints_rel'] = high_symm_rel
-                json_visualization['path'] = path
+                response['labelled_kpoints_rel'] = high_symm_rel
+                response['labelled_path'] = path
 
                 # If absolute coordinates can be calculated also provide them
                 if has_cell:
@@ -145,12 +127,12 @@ class KpointsDataTranslator(DataTranslator):
                     for idx, label in node.labels:
                         high_symm_abs[label] = explicit_kpoints_abs[idx].tolist()
 
-                    json_visualization['kpoints'] = high_symm_abs
+                    response['labelled_kpoints_abs'] = high_symm_abs
 
         # Return mesh and offset lists to be represented in a table
         if has_mesh:
-            json_visualization['mesh'] = mesh
-            json_visualization['offset'] = offset
+            response['mesh'] = mesh
+            response['offset'] = offset
 
         # Populate json content with booleans to make it easy to determine
         # how to visualize the node.
@@ -161,22 +143,7 @@ class KpointsDataTranslator(DataTranslator):
 
         bool_fields = dict(has_cell=has_cell, has_mesh=has_mesh, has_labels=has_labels)
 
-        json_visualization.update(bool_fields)
+        response.update(bool_fields)
 
-        # Construct json and return it
-        return json_visualization
-
-    @staticmethod
-    def get_downloadable_data(node, download_format=None):
-        """
-        Generic function extented for kpoints data. Currently
-        it is not implemented.
-
-        :param node: node object that has to be visualized
-        :param download_format: file extension format
-        :returns: raise RestFeatureNotAvailable exception
-        """
-
-        from aiida.restapi.common.exceptions import RestFeatureNotAvailable
-
-        raise RestFeatureNotAvailable('This endpoint is not available for Kpoints.')
+        # Return json response
+        return response

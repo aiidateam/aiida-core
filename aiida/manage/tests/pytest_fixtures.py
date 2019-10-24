@@ -39,7 +39,7 @@ def aiida_profile():
     # here, the TestManager instance has already been destroyed
 
 
-@pytest.fixture(scope='function', autouse=True)
+@pytest.fixture(scope='function')
 def clear_database(aiida_profile):  # pylint: disable=redefined-outer-name
     """Clear the database after each test.
 
@@ -51,7 +51,7 @@ def clear_database(aiida_profile):  # pylint: disable=redefined-outer-name
 
 
 @pytest.fixture(scope='function')
-def tempdir():
+def temp_dir():
     """Get a temporary directory.
 
     E.g. to use as the working directory of an AiiDA computer.
@@ -67,7 +67,7 @@ def tempdir():
 
 
 @pytest.fixture(scope='function')
-def aiida_localhost(tempdir):  # pylint: disable=redefined-outer-name
+def aiida_localhost(temp_dir):  # pylint: disable=redefined-outer-name
     """Get an AiiDA computer for localhost.
 
     Usage::
@@ -92,7 +92,7 @@ def aiida_localhost(tempdir):  # pylint: disable=redefined-outer-name
             name=name,
             description='localhost computer set up by test manager',
             hostname=name,
-            workdir=tempdir,
+            workdir=temp_dir,
             transport_type='local',
             scheduler_type='direct'
         )

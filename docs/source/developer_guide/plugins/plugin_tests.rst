@@ -15,7 +15,7 @@ AiiDA ships with tools that take care of this for you. They will:
  * create a new database
  * create a temporary ``.aiida`` folder
  * create a test profile
- * reset the AiiDA database before every individual test
+ * (optional) reset the AiiDA database before every individual test
 
 thus letting you focus on testing the functionality of your plugin without having to worry about this separation.
 
@@ -54,15 +54,20 @@ For example:
   * The :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture initializes the :py:class:`~aiida.manage.tests.TestManager` and yields it to the test function.
     Its parameters ``scope='session', autouse=True`` cause this fixture to automatically run once per test session, even if you don't explicitly require it.
   * The :py:func:`~aiida.manage.tests.pytest_fixtures.clear_database` fixture depends on the :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture and tells the received :py:class:`~aiida.manage.tests.TestManager` instance to reset the database.
-    Its parameters ``scope='function', autouse=True`` cause this fixture to automatically run once per test function, even if your test function does not require it.
     This fixture lets each test start in a fresh AiiDA environment.
-  * The :py:func:`~aiida.manage.tests.pytest_fixtures.tempdir` fixture returns a temporary directory for file operations and deletes it after the test is finished.
-  * ... you may want to add your own fixtures tailored for your plugin, for example to set up specific ``Data`` nodes.
+  * The :py:func:`~aiida.manage.tests.pytest_fixtures.temp_dir` fixture returns a temporary directory for file operations and deletes it after the test is finished.
+  * ... you may want to add your own fixtures tailored for your plugin to set up specific ``Data`` nodes & more.
 
 In order to make these fixtures available to your tests, add them to your ``conftest.py`` file at the root level of your plugin as follows::
 
    import pytest
    pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
+
+   # Example of how to define your own fixture
+   @pytest.fixture(scope='function', autouse=True)
+   def clear_database_auto(clear_database):
+       """Automatically clear database in between tests."""
+       pass
 
 Your custom fixtures would typically also go inside the ``conftest.py``.
 For more information on the ``conftest.py``, see `here <conftest>`_.
@@ -71,7 +76,7 @@ You can now start writing tests e.g. in a ``test_calculations.py`` file::
 
       # No need to import fixtures - added by pytest "automagically"
 
-      def test_qe_calculation(aiida_local_code_factory):
+      def test_qe_calculation(aiida_local_code_factory, clear_database):
           from aiida.engine import run
           from aiida.plugins import CalculationFactory
 
@@ -170,11 +175,12 @@ Below is a typical test class based on the :py:class:`~aiida.backends.testbase.A
           self.assertEqual(comdata.value == comp_num)
 
 If you enable the AiiDA fixtures in your ``conftest.py`` as explained above, they will also act on test functions defined in ``unittest`` test classes!
-Thus, the conversion to ``pytest`` should simply be this:
+Thus, the conversion to ``pytest`` can look as follows:
 
 .. code-block:: python
 
   import unittest
+  import pytest
   from aiida.plugins import DataFactory
 
   # Assuming our new date type has entry point myplugin.complex
@@ -183,21 +189,23 @@ Thus, the conversion to ``pytest`` should simply be this:
   class TestComplexData(unittest.TestCase):
       """Test ComplexData. Compatible with pytest."""
 
+      @pytest.fixture(autouse=True)
+      def setup_db(self, clear_database):
+          """Clear database for each test."""
+
       def store_complex(self, comp_num):
           comdata = ComplexData()
           comdata.value = comp_num
           return comdata.pk
 
-      def test_complex_store(self):
-          """Test if the complex numbers can be stored"""
+      def test_complex_store(self, clear_database):
+          """Test if the complex numbers can be stored."""
           comdata = ComplexData()
           comdata.value = 1 + 2j
           comdata.store()
 
-      def test_complex_retrieve(self):
-          """
-          Test if the complex number stored can be retrieved
-          """
+      def test_complex_retrieve(self, clear_database):
+          """Test if the complex number stored can be retrieved."""
           comp_num = 1 + 2j
           pk = self.store_complex(cnum)
           comdata = load_node(pk)

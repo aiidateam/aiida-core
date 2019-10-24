@@ -18,6 +18,6 @@ from __future__ import absolute_import
 def test_aiida_localhost(aiida_localhost):
     """Test aiida_localhost fixture.
 
-    Note: This indirectly also tests that the aiida_profile, tempdir and clean_database fixtures run.
+    Note: This indirectly also tests that the aiida_profile, temp_dir and clean_database fixtures run.
     """
     assert aiida_localhost.label == 'localhost'

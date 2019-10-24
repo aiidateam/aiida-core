@@ -30,15 +30,18 @@ from aiida.common.exceptions import ValidationError, InputValidationError, \
 
 class RestValidationError(ValidationError):
     """
-    document with an example
+    If validation error in code
+    E.g. more than one node available for given uuid
     """
 
 
 class RestInputValidationError(InputValidationError):
     """
-    document with an example
+    If inputs passed in query strings are wrong
     """
 
 
 class RestFeatureNotAvailable(FeatureNotAvailable):
-    pass
+    """
+    If endpoint is not emplemented for given node type
+    """

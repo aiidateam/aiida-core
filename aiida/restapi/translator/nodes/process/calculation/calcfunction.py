@@ -8,34 +8,35 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Translator for code
+Translator for calcfunction node
 """
 
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.restapi.translator.nodes.data import DataTranslator
+
+from aiida.restapi.translator.nodes.process.process import ProcessTranslator
 
 
-class CodeTranslator(DataTranslator):
+class CalcFunctionTranslator(ProcessTranslator):
     """
-    Translator relative to resource 'codes' and aiida class Code
+    Translator relative to resource 'calcfunction' and aiida class Calculation
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = 'codes'
+    __label__ = 'calcfunction'
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm import Code
-    _aiida_class = Code
+    from aiida.orm import CalcFunctionNode
+    _aiida_class = CalcFunctionNode
     # The string name of the AiiDA class
-    _aiida_type = 'data.code.Code'
+    _aiida_type = 'process.calculation.calcfunction.CalcFunctionNode'
 
     _result_type = __label__
 
     @staticmethod
     def get_derived_properties(node):
         """
-        Generic function extended for codes data. Currently
+        Generic function extended for calcfunction. Currently
         it is not implemented.
 
         :param node: node object

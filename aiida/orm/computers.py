@@ -14,10 +14,12 @@ from __future__ import absolute_import
 
 import logging
 import os
+import warnings
 import six
 
 from aiida import transports, schedulers
 from aiida.common import exceptions
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
 
@@ -732,7 +734,17 @@ class Computer(entities.Entity):
             - type: type of the property. e.g. str, dict, int
 
         :return: get schema of the computer
+
+        .. deprecated:: 1.0.0
+
+            Will be removed in `v2.0.0`.
+            Use :meth:`~aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead.
+
         """
+        message = 'method is deprecated, use' \
+            '`aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead'
+        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
+
         return {
             'description': {
                 'display_name': 'Description',

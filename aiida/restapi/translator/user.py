@@ -35,33 +35,43 @@ class UserTranslator(BaseTranslator):
 
     _default_projections = ['id', 'first_name', 'last_name', 'institution']
 
-    ## user schema
-    # All the values from column_order must present in additional info dict
-    # Note: final schema will contain details for only the fields present in column order
-    _schema_projections = {
-        'column_order': ['id', 'first_name', 'last_name', 'email', 'institution'],
-        'additional_info': {
+    def get_projectable_properties(self):
+        """
+        Get projectable properties specific for User
+        :return: dict of projectable properties and column_order list
+        """
+        projectable_properties = {
             'id': {
+                'display_name': 'Id',
+                'help_text': 'Id of the object',
+                'is_foreign_key': False,
+                'type': 'int',
                 'is_display': True
             },
             'first_name': {
-                'is_display': True
-            },
-            'last_name': {
-                'is_display': True
-            },
-            'email': {
+                'display_name': 'First name',
+                'help_text': 'First name of the user',
+                'is_foreign_key': False,
+                'type': 'str',
                 'is_display': True
             },
             'institution': {
+                'display_name': 'Institution',
+                'help_text': 'Affiliation of the user',
+                'is_foreign_key': False,
+                'type': 'str',
+                'is_display': True
+            },
+            'last_name': {
+                'display_name': 'Last name',
+                'help_text': 'Last name of the user',
+                'is_foreign_key': False,
+                'type': 'str',
                 'is_display': True
             }
         }
-    }
 
-    def __init__(self, **kwargs):
-        """
-        Initialise the parameters.
-        Create the basic query_help
-        """
-        super(UserTranslator, self).__init__(Class=self.__class__, **kwargs)
+        # Note: final schema will contain details for only the fields present in column order
+        column_order = ['id', 'first_name', 'last_name', 'institution']
+
+        return projectable_properties, column_order

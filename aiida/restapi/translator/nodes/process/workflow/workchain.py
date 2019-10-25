@@ -8,34 +8,35 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Translator for code
+Translator for workchain node
 """
 
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.restapi.translator.nodes.data import DataTranslator
+
+from aiida.restapi.translator.nodes.process.process import ProcessTranslator
 
 
-class CodeTranslator(DataTranslator):
+class WorkChainTranslator(ProcessTranslator):
     """
-    Translator relative to resource 'codes' and aiida class Code
+    Translator relative to resource 'workchain' and aiida class Process
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = 'codes'
+    __label__ = 'workchain'
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm import Code
-    _aiida_class = Code
+    from aiida.orm import WorkChainNode
+    _aiida_class = WorkChainNode
     # The string name of the AiiDA class
-    _aiida_type = 'data.code.Code'
+    _aiida_type = 'process.workflow.workchain.WorkChainNode'
 
     _result_type = __label__
 
     @staticmethod
     def get_derived_properties(node):
         """
-        Generic function extended for codes data. Currently
+        Generic function extended for workchain. Currently
         it is not implemented.
 
         :param node: node object

@@ -30,6 +30,11 @@ class TestData(AiidaTestCase):
             instance = data_class(file=os.path.join(dirpath_fixtures, 'data', 'Si.cif'))
             return instance
 
+        if data_class is orm.UpfData:
+            filename = os.path.join(dirpath_fixtures, 'pseudos', 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
+            instance = data_class(file=filename)
+            return instance
+
         if data_class is orm.StructureData:
             instance = orm.CifData(file=os.path.join(dirpath_fixtures, 'data', 'Si.cif')).get_structure()
             return instance

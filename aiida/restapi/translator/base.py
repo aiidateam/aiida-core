@@ -15,9 +15,7 @@ from __future__ import absolute_import
 
 import six
 
-from aiida.common.exceptions import InputValidationError, InvalidOperation, \
-    ConfigurationError
-from aiida.common.utils import get_object_from_string
+from aiida.common.exceptions import InputValidationError, InvalidOperation
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
@@ -44,45 +42,22 @@ class BaseTranslator(object):
     _result_type = __label__
 
     _default = _default_projections = ['**']
-    _default_user_projections = None
-
-    _schema_projections = {'column_order': [], 'additional_info': {}}
 
     _is_qb_initialized = False
     _is_id_query = None
     _total_count = None
 
-    def __init__(self, Class=None, **kwargs):
+    def __init__(self, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
 
         keyword Class (default None but becomes this class): is the class
         from which one takes the initial values of the attributes. By default
-        is this class so that class atributes are  translated into object
+        is this class so that class atributes are translated into object
         attributes. In case of inheritance one cane use the
         same constructore but pass the inheriting class to pass its attributes.
         """
-
-        # Assume default class is this class (cannot be done in the
-        # definition as it requires self)
-        if Class is None:
-            Class = self.__class__
-
-        # Assign class parameters to the object
-        self.__label__ = Class.__label__
-        self._aiida_class = Class._aiida_class  # pylint: disable=protected-access
-        self._aiida_type = Class._aiida_type  # pylint: disable=protected-access
-        self._result_type = Class.__label__
-
-        self._default = Class._default  # pylint: disable=protected-access
-        self._default_projections = Class._default_projections  # pylint: disable=protected-access
-        self._default_user_projections = Class._default_user_projections  # pylint: disable=protected-access
-        self._schema_projections = Class._schema_projections  # pylint: disable=protected-access
-        self._is_qb_initialized = Class._is_qb_initialized  # pylint: disable=protected-access
-        self._is_id_query = Class._is_id_query  # pylint: disable=protected-access
-        self._total_count = Class._total_count  # pylint: disable=protected-access
-
         # Basic filter (dict) to set the identity of the uuid. None if
         #  no specific node is requested
         self._id_filter = None
@@ -114,64 +89,15 @@ class BaseTranslator(object):
         """
         return ''
 
-    def get_schema(self):
-        # pylint: disable=fixme,too-many-branches
+    @staticmethod
+    def get_projectable_properties():
         """
-        Get node schema
-        :return: node schema
+        This method is extended in specific translators classes.
+        It returns a dict as follows:
+        dict(fields=projectable_properties, ordering=ordering)
+        where projectable_properties is a dict and ordering is a list
         """
-
-        # Construct the full class string
-        if any([self._aiida_type.startswith(prefix) for prefix in ['node.', 'data.', 'process.']]):
-            class_string = 'aiida.orm.nodes.' + self._aiida_type
-        else:
-            class_string = 'aiida.orm.' + self._aiida_type
-
-        # Load correspondent orm class
-        orm_class = get_object_from_string(class_string)
-
-        # Construct the json object to be returned
-        basic_schema = orm_class.get_schema()
-
-        schema = {}
-        ordering = []
-
-        # get addional info and column order from translator class
-        # and combine it with basic schema
-        if self._schema_projections['column_order']:
-            for field in self._schema_projections['column_order']:
-
-                # basic schema
-                if field in basic_schema.keys():
-                    schema[field] = basic_schema[field]
-                else:
-                    ## Note: if column name starts with user_* get the schema information from
-                    # user class. It is added mainly to handle user_email case.
-                    # TODO need to improve
-                    field_parts = field.split('_')
-                    if field_parts[0] == 'user' and field != 'user_id' and len(field_parts) > 1:
-                        from aiida.orm.users import User
-                        user_schema = User.get_schema()
-                        if field_parts[1] in user_schema.keys():
-                            schema[field] = user_schema[field_parts[1]]
-                        else:
-                            raise KeyError('{} is not present in user schema'.format(field))
-                    else:
-                        raise KeyError('{} is not present in ORM basic schema'.format(field))
-
-                # additional info defined in translator class
-                if field in self._schema_projections['additional_info']:
-                    schema[field].update(self._schema_projections['additional_info'][field])
-                else:
-                    raise KeyError('{} is not present in default projection additional info'.format(field))
-
-            # order
-            ordering = self._schema_projections['column_order']
-
-        else:
-            raise ConfigurationError('Define column order to get schema for {}'.format(self._aiida_type))
-
-        return dict(fields=schema, ordering=ordering)
+        return {}
 
     def init_qb(self):
         """
@@ -281,11 +207,7 @@ class BaseTranslator(object):
             if projections:
                 for project_key, project_list in projections.items():
                     self._query_help['project'][project_key] = project_list
-                if self._default_user_projections:
-                    from aiida.orm import User
-                    self._query_help['path'].insert(0, {'cls': User, 'tag': 'user'})
-                    self._query_help['path'][1]['with_user'] = 'user'
-                    self._query_help['project']['user'] = self._default_user_projections
+
         else:
             raise InputValidationError(
                 'Pass data in dictionary format where '
@@ -333,6 +255,8 @@ class BaseTranslator(object):
             return order_dict
 
         ## Assign orderby field query_help
+        if 'id' not in orders[self._result_type] and '-id' not in orders[self._result_type]:
+            orders[self._result_type].append('id')
         for tag, columns in orders.items():
             self._query_help['order_by'][tag] = def_order(columns)
 
@@ -343,16 +267,12 @@ class BaseTranslator(object):
         projections=None,
         query_type=None,
         node_id=None,
-        alist=None,
-        nalist=None,
-        elist=None,
-        nelist=None,
-        downloadformat=None,
-        visformat=None,
-        filename=None,
-        rtype=None
+        attributes=None,
+        attributes_filter=None,
+        extras=None,
+        extras_filter=None
     ):
-        # pylint: disable=too-many-arguments,unused-argument
+        # pylint: disable=too-many-arguments,unused-argument,too-many-locals,too-many-branches
         """
         Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
@@ -363,15 +283,11 @@ class BaseTranslator(object):
             if query_type=='attributes'/'extras'
         :param query_type: (string) specify the result or the content ("attr")
         :param id: (integer) id of a specific node
-        :param alist: list of attributes queried for node
-        :param nalist: list of attributes, returns all attributes except this for node
-        :param elist: list of extras queries for node
-        :param nelist: list of extras, returns all extras except this for node
-        :param downloadformat: file format to download e.g. cif, xyz
-        :param visformat: data format to visualise the node. Mainly used for structure,
-            cif, kpoints. E.g. jsmol, chemdoodle
         :param filename: name of the file to return its content
-        :param rtype: return type of the file
+        :param attributes: flag to show attributes in nodes endpoint
+        :param attributes_filter: list of node attributes to query
+        :param extras: flag to show attributes in nodes endpoint
+        :param extras_filter: list of node extras to query
         """
 
         tagged_filters = {}
@@ -399,7 +315,36 @@ class BaseTranslator(object):
 
         ## Add projections
         if projections is None:
-            self.set_default_projections()
+            if attributes is None and extras is None:
+                self.set_default_projections()
+            else:
+                default_projections = self.get_default_projections()
+
+                if attributes is True:
+                    if attributes_filter is None:
+                        default_projections.append('attributes')
+                    else:
+                        ## Check if attributes_filter is not a list
+                        if not isinstance(attributes_filter, list):
+                            attributes_filter = [attributes_filter]
+                        for attr in attributes_filter:
+                            default_projections.append('attributes.' + str(attr))
+                elif attributes is not None and attributes is not False:
+                    raise RestValidationError('The attributes filter is false by default and can only be set to true.')
+
+                if extras is True:
+                    if extras_filter is None:
+                        default_projections.append('extras')
+                    else:
+                        ## Check if extras_filter is not a list
+                        if not isinstance(extras_filter, list):
+                            extras_filter = [extras_filter]
+                        for extra in extras_filter:
+                            default_projections.append('extras.' + str(extra))
+                elif extras is not None and extras is not False:
+                    raise RestValidationError('The extras filter is false by default and can only be set to true.')
+
+                self.set_projections({self.__label__: default_projections})
         else:
             tagged_projections = {self._result_type: projections}
             self.set_projections(tagged_projections)
@@ -476,15 +421,19 @@ class BaseTranslator(object):
         if self._total_count > 0:
             for res in self.qbobj.dict():
                 tmp = res[label]
-                if self._default_user_projections:
-                    tmp['user_email'] = res['user']['email']
+
+                # Note: In code cleanup and design change, remove this node dependant part
+                # from base class and move it to node translator.
+                if self._result_type in ['with_outgoing', 'with_incoming']:
+                    tmp['link_type'] = res[self.__label__ + '--' + label]['type']
+                    tmp['link_label'] = res[self.__label__ + '--' + label]['label']
                 results.append(tmp)
 
         # TODO think how to make it less hardcoded
         if self._result_type == 'with_outgoing':
-            result = {'inputs': results}
+            result = {'incoming': results}
         elif self._result_type == 'with_incoming':
-            result = {'outputs': results}
+            result = {'outgoing': results}
         else:
             result = {self.__label__: results}
 
@@ -531,9 +480,9 @@ class BaseTranslator(object):
 
         if self._has_uuid:
 
-            # For consistency check that tid is a string
+            # For consistency check that id is a string
             if not isinstance(node_id, six.string_types):
-                raise RestValidationError('parameter id has to be an string')
+                raise RestValidationError('parameter id has to be a string')
 
             identifier_type = IdentifierType.UUID
             qbobj, _ = loader.get_query_builder(node_id, identifier_type, sub_classes=(self._aiida_class,))
@@ -552,9 +501,9 @@ class BaseTranslator(object):
         try:
             pk = qbobj.one()[0].pk
         except MultipleObjectsError:
-            raise RestValidationError('More than one node found. Provide longer starting pattern for id.')
+            raise RestInputValidationError('More than one node found. Provide longer starting pattern for id.')
         except NotExistent:
-            raise RestValidationError(
+            raise RestInputValidationError(
                 "either no object's id starts"
                 " with '{}' or the corresponding object"
                 ' is not of type aiida.orm.{}'.format(node_id, self._aiida_type)

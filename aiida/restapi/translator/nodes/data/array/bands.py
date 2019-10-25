@@ -32,15 +32,8 @@ class BandsDataTranslator(DataTranslator):
 
     _result_type = __label__
 
-    def __init__(self, **kwargs):
-        """
-        Initialise the parameters.
-        Create the basic query_help
-        """
-        super(BandsDataTranslator, self).__init__(Class=self.__class__, **kwargs)
-
     @staticmethod
-    def get_visualization_data(node, visformat=None):
+    def get_derived_properties(node):
         """
         Returns: data in a format required by dr.js to visualize a 2D plot
         with multiple data series.
@@ -52,28 +45,11 @@ class BandsDataTranslator(DataTranslator):
         TODO: modify the function exportstring (or add another function in
         BandsData) so that it returns a python object rather than a string.
         """
+        response = {}
 
         from aiida.common import json
         json_string = node._exportcontent('json', comments=False)  # pylint: disable=protected-access
         json_content = json.loads(json_string[0])
+        response['bands'] = json_content
 
-        # Add Ylabel which by default is not exported
-        y_label = node.label + ' ({})'.format(node.get_attribute('units'))
-        json_content['Y_label'] = y_label
-
-        return json_content
-
-    @staticmethod
-    def get_downloadable_data(node, download_format=None):
-        """
-        Generic function extented for kpoints data. Currently
-        it is not implemented.
-
-        :param node: node object that has to be visualized
-        :param download_format: file extension format
-        :returns: raise RestFeatureNotAvailable exception
-        """
-
-        from aiida.restapi.common.exceptions import RestFeatureNotAvailable
-
-        raise RestFeatureNotAvailable('This endpoint is not available for Bands.')
+        return response

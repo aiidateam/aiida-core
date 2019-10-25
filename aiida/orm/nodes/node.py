@@ -1238,7 +1238,17 @@ class Node(Entity):
             - type: type of the property. e.g. str, dict, int
 
         :return: get schema of the node
+
+        .. deprecated:: 1.0.0
+
+            Will be removed in `v2.0.0`.
+            Use :meth:`~aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead.
+
         """
+        message = 'method is deprecated, use' \
+            '`aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead'
+        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
+
         return {
             'attributes': {
                 'display_name': 'Attributes',

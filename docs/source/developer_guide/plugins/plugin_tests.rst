@@ -4,10 +4,10 @@ Testing AiiDA plugins
 =====================
 
 When developing a plugin it is important to write tests.
-We recommend using the `pytest`_ framework, while he `unittest`_ framework is also supported.
+We recommend using the `pytest`_ framework, while the `unittest`_ framework is also supported.
 
 One concern when running tests for AiiDA plugins is to separate the test environment from your production environment.
-Ideally, each individual test should be run against a fresh AiiDA database.
+Depending on the kind of test, each should even be run against a fresh AiiDA database.
 
 AiiDA ships with tools that take care of this for you. They will:
 

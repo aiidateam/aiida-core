@@ -16,10 +16,11 @@ __all__ = (
     'AiidaException', 'NotExistent', 'MultipleObjectsError', 'RemoteOperationError', 'ContentNotExistent',
     'FailedError', 'StoringNotAllowed', 'ModificationNotAllowed', 'IntegrityError', 'UniquenessError',
     'EntryPointError', 'MissingEntryPointError', 'MultipleEntryPointError', 'LoadingEntryPointError',
-    'InvalidOperation', 'ParsingError', 'InternalError', 'PluginInternalError', 'ValidationError', 'ConfigurationError',
-    'ProfileConfigurationError', 'MissingConfigurationError', 'ConfigurationVersionError', 'DbContentError',
-    'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError',
-    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError'
+    'InvalidEntryPointTypeError', 'InvalidOperation', 'ParsingError', 'InternalError', 'PluginInternalError',
+    'ValidationError', 'ConfigurationError', 'ProfileConfigurationError', 'MissingConfigurationError',
+    'ConfigurationVersionError', 'DbContentError', 'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled',
+    'LicensingException', 'TestsNotAllowedError', 'UnsupportedSpeciesError', 'TransportTaskException',
+    'OutputParsingError'
 )
 
 
@@ -107,6 +108,10 @@ class MultipleEntryPointError(EntryPointError):
 
 class LoadingEntryPointError(EntryPointError):
     """Raised when the resource corresponding to requested entry point cannot be imported."""
+
+
+class InvalidEntryPointTypeError(EntryPointError):
+    """Raised when a loaded entry point has a type that is not supported by the corresponding entry point group."""
 
 
 class InvalidOperation(AiidaException):

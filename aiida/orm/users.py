@@ -12,7 +12,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import warnings
+
 from aiida.common import exceptions
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
 
 from . import entities
@@ -162,7 +165,17 @@ class User(entities.Entity):
           - type: type of the property. e.g. str, dict, int
 
         :return: schema of the user
+
+        .. deprecated:: 1.0.0
+
+            Will be removed in `v2.0.0`.
+            Use :meth:`~aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead.
+
         """
+        message = 'method is deprecated, use' \
+            '`aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead'
+        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
+
         return {
             'id': {
                 'display_name': 'Id',

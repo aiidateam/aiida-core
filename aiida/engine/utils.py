@@ -20,7 +20,7 @@ from six.moves import range
 import tornado.ioloop
 from tornado import concurrent, gen
 
-__all__ = ('interruptable_task', 'InterruptableFuture')
+__all__ = ('interruptable_task', 'InterruptableFuture', 'is_process_function')
 
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'

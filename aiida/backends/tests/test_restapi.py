@@ -26,7 +26,7 @@ class RESTApiTestCase(AiidaTestCase):
     """
     Setup of the tests for the AiiDA RESTful-api
     """
-    _url_prefix = '/api/v3'
+    _url_prefix = '/api/v4'
     _dummy_data = {}
     _PERPAGE_DEFAULT = 20
     _LIMIT_DEFAULT = 400
@@ -54,6 +54,8 @@ class RESTApiTestCase(AiidaTestCase):
         structure = orm.StructureData(cell=cell)
         structure.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         structure.store()
+        structure.add_comment('This is test comment.')
+        structure.add_comment('Add another comment.')
 
         cif = orm.CifData(ase=structure.get_ase())
         cif.store()
@@ -77,6 +79,8 @@ class RESTApiTestCase(AiidaTestCase):
         calc.set_option('resources', resources)
         calc.set_attribute('attr1', 'OK')
         calc.set_attribute('attr2', 'OK')
+        calc.set_extra('extra1', False)
+        calc.set_extra('extra2', 'extra_info')
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
@@ -89,6 +93,24 @@ class RESTApiTestCase(AiidaTestCase):
             handle.seek(0)
             calc.put_object_from_filelike(handle, key='calcjob_inputs/aiida.in', force=True)
         calc.store()
+
+        # create log message for calcjob
+        import logging
+        from aiida.common.log import LOG_LEVEL_REPORT
+        from aiida.common.timezone import now
+        from aiida.orm import Log
+
+        log_record = {
+            'time': now(),
+            'loggername': 'loggername',
+            'levelname': logging.getLevelName(LOG_LEVEL_REPORT),
+            'dbnode_id': calc.id,
+            'message': 'This is a template record message',
+            'metadata': {
+                'content': 'test'
+            },
+        }
+        Log(**log_record)
 
         aiida_out = 'The output file\nof the CalcJob node'
         retrieved_outputs = orm.FolderData()
@@ -274,7 +296,7 @@ class RESTApiTestCase(AiidaTestCase):
         :param expected_errormsg: expected error message in response
         :param uuid: url requested for the node pk
         :param result_node_type: node type in response data
-        :param result_name: result name in response e.g. inputs, outputs
+        :param result_name: result name in response e.g. incoming, outgoing
         """
 
         if expected_list_ids is None:
@@ -699,128 +721,78 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.node_exception(self, "/computers?aa=bb&id=2", InputValidationError)
         """
 
-    ############### single calculation ########################
-    def test_calculations_details(self):
-        """
-        Requests the details of single calculation
-        """
-        node_uuid = self.get_dummy_data()['calculations'][0]['uuid']
-        RESTApiTestCase.process_test(
-            self, 'calculations', '/calculations/' + str(node_uuid), expected_list_ids=[0], uuid=node_uuid
-        )
-
-    ############### full list with limit, offset, page, perpage #############
-    def test_calculations_list(self):
-        """
-        Get the full list of calculations from database
-        """
-        RESTApiTestCase.process_test(self, 'calculations', '/calculations?orderby=-id', full_list=True)
-
-    def test_calculations_list_limit_offset(self):
-        """
-        Get the list of calculations from database using limit
-        and offset parameter.
-        It should return the no of rows specified in limit from
-        database starting from the no. specified in offset
-        """
-        RESTApiTestCase.process_test(
-            self, 'calculations', '/calculations?limit=1&offset=1&orderby=+id', expected_list_ids=[1]
-        )
-
     ############### calculation retrieved_inputs and retrieved_outputs  #############
     def test_calculation_retrieved_inputs(self):
         """
         Get the list of given calculation retrieved_inputs
         """
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/io/retrieved_inputs'
+        url = self.get_url_prefix() + '/calcjobs/' + str(node_uuid) + '/input_files'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertEqual(response['data']['retrieved_inputs'], ['calcjob_inputs/aiida.in'])
+            self.assertEqual(response['data'], [{'name': 'calcjob_inputs', 'type': 'DIRECTORY'}])
 
     def test_calculation_retrieved_outputs(self):
         """
         Get the list of given calculation retrieved_outputs
         """
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/io/retrieved_outputs'
+        url = self.get_url_prefix() + '/calcjobs/' + str(node_uuid) + '/output_files'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertEqual(response['data']['retrieved_outputs'], ['calcjob_outputs/aiida.out'])
+            self.assertEqual(response['data'], [{'name': 'calcjob_outputs', 'type': 'DIRECTORY'}])
 
-    def test_calcfunction_retrieved_inputs(self):
-        """
-        Check that the given calcfunction does not have retrieved_inputs
-        """
-        node_uuid = self.get_dummy_data()['calculations'][2]['uuid']
-        self.process_test(
-            'calculations',
-            '/calculations/' + str(node_uuid) + '/io/retrieved_inputs',
-            uuid=node_uuid,
-            result_name='retrieved_inputs',
-            empty_list=True
-        )
-
-    def test_calcfunction_retrieved_outputs(self):
-        """
-        Check that the given calcfunction does not have retrieved_outputs
-        """
-        node_uuid = self.get_dummy_data()['calculations'][2]['uuid']
-        self.process_test(
-            'calculations',
-            '/calculations/' + str(node_uuid) + '/io/retrieved_outputs',
-            uuid=node_uuid,
-            result_name='retrieved_outputs',
-            empty_list=True
-        )
-
-    ############### calculation inputs  #############
+    ############### calculation incoming  #############
     def test_calculation_inputs(self):
         """
-        Get the list of give calculation inputs
+        Get the list of give calculation incoming
         """
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
         self.process_test(
-            'calculations',
-            '/calculations/' + str(node_uuid) + '/io/inputs?orderby=id',
+            'nodes',
+            '/nodes/' + str(node_uuid) + '/links/incoming?orderby=id',
             expected_list_ids=[5, 3],
             uuid=node_uuid,
             result_node_type='data',
-            result_name='inputs'
+            result_name='incoming'
         )
 
     def test_calculation_input_filters(self):
         """
-        Get filtered inputs list for given calculations
+        Get filtered incoming list for given calculations
         """
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
         self.process_test(
-            'calculations',
-            '/calculations/' + str(node_uuid) + '/io/inputs?node_type="data.dict.Dict."',
+            'nodes',
+            '/nodes/' + str(node_uuid) + '/links/incoming?node_type="data.dict.Dict."',
             expected_list_ids=[3],
             uuid=node_uuid,
             result_node_type='data',
-            result_name='inputs'
+            result_name='incoming'
         )
 
     def test_calculation_iotree(self):
         """
-        Get filtered inputs list for given calculations
+        Get filtered incoming list for given calculations
         """
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/io/tree?in_limit=1&out_limit=1'
+        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/links/tree?in_limit=1&out_limit=1'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertEqual(len(response['data']['nodes']), 3)
-            self.assertEqual(len(response['data']['edges']), 2)
-            expected_attr = ['nodelabel', 'nodetype', 'linklabel', 'linktype', 'nodeuuid', 'description']
-            received_attr = response['data']['nodes'][1].keys()
+            self.assertEqual(len(response['data']['nodes']), 1)
+            self.assertEqual(len(response['data']['nodes'][0]['incoming']), 1)
+            self.assertEqual(len(response['data']['nodes'][0]['outgoing']), 1)
+            self.assertEqual(len(response['data']['metadata']), 1)
+            expected_attr = [
+                'ctime', 'mtime', 'id', 'node_label', 'node_type', 'uuid', 'description', 'incoming', 'outgoing'
+            ]
+            received_attr = response['data']['nodes'][0].keys()
             for attr in expected_attr:
                 self.assertIn(attr, received_attr)
-            RESTApiTestCase.compare_extra_response_data(self, 'calculations', url, response, uuid=node_uuid)
+            RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
 
     ############### calculation attributes #############
     def test_calculation_attributes(self):
@@ -836,19 +808,34 @@ class RESTApiTestSuite(RESTApiTestCase):
             },
         }
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/content/attributes'
+        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/contents/attributes'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
             self.assertNotIn('message', response)
             self.assertEqual(response['data']['attributes'], attributes)
-            RESTApiTestCase.compare_extra_response_data(self, 'calculations', url, response, uuid=node_uuid)
+            RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
 
-    def test_calculation_attributes_nalist_filter(self):
+    def test_contents_attributes_filter(self):
         """
-        Get list of calculation attributes with filter nalist
+        Get list of calculation attributes with filter attributes_filter
+        """
+        node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
+        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/contents/attributes?attributes_filter="attr1"'
+        with self.app.test_client() as client:
+            rv_obj = client.get(url)
+            response = json.loads(rv_obj.data)
+            self.assertNotIn('message', response)
+            self.assertEqual(response['data']['attributes'], {'attr1': 'OK'})
+            RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
+
+    ############### calculation node attributes filter  #############
+    def test_calculation_attributes_filter(self):
+        """
+        Get the list of given calculation attributes filtered
         """
         attributes = {
+            'attr1': 'OK',
             'attr2': 'OK',
             'resources': {
                 'num_machines': 1,
@@ -856,112 +843,89 @@ class RESTApiTestSuite(RESTApiTestCase):
             },
         }
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/content/attributes?nalist="attr1"'
+        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '?attributes=true'
         with self.app.test_client() as client:
-            rv_obj = client.get(url)
-            response = json.loads(rv_obj.data)
-            self.assertNotIn('message', response)
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+            self.assertEqual(response['data']['nodes'][0]['attributes'], attributes)
 
-            self.assertEqual(response['data']['attributes'], attributes)
-            RESTApiTestCase.compare_extra_response_data(self, 'calculations', url, response, uuid=node_uuid)
-
-    def test_calculation_attributes_alist_filter(self):
+    ############### calculation node extras_filter  #############
+    def test_calculation_extras_filter(self):
         """
-        Get list of calculation attributes with filter alist
+        Get the list of given calculation extras filtered
         """
+        extras = {'extra1': False, 'extra2': 'extra_info'}
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/content/attributes?alist="attr1"'
+        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '?extras=true&extras_filter=extra1,extra2'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+            self.assertEqual(response['data']['nodes'][0]['extras']['extra1'], extras['extra1'])
+            self.assertEqual(response['data']['nodes'][0]['extras']['extra2'], extras['extra2'])
+
+    ############### structure node attributes filter #############
+    def test_structure_attributes_filter(self):
+        """
+        Get the list of given calculation attributes filtered
+        """
+        cell = [[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]]
+        node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
+        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '?attributes=true&attributes_filter=cell'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
-            self.assertNotIn('message', response)
-            self.assertEqual(response['data']['attributes'], {'attr1': 'OK'})
-            RESTApiTestCase.compare_extra_response_data(self, 'calculations', url, response, uuid=node_uuid)
+            self.assertEqual(response['data']['nodes'][0]['attributes']['cell'], cell)
+
+    ############### node full_type filter #############
+    def test_nodes_full_type_filter(self):
+        """
+        Get the list of nodes filtered by full_type
+        """
+        expected_node_uuids = []
+        for calc in self.get_dummy_data()['calculations']:
+            if calc['node_type'] == 'process.calculation.calcjob.CalcJobNode.':
+                expected_node_uuids.append(calc['uuid'])
+
+        url = self.get_url_prefix() + '/nodes/' + '?full_type="process.calculation.calcjob.CalcJobNode.|"'
+        with self.app.test_client() as client:
+            rv_obj = client.get(url)
+            response = json.loads(rv_obj.data)
+            for node in response['data']['nodes']:
+                self.assertIn(node['uuid'], expected_node_uuids)
 
     ############### Structure visualization and download #############
-    def test_structure_visualization(self):
+    def test_structure_derived_properties(self):
         """
-        Get the list of give calculation inputs
+        Get the list of give calculation incoming
         """
-        from aiida.backends.tests.test_dataclasses import simplify
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = self.get_url_prefix() + '/structures/' + str(node_uuid) + '/content/visualization?visformat=cif'
+        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/contents/derived_properties'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
             self.assertNotIn('message', response)
-
-            expected_visdata = """\n##########################################################################\n#               Crystallographic Information Format file \n#               Produced by PyCifRW module\n# \n#  This is a CIF file.  CIF has been adopted by the International\n#  Union of Crystallography as the standard for data archiving and \n#  transmission.\n#\n#  For information on this file format, follow the CIF links at\n#  http://www.iucr.org\n##########################################################################\n\ndata_0\nloop_\n  _atom_site_label\n  _atom_site_fract_x\n  _atom_site_fract_y\n  _atom_site_fract_z\n  _atom_site_type_symbol\n   Ba1  0.0  0.0  0.0  Ba\n \n_cell_angle_alpha                       90.0\n_cell_angle_beta                        90.0\n_cell_angle_gamma                       90.0\n_cell_length_a                          2.0\n_cell_length_b                          2.0\n_cell_length_c                          2.0\nloop_\n  _symmetry_equiv_pos_as_xyz\n   'x, y, z'\n \n_symmetry_int_tables_number             1\n_symmetry_space_group_name_H-M          'P 1'\n"""  # pylint: disable=line-too-long
             self.assertEqual(
-                simplify(response['data']['visualization']['str_viz_info']['data']), simplify(expected_visdata)
-            )
-            self.assertEqual(response['data']['visualization']['str_viz_info']['format'], 'cif')
-            self.assertEqual(
-                response['data']['visualization']['dimensionality'], {
+                response['data']['derived_properties']['dimensionality'], {
                     u'dim': 3,
                     u'value': 8.0,
                     u'label': u'volume'
                 }
             )
-            self.assertEqual(response['data']['visualization']['pbc'], [True, True, True])
-            self.assertEqual(response['data']['visualization']['formula'], 'Ba')
-            RESTApiTestCase.compare_extra_response_data(self, 'structures', url, response, uuid=node_uuid)
+            self.assertEqual(response['data']['derived_properties']['formula'], 'Ba')
+            RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
 
-    def test_xsf_visualization(self):
+    def test_structure_download(self):
         """
-        Get the list of given calculation inputs
+        Test download of structure file
         """
-        from aiida.backends.tests.test_dataclasses import simplify
+        from aiida.orm import load_node
+
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = self.get_url_prefix() + '/structures/' + str(node_uuid) + '/content/visualization?visformat=xsf'
+        url = self.get_url_prefix() + '/nodes/' + node_uuid + '/download?download_format=xsf'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
-            response = json.loads(rv_obj.data)
-            self.assertNotIn('message', response)
-
-            expected_visdata = 'CRYSTAL\nPRIMVEC 1\n      2.0000000000       0.0000000000       0.0000000000\n      0.0000000000       2.0000000000       0.0000000000\n      0.0000000000       0.0000000000       2.0000000000\nPRIMCOORD 1\n1 1\n56       0.0000000000       0.0000000000       0.0000000000\n'  # pylint: disable=line-too-long
-            self.assertEqual(
-                simplify(response['data']['visualization']['str_viz_info']['data']), simplify(expected_visdata)
-            )
-            self.assertEqual(response['data']['visualization']['str_viz_info']['format'], 'xsf')
-            self.assertEqual(
-                response['data']['visualization']['dimensionality'], {
-                    u'dim': 3,
-                    u'value': 8.0,
-                    u'label': u'volume'
-                }
-            )
-            self.assertEqual(response['data']['visualization']['pbc'], [True, True, True])
-            self.assertEqual(response['data']['visualization']['formula'], 'Ba')
-            RESTApiTestCase.compare_extra_response_data(self, 'structures', url, response, uuid=node_uuid)
-
-    def test_visualization(self):
-        """
-        Get the list of given calculation inputs
-        """
-        from aiida.backends.tests.test_dataclasses import simplify
-        node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = self.get_url_prefix() + '/structures/' + str(node_uuid) + '/content/visualization'
-        with self.app.test_client() as client:
-            rv_obj = client.get(url)
-            response = json.loads(rv_obj.data)
-            self.assertNotIn('message', response)
-
-            expected_visdata = 'CRYSTAL\nPRIMVEC 1\n      2.0000000000       0.0000000000       0.0000000000\n      0.0000000000       2.0000000000       0.0000000000\n      0.0000000000       0.0000000000       2.0000000000\nPRIMCOORD 1\n1 1\n56       0.0000000000       0.0000000000       0.0000000000\n'  # pylint: disable=line-too-long
-            self.assertEqual(
-                simplify(response['data']['visualization']['str_viz_info']['data']), simplify(expected_visdata)
-            )
-            self.assertEqual(response['data']['visualization']['str_viz_info']['format'], 'xsf')
-            self.assertEqual(
-                response['data']['visualization']['dimensionality'], {
-                    u'dim': 3,
-                    u'value': 8.0,
-                    u'label': u'volume'
-                }
-            )
-            self.assertEqual(response['data']['visualization']['pbc'], [True, True, True])
-            self.assertEqual(response['data']['visualization']['formula'], 'Ba')
-            RESTApiTestCase.compare_extra_response_data(self, 'structures', url, response, uuid=node_uuid)
+        structure_data = load_node(node_uuid)._exportcontent('xsf')[0]  # pylint: disable=protected-access
+        self.assertEqual(rv_obj.data, structure_data)
 
     def test_cif(self):
         """
@@ -970,21 +934,19 @@ class RESTApiTestSuite(RESTApiTestCase):
         from aiida.orm import load_node
 
         node_uuid = self.get_dummy_data()['cifdata'][0]['uuid']
-        url = self.get_url_prefix() + '/cifs/' + node_uuid + '/content/download'
-
+        url = self.get_url_prefix() + '/nodes/' + node_uuid + '/download?download_format=cif'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
-
         cif = load_node(node_uuid)._prepare_cif()[0]  # pylint: disable=protected-access
         self.assertEqual(rv_obj.data, cif)
 
-    ############### schema #############
-    def test_schema(self):
+    ############### projectable_properties #############
+    def test_projectable_properties(self):
         """
-        test schema
+        test projectable_properties endpoint
         """
-        for nodetype in ['nodes', 'calculations', 'data', 'codes', 'computers', 'users', 'groups']:
-            url = self.get_url_prefix() + '/' + nodetype + '/schema'
+        for nodetype in ['nodes', 'processes', 'computers', 'users', 'groups']:
+            url = self.get_url_prefix() + '/' + nodetype + '/projectable_properties'
             with self.app.test_client() as client:
                 rv_obj = client.get(url)
                 response = json.loads(rv_obj.data)
@@ -1003,21 +965,82 @@ class RESTApiTestSuite(RESTApiTestCase):
                 for prop in response['data']['ordering']:
                     self.assertIn(prop, available_properties)
 
-    def test_node_types(self):
+    def test_node_namespace(self):
         """
-        Test the rest api call to get list of available node types
+        Test the rest api call to get list of available node namespace
         """
-        url = self.get_url_prefix() + '/nodes/types'
+        url = self.get_url_prefix() + '/nodes/full_types'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
-            self.assertEqual(
-                response['data']['process'],
-                ['process.calculation.calcfunction.CalcFunctionNode.', 'process.calculation.calcjob.CalcJobNode.']
-            )
-            expected_data_types = [
-                'data.array.kpoints.KpointsData.', 'data.cif.CifData.', 'data.dict.Dict.', 'data.folder.FolderData.',
-                'data.structure.StructureData.'
-            ]
-            self.assertEqual(response['data']['data'], expected_data_types)
+            expected_data_keys = ['path', 'namespace', 'subspaces', 'label', 'full_type']
+            response_keys = response['data'].keys()
+            for dkay in expected_data_keys:
+                self.assertIn(dkay, response_keys)
             RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response)
+
+    def test_comments(self):
+        """
+        Get the node comments
+        """
+        node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
+        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/contents/comments'
+        with self.app.test_client() as client:
+            rv_obj = client.get(url)
+            response = json.loads(rv_obj.data)['data']['comments']
+            all_comments = []
+            for comment in response:
+                all_comments.append(comment['message'])
+            self.assertEqual(sorted(all_comments), sorted(['This is test comment.', 'Add another comment.']))
+
+    def test_repo(self):
+        """
+        Test to get repo list or repo file contents for given node
+        """
+        from aiida.orm import load_node
+
+        node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
+        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/repo/list?filename="calcjob_inputs"'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+            self.assertEqual(response['data']['repo_list'], [{'type': 'FILE', 'name': 'aiida.in'}])
+
+        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/repo/contents?filename="calcjob_inputs/aiida.in"'
+        with self.app.test_client() as client:
+            response_obj = client.get(url)
+            input_file = load_node(node_uuid).get_object_content('calcjob_inputs/aiida.in', mode='rb')
+            self.assertEqual(response_obj.data, input_file)
+
+    def test_process_report(self):
+        """
+        Test process report
+        """
+        node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
+        url = self.get_url_prefix() + '/processes/' + str(node_uuid) + '/report'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+
+            expected_keys = response['data'].keys()
+            for key in ['logs']:
+                self.assertIn(key, expected_keys)
+
+            expected_log_keys = response['data']['logs'][0].keys()
+            for key in ['time', 'loggername', 'levelname', 'dbnode_id', 'message']:
+                self.assertIn(key, expected_log_keys)
+
+    def test_download_formats(self):
+        """
+        test for download format endpoint
+        """
+        url = self.get_url_prefix() + '/nodes/download_formats'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+
+            for key in ['data.structure.StructureData.|', 'data.cif.CifData.|']:
+                self.assertIn(key, response['data'].keys())
+            for key in ['cif', 'xsf', 'xyz']:
+                self.assertIn(key, response['data']['data.structure.StructureData.|'])
+            self.assertIn('cif', response['data']['data.cif.CifData.|'])

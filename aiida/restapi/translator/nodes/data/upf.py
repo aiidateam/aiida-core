@@ -15,7 +15,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.nodes.data import DataTranslator
-from aiida.restapi.common.exceptions import RestInputValidationError
 
 
 class UpfDataTranslator(DataTranslator):
@@ -33,44 +32,12 @@ class UpfDataTranslator(DataTranslator):
 
     _result_type = __label__
 
-    def __init__(self, **kwargs):
-        """
-        Initialise the parameters.
-        Create the basic query_help
-        """
-        super(UpfDataTranslator, self).__init__(Class=self.__class__, **kwargs)
-
     @staticmethod
-    def get_visualization_data(node, visformat=None):
+    def get_derived_properties(node):
         """
-
-        Returns: data in a format required by dr.js to visualize a 2D plot
-        with multiple data series.
-
+        :param node: node object
+        :returns: empty dict
         """
-        return []
-
-    @staticmethod
-    def get_downloadable_data(node, download_format=None):
-        """
-        Generic function extended for upf data
-
-        :param node: node object that has to be downloaded
-        :param download_format: file extension format
-        :returns: data in selected format to download
-        """
-
         response = {}
-
-        filename = node.filename
-        try:
-            content = node.get_content()
-        except IOError:
-            error = 'Error in getting {} content'.format(filename)
-            raise RestInputValidationError(error)
-
-        response['status'] = 200
-        response['data'] = content
-        response['filename'] = filename
 
         return response

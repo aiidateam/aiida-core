@@ -100,11 +100,14 @@ def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-sta
     """Run the unittest suite or parts of it."""
     import os
     import unittest
+    import warnings
 
     import aiida
     from aiida.backends.testbase import run_aiida_db_tests
     from aiida.backends.testbase import check_if_tests_can_run
     from aiida.manage import configuration
+    from aiida.manage import tests
+    from aiida.common.warnings import AiidaTestWarning
 
     test_failures = []
     test_errors = []
@@ -113,6 +116,13 @@ def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-sta
     db_test_list = []
     test_folders = []
     do_db = False
+
+    if tests.get_test_profile_name():
+        warnings.warn(   # pylint: disable=no-member
+            'Ignoring `AIIDA_TEST_PROFILE` environment variable.'
+            ' Use `verdi -p test_profile devel tests` to select the test profile for aiida-core tests.',
+            AiidaTestWarning
+        )
 
     if paths:
         for path in paths:

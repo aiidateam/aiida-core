@@ -21,10 +21,12 @@ thus letting you focus on testing the functionality of your plugin without havin
 
 .. note::
    The overhead for setting up the temporary environment is of the order of a few seconds and occurs only once per test session.
+   You can control the database backend for the temporary profile by setting the ``AIIDA_TEST_BACKEND`` environment variable, e.g. ``export AIIDA_TEST_BACKEND=sqlalchemy``.
+
 
 If you prefer to run tests on an existing profile, say ``test_profile``, simply set the following environment variable before running your tests::
 
-  export TEST_AIIDA_PROFILE=test_profile
+  export AIIDA_TEST_PROFILE=test_profile
 
 
 .. note::

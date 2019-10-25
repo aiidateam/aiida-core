@@ -16,7 +16,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 import tempfile
 import shutil
-from os import path
+import os
 from contextlib import contextmanager
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
@@ -85,19 +85,19 @@ class TestManager(object):
         self._manager = TemporaryProfileManager(backend=backend)
         self._manager.create_profile(pgtest=pgtest)
 
-    def use_profile(self, profile):
+    def use_profile(self, profile_name):
         """Set up Test manager to use existing profile.
 
          Uses :py:class:`aiida.manage.tests.ProfileManager` internally.
 
-        :param profile: Name of existing test profile to use.
+        :param profile_name: Name of existing test profile to use.
         """
         if configuration.PROFILE is not None:
             raise TestManagerError('AiiDA dbenv must not be loaded before setting up a test profile.')
         if self._manager is not None:
             raise TestManagerError('Profile manager already loaded.')
 
-        self._manager = ProfileManager(profile_name=profile)
+        self._manager = ProfileManager(profile_name=profile_name)
         self._manager.init_db()
 
     def has_profile_open(self):
@@ -334,7 +334,7 @@ class TemporaryProfileManager(ProfileManager):
         self.init_db()
 
     def repo_ok(self):
-        return bool(self.repo and path.isdir(path.dirname(self.repo)))
+        return bool(self.repo and os.path.isdir(os.path.dirname(self.repo)))
 
     @property
     def repo(self):
@@ -342,9 +342,9 @@ class TemporaryProfileManager(ProfileManager):
 
     def _return_dir(self, dir_path):
         """Return a path to a directory from the fs environment"""
-        if path.isabs(dir_path):
+        if os.path.isabs(dir_path):
             return dir_path
-        return path.join(self.root_dir, dir_path)
+        return os.path.join(self.root_dir, dir_path)
 
     @property
     def backend(self):
@@ -362,7 +362,7 @@ class TemporaryProfileManager(ProfileManager):
 
     @property
     def config_dir_ok(self):
-        return bool(self.config_dir and path.isdir(self.config_dir))
+        return bool(self.config_dir and os.path.isdir(self.config_dir))
 
     @property
     def config_dir(self):
@@ -378,7 +378,7 @@ class TemporaryProfileManager(ProfileManager):
 
     @property
     def root_dir_ok(self):
-        return bool(self.root_dir and path.isdir(self.root_dir))
+        return bool(self.root_dir and os.path.isdir(self.root_dir))
 
     def destroy_all(self):
         """Remove all traces of the tests run"""
@@ -408,11 +408,11 @@ _GLOBAL_TEST_MANAGER = TestManager()
 
 
 @contextmanager
-def test_manager(backend=BACKEND_DJANGO, pgtest=None):
+def test_manager(backend=BACKEND_DJANGO, profile_name=None, pgtest=None):
     """ Context manager for TestManager objects.
 
     Sets up temporary AiiDA environment for testing or reuses existing environment,
-    if `TEST_AIIDA_PROFILE` environment variable is set.
+    if `AIIDA_TEST_PROFILE` environment variable is set.
 
     Example pytest fixture::
 
@@ -428,6 +428,7 @@ def test_manager(backend=BACKEND_DJANGO, pgtest=None):
 
 
     :param backend: database backend, either BACKEND_SQLA or BACKEND_DJANGO
+    :param profile_name: name of test profile to be used or None (to use temporary profile)
     :param pgtest: a dictionary of arguments to be passed to PGTest() for starting the postgresql cluster,
        e.g. {'pg_ctl': '/somepath/pg_ctl'}. Should usually not be necessary.
     """
@@ -436,8 +437,8 @@ def test_manager(backend=BACKEND_DJANGO, pgtest=None):
 
     try:
         if not _GLOBAL_TEST_MANAGER.has_profile_open():
-            if get_test_profile():
-                _GLOBAL_TEST_MANAGER.use_profile(profile=get_test_profile())
+            if profile_name:
+                _GLOBAL_TEST_MANAGER.use_profile(profile_name=profile_name)
             else:
                 with Capturing():  # capture output of AiiDA DB setup
                     _GLOBAL_TEST_MANAGER.use_temporary_profile(backend=backend, pgtest=pgtest)
@@ -447,28 +448,30 @@ def test_manager(backend=BACKEND_DJANGO, pgtest=None):
         _GLOBAL_TEST_MANAGER.destroy_all()
 
 
-def get_test_backend():
-    """ Read database backend from environment variable.
+def get_test_backend_name():
+    """ Read name of database backend from environment variable.
 
-    Reads database backend ('django' or 'sqlalchemy') from 'TEST_AIIDA_BACKEND' environment variable.
+    Reads database backend ('django' or 'sqlalchemy') from 'AIIDA_TEST_BACKEND' environment variable.
     Defaults to django backend.
-    """
-    import os
 
-    backend_env = os.environ.get('TEST_AIIDA_BACKEND', BACKEND_DJANGO)
+    :returns: content of environment variable or `BACKEND_DJANGO`
+    :raises: ValueError if unknown backend name detected.
+    """
+    backend_env = os.environ.get('AIIDA_TEST_BACKEND', BACKEND_DJANGO)
     if backend_env in (BACKEND_DJANGO, BACKEND_SQLA):
         return backend_env
-    raise ValueError("Unknown backend '{}' read from TEST_AIIDA_BACKEND environment variable".format(backend_env))
+    raise ValueError("Unknown backend '{}' read from AIIDA_TEST_BACKEND environment variable".format(backend_env))
 
 
-def get_test_profile():
-    """ Read test profile from environment variable.
+def get_test_profile_name():
+    """ Read name of test profile from environment variable.
 
-    Reads existing test profile 'TEST_AIIDA_PROFILE' environment variable.
-    If specified, this profile is used directly (no new profile is set up).
+    Reads name of existing test profile 'AIIDA_TEST_PROFILE' environment variable.
+    If specified, this profile is used for running the tests (instead of setting up a temporary profile).
+
+    :returns: content of environment variable or `None`
     """
-    import os
-    return os.environ.get('TEST_AIIDA_PROFILE', None)
+    return os.environ.get('AIIDA_TEST_PROFILE', None)
 
 
 def get_user_dict(profile_dict):

@@ -18,7 +18,7 @@ import sys
 
 from pgtest import pgtest
 
-from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend
+from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend_name
 from aiida.common.utils import Capturing
 
 
@@ -30,7 +30,7 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
             # tell unittest not to warn about running processes
             warnings.simplefilter('ignore', ResourceWarning)  # pylint: disable=no-member,undefined-variable
 
-        self.backend = get_test_backend()
+        self.backend = get_test_backend_name()
         self.profile_manager = TemporaryProfileManager(backend=self.backend)
 
     def tearDown(self):

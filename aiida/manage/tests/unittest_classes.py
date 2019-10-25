@@ -18,7 +18,7 @@ from __future__ import print_function
 import unittest
 
 from aiida.manage.manager import get_manager
-from . import _GLOBAL_TEST_MANAGER, test_manager, get_test_backend
+from . import _GLOBAL_TEST_MANAGER, test_manager, get_test_backend_name, get_test_profile_name
 
 __all__ = ('PluginTestCase', 'TestRunner')
 
@@ -75,12 +75,13 @@ class TestRunner(unittest.runner.TextTestRunner):
     """
 
     # pylint: disable=arguments-differ
-    def run(self, suite, backend=None):
+    def run(self, suite, backend=None, profile_name=None):
         """
         Run tests using fixture manager for specified backend.
 
-        :param tests: A suite of tests, as returned e.g. by :py:meth:`unittest.TestLoader.discover`
-        :param backend: Database backend to be used.
+        :param suite: A suite of tests, as returned e.g. by :py:meth:`unittest.TestLoader.discover`
+        :param backend: name of database backend to be used.
+        :param profile_name: name of test profile to be used or None (will use temporary profile)
         """
         import warnings
         from aiida.common.warnings import AiidaDeprecationWarning
@@ -89,5 +90,7 @@ class TestRunner(unittest.runner.TextTestRunner):
             AiidaDeprecationWarning
         )
 
-        with test_manager(backend=backend or get_test_backend()):
+        with test_manager(
+            backend=backend or get_test_backend_name(), profile_name=profile_name or get_test_profile_name()
+        ):
             return super(TestRunner, self).run(suite)

@@ -23,7 +23,7 @@ from __future__ import print_function
 import tempfile
 import shutil
 import pytest
-from aiida.manage.tests import test_manager, get_test_backend
+from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -34,7 +34,7 @@ def aiida_profile():
      need to depend on it explicitly - it will activate as soon as you import it in your ``conftest.py``.
     """
     # create new TestManager instance
-    with test_manager(backend=get_test_backend()) as test_mgr:
+    with test_manager(backend=get_test_backend_name(), profile_name=get_test_profile_name()) as test_mgr:
         yield test_mgr
     # here, the TestManager instance has already been destroyed
 
@@ -118,13 +118,12 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
     :rtype: object
     """
 
-    def get_code(entry_point, executable=None, computer=aiida_localhost):
+    def get_code(entry_point, executable, computer=aiida_localhost):
         """Get local code.
         Sets up code for given entry point on given computer.
 
         :param entry_point: Entry point of calculation plugin
-        :param executable: name of executable, which will be searched for in local system PATH.
-            If not specified, a fake path will be used.
+        :param executable: name of executable; will be searched for in local system PATH.
         :param computer: (local) AiiDA computer
         :return: The code node
         :rtype: :py:class:`aiida.orm.Code`
@@ -136,10 +135,7 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
         if codes:
             return codes[0]
 
-        if executable is None:
-            executable_path = '/fake/path'
-        else:
-            executable_path = which(executable)
+        executable_path = which(executable)
 
         code = Code(
             input_plugin_name=entry_point,

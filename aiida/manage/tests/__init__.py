@@ -412,7 +412,7 @@ def test_manager(backend=BACKEND_DJANGO, pgtest=None):
     """ Context manager for TestManager objects.
 
     Sets up temporary AiiDA environment for testing or reuses existing environment,
-    if `AIIDA_TEST_PROFILE` environment variable is set.
+    if `TEST_AIIDA_PROFILE` environment variable is set.
 
     Example pytest fixture::
 
@@ -432,6 +432,8 @@ def test_manager(backend=BACKEND_DJANGO, pgtest=None):
        e.g. {'pg_ctl': '/somepath/pg_ctl'}. Should usually not be necessary.
     """
     from aiida.common.utils import Capturing
+    from aiida.common.log import configure_logging
+
     try:
         if not _GLOBAL_TEST_MANAGER.has_profile_open():
             if get_test_profile():
@@ -439,6 +441,7 @@ def test_manager(backend=BACKEND_DJANGO, pgtest=None):
             else:
                 with Capturing():  # capture output of AiiDA DB setup
                     _GLOBAL_TEST_MANAGER.use_temporary_profile(backend=backend, pgtest=pgtest)
+        configure_logging(with_orm=True)
         yield _GLOBAL_TEST_MANAGER
     finally:
         _GLOBAL_TEST_MANAGER.destroy_all()

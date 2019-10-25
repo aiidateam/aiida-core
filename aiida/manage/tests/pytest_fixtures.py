@@ -42,8 +42,6 @@ def aiida_profile():
 @pytest.fixture(scope='function')
 def clear_database(aiida_profile):  # pylint: disable=redefined-outer-name
     """Clear the database after each test.
-
-    Note: Thanks to ``autouse=True``, this happens as soon as you import this fixure in your ``conftest.py``.
     """
     yield
     # after the test function has completed, reset the database
@@ -60,10 +58,12 @@ def temp_dir():
     :rtype: str
 
     """
-    dirpath = tempfile.mkdtemp()
-    yield dirpath
-    # after the test function has completed, remove the directory again
-    shutil.rmtree(dirpath)
+    try:
+        dirpath = tempfile.mkdtemp()
+        yield dirpath
+    finally:
+        # after the test function has completed, remove the directory again
+        shutil.rmtree(dirpath)
 
 
 @pytest.fixture(scope='function')
@@ -118,11 +118,13 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
     :rtype: object
     """
 
-    def get_code(executable, entry_point, computer=aiida_localhost):
+    def get_code(entry_point, executable=None, computer=aiida_localhost):
         """Get local code.
         Sets up code for given entry point on given computer.
 
         :param entry_point: Entry point of calculation plugin
+        :param executable: name of executable, which will be searched for in local system PATH.
+            If not specified, a fake path will be used.
         :param computer: (local) AiiDA computer
         :return: The code node
         :rtype: :py:class:`aiida.orm.Code`
@@ -134,7 +136,11 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
         if codes:
             return codes[0]
 
-        executable_path = which(executable)
+        if executable is None:
+            executable_path = '/fake/path'
+        else:
+            executable_path = which(executable)
+
         code = Code(
             input_plugin_name=entry_point,
             remote_computer_exec=[computer, executable_path],

@@ -24,7 +24,7 @@ thus letting you focus on testing the functionality of your plugin without havin
 
 If you prefer to run tests on an existing profile, say ``test_profile``, simply set the following environment variable before running your tests::
 
-  export AIIDA_TEST_PROFILE=test_profile
+  export TEST_AIIDA_PROFILE=test_profile
 
 
 .. note::

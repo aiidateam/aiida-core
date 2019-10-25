@@ -163,15 +163,14 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         """
         return [_[0] for _ in self.query().all()]
 
-    @classmethod
-    def reset(cls):
+    def reset(self):
         """
-        Reset collection to initial state.
+        Remove lazily constructed collection instance.
 
-        Resets collection instance back to its initial state (to be constructed from scratch when next requested).
+        Removes lazily constructed collection instance from LazyStore (constructed again upon next request).
         Useful to clear any internal caches of the collection.
         """
-        cls._COLLECTIONS = datastructures.LazyStore()
+        self._COLLECTIONS.pop((self.entity_type, self.backend))
 
 
 class Entity(object):

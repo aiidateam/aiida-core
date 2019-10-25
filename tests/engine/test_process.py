@@ -317,7 +317,7 @@ class TestProcess(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.input('add_outputs', valid_type=orm.Bool, default=orm.Bool(False))
+                spec.input('add_outputs', valid_type=orm.Bool, default=lambda: orm.Bool(False))
                 spec.output_namespace('integer.namespace', valid_type=orm.Int, dynamic=True)
                 spec.output('required_string', valid_type=orm.Str, required=True)
 

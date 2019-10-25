@@ -131,8 +131,8 @@ class TestQueryBuilder(AiidaTestCase):
             def define(cls, spec):
                 super().define(spec)
                 spec.input('success', valid_type=orm.Bool)
-                spec.input('through_return', valid_type=orm.Bool, default=orm.Bool(False))
-                spec.input('through_exit_code', valid_type=orm.Bool, default=orm.Bool(False))
+                spec.input('through_return', valid_type=orm.Bool, default=lambda: orm.Bool(False))
+                spec.input('through_exit_code', valid_type=orm.Bool, default=lambda: orm.Bool(False))
                 spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
                 spec.outline(if_(cls.should_return_out_of_outline)(return_(cls.EXIT_STATUS)), cls.failure, cls.success)
                 spec.output(cls.OUTPUT_LABEL, required=False)

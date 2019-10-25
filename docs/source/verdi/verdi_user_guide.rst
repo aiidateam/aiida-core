@@ -370,9 +370,10 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      check-load-time  Check for common indicators that slowdown `verdi`.
-      run_daemon       Run a daemon instance in the current interpreter.
-      tests            Run the unittest suite or parts of it.
+      check-load-time   Check for common indicators that slowdown `verdi`.
+      run_daemon        Run a daemon instance in the current interpreter.
+      tests             Run the unittest suite or parts of it.
+      validate-plugins  Validate all plugins by checking they can be loaded.
 
 
 .. _verdi_export:

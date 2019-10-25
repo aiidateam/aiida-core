@@ -92,6 +92,21 @@ def devel_run_daemon():
     start_daemon()
 
 
+@verdi_devel.command('validate-plugins')
+@decorators.with_dbenv()
+def devel_validate_plugins():
+    """Validate all plugins by checking they can be loaded."""
+    from aiida.common.exceptions import EntryPointError
+    from aiida.plugins.entry_point import validate_registered_entry_points
+
+    try:
+        validate_registered_entry_points()
+    except EntryPointError as exception:
+        echo.echo_critical(str(exception))
+
+    echo.echo_success('all registered plugins could successfully loaded.')
+
+
 @verdi_devel.command('tests')
 @click.argument('paths', nargs=-1, type=TestModuleParamType(), required=False)
 @options.VERBOSE(help='Print the class and function name for each test.')

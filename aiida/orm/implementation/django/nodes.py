@@ -176,7 +176,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         :param key: name of the attribute
         :return: the value of the attribute
-        :raises AttributeError: if the attribute does not exist and no default is specified
+        :raises AttributeError: if the attribute does not exist
         """
         try:
             return self._dbmodel.attributes[key]
@@ -321,7 +321,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         :param key: name of the extra
         :return: the value of the extra
-        :raises AttributeError: if the extra does not exist and no default is specified
+        :raises AttributeError: if the extra does not exist
         """
         try:
             return self._dbmodel.extras[key]
@@ -484,7 +484,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         self._dbmodel.attributes = clean_value(self._dbmodel.attributes)
         self._dbmodel.extras = clean_value(self._dbmodel.extras)
 
-    def store(self, links=None, with_transaction=True, clean=True):
+    def store(self, links=None, with_transaction=True, clean=True):  # pylint: disable=arguments-differ
         """Store the node in the database.
 
         :param links: optional links to add before storing

@@ -176,7 +176,7 @@ class BackendNode(backends.BackendEntity):
 
         :param key: name of the attribute
         :return: the value of the attribute
-        :raises AttributeError: if the attribute does not exist and no default is specified
+        :raises AttributeError: if the attribute does not exist
         """
 
     @abc.abstractmethod
@@ -283,7 +283,7 @@ class BackendNode(backends.BackendEntity):
 
         :param key: name of the extra
         :return: the value of the extra
-        :raises AttributeError: if the extra does not exist and no default is specified
+        :raises AttributeError: if the extra does not exist
         """
 
     @abc.abstractmethod

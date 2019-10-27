@@ -411,7 +411,7 @@ class CifData(SinglefileData):
             from CifFile import CifBlock  # pylint: disable=no-name-in-module
 
             with self.open() as handle:
-                c = CifFile.ReadCif(handle, scantype=self.get_attribute('scan_type'))  # pylint: disable=no-member
+                c = CifFile.ReadCif(handle, scantype=self.get_attribute('scan_type', 'standard'))  # pylint: disable=no-member
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c

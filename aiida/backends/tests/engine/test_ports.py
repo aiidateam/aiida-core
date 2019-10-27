@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine.processes.ports import InputPort, PortNamespace
-from aiida.orm import Dict
+from aiida.orm import Dict, Int
 
 
 class TestInputPort(AiidaTestCase):
@@ -98,3 +98,31 @@ class TestPortNamespace(AiidaTestCase):
         # The `assertRaisesRegexp` method is deprecated in python 3 but assertRaisesRegex` does not exist in python 2
         with self.assertRaisesRegexp(TypeError, '.*{}.*{}.*'.format(base_namespace, nested_namespace)):
             port_namespace.serialize({'some': {'nested': {'namespace': {Dict()}}}})
+
+    def test_lambda_default(self):
+        """Test that an input port can specify a lambda as a default."""
+        port_namespace = PortNamespace('base')
+
+        # Defining lambda for default that returns incorrect type should not except at construction
+        port_namespace['port'] = InputPort('port', valid_type=Int, default=lambda: 'string')
+
+        # However, pre processing the namespace, which shall evaluate the default followed by validation will fail
+        inputs = port_namespace.pre_process({})
+        self.assertIsNotNone(port_namespace.validate(inputs))
+
+        # Passing an explicit value for the port will forego the default and validation on returned inputs should pass
+        inputs = port_namespace.pre_process({'port': Int(5)})
+        self.assertIsNone(port_namespace.validate(inputs))
+
+        # Redefining the port, this time with a correct default
+        port_namespace['port'] = InputPort('port', valid_type=Int, default=lambda: Int(5))
+
+        # Pre processing the namespace shall evaluate the default and return the int node
+        inputs = port_namespace.pre_process({})
+        self.assertIsInstance(inputs['port'], Int)
+        self.assertEqual(inputs['port'].value, 5)
+
+        # Passing an explicit value for the port will forego the default
+        inputs = port_namespace.pre_process({'port': Int(3)})
+        self.assertIsInstance(inputs['port'], Int)
+        self.assertEqual(inputs['port'].value, 3)

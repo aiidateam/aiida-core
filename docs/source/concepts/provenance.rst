@@ -238,7 +238,7 @@ While we emphasize that this operation removes all provenance information for th
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
 
 .. [#f01]
-   Although we provide the option to automatically export all calculations that use as input any targeted data node (by specifying ``input_calc_forward=True``) we *currently* do not provide the reciprocal option to delete all the data node inputs when targetting calculation nodes.
+   Although we provide the option to automatically export all calculations that use as input any targeted data node (by specifying ``input_calc_forward=True``) we *currently* do not provide the reciprocal option to delete all the data node inputs when targeting calculation nodes.
    This is mainly for the potential danger that would imply automatically enabling upwards traversal of the data provenance when deleting, which would make it extremely hard to predict or control the nodes that will be ultimately affected.
 
 
@@ -282,29 +282,26 @@ The results of a parent workflow depend critically on the subworkflows or calcul
 Analogously, when deleting a process, the parent workflow that has called it (if present) will be deleted as well (by traversing a ``backward`` ``call_calc`` or ``call_work`` link).
 Since the traversal rules are applied recursively, this means that also the caller of the caller of the process will be deleted, and so on.
 
-The possibility to follow ``call`` links in the other direction is enabled by default when exporting (thus including the whole logical provenance which contains the generating data provenance) and disabled by default when deleting (thus protecting the underlying procedures of targetted workflows).
-This default behaviors can be changed by the user in cases such as when wanting to export only the data provenance (thus sharing enough information to ensure reproducibility, but keeping private some aspects related to their own work schemas and criteria) or wanting to easily delete whole workflows that they no longer need to keep (although one should always be extremely careful in this case, see below).
+The possibility to follow ``call`` links in the other direction is enabled by default, which causes that targeting a given process for either export or deletion will also include in the process not only all of his child processes, but also all the childs of any of its parent processes as well.
+As a result of all ``call`` links being traversed in both directions, targeting any of the process nodes in a workflow will mean the inclusion of the other processes of that workflow as well.
+The option of disabling the traversal of the ``call`` links in one of the directions (forward if deleting, backward if exporting) provides the users with the ability to select parts within their workflows to affect, but this usually requires a much deeper understanding of the conectivity of the nodes and the complex behavior that arises from the combination of the different traversal rules (see below).
 
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
 | Illustrative diagram (explicitly targeted     | Name of Rule            | Behavior when exporting target node                 | Behavior when deleting target node                 |
 | node is encircled)                            |                         |                                                     |                                                    |
 +===============================================+=========================+=====================================================+====================================================+
-| .. image:: include/images/delexp_caseWC1.png  | ``call_calc_forward``   | - Fixed Value: ``True``                             | - Default Value: ``False`` [#f03]_                 |
-|    :scale: 60%                                |                         | - Linked node **will always** be exported.          | - Linked node **won't** be deleted **by default**. |
+| .. image:: include/images/delexp_caseWC1.png  | ``call_calc_forward``   | - Fixed Value: ``True``                             | - Default Value: ``True``                          |
+|    :scale: 60%                                |                         | - Linked node **will always** be exported.          | - Linked node **will** be deleted **by default**.  |
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
 | .. image:: include/images/delexp_caseWC2.png  | ``call_calc_backward``  | - Default Value: ``True``                           | - Fixed Value: ``True``                            |
 |    :scale: 60%                                |                         | - Linked node **will** be exported **by default**.  | - Linked node **will always** be deleted.          |
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
-| .. image:: include/images/delexp_caseWW1.png  | ``call_work_forward``   | - Fixed Value: ``True``                             | - Default Value: ``False``  [#f03]_                |
-|    :scale: 60%                                |                         | - Linked node **will always** be exported.          | - Linked node **won't** be deleted **by default**. |
+| .. image:: include/images/delexp_caseWW1.png  | ``call_work_forward``   | - Fixed Value: ``True``                             | - Default Value: ``True``                          |
+|    :scale: 60%                                |                         | - Linked node **will always** be exported.          | - Linked node **will** be deleted **by default**.  |
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
 | .. image:: include/images/delexp_caseWW2.png  | ``call_work_backward``  | - Default Value: ``True``.                          | - Fixed Value: ``True``                            |
 |    :scale: 60%                                |                         | - Linked node **will** be exported **by default**.  | - Linked node **will always** be deleted.          |
 +-----------------------------------------------+-------------------------+-----------------------------------------------------+----------------------------------------------------+
-
-.. [#f03]
-   One should be extremely careful when enabling these options since this will not only enable the deletion of the subprocesses of the targeted workflow, but it will also delete all processes called by any of the parent processes of the targeted workflow.
-   We will further illustrate this behavior below.
 
 
 Cascading rules: an example
@@ -322,63 +319,71 @@ Let us first focus on the data provenance only (i.e., only ``input_calc`` and ``
 The consequence of these two together is a "chain reaction" in which every node that can be traced back through the data provenance to any of the initial targeted nodes will end up being deleted as well.
 The reciprocal is true for the export: the default behavior is that every ancestor will also be exported by default (because ``create_backward`` is ``True`` by default and ``input_calc_backward`` is always ``True``).
 
-In regards to the connection between data provenance and logical provenance, the most important thing to consider is how the default settings of ``call_calc_forward=False``
-and ``call_work_forward=False`` protect the data provenance not specifically targetted by the user from deletion.
-This is an important aspect to understand, specially when customizing this directives, since enabling the optional rules and overriding this default behavior can potentially lead to undesired and irreversible results.
-To better illustrate this, we consider the following graph:
+In regards to the connection between data provenance and logical provenance, the most important thing to understand is how the default behavior of the program treats the highest-level workflows as the units to be handled.
+The logic behind this is the assumption that the typical user of the program will be dealing with it mostly in an interactive way, running pre-defined workflows through the verdi command line without needing a detailed knowledge of their internal procedures.
+The default behavior then was designed to reproduce the most intiuitive outcomes for this type of usage.
+
+This behavior is basically the result of the settings of ``call_calc_forward=True`` and ``call_work_forward=True``, which makes that the inclusion of a process node will also imply the inclusion of any child or parent process node as well.
+Following this rules in a recursive way leads to the command affecting all the processes within any given workflow: in this way, nodes that are sub-processes of a given highest-level workflow will end up grouped together, in the sense that (by default) they will all be affected in the same way when deleting or exporting.
+
+More freedom to further customize the selection of sections to export or delete is available through the specific toggable flags for each functionality (although the final sections must always comply with the non-toggable rules, see above).
+However, this usually requires a deeper understanding of the traversal rules and may imply a more thorough analysis of the particular graph.
+To better illustrate this, we will now consider the aplication of the deletion procedure to the following graph:
 
 .. _delexp_example02:
 .. image:: include/images/delexp_example02.png
    :scale: 80%
 
-As you can see, |W_1| and |W_2| describe two similar but independent procedures (e.g., two tests run for the same research project), but launched by a single parent workflow |W_0|. It might be the case, therefore, that one would like to delete information from one of them without affecting the other (e.g., if one of the tests was later deemed unnecessary).
-In this particular case, just targeting |C_1| with the default behavior gives the following result, that is probably the desired final state of the database (in the following figures, the dash-circled node is the targeted one, and nodes highlighted in red are those that are eventually deleted):
+As you can see, |W_1| and |W_2| describe two similar but independent procedures that were launched by a single parent workflow |W_0|.
+A typical user would have obtained this by directly running this workflow |W_0| to obtain the results |D_3| and |D_4| from the inputs |D_1| and |D_2|, and may even be unaware of the internal division of |W_0| into two sub-Workflows |W_1| and |W_2|.
+Hence, if the user considers the workflow (meaning, the whole set of nodes produced by it) no longer necessary, the intuitive thing to do in order to remove it from its database would be by targeting the workflow node |W_0| for deletion.
+Indeed, this would produce the desired result:
 
-.. _delexp_example02a:
-.. image:: include/images/delexp_example02-a00.png
+.. _delexp_example02-a01:
+.. image:: include/images/delexp_example02-a01.png
    :scale: 80%
 
-Notice that we arrived at this result through the following traversal rules (illustrated by the red arrows in the figure):
+The nodes |W_1| and |W_2| would be included because |W_0| is being targeted (``call_work_forward=True``), then the nodes |C_1| and |C_2| would also be included (``call_calc_forward=True``), and finally the nodes |D_3| and |D_4| would end up being included as well (``create_forward=True``).
+In the end, only the inputs |D_1| and |D_2| remain (since ``input_work_backward=False`` always and ``input_calc_backward=False`` by default).
+The same result would occurr if the user were to target the output nodes instead (intending to delete everything associated with the obtention of those results):
 
-* |D_3| will be deleted because |C_1| is being deleted (``create_forward=True``).
-* |W_1| will be deleted because |C_1| is being deleted (``call_calc_backward=True``).
-* |W_0| will be deleted because |W_1| is being deleted (``call_work_backward=True``)
-
-
-But what if there are more calculation called by |W_1|?
-These won't be deleted by the default behavior, because ``call_calc_forward=False``.
-This can be illustrated by considering what would happen if we targeted the workflow node |W_1| instead (which might be the most natural thing to do for what we intend to achieve):
-
-.. _delexp_example02b:
-.. image:: include/images/delexp_example02-b00.png
+.. _delexp_example02-a02:
+.. image:: include/images/delexp_example02-a02.png
    :scale: 80%
 
-As you see, only |W_0| and |W_1| have been deleted, but |C_1| is still in the database.
-In this case in particular, to achieve the same result as above, it would suffice to enable ``call_calc_forward=True`` to traverse the ``call_calc`` link from |W_1| to |C_1| and then recover our desired result, starting from a different target (|W_1| here, instead of |C_1| above).
-The second workflow |W_2| would still be unaffected because there was no need to forward traverse any ``call_work`` link so far.
+In this case, the nodes |C_1| and |C_2| would first be included because the data nodes |D_3| and |D_4| are being targeted (``create_reverse=True``), and this would then include the nodes |W_1| and |W_2| (``call_calc_reverse=True``) and finally the parent workflow |W_0| (``call_work_reverse=True``).
+It is important to notice that even if the user deletes only one of the outputs, the whole set of nodes generated by the workflow would be deleted, and not just the ones associated to the targeted data node.
+As the results |D_3| and |D_4| where obtained from the same high-level process |W_0|, then the default behavior has the underlying assumption that they are interconected and not independent from one another (as if they were two different outputs of a single calculation).
 
-.. _delexp_example02c:
-.. image:: include/images/delexp_example02-c00.png
+.. _delexp_example02-a03:
+.. image:: include/images/delexp_example02-a03.png
    :scale: 80%
 
-But what if some of the child processes of |W_1| are workflows instead of calculations?
-The naive answer would be to enable ``call_work_forward=True`` as well. However, this will delete much more that you might want! In fact, since we are also deleting |W_0|, this last rule would also imply going through the ``call_work`` link between |W_0| and |W_2|, thus producing the following final undesired result, where most nodes have been deleted:
+This results from a combination of the rules mentioned in the previous two paragraphs: so the first section (|D_3| to |C_1| to |W_1| to |W_0|) is the same as the last case viewed, and then the rest (|W_0| to |W_2| to |C_2| to |D_4|) is the same as the case when the target is |W_0|.
+This dependency between nodes becomes particularly relevant when, for example, a user with more knowledge of the internal procedures of the parent workflow |W_0| wants to only delete the calculations and results associated to workflow |W_1|.
+The intuitive action of targeting |W_1| does not produce the desired outcome:
 
-.. _delexp_example02d:
-.. image:: include/images/delexp_example02-d00.png
+.. _delexp_example02-b01:
+.. image:: include/images/delexp_example02-b01.png
    :scale: 80%
 
-So what can you do in the general case where you want to delete all processes (calculations and workflows) contained under |W_1| without affecting |W_2|?
-First you would need to get rid of the connection between these two nodes by targetting the node |W_0| (with the default keywords, and in particular ``call_work_forward=False``).
-This will delete only |W_0| and no other node.
+Indeed |C_1| and |D_4| will be deleted (through ``call_calc_forward`` from |W_1| to |C_1| and ``create_forward`` from |C_1| to |D_3|), but so will |W_0| (through ``call_work_reverse`` from |W_1|), |W_2| (``call_work_forward`` from |W_0|), |C_2| (``call_calc_forward`` from |W_2|) and |D_4| (``create_forward`` from |C_2|).
+The way to achieve the desired outcome is not at all obvious, although in this particular case one could propose some simple 'hacks', like targeting |W_1| setting the toggable flag ``call_work_forward=False`` (preventing the traversal from |W_0| to |W_2|):
 
-Only then you can target |W_1| by activating the keywords to include all call links to its subprocesses (``call_work_forward=True`` and ``call_calc_forward=True``).
-After this two-step procedure, you will get the desired result for this more general case:
-
-.. _delexp_example02e:
-.. image:: include/images/delexp_example02-e00.png
+.. _delexp_example02-b02:
+.. image:: include/images/delexp_example02-b02.png
    :scale: 80%
 
+However, these kind of solutions are not very generalizable (for example, this would no longer work if |W_1| also had other sub-workflows that needed to be deleted as well).
+A better approach would be to first delete, using the most conservative setup (disabling all toggable rules), the node that is linking the workflows that the user wishes to now treat separatedly (in this case |W_0|, which is linking |W_1| and |W_2|).
+Then, once the independence of these two workflows (|W_1| and |W_2|) is explicitly reflected in the graph, the node |W_1| can be targeted for deletion with the default settings and nothing will happen to the procedures in |W_2|.
+
+.. _delexp_example02-b03:
+.. image:: include/images/delexp_example02-b03.png
+   :scale: 80%
+
+It is worth noticing that if the workflow |W_0| was itself a sub-process of a more complicated workflow, all that high-level logic will be deleted and lost due to the non-toggable rule ``call_work_reverse=True``.
+This is an inevitable outcome of deleting part of a workflow, since due to the loss of that information it has become incomplete and it makes no sense to keep it.
 
 The number of possible scenarios and desired outcomes is impossible to cover entirely, but hopefully this example helped to show how you need to analyze the outcome of applying the delete or export procedures in your own cases of interest, especially when not using the default rules.
 

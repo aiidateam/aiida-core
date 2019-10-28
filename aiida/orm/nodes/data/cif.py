@@ -235,15 +235,16 @@ class CifData(SinglefileData):
         first, the values are updated from the physical CIF file.
     """
     # pylint: disable=abstract-method, too-many-public-methods
-    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
-    _scan_types = ('standard', 'flex')
-    _parse_policies = ('eager', 'lazy')
+    _SET_INCOMPATIBILITIES = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
+    _SCAN_TYPES = ('standard', 'flex')
+    _SCAN_TYPE_DEFAULT = 'standard'
+    _PARSE_POLICIES = ('eager', 'lazy')
+    _PARSE_POLICY_DEFAULT = 'eager'
+
     _values = None
     _ase = None
 
-    def __init__(
-        self, ase=None, file=None, values=None, source=None, scan_type='standard', parse_policy='eager', **kwargs
-    ):
+    def __init__(self, ase=None, file=None, values=None, source=None, scan_type=None, parse_policy=None, **kwargs):
         # pylint: disable=too-many-arguments, redefined-builtin
 
         args = {
@@ -252,13 +253,13 @@ class CifData(SinglefileData):
             'values': values,
         }
 
-        for left, right in self._set_incompatibilities:
+        for left, right in CifData._SET_INCOMPATIBILITIES:
             if args[left] is not None and args[right] is not None:
                 raise ValueError('cannot pass {} and {} at the same time'.format(left, right))
 
         super(CifData, self).__init__(file, **kwargs)
-        self.set_scan_type(scan_type)
-        self.set_parse_policy(parse_policy)
+        self.set_scan_type(scan_type or CifData._SCAN_TYPE_DEFAULT)
+        self.set_parse_policy(parse_policy or CifData._PARSE_POLICY_DEFAULT)
 
         if source is not None:
             self.set_source(source)
@@ -411,7 +412,7 @@ class CifData(SinglefileData):
             from CifFile import CifBlock  # pylint: disable=no-name-in-module
 
             with self.open() as handle:
-                c = CifFile.ReadCif(handle, scantype=self.get_attribute('scan_type', 'standard'))  # pylint: disable=no-member
+                c = CifFile.ReadCif(handle, scantype=self.get_attribute('scan_type', CifData._SCAN_TYPE_DEFAULT))  # pylint: disable=no-member
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
@@ -494,7 +495,7 @@ class CifData(SinglefileData):
 
         :param scan_type: Either 'standard' or 'flex' (see _scan_types)
         """
-        if scan_type in self._scan_types:
+        if scan_type in CifData._SCAN_TYPES:
             self.set_attribute('scan_type', scan_type)
         else:
             raise ValueError('Got unknown scan_type {}'.format(scan_type))
@@ -506,7 +507,7 @@ class CifData(SinglefileData):
         :param parse_policy: Either 'eager' (parse CIF file on set_file)
             or 'lazy' (defer parsing until needed)
         """
-        if parse_policy in self._parse_policies:
+        if parse_policy in CifData._PARSE_POLICIES:
             self.set_attribute('parse_policy', parse_policy)
         else:
             raise ValueError('Got unknown parse_policy {}'.format(parse_policy))

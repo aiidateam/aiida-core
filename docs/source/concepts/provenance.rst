@@ -359,8 +359,8 @@ In this case, the node |C_1| would first be included because the data node |D_3|
 Then nodes |W_2|, |C_2| and |D_4| will be included because |W_0| was included, for the same reasons that were explained in the paragraphs above.
 
 
-Customizing the section to delete (or export)
-.............................................
+Customizing the graph traversal (for deletion or export)
+........................................................
 
 This dependency between nodes becomes particularly relevant when, for example, a user with more knowledge of the internal procedures of the parent workflow |W_0| wants to only delete the calculations and results associated to workflow |W_1|.
 The intuitive action of targeting |W_1| does not produce the desired outcome:
@@ -370,7 +370,7 @@ The intuitive action of targeting |W_1| does not produce the desired outcome:
    :scale: 80%
 
 Indeed |C_1| and |D_4| will be deleted (through ``call_calc_forward`` from |W_1| to |C_1| and ``create_forward`` from |C_1| to |D_3|), but so will |W_0| (through ``call_work_reverse`` from |W_1|), |W_2| (``call_work_forward`` from |W_0|), |C_2| (``call_calc_forward`` from |W_2|) and |D_4| (``create_forward`` from |C_2|).
-The way to achieve the desired outcome is not at all obvious, although in this particular case one could propose some simple 'hacks', like targeting |W_1| setting the switchable flag ``call_work_forward=False`` (preventing the traversal from |W_0| to |W_2|):
+The way to achieve the desired outcome is not trivial, although in some situations like this, one could propose case-specific solutions such as targeting |W_1| with the switchable flag ``call_work_forward=False`` (preventing the traversal from |W_0| to |W_2|):
 
 .. _delexp_example02-b02:
 .. image:: include/images/delexp_example02-b02.png

@@ -134,9 +134,10 @@ class Collection(typing.Generic[EntityType]):
         :return: the entry
         """
         res = self.query(filters=filters, limit=1)
-        if res.count() == 0:
+        res_count = res.count()
+        if res_count == 0:
             raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, filters))
-        if res.count() > 1:
+        if res_count > 1:
             raise exceptions.MultipleObjectsError(
                 "Multiple {}s found with the same id '{}'".format(self.entity_type.__name__, id)
             )

@@ -171,19 +171,16 @@ class Collection(typing.Generic[EntityType]):
         """
         return [_[0] for _ in self.query().all()]
 
-    def count(self, filters=None, limit=None, offset=None):
+    def count(self, filters=None):
         """Count entities in this collection according to criteria
 
         :param filters: the keyword value pair filters to match
         :type filters: dict
 
-        :param limit: the maximum number of results to return
-        :type limit: int
-
         :return: The number of entities found using the supplied criteria
         :rtype: int
         """
-        return self.query(filters=filters, limit=limit, offset=offset).count()
+        return self.query(filters=filters).count()
 
 
 class Entity(object):

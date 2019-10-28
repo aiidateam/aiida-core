@@ -114,6 +114,15 @@ class ZipFolder(object):
         # create: ignored, for the time being
         return ZipFolder(self, subfolder=subfolder)
 
+    def exists(self, path):
+        """Check whether path already exists in the ZipFolder"""
+        try:
+            self._zipfile.getinfo(path)
+            exists = True
+        except KeyError:
+            exists = False
+        return exists
+
     def insert_path(self, src, dest_name=None, overwrite=True):
         if dest_name is None:
             base_filename = six.text_type(os.path.basename(src))
@@ -127,27 +136,22 @@ class ZipFolder(object):
         if not os.path.isabs(src):
             raise ValueError('src must be an absolute path in insert_file')
 
-        if not overwrite:
-            try:
-                self._zipfile.getinfo(base_filename)
-                exists = True
-            except KeyError:
-                exists = False
-            if exists:
-                raise IOError('destination already exists: {}'.format(base_filename))
+        if not overwrite and self.exists(base_filename):
+            raise IOError('destination already exists: {}'.format(base_filename))
 
-        # print src, filename
         if os.path.isdir(src):
             for dirpath, dirnames, filenames in os.walk(src):
                 relpath = os.path.relpath(dirpath, src)
                 if not dirnames and not filenames:
                     real_src = dirpath
-                    real_dest = os.path.join(base_filename, relpath)
-                    self._zipfile.write(real_src, real_dest)
+                    real_dest = os.path.join(base_filename, relpath) + os.path.sep
+                    if not self.exists(real_dest):
+                        self._zipfile.write(real_src, real_dest)
                 else:
                     for fname in dirnames + filenames:
                         real_src = os.path.join(dirpath, fname)
                         real_dest = os.path.join(base_filename, relpath, fname)
-                        self._zipfile.write(real_src, real_dest)
+                        if not self.exists(real_dest):
+                            self._zipfile.write(real_src, real_dest)
         else:
             self._zipfile.write(src, base_filename)

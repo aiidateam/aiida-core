@@ -110,7 +110,7 @@ class Parser(object):
         return result
 
     @classmethod
-    def parse_from_node(cls, node, store_provenance=True):
+    def parse_from_node(cls, node, store_provenance=True, retrieved_temporary_folder=None):
         """Parse the outputs directly from the `CalcJobNode`.
 
         If `store_provenance` is set to False, a `CalcFunctionNode` will still be generated, but it will not be stored.
@@ -123,6 +123,7 @@ class Parser(object):
 
         :param node: a `CalcJobNode` instance
         :param store_provenance: bool, if True will store the parsing as a `CalcFunctionNode` in the provenance
+        :param retrieved_temporary_folder: absolute path to folder with contents of `retrieved_temporary_list`
         :return: a tuple of the parsed results and the `CalcFunctionNode` representing the process of parsing
         """
         parser = cls(node=node)
@@ -141,6 +142,9 @@ class Parser(object):
             :param kwargs: keyword arguments that are passed to `Parser.parse` after it has been constructed
             """
             from aiida.engine import Process
+
+            if retrieved_temporary_folder is not None:
+                kwargs['retrieved_temporary_folder'] = retrieved_temporary_folder
 
             exit_code = parser.parse(**kwargs)
             outputs = parser.outputs

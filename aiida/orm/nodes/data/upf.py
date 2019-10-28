@@ -443,6 +443,15 @@ class UpfData(SinglefileData):
         if attr_md5 != md5:
             raise ValidationError("Attribute 'md5' says '{}' but '{}' was parsed instead.".format(attr_md5, md5))
 
+    def _prepare_upf(self, main_file_name=''):
+        """
+        Return UPF content.
+        """
+        # pylint: disable=unused-argument
+        return_string = self.get_content()
+
+        return return_string.encode('utf-8'), {}
+
     @classmethod
     def get_upf_group(cls, group_label):
         """Return the UPF family group with the given label.

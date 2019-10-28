@@ -89,10 +89,13 @@ def create(
     create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs
 ):
     """
-    Export parts of the AiiDA database to file for sharing.
+    Export subsets of the provenance graph to file for sharing.
 
-    Various entities can be exported, such as Codes, Computers, Groups, Nodes,
-    Comments, Logs, ...
+    Besides Nodes of the provenance graph, you can export Groups, Codes, Computers, Comments and Logs.
+
+    By default, the export file will include not only the entities explicitly provided via the command line but also
+    their provenance, according to the rules outlined in the documentation.
+    You can modify some of those rules using options of this command.
     """
     from aiida.tools.importexport import export, export_zip
 

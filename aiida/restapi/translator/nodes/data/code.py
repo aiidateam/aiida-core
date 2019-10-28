@@ -32,39 +32,15 @@ class CodeTranslator(DataTranslator):
 
     _result_type = __label__
 
-    def __init__(self, **kwargs):
-        """
-        Initialise the parameters.
-        Create the basic query_help
-        """
-        super(CodeTranslator, self).__init__(Class=self.__class__, **kwargs)
-
     @staticmethod
-    def get_visualization_data(node, visformat=None):
+    def get_derived_properties(node):
         """
-        Generic function extented for codes data. Currently
+        Generic function extended for codes data. Currently
         it is not implemented.
 
-        :param node: node object that has to be visualized
-        :param visformat: visualization format
-        :returns: raise RestFeatureNotAvailable exception
+        :param node: node object
+        :returns: empty dict
         """
+        response = {}
 
-        from aiida.restapi.common.exceptions import RestFeatureNotAvailable
-
-        raise RestFeatureNotAvailable('This endpoint is not available for Codes.')
-
-    @staticmethod
-    def get_downloadable_data(node, download_format=None):
-        """
-        Generic function extented for codes data. Currently
-        it is not implemented.
-
-        :param node: node object that has to be downloaded
-        :param download_format: file extension format
-        :returns: raise RestFeatureNotAvailable exception
-        """
-
-        from aiida.restapi.common.exceptions import RestFeatureNotAvailable
-
-        raise RestFeatureNotAvailable('This endpoint is not available for Codes.')
+        return response

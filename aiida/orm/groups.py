@@ -13,10 +13,12 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from enum import Enum
+import warnings
 import six
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
 
 from . import convert
@@ -333,7 +335,17 @@ class Group(entities.Entity):
 
         :return: schema of the group
         :rtype: dict
+
+        .. deprecated:: 1.0.0
+
+            Will be removed in `v2.0.0`.
+            Use :meth:`~aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead.
+
         """
+        message = 'method is deprecated, use' \
+            '`aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead'
+        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
+
         return {
             'description': {
                 'display_name': 'Description',

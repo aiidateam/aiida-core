@@ -57,20 +57,25 @@ class App(Flask):
 
                 elif isinstance(error, RestInputValidationError):
                     response = jsonify({'message': str(error)})
-                    response.status_code = 400
+                    response.status_code = 404
 
                 elif isinstance(error, RestFeatureNotAvailable):
                     response = jsonify({'message': str(error)})
                     response.status_code = 501
 
+                elif isinstance(error, HTTPException) and error.code == 404:
+                    from aiida.restapi.common.utils import list_routes
+
+                    response = jsonify({
+                        'message': 'The requested URL is not found on the server.',
+                        'available_endpoints': list_routes()
+                    })
+                    response.status_code = 404
+
                 # Generic server-side error (not to make the api crash if an
                 # unhandled exception is raised. Caution is never enough!!)
                 else:
-                    response = jsonify({
-                        'message':
-                        'Internal server error. The original '
-                        'message was: \"{}\"'.format(error)
-                    })
+                    response = jsonify({'message': str(error)})
                     response.status_code = 500
 
                 return response
@@ -94,8 +99,7 @@ class AiidaApi(Api):
           configuration and PREFIX
         """
 
-        from aiida.restapi.resources import Calculation, Computer, User, Code, Data, \
-            Group, Node, StructureData, KpointsData, BandsData, UpfData, CifData, ServerInfo
+        from aiida.restapi.resources import ProcessNode, CalcJobNode, Computer, User, Group, Node, ServerInfo
 
         self.app = app
 
@@ -118,7 +122,7 @@ class AiidaApi(Api):
             '/computers/page/',
             '/computers/page/<int:page>/',
             '/computers/<id>/',
-            '/computers/schema/',
+            '/computers/projectable_properties/',
             endpoint='computers',
             strict_slashes=False,
             resource_class_kwargs=kwargs
@@ -127,207 +131,46 @@ class AiidaApi(Api):
         self.add_resource(
             Node,
             '/nodes/',
-            '/nodes/schema/',
+            '/nodes/projectable_properties/',
             '/nodes/statistics/',
-            '/nodes/types/',
+            '/nodes/full_types/',
+            '/nodes/download_formats/',
             '/nodes/page/',
             '/nodes/page/<int:page>/',
             '/nodes/<id>/',
-            '/nodes/<id>/io/inputs/',
-            '/nodes/<id>/io/inputs/page/',
-            '/nodes/<id>/io/inputs/page/<int:page>/',
-            '/nodes/<id>/io/outputs/',
-            '/nodes/<id>/io/outputs/page/',
-            '/nodes/<id>/io/outputs/page/<int:page>/',
-            '/nodes/<id>/io/tree/',
-            '/nodes/<id>/content/attributes/',
-            '/nodes/<id>/content/extras/',
-            '/nodes/<id>/content/visualization/',
+            '/nodes/<id>/links/incoming/',
+            '/nodes/<id>/links/incoming/page/',
+            '/nodes/<id>/links/incoming/page/<int:page>/',
+            '/nodes/<id>/links/outgoing/',
+            '/nodes/<id>/links/outgoing/page/',
+            '/nodes/<id>/links/outgoing/page/<int:page>/',
+            '/nodes/<id>/links/tree/',
+            '/nodes/<id>/contents/attributes/',
+            '/nodes/<id>/contents/extras/',
+            '/nodes/<id>/contents/derived_properties/',
+            '/nodes/<id>/contents/comments/',
+            '/nodes/<id>/repo/list/',
+            '/nodes/<id>/repo/contents/',
+            '/nodes/<id>/download/',
             endpoint='nodes',
             strict_slashes=False,
             resource_class_kwargs=kwargs
         )
 
         self.add_resource(
-            Calculation,
-            '/calculations/',
-            '/calculations/types/',
-            '/calculations/schema/',
-            '/calculations/page/',
-            '/calculations/page/<int:page>/',
-            '/calculations/<id>/',
-            '/calculations/<id>/io/retrieved_inputs/',
-            '/calculations/<id>/io/retrieved_outputs/',
-            '/calculations/<id>/io/inputs/',
-            '/calculations/<id>/io/inputs/page/',
-            '/calculations/<id>/io/inputs/page/<int:page>/',
-            '/calculations/<id>/io/outputs/',
-            '/calculations/<id>/io/outputs/page/',
-            '/calculations/<id>/io/outputs/page/<int:page>/',
-            '/calculations/<id>/io/tree/',
-            '/calculations/<id>/content/attributes/',
-            '/calculations/<id>/content/extras/',
-            endpoint='calculations',
+            ProcessNode,
+            '/processes/projectable_properties/',
+            '/processes/<id>/report/',
+            endpoint='processes',
             strict_slashes=False,
             resource_class_kwargs=kwargs
         )
 
         self.add_resource(
-            Data,
-            '/data/',
-            '/data/types/',
-            '/data/schema/',
-            '/data/page/',
-            '/data/page/<int:page>',
-            '/data/<id>/',
-            '/data/<id>/io/inputs/',
-            '/data/<id>/io/inputs/page/',
-            '/data/<id>/io/inputs/page/<int:page>/',
-            '/data/<id>/io/outputs/',
-            '/data/<id>/io/outputs/page/',
-            '/data/<id>/io/outputs/page/<int:page>/',
-            '/data/<id>/io/tree/',
-            '/data/<id>/content/attributes/',
-            '/data/<id>/content/extras/',
-            '/data/<id>/content/visualization/',
-            '/data/<id>/content/download/',
-            endpoint='data',
-            strict_slashes=False,
-            resource_class_kwargs=kwargs
-        )
-
-        self.add_resource(
-            Code,
-            '/codes/',
-            '/codes/schema/',
-            '/codes/page/',
-            '/codes/page/<int:page>/',
-            '/codes/<id>/',
-            '/codes/<id>/io/inputs/',
-            '/codes/<id>/io/inputs/page/',
-            '/codes/<id>/io/inputs/page/<int:page>/',
-            '/codes/<id>/io/outputs/',
-            '/codes/<id>/io/outputs/page/',
-            '/codes/<id>/io/outputs/page/<int:page>/',
-            '/codes/<id>/io/tree/',
-            '/codes/<id>/content/attributes/',
-            '/codes/<id>/content/extras/',
-            '/codes/<id>/content/visualization/',
-            '/codes/<id>/content/download/',
-            endpoint='codes',
-            strict_slashes=False,
-            resource_class_kwargs=kwargs
-        )
-
-        self.add_resource(
-            StructureData,
-            '/structures/',
-            '/structures/schema/',
-            '/structures/page/',
-            '/structures/page/<int:page>',
-            '/structures/<id>/',
-            '/structures/<id>/io/inputs/',
-            '/structures/<id>/io/inputs/page/',
-            '/structures/<id>/io/inputs/page/<int:page>/',
-            '/structures/<id>/io/outputs/',
-            '/structures/<id>/io/outputs/page/',
-            '/structures/<id>/io/outputs/page/<int:page>/',
-            '/structures/<id>/io/tree/',
-            '/structures/<id>/content/attributes/',
-            '/structures/<id>/content/extras/',
-            '/structures/<id>/content/visualization/',
-            '/structures/<id>/content/download/',
-            endpoint='structures',
-            strict_slashes=False,
-            resource_class_kwargs=kwargs
-        )
-
-        self.add_resource(
-            KpointsData,
-            '/kpoints/',
-            '/kpoints/schema/',
-            '/kpoints/page/',
-            '/kpoints/page/<int:page>',
-            '/kpoints/<id>/',
-            '/kpoints/<id>/io/inputs/',
-            '/kpoints/<id>/io/inputs/page/',
-            '/kpoints/<id>/io/inputs/page/<int:page>/',
-            '/kpoints/<id>/io/outputs/',
-            '/kpoints/<id>/io/outputs/page/',
-            '/kpoints/<id>/io/outputs/page/<int:page>/',
-            '/kpoints/<id>/io/tree/',
-            '/kpoints/<id>/content/attributes/',
-            '/kpoints/<id>/content/extras/',
-            '/kpoints/<id>/content/visualization/',
-            endpoint='kpoints',
-            strict_slashes=False,
-            resource_class_kwargs=kwargs
-        )
-
-        self.add_resource(
-            BandsData,
-            '/bands/',
-            '/bands/schema/',
-            '/bands/page/',
-            '/bands/page/<int:page>',
-            '/bands/<id>/',
-            '/bands/<id>/io/inputs/',
-            '/bands/<id>/io/inputs/page/',
-            '/bands/<id>/io/inputs/page/<int:page>/',
-            '/bands/<id>/io/outputs/',
-            '/bands/<id>/io/outputs/page/',
-            '/bands/<id>/io/outputs/page/<int:page>/',
-            '/bands/<id>/io/tree/',
-            '/bands/<id>/content/attributes/',
-            '/bands/<id>/content/extras/',
-            '/bands/<id>/content/visualization/',
-            endpoint='bands',
-            strict_slashes=False,
-            resource_class_kwargs=kwargs
-        )
-
-        self.add_resource(
-            UpfData,
-            '/upfs/',
-            '/upfs/schema/',
-            '/upfs/page/',
-            '/upfs/page/<int:page>',
-            '/upfs/<id>/',
-            '/upfs/<id>/io/inputs/',
-            '/upfs/<id>/io/inputs/page/',
-            '/upfs/<id>/io/inputs/page/<int:page>/',
-            '/upfs/<id>/io/outputs/',
-            '/upfs/<id>/io/outputs/page/',
-            '/upfs/<id>/io/outputs/page/<int:page>/',
-            '/upfs/<id>/io/tree/',
-            '/upfs/<id>/content/attributes/',
-            '/upfs/<id>/content/extras/',
-            '/upfs/<id>/content/visualization/',
-            '/upfs/<id>/content/download/',
-            endpoint='upfs',
-            strict_slashes=False,
-            resource_class_kwargs=kwargs
-        )
-
-        self.add_resource(
-            CifData,
-            '/cifs/',
-            '/cifs/schema/',
-            '/cifs/page/',
-            '/cifs/page/<int:page>',
-            '/cifs/<id>/',
-            '/cifs/<id>/io/inputs/',
-            '/cifs/<id>/io/inputs/page/',
-            '/cifs/<id>/io/inputs/page/<int:page>/',
-            '/cifs/<id>/io/outputs/',
-            '/cifs/<id>/io/outputs/page/',
-            '/cifs/<id>/io/outputs/page/<int:page>/',
-            '/cifs/<id>/io/tree/',
-            '/cifs/<id>/content/attributes/',
-            '/cifs/<id>/content/extras/',
-            '/cifs/<id>/content/visualization/',
-            '/cifs/<id>/content/download/',
-            endpoint='cifs',
+            CalcJobNode,
+            '/calcjobs/<id>/input_files/',
+            '/calcjobs/<id>/output_files/',
+            endpoint='calcjobs',
             strict_slashes=False,
             resource_class_kwargs=kwargs
         )
@@ -335,7 +178,7 @@ class AiidaApi(Api):
         self.add_resource(
             User,
             '/users/',
-            '/users/schema/',
+            '/users/projectable_properties/',
             '/users/page/',
             '/users/page/<int:page>/',
             '/users/<id>/',
@@ -347,7 +190,7 @@ class AiidaApi(Api):
         self.add_resource(
             Group,
             '/groups/',
-            '/groups/schema/',
+            '/groups/projectable_properties/',
             '/groups/page/',
             '/groups/page/<int:page>/',
             '/groups/<id>/',
@@ -362,19 +205,4 @@ class AiidaApi(Api):
         :param e: raised exception
         :return: list of available endpoints
         """
-
-        if isinstance(e, HTTPException):
-            if e.code == 404:
-
-                from aiida.restapi.common.utils import list_routes
-
-                response = {}
-
-                response['status'] = '404 Not Found'
-                response['message'] = 'The requested URL is not found on the server.'
-
-                response['available_endpoints'] = list_routes()
-
-                return jsonify(response)
-
         raise e

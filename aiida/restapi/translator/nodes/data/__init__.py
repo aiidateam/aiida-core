@@ -14,7 +14,10 @@ Translator for data node
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.restapi.translator.nodes.node import NodeTranslator
+from aiida.restapi.common.exceptions import RestInputValidationError
+from aiida.common.exceptions import LicensingException
 
 
 class DataTranslator(NodeTranslator):
@@ -32,15 +35,41 @@ class DataTranslator(NodeTranslator):
 
     _result_type = __label__
 
-    def __init__(self, Class=None, **kwargs):
+    @staticmethod
+    def get_downloadable_data(node, download_format=None):
         """
-        Initialise the parameters.
-        Create the basic query_help
+        Return content in the specified format for download
+
+        :param node: node representing cif file to be downloaded
+        :param download_format: export format
+        :returns: content of the node in the specified format for download
         """
+        response = {}
 
-        # Assume default class is this class (cannot be done in the
-        # definition as it requires self)
-        if Class is None:
-            Class = self.__class__
+        if download_format is None:
+            raise RestInputValidationError(
+                'Please specify the download format. '
+                'The available download formats can be '
+                'queried using the /nodes/download_formats/ endpoint.'
+            )
 
-        super(DataTranslator, self).__init__(Class=Class, **kwargs)
+        elif download_format in node.get_export_formats():
+            try:
+                response['data'] = node._exportcontent(download_format)[0]  # pylint: disable=protected-access
+                response['status'] = 200
+                try:
+                    response['filename'] = node.filename
+                except AttributeError:
+                    response['filename'] = node.uuid + '.' + download_format
+            except LicensingException as exc:
+                response['status'] = 500
+                response['data'] = str(exc)
+
+            return response
+
+        else:
+            raise RestInputValidationError(
+                'The format {} is not supported. '
+                'The available download formats can be '
+                'queried using the /nodes/download_formats/ endpoint.'.format(download_format)
+            )

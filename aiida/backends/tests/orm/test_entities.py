@@ -30,7 +30,7 @@ class TestBackendEntitiesAndCollections(AiidaTestCase):
         self.assertIs(user_collection, user_collection(backend))
 
     def test_collections_count(self):
-        """Make sure we count() works for collections"""
+        """Make sure count() works for collections"""
         user_collection_count = orm.User.objects.count()
         number_of_users = orm.QueryBuilder().append(orm.User).count()
         self.assertGreater(number_of_users, 0, msg='There should be more than 0 Users in the DB')

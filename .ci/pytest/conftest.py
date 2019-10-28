@@ -8,20 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Testing infrastructure for easy testing of AiiDA plugins.
-
+For pytest, put this file in the root directory of the package to make
+the fixtures available to all tests.
 """
 from __future__ import division
-from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import absolute_import
 
-import warnings
-from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.manage.tests import TestManager as FixtureManager
-from aiida.manage.tests import test_manager as fixture_manager
-from aiida.manage.tests import _GLOBAL_TEST_MANAGER as _GLOBAL_FIXTURE_MANAGER
-from aiida.manage.tests.unittest_classes import PluginTestCase
-
-warnings.warn('this module is deprecated, use `aiida.manage.tests` and its submodules instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-__all__ = ('FixtureManager', 'fixture_manager', '_GLOBAL_FIXTURE_MANAGER', 'PluginTestCase')
+import pytest  # pylint: disable=unused-import
+pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name

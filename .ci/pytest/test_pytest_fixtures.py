@@ -8,20 +8,23 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Testing infrastructure for easy testing of AiiDA plugins.
-
+Test pytest fixtures.
 """
 from __future__ import division
-from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import absolute_import
 
-import warnings
-from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.manage.tests import TestManager as FixtureManager
-from aiida.manage.tests import test_manager as fixture_manager
-from aiida.manage.tests import _GLOBAL_TEST_MANAGER as _GLOBAL_FIXTURE_MANAGER
-from aiida.manage.tests.unittest_classes import PluginTestCase
 
-warnings.warn('this module is deprecated, use `aiida.manage.tests` and its submodules instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+def test_aiida_localhost(aiida_localhost):
+    """Test aiida_localhost fixture.
 
-__all__ = ('FixtureManager', 'fixture_manager', '_GLOBAL_FIXTURE_MANAGER', 'PluginTestCase')
+    Note: This indirectly also tests that the aiida_profile, temp_dir and clean_database fixtures run.
+    """
+    assert aiida_localhost.label == 'localhost-test'
+
+
+def test_aiida_local_code(aiida_local_code_factory):
+    """Test aiida_local_code_factory fixture.
+    """
+    code = aiida_local_code_factory(entry_point='templatereplacer', executable='diff')
+    assert code.computer.label == 'localhost-test'

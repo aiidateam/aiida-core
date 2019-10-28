@@ -82,7 +82,7 @@ You can now start writing tests e.g. in a ``test_calculations.py`` file::
           from aiida.engine import run
           from aiida.plugins import CalculationFactory
 
-          code = aiida_local_code_factory('pw.x', 'quantumespresso.pw')
+          code = aiida_local_code_factory(entry_point='quantumespresso.pw', executable='pw.x')
           # ...
           inputs = { 'code': code, ... }
 

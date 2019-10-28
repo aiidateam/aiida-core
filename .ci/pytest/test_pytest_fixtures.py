@@ -20,4 +20,11 @@ def test_aiida_localhost(aiida_localhost):
 
     Note: This indirectly also tests that the aiida_profile, temp_dir and clean_database fixtures run.
     """
-    assert aiida_localhost.label == 'localhost'
+    assert aiida_localhost.label == 'localhost-test'
+
+
+def test_aiida_local_code(aiida_local_code_factory):
+    """Test aiida_local_code_factory fixture.
+    """
+    code = aiida_local_code_factory(entry_point='templatereplacer', executable='diff')
+    assert code.computer.label == 'localhost-test'

@@ -83,7 +83,7 @@ def aiida_localhost(temp_dir):  # pylint: disable=redefined-outer-name
     from aiida.orm import Computer
     from aiida.common.exceptions import NotExistent
 
-    name = 'localhost'
+    name = 'localhost-test'
 
     try:
         computer = Computer.objects.get(name=name)

@@ -72,6 +72,12 @@ class User(entities.Entity):
 
             return self._default_user
 
+        def reset(self):
+            """
+            Reset internal caches (default user).
+            """
+            self._default_user = self.UNDEFINED
+
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 
     def __init__(self, email, first_name='', last_name='', institution='', backend=None):

@@ -17,18 +17,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import os
 import sys
 import unittest
 import tempfile
 import shutil
 
-from aiida.manage.fixtures import PluginTestCase, TestRunner
-from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
-
-
-def determine_backend():
-    return BACKEND_DJANGO if os.environ.get('TEST_AIIDA_BACKEND', BACKEND_DJANGO) == BACKEND_DJANGO else BACKEND_SQLA
+from aiida.manage.tests.unittest_classes import PluginTestCase, TestRunner
 
 
 class PluginTestCase1(PluginTestCase):
@@ -41,6 +35,10 @@ class PluginTestCase1(PluginTestCase):
         self.data = self.get_data()
         self.data_pk = self.data.pk
         self.computer = self.get_computer(temp_dir=self.temp_dir)
+
+    def tearDown(self):
+        super(PluginTestCase1, self).tearDown()
+        shutil.rmtree(self.temp_dir)
 
     @staticmethod
     def get_data():
@@ -72,22 +70,30 @@ class PluginTestCase1(PluginTestCase):
 
     def test_data_loaded(self):
         """
-        Check that the data is indeed in the DB when calling load_node
+        Check that the data node is indeed in the DB when calling load_node
         """
         from aiida import orm
         self.assertEqual(orm.load_node(self.data_pk).uuid, self.data.uuid)
+
+    def test_computer_loaded(self):
+        """
+        Check that the computer is indeed in the DB when calling load_node
+
+        Note: Important to have at least two test functions in order to verify things
+        work after resetting the DB.
+        """
+        from aiida import orm
         self.assertEqual(orm.Computer.objects.get(name='localhost').uuid, self.computer.uuid)
 
     def test_tear_down(self):
         """
         Check that after tearing down, the previously stored nodes
-        are not there anymore. Then remove the temporary folder.
+        are not there anymore.
         """
         from aiida.orm import load_node
-        super(PluginTestCase1, self).tearDown()
+        super(PluginTestCase1, self).tearDown()  # reset DB
         with self.assertRaises(Exception):
             load_node(self.data_pk)
-        shutil.rmtree(self.temp_dir)
 
 
 class PluginTestCase2(PluginTestCase):
@@ -95,9 +101,9 @@ class PluginTestCase2(PluginTestCase):
     Second PluginTestCase.
     """
 
-    def test_stupid(self):
+    def test_dummy(self):
         """
-        Dummy test for 2nd plugin testcase class.
+        Dummy test for 2nd PluginTestCase class.
 
         Just making sure that setup/teardown is safe for
         multiple testcase classes (this was broken in #1425).
@@ -108,7 +114,7 @@ class PluginTestCase2(PluginTestCase):
 if __name__ == '__main__':
     MODULE = sys.modules[__name__]
     SUITE = unittest.defaultTestLoader.loadTestsFromModule(MODULE)
-    RESULT = TestRunner().run(SUITE, backend=determine_backend())
+    RESULT = TestRunner().run(SUITE)
 
     EXIT_CODE = int(not RESULT.wasSuccessful())
     sys.exit(EXIT_CODE)

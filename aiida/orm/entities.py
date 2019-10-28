@@ -16,7 +16,6 @@ import typing
 
 from plumpy.base.utils import super_check, call_with_super_check
 
-from aiida.common import exceptions
 from aiida.common import datastructures
 from aiida.common.lang import classproperty, type_check
 from aiida.manage.manager import get_manager
@@ -133,16 +132,8 @@ class Collection(typing.Generic[EntityType]):
 
         :return: the entry
         """
-        res = self.query(filters=filters, limit=1)
-        res_count = res.count()
-        if res_count == 0:
-            raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, filters))
-        if res_count > 1:
-            raise exceptions.MultipleObjectsError(
-                "Multiple {}s found with the same id '{}'".format(self.entity_type.__name__, id)
-            )
-
-        return res.first()[0]
+        res = self.query(filters=filters)
+        return res.one()[0]
 
     def find(self, filters=None, order_by=None, limit=None):
         """

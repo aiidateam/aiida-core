@@ -23,10 +23,10 @@ from aiida.manage.manager import get_manager
 
 __all__ = ('Entity', 'Collection')
 
-EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
+EntityType = typing.TypeVar('EntityType')
 
 
-class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable-object
+class Collection(typing.Generic[EntityType]):
     """Container class that represents the collection of objects of a particular type."""
 
     # A store for any backend specific collections that already exist
@@ -114,7 +114,6 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         :return: a new query builder instance
         :rtype: :class:`aiida.orm.QueryBuilder`
         """
-        # pylint: disable=no-self-use
         from . import querybuilder
 
         filters = filters or {}
@@ -196,7 +195,7 @@ class Entity(object):
     Collection = Collection
 
     @classproperty
-    def objects(cls, backend=None):  # pylint: disable=no-self-use, no-self-argument
+    def objects(cls, backend=None):  # pylint: disable=no-self-argument
         """
         Get a collection for objects of this type.
 
@@ -211,7 +210,6 @@ class Entity(object):
 
     @classmethod
     def get(cls, **kwargs):
-        # pylint: disable=redefined-builtin, invalid-name
         return cls.objects.get(**kwargs)  # pylint: disable=no-member
 
     @classmethod
@@ -254,14 +252,13 @@ class Entity(object):
         """
 
     @property
-    def id(self):
+    def id(self):  # pylint: disable=invalid-name
         """Return the id for this entity.
 
         This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.
 
         :return: the entity's id
         """
-        # pylint: disable=redefined-builtin, invalid-name
         return self._backend_entity.id
 
     @property

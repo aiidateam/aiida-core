@@ -14,19 +14,19 @@ then
     export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}/.ci/polish"
 
     # Start the daemon for the correct profile and add four additional workers to prevent deadlock with integration tests
-    verdi -p $TEST_AIIDA_BACKEND daemon start
-    verdi -p $TEST_AIIDA_BACKEND daemon incr 4
+    verdi -p $AIIDA_TEST_BACKEND daemon start
+    verdi -p $AIIDA_TEST_BACKEND daemon incr 4
 
     if [[ "$COMPUTER_SETUP_TYPE" != "jenkins" ]]
     then
         # Setup the torquessh computer
-        verdi -p $TEST_AIIDA_BACKEND computer setup --non-interactive --label=torquessh --hostname=localhost --transport=ssh --scheduler=torque --mpiprocs-per-machine=1 --prepend-text="" --append-text=""
+        verdi -p $AIIDA_TEST_BACKEND computer setup --non-interactive --label=torquessh --hostname=localhost --transport=ssh --scheduler=torque --mpiprocs-per-machine=1 --prepend-text="" --append-text=""
 
         # Configure the torquessh computer
-        verdi -p $TEST_AIIDA_BACKEND computer configure ssh torquessh --non-interactive --safe-interval=1 --username=app --port=10022 --key-filename=~/.ssh/id_rsa --timeout=60 --compress --gss-host=localhost --load-system-host-keys --key-policy=RejectPolicy
+        verdi -p $AIIDA_TEST_BACKEND computer configure ssh torquessh --non-interactive --safe-interval=1 --username=app --port=10022 --key-filename=~/.ssh/id_rsa --timeout=60 --compress --gss-host=localhost --load-system-host-keys --key-policy=RejectPolicy
 
         # Configure the 'doubler' code inside torquessh
-        verdi -p $TEST_AIIDA_BACKEND code setup -n -L doubler \
+        verdi -p $AIIDA_TEST_BACKEND code setup -n -L doubler \
             -D "simple script that doubles a number and sleeps for a given number of seconds" \
             --on-computer -P templatereplacer -Y torquessh \
             --remote-abs-path=/usr/local/bin/d\"o\'ub\ ler.sh
@@ -47,19 +47,19 @@ then
         # Computer configuration on Jenkins
 
         # Setup the torquessh computer - this one is custom, using direct scheduler
-        verdi -p $TEST_AIIDA_BACKEND computer setup --non-interactive --label=torquessh --hostname=localhost --transport=ssh --scheduler=direct --mpiprocs-per-machine=1 --prepend-text="" --append-text=""
+        verdi -p $AIIDA_TEST_BACKEND computer setup --non-interactive --label=torquessh --hostname=localhost --transport=ssh --scheduler=direct --mpiprocs-per-machine=1 --prepend-text="" --append-text=""
 
         # Configure the torquessh computer - this one is custom, using port 22
-        verdi -p $TEST_AIIDA_BACKEND computer configure ssh torquessh --non-interactive --safe-interval=1 --username=jenkins --port=22 --key-filename=~/.ssh/id_rsa --timeout=60 --compress --gss-host=localhost --load-system-host-keys --key-policy=RejectPolicy
+        verdi -p $AIIDA_TEST_BACKEND computer configure ssh torquessh --non-interactive --safe-interval=1 --username=jenkins --port=22 --key-filename=~/.ssh/id_rsa --timeout=60 --compress --gss-host=localhost --load-system-host-keys --key-policy=RejectPolicy
 
         # Configure the 'doubler' code inside torquessh
-        verdi -p $TEST_AIIDA_BACKEND code setup -n -L doubler \
+        verdi -p $AIIDA_TEST_BACKEND code setup -n -L doubler \
             -D "simple script that doubles a number and sleeps for a given number of seconds" \
             --on-computer -P templatereplacer -Y torquessh \
             --remote-abs-path=/usr/local/bin/d\"o\'ub\ ler.sh
 
         # Configure the 'add' code inside torquessh, which is only required for the integrations test on Jenkins
-        verdi -p $TEST_AIIDA_BACKEND code setup -n -L add \
+        verdi -p $AIIDA_TEST_BACKEND code setup -n -L add \
             -D "simple script that adds two numbers" --on-computer -P arithmetic.add \
             -Y torquessh --remote-abs-path=/usr/local/bin/add.sh
 

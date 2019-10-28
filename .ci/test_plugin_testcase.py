@@ -31,7 +31,6 @@ class PluginTestCase1(PluginTestCase):
     """
 
     def setUp(self):
-        #import pdb; pdb.set_trace()
         self.temp_dir = tempfile.mkdtemp()
         self.data = self.get_data()
         self.data_pk = self.data.pk

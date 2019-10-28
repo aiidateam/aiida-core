@@ -44,16 +44,16 @@ case "$TEST_TYPE" in
         # append to coverage file, do not create final report
         pytest --cov=aiida --cov-append --cov-report= "${CI_DIR}/pytest"
         # rerun tests with existing profile
-        TEST_AIIDA_PROFILE=test_${TEST_AIIDA_BACKEND} pytest --cov=aiida --cov-append --cov-report= "${CI_DIR}/pytest"
+        TEST_AIIDA_PROFILE=test_${AIIDA_TEST_BACKEND} pytest --cov=aiida --cov-append --cov-report= "${CI_DIR}/pytest"
 
         # Run verdi devel tests
-        coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} devel tests -v
+        coverage run -a $VERDI -p test_${AIIDA_TEST_BACKEND} devel tests -v
 
         # Run the daemon tests using docker
-        # Note: This is not a typo, the profile is called ${TEST_AIIDA_BACKEND}
+        # Note: This is not a typo, the profile is called ${AIIDA_TEST_BACKEND}
 
         # In case of error, I do some debugging, but I make sure I anyway exit with an exit error
-        coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${CI_DIR}/test_daemon.py" || ( if which docker > /dev/null ; then docker ps -a ; docker exec torquesshmachine cat /var/log/syslog ; fi ; exit 1 )
+        coverage run -a $VERDI -p ${AIIDA_TEST_BACKEND} run "${CI_DIR}/test_daemon.py" || ( if which docker > /dev/null ; then docker ps -a ; docker exec torquesshmachine cat /var/log/syslog ; fi ; exit 1 )
 
         # Run the sphinxext tests, append to coverage file, do not create final report
         coverage run --append -m pytest aiida/sphinxext/tests

@@ -22,7 +22,7 @@ from aiida.manage.manager import get_manager
 
 __all__ = ('Entity', 'Collection')
 
-EntityType = typing.TypeVar('EntityType')
+EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 
 
 class Collection(typing.Generic[EntityType]):

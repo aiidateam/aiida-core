@@ -16,7 +16,6 @@ import typing
 
 from plumpy.base.utils import super_check, call_with_super_check
 
-from aiida.common import exceptions
 from aiida.common import datastructures
 from aiida.common.lang import classproperty, type_check
 from aiida.manage.manager import get_manager
@@ -26,7 +25,7 @@ __all__ = ('Entity', 'Collection')
 EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 
 
-class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable-object
+class Collection(typing.Generic[EntityType]):
     """Container class that represents the collection of objects of a particular type."""
 
     # A store for any backend specific collections that already exist
@@ -95,18 +94,33 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         """
         return self._entity_type
 
-    def query(self):
+    def query(self, filters=None, order_by=None, limit=None, offset=None):
         """
         Get a query builder for the objects of this collection
+
+        :param filters: the keyword value pair filters to match
+        :type filters: dict
+
+        :param order_by: a list of (key, direction) pairs specifying the sort order
+        :type order_by: list
+
+        :param limit: the maximum number of results to return
+        :type limit: int
+
+        :param offset: number of initial results to be skipped
+        :type offset: int
 
         :return: a new query builder instance
         :rtype: :class:`aiida.orm.QueryBuilder`
         """
-        # pylint: disable=no-self-use
         from . import querybuilder
 
-        query = querybuilder.QueryBuilder()
-        query.append(self._entity_type, project='*')
+        filters = filters or {}
+        order_by = {self.entity_type: order_by} if order_by else {}
+
+        query = querybuilder.QueryBuilder(limit=limit, offset=offset)
+        query.append(self.entity_type, project='*', filters=filters)
+        query.order_by([order_by])
         return query
 
     def get(self, **filters):
@@ -118,15 +132,8 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
 
         :return: the entry
         """
-        res = self.find(filters=filters)
-        if not res:
-            raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, filters))
-        if len(res) > 1:
-            raise exceptions.MultipleObjectsError(
-                "Multiple {}s found with the same id '{}'".format(self.entity_type.__name__, id)
-            )
-
-        return res[0]
+        res = self.query(filters=filters)
+        return res.one()[0]
 
     def find(self, filters=None, order_by=None, limit=None):
         """
@@ -144,24 +151,28 @@ class Collection(typing.Generic[EntityType]):  # pylint: disable=unsubscriptable
         :return: a list of resulting matches
         :rtype: list
         """
-        query = self.query()
-        filters = filters or {}
-        query.add_filter(self.entity_type, filters)
-        if order_by:
-            query.order_by({self.entity_type: order_by})
-        if limit:
-            query.limit(limit)
-
+        query = self.query(filters=filters, order_by=order_by, limit=limit)
         return [_[0] for _ in query.all()]
 
     def all(self):
         """
         Get all entities in this collection
 
-        :return: A collection of users matching the criteria
+        :return: A list of all entities
         :rtype: list
         """
         return [_[0] for _ in self.query().all()]
+
+    def count(self, filters=None):
+        """Count entities in this collection according to criteria
+
+        :param filters: the keyword value pair filters to match
+        :type filters: dict
+
+        :return: The number of entities found using the supplied criteria
+        :rtype: int
+        """
+        return self.query(filters=filters).count()
 
 
 class Entity(object):
@@ -173,7 +184,7 @@ class Entity(object):
     Collection = Collection
 
     @classproperty
-    def objects(cls, backend=None):  # pylint: disable=no-self-use, no-self-argument
+    def objects(cls, backend=None):  # pylint: disable=no-self-argument
         """
         Get a collection for objects of this type.
 
@@ -188,7 +199,6 @@ class Entity(object):
 
     @classmethod
     def get(cls, **kwargs):
-        # pylint: disable=redefined-builtin, invalid-name
         return cls.objects.get(**kwargs)  # pylint: disable=no-member
 
     @classmethod
@@ -231,14 +241,13 @@ class Entity(object):
         """
 
     @property
-    def id(self):
+    def id(self):  # pylint: disable=invalid-name
         """Return the id for this entity.
 
         This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.
 
         :return: the entity's id
         """
-        # pylint: disable=redefined-builtin, invalid-name
         return self._backend_entity.id
 
     @property

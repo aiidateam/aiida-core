@@ -34,7 +34,7 @@ We first load the database and required modules:
 The example provenance graph, used in this tutorial, can then be
 imported into the database:
 
-.. code:: python
+.. code:: ipython
 
     archive_path = get_archive_file('graph1.aiida', 'graphs')
     !verdi import -n {archive_path}

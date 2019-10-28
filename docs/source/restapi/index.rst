@@ -43,12 +43,12 @@ Like all ``verdi`` commands, the AiiDA profile can be changed by putting ``-p PR
 
 The base URL for your REST API is::
 
-        http://localhost:5000/api/v3
+        http://localhost:5000/api/v4
 
-where the last field identifies the version of the API (currently ``v3``).
+where the last field identifies the version of the API (currently ``v4``).
 Simply type this URL in your browser or use command-line tools such as ``curl`` or ``wget``.
 
-.. note:: Note that the ``v2`` version of the API was used for versions of AiiDA previous to 1.0.0b3.
+.. note:: Note that the ``v3`` version of the API was used for versions of AiiDA previous to 1.0.0b6.
 
 For the full list of configuration options, see the file ``aiida/restapi/common/config.py``.
 
@@ -60,7 +60,7 @@ A generic URL to send requests to the REST API is formed by:
 
     1. The base URL. It specifies the host and the version of the API. Example::
 
-        http://localhost:5000/api/v3
+        http://localhost:5000/api/v4
 
     2. The path. It defines the kind of resource requested by the client and the type of query. Example::
 
@@ -73,9 +73,9 @@ A generic URL to send requests to the REST API is formed by:
 
 The query string is introduced by the question mark character ``?``. Here are some examples::
 
-  http://localhost:5000/api/v3/users/
-  http://localhost:5000/api/v3/computers?scheduler_type="slurm"
-  http://localhost:5000/api/v3/nodes/?id>45&node_type=like="data%"
+  http://localhost:5000/api/v4/users/
+  http://localhost:5000/api/v4/computers?scheduler_type="slurm"
+  http://localhost:5000/api/v4/nodes/?id>45&node_type=like="data%"
 
 The trailing slash at the end of the path is not mandatory.
 
@@ -95,9 +95,9 @@ by the number of the required page.
 The number of results contained in each page can be altered by specifying the ``perpage=(PERPAGE)`` field in the
 query string. Note that ``(PERPAGE)`` values larger than 400 are not allowed. Examples::
 
-    http://localhost:5000/api/v3/computers/page/1?
-    http://localhost:5000/api/v3/computers/page/1?perpage=5
-    http://localhost:5000/api/v3/computers/page
+    http://localhost:5000/api/v4/computers/page/1?
+    http://localhost:5000/api/v4/computers/page/1?perpage=5
+    http://localhost:5000/api/v4/computers/page
 
 If no page number is specified, as in the last example, the system redirects the request to page 1.
 When pagination is used the **header** of the response contains two more non-empty fields:
@@ -124,7 +124,7 @@ You can specify two special fields in the query string:
 
 Example::
 
-    http://localhost:5000/api/v3/computers/?limit=3&offset=2
+    http://localhost:5000/api/v4/computers/?limit=3&offset=2
 
 
 How to build the path
@@ -133,33 +133,21 @@ How to build the path
 The first element of the path is the *Resource* corresponding to the
 AiiDA object(s) you want to request. The following resources are available:
 
-+-------------------------------------------------------------------------+-------------------+
-| Class                                                                   | Resource          |
-+=========================================================================+===================+
-| :py:class:`ProcessNode <aiida.orm.nodes.process.ProcessNode>`           | ``/calculations`` |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`Computer <aiida.orm.Computer>`                               | ``/computers``    |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`Data <aiida.orm.nodes.data.data.Data>`                       | ``/data``         |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`Group <aiida.orm.groups.Group>`                              | ``/groups``       |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`Node <aiida.orm.nodes.Node>`                                 | ``/nodes``        |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`User <aiida.orm.User>`                                       | ``/users``        |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`Code <aiida.orm.nodes.data.code.Code>`                       | ``/codes``        |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`BandsData <aiida.orm.nodes.data.array.bands.BandsData>`      | ``/bands``        |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`                  | ``/cifs``         |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`KpointsData <aiida.orm.nodes.data.array.kpoints.KpointsData>`| ``/kpoints``      |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`StructureData <aiida.orm.nodes.data.structure.StructureData>`| ``/structures``   |
-+-------------------------------------------------------------------------+-------------------+
-| :py:class:`UpfData <aiida.orm.nodes.data.upf.UpfData>`                  | ``/upfs``         |
-+-------------------------------------------------------------------------+-------------------+
++------------------------------------------------------------------------------------+----------------------+
+| Class                                                                              | Resource             |
++====================================================================================+======================+
+| :py:class:`Computer <aiida.orm.Computer>`                                          | ``/computers``       |
++------------------------------------------------------------------------------------+----------------------+
+| :py:class:`Group <aiida.orm.groups.Group>`                                         | ``/groups``          |
++------------------------------------------------------------------------------------+----------------------+
+| :py:class:`User <aiida.orm.User>`                                                  | ``/users``           |
++------------------------------------------------------------------------------------+----------------------+
+| :py:class:`Node <aiida.orm.nodes.Node>`                                            | ``/nodes``           |
++------------------------------------------------------------------------------------+----------------------+
+| :py:class:`ProcessNode <aiida.orm.nodes.process.ProcessNode>`                      | ``/processes``       |
++------------------------------------------------------------------------------------+----------------------+
+| :py:class:`CalcJobNode <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>`  | ``/calcjobs``        |
++------------------------------------------------------------------------------------+----------------------+
 
 For a **full list** of available endpoints for each resource, simply query the base URL of the REST API (e.g. ``http://localhost:5000``).
 
@@ -169,52 +157,46 @@ or one specific object of a resource.
 If no specific endpoint is appended to the name of the resource, the API
 returns the full list of objects of that resource (default limits apply).
 
-Appending the endpoint ``schema`` to a
-resource will give the list of fields that are normally returned by the API for
+Appending the endpoint ``projectable_properties`` to a
+resources like nodes, processes, users, groups and computers will give the list of projectable fields
+that are normally returned by the API for
 an object of a specific resource, whereas the endpoint ``statistics`` returns a
 list of statistical facts concerning a resource.
 Here are few examples of valid URIs::
 
-    http://localhost:5000/api/v3/nodes/statistics
-    http://localhost:5000/api/v3/users/
-    http://localhost:5000/api/v3/groups/schema
+    http://localhost:5000/api/v4/nodes/statistics
+    http://localhost:5000/api/v4/users/
+    http://localhost:5000/api/v4/groups/projectable_properties
 
 
 If you request informations of a specific object, in general you have to append its entire *uuid* or the starting pattern of its *uuid* to the path.
  Here are two examples that should return the same object::
 
-    http://localhost:5000/api/v3/nodes/338357f4-f236-4f9c-8fbe-cd550dc6b858
-    http://localhost:5000/api/v3/nodes/338357f4-f2
+    http://localhost:5000/api/v4/nodes/338357f4-f236-4f9c-8fbe-cd550dc6b858
+    http://localhost:5000/api/v4/nodes/338357f4
 
 In the first URL, we have specified the full *uuid*, whereas in the second only a chunk of its first characters that is
 sufficiently long to match only one *uuid* in the database.
 
-.. note:: Using *id* in place of *uuid* is not allowed anylonger, e.g.  ``http://localhost:5000/api/v3/nodes/201`` does not work.
-    Use ``http://localhost:5000/api/v3/nodes?id=201`` instead.
+.. note:: Using *id* in place of *uuid* is not allowed anylonger, e.g.  ``http://localhost:5000/api/v4/nodes/201`` does not work.
+    Use ``http://localhost:5000/api/v4/nodes?id=201`` instead.
 
-Il the *uuid* pattern is not long enough to identify a unique object, the API will raise an exception.
+If the *uuid* pattern is not long enough to identify a unique object, the API will raise an exception.
 The only exception to this rule is the resource *users* since the corresponding AiiDA``User`` class has no *uuid*
 attribute. In this case, you have to specify the *id* (integer) of the object. Here is an example::
 
-    http://localhost:5000/api/v3/users?id=2
+    http://localhost:5000/api/v4/users?id=2
 
 When you ask for a single object (and only in that case) you can construct more complex requests, namely, you can ask
-for its inputs/outputs or for its attributes/extras.
-In the first case you have to append to the path the string ``/io/inputs`` or ``io/outputs`` depending on the desired
-relation between the nodes, whereas in the second case you have to append ``content/attributes`` or ``content/extras``
+for its incoming/outgoing or for its attributes/extras.
+In the first case you have to append to the path the string ``/links/incoming`` or ``/links/outgoing`` depending on the desired
+relation between the nodes, whereas in the second case you have to append ``contents/attributes`` or ``contents/extras``
 depending on the kind of content you want to access. Here are some examples::
 
-    http://localhost:5000/api/v3/calculations/338357f4-f2/io/inputs
-    http://localhost:5000/api/v3/nodes/338357f4-f2/io/inputs
-    http://localhost:5000/api/v3/data/338357f4-f2/content/attributes
-    http://localhost:5000/api/v3/nodes/338357f4-f2/content/extras
-
-.. note:: As you can see from the last examples, a *Node* object can be accessed requesting either a generic ``nodes``
-    resource or requesting the resource corresponding to its specific node type (``data``, ``codes``, ``calculations``,
-    ``kpoints``, ... ).
-    This is because in AiiDA the classes *Data* and *Calculation* are derived from the class *Node*.
-    In turn, *Data* is the baseclass of a number of built-in and custom classes, e.g. ``KpointsData``,
-    ``StructureData``, ``BandsData``, ``Code``, ...
+    http://localhost:5000/api/v4/nodes/338357f4/links/incoming
+    http://localhost:5000/api/v4/nodes/338357f4/links/outgoing
+    http://localhost:5000/api/v4/nodes/338357f4/contents/attributes
+    http://localhost:5000/api/v4/nodes/338357f4/contents/extras
 
 How to build the query string
 -----------------------------
@@ -247,28 +229,40 @@ All of them must be followed by the operator ``=``. Here is the complete list:
 
         ::
 
-            http://localhost:5000/api/v3/computers?orderby=+id
-            http://localhost:5000/api/v3/computers?orderby=+name
-            http://localhost:5000/api/v3/computers?orderby=-uuid
+            http://localhost:5000/api/v4/computers?orderby=+id
+            http://localhost:5000/api/v4/computers?orderby=+name
+            http://localhost:5000/api/v4/computers?orderby=-uuid
 
 
-    :alist: This key is used to specify which attributes of a specific object have to be returned.
+    :attributes_filter: This key is used to specify which attributes of a specific object have to be returned.
         The desired attributes have to be provided as a comma-separated list of values.
-        It requires that the path contains the endpoint ``/content/attributes``. Example:
+        It is used in the endpoints ``/contents/attributes`` and ``/nodes``. Example:
 
         ::
 
-            http://localhost:5000/api/v3/codes/4fb10ef1-1a/content/attributes?alist=append_text,prepend_text
+            http://localhost:5000/api/v4/nodes/4fb10ef1/contents/attributes?attributes_filter=append_text,prepend_text
 
 
-    :nalist: (incompatible with ``alist``) This key is used to specify which attributes of a specific object should not
-        be returned. The syntax is identical to ``alist``.
-        The system returns all the attributes except those specified in the list of values.
+    :extras_filter: Similar to ``attributes_filter`` but for extras. It is used in the endpoints ``/contents/extras``
+        and ``/nodes``.
 
-    :elist: Similar to ``alist`` but for extras. It requires that the path contains the endpoint ``/content/extras``.
+    :attributes: by default ``attributes`` are not returned in ``/nodes`` endpoint. To get the
+        list of all ``attributes`` specify ``attributes=true`` and to get selected ``attribute(s)`` list, use
+        ``attributes=true&attributes_filters=<comma separated list of attributes you want to request>``.
 
-    :nelist: (incompatible with ``elist``) Similar to ``nalist`` but for extras.
-        It requires that the path contains the endpoint ``/content/extras``.
+    :extras: by default ``extras`` are not returned in ``/nodes`` endpoint. To get the list of all
+        ``extras`` specify ``extras=true`` and to get selected ``extras`` list, use
+        ``extras=true&extras_filters=<comma separated list of extras you want to request>``.
+
+    :download_format: to specify download format in ``/download`` endpoint.
+
+    :download: in ``/download`` endpoint, if ``download=false`` it displays the content in the browser instead of downloading a file.
+
+    :filename: this filter is used to pass file name in ``/repo/list`` and ``/repo/contents`` endpoint.
+
+    :tree_in_limit: specifies the limit on tree incoming nodes.
+
+    :tree_out_limit: specifies the limit on tree outgoing nodes.
 
 Filters
 *******
@@ -303,9 +297,9 @@ Each filter key is associated to a unique value type. The possible types are:
 
         ::
 
-            http://localhost:5000/api/v3/nodes?ctime>2019-04-23T05:45+03:45
-            http://localhost:5000/api/v3/nodes?ctime<2019-04-23T05:45
-            http://localhost:5000/api/v3/nodes?mtime>=2019-04-23
+            http://localhost:5000/api/v4/nodes?ctime>2019-04-23T05:45+03:45
+            http://localhost:5000/api/v4/nodes?ctime<2019-04-23T05:45
+            http://localhost:5000/api/v4/nodes?mtime>=2019-04-23
 
 
     :bool: It can be either true or false (lower case).
@@ -314,17 +308,15 @@ The following table reports what is the value type and the supported resources a
 
 .. note:: In the following *id* is a synonym for *pk* (often used in other sections of the documentation).
 
-.. note:: If a key is present in the resource *data*, it will be also in the derived resources: *structures*, *kpoints*,
-    *bands*, ...
 
 +--------------+----------+---------------------------------------------------+
 |key           |value type|resources                                          |
 +==============+==========+===================================================+
-|id            |integer   |users, computers, groups, nodes, calculations, data|
+|id            |integer   |users, computers, groups, nodes                    |
 +--------------+----------+---------------------------------------------------+
 |user_id       |integer   |groups                                             |
 +--------------+----------+---------------------------------------------------+
-|uuid          |string    |computers, groups, nodes, calculations, data       |
+|uuid          |string    |computers, groups, nodes                           |
 +--------------+----------+---------------------------------------------------+
 |name          |string    |computers                                          |
 +--------------+----------+---------------------------------------------------+
@@ -334,9 +326,7 @@ The following table reports what is the value type and the supported resources a
 +--------------+----------+---------------------------------------------------+
 |institution   |string    |users                                              |
 +--------------+----------+---------------------------------------------------+
-|email *       |string    |users                                              |
-+--------------+----------+---------------------------------------------------+
-|label         |string    |groups, nodes, calculations, data                  |
+|label         |string    |groups, nodes,                                     |
 +--------------+----------+---------------------------------------------------+
 |description   |string    |computers, groups                                  |
 +--------------+----------+---------------------------------------------------+
@@ -344,15 +334,15 @@ The following table reports what is the value type and the supported resources a
 +--------------+----------+---------------------------------------------------+
 |scheduler_type|string    |computers                                          |
 +--------------+----------+---------------------------------------------------+
-|attributes    |string    |nodes, calculations, data                          |
+|attributes    |string    |nodes                                              |
 +--------------+----------+---------------------------------------------------+
-|ctime         |datetime  |nodes, calculations, data                          |
+|ctime         |datetime  |nodes                                              |
 +--------------+----------+---------------------------------------------------+
-|mtime         |datetime  |nodes, calculations, data                          |
+|mtime         |datetime  |nodes                                              |
 +--------------+----------+---------------------------------------------------+
-|user_email    |string    |groups, nodes, calculations, data                  |
+|node_type     |string    |nodes                                              |
 +--------------+----------+---------------------------------------------------+
-|node_type     |string    |nodes, calculations, data                          |
+|full_type     |string    |nodes                                              |
 +--------------+----------+---------------------------------------------------+
 |type_string   |string    |groups                                             |
 +--------------+----------+---------------------------------------------------+
@@ -421,16 +411,16 @@ The condition is fulfilled if the column value of an object is an element of the
 
 Examples::
 
-    http://localhost:5000/api/v3/nodes?id=in=45,56,78
-    http://localhost:5000/api/v3/computers/?scheduler_type=in="slurm","pbs"
+    http://localhost:5000/api/v4/nodes?id=in=45,56,78
+    http://localhost:5000/api/v4/computers/?scheduler_type=in="slurm","pbs"
 
 The relational operators '<', '>', '<=', '>=' assume natural ordering for integers, (case-insensitive) alphabetical
 ordering for strings, and chronological ordering for datetime values.
 
 Examples:
 
-    - ``http://localhost:5000/api/v3/nodes?id>578`` selects the nodes having an id larger than 578.
-    - ``http://localhost:5000/api/v3/users/?last_name<="m"`` selects only the users whose last name begins with a
+    - ``http://localhost:5000/api/v4/nodes?id>578`` selects the nodes having an id larger than 578.
+    - ``http://localhost:5000/api/v4/users/?last_name<="m"`` selects only the users whose last name begins with a
       character in the range [a-m].
 
 
@@ -440,15 +430,15 @@ Examples:
     - ``node_type="data.code.Code."`` selects only objects of *Code* type
     - ``node_type="data.remote.RemoteData."`` selects only objects of *RemoteData* type
 
-.. note:: If you use in your request the endpoint *io/input* (*io/outputs*) together with one or more filters, the
-    latter are applied to the input (output) nodes of the selected *id*. For example, the request:
+.. note:: If you use in your request the endpoint *links/incoming* (*links/outgoing*) together with one or more filters, the
+    latter are applied to the incoming (outgoing) nodes of the selected *id*. For example, the request:
 
         ::
 
-            http://localhost:5000/api/v3/nodes/a67fba41-8a/io/outputs/?node_type="data.folder.FolderData."
+            http://localhost:5000/api/v4/nodes/a67fba41/links/outgoing?full_type="data.dict.Dict.|"
 
-    would first search for the outputs of the node with *uuid* starting with "a67fba41-8a" and then select only those
-    nodes of type *FolderData*.
+    would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those
+    nodes of full_type *data.dict.Dict.|*.
 
 
 
@@ -565,8 +555,8 @@ Examples of well-formed URLs are:
 
 .. code-block:: bash
 
-    curl http://localhost/django/api/v3/computers -X GET
-    curl http://localhost/sqlalchemy/api/v3/computers -X GET
+    curl http://localhost/django/api/v4/computers -X GET
+    curl http://localhost/sqlalchemy/api/v4/computers -X GET
 
 The first (second) request will be handled by the app ``django`` (``sqlalchemy``), namely will serve results fetched
 from the profile ``django`` (``sqlalchemy``).
@@ -584,7 +574,7 @@ Computers
 
     REST URL::
 
-        http://localhost:5000/api/v3/computers?limit=3&offset=2&orderby=id
+        http://localhost:5000/api/v4/computers?limit=3&offset=2&orderby=id
 
     Description:
 
@@ -626,11 +616,12 @@ Computers
               }
             ]
           },
+          "id": null,
           "method": "GET",
-          "path": "/api/v3/computers",
+          "path": "/api/v4/computers",
           "query_string": "limit=3&offset=2&orderby=id",
           "resource_type": "computers",
-          "url": "http://localhost:5000/api/v3/computers?limit=3&offset=2&orderby=id",
+          "url": "http://localhost:5000/api/v4/computers?limit=3&offset=2&orderby=id",
           "url_root": "http://localhost:5000/"
         }
 
@@ -640,7 +631,7 @@ Computers
 
     REST URL::
 
-        http://localhost:5000/api/v3/computers/5d490d77-638d
+        http://localhost:5000/api/v4/computers/5d490d77
 
     Description:
 
@@ -662,11 +653,12 @@ Computers
               }
             ]
           },
+          "id": null,
           "method": "GET",
-          "path": "/api/v3/computers/5d490d77-638d",
+          "path": "/api/v4/computers/5d490d77",
           "query_string": "",
           "resource_type": "computers",
-          "url": "http://localhost:5000/api/v3/computers/5d490d77-638d",
+          "url": "http://localhost:5000/api/v4/computers/5d490d77",
           "url_root": "http://localhost:5000/"
         }
 
@@ -674,11 +666,11 @@ Computers
 Nodes
 -----
 
-1.  Get a list of *Node* objects
+1.  Get a list of *Node* objects.
 
     REST URL::
 
-        http://localhost:5000/api/v3/nodes?limit=2&offset=8&orderby=-id
+        http://localhost:5000/api/v4/nodes?limit=2&offset=8&orderby=-id
 
     Description:
 
@@ -692,48 +684,47 @@ Nodes
           "data": {
             "nodes  ": [
               {
-                "attributes": {...},
-                "ctime": "Fri, 29 Apr 2019 19:24:12 GMT",
-                "extras": {},
-                "id": 386913,
+                "ctime": "Sun, 21 Jul 2019 11:45:52 GMT",
+                "full_type": "data.dict.Dict.|",
+                "id": 102618,
                 "label": "",
-                "mtime": "Fri, 29 Apr 2019 19:24:13 GMT",
-                "node_type": "process.calculation.calcfunction.CalcFunctionNode.",
-                "user_email": "aiida@theossrv5.epfl.ch",
-                "user_id": 3,
-                "uuid": "68d2ed6c-6f51-4546-8d10-7fe063525ab8"
+                "mtime": "Sun, 21 Jul 2019 11:45:52 GMT",
+                "node_type": "data.dict.Dict.",
+                "process_type": null,
+                "user_id": 4,
+                "uuid": "a43596fe-3d95-4d9b-b34a-acabc21d7a1e"
               },
               {
-                "attributes": {...},
-                "ctime": "Fri, 29 Apr 2019 19:24:00 GMT",
-                "extras": {},
-                "id": 386912,
+                "ctime": "Sun, 21 Jul 2019 18:18:26 GMT",
+                "full_type": "data.remote.RemoteData.|",
+                "id": 102617,
                 "label": "",
-                "mtime": "Fri, 29 Apr 2019 19:24:00 GMT",
-                "node_type": "data.dict.Dict.",
-                "user_email": "aiida@theossrv5.epfl.ch",
-                "user_id": 3,
-                "uuid": "a39dc158-fedd-4ea1-888d-d90ec6f86f35"
+                "mtime": "Sun, 21 Jul 2019 18:18:26 GMT",
+                "node_type": "data.remote.RemoteData.",
+                "process_type": null,
+                "user_id": 4,
+                "uuid": "12f95e1c-69df-4a4b-9b06-8e69072e6108"
               }
             ]
           },
+          "id": null,
           "method": "GET",
-          "path": "/api/v3/nodes",
+          "path": "/api/v4/nodes",
           "query_string": "limit=2&offset=8&orderby=-id",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v3/nodes?limit=2&offset=8&orderby=-id",
+          "url": "http://localhost:5000/api/v4/nodes?limit=2&offset=8&orderby=-id",
           "url_root": "http://localhost:5000/"
         }
 
-2. Get the details of a single *Node* object:
+    Get list of all nodes with attribute called ``pbc1``:
 
     REST URL::
 
-        http://localhost:5000/api/v3/nodes/e30da7cc
+        http://localhost:5000/api/v4/nodes?attributes=true&attributes_filter=pbc1
 
     Description:
 
-        returns the details of the *Node* object with ``uuid="e30da7cc..."``.
+        returns the list of *Node* objects. Every node object contains value of attribute called ``pbc1`` if present otherwise null.
 
     Response::
 
@@ -741,32 +732,164 @@ Nodes
           "data": {
             "nodes  ": [
               {
-                "attributes": {...},
-                "ctime": "Fri, 14 Aug 2018 13:18:04 GMT",
-                "extras": {},
-                "id": 1,
+                "attributes.pbc1": true,
+                "ctime": "Sun, 21 Jul 2019 15:36:30 GMT",
+                "full_type": "data.structure.StructureData.|",
+                "id": 51310,
                 "label": "",
-                "mtime": "Mon, 25 Jan 2019 14:34:59 GMT",
+                "mtime": "Sun, 21 Jul 2019 15:36:30 GMT",
+                "node_type": "data.structure.StructureData.",
+                "process_type": null,
+                "user_id": 4,
+                "uuid": "98de8d6d-f533-4f97-a8ad-7720cc5ca8f6"
+              },
+              {
+                "attributes.pbc1": null,
+                "ctime": "Sun, 21 Jul 2019 15:44:14 GMT",
+                "full_type": "data.dict.Dict.|",
+                "id": 51311,
+                "label": "",
+                "mtime": "Sun, 21 Jul 2019 15:44:14 GMT",
                 "node_type": "data.dict.Dict.",
-                "user_email": "aiida@theossrv5.epfl.ch",
-                "user_id": 3,
-                "uuid": "e30da7cc-af50-40ca-a940-2ac8d89b2e0d"
+                "process_type": null,
+                "user_id": 4,
+                "uuid": "321795fa-338e-4852-ae72-2eb30e33386e"
               }
+              ...
             ]
           },
+          "id": null,
           "method": "GET",
-          "path": "/api/v3/nodes/e30da7cc",
-          "query_string": "",
+          "path": "/api/v4/nodes",
+          "query_string": "limit=2&offset=8&orderby=-id",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v3/nodes/e30da7cc",
+          "url": "http://localhost:5000/api/v4/nodes?limit=2&offset=8&orderby=-id",
           "url_root": "http://localhost:5000/"
         }
 
-3. Get the list of inputs of a specific node.
+2. Get a list of all available node types from database.
 
     REST URL::
 
-        http://localhost:5000/api/v3/nodes/de83b1/io/inputs?limit=2
+        http://localhost:5000/api/v4/nodes/full_types
+
+    Description:
+
+        returns the list of full_types from database.
+
+    Response::
+
+        {
+            "data": {
+                "full_type": "node.%|%",
+                "label": node,
+                "namespace": "node",
+                "path": "node",
+                "subspaces": [...]
+            },
+            "id": null,
+            "method": "GET",
+            "path": "/api/v4/nodes/full_types",
+            "query_string": "",
+            "resource_type": "nodes",
+            "url": "http://localhost:5000/api/v4/nodes/full_types",
+            "url_root": "http://localhost:5000/"
+        }
+
+3. Get a list of all available download formats.
+
+    REST URL::
+
+        http://localhost:5000/api/v4/nodes/download_formats
+
+    Description:
+
+        returns the list of available download formats.
+
+    Response::
+
+        {
+            "data": {
+                "data.array.bands.BandsData.|": [
+                    "agr",
+                    "agr_batch",
+                    "dat_blocks",
+                    "dat_multicolumn",
+                    "gnuplot",
+                    "json",
+                    "mpl_pdf",
+                    "mpl_png",
+                    "mpl_singlefile",
+                    "mpl_withjson"
+                ],
+                "data.array.trajectory.TrajectoryData.|": [
+                    "cif",
+                    "xsf"
+                ],
+                "data.cif.CifData.|": [
+                    "cif"
+                ],
+                "data.structure.StructureData.|": [
+                    "chemdoodle",
+                    "cif",
+                    "xsf",
+                    "xyz"
+                ],
+                "data.upf.UpfData.|": [
+                    "upf"
+                ]
+            },
+            "id": null,
+            "method": "GET",
+            "path": "/api/v4/nodes/download_formats",
+            "query_string": "",
+            "resource_type": "nodes",
+            "url": "http://localhost:5000/api/v4/nodes/download_formats",
+            "url_root": "http://localhost:5000/"
+        }
+
+4. Get the details of a single *Node* object.
+
+    REST URL::
+
+        http://localhost:5000/api/v4/nodes/12f95e1c
+
+    Description:
+
+        returns the details of the *Node* object with ``uuid="12f95e1c..."``.
+
+    Response::
+
+        {
+          "data": {
+            "nodes  ": [
+              {
+                "ctime": "Sun, 21 Jul 2019 18:18:26 GMT",
+                "full_type": "data.remote.RemoteData.|",
+                "id": 102617,
+                "label": "",
+                "mtime": "Sun, 21 Jul 2019 18:18:26 GMT",
+                "node_type": "data.remote.RemoteData.",
+                "process_type": null,
+                "user_id": 4,
+                "uuid": "12f95e1c-69df-4a4b-9b06-8e69072e6108"
+              }
+            ]
+          },
+          "id": "12f95e1c",
+          "method": "GET",
+          "path": "/api/v4/nodes/12f95e1c",
+          "query_string": "",
+          "resource_type": "nodes",
+          "url": "http://localhost:5000/api/v4/nodes/12f95e1c",
+          "url_root": "http://localhost:5000/"
+        }
+
+5. Get the list of incoming of a specific node.
+
+    REST URL::
+
+        http://localhost:5000/api/v4/nodes/de83b1/links/incoming?limit=2
 
     Description:
 
@@ -776,122 +899,129 @@ Nodes
 
         {
           "data": {
-            "inputs": [
+            "incoming": [
               {
-                "attributes": {...},
-                "ctime": "Fri, 24 Jul 2018 18:49:23 GMT",
-                "extras": {},
-                "id": 10605,
+                "ctime": "Sun, 21 Jul 2019 08:02:23 GMT",
+                "full_type": "data.dict.Dict.|",
+                "id": 53770,
                 "label": "",
-                "mtime": "Mon, 25 Jan 2019 14:35:00 GMT",
-                "node_type": "data.remote.RemoteData.",
-                "user_email": "aiida@theossrv5.epfl.ch",
-                "user_id": 6,
-                "uuid": "16b93b23-8629-4d83-9259-de2a947b43ed"
+                "link_label": "settings",
+                "link_type": "input_calc",
+                "mtime": "Sun, 21 Jul 2019 08:02:23 GMT",
+                "node_type": "data.dict.Dict.",
+                "process_type": null,
+                "user_id": 4,
+                "uuid": "31993382-c1ab-4822-a116-bd88697f2796"
               },
               {
-                "attributes": {...},
-                "ctime": "Fri, 24 Jul 2018 14:33:04 GMT",
-                "extras": {},
-                "id": 9215,
+                "ctime": "Fri, 28 Jun 2019 10:54:25 GMT",
+                "full_type": "data.upf.UpfData.|",
+                "id": 54502,
                 "label": "",
-                "mtime": "Mon, 25 Jan 2019 14:35:00 GMT",
-                "node_type": "data.array.kpoints.KpointsData.",
-                "user_email": "aiida@theossrv5.epfl.ch",
-                "user_id": 6,
-                "uuid": "1b4d22ec-9f29-4e0d-9d68-84ddd18ad8e7"
+                "link_label": "pseudos__N",
+                "link_type": "input_calc",
+                "mtime": "Fri, 28 Jun 2019 10:54:28 GMT",
+                "node_type": "data.upf.UpfData.",
+                "process_type": null,
+                "user_id": 4,
+                "uuid": "2e2df55d-27a5-4b34-bf7f-911b16da95f0"
               }
             ]
           },
+          "id": "de83b1",
           "method": "GET",
-          "path": "/api/v3/nodes/de83b1/io/inputs",
+          "path": "/api/v4/nodes/de83b1/links/incoming",
           "query_string": "limit=2",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v3/nodes/de83b1/io/inputs?limit=2",
+          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/incoming?limit=2",
           "url_root": "http://localhost:5000/"
         }
 
 
-4. Filter the inputs/outputs of a node by their node type.
+6. Filter the incoming/outgoing of a node by their full type.
 
     REST URL::
 
-        http://localhost:5000/api/v3/nodes/de83b1/io/inputs?node_type="data.array.kpoints.KpointsData."
+        http://localhost:5000/api/v4/nodes/de83b1/links/incoming?full_type="data.dict.Dict.|"
 
     Description:
 
-        returns the list of the `*KpointsData* input nodes of
+        returns the list of the `*dict* incoming nodes of
         the *Node* object with ``uuid="de83b1..."``.
 
     Response::
 
         {
           "data": {
-            "inputs": [
+            "incoming": [
               {
-                "attributes": {...},
-                "ctime": "Fri, 24 Jul 2018 14:33:04 GMT",
-                "extras": {},
-                "id": 9215,
+                "ctime": "Sun, 21 Jul 2019 08:02:23 GMT",
+                "full_type": "data.dict.Dict.|",
+                "id": 53770,
                 "label": "",
-                "mtime": "Mon, 25 Jan 2019 14:35:00 GMT",
-                "node_type": "data.array.kpoints.KpointsData.",
-                "user_email": "aiida@theossrv5.epfl.ch",
-                "user_id": 6,
-                "uuid": "1b4d22ec-9f29-4e0d-9d68-84ddd18ad8e7"
+                "link_label": "settings",
+                "link_type": "input_calc",
+                "mtime": "Sun, 21 Jul 2019 08:02:23 GMT",
+                "node_type": "data.dict.Dict.",
+                "process_type": null,
+                "user_id": 4,
+                "uuid": "31993382-c1ab-4822-a116-bd88697f2796"
               }
             ]
           },
+          "id": "de83b1",
           "method": "GET",
-          "path": "/api/v3/nodes/de83b1/io/inputs",
-          "query_string": "node_type=\"data.array.kpoints.KpointsData.\"",
+          "path": "/api/v4/nodes/de83b1/links/incoming",
+          "query_string": "full_type=%22data.dict.Dict.|%22",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v3/nodes/de83b1/io/inputs?node_type=\"data.array.kpoints.KpointsData.\"",
+          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/incoming?full_type=\"data.dict.Dict.|\"",
           "url_root": "http://localhost:5000/"
         }
 
     REST URL::
 
-        http://localhost:5000/api/v3/nodes/de83b1/io/outputs?node_type="data.remote.RemoteData."
+        http://localhost:5000/api/v4/nodes/de83b1/links/outgoing?full_type="data.dict.Dict.|"
 
     Description:
 
-        returns the list of the *RemoteData* output nodes of the *Node* object with ``uuid="de83b1..."``.
+        returns the list of the *dict* outgoing nodes of the *Node* object with ``uuid="de83b1..."``.
 
     Response::
 
         {
           "data": {
-            "outputs": [
+            "outgoing": [
               {
-                "attributes": {...},
-                "ctime": "Fri, 24 Jul 2018 20:35:02 GMT",
-                "extras": {},
-                "id": 2811,
+                "ctime": "Sun, 21 Jul 2019 09:08:05 GMT",
+                "full_type": "data.dict.Dict.|",
+                "id": 67440,
                 "label": "",
-                "mtime": "Mon, 25 Jan 2019 14:34:59 GMT",
-                "node_type": "data.remote.RemoteData.",
-                "user_email": "aiida@theossrv5.epfl.ch",
-                "user_id": 6,
-                "uuid": "bd48e333-da8a-4b6f-8e1e-6aaa316852eb"
+                "link_label": "output_parameters",
+                "link_type": "create",
+                "mtime": "Sun, 21 Jul 2019 09:08:05 GMT",
+                "node_type": "data.dict.Dict.",
+                "process_type": null,
+                "user_id": 4,
+                "uuid": "861e1108-33a1-4495-807b-8c5189ad74e3"
               }
             ]
           },
+          "id": "de83b1",
           "method": "GET",
-          "path": "/api/v3/nodes/de83b1/io/outputs",
-          "query_string": "node_type=\"data.remote.RemoteData.\"",
+          "path": "/api/v4/nodes/de83b1/links/outgoing",
+          "query_string": "full_type=%22data.dict.Dict.|%22",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v3/nodes/de83b1/io/outputs?node_type=\"data.remote.RemoteData.\"",
+          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/outgoing?full_type=\"data.dict.Dict.|\"",
           "url_root": "http://localhost:5000/"
         }
 
 
 
-5. Getting the list of the attributes/extras of a specific node
+7. Getting the list of the attributes/extras of a specific node.
 
     REST URL::
 
-        http://localhost:5000/api/v3/nodes/ffe11/content/attributes
+        http://localhost:5000/api/v4/nodes/ffe11/contents/attributes
 
     Description:
 
@@ -909,11 +1039,12 @@ Nodes
               "remote_exec_path": "/project/espresso-5.1-intel/bin/pw.x"
             }
           },
+          "id": "ffe11",
           "method": "GET",
-          "path": "/api/v3/nodes/ffe11/content/attributes",
+          "path": "/api/v4/nodes/ffe11/contents/attributes",
           "query_string": "",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v3/nodes/ffe11/content/attributes",
+          "url": "http://localhost:5000/api/v4/nodes/ffe11/contents/attributes",
           "url_root": "http://localhost:5000/"
         }
 
@@ -921,7 +1052,7 @@ Nodes
 
     REST URL::
 
-        http://localhost:5000/api/v3/nodes/ffe11/content/extras
+        http://localhost:5000/api/v4/nodes/ffe11/contents/extras
 
     Description:
 
@@ -938,20 +1069,21 @@ Nodes
               "trialStr": "trial"
             }
           },
+          "id": "ffe11",
           "method": "GET",
-          "path": "/api/v3/nodes/ffe11/content/extras",
+          "path": "/api/v4/nodes/ffe11/contents/extras",
           "query_string": "",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v3/nodes/ffe11/content/extras",
+          "url": "http://localhost:5000/api/v4/nodes/ffe11/contents/extras",
           "url_root": "http://localhost:5000/"
         }
 
 
-6. Getting a user-defined list of attributes/extras of a specific node
+8. Getting a user-defined list of attributes/extras of a specific node.
 
     REST URL::
 
-         http://localhost:5000/api/v3/codes/ffe11/content/attributes?alist=append_text,is_local
+         http://localhost:5000/api/v4/nodes/ffe11/contents/attributes?attributes_filter=append_text,is_local
 
     Description:
 
@@ -966,11 +1098,12 @@ Nodes
               "is_local": false
             }
           },
+          "id": "ffe11",
           "method": "GET",
-          "path": "/api/v3/codes/ffe11/content/attributes",
-          "query_string": "alist=append_text,is_local",
-          "resource_type": "codes",
-          "url": "http://localhost:5000/api/v3/codes/ffe11/content/attributes?alist=append_text,is_local",
+          "path": "/api/v4/nodes/ffe11/contents/attributes",
+          "query_string": "attributes_filter=append_text,is_local",
+          "resource_type": "nodes",
+          "url": "http://localhost:5000/api/v4/nodes/ffe11/contents/attributes?attributes_filter=append_text,is_local",
           "url_root": "http://localhost:5000/"
         }
 
@@ -978,7 +1111,7 @@ Nodes
 
     REST URL::
 
-        http://localhost:5000/api/v3/codes/ffe11/content/extras?elist=trialBool,trialInt
+        http://localhost:5000/api/v4/nodes/ffe11/contents/extras?extras_filter=trialBool,trialInt
 
     Description:
 
@@ -993,72 +1126,187 @@ Nodes
               "trialInt": 34
             }
           },
+          "id": "ffe11",
           "method": "GET",
-          "path": "/api/v3/codes/ffe11/content/extras",
-          "query_string": "elist=trialBool,trialInt",
-          "resource_type": "codes",
-          "url": "http://localhost:5000/api/v3/codes/ffe11/content/extras?elist=trialBool,trialInt",
+          "path": "/api/v4/nodes/ffe11/contents/extras",
+          "query_string": "extras_filter=trialBool,trialInt",
+          "resource_type": "nodes",
+          "url": "http://localhost:5000/api/v4/nodes/ffe11/contents/extras?extras_filter=trialBool,trialInt",
           "url_root": "http://localhost:5000/"
         }
 
-7. Getting all the attributes/extras of a specific node except a user-defined list
-
+9. Get comments of specific node.
 
     REST URL::
 
-        http://localhost:5000/api/v3/codes/ffe11/content/attributes?nalist=append_text,is_local
+        http://localhost:5000/api/v4/nodes/ffe11/contents/comments
 
     Description:
 
-        returns all the attributes of the *Node* object with ``uuid="ffe11..."`` except ``append_text`` and ``is_local``.
+        returns comments of the given node
 
     Response::
 
         {
-          "data": {
-            "attributes": {
-              "input_plugin": "quantumespresso.pw",
-              "prepend_text": "",
-              "remote_exec_path": "/project/espresso-5.1-intel/bin/pw.x"
-            }
-          },
-          "method": "GET",
-          "path": "/api/v3/codes/ffe11/content/attributes",
-          "query_string": "nalist=append_text,is_local",
-          "resource_type": "codes",
-          "url": "http://localhost:5000/api/v3/codes/ffe11/content/attributes?nalist=append_text,is_local",
-          "url_root": "http://localhost:5000/"
+            "data": {
+                "comments": ["This is test comment.", "Add another comment."]
+            },
+            "id": "ffe11",
+            "method": "GET",
+            "path": "/api/v4/nodes/ffe11/contents/comments/",
+            "query_string": "",
+            "resource_type": "nodes",
+            "url": "http://localhost:5000/api/v4/nodes/ffe11/contents/comments/",
+            "url_root": "http://localhost:5000/"
         }
 
+10. Get list of all the files/directories from node repository
 
     REST URL::
 
-        http://localhost:5000/api/v3/codes/ffe11/content/extras?nelist=trialBool,trialInt
+        http://localhost:5000/api/v4/nodes/ffe11/repo/list
 
     Description:
 
-        returns all the extras of the *Node* object with ``uuid="ffe11..."`` except ``trialBool`` and ``trialInt``.
+        returns list of all the files/directories from node repository
 
     Response::
 
         {
-          "data": {
-            "extras": {
-              "trialFloat": 3.0,
-              "trialStr": "trial"
-            }
-          },
-          "method": "GET",
-          "path": "/api/v3/codes/ffe11/content/extras",
-          "query_string": "nelist=trialBool,trialInt",
-          "resource_type": "codes",
-          "url": "http://localhost:5000/api/v3/codes/ffe11/content/extras?nelist=trialBool,trialInt",
-          "url_root": "http://localhost:5000/"
+            "data": {
+                "repo_list": [
+                    {
+                        "name": ".aiida",
+                        "type": "DIRECTORY"
+                    },
+                    {
+                        "name": "_aiidasubmit.sh",
+                        "type": "FILE"
+                    },
+                    {
+                        "name": "aiida.in",
+                        "type": "FILE"
+                    },
+                    {
+                        "name": "out",
+                        "type": "DIRECTORY"
+                    },
+                    {
+                        "name": "pseudo",
+                        "type": "DIRECTORY"
+                    }
+                ]
+            },
+            "id": "ffe11",
+            "method": "GET",
+            "path": "/api/v4/nodes/ffe11/repo/list/",
+            "query_string": "",
+            "resource_type": "nodes",
+            "url": "http://localhost:5000/api/v4/nodes/ffe11/repo/list/",
+            "url_root": "http://localhost:5000/"
         }
 
+11. Download a file from node repository
 
-.. note:: The same REST URLs supported for the resource ``nodes`` are also available with the derived resources, namely,
-    ``calculations`` and ``data``, just changing the resource field in the path.
+    REST URL::
+
+        http://localhost:5000/api/v4/nodes/ffe11/repo/contents?filename="aiida.in"
+
+    Description:
+
+        downloads the file ``aiida.in`` from node repository
+
+    Response::
+
+        It downloads the file.
+
+
+12. There are specific download formats (check ``nodes/download_formats`` endpoint) available to download different
+    types of nodes. This endpoint is used to download file in given format.
+
+    REST URL::
+
+        http://localhost:5000/api/v4/nodes/fafdsf/download?download_format=xsf
+
+    Description:
+
+        downloads structure node of uuid=fafdsf in ``xsf`` format
+
+    Response::
+
+        It downloads the file.
+
+Processes
+---------
+
+1.  Get a process report.
+
+    REST URL::
+
+        http://localhost:5000/api/v4/processes/8b95cd85/report
+
+    Description:
+
+        returns report of process of ``uuid="8b95cd85-...."``
+
+    Response::
+
+        {
+            "data": {
+                "logs": []
+            },
+            "id": "8b95cd85",
+            "method": "GET",
+            "path": "/api/v4/processes/8b95cd85/report",
+            "query_string": "",
+            "resource_type": "processes",
+            "url": "http://localhost:5000/api/v4/processes/8b95cd85/report",
+            "url_root": "http://localhost:5000/"
+        }
+
+CalcJobs
+--------
+
+1.  Get a list of input or output files of given calcjob node.
+
+    REST URL::
+
+        http://localhost:5000/api/v4/calcjobs/sffs241j/input_files
+
+    Description:
+
+        returns list of all input files of given calcjob node of ``uuid="sffs241j-...."``
+
+    Response::
+
+        {
+            "data": [
+                {
+                    "name": ".aiida",
+                    "type": "DIRECTORY"
+                },
+                {
+                    "name": "_aiidasubmit.sh",
+                    "type": "FILE"
+                },
+                {
+                    "name": "aiida.in",
+                    "type": "FILE"
+                },
+                {
+                    "name": "out",
+                    "type": "DIRECTORY"
+                },
+                ...
+            ],
+            "id": "sffs241j",
+            "method": "GET",
+            "path": "/api/v4/calcjobs/sffs241j/input_files",
+            "query_string": "",
+            "resource_type": "calcjobs",
+            "url": "http://localhost:5000/api/v4/calcjobs/sffs241j/input_files",
+            "url_root": "http://localhost:5000/"
+        }
 
 
 Users
@@ -1068,7 +1316,7 @@ Users
 
     REST URL::
 
-        http://localhost:5000/api/v3/users/
+        http://localhost:5000/api/v4/users/
 
     Description:
 
@@ -1093,11 +1341,12 @@ Users
               }
             ]
           },
+          "id": null,
           "method": "GET",
-          "path": "/api/v3/users/",
+          "path": "/api/v4/users/",
           "query_string": "",
           "resource_type": "users",
-          "url": "http://localhost:5000/api/v3/users/",
+          "url": "http://localhost:5000/api/v4/users/",
           "url_root": "http://localhost:5000/"
         }
 
@@ -1105,7 +1354,7 @@ Users
 
     REST URL::
 
-        http://localhost:5000/api/v3/users/?first_name=ilike="aii%"
+        http://localhost:5000/api/v4/users/?first_name=ilike="aii%"
 
     Description:
 
@@ -1124,11 +1373,12 @@ Users
               }
             ]
           },
+          "id": null,
           "method": "GET",
-          "path": "/api/v3/users/",
+          "path": "/api/v4/users/",
           "query_string": "first_name=ilike=%22aii%%22",
           "resource_type": "users",
-          "url": "http://localhost:5000/api/v3/users/?first_name=ilike=\"aii%\"",
+          "url": "http://localhost:5000/api/v4/users/?first_name=ilike=\"aii%\"",
           "url_root": "http://localhost:5000/"
         }
 
@@ -1140,7 +1390,7 @@ Groups
 
     REST URL::
 
-        http://localhost:5000/api/v3/groups/?limit=10&orderby=-user_id
+        http://localhost:5000/api/v4/groups/?limit=10&orderby=-user_id
 
     Description:
 
@@ -1158,7 +1408,6 @@ Groups
                 "id": 104,
                 "label": "SSSP_new_phonons_0p002",
                 "type_string": "",
-                "user_email": "aiida@theossrv5.epfl.ch",
                 "user_id": 2,
                 "uuid": "7c0e0744-8549-4eea-b1b8-e7207c18de32"
               },
@@ -1167,7 +1416,6 @@ Groups
                 "id": 102,
                 "label": "SSSP_cubic_old_phonons_0p025",
                 "type_string": "",
-                "user_email": "aiida@localhost",
                 "user_id": 1,
                 "uuid": "c4e22134-495d-4779-9259-6192fcaec510"
               },
@@ -1175,11 +1423,12 @@ Groups
 
             ]
           },
+          "id": null,
           "method": "GET",
-          "path": "/api/v3/groups/",
+          "path": "/api/v4/groups/",
           "query_string": "limit=10&orderby=-user_id",
           "resource_type": "groups",
-          "url": "http://localhost:5000/api/v3/groups/?limit=10&orderby=-user_id",
+          "url": "http://localhost:5000/api/v4/groups/?limit=10&orderby=-user_id",
           "url_root": "http://localhost:5000/"
         }
 
@@ -1187,7 +1436,7 @@ Groups
 
     REST URL::
 
-        http://localhost:5000/api/v3/groups/a6e5b
+        http://localhost:5000/api/v4/groups/a6e5b
 
     Description:
 
@@ -1209,10 +1458,11 @@ Groups
               }
             ]
           },
+          "id": "a6e5b,
           "method": "GET",
-          "path": "/api/v3/groups/a6e5b",
+          "path": "/api/v4/groups/a6e5b",
           "query_string": "",
           "resource_type": "groups",
-          "url": "http://localhost:5000/api/v3/groups/a6e5b",
+          "url": "http://localhost:5000/api/v4/groups/a6e5b",
           "url_root": "http://localhost:5000/"
         }

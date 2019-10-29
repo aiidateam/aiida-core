@@ -20,7 +20,7 @@ import copy
 from functools import reduce
 
 import six
-from six.moves import range, zip
+from six.moves import range, zip, map
 
 from .data import Data
 from aiida.common.constants import elements
@@ -896,16 +896,23 @@ class StructureData(Data):
         self.pbc = [True, True, True]
         self.clear_kinds()
 
+        pymatgen_version = tuple(map(int, get_pymatgen_version().split('.')))
         for site in struct.sites:
+
+            # site.species property first introduced in pymatgen version 2019.3.13
+            if pymatgen_version < (2019, 3, 13):
+                species_and_occu = site.species_and_occu
+            else:
+                species_and_occu = site.species
 
             if 'kind_name' in site.properties:
                 kind_name = site.properties['kind_name']
             else:
-                kind_name = build_kind_name(site.species_and_occu)
+                kind_name = build_kind_name(species_and_occu)
 
             inputs = {
-                'symbols': [x.symbol for x in site.species_and_occu.keys()],
-                'weights': [x for x in site.species_and_occu.values()],
+                'symbols': [x.symbol for x in species_and_occu.keys()],
+                'weights': [x for x in species_and_occu.values()],
                 'position': site.coords.tolist()
             }
 

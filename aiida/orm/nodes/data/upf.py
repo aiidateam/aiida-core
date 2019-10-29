@@ -13,9 +13,11 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import io
+import json
 import re
-
 import six
+
+from upf_to_json import upf_to_json
 
 from aiida.common.lang import classproperty
 from aiida.orm import GroupTypeString
@@ -493,3 +495,12 @@ class UpfData(SinglefileData):
         builder.order_by({Group: {'id': 'asc'}})
 
         return [group for group, in builder.all()]
+
+    # pylint: disable=unused-argument
+    def _prepare_json(self, main_file_name=''):
+        """
+        Returns UPF PP in json format.
+        """
+        with self.open() as file_handle:
+            upf_json = upf_to_json(file_handle.read(), fname=self.filename)
+        return json.dumps(upf_json).encode('utf-8'), {}

@@ -1,6 +1,6 @@
 # <img src="docs/source/images/AiiDA_transparent_logo.png" alt="AiiDA" width="200"/>
 
-AiiDA (www.aiida.net) is a python framework that aims to help researchers with managing complex workflows and making them fully reproducible.
+AiiDA (www.aiida.net) is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.
 
 |    | |
 |-----|----------------------------------------------------------------------------|

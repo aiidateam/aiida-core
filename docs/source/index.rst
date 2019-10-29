@@ -84,24 +84,10 @@ For developers
 
 .. toctree::
     :maxdepth: 1
-    :caption: Terms and Concepts
+    :caption: Reference Guide
     :hidden:
 
-    concepts/provenance
-    concepts/processes
-    concepts/calculations
-    concepts/workflows
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Workflow development
-    :hidden:
-
-    working/data
-    working/processes
-    working/functions
-    working/calculations
-    working/workflows
+    reference/index
 
 .. toctree::
    :maxdepth: 1

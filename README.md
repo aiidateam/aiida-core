@@ -7,8 +7,7 @@ AiiDA (www.aiida.net) is a python framework that aims to help researchers with m
 |Latest release| [![PyPI version](https://badge.fury.io/py/aiida-core.svg)](https://badge.fury.io/py/aiida-core) [![conda-forge](https://img.shields.io/conda/vn/conda-forge/aiida-core.svg?style=flat)](https://anaconda.org/conda-forge/aiida-core) [![PyPI pyversions](https://img.shields.io/pypi/pyversions/aiida-core.svg)](https://pypi.python.org/pypi/aiida-core/) |
 |Getting help| [![Docs status](https://readthedocs.org/projects/aiida-core/badge)](http://aiida-core.readthedocs.io/) [![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/aiidausers)
 |Build status| [![Build Status](https://travis-ci.org/aiidateam/aiida-core.svg?branch=develop)](https://travis-ci.org/aiidateam/aiida-core) [![Coverage Status](https://coveralls.io/repos/github/aiidateam/aiida-core/badge.svg?branch=develop)](https://coveralls.io/github/aiidateam/aiida-core?branch=develop) |
-|License| [![License](https://img.shields.io/github/license/aiidateam/aiida-core.svg)](https://github.com/aiidateam/aiida-core/blob/develop/LICENSE.txt)|
-|Activity| [![PyPI-downloads](https://img.shields.io/pypi/dm/aiida-core.svg?style=flat)](https://pypistats.org/packages/aiida-core) [![HitCount](http://hits.dwyl.io/aiidateam/aiida-core.svg)](http://hits.dwyl.io/aiidateam/aiida-core) [![Commit Activity](https://img.shields.io/github/commit-activity/m/aiidateam/aiida-core)](https://github.com/aiidateam/aiida-core/pulse)
+|Activity| [![PyPI-downloads](https://img.shields.io/pypi/dm/aiida-core.svg?style=flat)](https://pypistats.org/packages/aiida-core) [![Commit Activity](https://img.shields.io/github/commit-activity/m/aiidateam/aiida-core)](https://github.com/aiidateam/aiida-core/pulse)
 |Development| [![Percentage of issues still open](https://isitmaintained.com/badge/open/aiidateam/aiida-core.svg)](https://isitmaintained.com/project/aiidateam/aiida-core "Percentage of issues still open") [![Bugs](https://img.shields.io/github/issues/aiidateam/aiida-core/type%2Fbug.svg)](https://github.com/aiidateam/aiida-core/issues?q=is%3Aopen+is%3Aissue+label%3A%22type%2Fbug%22+sort%3Areactions-%2B1-desc)   [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/aiidateam/aiida-core.svg)](http://isitmaintained.com/project/aiidateam/aiida-core "Average time to resolve an issue")|
 |Contributing| [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) [![GitHub issues by-label](https://img.shields.io/github/issues/aiidateam/aiida-core/good%20first%20issue)](https://github.com/aiidateam/aiida-core/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)  [Contributor Guide](https://github.com/aiidateam/aiida-core/wiki)|
 
@@ -50,7 +49,8 @@ If you use AiiDA in your research, please consider citing the AiiDA paper:
 > (2016); <https://doi.org/10.1016/j.commatsci.2015.09.013>;
 > <http://www.aiida.net>.
 
-## License
+## License [![License](https://img.shields.io/github/license/aiidateam/aiida-core.svg)](https://github.com/aiidateam/aiida-core/blob/develop/LICENSE.txt)
+
 
 AiiDA is distributed under the MIT open source license (see [`LICENSE.txt`](LICENSE.txt)).
 

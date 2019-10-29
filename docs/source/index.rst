@@ -91,31 +91,11 @@ For developers
 
 .. toctree::
    :maxdepth: 1
-   :caption: AiiDA plugin development
+   :caption: Development
    :hidden:
 
-   developer_guide/plugins/basics
-   developer_guide/plugins/quickstart
-   developer_guide/plugins/entry_points
-   developer_guide/plugins/documenting
-   developer_guide/plugins/plugin_tests
-   developer_guide/plugins/publish
-   developer_guide/plugins/update_plugin
-
-.. toctree::
-    :maxdepth: 1
-    :caption: AiiDA core development
-    :hidden:
-
-    developer_guide/core/internals
-    developer_guide/core/transport
-    developer_guide/core/modifying_the_schema
-    developer_guide/core/extend_restapi
-    developer_guide/core/caching
-    developer_guide/core/plugin_system
-    developer_guide/tools/sphinx_cheatsheet
-    developer_guide/tools/visual_aids
-    developer_guide/design/changes
+   developer_guide/plugins
+   developer_guide/core
 
 .. toctree::
     :maxdepth: 1

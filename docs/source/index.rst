@@ -103,6 +103,7 @@ For developers
     :hidden:
 
     apidoc/aiida
+    restapi/index
 
 ***********
 How to cite

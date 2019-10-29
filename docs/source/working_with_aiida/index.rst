@@ -174,15 +174,6 @@ Troubleshooting
     troubleshooting.rst
 
 ========
-REST API
-========
-
-.. toctree::
-    :maxdepth: 4
-
-    ../restapi/index.rst
-
-========
 Cookbook
 ========
 

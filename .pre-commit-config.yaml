@@ -3,14 +3,12 @@
   hooks:
   - id: trailing-whitespace
   - id: double-quote-string-fixer
+  - id: check-yaml
 
-- repo: local
+- repo: https://github.com/pre-commit/mirrors-yapf
+  rev: '80b9cd2f0f3b1f3456a77eff3ddbaf08f18c08ae'
   hooks:
   - id: yapf
-    name: yapf
-    entry: yapf
-    language: system
-    types: [python]
     args: ["-i"]
     exclude: &exclude_files >
       (?x)^(
@@ -164,7 +162,11 @@
         .ci/workchains.py|
       )$
 
-  # prospector: collection of linters
+
+# prospector: collection of linters
+- repo: https://github.com/PyCQA/prospector
+  rev: '7c471177f155d7020eada72cca2e83a581b81300'
+  hooks:
   - id: prospector
     language: system
     types: [file, python]
@@ -173,6 +175,75 @@
     description: "This hook runs Prospector: https://github.com/landscapeio/prospector"
     entry: prospector
 
+# modernizer: make sure our code-base is Python 3 ready
+- repo: https://github.com/python-modernize/python-modernize.git
+  rev: b8e29d95ed6e0f03ab82280ec0ab36136472e9c4
+  hooks:
+  - id: python-modernize
+    exclude: >
+      (?x)^(
+        docs/.*|
+        aiida/engine/utils.py  # exclude because tornado WaitIterator.next() does not work with next(...)
+      )$
+    args:
+      - --write
+      - --nobackups
+# Following are all the fixers in python-modernize.
+# Those marked as 'done' were run at some point and their results checked
+# and incorporated if necessary, but they can't be applied without breaking valid cases
+      - --fix=apply
+      - --fix=except
+      - --fix=exec
+      - --fix=execfile
+      - --fix=exitfunc
+      - --fix=funcattrs
+#done:      - --fix=has_key
+#optional:      - --fix=idioms
+#done:      - --fix=long
+      - --fix=methodattrs
+      - --fix=ne
+      - --fix=numliterals
+      - --fix=operator
+      - --fix=paren
+      - --fix=reduce
+      - --fix=renames
+      - --fix=repr
+#optional:      - --fix=set_literal
+      - --fix=standarderror
+      - --fix=sys_exc
+      - --fix=throw
+      - --fix=tuple_params
+      - --fix=types
+#optional:      - --fix=ws_comma
+      - --fix=xreadlines
+      - --fix=basestring
+      - --fix=classic_division
+#done:      - --fix=dict_six
+      - --fix=file
+      - --fix=filter
+      - --fix=import
+      - --fix=imports_six
+      - --fix=input_six
+      - --fix=int_long_tuple
+      - --fix=itertools_imports_six
+      - --fix=itertools_six
+      - --fix=map
+      - --fix=metaclass
+      - --fix=next
+#optional:      - --fix=open
+      - --fix=print
+      - --fix=raise
+      - --fix=raise_six
+      - --fix=unichr
+      - --fix=unicode
+      - --fix=unicode_future
+      - --fix=unicode_type
+      - --fix=urllib_six
+      - --fix=xrange_six
+      - --fix=zip
+
+- repo: local
+  hooks:
   - id: rtd-requirements
     name: Requirements for RTD
     entry: python ./docs/update_req_for_rtd.py --pre-commit
@@ -240,74 +311,4 @@
       )$
     pass_filenames: false
 
-# modernizer: make sure our code-base is Python 3 ready
-- repo: https://github.com/python-modernize/python-modernize.git
-  rev: a234ce4e185cf77a55632888f1811d83b4ad9ef2
-  hooks:
-  - id: python-modernize
-    exclude: >
-      (?x)^(
-        docs/.*|
-        aiida/engine/utils.py  # exclude because tornado WaitIterator.next() does not work with next(...)
-      )$
-    args:
-      - --write
-      - --nobackups
-# Following are all the fixers in python-modernize.
-# Those marked as 'done' were run at some point and their results checked
-# and incorporated if necessary, but they can't be applied without breaking valid cases
-      - --fix=apply
-      - --fix=except
-      - --fix=exec
-      - --fix=execfile
-      - --fix=exitfunc
-      - --fix=funcattrs
-#done:      - --fix=has_key
-#optional:      - --fix=idioms
-#done:      - --fix=long
-      - --fix=methodattrs
-      - --fix=ne
-      - --fix=numliterals
-      - --fix=operator
-      - --fix=paren
-      - --fix=reduce
-      - --fix=renames
-      - --fix=repr
-#optional:      - --fix=set_literal
-      - --fix=standarderror
-      - --fix=sys_exc
-      - --fix=throw
-      - --fix=tuple_params
-      - --fix=types
-#optional:      - --fix=ws_comma
-      - --fix=xreadlines
-      - --fix=basestring
-      - --fix=classic_division
-#done:      - --fix=dict_six
-      - --fix=file
-      - --fix=filter
-      - --fix=import
-      - --fix=imports_six
-      - --fix=input_six
-      - --fix=int_long_tuple
-      - --fix=itertools_imports_six
-      - --fix=itertools_six
-      - --fix=map
-      - --fix=metaclass
-      - --fix=next
-#optional:      - --fix=open
-      - --fix=print
-      - --fix=raise
-      - --fix=raise_six
-      - --fix=unichr
-      - --fix=unicode
-      - --fix=unicode_future
-      - --fix=unicode_type
-      - --fix=urllib_six
-      - --fix=xrange_six
-      - --fix=zip
 
-- repo: git://github.com/pre-commit/pre-commit-hooks
-  rev: v1.1.1
-  hooks:
-  - id: check-yaml

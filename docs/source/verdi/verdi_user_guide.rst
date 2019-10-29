@@ -440,6 +440,21 @@ Below is a list with all available subcommands.
       show          Show information for a given group.
 
 
+.. _verdi_help:
+
+``verdi help``
+--------------
+
+::
+
+    Usage:  [OPTIONS] [COMMAND]
+
+      Show help for given command.
+
+    Options:
+      --help  Show this message and exit.
+
+
 .. _verdi_import:
 
 ``verdi import``

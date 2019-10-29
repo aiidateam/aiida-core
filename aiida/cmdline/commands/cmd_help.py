@@ -7,19 +7,33 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-arguments, wrong-import-position
-"""The `verdi` command line interface."""
+"""Command for `verdi help`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import click_completion
 
-# Activate the completion of parameter types provided by the click_completion package
-click_completion.init()
+import sys
+import click
 
-# Import to populate the `verdi` sub commands
-from aiida.cmdline.commands import (
-    cmd_calcjob, cmd_code, cmd_comment, cmd_completioncommand, cmd_computer, cmd_config, cmd_data, cmd_database,
-    cmd_daemon, cmd_devel, cmd_export, cmd_graph, cmd_group, cmd_help, cmd_import, cmd_node, cmd_plugin, cmd_process,
-    cmd_profile, cmd_rehash, cmd_restapi, cmd_run, cmd_setup, cmd_shell, cmd_status, cmd_user
-)
+from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.utils import echo
+
+
+@verdi.command('help')
+@click.pass_context
+@click.argument('command', type=click.STRING, required=False)
+def verdi_help(ctx, command):
+    """Show help for given command."""
+
+    cmdctx = ctx.parent
+
+    if command:
+        cmd = verdi.get_command(ctx.parent, command)
+
+        if not cmd:
+            echo.echo_error("command '{}' not found".format(command))
+            sys.exit(1)
+
+        cmdctx = click.Context(cmd, info_name=cmd.name, parent=ctx.parent)
+
+    echo.echo(cmdctx.get_help())

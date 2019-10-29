@@ -121,7 +121,7 @@ class Profile(object):  # pylint: disable=too-many-public-methods
 
     @property
     def default_user(self):
-        return self._attributes[self.KEY_DEFAULT_USER]
+        return self._attributes.get(self.KEY_DEFAULT_USER, None)
 
     @default_user.setter
     def default_user(self, value):

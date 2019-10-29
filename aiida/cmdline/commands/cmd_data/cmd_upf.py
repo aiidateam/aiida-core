@@ -17,7 +17,8 @@ import os
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.params import arguments, options
+from aiida.cmdline.params import arguments, options, types
+from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
 from aiida.cmdline.utils import decorators, echo
 
 
@@ -136,3 +137,23 @@ def upf_import(filename):
 
     node, _ = UpfData.get_or_create(filename)
     echo.echo_success('Imported: {}'.format(node))
+
+
+@upf.command('export')
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:upf',)))
+@options.EXPORT_FORMAT(
+    type=click.Choice(['json']),
+    default='json',
+)
+@export_options
+@decorators.with_dbenv()
+def upf_export(**kwargs):
+    """Export `UpfData` object to file."""
+    node = kwargs.pop('datum')
+    output = kwargs.pop('output')
+    fmt = kwargs.pop('fmt')
+    force = kwargs.pop('force')
+
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
+
+    data_export(node, output, fmt, other_args=kwargs, overwrite=force)

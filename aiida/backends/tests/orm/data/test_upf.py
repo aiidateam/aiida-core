@@ -17,12 +17,66 @@ from __future__ import absolute_import
 import errno
 import tempfile
 import shutil
+import json
 import os
+import numpy
+from numpy import array, isclose
+from six.moves import zip
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ParsingError
 from aiida.orm.nodes.data.upf import parse_upf
+
+
+def isnumeric(vector):
+    """Check if elements of iterable `x` are numbers."""
+    # pylint: disable=invalid-name
+    numeric_types = (float, int, numpy.float, numpy.float64, numpy.int64, numpy.int)
+    for xi in vector:
+        if isinstance(xi, numeric_types):
+            yield True
+        else:
+            yield False
+
+
+def compare_dicts(dd1, dd2):
+    """Compare two dictionaries taking into account rounding errors."""
+
+    # pylint: disable=too-many-branches,too-many-nested-blocks,invalid-name
+    def compare(dd1, dd2):
+        """compare dictionaries, returns a generator."""
+        if not isinstance(dd1, dict) or not isinstance(dd2, dict):
+            yield False
+
+        for k in set(dd1) | set(dd2):
+            if isinstance(dd1[k], dict):
+                for res in compare(dd1[k], dd2[k]):
+                    yield res
+            elif isinstance(dd1[k], list):
+                # check if it is a list of numbers
+                if all(isnumeric(dd1[k])):
+                    yield isclose(array(dd1[k]).astype(float), array(dd2[k]).astype(float)).all()
+                else:
+                    for d1, d2 in zip(dd1[k], dd2[k]):
+                        if isinstance(d1, dict):
+                            # compare dictionaries
+                            for res in compare(d1, d2):
+                                yield res
+                        elif isinstance(d1, list):
+                            # iterate over list and compare numbers with tolerance
+                            for xi, yi in zip(d1, d2):
+                                if isinstance(xi, (float, numpy.float64)):
+                                    yield isclose(xi, yi)
+                                else:
+                                    yield xi == yi
+            else:
+                if isinstance(dd1[k], (int, float, numpy.float64)):
+                    yield isclose(dd1[k], dd2[k])
+                else:
+                    yield dd1[k] == dd2[k]
+
+    return all(compare(dd1, dd2))
 
 
 class TestUpfParser(AiidaTestCase):
@@ -34,8 +88,10 @@ class TestUpfParser(AiidaTestCase):
         filepath_base = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos'))
         filepath_barium = os.path.join(filepath_base, 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
         filepath_oxygen = os.path.join(filepath_base, 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF')
+        filepath_carbon = os.path.join(filepath_base, 'C_pbe_v1.2.uspp.F.UPF')
         cls.pseudo_barium = orm.UpfData(file=filepath_barium).store()
         cls.pseudo_oxygen = orm.UpfData(file=filepath_oxygen).store()
+        cls.pseudo_carbon = orm.UpfData(file=filepath_carbon).store()
 
     def setUp(self):
         """Setup a temporary directory to store UPF files."""
@@ -260,6 +316,30 @@ class TestUpfParser(AiidaTestCase):
         # Check if parser raises the desired ParsingError
         with self.assertRaises(ParsingError):
             _ = parse_upf(path_to_upf, check_filename=True)
+
+    def test_upf1_to_json_carbon(self):
+        """Test UPF check Oxygen UPF1 pp conversion"""
+        # pylint: disable=protected-access
+        json_string, _ = self.pseudo_carbon._prepare_json()
+        filepath_base = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos'))
+        reference_dict = json.load(open(os.path.join(filepath_base, 'C.json'), 'r'))
+        pp_dict = json.loads(json_string)
+        # remove path information
+        pp_dict['pseudo_potential']['header']['original_upf_file'] = ''
+        reference_dict['pseudo_potential']['header']['original_upf_file'] = ''
+        self.assertTrue(compare_dicts(pp_dict, reference_dict))
+
+    def test_upf2_to_json_barium(self):
+        """Test UPF check Bariium UPF1 pp conversion"""
+        # pylint: disable=protected-access
+        json_string, _ = self.pseudo_barium._prepare_json()
+        filepath_base = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos'))
+        reference_dict = json.load(open(os.path.join(filepath_base, 'Ba.json'), 'r'))
+        pp_dict = json.loads(json_string)
+        # remove path information
+        pp_dict['pseudo_potential']['header']['original_upf_file'] = ''
+        reference_dict['pseudo_potential']['header']['original_upf_file'] = ''
+        self.assertTrue(compare_dicts(pp_dict, reference_dict))
 
     def test_invalid_element_upf_v1(self):
         """Test parsers exception on invalid element name in UPF v1."""

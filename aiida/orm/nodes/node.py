@@ -986,7 +986,7 @@ class Node(Entity):
 
         return self.store(with_transaction)
 
-    def store(self, with_transaction=True, use_cache=None):
+    def store(self, with_transaction=True, use_cache=None):  # pylint: disable=arguments-differ
         """Store the node in the database while saving its attributes and repository directory.
 
         After being called attributes cannot be changed anymore! Instead, extras can be changed only AFTER calling
@@ -997,7 +997,6 @@ class Node(Entity):
 
         :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
-        # pylint: disable=arguments-differ
         from aiida.manage.caching import get_use_cache
 
         if use_cache is not None:

@@ -20,6 +20,7 @@ from aiida.backends.tests.utils.archives import get_archive_file, get_json_files
 from aiida.backends.tests.utils.configuration import with_temp_dir
 from aiida.tools.importexport import import_data, EXPORT_VERSION as newest_version
 from aiida.tools.importexport.migration import migrate_recursively, verify_metadata_version
+from aiida.common.utils import Capturing
 
 
 class TestExportFileMigration(AiidaTestCase):
@@ -161,7 +162,8 @@ class TestExportFileMigration(AiidaTestCase):
         # Make sure migrate_recursively throws a critical message and raises SystemExit
         for metadata in wrong_version_metadatas:
             with self.assertRaises(SystemExit) as exception:
-                new_version = migrate_recursively(metadata, {}, None)
+                with Capturing(capture_stderr=True):
+                    new_version = migrate_recursively(metadata, {}, None)
 
                 self.assertIn(
                     'Critical: Cannot migrate from version {}'.format(metadata['export_version']),
@@ -184,7 +186,9 @@ class TestExportFileMigration(AiidaTestCase):
 
         # Check
         with self.assertRaises(SystemExit) as exception:
-            new_version = migrate_recursively(metadata, {}, None)
+
+            with Capturing(capture_stderr=True):
+                new_version = migrate_recursively(metadata, {}, None)
 
             self.assertIn(
                 'Critical: Your export file is already at the newest export version {}'.format(

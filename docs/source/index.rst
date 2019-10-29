@@ -80,7 +80,6 @@ For developers
     :hidden:
 
     working_with_aiida/index
-    import_export/index
 
 
 .. toctree::

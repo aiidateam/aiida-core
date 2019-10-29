@@ -68,9 +68,10 @@ This is possible via the interactive ``verdi shell`` and via python scripts:
     scripting
     daemon_service
 
+===========
+Manage data
+===========
 
-
-==========
 Data types
 ==========
 
@@ -82,7 +83,6 @@ Data types
     ../datatypes/bands
     ../datatypes/functionality
 
-======
 Groups
 ======
 
@@ -90,6 +90,66 @@ Groups
     :maxdepth: 4
 
     groups
+
+Querying data
+=============
+
+.. toctree::
+    :maxdepth: 4
+
+    ../querying/querybuilder/intro
+    ../querying/querybuilder/append
+    ../querying/querybuilder/queryhelp
+    ../querying/backend
+
+Result manager
+==============
+
+.. toctree::
+    :maxdepth: 4
+
+    resultmanager.rst
+
+Deleting Nodes
+==============
+.. toctree::
+    :maxdepth: 2
+
+    deleting_nodes.rst
+
+Provenance Graphs
+=================
+.. toctree::
+    :maxdepth: 2
+
+    visualising_graphs/visualising_graphs
+
+Backups
+=======
+
+.. toctree::
+    :maxdepth: 4
+
+    ../backup/index.rst
+
+Import and Export
+=================
+
+.. toctree::
+    :maxdepth: 4
+
+    ../import_export/main
+    ../import_export/external_dbs
+
+=======
+Caching
+=======
+
+.. toctree::
+    :maxdepth: 4
+
+    caching.rst
+
 
 ==========
 Schedulers
@@ -103,46 +163,6 @@ Interfaces have been written for some of the most used schedulers.
     :maxdepth: 4
 
     ../scheduler/index
-
-=============
-Querying data
-=============
-
-.. toctree::
-    :maxdepth: 4
-
-    ../querying/querybuilder/intro
-    ../querying/querybuilder/append
-    ../querying/querybuilder/queryhelp
-    ../querying/backend
-
-=======
-Caching
-=======
-
-.. toctree::
-    :maxdepth: 4
-
-    caching.rst
-
-==============
-Result manager
-==============
-
-.. toctree::
-    :maxdepth: 4
-
-    resultmanager.rst
-
-
-=======
-Backups
-=======
-
-.. toctree::
-    :maxdepth: 4
-
-    ../backup/index.rst
 
 ===============
 Troubleshooting
@@ -170,21 +190,4 @@ Cookbook
     :maxdepth: 4
 
     cookbook.rst
-
-=================
-Provenance Graphs
-=================
-.. toctree::
-    :maxdepth: 2
-
-    visualising_graphs/visualising_graphs
-
-
-==============
-Deleting Nodes
-==============
-.. toctree::
-    :maxdepth: 2
-
-    deleting_nodes.rst
 

@@ -118,16 +118,8 @@
       "unittest2==1.1.0; python_version<'3.5'"
     ],
     "dev_precommit": [
-      "astroid==1.6.6; python_version<'3.0'",
-      "astroid==2.2.5; python_version>='3.0'",
-      "pep8-naming==0.8.2",
-      "pre-commit==1.18.3",
-      "prospector==1.1.7",
-      "pylint-django==0.11.1; python_version<'3.0'",
-      "pylint==1.9.4; python_version<'3.0'",
-      "pylint==2.3.1; python_version>='3.0'",
-      "toml==0.10.0",
-      "yapf==0.28.0"
+      "pre-commit==1.20.0",
+      "toml==0.10.0"
     ],
     "bpython": [
       "bpython==0.17.1"

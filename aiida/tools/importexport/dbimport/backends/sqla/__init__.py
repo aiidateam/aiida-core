@@ -695,7 +695,8 @@ def import_data_sqla(
                 print('COMMITTING EVERYTHING...')
             session.commit()
         except:
-            print('Rolling back')
+            if not silent:
+                print('Rolling back')
             session.rollback()
             raise
 

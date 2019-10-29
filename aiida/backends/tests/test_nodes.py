@@ -1606,248 +1606,216 @@ class TestNodeDeletion(AiidaTestCase):
 
     def test_deletion_non_existing_pk(self):
         """Verify that passing a non-existing pk should not raise."""
-        nodes = self._create_minimal_graph()
-        existing_pks = [node.pk for node in nodes]
-
-        non_existing_pk = 1
-
-        # Starting from pk=1, find a pk that does not exist
-        while (True):
-            if non_existing_pk not in existing_pks:
-                break
-
-            non_existing_pk += 1
-
+        non_existing_pk = -1
         with Capturing():
             delete_nodes([non_existing_pk], force=True)
 
 #   TEST BASIC CASES
 
-    def _create_minimal_graph(self):
+    def _create_simple_graph(self):
         """
-        Creates a minimal graph which has one parent workflow (W2) that calls
-        a child workflow (W1) which calls a calculation function (C0). There
-        is one input (DI) and one output (DO). It has at least one link of
-        each class:
+        Creates a simple graph which has one parent workflow (WN2) that calls a child
+        workflow (WN1) and then a calculation (CN2). The child workflow (WN1) calls
+        its own calculation (CN1). There is one input data node (DNI), on middle data
+        node (DNM) and one output data node (DNO). There is at least one link of each
+        type and there are two "one-step" calculation calls (WN1 -> CN1 and WN2 -> CN2)
+        and one "two-step" calculation call (WN2 -> WN1 -> CN1).
 
-        * CALL_WORK from W2 to W1.
-        * CALL_CALC from W1 to C0.
-        * INPUT_CALC from DI to C0 and CREATE from C0 to DO.
-        * INPUT_WORK from DI to W1 and RETURN from W1 to DO.
-        * INPUT_WORK from DI to W2 and RETURN from W2 to DO.
+        The existing links are:
 
-        This graph looks like this::
+        * CALL_WORK from WN2 to WN1.
+        * CALL_CALC from WN2 to CN2.
+        * CALL_CALC from WN1 to CN1.
+        * INPUT_WORK from DNI to WN1 and RETURN from WN1 to DNM.
+        * INPUT_WORK from DNI to WN2 and RETURN from WN2 to DNO.
+        * INPUT_CALC from DNI to CN1 and CREATE from CN1 to DNM.
+        * INPUT_CALC from DNM to CN2 and CREATE from CN2 to DNO.
 
-                  input_work     +----+     return
-              +----------------> | W2 | ---------------+
-              |                  +----+                |
-              |                    |                   |
-              |                    | call_work         |
-              |                    |                   |
-              |                    v                   |
-              |     input_work   +----+    return      |
-              |  +-------------> | W1 | ------------+  |
-              |  |               +----+             |  |
-              |  |                 |                |  |
-              |  |                 | call_calc      |  |
-              |  |                 |                |  |
-              |  |                 v                v  v
-            +------+ input_calc  +----+  create   +------+
-            |  DI  | ----------> | C0 | --------> |  DO  |
-            +------+             +----+           +------+
+        And this graph looks like this::
+
+                            input_work             +-----+              return
+               +---------------------------------> | WN2 | ----------------------------------+
+               |                                   +-----+                                   |
+               |                        call_work     |      call_calc                       |
+               |                    +-----------------+--------------------+                 |
+               |                    |                                      |                 |
+               |                    v                                      |                 |
+               |    input_work   +-----+    return                         |                 |
+               +---------------> | WN1 | -------------+                    |                 |
+               |                 +-----+              |                    |                 |
+               |                    |                 |                    |                 |
+               |                    | call_calc       |                    |                 |
+               |                    |                 |                    |                 |
+               |                    v                 v                    v                 v
+            +-----+  input_calc  +-----+  create   +-----+  input_calc  +-----+  create   +-----+
+            | DNI | -----------> | CN1 | --------> | DNM | -----------> | CN2 | --------> | DNO |
+            +-----+              +-----+           +-----+              +-----+           +-----+
         """
 
-        data_i = orm.Data().store()
-        data_o = orm.Data().store()
+        dni = orm.Data().store()
+        dnm = orm.Data().store()
+        dno = orm.Data().store()
 
-        calc_0 = orm.CalculationNode()
-        work_1 = orm.WorkflowNode()
-        work_2 = orm.WorkflowNode()
+        cn1 = orm.CalculationNode()
+        cn2 = orm.CalculationNode()
+        wn1 = orm.WorkflowNode()
+        wn2 = orm.WorkflowNode()
 
-        calc_0.add_incoming(data_i, link_type=LinkType.INPUT_CALC, link_label='inpcalc')
-        work_1.add_incoming(data_i, link_type=LinkType.INPUT_WORK, link_label='inpwork')
-        calc_0.add_incoming(work_1, link_type=LinkType.CALL_CALC, link_label='callcalc')
-        work_1.add_incoming(work_2, link_type=LinkType.CALL_WORK, link_label='callwork')
+        wn1.add_incoming(dni, link_type=LinkType.INPUT_WORK, link_label='inpwork1')
+        wn2.add_incoming(dni, link_type=LinkType.INPUT_WORK, link_label='inpwork2')
+        cn1.add_incoming(dni, link_type=LinkType.INPUT_CALC, link_label='inpcalc1')
+        cn2.add_incoming(dnm, link_type=LinkType.INPUT_CALC, link_label='inpcalc2')
 
-        work_2.store()
-        work_1.store()
-        calc_0.store()
+        cn1.add_incoming(wn1, link_type=LinkType.CALL_CALC, link_label='callcalc1')
+        cn2.add_incoming(wn2, link_type=LinkType.CALL_CALC, link_label='callcalc2')
+        wn1.add_incoming(wn2, link_type=LinkType.CALL_WORK, link_label='callwork0')
 
-        data_o.add_incoming(calc_0, link_type=LinkType.CREATE, link_label='create0')
-        data_o.add_incoming(work_1, link_type=LinkType.RETURN, link_label='return1')
-        data_o.add_incoming(work_2, link_type=LinkType.RETURN, link_label='return2')
+        wn2.store()
+        wn1.store()
+        cn2.store()
+        cn1.store()
 
-        return data_i, data_o, calc_0, work_1, work_2
+        dnm.add_incoming(cn1, link_type=LinkType.CREATE, link_label='create1')
+        dnm.add_incoming(wn1, link_type=LinkType.RETURN, link_label='return1')
+        dno.add_incoming(cn2, link_type=LinkType.CREATE, link_label='create2')
+        dno.add_incoming(wn2, link_type=LinkType.RETURN, link_label='return2')
+
+        return dni, dnm, dno, cn1, cn2, wn1, wn2
 
     def test_delete_cases(self):
         """
-        Using a minimal graph (almost only one of each type of link) will test all
-        the conditions established for the consistent deletion of nodes.
+        Using a simple graph to test all the conditions established for the
+        consistent deletion of nodes. The first part tests the default behavior,
+        which is to delete every node within the highest level workflows that
+        link to the targetted nodes (except for non targetted inputs).
+        The second part tests the available options to customize deletion in
+        their expected use cases.
         """
 
-        # By default deleting input data should eliminate everything that it
-        # generated forwards.
-        di, do, c0, w1, w2 = self._create_minimal_graph()
-        uuids_check_existence = [n.uuid for n in ()]
-        uuids_check_deleted = [n.uuid for n in (di, do, c0, w1, w2)]
-        with Capturing():
-            delete_nodes([di.pk], force=True)
-        self._check_existence(uuids_check_existence, uuids_check_deleted)
-
-        # By default deleting output data should eliminate the creating calcs and
-        # returning workflows (and backwards logic should be eliminated but not the
-        # backwards data)
-        di, do, c0, w1, w2 = self._create_minimal_graph()
-        uuids_check_existence = [n.uuid for n in (di,)]
-        uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
-        with Capturing():
-            delete_nodes([do.pk], force=True)
-        self._check_existence(uuids_check_existence, uuids_check_deleted)
-
-        # By default deleting a calculation should eliminate its output data but
-        # keep any inputs, and eliminate all logical backwards provenance.
-        di, do, c0, w1, w2 = self._create_minimal_graph()
-        uuids_check_existence = [n.uuid for n in (di,)]
-        uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
-        with Capturing():
-            delete_nodes([c0.pk], force=True)
-        self._check_existence(uuids_check_existence, uuids_check_deleted)
-
-        # But you can prevent data output deletion by unsetting the corresponding
-        # keyword in the call
-        di, do, c0, w1, w2 = self._create_minimal_graph()
-        uuids_check_existence = [n.uuid for n in (di, do)]
-        uuids_check_deleted = [n.uuid for n in (c0, w1, w2)]
-        with Capturing():
-            delete_nodes([c0.pk], force=True, create_forward=False)
-        self._check_existence(uuids_check_existence, uuids_check_deleted)
-
-        # By default deleting a workflow should delete all backwards logical provenance
-        # but not forwards provenance, and should not affect input or output data.
-        #  > deleting w1 only deletes w2.
-        #  > deleting w2 doesn't affect anything else.
-        di, do, c0, w1, w2 = self._create_minimal_graph()
-        uuids_check_existence = [n.uuid for n in (di, do, c0, w1)]
-        uuids_check_deleted = [n.uuid for n in (w2,)]
-        with Capturing():
-            delete_nodes([w2.pk], force=True)
-        self._check_existence(uuids_check_existence, uuids_check_deleted)
-
-        di, do, c0, w1, w2 = self._create_minimal_graph()
-        uuids_check_existence = [n.uuid for n in (di, do, c0)]
-        uuids_check_deleted = [n.uuid for n in (w1, w2)]
+        # By default, targetting any workflow will propagate to any incoming or
+        # outgoing workflows connected to it, therefore resulting in the deletion
+        # of the highest level workflow that contains the targetted workflow and
+        # of every other workflow called within it.
+        # This will also delete any calculation called by all those workflows, and
+        # also of any data node that was created by those calculations.
+        # The end result is the deletion of all nodes contained within the highest
+        # level workflow, except for the inputs that were not targetted.
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di]]
+        uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
         with Capturing():
             delete_nodes([w1.pk], force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-        # You can also delete all generated stuff by a workflow by activating
-        # the keyword to go forwards (THIS MAY DELETE ALL YOUR STUFF)
-        di, do, c0, w1, w2 = self._create_minimal_graph()
-        uuids_check_existence = [n.uuid for n in (di,)]
-        uuids_check_deleted = [n.uuid for n in (do, c0, w1, w2)]
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di]]
+        uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
         with Capturing():
-            delete_nodes([w2.pk], force=True, call_calc_forward=True, call_work_forward=True)
+            delete_nodes([w2.pk], force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-        # But you can also be more carefull and not delete the final data
-        # when you do this
-        di, do, c0, w1, w2 = self._create_minimal_graph()
-        uuids_check_existence = [n.uuid for n in (di, do)]
-        uuids_check_deleted = [n.uuid for n in (c0, w1, w2)]
+        # By default, targetting a calculation will have the same effect because
+        # it will also delete any calling workflows and therefore the previously
+        # described chain will activate.
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di]]
+        uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
         with Capturing():
-            delete_nodes([w2.pk], force=True, call_calc_forward=True, call_work_forward=True, create_forward=False)
+            delete_nodes([c1.pk], force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-        # Or even keep all data provenance (calcs but not works)
-        di, do, c0, w1, w2 = self._create_minimal_graph()
-        uuids_check_existence = [n.uuid for n in (di, do, c0)]
-        uuids_check_deleted = [n.uuid for n in (w1, w2)]
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di]]
+        uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
         with Capturing():
-            delete_nodes([w2.pk], force=True, call_calc_forward=False, call_work_forward=True)
+            delete_nodes([c2.pk], force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-
-    def _create_looped_graph(self):
-        """
-        Creates a basic graph with one parent workflow (PWM) which first calls a child
-        workflow (PWS) to choose one input from a set (DI1 from DI1-DI4), and then use
-        it to perform a calculation (PCS) and obtain an output (DO1). The node PWM will
-        call both PWS and PCS itself.
-        """
-
-        di1 = orm.Data().store()
-        di2 = orm.Data().store()
-        di3 = orm.Data().store()
-        di4 = orm.Data().store()
-
-        pwm = orm.WorkflowNode()
-        pwm.add_incoming(di1, link_type=LinkType.INPUT_WORK, link_label='inpwm1')
-        pwm.add_incoming(di2, link_type=LinkType.INPUT_WORK, link_label='inpwm2')
-        pwm.add_incoming(di3, link_type=LinkType.INPUT_WORK, link_label='inpwm3')
-        pwm.add_incoming(di4, link_type=LinkType.INPUT_WORK, link_label='inpwm4')
-        pwm.store()
-
-        pws = orm.WorkflowNode()
-        pws.add_incoming(di1, link_type=LinkType.INPUT_WORK, link_label='inpws1')
-        pws.add_incoming(di2, link_type=LinkType.INPUT_WORK, link_label='inpws2')
-        pws.add_incoming(di3, link_type=LinkType.INPUT_WORK, link_label='inpws3')
-        pws.add_incoming(di4, link_type=LinkType.INPUT_WORK, link_label='inpws4')
-        pws.add_incoming(pwm, link_type=LinkType.CALL_WORK, link_label='callw')
-        pws.store()
-
-        di1.add_incoming(pws, link_type=LinkType.RETURN, link_label='outpws')
-
-        pcs = orm.CalculationNode()
-        pcs.add_incoming(di1, link_type=LinkType.INPUT_CALC, link_label='inpcs1')
-        pcs.add_incoming(pwm, link_type=LinkType.CALL_CALC, link_label='callc')
-        pcs.store()
-
-        do1 = orm.Data().store()
-        do1.add_incoming(pcs, link_type=LinkType.CREATE, link_label='outpcs')
-        do1.add_incoming(pwm, link_type=LinkType.RETURN, link_label='outpwm')
-
-        return di1, di2, di3, di4, do1, pws, pcs, pwm
-
-    def test_loop_cases(self):
-        """
-        Using a looped graph, will test the behaviour when deleting nodes that
-        can be both input and output of a workflow.
-        """
-
-        # By default deleting and input of the selection process will delete
-        # the workflow that involves the selection procedure but not any
-        # process that uses non-deleted inputs...
-        di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
-        uuids_check_existence = [n.uuid for n in (di1, di2, di3, do1, pcs)]
-        uuids_check_deleted = [n.uuid for n in (di4, pws, pwm)]
+        # By default, targetting a data node will also have the same effect because
+        # it will also delete the calculation that created it, and therefore the
+        # previously described chain will activate.
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in []]
+        uuids_check_deleted = [n.uuid for n in [di, dm, do, c1, c2, w1, w2]]
         with Capturing():
-            delete_nodes([di4.pk], force=True)
+            delete_nodes([di.pk], force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-        # If the deleted input is the chosen one, then that's another story
-        di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
-        uuids_check_existence = [n.uuid for n in (di2, di3, di4)]
-        uuids_check_deleted = [n.uuid for n in (di1, do1, pws, pcs, pwm)]
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di]]
+        uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
         with Capturing():
-            delete_nodes([di1.pk], force=True)
+            delete_nodes([dm.pk], force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-        # Deleting the workflow that chooses inputs should not touch the data
-        # provenance either.
-        di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
-        uuids_check_existence = [n.uuid for n in (di1, di2, di3, di4, do1, pcs)]
-        uuids_check_deleted = [n.uuid for n in (pws, pwm)]
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di]]
+        uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
         with Capturing():
-            delete_nodes([pws.pk], force=True)
+            delete_nodes([do.pk], force=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-        # Again, deleting with call_calc/work_forward also deletes other parts of
-        # the graph.
-        di1, di2, di3, di4, do1, pws, pcs, pwm = self._create_looped_graph()
-        uuids_check_existence = [n.uuid for n in (di1, di2, di3, di4)]
-        uuids_check_deleted = [n.uuid for n in (do1, pws, pcs, pwm)]
+        # Data deletion within the highest level workflow can be prevented by
+        # disabling the rule that follows forward any creation link. This will
+        # still delete any data node explicitly required.
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di, dm, do]]
+        uuids_check_deleted = [n.uuid for n in [c1, c2, w1, w2]]
         with Capturing():
-            delete_nodes([pws.pk], force=True, call_calc_forward=True, call_work_forward=True)
+            delete_nodes([w2.pk], force=True, create_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [dm, do]]
+        uuids_check_deleted = [n.uuid for n in [di, c1, c2, w1, w2]]
+        with Capturing():
+            delete_nodes([di.pk], force=True, create_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # On the other hand, the whole data provenance can be protected by
+        # disabling the rule to go forwards through the call_calc links.
+        # Again, this still allows to target specific sections to be deleted
+        # (which will also delete any forward data provenance because the rules
+        # to traverse 'create' and 'input_calc' links forward are always on).
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di, dm, do, c1, c2]]
+        uuids_check_deleted = [n.uuid for n in [w1, w2]]
+        with Capturing():
+            delete_nodes([w2.pk], force=True, call_calc_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di, dm, c1]]
+        uuids_check_deleted = [n.uuid for n in [do, c2, w1, w2]]
+        with Capturing():
+            delete_nodes([c2.pk], force=True, call_calc_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # Another posibility which also exists, though may have more limited
+        # uses, is to protect underlying workflows by disabling the rule that
+        # allows the traversal of 'call_work' links forward. This alone will
+        # still delete any calculations that are directly called by any of the
+        # workflows that are targeted (or that call the targeted ones), but
+        # this can be combined with any of the previous cases as well.
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di, dm, c1, w1]]
+        uuids_check_deleted = [n.uuid for n in [do, c2, w2]]
+        with Capturing():
+            delete_nodes([w2.pk], force=True, call_work_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di, dm, do, c1, w1]]
+        uuids_check_deleted = [n.uuid for n in [c2, w2]]
+        with Capturing():
+            delete_nodes([w2.pk], force=True, call_work_forward=False, create_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
+        uuids_check_existence = [n.uuid for n in [di, dm, do, c1, c2, w1]]
+        uuids_check_deleted = [n.uuid for n in [w2]]
+        with Capturing():
+            delete_nodes([w2.pk], force=True, call_work_forward=False, call_calc_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
     def _create_indep2w_graph(self):
@@ -1936,36 +1904,173 @@ class TestNodeDeletion(AiidaTestCase):
         provenance but not the data provenance).
         """
 
+        # First of all one should notice that enabling all forward traverse rules
+        # (call_calc, call_work, create) will end up deleting everything under both
+        # workflows no matter what is targetted.
         dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
         uuids_check_existence = [n.uuid for n in [dia, dib]]
         uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, dob, pcb, pwb, pw0]]
         with Capturing():
-            delete_nodes((pwa.pk,), force=True, call_calc_forward=True, call_work_forward=True)
+            delete_nodes((pca.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-        # If you want to keep the independent process, first delete the global
-        # workflow
+        dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
+        uuids_check_existence = [n.uuid for n in [dia, dib]]
+        uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, dob, pcb, pwb, pw0]]
+        with Capturing():
+            delete_nodes((pwa.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # In this particular case where the workflow (pwa) only calls a single
+        # calculation (pca), one could target either and obtain the desired result
+        # just by disabling the call_work forward traverse.
+        # This solution stops being viable in the cases with more calculations that
+        # are directly called both by pwa and pw0 (which will have problems with the
+        # call_calc traversal), or having other subworkflows being called by pwa that
+        # need to be deleted as well (which, on the other hand, will have problems
+        # with the call_work traversal).
+        dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
+        uuids_check_existence = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
+        uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, pw0]]
+        with Capturing():
+            delete_nodes((pca.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
+        uuids_check_existence = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
+        uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, pw0]]
+        with Capturing():
+            delete_nodes((pwa.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # The best and most controlled way to deal with this situation would be
+        # to use a multiple step approach: first deleting with the safest setup
+        # ONLY the workflow that calls the one that needs to be deleted, and then
+        # actually deleting that workflow with the normal setup.
+        # (Some of the rules disabled in the first delete may not have been needed
+        # for this particular case, but this setup would be more generalizable)
         dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
 
-        uuids_check_existence = [n.uuid for n in [dia, doa, pca, pwa, dib, dob, pcb, pwb]]
-        uuids_check_deleted = [n.uuid for n in [pw0]]
+        uuids_check_existence1 = [n.uuid for n in [dia, doa, pca, pwa, dib, dob, pcb, pwb]]
+        uuids_check_deleted1 = [n.uuid for n in [pw0]]
+
+        uuids_check_existence2 = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
+        uuids_check_deleted2 = [n.uuid for n in [doa, pca, pwa, pw0]]
+
         with Capturing():
-            delete_nodes((pw0.pk,), force=True, call_calc_forward=False, call_work_forward=False)
-        self._check_existence(uuids_check_existence, uuids_check_deleted)
+            delete_nodes((pw0.pk,), force=True, create_forward=False, call_calc_forward=False, call_work_forward=False)
+        self._check_existence(uuids_check_existence1, uuids_check_deleted1)
 
-        uuids_check_existence = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
-        uuids_check_deleted = [n.uuid for n in [doa, pca, pwa]]
         with Capturing():
-            delete_nodes((pwa.pk,), force=True, call_calc_forward=True, call_work_forward=True)
-        self._check_existence(uuids_check_existence, uuids_check_deleted)
+            delete_nodes((pwa.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=True)
+        self._check_existence(uuids_check_existence2, uuids_check_deleted2)
 
-
-    def _create_long_graph(self):
+    def _create_looped_graph(self):
         """
-        Creates a straighforward graph with up to N=20 (currently) nodes. It
-        checks if propagation works correctly, but it also can be used quickly
-        to make preliminary timing profiling (increasing hardcoded N). The link
-        scheeme looks like this::
+        Creates a basic graph with one parent workflow (PWM) which first calls a child
+        workflow (PWS) to choose one input from a set (DI1 from DI1-DI3), and then use
+        it to perform a calculation (PCS) and obtain an output (DO1). The node PWM will
+        call both PWS and PCS itself. The final graph looks like this::
+
+            +-----+     input_work   +-----+                         return
+            | DI3 | --+------------> | PWM | -----------------+-----------------+
+            +-----+   |              +-----+                  |                 |
+                      |                 |                     |                 |
+                      |                 | call_work           |                 |
+                      |                 v                     |                 |
+            +-----+   | input_work   +-----+                  |                 |
+            | DI2 | --+------------> | PWS |                  | call_calc       |
+            +-----+   |              +-----+                  |                 |
+                      |                 |                     |                 |
+                      |    (CYCLE)      | return              |                 |
+                      |                 v                     v                 v
+                      |              +-----+  input_calc   +-----+  create   +-----+
+                      +------------- | DI1 | ------------> | PCS | --------> | DO1 |
+                                     +-----+               +-----+           +-----+
+        """
+
+        di1 = orm.Data().store()
+        di2 = orm.Data().store()
+        di3 = orm.Data().store()
+
+        pwm = orm.WorkflowNode()
+        pwm.add_incoming(di1, link_type=LinkType.INPUT_WORK, link_label='inpwm1')
+        pwm.add_incoming(di2, link_type=LinkType.INPUT_WORK, link_label='inpwm2')
+        pwm.add_incoming(di3, link_type=LinkType.INPUT_WORK, link_label='inpwm3')
+        pwm.store()
+
+        pws = orm.WorkflowNode()
+        pws.add_incoming(di1, link_type=LinkType.INPUT_WORK, link_label='inpws1')
+        pws.add_incoming(di2, link_type=LinkType.INPUT_WORK, link_label='inpws2')
+        pws.add_incoming(di3, link_type=LinkType.INPUT_WORK, link_label='inpws3')
+        pws.add_incoming(pwm, link_type=LinkType.CALL_WORK, link_label='callw')
+        pws.store()
+
+        di1.add_incoming(pws, link_type=LinkType.RETURN, link_label='outpws')
+
+        pcs = orm.CalculationNode()
+        pcs.add_incoming(di1, link_type=LinkType.INPUT_CALC, link_label='inpcs1')
+        pcs.add_incoming(pwm, link_type=LinkType.CALL_CALC, link_label='callc')
+        pcs.store()
+
+        do1 = orm.Data().store()
+        do1.add_incoming(pcs, link_type=LinkType.CREATE, link_label='outpcs')
+        do1.add_incoming(pwm, link_type=LinkType.RETURN, link_label='outpwm')
+
+        return di1, di2, di3, do1, pws, pcs, pwm
+
+    def test_loop_cases(self):
+        """
+        Using a looped graph, will test the behaviour when deleting nodes that
+        can be both input and output of a workflow.
+        """
+
+        # Deleting any of the nodes while having enabled all the toggable
+        # forward traversal rules will end up deleting the whole workflow
+        # (excluding input nodes except specifically targetted).
+        di1, di2, di3, do1, pws, pcs, pwm = self._create_looped_graph()
+        uuids_check_existence = [n.uuid for n in [di1, di2]]
+        uuids_check_deleted = [n.uuid for n in [di3, do1, pcs, pws, pwm]]
+        with Capturing():
+            delete_nodes([di3.pk], force=True, create_forward=True, call_calc_forward=True, call_work_forward=True)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # When disabling the call_calc and call_work forward rules, deleting
+        # inputs will only delete the master and selection workflows, but will
+        # leave the calculation and outputs.
+        di1, di2, di3, do1, pws, pcs, pwm = self._create_looped_graph()
+        uuids_check_existence = [n.uuid for n in [di1, di2, do1, pcs]]
+        uuids_check_deleted = [n.uuid for n in [di3, pws, pwm]]
+        with Capturing():
+            delete_nodes([di3.pk], force=True, create_forward=True, call_calc_forward=False, call_work_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # Of course, deleting the selected input will cause all the procedure to
+        # be deleted, no matter the flags chosen.
+        di1, di2, di3, do1, pws, pcs, pwm = self._create_looped_graph()
+        uuids_check_existence = [n.uuid for n in [di2, di3]]
+        uuids_check_deleted = [n.uuid for n in [di1, do1, pws, pcs, pwm]]
+        with Capturing():
+            delete_nodes([di1.pk], force=True, create_forward=True, call_calc_forward=False, call_work_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+        # Deleting with these settings the workflow that chooses inputs should
+        # not affect the data provenance either.
+        di1, di2, di3, do1, pws, pcs, pwm = self._create_looped_graph()
+        uuids_check_existence = [n.uuid for n in [di1, di2, di3, do1, pcs]]
+        uuids_check_deleted = [n.uuid for n in [pws, pwm]]
+        with Capturing():
+            delete_nodes([pws.pk], force=True, create_forward=True, call_calc_forward=False, call_work_forward=False)
+        self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+
+    def _create_long_graph(self, total_calcs):
+        """
+        Creates a straighforward graph with the required number of calculation nodes.
+        All these calculation nodes are connected through a series of data nodes,
+        starting with a data node D0 as the first input and each calculation C(N)
+        will have data node D(N-1) as an input and data node D(N) as an output.
+        The final graph looks like this::
 
             +----+     +----+     +----+     +----+     +----+
             | D0 | --> | C1 | --> | D1 | --> | C2 | --> | D2 | --> ...
@@ -1975,7 +2080,7 @@ class TestNodeDeletion(AiidaTestCase):
         old_data = orm.Data().store()
         node_list = [old_data]
 
-        for ii in range(20):
+        for ii in range(total_calcs):
             new_calc = orm.CalculationNode()
             new_data = orm.Data().store()
             new_calc.add_incoming(old_data, link_type=LinkType.INPUT_CALC, link_label='inp' + str(ii))
@@ -1989,16 +2094,14 @@ class TestNodeDeletion(AiidaTestCase):
 
     def test_long_case(self):
         """
-        Using a simple but long graph, will test the propagation of the delete
-        functionality and that the efficiency for it is decent.
+        Using a simple but long graph, this test checks the propagation of the delete
+        functionality forward in data provenance.
         """
 
-        # By default deleting input data should eliminate everything that it
-        # generated forwards.
-        node_list = self._create_long_graph()
-
+        node_list = self._create_long_graph(10)
         uuids_check_existence = [n.uuid for n in node_list[:3]]
         uuids_check_deleted = [n.uuid for n in node_list[3:]]
         with Capturing():
-            delete_nodes((node_list[3].pk,), force=True)
+            delete_nodes((node_list[3].pk,), force=True, create_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
+

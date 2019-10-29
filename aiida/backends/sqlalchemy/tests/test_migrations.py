@@ -1360,6 +1360,7 @@ class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
             finally:
                 session.close()
 
+
 class TestResetHash(TestMigrationsSQLA):
     """Test the migration that resets the node hash."""
 
@@ -1512,6 +1513,100 @@ class TestLegacyProcessAttributeMigration(TestMigrationsSQLA):
                 self.assertEqual(node_data.attributes.get('sealed', None), None)
                 for key in deleted_keys:
                     self.assertIn(key, node_data.attributes)
+
+            finally:
+                session.close()
+
+
+class TestSealUnsealedProcessesMigration(TestMigrationsSQLA):
+    """Test the migration that performs a data migration of legacy process attributes."""
+
+    migrate_from = 'e734dd5e50d7'
+    migrate_to = '7b38a9e783e7'
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                session.add(user)
+                session.commit()
+
+                node_process = DbNode(
+                    node_type='process.calculation.calcjob.CalcJobNode.',
+                    user_id=user.id,
+                    attributes={
+                        'process_state': 'finished',
+                        'sealed': True,
+                    })
+
+                # This is an "active" modern process, due to its `process_state` and should *not* receive the
+                # `sealed` attribute
+                node_process_active = DbNode(
+                    node_type='process.calculation.calcjob.CalcJobNode.',
+                    user_id=user.id,
+                    attributes={
+                        'process_state': 'created',
+                    })
+
+                # This is a legacy process that does not even have a `process_state`
+                node_process_legacy = DbNode(
+                    node_type='process.calculation.calcfunction.CalcFunctionNode.',
+                    user_id=user.id,
+                    attributes={}
+                )
+
+                # Note that `Data` nodes should not have these attributes in real databases but the migration explicitly
+                # excludes data nodes, which is what this test is verifying, by checking they are not deleted
+                node_data = DbNode(
+                    node_type='data.dict.Dict.',
+                    user_id=user.id,
+                    attributes={}
+                )
+
+                session.add(node_process)
+                session.add(node_process_active)
+                session.add(node_process_legacy)
+                session.add(node_data)
+                session.commit()
+
+                self.node_process_id = node_process.id
+                self.node_process_active_id = node_process_active.id
+                self.node_process_legacy_id = node_process_legacy.id
+                self.node_data_id = node_data.id
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_data_migrated(self):
+        """Verify that the attributes for process node have been deleted and `_sealed` has been changed to `sealed`."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                node_process = session.query(DbNode).filter(DbNode.id == self.node_process_id).one()
+                self.assertEqual(node_process.attributes['sealed'], True)
+
+                node_process_active = session.query(DbNode).filter(DbNode.id == self.node_process_active_id).one()
+                self.assertNotIn('sealed', node_process_active.attributes)
+
+                node_process_legacy = session.query(DbNode).filter(DbNode.id == self.node_process_legacy_id).one()
+                self.assertEqual(node_process_legacy.attributes['sealed'], True)
+
+                node_data = session.query(DbNode).filter(DbNode.id == self.node_data_id).one()
+                self.assertNotIn('sealed', node_data.attributes)
 
             finally:
                 session.close()

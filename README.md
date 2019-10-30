@@ -31,7 +31,7 @@ AiiDA (www.aiida.net) is a workflow manager for computational science with a str
  -   **Plugin interface:** Extend AiiDA with [plugins](https://aiidateam.github.io/aiida-registry/) for new simulation codes (input generation & parsing), data types, schedulers, transport modes and more.
  -   **Open Science:** Export subsets of your provenance graph and share them with peers or make them available online for everyone
      on the [Materials Cloud](https://www.materialscloud.org).
- -   **Open source:** AiiDA is released under the [MIT open source license](https://github.com/aiidateam/aiida-core/blob/develop/LICENSE.txt).
+ -   **Open source:** AiiDA is released under the [MIT open source license](LICENSE.txt)
 
 ## Installation
 
@@ -54,13 +54,11 @@ If you use AiiDA in your research, please consider citing the AiiDA paper:
 > (2016); <https://doi.org/10.1016/j.commatsci.2015.09.013>;
 > <http://www.aiida.net>.
 
-## License [![License](https://img.shields.io/github/license/aiidateam/aiida-core.svg)](https://github.com/aiidateam/aiida-core/blob/develop/LICENSE.txt)
-
+## License
 
 AiiDA is distributed under the MIT open source license (see [`LICENSE.txt`](LICENSE.txt)).
 
-For a list of other open source components included in AiiDA, see the
-file [`open_source_licenses.txt`](open_source_licenses.txt).
+For a list of other open source components included in AiiDA, see [`open_source_licenses.txt`](open_source_licenses.txt).
 
 ## Acknowledgements
 

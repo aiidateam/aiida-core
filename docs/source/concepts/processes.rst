@@ -1,8 +1,9 @@
 .. _concepts_processes:
 
-*********
-Processes
-*********
+
+*******
+Concept
+*******
 
 Anything that runs in AiiDA is an instance of the :py:class:`~aiida.engine.processes.process.Process` class.
 The ``Process`` class contains all the information and logic to tell, whoever is handling it, how to run it to completion.

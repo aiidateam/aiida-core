@@ -18,6 +18,7 @@ from enum import IntEnum
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.common.log import override_log_level
 from ..utils.echo import ExitCode
 
 
@@ -79,8 +80,9 @@ def verdi_status():
     # Getting the postgres status by trying to get a database cursor
     database_data = [profile.database_username, profile.database_hostname, profile.database_port]
     try:
-        backend = manager.get_backend()
-        backend.cursor()
+        with override_log_level():  # temporarily suppress noisy logging
+            backend = manager.get_backend()
+            backend.cursor()
     except Exception:
         print_status(ServiceStatus.DOWN, 'postgres', 'Unable to connect as {}@{}:{}'.format(*database_data))
         exit_code = ExitCode.CRITICAL
@@ -90,8 +92,9 @@ def verdi_status():
     # getting the rmq status
     try:
         with Capturing(capture_stderr=True):
-            comm = manager.create_communicator(with_orm=False)
-            comm.stop()
+            with override_log_level():  # temporarily suppress noisy logging
+                comm = manager.create_communicator(with_orm=False)
+                comm.stop()
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'rabbitmq', 'Unable to connect to rabbitmq', exception=exc)
         exit_code = ExitCode.CRITICAL

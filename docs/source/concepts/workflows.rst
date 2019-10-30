@@ -1,8 +1,8 @@
 .. _concepts_workflows:
 
-*********
-Workflows
-*********
+*******
+Concept
+*******
 
 A workflow in AiiDA is a process (see the :ref:`process section<concepts_processes>` for details) that calls other workflows and calculations and optionally *returns* data and as such can encode the logic of a typical scientific workflow.
 Currently, there are two ways of implementing a workflow process:

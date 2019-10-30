@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import copy
 import logging
 import types
+from contextlib import contextmanager
 import six
 
 if six.PY2:
@@ -24,7 +25,7 @@ else:
 
 from aiida.manage.configuration import get_config_option  # pylint: disable=wrong-import-position
 
-__all__ = ('AIIDA_LOGGER',)
+__all__ = ('AIIDA_LOGGER', 'override_log_level')
 
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
 # We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however
@@ -201,3 +202,13 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
         config['loggers']['aiida']['handlers'].append(handler_dblogger)
 
     dictConfig(config)
+
+
+@contextmanager
+def override_log_level(level=logging.CRITICAL):
+    """Temporarily adjust the log-level of logger."""
+    logging.disable(level=level)
+    try:
+        yield
+    finally:
+        logging.disable(level=logging.NOTSET)

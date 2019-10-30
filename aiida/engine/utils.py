@@ -20,7 +20,7 @@ from six.moves import range
 import tornado.ioloop
 from tornado import concurrent, gen
 
-__all__ = ('interruptable_task', 'InterruptableFuture')
+__all__ = ('interruptable_task', 'InterruptableFuture', 'is_process_function')
 
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
@@ -52,7 +52,7 @@ def instantiate_process(runner, process, *args, **inputs):
     if isinstance(process, ProcessBuilder):
         builder = process
         process_class = builder.process_class
-        inputs.update(**builder)
+        inputs.update(**builder._inputs(prune=True))  # pylint: disable=protected-access
     elif issubclass(process, Process):
         process_class = process
     else:
@@ -203,7 +203,7 @@ def is_process_function(function):
     :returns: True if the function is a wrapped process function, False otherwise
     """
     try:
-        return function.is_process_function
+        return function.is_process_function is True
     except AttributeError:
         return False
 

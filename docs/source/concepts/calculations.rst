@@ -1,8 +1,8 @@
 .. _concepts_calculations:
 
-************
-Calculations
-************
+*******
+Concept
+*******
 
 A calculation is a process (see the :ref:`process section<concepts_processes>` for details) that *creates* new data.
 Currently, there are two ways of implementing a calculation process:

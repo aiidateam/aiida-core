@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import sys
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -58,12 +59,52 @@ def get_valid_test_paths():
     return valid_test_paths
 
 
+@verdi_devel.command('check-load-time')
+def devel_check_load_time():
+    """Check for common indicators that slowdown `verdi`.
+
+    Check for environment properties that negatively affect the responsiveness of the `verdi` command line interface.
+    Known pathways that increase load time:
+
+        * the database environment is loaded when it doesn't need to be
+        * the `aiida.orm` module is imported when it doesn't need to be
+
+    If either of these conditions are true, the command will raise a critical error
+    """
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+
+    if manager.backend_loaded:
+        echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
+
+    if 'aiida.orm' in sys.modules:
+        echo.echo_critical('potential `verdi` speed problem: `aiida.orm` module is imported.')
+
+    echo.echo_success('no issues detected')
+
+
 @verdi_devel.command('run_daemon')
 @decorators.with_dbenv()
 def devel_run_daemon():
     """Run a daemon instance in the current interpreter."""
     from aiida.engine.daemon.runner import start_daemon
     start_daemon()
+
+
+@verdi_devel.command('validate-plugins')
+@decorators.with_dbenv()
+def devel_validate_plugins():
+    """Validate all plugins by checking they can be loaded."""
+    from aiida.common.exceptions import EntryPointError
+    from aiida.plugins.entry_point import validate_registered_entry_points
+
+    try:
+        validate_registered_entry_points()
+    except EntryPointError as exception:
+        echo.echo_critical(str(exception))
+
+    echo.echo_success('all registered plugins could successfully loaded.')
 
 
 @verdi_devel.command('tests')
@@ -73,13 +114,15 @@ def devel_run_daemon():
 def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """Run the unittest suite or parts of it."""
     import os
-    import sys
     import unittest
+    import warnings
 
     import aiida
     from aiida.backends.testbase import run_aiida_db_tests
     from aiida.backends.testbase import check_if_tests_can_run
     from aiida.manage import configuration
+    from aiida.manage import tests
+    from aiida.common.warnings import AiidaTestWarning
 
     test_failures = []
     test_errors = []
@@ -88,6 +131,13 @@ def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-sta
     db_test_list = []
     test_folders = []
     do_db = False
+
+    if tests.get_test_profile_name():
+        warnings.warn(   # pylint: disable=no-member
+            'Ignoring `AIIDA_TEST_PROFILE` environment variable.'
+            ' Use `verdi -p test_profile devel tests` to select the test profile for aiida-core tests.',
+            AiidaTestWarning
+        )
 
     if paths:
         for path in paths:

@@ -28,7 +28,10 @@ class AiidaDeprecationWarning(Warning):
 class AiidaEntryPointWarning(Warning):
     """
     Class for warnings concerning AiiDA entry points.
+    """
 
-    It does *not* inherit, on purpose, from `DeprecationWarning` as
-    this would be filtered out by default.
+
+class AiidaTestWarning(Warning):
+    """
+    Class for warnings concerning the AiiDA testing infrastructure.
     """

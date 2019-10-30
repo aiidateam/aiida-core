@@ -12,9 +12,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.common.exceptions import InputValidationError, ValidationError, \
     InvalidOperation
-from aiida.restapi.common.exceptions import RestValidationError
 from aiida.restapi.translator.base import BaseTranslator
 from aiida.manage.manager import get_manager
 from aiida import orm
@@ -42,73 +42,22 @@ class NodeTranslator(BaseTranslator):
 
     _content_type = None
 
-    _alist = None
-    _nalist = None
-    _elist = None
-    _nelist = None
-    _downloadformat = None
-    _visformat = None
+    _attributes_filter = None
+    _extras_filter = None
+    _download_format = None
+    _download = None
     _filename = None
-    _rtype = None
 
-    def __init__(self, Class=None, **kwargs):
+    def __init__(self, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
         """
 
-        # Assume default class is this class (cannot be done in the
-        # definition as it requires self)
-        if Class is None:
-            Class = self.__class__
-
         # basic initialization
-        super(NodeTranslator, self).__init__(Class=Class, **kwargs)
+        super(NodeTranslator, self).__init__(**kwargs)
 
-        self._default_projections = [
-            'id', 'label', 'node_type', 'ctime', 'mtime', 'uuid', 'user_id', 'attributes', 'extras'
-        ]
-        self._default_user_projections = ['email']
-
-        ## node schema
-        # All the values from column_order must present in additional info dict
-        # Note: final schema will contain details for only the fields present in column order
-        self._schema_projections = {
-            'column_order':
-            ['id', 'label', 'node_type', 'ctime', 'mtime', 'uuid', 'user_id', 'user_email', 'attributes', 'extras'],
-            'additional_info': {
-                'id': {
-                    'is_display': True
-                },
-                'label': {
-                    'is_display': False
-                },
-                'node_type': {
-                    'is_display': True
-                },
-                'ctime': {
-                    'is_display': True
-                },
-                'mtime': {
-                    'is_display': True
-                },
-                'uuid': {
-                    'is_display': False
-                },
-                'user_id': {
-                    'is_display': False
-                },
-                'user_email': {
-                    'is_display': True
-                },
-                'attributes': {
-                    'is_display': False
-                },
-                'extras': {
-                    'is_display': False
-                }
-            }
-        }
+        self._default_projections = ['id', 'label', 'node_type', 'process_type', 'ctime', 'mtime', 'uuid', 'user_id']
 
         # Inspect the subclasses of NodeTranslator, to avoid hard-coding
         # (should resemble the following tree)
@@ -132,14 +81,11 @@ class NodeTranslator(BaseTranslator):
     def set_query_type(
         self,
         query_type,
-        alist=None,
-        nalist=None,
-        elist=None,
-        nelist=None,
-        downloadformat=None,
-        visformat=None,
-        filename=None,
-        rtype=None
+        attributes_filter=None,
+        extras_filter=None,
+        download_format=None,
+        download=None,
+        filename=None
     ):
         """
         sets one of the mutually exclusive values for self._result_type and
@@ -150,42 +96,43 @@ class NodeTranslator(BaseTranslator):
 
         if query_type == 'default':
             pass
-        elif query_type == 'inputs':
+        elif query_type == 'incoming':
             self._result_type = 'with_outgoing'
-        elif query_type == 'outputs':
+        elif query_type == 'outgoing':
             self._result_type = 'with_incoming'
         elif query_type == 'attributes':
             self._content_type = 'attributes'
-            self._alist = alist
-            self._nalist = nalist
+            self._attributes_filter = attributes_filter
         elif query_type == 'extras':
             self._content_type = 'extras'
-            self._elist = elist
-            self._nelist = nelist
-        elif query_type == 'visualization':
-            self._content_type = 'visualization'
-            self._visformat = visformat
+            self._extras_filter = extras_filter
+        elif query_type == 'derived_properties':
+            self._content_type = 'derived_properties'
         elif query_type == 'download':
             self._content_type = 'download'
-            self._downloadformat = downloadformat
-        elif query_type == 'retrieved_inputs':
-            self._content_type = 'retrieved_inputs'
+            self._download_format = download_format
+            self._download = download
+        elif query_type == 'comments':
+            self._content_type = 'comments'
+        elif query_type == 'repo_list':
+            self._content_type = 'repo_list'
             self._filename = filename
-            self._rtype = rtype
-        elif query_type == 'retrieved_outputs':
-            self._content_type = 'retrieved_outputs'
+        elif query_type == 'repo_contents':
+            self._content_type = 'repo_contents'
             self._filename = filename
-            self._rtype = rtype
         else:
             raise InputValidationError('invalid result/content value: {}'.format(query_type))
 
         # Add input/output relation to the query help
         if self._result_type != self.__label__:
+            edge_tag = self.__label__ + '--' + self._result_type
             self._query_help['path'].append({
-                'entity_type': ('node.Node.', 'data.Data.'),
+                'cls': self._aiida_class,
                 'tag': self._result_type,
+                'edge_tag': edge_tag,
                 self._result_type: self.__label__
             })
+            self._query_help['project'][edge_tag] = [{'label': {}}, {'type': {}}]
 
     def set_query(
         self,
@@ -194,14 +141,14 @@ class NodeTranslator(BaseTranslator):
         projections=None,
         query_type=None,
         node_id=None,
-        alist=None,
-        nalist=None,
-        elist=None,
-        nelist=None,
-        downloadformat=None,
-        visformat=None,
+        download_format=None,
+        download=None,
         filename=None,
-        rtype=None
+        attributes=None,
+        attributes_filter=None,
+        extras=None,
+        extras_filter=None,
+        full_type=None
     ):
         """
         Adds filters, default projections, order specs to the query_help,
@@ -213,16 +160,14 @@ class NodeTranslator(BaseTranslator):
             if query_type=='attributes'/'extras'
         :param query_type: (string) specify the result or the content ("attr")
         :param id: (integer) id of a specific node
-        :param alist: list of attributes queried for node
-        :param nalist: list of attributes, returns all attributes except this for node
-        :param elist: list of extras queries for node
-        :param nelist: list of extras, returns all extras except this for node
-        :param downloadformat: file format to download e.g. cif, xyz
-        :param visformat: data format to visualise the node. Mainly used for structure,
-            cif, kpoints. E.g. jsmol, chemdoodle
+        :param download_format: file format to download e.g. cif, xyz
         :param filename: name of the file to return its content
-        :param rtype: return type of the file
+        :param attributes: flag to show attributes for nodes
+        :param attributes_filter: list of attributes to query
+        :param extras: flag to show extras for nodes
+        :param extras_filter: list of extras to query
         """
+        # pylint: disable=arguments-differ, too-many-locals
 
         ## Check the compatibility of query_type and id
         if query_type != 'default' and id is None:
@@ -234,14 +179,11 @@ class NodeTranslator(BaseTranslator):
         ## Set the type of query
         self.set_query_type(
             query_type,
-            alist=alist,
-            nalist=nalist,
-            elist=elist,
-            nelist=nelist,
-            downloadformat=downloadformat,
-            visformat=visformat,
-            filename=filename,
-            rtype=rtype
+            attributes_filter=attributes_filter,
+            extras_filter=extras_filter,
+            download_format=download_format,
+            download=download,
+            filename=filename
         )
 
         ## Define projections
@@ -258,7 +200,23 @@ class NodeTranslator(BaseTranslator):
         if self._result_type is not self.__label__:
             projections = self._default_projections
 
-        super(NodeTranslator, self).set_query(filters=filters, orders=orders, projections=projections, node_id=node_id)
+        if full_type:
+            # If full_type is not none, convert it into node_type
+            # and process_type filters to pass it to query help
+            from aiida.restapi.common.identifiers import get_full_type_filters
+            full_type_filter = get_full_type_filters(full_type)
+            filters.update(full_type_filter)
+
+        super(NodeTranslator, self).set_query(
+            filters=filters,
+            orders=orders,
+            projections=projections,
+            node_id=node_id,
+            attributes=attributes,
+            attributes_filter=attributes_filter,
+            extras=extras,
+            extras_filter=extras_filter
+        )
 
     def _get_content(self):
         """
@@ -266,6 +224,8 @@ class NodeTranslator(BaseTranslator):
         :return: data: a dictionary containing the results obtained by
         running the query
         """
+        # pylint: disable=too-many-statements
+
         if not self._is_qb_initialized:
             raise InvalidOperation('query builder object has not been initialized.')
 
@@ -278,78 +238,57 @@ class NodeTranslator(BaseTranslator):
             return {}
 
         # otherwise ...
-        node = self.qbobj.first()[1]
+        node = self.qbobj.first()[0]
 
         # content/attributes
         if self._content_type == 'attributes':
-            # Get all attrs if nalist and alist are both None
-            if self._alist is None and self._nalist is None:
+            # Get all attrs if attributes_filter is None
+            if self._attributes_filter is None:
                 data = {self._content_type: node.attributes}
-            # Get all attrs except those contained in nalist
-            elif self._alist is None and self._nalist is not None:
-                attrs = {}
-                for key in node.attributes.keys():
-                    if key not in self._nalist:
-                        attrs[key] = node.get_attribute(key)
-                data = {self._content_type: attrs}
-            # Get all attrs contained in alist
-            elif self._alist is not None and self._nalist is None:
-                attrs = {}
-                for key in node.attributes.keys():
-                    if key in self._alist:
-                        attrs[key] = node.get_attribute(key)
-                data = {self._content_type: attrs}
+            # Get all attrs contained in attributes_filter
             else:
-                raise RestValidationError('you cannot specify both alist and nalist')
+                attrs = {}
+                for key in node.attributes.keys():
+                    if key in self._attributes_filter:
+                        attrs[key] = node.get_attribute(key)
+                data = {self._content_type: attrs}
+
         # content/extras
         elif self._content_type == 'extras':
-
-            # Get all extras if nelist and elist are both None
-            if self._elist is None and self._nelist is None:
+            # Get all extras if elist is None
+            if self._extras_filter is None:
                 data = {self._content_type: node.extras}
-
-            # Get all extras except those contained in nelist
-            elif self._elist is None and self._nelist is not None:
-                extras = {}
-                for key in node.extras.keys():
-                    if key not in self._nelist:
-                        extras[key] = node.get_extra(key)
-                data = {self._content_type: extras}
-
-            # Get all extras contained in elist
-            elif self._elist is not None and self._nelist is None:
-                extras = {}
-                for key in node.extras.keys():
-                    if key in self._elist:
-                        extras[key] = node.get_extra(key)
-                data = {self._content_type: extras}
-
             else:
-                raise RestValidationError('you cannot specify both elist and nelist')
+                # Get all extras contained in elist
+                extras = {}
+                for key in node.extras.keys():
+                    if key in self._extras_filter:
+                        extras[key] = node.get_extra(key)
+                data = {self._content_type: extras}
 
         # Data needed for visualization appropriately serialized (this
         # actually works only for data derived classes)
         # TODO refactor the code so to have this option only in data and
         # derived classes
-        elif self._content_type == 'visualization':
-            # In this we do not return a dictionary but just an object and
-            # the dictionary format is set by get_visualization_data
-            data = {self._content_type: self.get_visualization_data(node, self._visformat)}
+        elif self._content_type == 'derived_properties':
+            data = {self._content_type: self.get_derived_properties(node)}
 
         elif self._content_type == 'download':
             # In this we do not return a dictionary but download the file in
             # specified format if available
-            data = {self._content_type: self.get_downloadable_data(node, self._downloadformat)}
+            data = {self._content_type: self.get_downloadable_data(node, self._download_format)}
 
-        elif self._content_type == 'retrieved_inputs':
-            # This type is only available for calc nodes. In case of job calc it
-            # returns calc inputs prepared to submit calc on the cluster else []
-            data = {self._content_type: self.get_retrieved_inputs(node, self._filename, self._rtype)}
+        elif self._content_type == 'repo_list':
+            # return list of all the files and directories from node file repository
+            data = {self._content_type: self.get_repo_list(node, self._filename)}
 
-        elif self._content_type == 'retrieved_outputs':
-            # This type is only available for calc nodes. In case of job calc it
-            # returns calc outputs retrieved from the cluster else []
-            data = {self._content_type: self.get_retrieved_outputs(node, self._filename, self._rtype)}
+        elif self._content_type == 'repo_contents':
+            # return the contents of single file from node file repository
+            data = self.get_repo_contents(node, self._filename)
+
+        elif self._content_type == 'comments':
+            # return the node comments
+            data = {self._content_type: self.get_comments(node)}
 
         else:
             raise ValidationError('invalid content type')
@@ -424,17 +363,15 @@ class NodeTranslator(BaseTranslator):
                 results.update(self._get_subclasses(parent=app_module, parent_class=parent_class))
         return results
 
-    def get_visualization_data(self, node, visformat=None):
+    def get_derived_properties(self, node):
         """
-        Generic function to get the data required to visualize the node with
-        a specific plugin.
-        Actual definition is in child classes as the content to be be
-        returned and its format depends on the visualization plugin specific
+        Generic function to get the derived properties of the node.
+        Actual definition is in child classes as the content to be
+        returned depends on the plugin specific
         to the resource
 
         :param node: node object that has to be visualized
-        :param visformat: visualization format
-        :returns: data selected and serialized for visualization
+        :returns: derived properties of the node
 
         If this method is called by Node resource it will look for the type
         of object and invoke the correct method in the lowest-compatible
@@ -449,64 +386,139 @@ class NodeTranslator(BaseTranslator):
             if subclass._aiida_type.split('.')[-1] == tclass.__name__:  # pylint: disable=protected-access
                 lowtrans = subclass
 
-        visualization_data = lowtrans.get_visualization_data(node, visformat=visformat)
+        derived_properties = lowtrans.get_derived_properties(node)
 
-        return visualization_data
+        return derived_properties
 
-    def get_downloadable_data(self, node, download_format=None):
+    @staticmethod
+    def get_all_download_formats(full_type=None):
+        """
+        returns dict of possible node formats for all available node types
+        """
+        from aiida.plugins.entry_point import load_entry_point, get_entry_point_names
+        from aiida.restapi.common.identifiers import load_entry_point_from_full_type, construct_full_type
+        from aiida.common import EntryPointError
+        from aiida.common.exceptions import LoadingEntryPointError
+        from aiida.restapi.common.exceptions import RestFeatureNotAvailable, RestInputValidationError
+
+        all_formats = {}
+
+        if full_type:
+            try:
+                node_cls = load_entry_point_from_full_type(full_type)
+            except (TypeError, ValueError):
+                raise RestInputValidationError('The full type {} is invalid.'.format(full_type))
+            except EntryPointError:
+                raise RestFeatureNotAvailable('The download formats for this node type are not available.')
+
+            try:
+                available_formats = node_cls.get_export_formats()
+                all_formats[full_type] = available_formats
+            except AttributeError:
+                pass
+        else:
+            entry_point_group = 'aiida.data'
+
+            for name in get_entry_point_names(entry_point_group):
+                try:
+                    node_cls = load_entry_point(entry_point_group, name)
+                except LoadingEntryPointError:
+                    pass
+                else:
+                    node_cls.get_export_formats()
+                try:
+                    available_formats = node_cls.get_export_formats()
+                    if available_formats:
+                        full_type = construct_full_type(node_cls.class_node_type, '')
+                        all_formats[full_type] = available_formats
+                except AttributeError:
+                    pass
+        return all_formats
+
+    @staticmethod
+    def get_downloadable_data(node, download_format=None):
         """
         Generic function to download file in specified format.
         Actual definition is in child classes as the content to be
-        returned and its format depends on the visualization plugin specific
+        returned and its format depends on the download plugin specific
         to the resource
 
         :param node: node object
         :param download_format: file extension format
         :returns: data in selected format to download
 
-        If this method is called by Node resource it will look for the type
-        of object and invoke the correct method in the lowest-compatible
-        subclass
+        If this method is called for a Data node resource it will
+        invoke the get_downloadable_data method in the Data transaltor.
+        Otherwise it raises RestFeatureNotAvailable exception
         """
+        from aiida.orm import Data
+        from aiida.restapi.translator.nodes.data import DataTranslator  # pylint: disable=cyclic-import
+        from aiida.restapi.common.exceptions import RestFeatureNotAvailable
 
-        # Look for the translator associated to the class of which this node
-        # is instance
-        tclass = type(node)
-        for subclass in self._subclasses.values():
-            if subclass._aiida_type.split('.')[-1] == tclass.__name__:  # pylint: disable=protected-access
-                lowtrans = subclass
+        # This needs to be here because currently, for all nodes the `NodeTranslator` will be instantiated. Once that
+        # logic is cleaned where the correct translator sub class is instantiated based on the node type that is
+        # referenced, this hack can be removed.
+        if isinstance(node, Data):
+            downloadable_data = DataTranslator.get_downloadable_data(node, download_format=download_format)
+            return downloadable_data
 
-        downloadable_data = lowtrans.get_downloadable_data(node, download_format=download_format)
-
-        return downloadable_data
+        raise RestFeatureNotAvailable('This endpoint is not available for Process nodes.')
 
     @staticmethod
-    def get_retrieved_inputs(node, filename=None, rtype=None):
+    def get_repo_list(node, filename=''):
         """
-        Generic function to return output of calc inputls verdi command.
-        Actual definition is in child classes as the content to be
-        returned and its format depends on the visualization plugin specific
-        to the resource
-
+        Every node in AiiDA is having repo folder.
+        This function returns the metadata using list_objects() method
         :param node: node object
-        :returns: list of calc inputls command
+        :param filename: folder name (optional)
+        :return: folder list
         """
-        # pylint: disable=unused-argument
-        return []
+        from aiida.restapi.common.exceptions import RestInputValidationError
+
+        try:
+            flist = node.list_objects(filename)
+        except IOError:
+            raise RestInputValidationError('{} is not a directory in this repository'.format(filename))
+        response = []
+        for fobj in flist:
+            response.append({'name': fobj.name, 'type': fobj.type.name})
+        return response
 
     @staticmethod
-    def get_retrieved_outputs(node, filename=None, rtype=None):
+    def get_repo_contents(node, filename=''):
         """
-        Generic function to return output of calc outputls verdi command.
-        Actual definition is in child classes as the content to be
-        returned and its format depends on the visualization plugin specific
-        to the resource
-
+        Every node in AiiDA is having repo folder.
+        This function returns the metadata using get_object() method
         :param node: node object
-        :returns: list of calc outputls command
+        :param filename: folder or file name (optional)
+        :return: file content in bytes to download
         """
-        # pylint: disable=unused-argument
-        return []
+        from aiida.restapi.common.exceptions import RestInputValidationError, RestValidationError
+
+        if filename:
+            try:
+                data = node.get_object_content(filename, mode='rb')
+                return data
+            except IOError:
+                raise RestInputValidationError('No such file is present')
+        raise RestValidationError('filename is not provided')
+
+    @staticmethod
+    def get_comments(node):
+        """
+        :param node: node object
+        :return: node comments
+        """
+        comments = node.get_comments()
+        response = []
+        for cobj in comments:
+            response.append({
+                'created_time': cobj.ctime,
+                'modified_time': cobj.mtime,
+                'user': cobj.user.first_name + ' ' + cobj.user.last_name,
+                'message': cobj.content
+            })
+        return response
 
     @staticmethod
     def get_file_content(node, file_name):
@@ -543,35 +555,51 @@ class NodeTranslator(BaseTranslator):
 
         return super(NodeTranslator, self).get_results()
 
+    def get_formatted_result(self, label):
+        """
+        Runs the query and retrieves results tagged as "label".
+
+        :param label: the tag of the results to be extracted out of
+          the query rows.
+        :type label: str
+        :return: a list of the query results
+        """
+
+        results = super(NodeTranslator, self).get_formatted_result(label)
+
+        if self._result_type == 'with_outgoing':
+            result_name = 'incoming'
+        elif self._result_type == 'with_incoming':
+            result_name = 'outgoing'
+        else:
+            result_name = self.__label__
+
+        from aiida.restapi.common.identifiers import construct_full_type
+
+        for node_entry in results[result_name]:
+            # construct full_type and add it to every node
+            try:
+                node_entry['full_type'] = construct_full_type(node_entry['node_type'], node_entry['process_type'])
+            except KeyError:
+                node_entry['full_type'] = None
+
+        return results
+
     def get_statistics(self, user_pk=None):
         """Return statistics for a given node"""
 
         qmanager = self._backend.query_manager
         return qmanager.get_creation_statistics(user_pk=user_pk)
 
-    def get_types(self):
+    @staticmethod
+    def get_namespace():
         """
-        return available distinct types of nodes from database
+        return full_types of the nodes
         """
-        from aiida.orm.querybuilder import QueryBuilder
 
-        qb_obj = QueryBuilder()
-        qb_obj.append(self._aiida_class, project=['node_type'])
-        qb_response = qb_obj.distinct().all()
-        results = {}
-        if qb_response:
-            for ntype in qb_response:
-                ntype = ntype[0]
-                ntype_parts = ntype.split('.')
-                if ntype_parts:
-                    dict_key = ntype_parts[0]
-                    if dict_key not in results.keys():
-                        results[dict_key] = []
-                    results[dict_key].append(ntype)
+        from aiida.restapi.common.identifiers import get_node_namespace
 
-        for key, values in results.items():
-            results[key] = sorted(values)
-        return results
+        return get_node_namespace().get_description()
 
     def get_io_tree(self, uuid_pattern, tree_in_limit, tree_out_limit):
         # pylint: disable=too-many-statements,too-many-locals
@@ -582,24 +610,6 @@ class NodeTranslator(BaseTranslator):
         """
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
-
-        def get_node_shape(ntype):
-            """
-            Get tree node shape depending on node type
-            :param ntype: node type
-            :return: shape of the node displayed in tree
-            """
-
-            node_type = ntype.split('.')[0]
-            if node_type == 'process':
-                shape = 'square'
-            elif ntype.split('.')[1] == 'code':
-                shape = 'triangle'
-            else:
-                # default and data node shape
-                shape = 'dot'
-
-            return shape
 
         def get_node_description(node):
             """
@@ -622,8 +632,6 @@ class NodeTranslator(BaseTranslator):
         qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
 
         nodes = []
-        edges = []
-        node_count = 0
 
         if qb_obj.count() > 0:
             main_node = qb_obj.first()[0]
@@ -631,30 +639,34 @@ class NodeTranslator(BaseTranslator):
             uuid = main_node.uuid
             nodetype = main_node.node_type
             nodelabel = main_node.label
-            display_type = nodetype.split('.')[-2]
             description = get_node_description(main_node)
+            ctime = main_node.ctime
+            mtime = main_node.mtime
 
             nodes.append({
-                'id': node_count,
-                'nodeid': pk,
-                'nodeuuid': uuid,
-                'nodetype': nodetype,
-                'nodelabel': nodelabel,
-                'displaytype': display_type,
-                'group': 'main_node',
+                'ctime': ctime,
+                'mtime': mtime,
+                'id': pk,
+                'uuid': uuid,
+                'node_type': nodetype,
+                'node_label': nodelabel,
                 'description': description,
-                'shape': get_node_shape(nodetype)
+                'incoming': [],
+                'outgoing': []
             })
-        node_count += 1
 
-        # get all inputs
+        # get all incoming
         qb_obj = QueryBuilder()
         qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
-        qb_obj.append(Node, tag='in', project=['*'], edge_project=['label', 'type'], with_outgoing='main')
+        qb_obj.append(Node, tag='in', project=['*'], edge_project=['label', 'type'],
+                      with_outgoing='main').order_by({'in': [{
+                          'id': {
+                              'order': 'asc'
+                          }
+                      }]})
         if tree_in_limit is not None:
             qb_obj.limit(tree_in_limit)
 
-        input_node_pks = {}
         sent_no_of_incomings = qb_obj.count()
 
         if sent_no_of_incomings > 0:
@@ -663,50 +675,37 @@ class NodeTranslator(BaseTranslator):
                 pk = node.pk
                 linklabel = node_input['main--in']['label']
                 linktype = node_input['main--in']['type']
+                uuid = node.uuid
+                nodetype = node.node_type
+                nodelabel = node.label
+                description = get_node_description(node)
+                node_ctime = node.ctime
+                node_mtime = node.mtime
 
-                # add node if it is not present
-                if pk not in input_node_pks.keys():
-                    input_node_pks[pk] = node_count
-                    uuid = node.uuid
-                    nodetype = node.node_type
-                    nodelabel = node.label
-                    display_type = nodetype.split('.')[-2]
-                    description = get_node_description(node)
-
-                    nodes.append({
-                        'id': node_count,
-                        'nodeid': pk,
-                        'nodeuuid': uuid,
-                        'nodetype': nodetype,
-                        'nodelabel': nodelabel,
-                        'displaytype': display_type,
-                        'group': 'inputs',
-                        'description': description,
-                        'linklabel': linklabel,
-                        'linktype': linktype,
-                        'shape': get_node_shape(nodetype)
-                    })
-                    node_count += 1
-
-                from_edge = input_node_pks[pk]
-                edges.append({
-                    'from': from_edge,
-                    'to': 0,
-                    'arrows': 'to',
-                    'color': {
-                        'inherit': 'from'
-                    },
-                    'linktype': linktype,
+                nodes[0]['incoming'].append({
+                    'ctime': node_ctime,
+                    'mtime': node_mtime,
+                    'id': pk,
+                    'uuid': uuid,
+                    'node_type': nodetype,
+                    'node_label': nodelabel,
+                    'description': description,
+                    'link_label': linklabel,
+                    'link_type': linktype
                 })
 
-        # get all outputs
+        # get all outgoing
         qb_obj = QueryBuilder()
         qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
-        qb_obj.append(Node, tag='out', project=['*'], edge_project=['label', 'type'], with_incoming='main')
+        qb_obj.append(Node, tag='out', project=['*'], edge_project=['label', 'type'],
+                      with_incoming='main').order_by({'out': [{
+                          'id': {
+                              'order': 'asc'
+                          }
+                      }]})
         if tree_out_limit is not None:
             qb_obj.limit(tree_out_limit)
 
-        output_node_pks = {}
         sent_no_of_outgoings = qb_obj.count()
 
         if sent_no_of_outgoings > 0:
@@ -715,40 +714,23 @@ class NodeTranslator(BaseTranslator):
                 pk = node.pk
                 linklabel = output['main--out']['label']
                 linktype = output['main--out']['type']
+                uuid = node.uuid
+                nodetype = node.node_type
+                nodelabel = node.label
+                description = get_node_description(node)
+                node_ctime = node.ctime
+                node_mtime = node.mtime
 
-                # add node if it is not present
-                if pk not in output_node_pks.keys():
-                    output_node_pks[pk] = node_count
-                    uuid = node.uuid
-                    nodetype = node.node_type
-                    nodelabel = node.label
-                    display_type = nodetype.split('.')[-2]
-                    description = get_node_description(node)
-
-                    nodes.append({
-                        'id': node_count,
-                        'nodeid': pk,
-                        'nodeuuid': uuid,
-                        'nodetype': nodetype,
-                        'nodelabel': nodelabel,
-                        'displaytype': display_type,
-                        'group': 'outputs',
-                        'description': description,
-                        'linklabel': linklabel,
-                        'linktype': linktype,
-                        'shape': get_node_shape(nodetype)
-                    })
-                    node_count += 1
-
-                to_edge = output_node_pks[pk]
-                edges.append({
-                    'from': 0,
-                    'to': to_edge,
-                    'arrows': 'to',
-                    'color': {
-                        'inherit': 'to'
-                    },
-                    'linktype': linktype
+                nodes[0]['outgoing'].append({
+                    'ctime': node_ctime,
+                    'mtime': node_mtime,
+                    'id': pk,
+                    'uuid': uuid,
+                    'node_type': nodetype,
+                    'node_label': nodelabel,
+                    'description': description,
+                    'link_label': linklabel,
+                    'link_type': linktype
                 })
 
         # count total no of nodes
@@ -762,11 +744,82 @@ class NodeTranslator(BaseTranslator):
         builder.append(Node, tag='out', project=['id'], with_incoming='main')
         total_no_of_outgoings = builder.count()
 
-        return {
-            'nodes': nodes,
-            'edges': edges,
+        metadata = [{
             'total_no_of_incomings': total_no_of_incomings,
             'total_no_of_outgoings': total_no_of_outgoings,
             'sent_no_of_incomings': sent_no_of_incomings,
             'sent_no_of_outgoings': sent_no_of_outgoings
+        }]
+
+        return {'nodes': nodes, 'metadata': metadata}
+
+    def get_projectable_properties(self):
+        """
+        Get projectable properties specific for Node
+        :return: dict of projectable properties and column_order list
+        """
+        projectable_properties = {
+            'creator': {
+                'display_name': 'Creator',
+                'help_text': 'User that created the node',
+                'is_foreign_key': False,
+                'type': 'str',
+                'is_display': True
+            },
+            'ctime': {
+                'display_name': 'Creation time',
+                'help_text': 'Creation time of the node',
+                'is_foreign_key': False,
+                'type': 'datetime.datetime',
+                'is_display': True
+            },
+            'label': {
+                'display_name': 'Label',
+                'help_text': 'User-assigned label',
+                'is_foreign_key': False,
+                'type': 'str',
+                'is_display': False
+            },
+            'mtime': {
+                'display_name': 'Last Modification time',
+                'help_text': 'Last modification time',
+                'is_foreign_key': False,
+                'type': 'datetime.datetime',
+                'is_display': True
+            },
+            'node_type': {
+                'display_name': 'Type',
+                'help_text': 'Node type',
+                'is_foreign_key': False,
+                'type': 'str',
+                'is_display': True
+            },
+            'process_type': {
+                'display_name': 'Process type',
+                'help_text': 'Process type',
+                'is_foreign_key': False,
+                'type': 'str',
+                'is_display': False
+            },
+            'user_id': {
+                'display_name': 'Id of creator',
+                'help_text': 'Id of the user that created the node',
+                'is_foreign_key': True,
+                'related_column': 'id',
+                'related_resource': 'users',
+                'type': 'int',
+                'is_display': False
+            },
+            'uuid': {
+                'display_name': 'Unique ID',
+                'help_text': 'Universally Unique Identifier',
+                'is_foreign_key': False,
+                'type': 'unicode',
+                'is_display': True
+            }
         }
+
+        # Note: final schema will contain details for only the fields present in column order
+        column_order = ['uuid', 'label', 'node_type', 'ctime', 'mtime', 'creator']
+
+        return projectable_properties, column_order

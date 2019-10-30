@@ -1,24 +1,21 @@
 Some files in AiiDA include snippets of code taken from other open-source
-licenses. The files affected are the following (also the original code
-is mentioned):
+projects:
 
 Django:
   * aiida/backends/djsite/settings/settings.py
-  * aiida/backends/djsite/db/management/commands/customshell.py
-  * aiida/backends/djsite/manage.py
   * aiida/common/hashing.py
   * aiida/utils/timezone.py
 
 Python:
-  * aiida/transport/__init__.py
+  * aiida/transports/transport.py
 
 Fastep:
-  * fastentrypoints.py
+  * utils/fastentrypoints.py
 
 wait-for-it:
   * .ci/wait-for-it.sh
 
-The respective copyright notices follow below.
+The respective copyright notices are reproduced below.
 
 --------------------------------------------------------------------------
 
@@ -63,7 +60,7 @@ Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
 
 Detailed description:
 
-In the file aiida/transport/__init__.py we include a modified copy of
+In the file aiida/transports/transport.py we include a modified copy of
 the glob, iglob, has_magic, glob1, and glob0 functions from glob module
 of Python v. 2.7.8.
 

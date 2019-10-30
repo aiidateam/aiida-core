@@ -13,9 +13,11 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import io
+import json
 import re
-
 import six
+
+from upf_to_json import upf_to_json
 
 from aiida.common.lang import classproperty
 from aiida.orm import GroupTypeString
@@ -443,6 +445,15 @@ class UpfData(SinglefileData):
         if attr_md5 != md5:
             raise ValidationError("Attribute 'md5' says '{}' but '{}' was parsed instead.".format(attr_md5, md5))
 
+    def _prepare_upf(self, main_file_name=''):
+        """
+        Return UPF content.
+        """
+        # pylint: disable=unused-argument
+        return_string = self.get_content()
+
+        return return_string.encode('utf-8'), {}
+
     @classmethod
     def get_upf_group(cls, group_label):
         """Return the UPF family group with the given label.
@@ -484,3 +495,12 @@ class UpfData(SinglefileData):
         builder.order_by({Group: {'id': 'asc'}})
 
         return [group for group, in builder.all()]
+
+    # pylint: disable=unused-argument
+    def _prepare_json(self, main_file_name=''):
+        """
+        Returns UPF PP in json format.
+        """
+        with self.open() as file_handle:
+            upf_json = upf_to_json(file_handle.read(), fname=self.filename)
+        return json.dumps(upf_json).encode('utf-8'), {}

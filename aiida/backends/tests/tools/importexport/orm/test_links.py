@@ -230,12 +230,14 @@ class TestLinks(AiidaTestCase):
         # and the final set of nodes that are exported in each case, following
         # predecessor(INPUT, CREATE)/successor(CALL, RETURN, CREATE) links.
         export_list = [(work1, [data1, data2, data3, data4, calc1, work1, work2]),
-                       (work2, [data1, data3, data4, calc1, work2]), (data3, [data1, data3, data4, calc1]),
-                       (data4, [data1, data3, data4, calc1]),
-                       (data5, [data1, data3, data4, data5, data6, calc1, calc2]),
-                       (data6, [data1, data3, data4, data5, data6, calc1,
-                                calc2]), (calc1, [data1, data3, data4, calc1]),
-                       (calc2, [data1, data3, data4, data5, data6, calc1, calc2]), (data1, [data1]), (data2, [data2])]
+                       (work2, [data1, data3, data4, calc1, work2, work1, data2]),
+                       (data3, [data1, data3, data4, calc1, work2, work1, data2]),
+                       (data4, [data1, data3, data4, calc1, work2, work1, data2]),
+                       (data5, [data1, data3, data4, data5, data6, calc1, calc2, work2, work1, data2]),
+                       (data6, [data1, data3, data4, data5, data6, calc1, calc2, work2, work1, data2]),
+                       (calc1, [data1, data3, data4, calc1, work2, work1, data2]),
+                       (calc2, [data1, data3, data4, data5, data6, calc1, calc2, work2, work1, data2]),
+                       (data1, [data1]), (data2, [data2])]
 
         return graph_nodes, export_list[export_combination]
 
@@ -373,19 +375,14 @@ class TestLinks(AiidaTestCase):
     @staticmethod
     def prepare_link_flags_export(nodes_to_export, test_data):
         """Helper function"""
-        from aiida.tools.importexport.common.config import LINK_FLAGS
-        rules = {}
-        togglable_link_rules = {
-            'input_calc_forward', 'create_backward', 'return_backward', 'input_work_forward', 'call_calc_backward',
-            'call_work_backward'
-        }
-        for rule in LINK_FLAGS:
-            if rule in togglable_link_rules:
-                rules[rule] = LINK_FLAGS[rule]
+        from aiida.common.links import GraphTraversalRules
+
+        export_rules = GraphTraversalRules.EXPORT.value
+        traversal_rules = {name: rule.default for name, rule in export_rules.items() if rule.toggleable}
 
         for export_file, rule_changes, expected_nodes in test_data.values():
-            rules.update(rule_changes)
-            export(nodes_to_export[0], outfile=export_file, silent=True, **rules)
+            traversal_rules.update(rule_changes)
+            export(nodes_to_export[0], outfile=export_file, silent=True, **traversal_rules)
 
             for node_type in nodes_to_export[1]:
                 if node_type in expected_nodes:
@@ -508,7 +505,8 @@ class TestLinks(AiidaTestCase):
                 ['data', 'calc', 'work'],
                 [
                     [],  # calc: False, work: False (DEFAULT)
-                    ['calc1', 'data3', 'data4', 'calc2', 'data5', 'data6'],  # calc: True, work: False
+                    ['calc1', 'data3', 'data4', 'calc2', 'data5', 'data6', 'work2', 'work1',
+                     'data2'],  # calc: True, work: False
                     ['work1', 'data2', 'work2', 'calc1', 'data3', 'data4'],  # calc: False, work: True
                     ['work1', 'data2', 'work2', 'calc1', 'data3', 'data4', 'calc2', 'data5',
                      'data6']  # calc: True, work: True
@@ -527,9 +525,11 @@ class TestLinks(AiidaTestCase):
                 ['data', 'calc', 'work'],
                 [
                     [],  # create: False, return: False
-                    ['calc1', 'data3', 'data1', 'calc2', 'data6'],  # create: True, return: False (DEFAULT)
-                    ['work2', 'data1', 'calc1', 'data3'],  # create: False, return: True
-                    ['calc1', 'data3', 'data1', 'work2', 'calc2', 'data6']  # create: True, return: True
+                    ['calc1', 'data3', 'data1', 'calc2', 'data6', 'work2', 'work1',
+                     'data2'],  # create: True, return: False (DEFAULT)
+                    ['work2', 'data1', 'calc1', 'data3', 'work1', 'data2'],  # create: False, return: True
+                    ['calc1', 'data3', 'data1', 'work2', 'calc2', 'data6', 'work1',
+                     'data2']  # create: True, return: True
                 ]
             )
         )
@@ -546,10 +546,10 @@ class TestLinks(AiidaTestCase):
             expected_nodes=(
                 ['data', 'work'],
                 [
-                    ['data1', 'data3', 'data4'],  # calc: False, work: False (DEFAULT)
+                    ['data1', 'data3', 'data4'],  # calc: False, work: False
                     ['data1', 'data3', 'data4', 'work2'],  # calc: True, work: False
                     ['data1', 'data3', 'data4'],  # calc: False, work: True
-                    ['data1', 'data3', 'data4', 'work2', 'work1', 'data2']  # calc: True, work: True
+                    ['data1', 'data3', 'data4', 'work2', 'work1', 'data2']  # calc: True, work: True (DEFAULT)
                 ]
             )
         )
@@ -565,10 +565,10 @@ class TestLinks(AiidaTestCase):
             expected_nodes=(
                 ['data', 'calc', 'work'],
                 [
-                    ['data1', 'calc1', 'data3', 'data4'],  # calc: False, work: False (DEFAULT)
+                    ['data1', 'calc1', 'data3', 'data4'],  # calc: False, work: False
                     ['data1', 'calc1', 'data3', 'data4'],  # calc: True, work: False
                     ['data1', 'calc1', 'data3', 'data4', 'work1', 'data2'],  # calc: False, work: True
-                    ['data1', 'calc1', 'data3', 'data4', 'work1', 'data2']  # calc: True, work: True
+                    ['data1', 'calc1', 'data3', 'data4', 'work1', 'data2']  # calc: True, work: True (DEFAULT)
                 ]
             )
         )

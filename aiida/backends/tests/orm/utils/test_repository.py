@@ -19,6 +19,7 @@ import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Node
+from aiida.orm.utils.repository import File, FileType
 
 
 class TestRepository(AiidaTestCase):
@@ -29,6 +30,9 @@ class TestRepository(AiidaTestCase):
         self.tempdir = tempfile.mkdtemp()
         self.tree = {
             'subdir': {
+                'nested': {
+                    'deep.txt': u'Content does not matter',
+                },
                 'a.txt': u'Content of file A\nWith some newlines',
                 'b.txt': u'Content of file B without newline',
             },
@@ -68,9 +72,42 @@ class TestRepository(AiidaTestCase):
 
         return content
 
+    def test_list_object_names(self):
+        """Test the `list_object_names` method."""
+        node = Node()
+        node.put_object_from_tree(self.tempdir, '')
+
+        self.assertEqual(sorted(node.list_object_names()), ['c.txt', 'subdir'])
+        self.assertEqual(sorted(node.list_object_names('subdir')), ['a.txt', 'b.txt', 'nested'])
+
+    def test_get_object(self):
+        """Test the `get_object` method."""
+        node = Node()
+        node.put_object_from_tree(self.tempdir, '')
+
+        self.assertEqual(node.get_object('c.txt'), File('c.txt', FileType.FILE))
+        self.assertEqual(node.get_object('subdir'), File('subdir', FileType.DIRECTORY))
+        self.assertEqual(node.get_object('subdir/a.txt'), File('a.txt', FileType.FILE))
+        self.assertEqual(node.get_object('subdir/nested'), File('nested', FileType.DIRECTORY))
+
+        with self.assertRaises(IOError):
+            node.get_object('subdir/not_existant')
+
+        with self.assertRaises(IOError):
+            node.get_object('subdir/not_existant.dat')
+
     def test_put_object_from_filelike(self):
         """Test the `put_object_from_filelike` method."""
         key = os.path.join('subdir', 'a.txt')
+        filepath = os.path.join(self.tempdir, key)
+        content = self.get_file_content(key)
+
+        with io.open(filepath, 'r') as handle:
+            node = Node()
+            node.put_object_from_filelike(handle, key)
+            self.assertEqual(node.get_object_content(key), content)
+
+        key = os.path.join('subdir', 'nested', 'deep.txt')
         filepath = os.path.join(self.tempdir, key)
         content = self.get_file_content(key)
 

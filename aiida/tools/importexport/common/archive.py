@@ -349,30 +349,18 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
 
 
 def extract_tree(infile, folder):
-    """
-    Prepare to import nodes from plain file system tree.
+    """Prepare to import nodes from plain file system tree by copying in the given sandbox folder.
 
-    :param infile: path
+    .. note:: the contents of the unpacked archive directory are copied into the sandbox folder, because the files will
+        anyway haven to be copied to the repository at some point. By copying the contents of the source directory now
+        and continuing operation only on the sandbox folder, we do not risk to modify the source files accidentally.
+        During import then, the node files from the sandbox can be moved to the repository, so they won't have to be
+        copied again in any case.
+
+    :param infile: absolute filepath point to the unpacked archive directory
     :type infile: str
 
-    :param folder: a temporary folder used to extract the file tree
+    :param folder: a temporary folder to which the archive contents are copied
     :type folder: :py:class:`~aiida.common.folders.SandboxFolder`
     """
-
-    def add_files(args, path, files):
-        """Add files to a folder."""
-        folder = args['folder']
-        root = args['root']
-        for filename in files:
-            fullpath = os.path.join(path, filename)
-            relpath = os.path.relpath(fullpath, root)
-            if os.path.isdir(fullpath):
-                if os.path.dirname(relpath) != '':
-                    folder.get_subfolder(os.path.dirname(relpath) + os.sep, create=True)
-            elif not os.path.isfile(fullpath):
-                continue
-            if os.path.dirname(relpath) != '':
-                folder.get_subfolder(os.path.dirname(relpath) + os.sep, create=True)
-            folder.insert_path(os.path.abspath(fullpath), relpath)
-
-    os.walk(infile, add_files, {'folder': folder, 'root': infile})
+    folder.replace_with_folder(infile, move=False, overwrite=True)

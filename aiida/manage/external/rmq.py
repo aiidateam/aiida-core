@@ -114,18 +114,36 @@ def _store_inputs(inputs):
 
 
 class ProcessLauncher(plumpy.ProcessLauncher):
-    # pylint: disable=too-few-public-methods
-    """
-    A sub class of plumpy.ProcessLauncher to launch a Process
+    """A sub class of `plumpy.ProcessLauncher` to launch a `Process`.
 
     It overrides the _continue method to make sure the node corresponding to the task can be loaded and
     that if it is already marked as terminated, it is not continued but the future is reconstructed and returned
     """
 
+    @staticmethod
+    def handle_continue_exception(node, exception, message):
+        """Handle exception raised in `_continue` call.
+
+        If the process state of the node has not yet been put to excepted, the exception was raised before the process
+        instance could be reconstructed, for example when the process class could not be loaded, thereby circumventing
+        the exception handling of the state machine. Raising this exception will then acknowledge the process task with
+        RabbitMQ leaving an uncleaned node in the `CREATED` state for ever. Therefore we have to perform the node
+        cleaning manually.
+
+        :param exception: the exception object
+        :param message: string message to use for the log message
+        """
+        from aiida.engine import ProcessState
+
+        if not node.is_excepted:
+            node.logger.exception(message)
+            node.set_exception(str(exception))
+            node.set_process_state(ProcessState.EXCEPTED)
+            node.seal()
+
     @gen.coroutine
     def _continue(self, communicator, pid, nowait, tag=None):
-        """
-        Continue the task
+        """Continue the task.
 
         Note that the task may already have been completed, as indicated from the corresponding the node, in which
         case it is not continued, but the corresponding future is reconstructed and returned. This scenario may
@@ -138,7 +156,6 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         :param tag: the tag of the checkpoint to continue from
         """
         from aiida.common import exceptions
-        from aiida.engine import ProcessState
         from aiida.engine.exceptions import PastException
         from aiida.orm import load_node, Data
         from aiida.orm.utils import serialize
@@ -171,17 +188,13 @@ class ProcessLauncher(plumpy.ProcessLauncher):
 
         try:
             result = yield super(ProcessLauncher, self)._continue(communicator, pid, nowait, tag)
+        except ImportError as exception:
+            message = 'the class of the process could not be imported.'
+            self.handle_continue_exception(node, exception, message)
+            raise
         except Exception as exception:
-            # If the process state of the node has not yet been put to excepted, the exception was raised before the
-            # process instance could be reconstructed, for example when the process class could not be loaded, thereby
-            # circumventing the exception handling of the state machine. Raising this exception will then acknowledge
-            # the process task with RabbitMQ leaving an uncleaned node in the `CREATED` state for ever. Therefore we
-            # have to perform the node cleaning manually.
-            if not node.is_excepted:
-                node.logger.exception('failed to recreate the process instance in order to continue it')
-                node.set_exception(str(exception))
-                node.set_process_state(ProcessState.EXCEPTED)
-                node.seal()
+            message = 'failed to recreate the process instance in order to continue it.'
+            self.handle_continue_exception(node, exception, message)
             raise
 
         # Ensure that the result is serialized such that communication thread won't have to do database operations

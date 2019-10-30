@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c), 2015-2017, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE
+Copyright (c), 2015-2019, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE
 (Theory and Simulation of Materials (THEOS) and National Centre for
 Computational Design and Discovery of Novel Materials (NCCR MARVEL)),
 Switzerland and ROBERT BOSCH LLC, USA. All rights reserved.
@@ -22,8 +22,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-
-----
-
-For a list of other open source components included in AiiDA, see the
-file open_source_licenses.txt.

@@ -1,8 +1,8 @@
 .. _working_processes:
 
-*********
-Processes
-*********
+***********
+Application
+***********
 
 Before you start working with processes, make sure you have read and understood the :ref:`basic concept<concepts_processes>`.
 This section will explain the aspects of working with processes that apply to all the various types of processes.
@@ -123,9 +123,19 @@ An example input port that explicitly sets all these attributes is the following
 
 .. code:: python
 
-    spec.input('positive_number', required=False, default=Int(1), valid_type=(Int, Float), validator=is_number_positive)
+    spec.input('positive_number', required=False, default=lambda: Int(1), valid_type=(Int, Float), validator=is_number_positive)
 
-Here we define an input named ``positive_number`` that is not required, if a value is not explicitly passed, the default ``Int(1)`` will be used and if a value *is* passed, it should be of type ``Int`` or ``Float`` and it should be valid according to the ``is_number_positive`` validator.
+Here we define an input named ``positive_number`` that should be of type ``Int`` or ``Float`` and should pass the test of the ``is_number_positive`` validator.
+If no value is passed, the default will be used.
+
+.. warning::
+
+    In python, it is good practice to avoid mutable defaults for function arguments, `since they are instantiated at function definition and reused for each invocation <https://docs.python.org/3/reference/compound_stmts.html#function-definitions>`_.
+    This can lead to unexpected results when the default value is changed between function calls.
+    In the context of AiiDA, nodes (both stored and unstored) are considered *mutable* and should therefore *not* be used as default values for process ports.
+    However, it is possible to use a lambda that returns a node instance as done in the example above.
+    This will return a new instance of the node with the given value, each time the process is instantiated.
+
 Note that the validator is nothing more than a free function which takes a single argument, being the value that is to be validated.
 If nothing is returned, the value is considered to be valid.
 To signal that the value is invalid and to have a validation error raised, simply return a string with the validation error message, for example:

@@ -121,6 +121,14 @@ class Manager(object):
 
         return self._backend
 
+    @property
+    def backend_loaded(self):
+        """Return whether a database backend has been loaded.
+
+        :return: boolean, True if database backend is currently loaded, False otherwise
+        """
+        return self._backend is not None
+
     def get_backend(self):
         """
         Get the database backend

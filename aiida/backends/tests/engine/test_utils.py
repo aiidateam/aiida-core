@@ -16,7 +16,8 @@ from tornado.gen import coroutine
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.engine.utils import exponential_backoff_retry
+from aiida.engine import calcfunction, workfunction
+from aiida.engine.utils import exponential_backoff_retry, is_process_function
 
 ITERATION = 0
 MAX_ITERATIONS = 3
@@ -64,3 +65,21 @@ class TestExponentialBackoffRetry(AiidaTestCase):
         max_attempts = MAX_ITERATIONS - 1
         with self.assertRaises(RuntimeError):
             loop.run_sync(lambda: exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
+
+    def test_is_process_function(self):
+        """Test the `is_process_function` utility."""
+
+        def normal_function():
+            pass
+
+        @calcfunction
+        def calc_function():
+            pass
+
+        @workfunction
+        def work_function():
+            pass
+
+        self.assertEqual(is_process_function(normal_function), False)
+        self.assertEqual(is_process_function(calc_function), True)
+        self.assertEqual(is_process_function(work_function), True)

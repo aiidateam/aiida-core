@@ -108,6 +108,7 @@ class Repository(object):
 
         :param key: fully qualified identifier for the object within the repository
         :return: a `File` named tuple representing the object located at key
+        :raises IOError: if no object with the given key exists
         """
         self.validate_object_key(key)
 
@@ -121,10 +122,15 @@ class Repository(object):
         if directory:
             folder = folder.get_subfolder(directory)
 
-        if os.path.isdir(os.path.join(folder.abspath, filename)):
+        filepath = os.path.join(folder.abspath, filename)
+
+        if os.path.isdir(filepath):
             return File(filename, FileType.DIRECTORY)
 
-        return File(filename, FileType.FILE)
+        if os.path.isfile(filepath):
+            return File(filename, FileType.FILE)
+
+        raise IOError('object {} does not exist'.format(key))
 
     def get_object_content(self, key, mode='r'):
         """Return the content of a object identified by key.
@@ -225,7 +231,7 @@ class Repository(object):
 
         folder = self._get_base_folder()
 
-        if os.sep in key:
+        while os.sep in key:
             basepath, key = key.split(os.sep, 1)
             folder = folder.get_subfolder(basepath, create=True)
 

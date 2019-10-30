@@ -209,31 +209,22 @@ class Utils(object):
         if not path:
             return (resource_type, page, node_id, query_type)
 
-        # Query type (input, output, attributes, extras, visualization,
-        # schema, statistics)
-        if path[0] == 'schema':
+        if path[0] in [
+            'projectable_properties', 'statistics', 'full_types', 'download', 'download_formats', 'report', 'status',
+            'input_files', 'output_files'
+        ]:
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError('url requesting schema resources do not accept further fields')
-            else:
-                return (resource_type, page, node_id, query_type)
-        elif path[0] == 'statistics':
-            query_type = path.pop(0)
-            if path:
-                raise RestInputValidationError('url requesting statistics resources do not accept further fields')
-            else:
-                return (resource_type, page, node_id, query_type)
-        elif path[0] == 'types':
-            query_type = path.pop(0)
-            if path:
-                raise RestInputValidationError('url requesting types do not accept further fields')
-            else:
-                return (resource_type, page, node_id, query_type)
-        elif path[0] == 'io' or path[0] == 'content':
+                raise RestInputValidationError('Given url does not accept further fields')
+        elif path[0] in ['links', 'contents']:
             path.pop(0)
             query_type = path.pop(0)
-            if not path:
-                return (resource_type, page, node_id, query_type)
+        elif path[0] in ['repo']:
+            path.pop(0)
+            query_type = 'repo_' + path.pop(0)
+
+        if not path:
+            return (resource_type, page, node_id, query_type)
 
         # Page (this has to be in any case the last field)
         if path[0] == 'page':
@@ -242,6 +233,8 @@ class Utils(object):
                 page = 1
                 return (resource_type, page, node_id, query_type)
             page = int(path.pop(0))
+        else:
+            raise RestInputValidationError('The requested URL is not found on the server.')
 
         return (resource_type, page, node_id, query_type)
 
@@ -270,9 +263,9 @@ class Utils(object):
                 'requested (i.e. the path must contain '
                 '/page/)'
             )
-        # 4. No querystring if query type = schema'
-        if query_type in ('schema') and is_querystring_defined:
-            raise RestInputValidationError('schema requests do not allow specifying a query string')
+        # 4. No querystring if query type = projectable_properties'
+        if query_type in ('projectable_properties',) and is_querystring_defined:
+            raise RestInputValidationError('projectable_properties requests do not allow specifying a query string')
 
     def paginate(self, page, perpage, total_count):
         """
@@ -503,29 +496,27 @@ class Utils(object):
         :param field_list: a (nested) list of elements resulting from parsing the query_string
         :returns: the filters in the
         """
-
         ## Create void variables
         filters = {}
         orderby = []
         limit = None
         offset = None
         perpage = None
-        alist = None
-        nalist = None
-        elist = None
-        nelist = None
-        downloadformat = None
-        visformat = None
         filename = None
-        rtype = None
+        download_format = None
+        download = True
+        attributes = None
+        attributes_filter = None
+        extras = None
+        extras_filter = None
+        full_type = None
 
         # io tree limit parameters
         tree_in_limit = None
         tree_out_limit = None
 
-        ## Count how many time a key has been used for the filters and check if
-        # reserved keyword
-        # have been used twice,
+        ## Count how many time a key has been used for the filters
+        # and check if reserved keyword have been used twice
         field_counts = {}
         for field in field_list:
             field_key = field[0]
@@ -552,30 +543,29 @@ class Utils(object):
             raise RestInputValidationError('You cannot specify perpage more than once')
         if 'orderby' in field_counts.keys() and field_counts['orderby'] > 1:
             raise RestInputValidationError('You cannot specify orderby more than once')
-        if 'alist' in field_counts.keys() and field_counts['alist'] > 1:
-            raise RestInputValidationError('You cannot specify alist more than once')
-        if 'nalist' in field_counts.keys() and field_counts['nalist'] > 1:
-            raise RestInputValidationError('You cannot specify nalist more than once')
-        if 'elist' in field_counts.keys() and field_counts['elist'] > 1:
-            raise RestInputValidationError('You cannot specify elist more than once')
-        if 'nelist' in field_counts.keys() and field_counts['nelist'] > 1:
-            raise RestInputValidationError('You cannot specify nelist more than once')
-        if 'format' in field_counts.keys() and field_counts['format'] > 1:
-            raise RestInputValidationError('You cannot specify format more than once')
-        if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
-            raise RestInputValidationError('You cannot specify visformat more than once')
+        if 'download' in field_counts.keys() and field_counts['download'] > 1:
+            raise RestInputValidationError('You cannot specify download more than once')
+        if 'download_format' in field_counts.keys() and field_counts['download_format'] > 1:
+            raise RestInputValidationError('You cannot specify download_format more than once')
         if 'filename' in field_counts.keys() and field_counts['filename'] > 1:
             raise RestInputValidationError('You cannot specify filename more than once')
-        if 'rtype' in field_counts.keys() and field_counts['rtype'] > 1:
-            raise RestInputValidationError('You cannot specify rtype more than once')
         if 'in_limit' in field_counts.keys() and field_counts['in_limit'] > 1:
             raise RestInputValidationError('You cannot specify in_limit more than once')
         if 'out_limit' in field_counts.keys() and field_counts['out_limit'] > 1:
             raise RestInputValidationError('You cannot specify out_limit more than once')
+        if 'attributes' in field_counts.keys() and field_counts['attributes'] > 1:
+            raise RestInputValidationError('You cannot specify attributes more than once')
+        if 'attributes_filter' in field_counts.keys() and field_counts['attributes_filter'] > 1:
+            raise RestInputValidationError('You cannot specify attributes_filter more than once')
+        if 'extras' in field_counts.keys() and field_counts['extras'] > 1:
+            raise RestInputValidationError('You cannot specify extras more than once')
+        if 'extras_filter' in field_counts.keys() and field_counts['extras_filter'] > 1:
+            raise RestInputValidationError('You cannot specify extras_filter more than once')
+        if 'full_type' in field_counts.keys() and field_counts['full_type'] > 1:
+            raise RestInputValidationError('You cannot specify full_type more than once')
 
         ## Extract results
         for field in field_list:
-
             if field[0] == 'limit':
                 if field[1] == '=':
                     limit = field[2]
@@ -592,27 +582,6 @@ class Utils(object):
                 else:
                     raise RestInputValidationError("only assignment operator '=' is permitted after 'perpage'")
 
-            elif field[0] == 'alist':
-                if field[1] == '=':
-                    alist = field[2]
-                else:
-                    raise RestInputValidationError("only assignment operator '=' is permitted after 'alist'")
-            elif field[0] == 'nalist':
-                if field[1] == '=':
-                    nalist = field[2]
-                else:
-                    raise RestInputValidationError("only assignment operator '=' is permitted after 'nalist'")
-            elif field[0] == 'elist':
-                if field[1] == '=':
-                    elist = field[2]
-                else:
-                    raise RestInputValidationError("only assignment operator '=' is permitted after 'elist'")
-            elif field[0] == 'nelist':
-                if field[1] == '=':
-                    nelist = field[2]
-                else:
-                    raise RestInputValidationError("only assignment operator '=' is permitted after 'nelist'")
-
             elif field[0] == 'orderby':
                 if field[1] == '=':
                     # Consider value (gives string) and value_list (gives list of
@@ -624,17 +593,17 @@ class Utils(object):
                 else:
                     raise RestInputValidationError("only assignment operator '=' is permitted after 'orderby'")
 
-            elif field[0] == 'format':
+            elif field[0] == 'download':
                 if field[1] == '=':
-                    downloadformat = field[2]
+                    download = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' is permitted after 'format'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'download'")
 
-            elif field[0] == 'visformat':
+            elif field[0] == 'download_format':
                 if field[1] == '=':
-                    visformat = field[2]
+                    download_format = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' is permitted after 'visformat'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'download_format'")
 
             elif field[0] == 'filename':
                 if field[1] == '=':
@@ -642,11 +611,11 @@ class Utils(object):
                 else:
                     raise RestInputValidationError("only assignment operator '=' is permitted after 'filename'")
 
-            elif field[0] == 'rtype':
+            elif field[0] == 'full_type':
                 if field[1] == '=':
-                    rtype = field[2]
+                    full_type = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' is permitted after 'rtype'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'full_type'")
 
             elif field[0] == 'in_limit':
                 if field[1] == '=':
@@ -659,6 +628,31 @@ class Utils(object):
                     tree_out_limit = field[2]
                 else:
                     raise RestInputValidationError("only assignment operator '=' is permitted after 'out_limit'")
+
+            elif field[0] == 'attributes':
+                if field[1] == '=':
+                    attributes = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'attributes'")
+
+            elif field[0] == 'attributes_filter':
+                if field[1] == '=':
+                    attributes_filter = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' is permitted after 'attributes_filter'"
+                    )
+            elif field[0] == 'extras':
+                if field[1] == '=':
+                    extras = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'extras'")
+
+            elif field[0] == 'extras_filter':
+                if field[1] == '=':
+                    extras_filter = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'extras_filter'")
 
             else:
 
@@ -687,8 +681,8 @@ class Utils(object):
         #     limit = self.limit_default
 
         return (
-            limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat, filename,
-            rtype, tree_in_limit, tree_out_limit
+            limit, offset, perpage, orderby, filters, download_format, download, filename, tree_in_limit,
+            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type
         )
 
     def parse_query_string(self, query_string):
@@ -813,7 +807,7 @@ class Utils(object):
         # General query string
         general_grammar = SS() + Optional(field) + ZeroOrMore(
             separator + field) + \
-                         Optional(separator) + SE()
+                          Optional(separator) + SE()
 
         ## Parse the query string
         try:

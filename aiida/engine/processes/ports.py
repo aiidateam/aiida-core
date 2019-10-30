@@ -17,8 +17,6 @@ import re
 
 from plumpy import ports
 
-from aiida.common.lang import type_check
-
 __all__ = (
     'PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize',
     'PORT_NAMESPACE_SEPARATOR'
@@ -82,8 +80,7 @@ class WithSerialize(object):
         self._serializer = serializer
 
     def serialize(self, value):
-        """
-        Serialize the given value if it is not already a Data type and a serializer function is defined
+        """Serialize the given value if it is not already a Data type and a serializer function is defined
 
         :param value: the value to be serialized
         :returns: a serialized version of the value or the unchanged value
@@ -185,25 +182,35 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         if any([len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores]):
             raise ValueError('invalid port name `{}`: more than two consecutive underscores'.format(port_name))
 
-    def serialize(self, mapping):
-        """
-        Serialize the given mapping onto this Portnamespace. It will recursively call this function on any
-        nested PortNamespace or the serialize function on any Ports.
+    def serialize(self, mapping, breadcrumbs=()):
+        """Serialize the given mapping onto this `Portnamespace`.
+
+        It will recursively call this function on any nested `PortNamespace` or the serialize function on any `Ports`.
 
         :param mapping: a mapping of values to be serialized
+        :param breadcrumbs: a tuple with the namespaces of parent namespaces
         :returns: the serialized mapping
         """
+        from plumpy.ports import breadcrumbs_to_port
+
         if mapping is None:
             return None
 
-        type_check(mapping, collections.Mapping)
+        breadcrumbs += (self.name,)
+
+        if not isinstance(mapping, collections.Mapping):
+            port = breadcrumbs_to_port(breadcrumbs)
+            raise TypeError('port namespace `{}` received `{}` instead of a dictionary'.format(port, type(mapping)))
 
         result = {}
 
         for name, value in mapping.items():
             if name in self:
                 port = self[name]
-                result[name] = port.serialize(value)
+                if isinstance(port, PortNamespace):
+                    result[name] = port.serialize(value, breadcrumbs)
+                else:
+                    result[name] = port.serialize(value)
             else:
                 result[name] = value
 

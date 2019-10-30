@@ -1,8 +1,7 @@
 .. _working_data:
 
-****
-Data
-****
+Concept
+=======
 
 The nodes in the :ref:`provenance graph<concepts_provenance>` that are the inputs and outputs of processes are referred to as `data` and are represented by :class:`~aiida.orm.nodes.data.data.Data` nodes.
 Since data can come in all shapes and forms, the :class:`~aiida.orm.nodes.data.data.Data` class can be sub classed.
@@ -154,11 +153,8 @@ The following section will provide useful guidelines on how to optimally design 
 
 .. _working_data_design_guidelines:
 
-Design guidelines
-=================
-
 Database or repository?
------------------------
+=======================
 
 When deciding where to store a property of a data type, one has to choose between the database and the file repository.
 The database will make it possible to search in the provenance graph based on criteria based on the property, e.g. all ``NewData`` nodes where the property is greater than 0.

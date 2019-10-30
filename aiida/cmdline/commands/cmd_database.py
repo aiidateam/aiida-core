@@ -30,6 +30,11 @@ def verdi_database():
 def database_migrate(force):
     """Migrate the database to the latest schema version."""
     from aiida.manage.manager import get_manager
+    from aiida.engine.daemon.client import get_daemon_client
+
+    client = get_daemon_client()
+    if client.is_daemon_running:
+        echo.echo_critical('Migration aborted, the daemon for the profile is still running.')
 
     manager = get_manager()
     profile = manager.get_profile()

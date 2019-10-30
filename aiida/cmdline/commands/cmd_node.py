@@ -11,16 +11,18 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 import tabulate
 
-from aiida.common import exceptions
-from aiida.common import timezone
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common import exceptions
+from aiida.common import timezone
+from aiida.common.links import GraphTraversalRules
 
 
 @verdi.group('node')
@@ -238,7 +240,7 @@ class NodeTreePrinter(object):
     """Utility functions for printing node trees."""
 
     @classmethod
-    def print_node_tree(cls, node, max_depth, follow_links=None):
+    def print_node_tree(cls, node, max_depth, follow_links=()):
         """Top-level function for printing node tree."""
         from ete3 import Tree
         from aiida.cmdline.utils.common import get_node_summary
@@ -254,13 +256,12 @@ class NodeTreePrinter(object):
         return link_triple.node.ctime
 
     @classmethod
-    def _build_tree(cls, node, show_pk=True, max_depth=None, follow_links=None, depth=0):
+    def _build_tree(cls, node, show_pk=True, max_depth=None, follow_links=(), depth=0):
         """Return string with tree."""
         if max_depth is not None and depth > max_depth:
             return None
 
         children = []
-        # pylint: disable=unused-variable
         for entry in sorted(node.get_outgoing(link_type=follow_links).all(), key=cls._ctime):
             child_str = cls._build_tree(
                 entry.node, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1
@@ -288,18 +289,15 @@ class NodeTreePrinter(object):
 @arguments.NODES('nodes', required=True)
 @options.VERBOSE()
 @options.DRY_RUN()
-@click.option('--force', is_flag=True, default=False, help='Do not ask for confirmation.')
-@click.option('--create-forward', is_flag=True, default=True, help='Follow CREATE links forwards when deleting.')
-@click.option('--call-calc-forward', is_flag=True, default=False, help='Follow CALL_CALC links forwards when deleting.')
-@click.option('--call-work-forward', is_flag=True, default=False, help='Follow CALL_WORK links forwards when deleting.')
+@options.FORCE()
+@options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(nodes, dry_run, verbose, force, create_forward, call_calc_forward, call_work_forward):  # pylint: disable=too-many-arguments
-    """
-    Delete nodes from the database.
+def node_delete(nodes, dry_run, verbose, force, **kwargs):
+    """Delete nodes from the provenance graph.
 
-    Please notice that this will not only delete the nodes explicitly provided
-    via the command line, but will also include the nodes necessary to keep a
-    consistent provenance acording to the rules outlined in the documentation.
+    This will not only delete the nodes explicitly provided via the command line, but will also include
+    the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
+    You can modify some of those rules using options of this command.
     """
     from aiida.manage.database.delete.nodes import delete_nodes
 
@@ -311,15 +309,7 @@ def node_delete(nodes, dry_run, verbose, force, create_forward, call_calc_forwar
 
     node_pks_to_delete = [node.pk for node in nodes]
 
-    delete_nodes(
-        node_pks_to_delete,
-        dry_run=dry_run,
-        verbosity=verbosity,
-        force=force,
-        create_forward=create_forward,
-        call_calc_forward=call_calc_forward,
-        call_work_forward=call_work_forward
-    )
+    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force, **kwargs)
 
 
 @verdi_node.command('rehash')

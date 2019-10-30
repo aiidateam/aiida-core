@@ -31,8 +31,7 @@ class ProcessBuilderNamespace(collections.MutableMapping):
     """
 
     def __init__(self, port_namespace):
-        """
-        Dynamically construct the get and set properties for the ports of the given port namespace
+        """Dynamically construct the get and set properties for the ports of the given port namespace.
 
         For each port in the given port namespace a get and set property will be constructed dynamically
         and added to the ProcessBuilderNamespace. The docstring for these properties will be defined
@@ -73,9 +72,10 @@ class ProcessBuilderNamespace(collections.MutableMapping):
             setattr(self.__class__, name, getter)
 
     def __setattr__(self, attr, value):
-        """
-        Any attributes without a leading underscore being set correspond to inputs and should hence
-        be validated with respect to the corresponding input port from the process spec
+        """Assign the given value to the port with key `attr`.
+
+        .. note:: Any attributes without a leading underscore being set correspond to inputs and should hence be
+            validated with respect to the corresponding input port from the process spec
 
         :param attr: attribute
         :type attr: str
@@ -148,14 +148,51 @@ class ProcessBuilderNamespace(collections.MutableMapping):
             else:
                 self.__setattr__(key, value)
 
+    def _inputs(self, prune=False):
+        """Return the entire mapping of inputs specified for this builder.
+
+        :param prune: boolean, when True, will prune nested namespaces that contain no actual values whatsoever
+        :return: mapping of inputs ports and their input values.
+        """
+        if prune:
+            return self._prune(dict(self))
+
+        return dict(self)
+
+    def _prune(self, value):
+        """Prune a nested mapping from all mappings that are completely empty.
+
+        .. note:: a nested mapping that is completely empty means it contains at most other empty mappings. Other null
+            values, such as `None` or empty lists, should not be pruned.
+
+        :param value: a nested mapping of port values
+        :return: the same mapping but without any nested namespace that is completely empty.
+        """
+        from aiida.orm import Node
+
+        if isinstance(value, collections.Mapping) and not isinstance(value, Node):
+            result = {}
+            for key, sub_value in value.items():
+                pruned = self._prune(sub_value)
+                # If `pruned` is an "empty'ish" mapping and not an instance of `Node`, skip it, otherwise keep it.
+                if not (isinstance(pruned, collections.Mapping) and not pruned and not isinstance(pruned, Node)):
+                    result[key] = pruned
+            return result
+
+        return value
+
 
 class ProcessBuilder(ProcessBuilderNamespace):
     """A process builder that helps setting up the inputs for creating a new process."""
 
     def __init__(self, process_class):
+        """Construct a `ProcessBuilder` instance for the given `Process` class.
+
+        :param process_class: the `Process` subclass
+        """
         self._process_class = process_class
         self._process_spec = self._process_class.spec()
-        super(ProcessBuilder, self).__init__(port_namespace=self._process_spec.inputs)
+        super(ProcessBuilder, self).__init__(self._process_spec.inputs)
 
     @property
     def process_class(self):

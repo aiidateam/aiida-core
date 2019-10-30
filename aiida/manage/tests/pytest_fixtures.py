@@ -23,18 +23,27 @@ from __future__ import print_function
 import tempfile
 import shutil
 import pytest
+from aiida.common.extendeddicts import AttributeDict
 from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
 
 
 @pytest.fixture(scope='session', autouse=True)
-def aiida_profile():
+def aiida_profile(request):
     """Set up AiiDA test profile for the duration of the tests.
 
     Note: scope='session' limits this fixture to run once per session. Thanks to ``autouse=True``, you don't actually
      need to depend on it explicitly - it will activate as soon as you import it in your ``conftest.py``.
     """
     # create new TestManager instance
-    with test_manager(backend=get_test_backend_name(), profile_name=get_test_profile_name()) as test_mgr:
+    try:
+        test_arguments = request.param
+    except AttributeError:
+        test_arguments = AttributeDict()
+    if 'backend' not in test_arguments:
+        test_arguments.backend = get_test_backend_name()
+    if 'profile_name' not in test_arguments:
+        test_arguments.profile_name = get_test_profile_name()
+    with test_manager(**test_arguments) as test_mgr:
         yield test_mgr
     # here, the TestManager instance has already been destroyed
 

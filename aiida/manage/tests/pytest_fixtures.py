@@ -61,7 +61,7 @@ def clear_database(aiida_profile):  # pylint: disable=redefined-outer-name
     """
     yield
     # after the test function has completed, reset the database
-    aiida_profile.reset_db()
+    aiida_profile().reset_db()
 
 
 @pytest.fixture(scope='function')

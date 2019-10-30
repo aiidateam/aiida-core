@@ -18,7 +18,7 @@ from __future__ import division
 import itertools
 import copy
 from functools import reduce
-from packaging import version
+from pkg_resources import parse_version
 
 import six
 from six.moves import range, zip
@@ -896,9 +896,9 @@ class StructureData(Data):
         self.cell = struct.lattice.matrix.tolist()
         self.pbc = [True, True, True]
         self.clear_kinds()
-
-        required_pmg_version = version.parse('2019.3.13')
-        current_pmg_version = version.parse(get_pymatgen_version())
+ 
+        required_pmg_version = parse_version('2019.3.13')
+        current_pmg_version = parse_version(get_pymatgen_version())
         for site in struct.sites:
 
             # site.species property first introduced in pymatgen version 2019.3.13

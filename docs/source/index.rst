@@ -64,23 +64,12 @@ For developers
     install/updating_installation
     install/troubleshooting
 
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Getting started
-    :hidden:
-
-    get_started/index
-    get_started/computers
-    get_started/codes
-
 .. toctree::
     :maxdepth: 1
     :caption: Working with AiiDA
     :hidden:
 
     working_with_aiida/index
-
 
 .. toctree::
     :maxdepth: 1

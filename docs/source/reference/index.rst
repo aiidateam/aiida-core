@@ -27,9 +27,9 @@ Processes
    ../concepts/processes
    ../working/processes
 
-==============================
-Calculation and work functions
-==============================
+=================
+Process functions
+=================
 
 .. toctree::
    :maxdepth: 4

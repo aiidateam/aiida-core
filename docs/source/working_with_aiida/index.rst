@@ -1,3 +1,18 @@
+.. _get_started:
+
+===============
+Getting started
+===============
+
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+
+    ../get_started/index
+    ../get_started/computers
+    ../get_started/codes
+
+
 ======================
 Command line interface
 ======================
@@ -45,26 +60,18 @@ Before checking out the individual commands below, start with a brief look at th
 
 
 
-==========
-Python API
-==========
+================
+Python interface
+================
+
+While the ``verdi`` CLI provides shortcuts for many common tasks, the AiiDA python API provides full access to the underlying AiiDA python objects and their methods.
+This is possible via the interactive ``verdi shell`` and via python scripts:
+
 
 .. toctree::
     :maxdepth: 4
 
     python_api
-
-
-=========
-Scripting
-=========
-
-While the ``verdi`` CLI provides shortcuts for many common tasks, the AiiDA python API provides full access to the underlying AiiDA python objects and their methods.
-This is possible via the interactive ``verdi shell`` and via python scripts:
-
-.. toctree::
-    :maxdepth: 4
-
     scripting
     daemon_service
 

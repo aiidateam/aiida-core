@@ -36,7 +36,7 @@ class TestManagerTestCase(unittest.TestCase):
         """
         Create a temporary profile, passing the pgtest argument.
         """
-        from aiida.common.files import which
+        from pgtest.pgtest import which
 
         # this should fail
         pgtest = {'pg_ctl': 'notapath'}

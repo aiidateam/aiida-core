@@ -1,16 +1,3 @@
-.. _get_started:
-
-
-******************
-First things first
-******************
-
-With ``aiida-core`` installed, a few steps remain before starting to run calculations:
-
-1) :ref:`plugins`
-2) :ref:`setup_computer`
-3) :ref:`setup_code`
-
 .. _plugins:
 
 ***************

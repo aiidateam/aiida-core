@@ -34,7 +34,7 @@ Installation phase
 
   followed by executing the original install command once more::
 
-    pip install -e .
+    pip install -e aiida-core
 
   This should fix the dependency error.
 

@@ -1,5 +1,5 @@
-Groups
-------
+About Groups
+------------
 
 Groups are a tool to organize the nodes of the provenance graph into sub sets. Any
 number of groups can be created and each group can contain any number of nodes of any type.
@@ -14,7 +14,10 @@ be performed with groups:
   in the database. The same happens if you delete nodes from the group -- they will remain
   in the database but won't belong to the group anymore.
 
-1. **Create a new Group.**
+
+Create a new Group
+------------------
+
     From the command line interface::
 
       verdi group create test_group
@@ -28,7 +31,8 @@ be performed with groups:
 
 
 
-2. **List available Groups.**
+List available Groups
+---------------------
 
     Example::
 
@@ -56,7 +60,9 @@ be performed with groups:
        [<Group: "new_group" [type user], of user xxx@xx.com>]]
 
 
-3. **Add nodes to a Group.**
+Add nodes to a Group
+--------------------
+
     Once the ``test_group`` has been created, we can add nodes to it. To add the node with ``pk=1`` to the group we need to do the following.
 
     From the command line interface::
@@ -77,7 +83,9 @@ be performed with groups:
 
       In [5]: group.add_nodes(p)
 
-4. **Show information about a Group.**
+Show information about a Group
+------------------------------
+
     From the command line interface::
 
       verdi group show test_group
@@ -93,7 +101,8 @@ be performed with groups:
 
 
 
-5. **Remove nodes from a Group.**
+Remove nodes from a Group
+-------------------------
 
     From the command line interface::
 
@@ -106,7 +115,9 @@ be performed with groups:
 
       In [2]: group.clear()
 
-6. **Rename Group.**
+Rename Group
+------------
+
     From the command line interface::
 
       verdi group relabel test_group old_group
@@ -118,7 +129,9 @@ be performed with groups:
 
       In [2]: group.label = "another_group"
 
-7. **Delete Group.**
+Delete Group
+------------
+
     From the command line interface::
 
       verdi group delete another_group
@@ -127,7 +140,9 @@ be performed with groups:
 
 
 
-8. **Copy one group into another.**
+Copy one group into another
+---------------------------
+
     This operation will copy the nodes of the source group into the destination
     group. Moreover, if the destination group did not exist before, it will
     be created automatically.
@@ -144,6 +159,3 @@ be performed with groups:
       In [2]: dest_group = Group(label='destination_group').store()
 
       In [3]: dest_group.add_nodes(list(src_group.nodes))
-
-
-

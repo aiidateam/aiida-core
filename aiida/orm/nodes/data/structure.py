@@ -18,9 +18,10 @@ from __future__ import division
 import itertools
 import copy
 from functools import reduce
+from packaging import version
 
 import six
-from six.moves import range, zip, map
+from six.moves import range, zip
 
 from .data import Data
 from aiida.common.constants import elements
@@ -896,11 +897,12 @@ class StructureData(Data):
         self.pbc = [True, True, True]
         self.clear_kinds()
 
-        pymatgen_version = tuple(map(int, get_pymatgen_version().split('.')))
+        required_pmg_version = version.parse('2019.3.13')
+        current_pmg_version = version.parse(get_pymatgen_version())
         for site in struct.sites:
 
             # site.species property first introduced in pymatgen version 2019.3.13
-            if pymatgen_version < (2019, 3, 13):
+            if current_pmg_version < required_pmg_version:
                 species_and_occu = site.species_and_occu
             else:
                 species_and_occu = site.species

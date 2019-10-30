@@ -64,73 +64,27 @@ For developers
     install/updating_installation
     install/troubleshooting
 
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Getting started
-    :hidden:
-
-    get_started/index
-    get_started/computers
-    get_started/codes
-
 .. toctree::
     :maxdepth: 1
     :caption: Working with AiiDA
     :hidden:
 
     working_with_aiida/index
-    import_export/index
-
 
 .. toctree::
     :maxdepth: 1
-    :caption: Terms and Concepts
+    :caption: Reference Guide
     :hidden:
 
-    concepts/provenance
-    concepts/processes
-    concepts/calculations
-    concepts/workflows
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Workflow development
-    :hidden:
-
-    working/data
-    working/processes
-    working/functions
-    working/calculations
-    working/workflows
+    reference/index
 
 .. toctree::
    :maxdepth: 1
-   :caption: AiiDA plugin development
+   :caption: Development
    :hidden:
 
-   developer_guide/plugins/basics
-   developer_guide/plugins/quickstart
-   developer_guide/plugins/entry_points
-   developer_guide/plugins/documenting
-   developer_guide/plugins/plugin_tests
-   developer_guide/plugins/publish
-   developer_guide/plugins/update_plugin
-
-.. toctree::
-    :maxdepth: 1
-    :caption: AiiDA core development
-    :hidden:
-
-    developer_guide/core/internals
-    developer_guide/core/transport
-    developer_guide/core/modifying_the_schema
-    developer_guide/core/extend_restapi
-    developer_guide/core/caching
-    developer_guide/core/plugin_system
-    developer_guide/tools/sphinx_cheatsheet
-    developer_guide/tools/visual_aids
-    developer_guide/design/changes
+   developer_guide/plugins
+   developer_guide/core
 
 .. toctree::
     :maxdepth: 1
@@ -138,6 +92,7 @@ For developers
     :hidden:
 
     apidoc/aiida
+    restapi/index
 
 ***********
 How to cite

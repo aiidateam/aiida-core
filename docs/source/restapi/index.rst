@@ -1,8 +1,8 @@
 .. _rest_api:
 
-===================
-REST API for AiiDA
-===================
+==============
+AiiDA REST API
+==============
 
 AiiDA provides a
 `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_

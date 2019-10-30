@@ -589,8 +589,8 @@ def import_data_dj(
                 elif outdegree == 'unique_pair' and \
                 (in_id, link['label'], link['type']) in existing_outgoing_unique_pair:
                     raise exceptions.ImportValidationError(
-                        'Node<{}> already has an incoming {} link with label "{}"'.format(
-                            target.uuid, link_type, link['label']
+                        'Node<{}> already has an outgoing {} link with label "{}"'.format(
+                            source.uuid, link_type, link['label']
                         )
                     )
 

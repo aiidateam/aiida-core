@@ -41,3 +41,20 @@ class TestVerdi(AiidaTestCase):
         CONFIG.dictionary[CONFIG.KEY_PROFILES] = {}
         result = self.cli_runner.invoke(cmd_verdi.verdi, [])
         self.assertIsNone(result.exception, result.output)
+
+    @with_temporary_config_instance
+    def test_invalid_cmd_matches(self):
+        """Test that verdi with an invalid command will return matches if somewhat close"""
+        result = self.cli_runner.invoke(cmd_verdi.verdi, ['usr'])
+        self.assertIn('is not a verdi command', result.output)
+        self.assertIn('The most similar commands are', result.output)
+        self.assertIn('user', result.output)
+        self.assertNotEqual(result.exit_code, 0)
+
+    @with_temporary_config_instance
+    def test_invalid_cmd_no_matches(self):
+        """Test that verdi with an invalid command with no matches returns an appropriate message"""
+        result = self.cli_runner.invoke(cmd_verdi.verdi, ['foobar'])
+        self.assertIn('is not a verdi command', result.output)
+        self.assertIn('No similar commands found', result.output)
+        self.assertNotEqual(result.exit_code, 0)

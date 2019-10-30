@@ -1,5 +1,8 @@
 .. _working_process_functions:
 
+About
+=====
+
 A process function is a process (see the :ref:`process section<concepts_processes>` for details) that is implemented as a decorated python function.
 Currently, there are two types of process functions:
 

@@ -3,10 +3,11 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Unique constraints for the db_dbgroup_dbnodes table
 
 Revision ID: 7a6587e16f4c
@@ -14,6 +15,9 @@ Revises: 35d4ee9a1b0e
 Create Date: 2019-02-11 19:25:11.744902
 
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 from alembic import op
 
 # revision identifiers, used by Alembic.

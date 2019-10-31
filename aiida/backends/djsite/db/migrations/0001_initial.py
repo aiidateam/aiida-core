@@ -3,26 +3,28 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 from django.db import models, migrations
 import django.db.models.deletion
 import django.utils.timezone
-from django.conf import settings
-import django_extensions.db.fields
 
-from aiida.backends.djsite.db.migrations import update_schema_version
+from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 
-
-SCHEMA_VERSION = "1.0.1"
+REVISION = '1.0.1'
+DOWN_REVISION = '1.0.0'
 
 
 class Migration(migrations.Migration):
+
     dependencies = [
         ('auth', '0001_initial'),
     ]
@@ -42,9 +44,9 @@ class Migration(migrations.Migration):
                 ('last_name', models.CharField(max_length=254, blank=True)),
                 ('institution', models.CharField(max_length=254, blank=True)),
                 ('is_staff', models.BooleanField(default=False,
-                                                 help_text=b'Designates whether the user can log into this admin site.')),
+                                                 help_text=u'Designates whether the user can log into this admin site.')),
                 ('is_active', models.BooleanField(default=True,
-                                                  help_text=b'Designates whether this user should be treated as active. Unselect this instead of deleting accounts.')),
+                                                  help_text=u'Designates whether this user should be treated as active. Unselect this instead of deleting accounts.')),
                 ('date_joined', models.DateTimeField(default=django.utils.timezone.now)),
                 ('groups',
                  models.ManyToManyField(related_query_name='user', related_name='user_set', to='auth.Group', blank=True,
@@ -65,11 +67,11 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('key', models.CharField(max_length=1024, db_index=True)),
-                ('datatype', models.CharField(default=b'none', max_length=10, db_index=True,
-                                              choices=[(b'float', b'float'), (b'int', b'int'), (b'txt', b'txt'),
-                                                       (b'bool', b'bool'), (b'date', b'date'), (b'json', b'json'),
-                                                       (b'dict', b'dict'), (b'list', b'list'), (b'none', b'none')])),
-                ('tval', models.TextField(default=b'', blank=True)),
+                ('datatype', models.CharField(default=u'none', max_length=10, db_index=True,
+                                              choices=[(u'float', u'float'), (u'int', u'int'), (u'txt', u'txt'),
+                                                       (u'bool', u'bool'), (u'date', u'date'), (u'json', u'json'),
+                                                       (u'dict', u'dict'), (u'list', u'list'), (u'none', u'none')])),
+                ('tval', models.TextField(default=u'', blank=True)),
                 ('fval', models.FloatField(default=None, null=True)),
                 ('ival', models.IntegerField(default=None, null=True)),
                 ('bval', models.NullBooleanField(default=None)),
@@ -84,10 +86,10 @@ class Migration(migrations.Migration):
             name='DbAuthInfo',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('auth_params', models.TextField(default=b'{}')),
-                ('metadata', models.TextField(default=b'{}')),
+                ('auth_params', models.TextField(default=u'{}')),
+                ('metadata', models.TextField(default=u'{}')),
                 ('enabled', models.BooleanField(default=True)),
-                ('aiidauser', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
+                ('aiidauser', models.ForeignKey(to='db.DbUser', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -98,15 +100,15 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('state', models.CharField(db_index=True, max_length=25,
-                                           choices=[(b'UNDETERMINED', b'UNDETERMINED'), (b'NOTFOUND', b'NOTFOUND'),
-                                                    (b'RETRIEVALFAILED', b'RETRIEVALFAILED'),
-                                                    (b'COMPUTED', b'COMPUTED'), (b'RETRIEVING', b'RETRIEVING'),
-                                                    (b'WITHSCHEDULER', b'WITHSCHEDULER'),
-                                                    (b'SUBMISSIONFAILED', b'SUBMISSIONFAILED'),
-                                                    (b'PARSING', b'PARSING'), (b'FAILED', b'FAILED'),
-                                                    (b'FINISHED', b'FINISHED'), (b'TOSUBMIT', b'TOSUBMIT'),
-                                                    (b'SUBMITTING', b'SUBMITTING'), (b'IMPORTED', b'IMPORTED'),
-                                                    (b'NEW', b'NEW'), (b'PARSINGFAILED', b'PARSINGFAILED')])),
+                                           choices=[(u'UNDETERMINED', u'UNDETERMINED'), (u'NOTFOUND', u'NOTFOUND'),
+                                                    (u'RETRIEVALFAILED', u'RETRIEVALFAILED'),
+                                                    (u'COMPUTED', u'COMPUTED'), (u'RETRIEVING', u'RETRIEVING'),
+                                                    (u'WITHSCHEDULER', u'WITHSCHEDULER'),
+                                                    (u'SUBMISSIONFAILED', u'SUBMISSIONFAILED'),
+                                                    (u'PARSING', u'PARSING'), (u'FAILED', u'FAILED'),
+                                                    (u'FINISHED', u'FINISHED'), (u'TOSUBMIT', u'TOSUBMIT'),
+                                                    (u'SUBMITTING', u'SUBMITTING'), (u'IMPORTED', u'IMPORTED'),
+                                                    (u'NEW', u'NEW'), (u'PARSINGFAILED', u'PARSINGFAILED')])),
                 ('time', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
             ],
             options={
@@ -117,7 +119,7 @@ class Migration(migrations.Migration):
             name='DbComment',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', django_extensions.db.fields.UUIDField(editable=False, blank=True)),
+                ('uuid', models.CharField(editable=False, blank=True, max_length=36)),
                 ('ctime', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
                 ('mtime', models.DateTimeField(auto_now=True)),
                 ('content', models.TextField(blank=True)),
@@ -130,15 +132,15 @@ class Migration(migrations.Migration):
             name='DbComputer',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', django_extensions.db.fields.UUIDField(editable=False, blank=True)),
+                ('uuid', models.CharField(max_length=36,editable=False, blank=True)),
                 ('name', models.CharField(unique=True, max_length=255)),
                 ('hostname', models.CharField(max_length=255)),
                 ('description', models.TextField(blank=True)),
                 ('enabled', models.BooleanField(default=True)),
                 ('transport_type', models.CharField(max_length=255)),
                 ('scheduler_type', models.CharField(max_length=255)),
-                ('transport_params', models.TextField(default=b'{}')),
-                ('metadata', models.TextField(default=b'{}')),
+                ('transport_params', models.TextField(default=u'{}')),
+                ('metadata', models.TextField(default=u'{}')),
             ],
             options={
             },
@@ -149,11 +151,11 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('key', models.CharField(max_length=1024, db_index=True)),
-                ('datatype', models.CharField(default=b'none', max_length=10, db_index=True,
-                                              choices=[(b'float', b'float'), (b'int', b'int'), (b'txt', b'txt'),
-                                                       (b'bool', b'bool'), (b'date', b'date'), (b'json', b'json'),
-                                                       (b'dict', b'dict'), (b'list', b'list'), (b'none', b'none')])),
-                ('tval', models.TextField(default=b'', blank=True)),
+                ('datatype', models.CharField(default=u'none', max_length=10, db_index=True,
+                                              choices=[(u'float', u'float'), (u'int', u'int'), (u'txt', u'txt'),
+                                                       (u'bool', u'bool'), (u'date', u'date'), (u'json', u'json'),
+                                                       (u'dict', u'dict'), (u'list', u'list'), (u'none', u'none')])),
+                ('tval', models.TextField(default=u'', blank=True)),
                 ('fval', models.FloatField(default=None, null=True)),
                 ('ival', models.IntegerField(default=None, null=True)),
                 ('bval', models.NullBooleanField(default=None)),
@@ -168,9 +170,9 @@ class Migration(migrations.Migration):
             name='DbGroup',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', django_extensions.db.fields.UUIDField(editable=False, blank=True)),
+                ('uuid', models.CharField(max_length=36,editable=False, blank=True)),
                 ('name', models.CharField(max_length=255, db_index=True)),
-                ('type', models.CharField(default=b'', max_length=255, db_index=True)),
+                ('type', models.CharField(default=u'', max_length=255, db_index=True)),
                 ('time', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
                 ('description', models.TextField(blank=True)),
             ],
@@ -210,7 +212,7 @@ class Migration(migrations.Migration):
                 ('objname', models.CharField(db_index=True, max_length=255, blank=True)),
                 ('objpk', models.IntegerField(null=True, db_index=True)),
                 ('message', models.TextField(blank=True)),
-                ('metadata', models.TextField(default=b'{}')),
+                ('metadata', models.TextField(default=u'{}')),
             ],
             options={
             },
@@ -220,7 +222,7 @@ class Migration(migrations.Migration):
             name='DbNode',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', django_extensions.db.fields.UUIDField(editable=False, blank=True)),
+                ('uuid', models.CharField(max_length=36,editable=False, blank=True)),
                 ('type', models.CharField(max_length=255, db_index=True)),
                 ('label', models.CharField(db_index=True, max_length=255, blank=True)),
                 ('description', models.TextField(blank=True)),
@@ -241,8 +243,8 @@ class Migration(migrations.Migration):
                 ('entry_edge_id', models.IntegerField(null=True, editable=False)),
                 ('direct_edge_id', models.IntegerField(null=True, editable=False)),
                 ('exit_edge_id', models.IntegerField(null=True, editable=False)),
-                ('child', models.ForeignKey(related_name='parent_paths', editable=False, to='db.DbNode')),
-                ('parent', models.ForeignKey(related_name='child_paths', editable=False, to='db.DbNode')),
+                ('child', models.ForeignKey(related_name='parent_paths', editable=False, to='db.DbNode', on_delete=models.CASCADE)),
+                ('parent', models.ForeignKey(related_name='child_paths', editable=False, to='db.DbNode', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -253,11 +255,11 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('key', models.CharField(max_length=1024, db_index=True)),
-                ('datatype', models.CharField(default=b'none', max_length=10, db_index=True,
-                                              choices=[(b'float', b'float'), (b'int', b'int'), (b'txt', b'txt'),
-                                                       (b'bool', b'bool'), (b'date', b'date'), (b'json', b'json'),
-                                                       (b'dict', b'dict'), (b'list', b'list'), (b'none', b'none')])),
-                ('tval', models.TextField(default=b'', blank=True)),
+                ('datatype', models.CharField(default=u'none', max_length=10, db_index=True,
+                                              choices=[(u'float', u'float'), (u'int', u'int'), (u'txt', u'txt'),
+                                                       (u'bool', u'bool'), (u'date', u'date'), (u'json', u'json'),
+                                                       (u'dict', u'dict'), (u'list', u'list'), (u'none', u'none')])),
+                ('tval', models.TextField(default=u'', blank=True)),
                 ('fval', models.FloatField(default=None, null=True)),
                 ('ival', models.IntegerField(default=None, null=True)),
                 ('bval', models.NullBooleanField(default=None)),
@@ -274,23 +276,22 @@ class Migration(migrations.Migration):
             name='DbWorkflow',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', django_extensions.db.fields.UUIDField(editable=False, blank=True)),
+                ('uuid', models.CharField(max_length=36,editable=False, blank=True)),
                 ('ctime', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
                 ('mtime', models.DateTimeField(auto_now=True)),
                 ('label', models.CharField(db_index=True, max_length=255, blank=True)),
                 ('description', models.TextField(blank=True)),
                 ('nodeversion', models.IntegerField(default=1, editable=False)),
                 ('lastsyncedversion', models.IntegerField(default=0, editable=False)),
-                ('state', models.CharField(default=b'INITIALIZED', max_length=255,
-                                           choices=[(b'CREATED', b'CREATED'), (b'FINISHED', b'FINISHED'),
-                                                    (b'RUNNING', b'RUNNING'), (b'SLEEP', b'SLEEP'),
-                                                    (b'ERROR', b'ERROR'), (b'INITIALIZED', b'INITIALIZED')])),
+                ('state', models.CharField(choices=[(u'CREATED', u'CREATED'), (u'ERROR', u'ERROR'), (u'FINISHED', u'FINISHED'),
+                       (u'INITIALIZED', u'INITIALIZED'), (u'RUNNING', u'RUNNING'), (u'SLEEP', u'SLEEP')],
+                      default=u'INITIALIZED', max_length=255) ),
                 ('report', models.TextField(blank=True)),
                 ('module', models.TextField()),
                 ('module_class', models.TextField()),
                 ('script_path', models.TextField()),
                 ('script_md5', models.CharField(max_length=255)),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=django.db.models.deletion.PROTECT)),
+                ('user', models.ForeignKey(to='db.DbUser', on_delete=django.db.models.deletion.PROTECT)),
             ],
             options={
             },
@@ -302,11 +303,11 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('name', models.CharField(max_length=255)),
                 ('time', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
-                ('data_type', models.CharField(default=b'PARAMETER', max_length=255)),
-                ('value_type', models.CharField(default=b'NONE', max_length=255)),
+                ('data_type', models.CharField(default=u'PARAMETER', max_length=255)),
+                ('value_type', models.CharField(default=u'NONE', max_length=255)),
                 ('json_value', models.TextField(blank=True)),
-                ('aiida_obj', models.ForeignKey(blank=True, to='db.DbNode', null=True)),
-                ('parent', models.ForeignKey(related_name='data', to='db.DbWorkflow')),
+                ('aiida_obj', models.ForeignKey(blank=True, to='db.DbNode', null=True, on_delete=models.CASCADE)),
+                ('parent', models.ForeignKey(related_name='data', to='db.DbWorkflow', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -318,15 +319,14 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('name', models.CharField(max_length=255)),
                 ('time', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
-                ('nextcall', models.CharField(default=b'none', max_length=255)),
-                ('state', models.CharField(default=b'CREATED', max_length=255,
-                                           choices=[(b'CREATED', b'CREATED'), (b'FINISHED', b'FINISHED'),
-                                                    (b'RUNNING', b'RUNNING'), (b'SLEEP', b'SLEEP'),
-                                                    (b'ERROR', b'ERROR'), (b'INITIALIZED', b'INITIALIZED')])),
+                ('nextcall', models.CharField(default=u'none', max_length=255)),
+                ('state', models.CharField(choices=[(u'CREATED', u'CREATED'), (u'ERROR', u'ERROR'), (u'FINISHED', u'FINISHED'),
+                       (u'INITIALIZED', u'INITIALIZED'), (u'RUNNING', u'RUNNING'), (u'SLEEP', u'SLEEP')],
+                      default=u'CREATED', max_length=255) ),
                 ('calculations', models.ManyToManyField(related_name='workflow_step', to='db.DbNode')),
-                ('parent', models.ForeignKey(related_name='steps', to='db.DbWorkflow')),
+                ('parent', models.ForeignKey(related_name='steps', to='db.DbWorkflow', on_delete=models.CASCADE)),
                 ('sub_workflows', models.ManyToManyField(related_name='parent_workflow_step', to='db.DbWorkflow')),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=django.db.models.deletion.PROTECT)),
+                ('user', models.ForeignKey(to='db.DbUser', on_delete=django.db.models.deletion.PROTECT)),
             ],
             options={
             },
@@ -367,7 +367,7 @@ class Migration(migrations.Migration):
             model_name='dbnode',
             name='user',
             field=models.ForeignKey(related_name='dbnodes', on_delete=django.db.models.deletion.PROTECT,
-                                    to=settings.AUTH_USER_MODEL),
+                                    to='db.DbUser'),
             preserve_default=True,
         ),
         migrations.AddField(
@@ -380,7 +380,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dblink',
             name='output',
-            field=models.ForeignKey(related_name='input_links', to='db.DbNode'),
+            field=models.ForeignKey(related_name='input_links', to='db.DbNode', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -396,7 +396,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbgroup',
             name='user',
-            field=models.ForeignKey(related_name='dbgroups', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(related_name='dbgroups', to='db.DbUser', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -406,7 +406,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbextra',
             name='dbnode',
-            field=models.ForeignKey(related_name='dbextras', to='db.DbNode'),
+            field=models.ForeignKey(related_name='dbextras', to='db.DbNode', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -416,19 +416,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbcomment',
             name='dbnode',
-            field=models.ForeignKey(related_name='dbcomments', to='db.DbNode'),
+            field=models.ForeignKey(related_name='dbcomments', to='db.DbNode', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='dbcomment',
             name='user',
-            field=models.ForeignKey(to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(to='db.DbUser', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='dbcalcstate',
             name='dbnode',
-            field=models.ForeignKey(related_name='dbstates', to='db.DbNode'),
+            field=models.ForeignKey(related_name='dbstates', to='db.DbNode', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -438,7 +438,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbauthinfo',
             name='dbcomputer',
-            field=models.ForeignKey(to='db.DbComputer'),
+            field=models.ForeignKey(to='db.DbComputer', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -448,12 +448,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbattribute',
             name='dbnode',
-            field=models.ForeignKey(related_name='dbattributes', to='db.DbNode'),
+            field=models.ForeignKey(related_name='dbattributes', to='db.DbNode', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
             name='dbattribute',
             unique_together=set([('dbnode', 'key')]),
         ),
-        update_schema_version(SCHEMA_VERSION)
+        upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

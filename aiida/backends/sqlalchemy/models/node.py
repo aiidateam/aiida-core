@@ -3,97 +3,53 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
-from sqlalchemy import ForeignKey, select, func, join, and_, case
-from sqlalchemy.orm import (
-    relationship, backref, Query, mapper,
-    foreign, aliased
-)
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.schema import Column, UniqueConstraint
-from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship, backref
+from sqlalchemy.schema import Column
+from sqlalchemy.types import Integer, String, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
 # Or maybe rely on sqlalchemy-utils UUID type
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy_utils.types.choice import ChoiceType
 
-from aiida.utils import timezone
-from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQuery
-from aiida.backends.sqlalchemy.models.utils import uuid_func
-
-from aiida.common import aiidalogger
-from aiida.common.exceptions import DbContentError, MissingPluginError
-from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
-
-from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.models.computer import DbComputer
-
-
-class DbCalcState(Base):
-    __tablename__ = "db_dbcalcstate"
-
-    id = Column(Integer, primary_key=True)
-
-    dbnode_id = Column(
-        Integer,
-        ForeignKey(
-            'db_dbnode.id', ondelete="CASCADE",
-            deferrable=True, initially="DEFERRED"
-        )
-    )
-    dbnode = relationship(
-        'DbNode', backref=backref('dbstates', passive_deletes=True),
-    )
-
-    # Note: this is suboptimal: calc_states is not sorted
-    # therefore the order is not the expected one. If we
-    # were to use the correct order here, we could directly sort
-    # without specifying a custom order. This is probably faster,
-    # but requires a schema migration at this point
-    state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
-
-    time = Column(DateTime(timezone=True), default=timezone.now)
-
-    __table_args__ = (
-        UniqueConstraint('dbnode_id', 'state'),
-    )
+from aiida.common import timezone
+from aiida.backends.sqlalchemy.models.base import Base
+from aiida.common.utils import get_new_uuid
 
 
 class DbNode(Base):
-    __tablename__ = "db_dbnode"
-
-    aiida_query = _QueryProperty(_AiidaQuery)
+    __tablename__ = 'db_dbnode'
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
-    type = Column(String(255), index=True)
-    label = Column(String(255), index=True, nullable=True,
-                   default="")  # Does it make sense to be nullable and have a default?
-    description = Column(Text(), nullable=True, default="")
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
+    node_type = Column(String(255), index=True)
+    process_type = Column(String(255), index=True)
+    label = Column(String(255), index=True, nullable=True, default='')  # Does it make sense to be nullable and have a default?
+    description = Column(Text(), nullable=True, default='')
     ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now)
-    nodeversion = Column(Integer, default=1)
-    public = Column(Boolean, default=False)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
     attributes = Column(JSONB)
     extras = Column(JSONB)
 
     dbcomputer_id = Column(
         Integer,
-        ForeignKey('db_dbcomputer.id', deferrable=True, initially="DEFERRED", ondelete="RESTRICT"),
+        ForeignKey('db_dbcomputer.id', deferrable=True, initially='DEFERRED', ondelete='RESTRICT'),
         nullable=True
     )
 
-    # This should have the same ondelet behaviour as db_computer_id, right?
+    # This should have the same ondelete behaviour as db_computer_id, right?
     user_id = Column(
         Integer,
         ForeignKey(
-            'db_dbuser.id', deferrable=True, initially="DEFERRED", ondelete="restrict"
+            'db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'
         ),
         nullable=False
     )
@@ -103,8 +59,6 @@ class DbNode(Base):
     # isn't exactly the same behaviour than with Django. The solution to
     # this is probably a ON DELETE inside the DB. On removing node with id=x,
     # we would remove all link with x as an output.
-
-    ######### RELATIONSSHIPS ################
 
     dbcomputer = relationship(
         'DbComputer',
@@ -119,16 +73,29 @@ class DbNode(Base):
 
     # outputs via db_dblink table
     outputs_q = relationship(
-        "DbNode", secondary="db_dblink",
-        primaryjoin="DbNode.id == DbLink.input_id",
-        secondaryjoin="DbNode.id == DbLink.output_id",
-        backref=backref("inputs_q", passive_deletes=True, lazy='dynamic'),
+        'DbNode', secondary='db_dblink',
+        primaryjoin='DbNode.id == DbLink.input_id',
+        secondaryjoin='DbNode.id == DbLink.output_id',
+        backref=backref('inputs_q', passive_deletes=True, lazy='dynamic'),
         lazy='dynamic',
         passive_deletes=True
     )
 
     def __init__(self, *args, **kwargs):
         super(DbNode, self).__init__(*args, **kwargs)
+        # The behavior of an unstored Node instance should be that all its attributes should be initialized in
+        # accordance with the defaults specified on the colums, i.e. if a default is specified for the `uuid` column,
+        # then an unstored `DbNode` instance should have a default value for the `uuid` attribute. The exception here
+        # is the `mtime`, that we do not want to be set upon instantiation, but only upon storing. However, in
+        # SqlAlchemy a default *has* to be defined if one wants to get that value upon storing. But since defining a
+        # default on the column in combination with the hack in `aiida.backend.SqlAlchemy.models.__init__` to force all
+        # defaults to be populated upon instantiation, we have to unset the `mtime` attribute here manually.
+        #
+        # The only time that we allow mtime not to be null is when we explicitly pass mtime as a kwarg. This covers
+        # the case that a node is constructed based on some very predefined data like when we create nodes at the
+        # AiiDA import functions.
+        if 'mtime' not in kwargs:
+            self.mtime = None
 
         if self.attributes is None:
             self.attributes = dict()
@@ -144,26 +111,6 @@ class DbNode(Base):
     def inputs(self):
         return self.inputs_q.all()
 
-    # XXX repetition between django/sqlalchemy here.
-    def get_aiida_class(self):
-        """
-        Return the corresponding aiida instance of class aiida.orm.Node or a
-        appropriate subclass.
-        """
-        from aiida.common.old_pluginloader import from_type_to_pluginclassname
-        from aiida.orm.node import Node
-        from aiida.common.pluginloader import load_plugin_safe
-
-        try:
-            pluginclassname = from_type_to_pluginclassname(self.type)
-        except DbContentError:
-            raise DbContentError("The type name of node with pk= {} is "
-                                 "not valid: '{}'".format(self.pk, self.type))
-
-        PluginClass = load_plugin_safe(Node, 'aiida.orm', pluginclassname, self.type, self.pk)
-
-        return PluginClass(dbnode=self)
-
     def get_simple_name(self, invalid_result=None):
         """
         Return a string with the last part of the type name.
@@ -175,197 +122,54 @@ class DbNode(Base):
         :param invalid_result: The value to be returned if the node type is
             not recognized.
         """
-        thistype = self.type
+        thistype = self.node_type
         # Fix for base class
-        if thistype == "":
-            thistype = "node.Node."
-        if not thistype.endswith("."):
+        if thistype == '':
+            thistype = 'node.Node.'
+        if not thistype.endswith('.'):
             return invalid_result
         else:
             thistype = thistype[:-1]  # Strip final dot
             return thistype.rpartition('.')[2]
-
-    def set_attr(self, key, value):
-        DbNode._set_attr(self.attributes, key, value)
-        flag_modified(self, "attributes")
-        self.save()
-
-    def set_extra(self, key, value):
-        DbNode._set_attr(self.extras, key, value)
-        flag_modified(self, "extras")
-        self.save()
-
-    def reset_extras(self, new_extras):
-        self.extras.clear()
-        self.extras.update(new_extras)
-        flag_modified(self, "extras")
-        self.save()
-
-    def del_attr(self, key):
-        DbNode._del_attr(self.attributes, key)
-        flag_modified(self, "attributes")
-        self.save()
-
-    def del_extra(self, key):
-        DbNode._del_attr(self.extras, key)
-        flag_modified(self, "extras")
-        self.save()
-
-    @staticmethod
-    def _set_attr(d, key, value):
-        if '.' in key:
-            raise ValueError("We don't know how to treat key with dot in it yet")
-
-        d[key] = value
-
-    @staticmethod
-    def _del_attr(d, key):
-        if '.' in key:
-            raise ValueError("We don't know how to treat key with dot in it yet")
-
-        if key not in d:
-            raise ValueError("Key {} does not exists".format(key))
-
-        del d[key]
 
     @property
     def pk(self):
         return self.id
 
     def __str__(self):
-        simplename = self.get_simple_name(invalid_result="Unknown")
+        simplename = self.get_simple_name(invalid_result='Unknown')
         # node pk + type
         if self.label:
-            return "{} node [{}]: {}".format(simplename, self.pk, self.label)
+            return '{} node [{}]: {}'.format(simplename, self.pk, self.label)
         else:
-            return "{} node [{}]".format(simplename, self.pk)
-
-    # User email
-    @hybrid_property
-    def user_email(self):
-        """
-        Returns: the email of the user
-        """
-        return self.user.email
-
-    @user_email.expression
-    def user_email(cls):
-        """
-        Returns: the email of the user at a class level (i.e. in the database)
-        """
-        return select([DbUser.email]).where(DbUser.id == cls.user_id).label(
-            'user_email')
-
-    # Computer name
-    @hybrid_property
-    def computer_name(self):
-        """
-        Returns: the of the computer
-        """
-        return self.dbcomputer.name
-
-    @computer_name.expression
-    def computer_name(cls):
-        """
-        Returns: the name of the computer at a class level (i.e. in the 
-        database)
-        """
-        return select([DbComputer.name]).where(DbComputer.id ==
-                                               cls.dbcomputer_id).label(
-            'computer_name')
-
-    @hybrid_property
-    def state(self):
-        """
-        Return the most recent state from DbCalcState
-        """
-        if not self.id:
-            return None
-        all_states = DbCalcState.query.filter(DbCalcState.dbnode_id == self.id).all()
-        if all_states:
-            # return max((st.time, st.state) for st in all_states)[1]
-            return sort_states(((dbcalcstate.state, dbcalcstate.state.value)
-                                for dbcalcstate in all_states),
-                               use_key=True)[0]
-        else:
-            return None
-
-    @state.expression
-    def state(cls):
-        """
-        Return the expression to get the 'latest' state from DbCalcState,
-        to be used in queries, where 'latest' is defined using the state order
-        defined in _sorted_datastates.
-        """
-        # Sort first the latest states
-        whens = {
-            v: idx for idx, v
-            in enumerate(_sorted_datastates[::-1], start=1)}
-        custom_sort_order = case(value=DbCalcState.state,
-                                 whens=whens,
-                                 else_=100)  # else: high value to put it at the bottom
-
-        # Add numerical state to string, to allow to sort them
-        states_with_num = select([
-            DbCalcState.id.label('id'),
-            DbCalcState.dbnode_id.label('dbnode_id'),
-            DbCalcState.state.label('state_string'),
-            custom_sort_order.label('num_state')
-        ]).select_from(DbCalcState).alias()
-
-        # Get the most 'recent' state (using the state ordering, and the min function) for
-        # each calc
-        calc_state_num = select([
-            states_with_num.c.dbnode_id.label('dbnode_id'),
-            func.min(states_with_num.c.num_state).label('recent_state')
-        ]).group_by(states_with_num.c.dbnode_id).alias()
-
-        # Join the most-recent-state table with the DbCalcState table
-        all_states_q = select([
-            DbCalcState.dbnode_id.label('dbnode_id'),
-            DbCalcState.state.label('state_string'),
-            calc_state_num.c.recent_state.label('recent_state'),
-            custom_sort_order.label('num_state'),
-        ]).select_from(  # DbCalcState).alias().join(
-            join(DbCalcState, calc_state_num, DbCalcState.dbnode_id == calc_state_num.c.dbnode_id)).alias()
-
-        # Get the association between each calc and only its corresponding most-recent-state row
-        subq = select([
-            all_states_q.c.dbnode_id.label('dbnode_id'),
-            all_states_q.c.state_string.label('state')
-        ]).select_from(all_states_q).where(all_states_q.c.num_state == all_states_q.c.recent_state).alias()
-
-        # Final filtering for the actual query
-        return select([subq.c.state]). \
-            where(
-            subq.c.dbnode_id == cls.id,
-        ). \
-            label('laststate')
+            return '{} node [{}]'.format(simplename, self.pk)
 
 
 class DbLink(Base):
-    __tablename__ = "db_dblink"
+    __tablename__ = 'db_dblink'
 
     id = Column(Integer, primary_key=True)
     input_id = Column(
         Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
+        index=True
     )
     output_id = Column(
         Integer,
         ForeignKey(
             'db_dbnode.id',
-            ondelete="CASCADE",
+            ondelete='CASCADE',
             deferrable=True,
-            initially="DEFERRED"
-        )
+            initially='DEFERRED'
+        ),
+        index=True
     )
 
-    input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
-    output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
+    input = relationship('DbNode', primaryjoin='DbLink.input_id == DbNode.id')
+    output = relationship('DbNode', primaryjoin='DbLink.output_id == DbNode.id')
 
     label = Column(String(255), index=True, nullable=False)
-    type = Column(String(255))
+    type = Column(String(255), index=True)
 
     # A calculation can have both a 'return' and a 'create' link to
     # a single data output node, which would violate the unique constraint
@@ -379,9 +183,9 @@ class DbLink(Base):
     )
 
     def __str__(self):
-        return "{} ({}) --> {} ({})".format(
-            self.input.get_simple_name(invalid_result="Unknown node"),
+        return '{} ({}) --> {} ({})'.format(
+            self.input.get_simple_name(invalid_result='Unknown node'),
             self.input.pk,
-            self.output.get_simple_name(invalid_result="Unknown node"),
+            self.output.get_simple_name(invalid_result='Unknown node'),
             self.output.pk
         )

@@ -3,91 +3,147 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Utilities for the implementation of the Django backend."""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
-from aiida.common.exceptions import DbContentError
+# pylint: disable=import-error,no-name-in-module
+from django.db import transaction, IntegrityError
+from django.db.models.fields import FieldDoesNotExist
+
+from aiida.common import exceptions
+
+IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid'}
 
 
+class ModelWrapper(object):
+    """Wrap a database model instance to correctly update and flush the data model when getting or setting a field.
 
-def get_db_columns(db_class):
+    If the model is not stored, the behavior of the get and set attributes is unaltered. However, if the model is
+    stored, which is to say, it has a primary key, the `getattr` and `setattr` are modified as follows:
+
+    * `getattr`: if the item corresponds to a mutable model field, the model instance is refreshed first
+    * `setattr`: if the item corresponds to a mutable model field, changes are flushed after performing the change
     """
-    This function returns a dictionary where the keys are the columns of
-    the table corresponding to the db_class and the values are the column
-    properties such as type, is_foreign_key and if so, the related table
-    and column.
-    :param db_class: the database model whose schema has to be returned
-    :return: a dictionary
-    """
 
-    import datetime
+    # pylint: disable=too-many-instance-attributes
 
-    django2python_map = {
-        'AutoField': int,
-        'BooleanField': bool,
-        'CharField': str,
-        'DateTimeField': datetime.datetime,
-        'EmailField': str,
-        'FloatField': float,
-        'IntegerField': int,
-        'TextField': str,
-        'UUIDField': str,
-    }
+    def __init__(self, model, auto_flush=()):
+        """Construct the ModelWrapper.
 
-    ## Retrieve the columns of the table corresponding to the present class
-    columns = db_class._meta.fields
+        :param model: the database model instance to wrap
+        :param auto_flush: an optional tuple of database model fields that are always to be flushed, in addition to
+            the field that corresponds to the attribute being set through `__setattr__`.
+        """
+        super(ModelWrapper, self).__init__()
+        # Have to do it this way because we overwrite __setattr__
+        object.__setattr__(self, '_model', model)
+        object.__setattr__(self, '_auto_flush', auto_flush)
 
-    column_names = []
-    column_types = []
-    column_python_types = []
-    foreign_keys = []
+    def __getattr__(self, item):
+        """Get an attribute of the model instance.
 
-    ## retrieve names, types, and convert types in python types.
-    for column in columns:
+        If the model is saved in the database, the item corresponds to a mutable model field and the current scope is
+        not in an open database connection, then the field's value is first refreshed from the database.
 
-        name = column.get_attname()
-        type = column.get_internal_type()
+        :param item: the name of the model field
+        :return: the value of the model's attribute
+        """
+        if self.is_saved() and self._is_mutable_model_field(item):
+            self._ensure_model_uptodate(fields=(item,))
 
-        column_names.append(name)
+        return getattr(self._model, item)
 
-        # Check for foreignkeys and compile a dictionary with the required
-        # informations
-        if type is 'ForeignKey':
-            # relation is a tuple with the related table and the related field
-            relation = column.resolve_related_fields()
-            if len(relation) == 0:
-                raise DbContentError(' "{}" field has no foreign '
-                                     'relationship')
-            elif len(relation) > 1:
-                raise DbContentError(' "{}" field has not a unique foreign '
-                                     'relationship')
-            else:
-                #Collect infos of the foreing key
-                foreign_keys.append((name, relation[0][0], relation[0][1]))
-                #Change the type according to the type of the related column
-                type = relation[0][1].get_internal_type()
+    def __setattr__(self, key, value):
+        """Set the attribute on the model instance.
 
-        column_types.append(type)
+        If the field being set is a mutable model field and the model is saved, the changes are flushed.
 
+        :param key: the name of the model field
+        :param value: the value to set
+        """
+        setattr(self._model, key, value)
+        if self.is_saved() and self._is_mutable_model_field(key):
+            fields = set((key,) + self._auto_flush)
+            self._flush(fields=fields)
 
-    column_python_types = map(lambda x: django2python_map[x], column_types)
+    def is_saved(self):
+        """Retun whether the wrapped model instance is saved in the database.
 
-    ## Fill in the returned dictionary
-    schema = {}
+        :return: boolean, True if the model is saved in the database, False otherwise
+        """
+        return self._model.pk is not None
 
-    # Fill in the keys based on the column names and the types. By default we
-    #  assume that columns are no foreign keys
-    for k, v in iter(zip(column_names, column_python_types)):
-        schema[k] = {'type': v, 'is_foreign_key': False}
+    def save(self):
+        """Store the model instance.
 
-    # Add infos about the foreign relationships
-    for k, related_class, related_field in foreign_keys:
-        schema[k].update({
-            'is_foreign_key': True,
-            'related_table': related_class.rel.to.__name__,
-            'related_column': related_field.get_attname()
-        })
+        :raises `aiida.common.IntegrityError`: if a database integrity error is raised during the save.
+        """
+        # transactions are needed here for Postgresql:
+        # https://docs.djangoproject.com/en/1.7/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
+        with transaction.atomic():
+            try:
+                self._model.save()
+            except IntegrityError as exception:
+                raise exceptions.IntegrityError(str(exception))
 
-    return schema
+    def _is_mutable_model_field(self, field):
+        """Return whether the field is a mutable field of the model.
+
+        :return: boolean, True if the field is a model field and is not in the `IMMUTABLE_MODEL_FIELDS` set.
+        """
+        if field in IMMUTABLE_MODEL_FIELDS:
+            return False
+
+        return self._is_model_field(field)
+
+    def _is_model_field(self, name):
+        """Return whether the field is a field of the model.
+
+        :return: boolean, True if the field is a model field, False otherwise.
+        """
+        try:
+            self._model.__class__._meta.get_field(name)  # pylint: disable=protected-access
+        except FieldDoesNotExist:
+            return False
+        else:
+            return True
+
+    def _flush(self, fields=None):
+        """Flush the fields of the model to the database.
+
+        .. note:: If the wrapped model is not actually save in the database yet, this method is a no-op.
+
+        :param fields: the model fields whose currently value to flush to the database
+        """
+        if self.is_saved():
+            try:
+                # Manually append the `mtime` to fields to update, because when using the `update_fields` keyword of the
+                # `save` method, the `auto_now` property of `mtime` column is not triggered. If `update_fields` is None
+                # everything is updated, so we do not have to add anything
+                if fields is not None and self._is_model_field('mtime'):
+                    fields.add('mtime')
+                self._model.save(update_fields=fields)
+            except IntegrityError as exception:
+                raise exceptions.IntegrityError(str(exception))
+
+    def _ensure_model_uptodate(self, fields=None):
+        """Refresh all fields of the wrapped model instance by fetching the current state of the database instance.
+
+        :param fields: optionally refresh only these fields, if `None` all fields are refreshed.
+        """
+        if self.is_saved():
+            self._model.refresh_from_db(fields=fields)
+
+    @staticmethod
+    def _in_transaction():
+        """Return whether the current scope is within an open database transaction.
+
+        :return: boolean, True if currently in open transaction, False otherwise.
+        """
+        return not transaction.get_autocommit()

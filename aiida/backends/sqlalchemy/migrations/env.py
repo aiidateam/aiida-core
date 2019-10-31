@@ -3,30 +3,31 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import with_statement
+from __future__ import absolute_import
+
 from alembic import context
-from aiida.backends.settings import IN_DOC_MODE
 
 # The available SQLAlchemy tables
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.group import DbGroup
-from aiida.backends.sqlalchemy.models.lock import DbLock
 from aiida.backends.sqlalchemy.models.log import DbLog
-from aiida.backends.sqlalchemy.models.node import (
-    DbCalcState, DbComputer,
-    DbContentError, DbLink, DbNode)
+from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
+from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.settings import DbSetting
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.models.workflow import (
-    DbWorkflow, DbWorkflowData, DbWorkflowStep)
+from aiida.common.exceptions import DbContentError
 from aiida.backends.sqlalchemy.models.base import Base
 target_metadata = Base.metadata
+
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -40,7 +41,7 @@ def run_migrations_offline():
     script output.
 
     """
-    raise NotImplementedError("This feature is not currently supported.")
+    raise NotImplementedError('This feature is not currently supported.')
 
 
 def run_migrations_online():
@@ -60,20 +61,24 @@ def run_migrations_online():
 
     if connectable is None:
         from aiida.common.exceptions import ConfigurationError
-        raise ConfigurationError("An initialized connection is expected "
-                                 "for the AiiDA online migrations.")
+        raise ConfigurationError('An initialized connection is expected '
+                                 'for the AiiDA online migrations.')
 
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=target_metadata
+            target_metadata=target_metadata,
+            transaction_per_migration=True,
         )
 
         with context.begin_transaction():
             context.run_migrations()
 
-if not IN_DOC_MODE:
+try:
     if context.is_offline_mode():
         run_migrations_offline()
     else:
         run_migrations_online()
+except NameError:
+    # This will occur in an environment that is just compiling the documentation
+    pass

@@ -3,14 +3,19 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
+import six
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
-
 
 
 class OqmdDbImporter(DbImporter):
@@ -22,15 +27,15 @@ class OqmdDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, basestring) and not isinstance(values, int):
+        if not isinstance(values, six.string_types) and not isinstance(values, int):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
-        return "{}={}".format(key, values)
+        return '{}={}'.format(key, values)
 
     _keywords = {'element': ['element', None]}
 
     def __init__(self, **kwargs):
-        self._query_url = "http://oqmd.org"
+        self._query_url = 'http://oqmd.org'
         self.setup_db(**kwargs)
 
     def query_get(self, **kwargs):
@@ -45,7 +50,7 @@ class OqmdDbImporter(DbImporter):
         if not isinstance(elements, list):
             elements = [elements]
 
-        return "{}/materials/composition/{}".format(self._query_url, "".join(elements))
+        return '{}/materials/composition/{}'.format(self._query_url, ''.join(elements))
 
     def query(self, **kwargs):
         """
@@ -55,21 +60,21 @@ class OqmdDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdSearchResults`.
         """
-        import urllib2
+        from six.moves import urllib
         import re
 
         query_statement = self.query_get(**kwargs)
-        response = urllib2.urlopen(query_statement).read()
-        entries = re.findall("(/materials/entry/\d+)", response)
+        response = urllib.request.urlopen(query_statement).read()
+        entries = re.findall('(/materials/entry/\d+)', response)
 
         results = []
         for entry in entries:
-            response = urllib2.urlopen("{}{}".format(self._query_url,
+            response = urllib.request.urlopen('{}{}'.format(self._query_url,
                                                      entry)).read()
-            structures = re.findall("/materials/export/conventional/cif/(\d+)",
+            structures = re.findall('/materials/export/conventional/cif/(\d+)',
                                     response)
             for struct in structures:
-                results.append({"id": struct})
+                results.append({'id': struct})
 
         return OqmdSearchResults(results)
 
@@ -99,7 +104,7 @@ class OqmdSearchResults(DbSearchResults):
     """
     Results of the search, performed on OQMD.
     """
-    _base_url = "http://oqmd.org/materials/export/conventional/cif/"
+    _base_url = 'http://oqmd.org/materials/export/conventional/cif/'
 
     def __init__(self, results):
         super(OqmdSearchResults, self).__init__(results)

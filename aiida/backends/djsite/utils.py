@@ -3,137 +3,130 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-name-in-module,no-member,import-error,cyclic-import
+"""Utility functions specific to the Django backend."""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
 import os
 import django
-from aiida.common.log import get_dblogger_extra
+
+from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting, validate_schema_generation
+from aiida.common import NotExistent
+
+SCHEMA_VERSION_DB_KEY = 'db|schemaversion'
+SCHEMA_VERSION_DB_DESCRIPTION = 'The version of the schema used in this database.'
 
 
-def load_dbenv(process=None, profile=None):
+class DjangoSettingsManager(SettingsManager):
+    """Class to get, set and delete settings from the `DbSettings` table."""
+
+    table_name = 'db_dbsetting'
+
+    def validate_table_existence(self):
+        """Verify that the `DbSetting` table actually exists.
+
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
+        """
+        from django.db import connection
+        if self.table_name not in connection.introspection.table_names():
+            raise NotExistent('the settings table does not exist')
+
+    def get(self, key):
+        """Return the setting with the given key.
+
+        :param key: the key identifying the setting
+        :return: Setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        from aiida.backends.djsite.db.models import DbSetting
+
+        self.validate_table_existence()
+        setting = DbSetting.objects.filter(key=key).first()
+
+        if setting is None:
+            raise NotExistent('setting `{}` does not exist'.format(key))
+
+        return Setting(setting.key, setting.val, setting.description, setting.time)
+
+    def set(self, key, value, description=None):
+        """Return the settings with the given key.
+
+        :param key: the key identifying the setting
+        :param value: the value for the setting
+        :param description: optional setting description
+        """
+        from aiida.backends.djsite.db.models import DbSetting
+
+        self.validate_table_existence()
+        validate_attribute_key(key)
+
+        other_attribs = dict()
+        if description is not None:
+            other_attribs['description'] = description
+
+        DbSetting.set_value(key, value, other_attribs=other_attribs)
+
+    def delete(self, key):
+        """Delete the setting with the given key.
+
+        :param key: the key identifying the setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        from aiida.backends.djsite.db.models import DbSetting
+
+        self.validate_table_existence()
+
+        try:
+            DbSetting.del_value(key=key)
+        except KeyError:
+            raise NotExistent('setting `{}` does not exist'.format(key))
+
+
+def load_dbenv(profile):
+    """Load the database environment and ensure that the code and database schema versions are compatible.
+
+    :param profile: instance of `Profile` whose database to load
     """
-    Load the database environment (Django) and perform some checks.
+    _load_dbenv_noschemacheck(profile)
+    check_schema_version(profile_name=profile.name)
 
-    :param process: the process that is calling this command ('verdi', or
-        'daemon')
-    :param profile: the string with the profile to use. If not specified,
-        use the default one specified in the AiiDA configuration file.
+
+def _load_dbenv_noschemacheck(profile):  # pylint: disable=unused-argument
+    """Load the database environment without checking that code and database schema versions are compatible.
+
+    This should ONLY be used internally, inside load_dbenv, and for schema migrations. DO NOT USE OTHERWISE!
+
+    :param profile: instance of `Profile` whose database to load
     """
-    _load_dbenv_noschemacheck(process, profile)
-    # Check schema version and the existence of the needed tables
-    check_schema_version()
-
-
-def _load_dbenv_noschemacheck(process, profile):
-    """
-    Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
-
-    :param process: the process that is calling this command ('verdi', or
-        'daemon')
-    :param profile: the string with the profile to use. If not specified,
-        use the default one specified in the AiiDA configuration file.
-
-    This should ONLY be used internally, inside load_dbenv, and for schema
-    migrations. DO NOT USE OTHERWISE!
-    """
-    # This function does not use process and profile because they are read
-    # from global variables (set before by load_profile) inside the
-    # djsite.settings.settings module.
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings.settings'
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings'
     django.setup()
 
 
-def get_log_messages(obj):
-    from aiida.backends.djsite.db.models import DbLog
-    import json
+def unload_dbenv():
+    """Unload the database environment.
 
-    extra = get_dblogger_extra(obj)
-    # convert to list, too
-    log_messages = list(DbLog.objects.filter(**extra).order_by('time').values(
-        'loggername', 'levelname', 'message', 'metadata', 'time'))
-
-    # deserialize metadata
-    for log in log_messages:
-        log.update({'metadata': json.loads(log['metadata'])})
-
-    return log_messages
-
-
-def get_daemon_user():
+    This means that the settings in `aiida.backends.djsite.settings` are "unset".
+    This needs to implemented and will address #2813
     """
-    Return the username (email) of the user that should run the daemon,
-    or the default AiiDA user in case no explicit configuration is found
-    in the DbSetting table.
-    """
-    from aiida.backends.djsite.globalsettings import get_global_setting
-    from aiida.common.setup import DEFAULT_AIIDA_USER
-
-    try:
-        return get_global_setting('daemon|user')
-    except KeyError:
-        return DEFAULT_AIIDA_USER
 
 
-def set_daemon_user(user_email):
-    """
-    Set the username (email) of the user that is allowed to run the daemon.
-    """
-    from aiida.backends.djsite.globalsettings import set_global_setting
-
-    set_global_setting("daemon|user", user_email,
-                       description="The only user that is allowed to run the "
-                                   "AiiDA daemon on this DB instance")
-
-_aiida_autouser_cache = None
+_aiida_autouser_cache = None  # pylint: disable=invalid-name
 
 
-def get_automatic_user():
-    """
-    Return the default user for this installation of AiiDA.
-    """
-    global _aiida_autouser_cache
-
-    if _aiida_autouser_cache is not None:
-        return _aiida_autouser_cache
-
-    from django.core.exceptions import ObjectDoesNotExist
-    from aiida.backends.djsite.db.models import DbUser
-    from aiida.common.exceptions import ConfigurationError
-    from aiida.common.utils import get_configured_user_email
-
-    email = get_configured_user_email()
-
-    try:
-        _aiida_autouser_cache = DbUser.objects.get(email=email)
-        return _aiida_autouser_cache
-    except ObjectDoesNotExist:
-        raise ConfigurationError("No aiida user with email {}".format(
-            email))
+def migrate_database():
+    """Migrate the database to the latest schema version."""
+    validate_schema_generation()
+    from django.core.management import call_command
+    call_command('migrate')
 
 
-def long_field_length():
-    """
-    Return the length of "long" fields.
-    This is used, for instance, for the 'key' field of attributes.
-    This returns 1024 typically, but it returns 255 if the backend is mysql.
-
-    :note: Call this function only AFTER having called load_dbenv!
-    """
-    # One should not load directly settings because there are checks inside
-    # for the current profile. However, this function is going to be called
-    # only after having loaded load_dbenv, so there should be no problem
-    from django.conf import settings
-
-    if 'mysql' in settings.DATABASES['default']['ENGINE']:
-        return 255
-    else:
-        return 1024
-
-
-def check_schema_version():
+def check_schema_version(profile_name):
     """
     Check if the version stored in the database is the same of the version
     of the code.
@@ -146,18 +139,20 @@ def check_schema_version():
       code. This is useful to have the code automatically set the DB version
       at the first code execution.
 
-    :raise ConfigurationError: if the two schema versions do not match.
+    :raise aiida.common.ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
-    import os
-    import aiida.backends.djsite.db.models
-    from aiida.backends.utils import get_current_profile
+    # pylint: disable=duplicate-string-formatting-argument
     from django.db import connection
+
+    import aiida.backends.djsite.db.models
     from aiida.common.exceptions import ConfigurationError
 
     # Do not do anything if the table does not exist yet
     if 'db_dbsetting' not in connection.introspection.table_names():
         return
+
+    validate_schema_generation()
 
     code_schema_version = aiida.backends.djsite.db.models.SCHEMA_VERSION
     db_schema_version = get_db_schema_version()
@@ -167,33 +162,25 @@ def check_schema_version():
         set_db_schema_version(code_schema_version)
         db_schema_version = get_db_schema_version()
 
-    filepath_utils = os.path.abspath(__file__)
-    filepath_manage = os.path.join(os.path.dirname(filepath_utils), 'manage.py')
-
     if code_schema_version != db_schema_version:
         raise ConfigurationError(
-            "The code schema version is {}, but the version stored in the "
-            "database (DbSetting table) is {}, stopping.\n"
-            "To migrate the database to the current version, run the following commands:"
-            "\n  verdi daemon stop\n  python {} --aiida-profile={} migrate".
-            format(
-                code_schema_version,
-                db_schema_version,
-                filepath_manage,
-                get_current_profile()
+            'Database schema version {} is outdated compared to the code schema version {}\n'
+            'Before you upgrade, make sure all calculations and workflows have finished running.\n'
+            'If this is not the case, revert the code to the previous version and finish them first.\n'
+            'To migrate the database to the current version, run the following commands:'
+            '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(
+                db_schema_version, code_schema_version, profile_name, profile_name
             )
         )
 
 
 def set_db_schema_version(version):
     """
-    Set the schema version stored in the DB. Use only if you know what
-    you are doing.
+    Set the schema version stored in the DB. Use only if you know what you are doing.
     """
-    from aiida.backends.utils import set_global_setting
-    return set_global_setting(
-        'db|schemaversion', version,
-        description="The version of the schema used in this database.")
+    from aiida.backends.utils import get_settings_manager
+    manager = get_settings_manager()
+    return manager.set(SCHEMA_VERSION_DB_KEY, version, description=SCHEMA_VERSION_DB_DESCRIPTION)
 
 
 def get_db_schema_version():
@@ -201,14 +188,19 @@ def get_db_schema_version():
     Get the current schema version stored in the DB. Return None if
     it is not stored.
     """
-    from aiida.backends.utils import get_global_setting
+    from django.db.utils import ProgrammingError
+    from aiida.manage.manager import get_manager
+    backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+
     try:
-        return get_global_setting('db|schemaversion')
-    except KeyError:
-        return None
+        result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
+    except ProgrammingError:
+        result = backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'db|schemaversion';""")
+
+    return result[0][0]
 
 
-def delete_nodes_and_connections_django(pks_to_delete):
+def delete_nodes_and_connections_django(pks_to_delete):  # pylint: disable=invalid-name
     """
     Delete all nodes corresponding to pks in the input.
     :param pks_to_delete: A list, tuple or set of pks that should be deleted.
@@ -217,9 +209,9 @@ def delete_nodes_and_connections_django(pks_to_delete):
     from django.db.models import Q
     from aiida.backends.djsite.db import models
     with transaction.atomic():
+        # This is fixed in pylint-django>=2, but this supports only py3
+        # pylint: disable=no-member
         # Delete all links pointing to or from a given node
-        models.DbLink.objects.filter(
-            Q(input__in=pks_to_delete) |
-            Q(output__in=pks_to_delete)).delete()
+        models.DbLink.objects.filter(Q(input__in=pks_to_delete) | Q(output__in=pks_to_delete)).delete()
         # now delete nodes
         models.DbNode.objects.filter(pk__in=pks_to_delete).delete()

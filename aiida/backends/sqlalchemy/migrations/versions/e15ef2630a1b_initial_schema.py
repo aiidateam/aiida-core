@@ -3,17 +3,20 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Initial schema
 
 Revision ID: e15ef2630a1b
-Revises: 
+Revises:
 Create Date: 2017-06-28 17:12:23.327195
 
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -186,7 +189,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['dbnode_id'], [u'db_dbnode.id'], name=u'db_dbworkflowstep_calculations_dbnode_id_fkey'),
     sa.ForeignKeyConstraint(['dbworkflowstep_id'], [u'db_dbworkflowstep.id'], name=u'db_dbworkflowstep_calculations_dbworkflowstep_id_fkey'),
     sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_calculations_pkey'),
-    sa.UniqueConstraint('dbworkflowstep_id', 'dbnode_id', name=u'db_dbworkflowstep_calculations_dbworkflowstep_id_dbnode_id_key')
+    sa.UniqueConstraint('dbworkflowstep_id', 'dbnode_id', name=u'db_dbworkflowstep_calculations_id_dbnode_id_key')
     )
     op.create_table('db_dbpath',
     sa.Column('id', sa.INTEGER(), nullable=False),
@@ -254,7 +257,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['dbworkflow_id'], [u'db_dbworkflow.id'], name=u'db_dbworkflowstep_sub_workflows_dbworkflow_id_fkey'),
     sa.ForeignKeyConstraint(['dbworkflowstep_id'], [u'db_dbworkflowstep.id'], name=u'db_dbworkflowstep_sub_workflows_dbworkflowstep_id_fkey'),
     sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_sub_workflows_pkey'),
-    sa.UniqueConstraint('dbworkflowstep_id', 'dbworkflow_id', name=u'db_dbworkflowstep_sub_workflo_dbworkflowstep_id_dbworkflow__key')
+    sa.UniqueConstraint('dbworkflowstep_id', 'dbworkflow_id', name=u'db_dbworkflowstep_sub_workflows_id_dbworkflow__key')
     )
     # I get the session using the alembic connection
     # (Keep in mind that alembic uses the AiiDA SQLA

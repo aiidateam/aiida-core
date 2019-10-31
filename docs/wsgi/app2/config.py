@@ -3,17 +3,20 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 ## Pagination defaults
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 LIMIT_DEFAULT = 400
 PERPAGE_DEFAULT = 20
 
 ##Version prefix for all the URLs (in most cases, you need to omit trailing
 # slash)
-PREFIX="/api/v2"
+PREFIX='/api/v3'
 
 
 """
@@ -65,12 +68,12 @@ Schema customization (if file schema_custom.json is present in this same folder)
 """
 #TODO add more verbose description
 import os
-import ujson as uj
+import json
 
 schema_custom_config = os.path.join(os.path.split(__file__)[0], 'schema_custom.json')
 try:
     with open(schema_custom_config) as fin:
-        custom_schema = uj.load(fin)
+        custom_schema = json.load(fin)
 except IOError:
     custom_schema = {}
 

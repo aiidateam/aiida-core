@@ -3,203 +3,141 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
-
-try:
-    import ultrajson as json
-    from functools import partial
-
-    # double_precision = 15, to replicate what PostgreSQL numerical type is
-    # using
-    json_dumps = partial(json.dumps, double_precision=15)
-    json_loads = partial(json.loads, precise_float=True)
-except ImportError:
-    import json
-
-    json_dumps = json.dumps
-    json_loads = json.loads
-
-import datetime
-
-import re
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
 from alembic.script import ScriptDirectory
-from dateutil import parser
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session
-from sqlalchemy.orm import sessionmaker
 
-from aiida.backends import sqlalchemy as sa, settings
-from aiida.common.exceptions import ConfigurationError
-from aiida.common.setup import (get_profile_config)
+from sqlalchemy.orm.exc import NoResultFound
 
-ALEMBIC_FILENAME = "alembic.ini"
-ALEMBIC_REL_PATH = "migrations"
+from aiida.backends import sqlalchemy as sa
+from aiida.backends.sqlalchemy import get_scoped_session
+from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting, validate_schema_generation
+from aiida.common import NotExistent
 
 
-# def is_dbenv_loaded():
-#     """
-#     Return if the environment has already been loaded or not.
-#     """
-#     return sa.get_scoped_session() is not None
+ALEMBIC_FILENAME = 'alembic.ini'
+ALEMBIC_REL_PATH = 'migrations'
 
-def recreate_after_fork(engine):
+
+class SqlaSettingsManager(SettingsManager):
+    """Class to get, set and delete settings from the `DbSettings` table."""
+
+    table_name = 'db_dbsetting'
+
+    def validate_table_existence(self):
+        """Verify that the `DbSetting` table actually exists.
+
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
+        """
+        from sqlalchemy.engine import reflection
+        inspector = reflection.Inspector.from_engine(get_scoped_session().bind)
+        if self.table_name not in inspector.get_table_names():
+            raise NotExistent('the settings table does not exist')
+
+    def get(self, key):
+        """Return the setting with the given key.
+
+        :param key: the key identifying the setting
+        :return: Setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        self.validate_table_existence()
+
+        try:
+            setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
+        except NoResultFound:
+            raise NotExistent('setting `{}` does not exist'.format(key))
+
+        return Setting(key, setting.getvalue(), setting.description, setting.time)
+
+    def set(self, key, value, description=None):
+        """Return the settings with the given key.
+
+        :param key: the key identifying the setting
+        :param value: the value for the setting
+        :param description: optional setting description
+        """
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        self.validate_table_existence()
+        validate_attribute_key(key)
+
+        other_attribs = dict()
+        if description is not None:
+            other_attribs['description'] = description
+
+        DbSetting.set_value(key, value, other_attribs=other_attribs)
+
+    def delete(self, key):
+        """Delete the setting with the given key.
+
+        :param key: the key identifying the setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        self.validate_table_existence()
+
+        try:
+            setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
+            setting.delete()
+        except NoResultFound:
+            raise NotExistent('setting `{}` does not exist'.format(key))
+
+
+
+def flag_modified(instance, key):
+    """Wrapper around `sqlalchemy.orm.attributes.flag_modified` to correctly dereference utils.ModelWrapper
+
+    Since SqlAlchemy 1.2.12 (and maybe earlier but not in 1.0.19) the flag_modified function will check that the
+    key is actually present in the instance or it will except. If we pass a model instance, wrapped in the ModelWrapper
+    the call will raise an InvalidRequestError. In this function that wraps the flag_modified of SqlAlchemy, we
+    derefence the model instance if the passed instance is actually wrapped in the ModelWrapper.
     """
-    :param engine: the engine that will be used by the sessionmaker
+    from sqlalchemy.orm.attributes import flag_modified as flag_modified_sqla
+    from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
 
-    Callback called after a fork. Not only disposes the engine, but also recreates a new scoped session
-    to use independent sessions in the forked process.
+    if isinstance(instance, ModelWrapper):
+        instance = instance._model
+
+    flag_modified_sqla(instance, key)
+
+
+def load_dbenv(profile):
+    """Load the database environment and ensure that the code and database schema versions are compatible.
+
+    :param profile: the string with the profile to use
     """
-    sa.engine.dispose()
-    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
+    _load_dbenv_noschemacheck(profile)
+    check_schema_version(profile_name=profile.name)
 
 
-def reset_session(config):
+def _load_dbenv_noschemacheck(profile):
+    """Load the database environment without checking that code and database schema versions are compatible.
+
+    This should ONLY be used internally, inside load_dbenv, and for schema migrations. DO NOT USE OTHERWISE!
+
+    :param profile: instance of `Profile` whose database to load
     """
-    :param config: the configuration of the profile from the
-       configuration file
-
-    Resets (global) engine and sessionmaker classes, to create a new one
-    (or creates a new one from scratch if not already available)
-    """
-    from multiprocessing.util import register_after_fork
-
-    engine_url = (
-        "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-        "{AIIDADB_HOST}:{AIIDADB_PORT}/{AIIDADB_NAME}"
-    ).format(**config)
-
-    sa.engine = create_engine(engine_url, json_serializer=dumps_json,
-                              json_deserializer=loads_json)
-    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine,
-                                                        expire_on_commit=True))
-    register_after_fork(sa.engine, recreate_after_fork)
+    sa.reset_session(profile)
 
 
-def load_dbenv(process=None, profile=None, connection=None):
-    """
-    Load the database environment (SQLAlchemy) and perform some checks.
-
-    :param process: the process that is calling this command ('verdi', or
-        'daemon')
-    :param profile: the string with the profile to use. If not specified,
-        use the default one specified in the AiiDA configuration file.
-    """
-    _load_dbenv_noschemacheck(process=process, profile=profile)
-    # Check schema version and the existence of the needed tables
-    check_schema_version()
-
-
-def _load_dbenv_noschemacheck(process=None, profile=None, connection=None):
-    """
-    Load the SQLAlchemy database.
-    """
-    config = get_profile_config(settings.AIIDADB_PROFILE)
-    reset_session(config)
+def unload_dbenv():
+    """Unload the database environment, which boils down to destroying the current engine and session."""
+    if sa.ENGINE is not None:
+        sa.ENGINE.dispose()
+    sa.SCOPED_SESSION_CLASS = None
 
 
 _aiida_autouser_cache = None
-
-
-def get_automatic_user():
-    # global _aiida_autouser_cache
-
-    # if _aiida_autouser_cache is not None:
-    #     return _aiida_autouser_cache
-
-    from aiida.backends.sqlalchemy.models.user import DbUser
-    from aiida.common.utils import get_configured_user_email
-
-    email = get_configured_user_email()
-
-    _aiida_autouser_cache = DbUser.query.filter(DbUser.email == email).first()
-
-    if not _aiida_autouser_cache:
-        raise ConfigurationError("No aiida user with email {}".format(
-            email))
-    return _aiida_autouser_cache
-
-
-def get_daemon_user():
-    """
-    Return the username (email) of the user that should run the daemon,
-    or the default AiiDA user in case no explicit configuration is found
-    in the DbSetting table.
-    """
-    from aiida.backends.sqlalchemy.globalsettings import get_global_setting
-    from aiida.common.setup import DEFAULT_AIIDA_USER
-
-    try:
-        return get_global_setting('daemon|user')
-    except KeyError:
-        return DEFAULT_AIIDA_USER
-
-
-def set_daemon_user(user_email):
-    """
-    Return the username (email) of the user that should run the daemon,
-    or the default AiiDA user in case no explicit configuration is found
-    in the DbSetting table.
-    """
-    from aiida.backends.sqlalchemy.globalsettings import set_global_setting
-
-    set_global_setting("daemon|user", user_email,
-                       description="The only user that is allowed to run the "
-                                   "AiiDA daemon on this DB instance")
-
-
-def dumps_json(d):
-    """
-    Transforms all datetime object into isoformat and then returns the JSON
-    """
-
-    def f(v):
-        if isinstance(v, list):
-            return [f(_) for _ in v]
-        elif isinstance(v, dict):
-            return dict((key, f(val)) for key, val in v.iteritems())
-        elif isinstance(v, datetime.datetime):
-            return v.isoformat()
-        return v
-
-    return json_dumps(f(d))
-
-
-date_reg = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
-
-
-def loads_json(s):
-    """
-    Loads the json and try to parse each basestring as a datetime object
-    """
-
-    ret = json_loads(s)
-
-    def f(d):
-        if isinstance(d, list):
-            for i, val in enumerate(d):
-                d[i] = f(val)
-            return d
-        elif isinstance(d, dict):
-            for k, v in d.iteritems():
-                d[k] = f(v)
-            return d
-        elif isinstance(d, basestring):
-            if date_reg.match(d):
-                try:
-                    return parser.parse(d)
-                except (ValueError, TypeError):
-                    return d
-            return d
-        return d
-
-    return f(ret)
 
 
 # XXX the code here isn't different from the one use in Django. We may be able
@@ -208,12 +146,12 @@ def install_tc(session):
     """
     Install the transitive closure table with SqlAlchemy.
     """
-    links_table_name = "db_dblink"
-    links_table_input_field = "input_id"
-    links_table_output_field = "output_id"
-    closure_table_name = "db_dbpath"
-    closure_table_parent_field = "parent_id"
-    closure_table_child_field = "child_id"
+    links_table_name = 'db_dblink'
+    links_table_input_field = 'input_id'
+    links_table_output_field = 'output_id'
+    closure_table_name = 'db_dbpath'
+    closure_table_parent_field = 'parent_id'
+    closure_table_child_field = 'child_id'
 
     session.execute(get_pg_tc(links_table_name, links_table_input_field,
                               links_table_output_field, closure_table_name,
@@ -404,62 +342,49 @@ CREATE TRIGGER autoupdate_tc
                             closure_table_child_field=closure_table_child_field)
 
 
-def check_schema_version(force_migration=False, alembic_cfg=None):
+def migrate_database(alembic_cfg=None):
+    """Migrate the database to the latest schema version.
+
+    :param config: alembic configuration to use, will use default if not provided
     """
-    Check if the version stored in the database is the same of the version
-    of the code.
-
-    :note: if the DbSetting table does not exist, this function does not
-      fail. The reason is to avoid to have problems before running the first
-      migrate call.
-
-    :note: if no version is found, the version is set to the version of the
-      code. This is useful to have the code automatically set the DB version
-      at the first code execution.
-
-    :raise ConfigurationError: if the two schema versions do not match.
-      Otherwise, just return.
-    """
-    import sys
-    from aiida.common.utils import query_yes_no
+    validate_schema_generation()
     from aiida.backends import sqlalchemy as sa
-    from aiida.backends.settings import IN_DOC_MODE
 
-    # Early exit if we compile the documentation since the schema
-    # check is not needed and it creates problems with the sqlalchemy
-    # migrations
-    if IN_DOC_MODE:
-        return
-
-    # If an alembic configuration file is given then use that one.
     if alembic_cfg is None:
         alembic_cfg = get_alembic_conf()
 
-    # Getting the version of the code and the database
-    # Reusing the existing engine (initialized by AiiDA)
-    with sa.engine.begin() as connection:
+    with sa.ENGINE.connect() as connection:
+        alembic_cfg.attributes['connection'] = connection
+        command.upgrade(alembic_cfg, 'head')
+
+
+def check_schema_version(profile_name):
+    """
+    Check if the version stored in the database is the same of the version of the code.
+
+    :raise aiida.common.ConfigurationError: if the two schema versions do not match
+    """
+    from aiida.backends import sqlalchemy as sa
+    from aiida.common.exceptions import ConfigurationError
+
+    alembic_cfg = get_alembic_conf()
+
+    validate_schema_generation()
+
+    # Getting the version of the code and the database, reusing the existing engine (initialized by AiiDA)
+    with sa.ENGINE.begin() as connection:
         alembic_cfg.attributes['connection'] = connection
         code_schema_version = get_migration_head(alembic_cfg)
         db_schema_version = get_db_schema_version(alembic_cfg)
 
     if code_schema_version != db_schema_version:
-        if db_schema_version is None:
-            print("It is time to perform your first SQLAlchemy migration.")
-        else:
-            print("The code schema version is {}, but the version stored in "
-                  "the database is {}."
-                  .format(code_schema_version, db_schema_version))
-        if force_migration or query_yes_no("Would you like to migrate to the "
-                                           "latest version?", "yes"):
-            print("Migrating to the last version")
-            # Reusing the existing engine (initialized by AiiDA)
-            with sa.engine.begin() as connection:
-                alembic_cfg.attributes['connection'] = connection
-                command.upgrade(alembic_cfg, "head")
-        else:
-            print("No migration is performed. Exiting since database is out "
-                  "of sync with the code.")
-            sys.exit(1)
+        raise ConfigurationError('Database schema version {} is outdated compared to the code schema version {}\n'
+                                 'Before you upgrade, make sure all calculations and workflows have finished running.\n'
+                                 'If this is not the case, revert the code to the previous version and finish them first.\n'
+                                 'To migrate the database to the current version, run the following commands:'
+                                 '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(
+                                    db_schema_version, code_schema_version, profile_name, profile_name))
+
 
 
 def get_migration_head(config):
@@ -519,36 +444,6 @@ def get_alembic_conf():
     return alembic_cfg
 
 
-def alembic_command(selected_command, *args, **kwargs):
-    """
-    This function calls the necessary alembic command with the provided
-    arguments.
-    :param selected_command: The command that should be called from the
-    alembic commands.
-    :param args: The arguments.
-    :param kwargs: The keyword arguments.
-    :return: Nothing.
-    """
-    if selected_command is None:
-        return
-
-    # Get the requested alembic command from the available commands
-    al_command = getattr(command, selected_command)
-
-    alembic_cfg = get_alembic_conf()
-    with sa.engine.begin() as connection:
-        alembic_cfg.attributes['connection'] = connection
-        if selected_command in ['current', 'history']:
-            if 'verbose' in args:
-                al_command(alembic_cfg, verbose=True)
-            else:
-                al_command(alembic_cfg, *args, **kwargs)
-        elif selected_command == 'revision':
-            al_command(alembic_cfg, message=args[0][0])
-        else:
-            al_command(alembic_cfg, *args, **kwargs)
-
-
 def delete_nodes_and_connections_sqla(pks_to_delete):
     """
     Delete all nodes corresponding to pks in the input.
@@ -557,9 +452,11 @@ def delete_nodes_and_connections_sqla(pks_to_delete):
     from aiida.backends import sqlalchemy as sa
     from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
     from aiida.backends.sqlalchemy.models.group import table_groups_nodes
+    from aiida.manage.manager import get_manager
 
-    session = sa.get_scoped_session()
-    try:
+    backend = get_manager().get_backend()
+
+    with backend.transaction() as session:
         # I am first making a statement to delete the membership of these nodes to groups.
         # Since table_groups_nodes is a sqlalchemy.schema.Table, I am using expression language to compile
         # a stmt to be executed by the session. It works, but it's not nice that two different ways are used!
@@ -573,11 +470,3 @@ def delete_nodes_and_connections_sqla(pks_to_delete):
         session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
         # Now I am deleting the nodes
         session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
-        # Here I commit this scoped session!
-        session.commit()
-    except Exception as e:
-        # If there was any exception, I roll back the session.
-        session.rollback()
-        raise e
-    finally:
-        session.close()

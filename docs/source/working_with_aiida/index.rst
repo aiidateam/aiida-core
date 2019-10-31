@@ -1,110 +1,85 @@
-##################
-Working with AiiDA
-##################
+.. _get_started:
 
-====================================
-The ``verdi`` command line interface
-====================================
+===============
+Getting started
+===============
 
-The main way of interacting with AiiDA is through a command line interface tool called ``verdi``.
-You have already used ``verdi`` when installing AiiDA, either through ``verdi quicksetup`` or ``verdi setup``.
-But ``verdi`` is very versatile and provides a wealth of other functionalities; here is a list:
+.. toctree::
+    :maxdepth: 1
+    :hidden:
 
-* :ref:`calculation<calculation>`:              query and interact with calculations
-* :ref:`code<code>`:                            setup and manage codes to be used
-* :ref:`comment<comment>`:                      manage general properties of nodes in the database
-* :ref:`completioncommand<completioncommand>`:  return the bash completion function to put in ~/.bashrc
-* :ref:`computer<computer>`:                    setup and manage computers to be used
-* :ref:`daemon<daemon>`:                        manage the AiiDA daemon
-* :ref:`data<data>`:                            setup and manage data specific types
-* :ref:`devel<devel>`:                          AiiDA commands for developers
-* :ref:`export<export>`:                        export nodes and group of nodes
-* :ref:`graph<graph>`:                          create a graph from a given root node
-* :ref:`group<group>`:                          setup and manage groups
-* :ref:`import<import>`:                        export nodes and group of nodes
-* :ref:`node<node>`:                            manage operations on AiiDA nodes
-* :ref:`profile<profile>`:                      list and manage AiiDA profiles
-* :ref:`run<run>`:                              execute an AiiDA script
-* :ref:`runserver<runserver>`:                  run the AiiDA webserver on localhost
-* :ref:`setup<setup>`:                          setup aiida for the current user/create a new profile
-* :ref:`shell<shell>`:                          run the interactive shell with the Django environment
-* :ref:`user<user>`:                            list and configure new AiiDA users.
-* :ref:`workflow<workflow>`:                    manage the AiiDA worflow manager
+    ../get_started/index
+    ../get_started/computers
+    ../get_started/codes
 
 
-Each command above can be preceded by the ``-p <profile>`` or ``--profile=<profile>``
-option, as in::
-  
-  verdi -p <profile> calculation list
+======================
+Command line interface
+======================
 
-This allows one to select a specific AiiDA profile, and therefore a specific database,
-on which the command is executed. Thus several databases can be handled and 
-accessed simultaneously by AiiDA. To install a new profile, use the 
-:ref:`install<install>` command.
+One way of interacting with AiiDA is through the ``verdi`` command line interface (CLI).
 
-.. note:: This profile selection has no effect on the ``verdi daemon`` commands.
+Before checking out the individual commands below, start with a brief look at the :ref:`general concepts<cli_concepts>` that apply across all commands.
 
-Some ambiguity might arise when a certain ``verdi`` subcommand manages both positional arguments and at least one option which accepts an unspecified number of arguments. Make sure you insert the separator ``--`` between the last optional argument and the first positional argument. As an example, instead of typing::
+.. toctree::
+    :maxdepth: 1
+    :hidden:
 
-  verdi export -g group1 group2 group3 export.aiida
+    ../verdi/verdi_user_guide.rst
 
-rather type::
+.. _verdi_overview:
 
-  verdi export -g group1 group2 group3 -- export.aiida
+* :ref:`calcjob<verdi_calcjob>`:  Inspect and manage calcjobs.
+* :ref:`code<verdi_code>`:  Setup and manage codes.
+* :ref:`comment<verdi_comment>`:  Inspect, create and manage node comments.
+* :ref:`completioncommand<verdi_completioncommand>`:  Return the code to activate bash completion.
+* :ref:`computer<verdi_computer>`:  Setup and manage computers.
+* :ref:`config<verdi_config>`:  Configure profile-specific or global AiiDA options.
+* :ref:`daemon<verdi_daemon>`:  Inspect and manage the daemon.
+* :ref:`data<verdi_data>`:  Inspect, create and manage data nodes.
+* :ref:`database<verdi_database>`:  Inspect and manage the database.
+* :ref:`devel<verdi_devel>`:  Commands for developers.
+* :ref:`export<verdi_export>`:  Create and manage export archives.
+* :ref:`graph<verdi_graph>`:  Create visual representations of the provenance graph.
+* :ref:`group<verdi_group>`:  Create, inspect and manage groups of nodes.
+* :ref:`help<verdi_help>`:  Show help for given command.
+* :ref:`import<verdi_import>`:  Import data from an AiiDA archive file.
+* :ref:`node<verdi_node>`:  Inspect, create and manage nodes.
+* :ref:`plugin<verdi_plugin>`:  Inspect AiiDA plugins.
+* :ref:`process<verdi_process>`:  Inspect and manage processes.
+* :ref:`profile<verdi_profile>`:  Inspect and manage the configured profiles.
+* :ref:`quicksetup<verdi_quicksetup>`:  Setup a new profile in a fully automated fashion.
+* :ref:`rehash<verdi_rehash>`:  Recompute the hash for nodes in the database.
+* :ref:`restapi<verdi_restapi>`:  Run the AiiDA REST API server.
+* :ref:`run<verdi_run>`:  Execute scripts with preloaded AiiDA environment.
+* :ref:`setup<verdi_setup>`:  Setup a new profile.
+* :ref:`shell<verdi_shell>`:  Start a python shell with preloaded AiiDA environment.
+* :ref:`status<verdi_status>`:  Print status of AiiDA services.
+* :ref:`user<verdi_user>`:  Inspect and manage users.
 
- The previous command will export the nodes belonging to groups ``group1``, ``group2``, and ``group3`` (specified by the option ``-g``) into the file ``export.aiida``, which is taken as a positional argument.
+.. END_OF_VERDI_OVERVIEW_MARKER
 
-Below is a list with all the available subcommands.
+
+
+================
+Python interface
+================
+
+While the ``verdi`` CLI provides shortcuts for many common tasks, the AiiDA python API provides full access to the underlying AiiDA python objects and their methods.
+This is possible via the interactive ``verdi shell`` and via python scripts:
+
 
 .. toctree::
     :maxdepth: 4
 
-    ../verdi/verdi_user_guide
-
-
-=========
-Scripting
-=========
-
-While many common functionalities are provided by either command-line tools 
-(via ``verdi``) or the web interface, for fine tuning (or automatization) 
-it is useful to directly access the python objects and call their methods.
-
-This is possible in two ways, either via an interactive shell, or writing and 
-running a script. Both methods are described below.
-
-.. toctree::
-    :maxdepth: 4
-
+    python_api
     scripting
+    daemon_service
 
+===========
+Manage data
+===========
 
-========
-Plug-ins
-========
-AiiDA plug-ins are input generators and output parsers, enabling the
-integration of codes into AiiDA calculations and workflows.
-
-The plug-ins are not meant to completely automatize the calculation of physical properties. An underlying knowledge of how each code works, which flags it requires, etc. is still required. A total automatization, if desired, has to be implemented at the level of a workflow.
-
-Plugins live in different repositories than AiiDA.
-You can find a list of existing plugins on the `AiiDA website <http://www.aiida.net/plugins/>`_ or on the
-``aiida-registry`` (check the `JSON version <https://github.com/aiidateam/aiida-registry/blob/master/plugins.json>`_
-or the `human-readable version <https://aiidateam.github.io/aiida-registry/>`_), the official location to register
-and list plugins.
-
-
-============
-Calculations
-============
-
-.. toctree::
-    :maxdepth: 4
-
-    ../state/calculation_state
-    resultmanager
-
-==========
 Data types
 ==========
 
@@ -116,11 +91,79 @@ Data types
     ../datatypes/bands
     ../datatypes/functionality
 
+Groups
+======
+
+.. toctree::
+    :maxdepth: 4
+
+    groups
+
+Querying data
+=============
+
+.. toctree::
+    :maxdepth: 4
+
+    ../querying/querybuilder/intro
+    ../querying/querybuilder/append
+    ../querying/querybuilder/queryhelp
+    ../querying/backend
+
+Result manager
+==============
+
+.. toctree::
+    :maxdepth: 4
+
+    resultmanager.rst
+
+Deleting Nodes
+==============
+.. toctree::
+    :maxdepth: 2
+
+    deleting_nodes.rst
+
+Provenance Graphs
+=================
+.. toctree::
+    :maxdepth: 2
+
+    visualising_graphs/visualising_graphs
+
+Backups
+=======
+
+.. toctree::
+    :maxdepth: 4
+
+    ../backup/index.rst
+
+Import and Export
+=================
+
+.. toctree::
+    :maxdepth: 4
+
+    ../import_export/main
+    ../import_export/external_dbs
+
+=======
+Caching
+=======
+
+.. toctree::
+    :maxdepth: 4
+
+    caching.rst
+
+
 ==========
 Schedulers
 ==========
 
-As described in the section about calculations, ``JobCalculation`` instances are submitted by the daemon to an external scheduler.
+Instances of ``CalcJobNode`` instances are submitted by the daemon to an external scheduler.
 For this functionality to work, AiiDA needs to be able to interact with these schedulers.
 Interfaces have been written for some of the most used schedulers.
 
@@ -129,41 +172,21 @@ Interfaces have been written for some of the most used schedulers.
 
     ../scheduler/index
 
-==========
-Link types
-==========
+===============
+Troubleshooting
+===============
 
 .. toctree::
     :maxdepth: 4
 
-    ../link_types/index.rst
+    troubleshooting.rst
 
-=============
-Querying data
-=============
-
-.. toctree::
-    :maxdepth: 4
-
-    ../querying/index.rst
-
-
-=========
-Workflows
-=========
+========
+Cookbook
+========
 
 .. toctree::
     :maxdepth: 4
 
-    ../work/index.rst
-    ../old_workflows/index.rst
+    cookbook.rst
 
-
-=======
-Backups
-=======
-
-.. toctree::
-    :maxdepth: 4
-
-    ../backup/index.rst

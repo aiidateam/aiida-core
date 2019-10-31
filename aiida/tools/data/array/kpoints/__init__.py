@@ -3,23 +3,30 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.orm.data.array.kpoints import KpointsData
-from aiida.orm.data.parameter import ParameterData
+"""
+Various utilities to deal with KpointsData instances or create new ones
+(e.g. band paths, kpoints from a parsed input text file, ...)
+"""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
+from aiida.orm import KpointsData, Dict
 from aiida.tools.data.array.kpoints import legacy
 from aiida.tools.data.array.kpoints import seekpath
 
-__all__ = ['get_kpoints_path', 'get_explicit_kpoints_path']
+__all__ = ('get_kpoints_path', 'get_explicit_kpoints_path')
 
 
 def get_kpoints_path(structure, method='seekpath', **kwargs):
     """
     Returns a dictionary whose contents depend on the method but includes at least the following keys
 
-        * parameters: ParameterData node
+        * parameters: Dict node
 
     The contents of the parameters depends on the method but contains at least the keys
 
@@ -42,17 +49,19 @@ def get_kpoints_path(structure, method='seekpath', **kwargs):
     :param kwargs: optional keyword arguments that depend on the selected method
     :returns: dictionary as described above in the docstring
     """
-    if method not in _get_kpoints_path_methods.keys():
+    if method not in _GET_KPOINTS_PATH_METHODS.keys():
         raise ValueError("the method '{}' is not implemented".format(method))
 
     if method == 'seekpath':
         try:
             seekpath.check_seekpath_is_installed()
-        except ImportError as exception:
-            raise ValueError("selected method is 'seekpath' but the package is not installed\n"
-                             "Either install it or pass method='legacy' as input to the function call")
+        except ImportError:
+            raise ValueError(
+                "selected method is 'seekpath' but the package is not installed\n"
+                "Either install it or pass method='legacy' as input to the function call"
+            )
 
-    method = _get_kpoints_path_methods[method]
+    method = _GET_KPOINTS_PATH_METHODS[method]
 
     return method(structure, **kwargs)
 
@@ -61,7 +70,7 @@ def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
     """
     Returns a dictionary whose contents depend on the method but includes at least the following keys
 
-        * parameters: ParameterData node
+        * parameters: Dict node
         * explicit_kpoints: KpointsData node with explicit kpoints path
 
     The contents of the parameters depends on the method but contains at least the keys
@@ -85,17 +94,19 @@ def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
     :param kwargs: optional keyword arguments that depend on the selected method
     :returns: dictionary as described above in the docstring
     """
-    if method not in _get_explicit_kpoints_path_methods.keys():
+    if method not in _GET_EXPLICIT_KPOINTS_PATH_METHODS.keys():
         raise ValueError("the method '{}' is not implemented".format(method))
 
     if method == 'seekpath':
         try:
             seekpath.check_seekpath_is_installed()
-        except ImportError as exception:
-            raise ValueError("selected method is 'seekpath' but the package is not installed\n"
-                             "Either install it or pass method='legacy' as input to the function call")
+        except ImportError:
+            raise ValueError(
+                "selected method is 'seekpath' but the package is not installed\n"
+                "Either install it or pass method='legacy' as input to the function call"
+            )
 
-    method = _get_explicit_kpoints_path_methods[method]
+    method = _GET_EXPLICIT_KPOINTS_PATH_METHODS[method]
 
     return method(structure, **kwargs)
 
@@ -129,7 +140,7 @@ def _seekpath_get_kpoints_path(structure, **kwargs):
     unknown_args = set(kwargs).difference(recognized_args)
 
     if unknown_args:
-        raise ValueError("unknown arguments {}".format(unknown_args))
+        raise ValueError('unknown arguments {}'.format(unknown_args))
 
     return seekpath.get_kpoints_path(structure, kwargs)
 
@@ -167,7 +178,7 @@ def _seekpath_get_explicit_kpoints_path(structure, **kwargs):
     unknown_args = set(kwargs).difference(recognized_args)
 
     if unknown_args:
-        raise ValueError("unknown arguments {}".format(unknown_args))
+        raise ValueError('unknown arguments {}'.format(unknown_args))
 
     return seekpath.get_explicit_kpoints_path(structure, kwargs)
 
@@ -185,11 +196,9 @@ def _legacy_get_kpoints_path(structure, **kwargs):
     args_unknown = set(kwargs).difference(args_recognized)
 
     if args_unknown:
-        raise ValueError("unknown arguments {}".format(args_unknown))
+        raise ValueError('unknown arguments {}'.format(args_unknown))
 
-    point_coords, path, bravais_info = legacy.get_kpoints_path(
-        cell=structure.cell, pbc=structure.pbc, **kwargs
-    )
+    point_coords, path, bravais_info = legacy.get_kpoints_path(cell=structure.cell, pbc=structure.pbc, **kwargs)
 
     parameters = {
         'bravais_info': bravais_info,
@@ -197,7 +206,7 @@ def _legacy_get_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {'parameters': ParameterData(dict=parameters)}
+    return {'parameters': Dict(dict=parameters)}
 
 
 def _legacy_get_explicit_kpoints_path(structure, **kwargs):
@@ -217,7 +226,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     args_unknown = set(kwargs).difference(args_recognized)
 
     if args_unknown:
-        raise ValueError("unknown arguments {}".format(args_unknown))
+        raise ValueError('unknown arguments {}'.format(args_unknown))
 
     point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(
         cell=structure.cell, pbc=structure.pbc, **kwargs
@@ -234,19 +243,15 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {
-        'parameters': ParameterData(dict=parameters),
-        'explicit_kpoints': kpoints
-    }
+    return {'parameters': Dict(dict=parameters), 'explicit_kpoints': kpoints}
 
 
-
-_get_kpoints_path_methods = {
+_GET_KPOINTS_PATH_METHODS = {
     'legacy': _legacy_get_kpoints_path,
     'seekpath': _seekpath_get_kpoints_path,
 }
 
-_get_explicit_kpoints_path_methods = {
+_GET_EXPLICIT_KPOINTS_PATH_METHODS = {
     'legacy': _legacy_get_explicit_kpoints_path,
     'seekpath': _seekpath_get_explicit_kpoints_path,
 }

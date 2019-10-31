@@ -3,17 +3,26 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
+from contextlib import contextmanager
+
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 
-class QueryManagerSQLA(AbstractQueryManager):
+class SqlaQueryManager(AbstractQueryManager):
     """
     SQLAlchemy implementation of custom queries, for efficiency reasons
     """
+
+    def __init__(self, backend):
+        super(SqlaQueryManager, self).__init__(backend)
 
     def get_creation_statistics(
             self,
@@ -49,10 +58,10 @@ class QueryManagerSQLA(AbstractQueryManager):
         retdict = {}
 
         total_query = s.query(m.node.DbNode)
-        types_query = s.query(m.node.DbNode.type.label('typestring'),
-                sa.func.count(m.node.DbNode.id))
+        types_query = s.query(m.node.DbNode.node_type.label('typestring'),
+                              sa.func.count(m.node.DbNode.id))
         stat_query = s.query(sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),
-                           sa.func.count(m.node.DbNode.id))
+                             sa.func.count(m.node.DbNode.id))
 
         if user_pk is not None:
             total_query = total_query.filter(m.node.DbNode.user_id == user_pk)
@@ -60,18 +69,16 @@ class QueryManagerSQLA(AbstractQueryManager):
             stat_query = stat_query.filter(m.node.DbNode.user_id == user_pk)
 
         # Total number of nodes
-        retdict["total"] = total_query.count()
+        retdict['total'] = total_query.count()
 
         # Nodes per type
-        retdict["types"] = dict(types_query.group_by('typestring').all())
+        retdict['types'] = dict(types_query.group_by('typestring').all())
 
         # Nodes created per day
         stat = stat_query.group_by('cday').order_by('cday').all()
 
         ctime_by_day = {_[0].strftime('%Y-%m-%d'): _[1] for _ in stat}
-        retdict["ctime_by_day"] = ctime_by_day
+        retdict['ctime_by_day'] = ctime_by_day
 
         return retdict
         # Still not containing all dates
-
-

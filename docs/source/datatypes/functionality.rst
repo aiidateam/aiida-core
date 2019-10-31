@@ -2,25 +2,25 @@
 
 Export data nodes to various formats
 ====================================
-Each data node has a :py:meth:`~aiida.orm.data.Data.export()` method
+Each data node has a :py:meth:`~aiida.orm.nodes.data.data.Data.export()` method
 that allows to export the given data node to file in a variety of available formats,
 e.g. to pass it to a visualization software.
 
-The :py:meth:`~aiida.orm.data.Data.export()` method asks for a filename, and it will
-write to file the result. It is possible that more than one file is written (example:
+The :py:meth:`~aiida.orm.nodes.data.data.Data.export()` method asks for a filename, and it will
+write to file the result. It is possible that more than one file is written (for example,
 if you produce a gnuplot script, the data will typically be in a different .dat file).
 The return value of the function is a list of files that have been created.
 
 The list of export formats depends on the specific Data plugin. The export format is
 typically inferred from the file extension, but if this is not possible (or you
 want to specify a given format), you can pass an additional ``fileformat`` parameter
-to :py:meth:`~aiida.orm.data.Data.export()`.
+to :py:meth:`~aiida.orm.nodes.data.data.Data.export()`.
 The list of all valid export formats can be obtained calling
 ``Data.get_export_formats()`` method, that returns a list of strings with all valid
 formats.
 
 If you don't want to export directly to a file, but want to get simply the content
-of the file as a string, then you can call the :py:meth:`~aiida.orm.data.Data._exportstring()`
+of the file as a string, then you can call the :py:meth:`~aiida.orm.nodes.data.data.Data._exportcontent()`
 method, passing also a ``fileformat`` parameter.
 The return value is a tuple of length 2: the first element is a string
 with the content of the "main" file, while the second is a dictionary (possibly empty)
@@ -31,12 +31,12 @@ Exporting from the command line
 +++++++++++++++++++++++++++++++
 Most data types expose the export functionality on the command line.
 
-For instance, if you want to export a StructureData object with given ``PK``, you can
+For instance, if you want to export a ``StructureData`` object with given ``PK``, you can
 run on the command line::
 
   verdi data structure export PK --format=FORMAT_NAME
 
-that will export the node with PK=``PK`` in the format ``FORMAT_NAME``.
+that will export the node with the corresponding  ``PK`` value in the format ``FORMAT_NAME``.
 This will print on screen the file content; a few command line options allow to change this
 behaviour:
 
@@ -48,12 +48,12 @@ behaviour:
 Additional options (often format-specific) exist, and can be discovered passing the ``-h``
 option to the command line. For instance:
 
-* ``verdi data structure export`` accepts a number of formats including ``xsf``, ``cif``, ``xyz``
-  and ``tcod``, and additional parameters like ``--no-reduce-symmetry`` (to be used in combination
+* ``verdi data structure export`` accepts a number of formats including ``xsf``, ``cif`` and  ``xyz``,
+  and additional parameters like ``--no-reduce-symmetry`` (to be used in combination
   with the ``tcod`` format to tell AiiDA not to try to reduce simmetry in the output CIF file, etc.
 
-* ``verdi data trajectory export`` accepts a number of formats including ``xsf``, ``cif``
-  and ``tcod``, and additional parameters like ``--step NUM`` (to choose to export only a
+* ``verdi data trajectory export`` accepts a number of formats including ``xsf`` and  ``cif``,
+  and additional parameters like ``--step NUM`` (to choose to export only a
   given trajectory step).
 
 * ``verdi data bands export`` accepts a number of formats including
@@ -77,9 +77,6 @@ The following export formats are available:
   the cell is indicated in the comment line)
 * ``cif`` (export to CIF format, without symmetry reduction, i.e. always storing the
   structure as P1 symmetry)
-* ``tcod`` (extension to the CIF format, supports symmetry reduction, and typically adds
-  in the CIF file a number of additional information, including the full provenance of
-  the crystal structure node)
 
 TrajectoryData
 --------------
@@ -89,9 +86,6 @@ The following export formats are available:
   supports periodic cells)
 * ``cif`` (export to CIF format, without symmetry reduction, i.e. always storing the
   structures as P1 symmetry)
-* ``tcod`` (extension to the CIF format, supports symmetry reduction, and typically adds
-  in the CIF file a number of additional information, including the full provenance of
-  the crystal trajecotry node)
 
 BandsData
 ---------
@@ -144,13 +138,13 @@ The prettifiers should be chosen depending on two aspects:
 
 Most export formats already decide which prettifier is best to use, but if you need
 to change it, you can do it passing the ``prettify_format`` parameter to the
-:py:meth:`~aiida.orm.data.Data.export()` method. Valid prettifiers include:
+:py:meth:`~aiida.orm.nodes.data.data.Data.export()` method. Valid prettifiers include:
 
-* ``'agr_seekpath``: format for Xmgrace, using ``seekpath`` raw label syntax
+* ``agr_seekpath``: format for Xmgrace, using ``seekpath`` raw label syntax
 * ``agr_simple``: format for Xmgrace, using ``simple`` raw label syntax
 * ``latex_simple``: format for LaTeX (including dollar signs), using ``seekpath`` raw label syntax
 * ``latex_seekpath``: format for LaTeX (including dollar signs), using ``simple`` raw label syntax
 * ``gnuplot_simple``: format for GNUPlot (Unicode for Greek letters, LaTeX syntax `without` dollar signs for underscores), using ``seekpath`` raw label syntax
-* gnuplot_seekpath``: format for GNUPlot (Unicode for Greek letters, LaTeX syntax `without` dollar signs for underscores), using ``simple`` raw label syntax
+* ``gnuplot_seekpath``: format for GNUPlot (Unicode for Greek letters, LaTeX syntax `without` dollar signs for underscores), using ``simple`` raw label syntax
 * ``pass``: no-op prettifier: leaves all strings unchanged to their raw value
 

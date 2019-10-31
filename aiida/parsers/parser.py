@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -11,161 +11,167 @@
 This module implements a generic output plugin, that is general enough
 to allow the reading of the outputs of a calculation.
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
+from abc import ABCMeta, abstractmethod
+import six
+
+from aiida.common import exceptions, extendeddicts
+from aiida.engine import calcfunction
+from aiida.engine.processes.ports import CalcJobOutputPort
+
+__all__ = ('Parser',)
 
 
+@six.add_metaclass(ABCMeta)
 class Parser(object):
-    """
-    Base class for a parser object.
+    """Base class for a Parser that can parse the outputs produced by a CalcJob process."""
 
-    Receives a Calculation object. This should be in the PARSING state.
-    Raises ValueError otherwise
-    Looks for the attached parser_opts or input_settings nodes attached to the calculation.
-    Get the child Folderdata, parse it and store the parsed data.
-    """
-    _linkname_outparams = 'output_parameters'
-    _retrieved_temporary_folder_key = 'retrieved_temporary_folder'
+    def __init__(self, node):
+        """Construct the Parser instance.
 
-    def __init__(self, calc):
-        from aiida.common import aiidalogger
+        :param node: the `CalcJobNode` that contains the results of the executed `CalcJob` process.
+        """
+        from aiida.common.log import AIIDA_LOGGER
+        from aiida.orm.utils.log import create_logger_adapter
 
-        self._logger = aiidalogger.getChild('parser').getChild( self.__class__.__name__)
-        self._calc = calc
+        self._logger = create_logger_adapter(AIIDA_LOGGER.getChild('parser').getChild(self.__class__.__name__), node)
+        self._node = node
+        self._outputs = extendeddicts.AttributeDict()
 
     @property
     def logger(self):
-        """
-        Return the logger, also with automatic extras of the associated
-        extras of the calculation
-        """
-        import logging
-        from aiida.common.log import get_dblogger_extra
+        """Return the logger preconfigured for the calculation node associated with this parser instance.
 
-        return logging.LoggerAdapter(logger=self._logger, extra=get_dblogger_extra(self._calc))
+        :return: `logging.Logger`
+        """
+        return self._logger
 
     @property
-    def retrieved_temporary_folder_key(self):
-        """
-        Return the key under which the retrieved_temporary_folder will be passed in the
-        dictionary of retrieved nodes in the parse_with_retrieved method
-        """
-        return self._retrieved_temporary_folder_key
+    def node(self):
+        """Return the node instance
 
-    def parse_with_retrieved(self, retrieved):
+        :return: the `CalcJobNode` instance
         """
-        Receives in input a dictionary of retrieved nodes.
-        Implement all the logic in this function of the subclass.
+        return self._node
 
-        :param retrieved: dictionary of retrieved nodes
+    @property
+    def exit_codes(self):
+        """Return the exit codes defined for the process class of the node being parsed.
+
+        :returns: ExitCodesNamespace of ExitCode named tuples
         """
-        raise NotImplementedError
+        return self.node.process_class.exit_codes
 
-    def parse_from_calc(self, retrieved_temporary_folder=None):
+    @property
+    def retrieved(self):
+        return self.node.get_outgoing().get_node_by_label(self.node.process_class.link_label_retrieved)
+
+    @property
+    def outputs(self):
+        """Return the dictionary of outputs that have been registered.
+
+        :return: an AttributeDict instance with the registered output nodes
         """
-        Parses the datafolder, stores results.
-        Main functionality of the class. If you only have one retrieved node,
-        you do not need to reimplement this. Implement only the
-        parse_with_retrieved
+        return self._outputs
+
+    def out(self, link_label, node):
+        """Register a node as an output with the given link label.
+
+        :param link_label: the name of the link label
+        :param node: the node to register as an output
+        :raises aiida.common.ModificationNotAllowed: if an output node was already registered with the same link label
         """
-        # select the folder object
-        out_folder = self._calc.get_retrieved_node()
-        if out_folder is None:
-            self.logger.error("No retrieved folder found")
-            return False, ()
+        if link_label in self._outputs:
+            raise exceptions.ModificationNotAllowed('the output {} already exists'.format(link_label))
+        self._outputs[link_label] = node
 
-        retrieved = {self._calc._get_linkname_retrieved(): out_folder}
+    def get_outputs_for_parsing(self):
+        """Return the dictionary of nodes that should be passed to the `Parser.parse` call.
 
-        if retrieved_temporary_folder is not None:
-            key = self.retrieved_temporary_folder_key
-            retrieved[key] = retrieved_temporary_folder
+        Output nodes can be marked as being required by the `parse` method, by setting the `pass_to_parser` attribute,
+        in the `spec.output` call in the process spec of the `CalcJob`, to True.
 
-        return self.parse_with_retrieved(retrieved)
+        :return: dictionary of nodes that are required by the `parse` method
+        """
+        link_triples = self.node.get_outgoing()
+        result = {}
+
+        for label, port in self.node.process_class.spec().outputs.items():
+            if isinstance(port, CalcJobOutputPort) and port.pass_to_parser:
+                try:
+                    result[label] = link_triples.get_node_by_label(label)
+                except exceptions.NotExistent:
+                    if port.required:
+                        raise
+
+        return result
 
     @classmethod
-    def get_linkname_outparams(self):
+    def parse_from_node(cls, node, store_provenance=True, retrieved_temporary_folder=None):
+        """Parse the outputs directly from the `CalcJobNode`.
+
+        If `store_provenance` is set to False, a `CalcFunctionNode` will still be generated, but it will not be stored.
+        It's storing method will also be disabled, making it impossible to store, because storing it afterwards would
+        not have the expected effect, as the outputs it produced will not be stored with it.
+
+        This method is useful to test parsing in unit tests where a `CalcJobNode` can be mocked without actually having
+        to run a `CalcJob`. It can also be useful to actually re-perform the parsing of a completed `CalcJob` with a
+        different parser.
+
+        :param node: a `CalcJobNode` instance
+        :param store_provenance: bool, if True will store the parsing as a `CalcFunctionNode` in the provenance
+        :param retrieved_temporary_folder: absolute path to folder with contents of `retrieved_temporary_list`
+        :return: a tuple of the parsed results and the `CalcFunctionNode` representing the process of parsing
         """
-        The name of the link used for the output parameters
+        parser = cls(node=node)
+
+        @calcfunction
+        def parse_calcfunction(**kwargs):
+            """A wrapper function that will turn calling the `Parser.parse` method into a `CalcFunctionNode`.
+
+            .. warning:: This implementation of a `calcfunction` uses the `Process.current` to circumvent the limitation
+                of not being able to return both output nodes as well as an exit code. However, since this calculation
+                function is supposed to emulate the parsing of a `CalcJob`, which *does* have that capability, I have
+                to use this method. This method should however not be used in process functions, in other words:
+
+                    Do not try this at home!
+
+            :param kwargs: keyword arguments that are passed to `Parser.parse` after it has been constructed
+            """
+            from aiida.engine import Process
+
+            if retrieved_temporary_folder is not None:
+                kwargs['retrieved_temporary_folder'] = retrieved_temporary_folder
+
+            exit_code = parser.parse(**kwargs)
+            outputs = parser.outputs
+
+            if exit_code and exit_code.status:
+                # In the case that an exit code was returned, still attach all the registered outputs on the current
+                # process as well, which should represent this `CalcFunctionNode`. Otherwise the caller of the
+                # `parse_from_node` method will get an empty dictionary as a result, despite the `Parser.parse` method
+                # having registered outputs.
+                process = Process.current()
+                process.out_many(outputs)
+                return exit_code
+
+            return dict(outputs)
+
+        inputs = {'metadata': {'store_provenance': store_provenance}}
+        inputs.update(parser.get_outputs_for_parsing())
+
+        return parse_calcfunction.run_get_node(**inputs)
+
+    @abstractmethod
+    def parse(self, **kwargs):
+        """Parse the contents of the output files retrieved in the `FolderData`.
+
+        This method should be implemented in the sub class. Outputs can be registered through the `out` method.
+        After the `parse` call finishes, the runner will automatically link them up to the underlying `CalcJobNode`.
+
+        :param kwargs: output nodes attached to the `CalcJobNode` of the parser instance.
+        :return: an instance of ExitCode or None
         """
-        return self._linkname_outparams
-
-    def get_result_dict(self):
-        """
-        Return a dictionary with all results (faster than doing multiple queries)
-
-        :note: the function returns an empty dictionary if no output params node
-          can be found (either because the parser did not create it, or because
-          the calculation has not been parsed yet).
-        """
-        from aiida.common.exceptions import NotExistent
-
-        try:
-            resnode = self.get_result_parameterdata_node()
-        except NotExistent:
-            return {}
-
-        return resnode.get_dict()
-
-    def get_result_parameterdata_node(self):
-        """
-        Return the parameterdata node.
-
-        :raise UniquenessError: if the node is not unique
-        :raise NotExistent: if the node does not exist
-        """
-        from aiida.orm.data.parameter import ParameterData
-        from aiida.common.exceptions import NotExistent
-
-        out_parameters = self._calc.get_outputs(node_type=ParameterData, also_labels=True)
-        out_parameter_data = [i[1] for i in out_parameters if i[0] == self.get_linkname_outparams()]
-
-        if not out_parameter_data:
-            raise NotExistent("No output .res ParameterData node found")
-        elif len(out_parameter_data) > 1:
-            from aiida.common.exceptions import UniquenessError
-
-            raise UniquenessError("Output ParameterData should be found once, "
-                                  "found it instead {} times"
-                                  .format(len(out_parameter_data)))
-
-        return out_parameter_data[0]
-
-    def get_result_keys(self):
-        """
-        Return an iterator of list of strings of valid result keys,
-        that can be then passed to the get_result() method.
-
-        :note: the function returns an empty list if no output params node
-          can be found (either because the parser did not create it, or because
-          the calculation has not been parsed yet).
-
-        :raise UniquenessError: if more than one output node with the name
-          self._get_linkname_outparams() is found.
-        """
-        from aiida.common.exceptions import NotExistent
-
-        try:
-            resnode = self.get_result_parameterdata_node()
-        except NotExistent:
-            return iter([])
-
-        return resnode.keys()
-
-    def get_result(self, key_name):
-        """
-        Access the parameters of the output.
-        The following method will should work for a generic parser,
-        provided it has to query only one ParameterData object.
-        """
-        resnode = self.get_result_parameterdata_node()
-
-        try:
-            value = resnode.get_attr(key_name)
-        except KeyError:
-            from aiida.common.exceptions import ContentNotExistent
-
-            raise ContentNotExistent("Key {} not found in results".format(key_name))
-
-        # TODO: eventually, here insert further operations
-        # (ex: key_name = energy_float_rydberg could return only the last element of a list,
-        # and convert in the right units)
-
-        return value

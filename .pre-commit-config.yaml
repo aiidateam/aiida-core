@@ -1,93 +1,313 @@
-# yet another python formatter
-- repo: git://github.com/pre-commit/mirrors-yapf
-  sha: v0.19.0
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.2.3
   hooks:
-  - id: yapf
-    language: system
-    files: >-  # begin multiline string
-      (?x)^(   # (?x) -> multiline regex, ^ -> beginning of file path
-        aiida/control/.*.py|        # must match the whole path, therefore
-        aiida/cmdline/tests/.*.py|  # the .*.py (.* matches everything)
-        docs/update_req_for_rtd.py| # a|b -> match a OR b
-        .travis_data/test_setup.py|
-        .travis-data/test_plugin_testcase.py|
-        aiida/backends/tests/verdi_commands.py|
-        aiida/orm/data/cif.py|
-        aiida/restapi/resources.py|
-        aiida/restapi/translator/data/cif.py|
-        aiida/utils/fixtures.py
-      )$  # $ -> end of file path, to add a directory, give full/path/.*
-
-# prospector: collection of linters
-- repo: git://github.com/guykisel/prospector-mirror
-  sha: b27f281eb9398fc8504415d7fbdabf119ea8c5e1
-  hooks:
-  - id: prospector
-    language: system
-    exclude: ^(tests/|examples/)
-    types: [file, python]
-    files: >-
-      (?x)^(
-        aiida/control/.*.py|
-        aiida/cmdline/tests/.*.py|
-        docs/update_req_for_rtd.py|
-        .travis_data/test_setup.py|
-        .travis-data/test_plugin_testcase.py|
-        aiida/backends/tests/verdi_commands.py|
-        aiida/orm/data/cif.py|
-        aiida/restapi/translator/data/cif.py|
-        aiida/restapi/resources.py|
-        aiida/utils/fixtures.py
-      )$
+  - id: trailing-whitespace
+  - id: double-quote-string-fixer
 
 - repo: local
   hooks:
+  - id: yapf
+    name: yapf
+    entry: yapf
+    language: system
+    types: [python]
+    args: ["-i"]
+    exclude: &exclude_files >
+      (?x)^(
+        docs/.*|
+        examples/.*|
+        aiida/backends/djsite/db/__init__.py|
+        aiida/backends/djsite/db/migrations/0001_initial.py|
+        aiida/backends/djsite/db/migrations/0002_db_state_change.py|
+        aiida/backends/djsite/db/migrations/0003_add_link_type.py|
+        aiida/backends/djsite/db/migrations/0004_add_daemon_and_uuid_indices.py|
+        aiida/backends/djsite/db/migrations/0005_add_cmtime_indices.py|
+        aiida/backends/djsite/db/migrations/0006_delete_dbpath.py|
+        aiida/backends/djsite/db/migrations/0007_update_linktypes.py|
+        aiida/backends/djsite/db/migrations/0008_code_hidden_to_extra.py|
+        aiida/backends/djsite/db/migrations/0009_base_data_plugin_type_string.py|
+        aiida/backends/djsite/db/migrations/0010_process_type.py|
+        aiida/backends/djsite/db/migrations/0011_delete_kombu_tables.py|
+        aiida/backends/djsite/db/migrations/0012_drop_dblock.py|
+        aiida/backends/djsite/db/migrations/0013_django_1_8.py|
+        aiida/backends/djsite/db/migrations/0014_add_node_uuid_unique_constraint.py|
+        aiida/backends/djsite/db/migrations/0016_code_sub_class_of_data.py|
+        aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
+        aiida/backends/djsite/db/migrations/__init__.py|
+        aiida/backends/djsite/db/models.py|
+        aiida/backends/djsite/db/subtests/test_generic.py|
+        aiida/backends/djsite/__init__.py|
+        aiida/backends/djsite/manage.py|
+        aiida/backends/djsite/queries.py|
+        aiida/backends/profile.py|
+        aiida/backends/general/abstractqueries.py|
+        aiida/backends/sqlalchemy/__init__.py|
+        aiida/backends/sqlalchemy/migrations/env.py|
+        aiida/backends/sqlalchemy/migrations/versions/0aebbeab274d_base_data_plugin_type_string.py|
+        aiida/backends/sqlalchemy/migrations/versions/35d4ee9a1b0e_code_hidden_attr_to_extra.py|
+        aiida/backends/sqlalchemy/migrations/versions/59edaf8a8b79_adding_indexes_and_constraints_to_the_.py|
+        aiida/backends/sqlalchemy/migrations/versions/6c629c886f84_process_type.py|
+        aiida/backends/sqlalchemy/migrations/versions/70c7d732f1b2_delete_dbpath.py|
+        aiida/backends/sqlalchemy/migrations/versions/89176227b25_add_indexes_to_dbworkflowdata_table.py|
+        aiida/backends/sqlalchemy/migrations/versions/a514d673c163_drop_dblock.py|
+        aiida/backends/sqlalchemy/migrations/versions/a6048f0ffca8_update_linktypes.py|
+        aiida/backends/sqlalchemy/migrations/versions/e15ef2630a1b_initial_schema.py|
+        aiida/backends/sqlalchemy/migrations/versions/f9a69de76a9a_delete_kombu_tables.py|
+        aiida/backends/sqlalchemy/migrations/versions/62fe0d36de90_add_node_uuid_unique_constraint.py|
+        aiida/backends/sqlalchemy/migrations/versions/a603da2cc809_code_sub_class_of_data.py|
+        aiida/backends/sqlalchemy/migrations/versions/162b99bca4a2_drop_dbcalcstate.py|
+        aiida/backends/sqlalchemy/models/authinfo.py|
+        aiida/backends/sqlalchemy/models/base.py|
+        aiida/backends/sqlalchemy/models/comment.py|
+        aiida/backends/sqlalchemy/models/computer.py|
+        aiida/backends/sqlalchemy/models/group.py|
+        aiida/backends/sqlalchemy/models/__init__.py|
+        aiida/backends/sqlalchemy/models/log.py|
+        aiida/backends/sqlalchemy/models/node.py|
+        aiida/backends/sqlalchemy/models/settings.py|
+        aiida/backends/sqlalchemy/models/user.py|
+        aiida/backends/sqlalchemy/queries.py|
+        aiida/backends/sqlalchemy/tests/test_generic.py|
+        aiida/backends/sqlalchemy/tests/__init__.py|
+        aiida/backends/sqlalchemy/tests/test_nodes.py|
+        aiida/backends/sqlalchemy/tests/test_query.py|
+        aiida/backends/sqlalchemy/tests/test_schema.py|
+        aiida/backends/sqlalchemy/tests/test_session.py|
+        aiida/backends/sqlalchemy/tests/testbase.py|
+        aiida/backends/sqlalchemy/tests/test_utils.py|
+        aiida/backends/sqlalchemy/utils.py|
+        aiida/backends/testbase.py|
+        aiida/backends/testimplbase.py|
+        aiida/backends/tests/test_base_dataclasses.py|
+        aiida/backends/tests/cmdline/commands/test_code.py|
+        aiida/backends/tests/cmdline/commands/test_comment.py|
+        aiida/backends/tests/cmdline/commands/test_computer.py|
+        aiida/backends/tests/cmdline/commands/test_data.py|
+        aiida/backends/tests/cmdline/commands/test_export.py|
+        aiida/backends/tests/cmdline/commands/test_group.py|
+        aiida/backends/tests/cmdline/commands/test_user.py|
+        aiida/backends/tests/test_dataclasses.py|
+        aiida/backends/tests/test_dbimporters.py|
+        aiida/backends/tests/test_generic.py|
+        aiida/backends/tests/__init__.py|
+        aiida/backends/tests/test_nodes.py|
+        aiida/backends/tests/orm/data/test_remote.py|
+        aiida/backends/tests/orm/utils/test_loaders.py|
+        aiida/backends/tests/test_plugin_loader.py|
+        aiida/backends/tests/engine/test_class_loader.py|
+        aiida/backends/tests/engine/test_daemon.py|
+        aiida/backends/tests/engine/test_persistence.py|
+        aiida/backends/tests/engine/test_process.py|
+        aiida/backends/tests/engine/test_futures.py|
+        aiida/backends/tests/engine/test_launch.py|
+        aiida/backends/tests/engine/test_process_builder.py|
+        aiida/backends/tests/engine/test_rmq.py|
+        aiida/backends/tests/engine/test_runners.py|
+        aiida/backends/tests/engine/test_transport.py|
+        aiida/backends/tests/engine/test_utils.py|
+        aiida/backends/tests/engine/test_utils.py|
+        aiida/backends/tests/engine/test_work_chain.py|
+        aiida/backends/utils.py|
+        aiida/common/datastructures.py|
+        aiida/engine/daemon/execmanager.py|
+        aiida/engine/processes/calcjobs/tasks.py|
+        aiida/orm/autogroup.py|
+        aiida/orm/querybuilder.py|
+        aiida/orm/nodes/data/array/bands.py|
+        aiida/orm/nodes/data/array/projection.py|
+        aiida/orm/nodes/data/array/xy.py|
+        aiida/orm/nodes/data/code.py|
+        aiida/orm/nodes/data/orbital.py|
+        aiida/orm/nodes/data/remote.py|
+        aiida/orm/nodes/data/structure.py|
+        aiida/orm/utils/remote.py|
+        aiida/parsers/plugins/arithmetic/add.py|
+        aiida/parsers/plugins/templatereplacer/doubler.py|
+        aiida/parsers/plugins/templatereplacer/__init__.py|
+        aiida/plugins/entry_point.py|
+        aiida/plugins/entry.py|
+        aiida/plugins/info.py|
+        aiida/plugins/registry.py|
+        aiida/schedulers/datastructures.py|
+        aiida/schedulers/plugins/direct.py|
+        aiida/schedulers/plugins/lsf.py|
+        aiida/schedulers/plugins/pbsbaseclasses.py|
+        aiida/schedulers/plugins/pbsbaseclasses.py|
+        aiida/schedulers/plugins/sge.py|
+        aiida/schedulers/plugins/slurm.py|
+        aiida/schedulers/plugins/test_direct.py|
+        aiida/schedulers/plugins/test_lsf.py|
+        aiida/schedulers/plugins/test_pbspro.py|
+        aiida/schedulers/plugins/test_sge.py|
+        aiida/schedulers/plugins/test_slurm.py|
+        aiida/schedulers/plugins/test_torque.py|
+        aiida/sphinxext/tests/workchain_source/conf.py|
+        aiida/tools/data/array/kpoints/legacy.py|
+        aiida/tools/data/array/kpoints/seekpath.py|
+        aiida/tools/data/__init__.py|
+        aiida/tools/dbexporters/__init__.py|
+        aiida/tools/dbimporters/baseclasses.py|
+        aiida/tools/dbimporters/__init__.py|
+        aiida/tools/dbimporters/plugins/cod.py|
+        aiida/tools/dbimporters/plugins/icsd.py|
+        aiida/tools/dbimporters/plugins/__init__.py|
+        aiida/tools/dbimporters/plugins/mpds.py|
+        aiida/tools/dbimporters/plugins/mpod.py|
+        aiida/tools/dbimporters/plugins/nninc.py|
+        aiida/tools/dbimporters/plugins/oqmd.py|
+        aiida/tools/dbimporters/plugins/pcod.py|
+        aiida/transports/plugins/ssh.py|
+        aiida/transports/plugins/test_all_plugins.py|
+        aiida/transports/plugins/test_local.py|
+        aiida/transports/plugins/test_ssh.py|
+        .ci/test_daemon.py|
+        .ci/workchains.py|
+      )$
+
+  # prospector: collection of linters
+  - id: prospector
+    language: system
+    types: [file, python]
+    exclude: *exclude_files
+    name: prospector
+    description: "This hook runs Prospector: https://github.com/landscapeio/prospector"
+    entry: prospector
+
   - id: rtd-requirements
     name: Requirements for RTD
     entry: python ./docs/update_req_for_rtd.py --pre-commit
     language: system
     files: >-
       (?x)^(
-        setup_requirements.py|
+        setup.json|
+        setup.py|
         docs/requirements_for_rtd.txt|
         docs/update_req_for_rtd.py|
       )$
     pass_filenames: false
 
-- repo: local
-  hooks:
   - id: pyproject
     name: Validating pyproject.toml
-    entry: python ./utils/validate_pyproject.py version
+    entry: python ./utils/validate_consistency.py toml
     language: system
     files: >-
       (?x)^(
-        setup_requirements.py|
-        utils/validate_pyproject.py|
+        setup.json|
+        setup.py|
+        utils/validate_consistency.py|
       )$
     pass_filenames: false
   - id: conda
     name: Validating environment.yml
-    entry: python ./utils/validate_pyproject.py conda
+    entry: python ./utils/validate_consistency.py conda
     language: system
     files: >-
       (?x)^(
-        setup_requirements.py|
-        utils/validate_pyproject.py|
+        setup.json|
+        setup.py|
+        utils/validate_consistency.py|
         environment.yml|
       )$
     pass_filenames: false
 
-- repo: git://github.com/pre-commit/pre-commit-hooks
-  sha: v1.1.1
-  hooks:
-  - id: check-yaml
+  - id: verdi-autodocs
+    name: Automatically generating verdi docs
+    entry: python ./utils/validate_consistency.py verdi-autodocs
+    language: system
+    files: >-
+      (?x)^(
+        aiida/cmdline/commands/.*|
+        utils/validate_consistency.py|
+      )$
+    pass_filenames: false
 
-- repo: local
-  hooks:
   - id: travis-linter
     name: travis
     entry: travis lint
     files: .travis.yml
     language: ruby
     additional_dependencies: ['travis']
+
+  - id: version-number
+    name: Check version numbers
+    entry: python ./utils/validate_consistency.py version
+    language: system
+    files: >-
+      (?x)^(
+        setup.json|
+        utils/validate_consistency.py|
+        aiida/__init__.py
+      )$
+    pass_filenames: false
+
+# modernizer: make sure our code-base is Python 3 ready
+- repo: https://github.com/python-modernize/python-modernize.git
+  rev: a234ce4e185cf77a55632888f1811d83b4ad9ef2
+  hooks:
+  - id: python-modernize
+    exclude: >
+      (?x)^(
+        docs/.*|
+        aiida/engine/utils.py  # exclude because tornado WaitIterator.next() does not work with next(...)
+      )$
+    args:
+      - --write
+      - --nobackups
+# Following are all the fixers in python-modernize.
+# Those marked as 'done' were run at some point and their results checked
+# and incorporated if necessary, but they can't be applied without breaking valid cases
+      - --fix=apply
+      - --fix=except
+      - --fix=exec
+      - --fix=execfile
+      - --fix=exitfunc
+      - --fix=funcattrs
+#done:      - --fix=has_key
+#optional:      - --fix=idioms
+#done:      - --fix=long
+      - --fix=methodattrs
+      - --fix=ne
+      - --fix=numliterals
+      - --fix=operator
+      - --fix=paren
+      - --fix=reduce
+      - --fix=renames
+      - --fix=repr
+#optional:      - --fix=set_literal
+      - --fix=standarderror
+      - --fix=sys_exc
+      - --fix=throw
+      - --fix=tuple_params
+      - --fix=types
+#optional:      - --fix=ws_comma
+      - --fix=xreadlines
+      - --fix=basestring
+      - --fix=classic_division
+#done:      - --fix=dict_six
+      - --fix=file
+      - --fix=filter
+      - --fix=import
+      - --fix=imports_six
+      - --fix=input_six
+      - --fix=int_long_tuple
+      - --fix=itertools_imports_six
+      - --fix=itertools_six
+      - --fix=map
+      - --fix=metaclass
+      - --fix=next
+#optional:      - --fix=open
+      - --fix=print
+      - --fix=raise
+      - --fix=raise_six
+      - --fix=unichr
+      - --fix=unicode
+      - --fix=unicode_future
+      - --fix=unicode_type
+      - --fix=urllib_six
+      - --fix=xrange_six
+      - --fix=zip
+
+- repo: git://github.com/pre-commit/pre-commit-hooks
+  rev: v1.1.1
+  hooks:
+  - id: check-yaml

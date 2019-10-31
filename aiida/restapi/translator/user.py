@@ -3,11 +3,18 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Translator for user"""
+
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 from aiida.restapi.translator.base import BaseTranslator
+from aiida import orm
+
 
 class UserTranslator(BaseTranslator):
     """
@@ -15,53 +22,56 @@ class UserTranslator(BaseTranslator):
     """
 
     # A label associated to the present class (coincides with the resource name)
-    __label__ = "users"
+    __label__ = 'users'
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.user import User
-    _aiida_class = User
+    _aiida_class = orm.User
     # The string name of the AiiDA class
-    _aiida_type = "user.User"
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = 'user'
+    _aiida_type = 'User'
 
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = False
 
     _result_type = __label__
 
-    _default_projections = ['id', 'first_name', "last_name", 'institution', 'date_joined']
+    _default_projections = ['id', 'first_name', 'last_name', 'institution']
 
-    ## user schema
-    # All the values from column_order must present in additional info dict
-    # Note: final schema will contain details for only the fields present in column order
-    _schema_projections = {
-        "column_order": [
-            "id",
-            "first_name",
-            "last_name",
-            "email",
-            "institution",
-            "date_joined",
-            "last_login",
-            "is_active"
-        ],
-        "additional_info": {
-            "id": {"is_display": True},
-            "first_name": {"is_display": True},
-            "last_name": {"is_display": True},
-            "email": {"is_display": True},
-            "institution": {"is_display": True},
-            "date_joined": {"is_display": False},
-            "last_login": {"is_display": False},
-            "is_active": {"is_display": False}
+    def get_projectable_properties(self):
+        """
+        Get projectable properties specific for User
+        :return: dict of projectable properties and column_order list
+        """
+        projectable_properties = {
+            'id': {
+                'display_name': 'Id',
+                'help_text': 'Id of the object',
+                'is_foreign_key': False,
+                'type': 'int',
+                'is_display': True
+            },
+            'first_name': {
+                'display_name': 'First name',
+                'help_text': 'First name of the user',
+                'is_foreign_key': False,
+                'type': 'str',
+                'is_display': True
+            },
+            'institution': {
+                'display_name': 'Institution',
+                'help_text': 'Affiliation of the user',
+                'is_foreign_key': False,
+                'type': 'str',
+                'is_display': True
+            },
+            'last_name': {
+                'display_name': 'Last name',
+                'help_text': 'Last name of the user',
+                'is_foreign_key': False,
+                'type': 'str',
+                'is_display': True
+            }
         }
-    }
 
+        # Note: final schema will contain details for only the fields present in column order
+        column_order = ['id', 'first_name', 'last_name', 'institution']
 
-    def __init__(self, **kwargs):
-        """
-        Initialise the parameters.
-        Create the basic query_help
-        """
-        super(UserTranslator, self).__init__(Class=self.__class__, **kwargs)
-
+        return projectable_properties, column_order

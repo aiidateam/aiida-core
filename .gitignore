@@ -21,6 +21,9 @@
 .pytest_cache
 .coverage
 
+# Files created by RPN tests
+.ci/polish/polish_workchains/polish*
+
 # Build files
 dist/
 pip-wheel-metadata

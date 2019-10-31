@@ -3,14 +3,19 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
+import six
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  UpfEntry)
-
 
 
 class NnincDbImporter(DbImporter):
@@ -22,10 +27,10 @@ class NnincDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, basestring):
+        if not isinstance(values, six.string_types):
             raise ValueError("incorrect value for keyword '{}' -- only "
-                             "strings and integers are accepted".format(alias))
-        return "{}={}".format(key, values)
+                             'strings and integers are accepted'.format(alias))
+        return '{}={}'.format(key, values)
 
     _keywords = {'xc_approximation': ['frmxcprox', _str_clause],
                  'xc_type': ['frmxctype', _str_clause],
@@ -33,7 +38,7 @@ class NnincDbImporter(DbImporter):
                  'element': ['element', None]}
 
     def __init__(self, **kwargs):
-        self._query_url = "http://nninc.cnf.cornell.edu/dd_search.php"
+        self._query_url = 'http://nninc.cnf.cornell.edu/dd_search.php'
         self.setup_db(**kwargs)
 
     def query_get(self, **kwargs):
@@ -59,7 +64,7 @@ class NnincDbImporter(DbImporter):
                                       "', '".join(kwargs.keys()) + \
                                       "' is(are) not implemented for NNIN/C")
 
-        return self._query_url + '?' + "&".join(get_parts)
+        return self._query_url + '?' + '&'.join(get_parts)
 
     def query(self, **kwargs):
         """
@@ -69,11 +74,11 @@ class NnincDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincSearchResults`.
         """
-        import urllib2
+        from six.moves import urllib
         import re
 
         query = self.query_get(**kwargs)
-        response = urllib2.urlopen(query).read()
+        response = urllib.request.urlopen(query).read()
         results = re.findall("psp_files/([^']+)\.UPF", response)
 
         elements = kwargs.get('element', None)
@@ -84,11 +89,11 @@ class NnincDbImporter(DbImporter):
             results_now = set()
             for psp in results:
                 for element in elements:
-                    if psp.startswith("{}.".format(element)):
+                    if psp.startswith('{}.'.format(element)):
                         results_now = results_now | set([psp])
             results = list(results_now)
 
-        return NnincSearchResults([{"id": x} for x in results])
+        return NnincSearchResults([{'id': x} for x in results])
 
     def setup_db(self, query_url=None, **kwargs):
         """
@@ -117,7 +122,7 @@ class NnincSearchResults(DbSearchResults):
     Results of the search, performed on NNIN/C Pseudopotential Virtual
     Vault.
     """
-    _base_url = "http://nninc.cnf.cornell.edu/psp_files/"
+    _base_url = 'http://nninc.cnf.cornell.edu/psp_files/'
 
     def __init__(self, results):
         super(NnincSearchResults, self).__init__(results)
@@ -141,7 +146,7 @@ class NnincSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return self._base_url + result_dict['id'] + ".UPF"
+        return self._base_url + result_dict['id'] + '.UPF'
 
 
 class NnincEntry(UpfEntry):

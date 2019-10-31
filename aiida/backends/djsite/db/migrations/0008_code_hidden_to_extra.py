@@ -3,17 +3,22 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
-from django.db import models, migrations
-from aiida.backends.djsite.db.migrations import update_schema_version
+from django.db import migrations
+from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 
-SCHEMA_VERSION = "1.0.8"
+REVISION = '1.0.8'
+DOWN_REVISION = '1.0.7'
+
 
 class Migration(migrations.Migration):
 
@@ -40,10 +45,10 @@ class Migration(migrations.Migration):
             DELETE FROM db_dbattribute
             WHERE id in (
                 SELECT db_dbattribute.id
-                FROM db_dbattribute 
+                FROM db_dbattribute
                 JOIN db_dbnode ON db_dbnode.id = db_dbattribute.dbnode_id
                 WHERE db_dbattribute.key = 'hidden' AND db_dbnode.type = 'code.Code.'
             );
         """),
-        update_schema_version(SCHEMA_VERSION)
+        upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

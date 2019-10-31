@@ -3,19 +3,23 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-from aiida.backends.settings import BACKEND
-from aiida.common.exceptions import InputValidationError, InvalidOperation, \
-    ConfigurationError
-from aiida.common.utils import get_object_from_string, issingular
+"""Base translator class"""
+
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
+import six
+
+from aiida.common.exceptions import InputValidationError, InvalidOperation
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
-from aiida.restapi.common.utils import pk_dbsynonym
+from aiida.restapi.common.utils import PK_DBSYNONYM
 
 
 class BaseTranslator(object):
@@ -23,6 +27,7 @@ class BaseTranslator(object):
     Generic class for translator. It contains the methods
     required to build a related QueryBuilder object
     """
+    # pylint: disable=too-many-instance-attributes,fixme
 
     # A label associated to the present class
     __label__ = None
@@ -31,74 +36,46 @@ class BaseTranslator(object):
     # The string name of the AiiDA class
     _aiida_type = None
 
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = None
-
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = None
 
     _result_type = __label__
 
-    _default = _default_projections = ["**"]
-
-    _schema_projections = {
-        "column_order": [],
-        "additional_info": {}
-    }
+    _default = _default_projections = ['**']
 
     _is_qb_initialized = False
     _is_id_query = None
     _total_count = None
 
-    def __init__(self, Class=None, **kwargs):
+    def __init__(self, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help
 
         keyword Class (default None but becomes this class): is the class
         from which one takes the initial values of the attributes. By default
-        is this class so that class atributes are  translated into object
+        is this class so that class atributes are translated into object
         attributes. In case of inheritance one cane use the
         same constructore but pass the inheriting class to pass its attributes.
         """
-
-        # Assume default class is this class (cannot be done in the
-        # definition as it requires self)
-        if Class is None:
-            Class = self.__class__
-
-        # Assign class parameters to the object
-        self.__label__ = Class.__label__
-        self._aiida_class = Class._aiida_class
-        self._aiida_type = Class._aiida_type
-        self._qb_type = Class._qb_type
-        self._result_type = Class.__label__
-
-        self._default = Class._default
-        self._default_projections = Class._default_projections
-        self._schema_projections = Class._schema_projections
-        self._is_qb_initialized = Class._is_qb_initialized
-        self._is_id_query = Class._is_id_query
-        self._total_count = Class._total_count
-
         # Basic filter (dict) to set the identity of the uuid. None if
         #  no specific node is requested
         self._id_filter = None
 
         # basic query_help object
         self._query_help = {
-            "path": [{
-                "type": self._qb_type,
-                "label": self.__label__
+            'path': [{
+                'cls': self._aiida_class,
+                'tag': self.__label__
             }],
-            "filters": {},
-            "project": {},
-            "order_by": {}
+            'filters': {},
+            'project': {},
+            'order_by': {}
         }
         # query_builder object (No initialization)
-        self.qb = QueryBuilder()
+        self.qbobj = QueryBuilder()
 
-        self.LIMIT_DEFAULT = kwargs['LIMIT_DEFAULT']
+        self.limit_default = kwargs['LIMIT_DEFAULT']
         self.schema = None
 
     def __repr__(self):
@@ -110,64 +87,23 @@ class BaseTranslator(object):
             because the inputs of self.get_nodes are sufficient to determine the
             identity of two queries.
         """
-        return ""
+        return ''
 
-    def get_schema(self):
-
-        # Construct the full class string
-        class_string = 'aiida.orm.' + self._aiida_type
-
-        # Load correspondent orm class
-        orm_class = get_object_from_string(class_string)
-
-        # Construct the json object to be returned
-        basic_schema = orm_class.get_schema()
-
-        schema = {}
-        ordering = []
-
-        # get addional info and column order from translator class
-        # and combine it with basic schema
-        if len(self._schema_projections["column_order"]) > 0:
-            for field in self._schema_projections["column_order"]:
-
-                # basic schema
-                if field in basic_schema.keys():
-                    schema[field] = basic_schema[field]
-                else:
-                    ## Note: if column name starts with user_* get the schema information from
-                    # user class. It is added mainly to handle user_email case.
-                    # TODO need to improve
-                    field_parts = field.split("_")
-                    if field_parts[0] == "user" and field != "user_id" and len(field_parts) > 1:
-                        from aiida.orm.user import User
-                        user_schema = User.get_schema()
-                        if field_parts[1] in user_schema.keys():
-                            schema[field] = user_schema[field_parts[1]]
-                        else:
-                            raise KeyError("{} is not present in user schema".format(field))
-                    else:
-                        raise KeyError("{} is not present in ORM basic schema".format(field))
-
-                # additional info defined in translator class
-                if field in self._schema_projections["additional_info"]:
-                    schema[field].update(self._schema_projections["additional_info"][field])
-                else:
-                    raise KeyError("{} is not present in default projection additional info".format(field))
-
-            # order
-            ordering = self._schema_projections["column_order"]
-
-        else:
-            raise ConfigurationError("Define column order to get schema for {}".format(self._aiida_type))
-
-        return dict(fields=schema, ordering=ordering)
+    @staticmethod
+    def get_projectable_properties():
+        """
+        This method is extended in specific translators classes.
+        It returns a dict as follows:
+        dict(fields=projectable_properties, ordering=ordering)
+        where projectable_properties is a dict and ordering is a list
+        """
+        return {}
 
     def init_qb(self):
         """
         Initialize query builder object by means of _query_help
         """
-        self.qb.__init__(**self._query_help)
+        self.qbobj.__init__(**self._query_help)
         self._is_qb_initialized = True
 
     def count(self):
@@ -175,10 +111,9 @@ class BaseTranslator(object):
         Count the number of rows returned by the query and set total_count
         """
         if self._is_qb_initialized:
-            self._total_count = self.qb.count()
+            self._total_count = self.qbobj.count()
         else:
-            raise InvalidOperation("query builder object has not been "
-                                   "initialized.")
+            raise InvalidOperation('query builder object has not been initialized.')
 
             # def caching_method(self):
             #     """
@@ -205,7 +140,7 @@ class BaseTranslator(object):
 
         return self._total_count
 
-    def set_filters(self, filters={}):
+    def set_filters(self, filters=None):
         """
         Add filters in query_help.
 
@@ -221,22 +156,27 @@ class BaseTranslator(object):
 
         :return: query_help dict including filters if any.
         """
-        if isinstance(filters, dict):
-            if len(filters) > 0:
-                for tag, tag_filters in filters.iteritems():
-                    if len(tag_filters) > 0 and isinstance(tag_filters, dict):
-                        self._query_help["filters"][tag] = {}
-                        for filter_key, filter_value in tag_filters.iteritems():
-                            if filter_key == "pk":
-                                filter_key = pk_dbsynonym
-                            self._query_help["filters"][tag][filter_key] \
+        if filters is None:
+            filters = {}
+
+        if isinstance(filters, dict):  # pylint: disable=too-many-nested-blocks
+            if filters:
+                for tag, tag_filters in filters.items():
+                    if tag_filters and isinstance(tag_filters, dict):
+                        self._query_help['filters'][tag] = {}
+                        for filter_key, filter_value in tag_filters.items():
+                            if filter_key == 'pk':
+                                filter_key = PK_DBSYNONYM
+                            self._query_help['filters'][tag][filter_key] \
                                 = filter_value
         else:
-            raise InputValidationError("Pass data in dictionary format where "
-                                       "keys are the tag names given in the "
-                                       "path in query_help and and their values"
-                                       " are the dictionary of filters want "
-                                       "to add for that tag name.")
+            raise InputValidationError(
+                'Pass data in dictionary format where '
+                'keys are the tag names given in the '
+                'path in query_help and and their values'
+                ' are the dictionary of filters want '
+                'to add for that tag name.'
+            )
 
     def get_default_projections(self):
         """
@@ -264,15 +204,18 @@ class BaseTranslator(object):
         :return: updated query_help with projections
         """
         if isinstance(projections, dict):
-            if len(projections) > 0:
-                for project_key, project_list in projections.iteritems():
-                    self._query_help["project"][project_key] = project_list
+            if projections:
+                for project_key, project_list in projections.items():
+                    self._query_help['project'][project_key] = project_list
+
         else:
-            raise InputValidationError("Pass data in dictionary format where "
-                                       "keys are the tag names given in the "
-                                       "path in query_help and values are the "
-                                       "list of the names you want to project "
-                                       "in the final output")
+            raise InputValidationError(
+                'Pass data in dictionary format where '
+                'keys are the tag names given in the '
+                'path in query_help and values are the '
+                'list of the names you want to project '
+                'in the final output'
+            )
 
     def set_order(self, orders):
         """
@@ -282,10 +225,12 @@ class BaseTranslator(object):
         :return: None or exception if any.
         """
         ## Validate input
-        if type(orders) is not dict:
-            raise InputValidationError("orders has to be a dictionary"
-                                       "compatible with the 'order_by' section"
-                                       "of the query_help")
+        if not isinstance(orders, dict):
+            raise InputValidationError(
+                'orders has to be a dictionary'
+                "compatible with the 'order_by' section"
+                'of the query_help'
+            )
 
         ## Auxiliary_function to get the ordering cryterion
         def def_order(columns):
@@ -296,7 +241,8 @@ class BaseTranslator(object):
             :param columns: (list of strings)
             :return: a dictionary
             """
-            order_dict = {}
+            from collections import OrderedDict
+            order_dict = OrderedDict()
             for column in columns:
                 if column[0] == '-':
                     order_dict[column[1:]] = 'desc'
@@ -304,41 +250,59 @@ class BaseTranslator(object):
                     order_dict[column[1:]] = 'asc'
                 else:
                     order_dict[column] = 'asc'
-            if order_dict.has_key('pk'):
-                order_dict[pk_dbsynonym] = order_dict.pop('pk')
+            if 'pk' in order_dict:
+                order_dict[PK_DBSYNONYM] = order_dict.pop('pk')
             return order_dict
 
         ## Assign orderby field query_help
-        for tag, columns in orders.iteritems():
+        if 'id' not in orders[self._result_type] and '-id' not in orders[self._result_type]:
+            orders[self._result_type].append('id')
+        for tag, columns in orders.items():
             self._query_help['order_by'][tag] = def_order(columns)
 
-    def set_query(self, filters=None, orders=None, projections=None, id=None):
+    def set_query(
+        self,
+        filters=None,
+        orders=None,
+        projections=None,
+        query_type=None,
+        node_id=None,
+        attributes=None,
+        attributes_filter=None,
+        extras=None,
+        extras_filter=None
+    ):
+        # pylint: disable=too-many-arguments,unused-argument,too-many-locals,too-many-branches
         """
         Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
 
         :param filters: dictionary with the filters
         :param orders: dictionary with the order for each tag
-        :param orders: dictionary with the projections
-        :param id: id of a specific node
-        :type id: int
+        :param projections: dictionary with the projection. It is discarded
+            if query_type=='attributes'/'extras'
+        :param query_type: (string) specify the result or the content ("attr")
+        :param id: (integer) id of a specific node
+        :param filename: name of the file to return its content
+        :param attributes: flag to show attributes in nodes endpoint
+        :param attributes_filter: list of node attributes to query
+        :param extras: flag to show attributes in nodes endpoint
+        :param extras_filter: list of node extras to query
         """
 
         tagged_filters = {}
 
         ## Check if filters are well defined and construct an ad-hoc filter
         # for id_query
-        if id is not None:
+        if node_id is not None:
             self._is_id_query = True
-            if self._result_type == self.__label__ and len(filters) > 0:
-                raise RestInputValidationError("selecting a specific id does "
-                                               "not "
-                                               "allow to specify filters")
+            if self._result_type == self.__label__ and filters:
+                raise RestInputValidationError('selecting a specific id does not allow to specify filters')
 
             try:
-                self._check_id_validity(id)
-            except RestValidationError as e:
-                raise RestValidationError(e.message)
+                self._check_id_validity(node_id)
+            except RestValidationError as exc:
+                raise RestValidationError(str(exc))
             else:
                 tagged_filters[self.__label__] = self._id_filter
                 if self._result_type is not self.__label__:
@@ -351,7 +315,36 @@ class BaseTranslator(object):
 
         ## Add projections
         if projections is None:
-            self.set_default_projections()
+            if attributes is None and extras is None:
+                self.set_default_projections()
+            else:
+                default_projections = self.get_default_projections()
+
+                if attributes is True:
+                    if attributes_filter is None:
+                        default_projections.append('attributes')
+                    else:
+                        ## Check if attributes_filter is not a list
+                        if not isinstance(attributes_filter, list):
+                            attributes_filter = [attributes_filter]
+                        for attr in attributes_filter:
+                            default_projections.append('attributes.' + str(attr))
+                elif attributes is not None and attributes is not False:
+                    raise RestValidationError('The attributes filter is false by default and can only be set to true.')
+
+                if extras is True:
+                    if extras_filter is None:
+                        default_projections.append('extras')
+                    else:
+                        ## Check if extras_filter is not a list
+                        if not isinstance(extras_filter, list):
+                            extras_filter = [extras_filter]
+                        for extra in extras_filter:
+                            default_projections.append('extras.' + str(extra))
+                elif extras is not None and extras is not False:
+                    raise RestValidationError('The extras filter is false by default and can only be set to true.')
+
+                self.set_projections({self.__label__: default_projections})
         else:
             tagged_projections = {self._result_type: projections}
             self.set_projections(tagged_projections)
@@ -387,32 +380,29 @@ class BaseTranslator(object):
             try:
                 limit = int(limit)
             except ValueError:
-                raise InputValidationError("Limit value must be an integer")
-            if limit > self.LIMIT_DEFAULT:
-                raise RestValidationError("Limit and perpage cannot be bigger "
-                                          "than {}".format(self.LIMIT_DEFAULT))
+                raise InputValidationError('Limit value must be an integer')
+            if limit > self.limit_default:
+                raise RestValidationError('Limit and perpage cannot be bigger than {}'.format(self.limit_default))
         else:
-            limit = self.LIMIT_DEFAULT
+            limit = self.limit_default
 
         if offset is not None:
             try:
                 offset = int(offset)
             except ValueError:
-                raise InputValidationError("Offset value must be an "
-                                           "integer")
+                raise InputValidationError('Offset value must be an integer')
 
         if self._is_qb_initialized:
             if limit is not None:
-                self.qb.limit(limit)
+                self.qbobj.limit(limit)
             else:
                 pass
             if offset is not None:
-                self.qb.offset(offset)
+                self.qbobj.offset(offset)
             else:
                 pass
         else:
-            raise InvalidOperation("query builder object has not been "
-                                   "initialized.")
+            raise InvalidOperation('query builder object has not been initialized.')
 
     def get_formatted_result(self, label):
         """
@@ -425,20 +415,29 @@ class BaseTranslator(object):
         """
 
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been "
-                                   "initialized.")
+            raise InvalidOperation('query builder object has not been initialized.')
 
         results = []
         if self._total_count > 0:
-            results = [res[label] for res in self.qb.dict()]
+            for res in self.qbobj.dict():
+                tmp = res[label]
+
+                # Note: In code cleanup and design change, remove this node dependant part
+                # from base class and move it to node translator.
+                if self._result_type in ['with_outgoing', 'with_incoming']:
+                    tmp['link_type'] = res[self.__label__ + '--' + label]['type']
+                    tmp['link_label'] = res[self.__label__ + '--' + label]['label']
+                results.append(tmp)
 
         # TODO think how to make it less hardcoded
-        if self._result_type == 'input_of':
-            return {'inputs': results}
-        elif self._result_type == 'output_of':
-            return {'outputs': results}
+        if self._result_type == 'with_outgoing':
+            result = {'incoming': results}
+        elif self._result_type == 'with_incoming':
+            result = {'outgoing': results}
         else:
-            return {self.__label__: results}
+            result = {self.__label__: results}
+
+        return result
 
     def get_results(self):
         """
@@ -449,8 +448,7 @@ class BaseTranslator(object):
 
         ## Check whether the querybuilder object has been initialized
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been "
-                                   "initialized.")
+            raise InvalidOperation('query builder object has not been initialized.')
 
         ## Count the total number of rows returned by the query (if not
         # already done)
@@ -461,55 +459,55 @@ class BaseTranslator(object):
         data = self.get_formatted_result(self._result_type)
         return data
 
-    def _check_id_validity(self, id):
+    def _check_id_validity(self, node_id):
         """
         Checks whether id corresponds to an object of the expected type,
         whenever type is a valid column of the database (ex. for nodes,
         but not for users)
-        
-        :param id: id (or id starting pattern)
-        
-        :return: True if id valid, False if invalid. If True, sets the id
+
+        :param node_id: id (or id starting pattern)
+
+        :return: True if node_id valid, False if invalid. If True, sets the id
           filter attribute correctly
-            
+
         :raise RestValidationError: if no node is found or id pattern does
           not identify a unique node
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
+        from aiida.orm.utils.loaders import IdentifierType, get_loader
 
-        from aiida.orm.utils import create_node_id_qb
+        loader = get_loader(self._aiida_class)
 
         if self._has_uuid:
 
-            # For consistency check that tid is a string
-            if not isinstance(id, (str, unicode)):
-                raise RestValidationError('parameter id has to be an string')
+            # For consistency check that id is a string
+            if not isinstance(node_id, six.string_types):
+                raise RestValidationError('parameter id has to be a string')
 
-            qb = create_node_id_qb(uuid=id, parent_class=self._aiida_class)
+            identifier_type = IdentifierType.UUID
+            qbobj, _ = loader.get_query_builder(node_id, identifier_type, sub_classes=(self._aiida_class,))
         else:
 
             # Similarly, check that id is an integer
-            if not isinstance(id, int):
+            if not isinstance(node_id, int):
                 raise RestValidationError('parameter id has to be an integer')
 
-            qb = create_node_id_qb(pk=id, parent_class=self._aiida_class)
+            identifier_type = IdentifierType.ID
+            qbobj, _ = loader.get_query_builder(node_id, identifier_type, sub_classes=(self._aiida_class,))
 
-        # project only the pk
-        qb.add_projection('node', ['id'])
-        # for efficiency i don;t go further than two results
-        qb.limit(2)
+        # For efficiency I don't go further than two results
+        qbobj.limit(2)
 
         try:
-            pk = qb.one()[0]
+            pk = qbobj.one()[0].pk
         except MultipleObjectsError:
-            raise RestValidationError("More than one node found."
-                                      " Provide longer starting pattern"
-                                      " for id.")
+            raise RestInputValidationError('More than one node found. Provide longer starting pattern for id.')
         except NotExistent:
-            raise RestValidationError("either no object's id starts"
-                                      " with '{}' or the corresponding object"
-                                      " is not of type aiida.orm.{}"
-                                      .format(id, self._aiida_type))
+            raise RestInputValidationError(
+                "either no object's id starts"
+                " with '{}' or the corresponding object"
+                ' is not of type aiida.orm.{}'.format(node_id, self._aiida_type)
+            )
         else:
             # create a permanent filter
             self._id_filter = {'id': {'==': pk}}

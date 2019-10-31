@@ -3,14 +3,19 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
+import six
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
-
 
 
 class CodDbImporter(DbImporter):
@@ -23,11 +28,10 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying integer fields.
         """
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, basestring):
+            if not isinstance(e, int) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return key + " IN (" + ", ".join(map(lambda i: str(int(i)),
-                                             values)) + ")"
+        return key + ' IN (' + ', '.join(str(int(i)) for i in values) + ')'
 
     def _str_exact_clause(self, key, alias, values):
         """
@@ -35,13 +39,13 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, basestring):
+            if not isinstance(e, int) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
             if isinstance(e, int):
                 e = str(e)
             clause_parts.append("'" + e + "'")
-        return key + " IN (" + ", ".join(clause_parts) + ")"
+        return key + ' IN (' + ', '.join(clause_parts) + ')'
 
     def _str_exact_or_none_clause(self, key, alias, values):
         """
@@ -55,9 +59,9 @@ class CodDbImporter(DbImporter):
                     values_now.append(e)
             if len(values_now):
                 clause = self._str_exact_clause(key, alias, values_now)
-                return "{} OR {} IS NULL".format(clause, key)
+                return '{} OR {} IS NULL'.format(clause, key)
             else:
-                return "{} IS NULL".format(key)
+                return '{} IS NULL'.format(key)
         else:
             return self._str_exact_clause(key, alias, values)
 
@@ -66,13 +70,12 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying formula fields.
         """
         for e in values:
-            if not isinstance(e, str):
+            if not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return self._str_exact_clause(key, \
                                       alias, \
-                                      map(lambda f: "- " + str(f) + " -", \
-                                          values))
+                                      ['- {} -'.format(f) for f in values])
 
     def _str_fuzzy_clause(self, key, alias, values):
         """
@@ -80,13 +83,13 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, basestring):
+            if not isinstance(e, int) and not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
             if isinstance(e, int):
                 e = str(e)
             clause_parts.append(key + " LIKE '%" + e + "%'")
-        return " OR ".join(clause_parts)
+        return ' OR '.join(clause_parts)
 
     def _composition_clause(self, key, alias, values):
         """
@@ -94,11 +97,11 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, basestring):
+            if not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
             clause_parts.append("formula REGEXP ' " + e + "[0-9 ]'")
-        return " AND ".join(clause_parts)
+        return ' AND '.join(clause_parts)
 
     def _double_clause(self, key, alias, values, precision):
         """
@@ -108,11 +111,7 @@ class CodDbImporter(DbImporter):
             if not isinstance(e, int) and not isinstance(e, float):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and floats are accepted")
-        return " OR ".join(map(lambda d: key + \
-                                         " BETWEEN " + \
-                                         str(d - precision) + " AND " + \
-                                         str(d + precision), \
-                               values))
+        return ' OR '.join('{} BETWEEN {} AND {}'.format(key, d-precision, d+precision) for d in values)
 
     length_precision = 0.001
     angle_precision = 0.001
@@ -200,24 +199,24 @@ class CodDbImporter(DbImporter):
         :return: string containing a SQL statement.
         """
         sql_parts = ["(status IS NULL OR status != 'retracted')"]
-        for key in self._keywords.keys():
+        for key in sorted(self._keywords.keys()):
             if key in kwargs.keys():
                 values = kwargs.pop(key)
                 if not isinstance(values, list):
                     values = [values]
                 sql_parts.append( \
-                    "(" + self._keywords[key][1](self, \
+                    '(' + self._keywords[key][1](self, \
                                                  self._keywords[key][0], \
                                                  key, \
                                                  values) + \
-                    ")")
+                    ')')
         if len(kwargs.keys()) > 0:
             raise NotImplementedError( \
                 "search keyword(s) '" + \
                 "', '".join(kwargs.keys()) + "' " + \
-                "is(are) not implemented for COD")
-        return "SELECT file, svnrevision FROM data WHERE " + \
-               " AND ".join(sql_parts)
+                'is(are) not implemented for COD')
+        return 'SELECT file, svnrevision FROM data WHERE ' + \
+               ' AND '.join(sql_parts)
 
     def query(self, **kwargs):
         """
@@ -289,7 +288,7 @@ class CodSearchResults(DbSearchResults):
     """
     Results of the search, performed on COD.
     """
-    _base_url = "http://www.crystallography.net/cod/"
+    _base_url = 'http://www.crystallography.net/cod/'
 
     def __init__(self, results):
         super(CodSearchResults, self).__init__(results)
@@ -317,10 +316,10 @@ class CodSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        url = self._base_url + result_dict['id'] + ".cif"
+        url = self._base_url + result_dict['id'] + '.cif'
         if 'svnrevision' in result_dict and \
                         result_dict['svnrevision'] is not None:
-            return "{}@{}".format(url, result_dict['svnrevision'])
+            return '{}@{}'.format(url, result_dict['svnrevision'])
         else:
             return url
 
@@ -332,7 +331,7 @@ class CodEntry(CifEntry):
     _license = 'CC0'
 
     def __init__(self, uri, db_name='Crystallography Open Database',
-                 db_uri='http://www.crystallography.net', **kwargs):
+                 db_uri='http://www.crystallography.net/cod', **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`, related

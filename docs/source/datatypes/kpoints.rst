@@ -22,18 +22,18 @@ The difference between the two methods is the following:
 
 Depending on how the underlying code works, one method might be preferred on the other.
 
-The docstring of the methods describes the expected parameters. The general interface requires always a StructureData
+The docstring of the methods describes the expected parameters. The general interface requires always a ``StructureData``
 as the first parameter ``structure``, as well as a string for the method to use (by default this is
 `seekpath <https://github.com/giovannipizzi/seekpath/>`_, but also the ``legacy`` method implemented in earlier versions
 of AiiDA is available; see description below).
 
-Additional parameters are passed as ``kwargs`` to the underlying implementation, that ofen accepts a different number
+Additional parameters are passed as ``kwargs`` to the underlying implementation, that often accepts a different number
 of parameters.
 
 Seekpath implementation
 +++++++++++++++++++++++
 When specifying ``method='seekpath'``, the `seekpath <https://github.com/giovannipizzi/seekpath/>`_ library is used
-to generate the path. Note that this requires that ``seekpath`` is installed (this is not available by default, in
+to generate the path. Note that this requires  ``seekpath`` to be installed (this is not available by default, in
 order to reduce the dependencies of AiiDA core, but can be easily installed using ``pip install seekpath``).
 
 For a full description of the accepted parameters, we refer to the docstring of the underlying methods
@@ -41,7 +41,7 @@ For a full description of the accepted parameters, we refer to the docstring of 
 :py:func:`aiida.tools.data.array.kpoints.seekpath.get_kpoints_path`, and for more general information
 to the `seekpath documentation <https://seekpath.readthedocs.io/>`_.
 
-If you use this implementation, please cite the `Hinuma paper <http://doi.org/10.1016/j.commatsci.2016.10.015>`_::
+If you use this implementation, please cite the `Hinuma paper <https://doi.org/10.1016/j.commatsci.2016.10.015>`_::
 
   Y. Hinuma, G. Pizzi, Y. Kumagai, F. Oba, I. Tanaka,
   Band structure diagram paths based on crystallography,
@@ -60,7 +60,7 @@ This refers to the implementation that has been available since the early versio
 
   We therefore suggest that you use the seekpath implementation, that is able to automatically correctly identify the
   standardized crystal structure (primitive and conventional) as described in the
-  `Hinuma paper <http://doi.org/10.1016/j.commatsci.2016.10.015>`_.
+  `Hinuma paper <https://doi.org/10.1016/j.commatsci.2016.10.015>`_.
 
 For a full description of the accepted parameters, we refer to the docstring of the underlying methods
 :py:func:`aiida.tools.data.array.kpoints.legacy.get_explicit_kpoints_path` and
@@ -69,45 +69,16 @@ to the `seekpath documentation <https://seekpath.readthedocs.io/>`_.
 
 If you use this implementation, please cite the correct reference from the following ones:
 
-- The 3D implementation is based on the `Setyawan paper <http://doi.org/10.1016/j.commatsci.2010.05.010>`_::
+- The 3D implementation is based on the `Setyawan paper <https://doi.org/10.1016/j.commatsci.2010.05.010>`_::
 
     W. Setyawan, S. Curtarolo,
     High-throughput electronic band structure calculations: Challenges and tools,
     Comp. Mat. Sci. 49, 299 (2010)
     DOI: 10.1016/j.commatsci.2010.05.010
 
-- The 2D implementation is based on the `Ramirez paper <http://doi.org/10.1002/qua.560300306>`_::
+- The 2D implementation is based on the `Ramirez paper <https://doi.org/10.1002/qua.560300306>`_::
 
     R. Ramirez and M. C. Bohm,
     Simple geometric generation of special points in brillouin-zone integrations. Two-dimensional bravais lattices
     Int. J. Quant. Chem., XXX, 391-411 (1986)
     DOI: 10.1002/qua.560300306
-
-
-Deprecated methods
-------------------
-Originally, the ``legacy`` implementation was implemented directly into the
-:py:class:`~aiida.orm.data.array.kpoints.KpointsData` class.
-
-In order to implement more than one method, and
-to simplify the :py:class:`~aiida.orm.data.array.kpoints.KpointsData` class,
-and to decouple the underlying logic from AiiDA, we have deprecated those methods, factored out the logic into
-the :py:class:`~aiida.tools.data.array.kpoints.legacy` module. The methods are currently still available
-but will be removed in future versions of AiiDA; plese use directly the wrappers
-:py:func:`aiida.tools.data.array.kpoints.get_kpoints_path`
-and :py:func:`aiida.tools.data.array.kpoints.get_explicit_kpoints_path` instead, passing as option ``method='legacy'``.
-
-The list of deprecated methods include:
-
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData.bravais_lattice`
-
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData._get_or_create_bravais_lattice`
-
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData.set_kpoints_path`
-
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData._find_bravais_info`
-
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData.find_bravais_lattice`
-
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData.get_special_points`
-

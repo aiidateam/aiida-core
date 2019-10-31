@@ -3,11 +3,18 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+
+import six
+from six.moves import range, zip
 import numpy
+
 
 _default_epsilon_length = 1e-5
 _default_epsilon_angle = 1e-5
@@ -151,7 +158,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
                 return False
 
             for i in path:
-                are_str = all([isinstance(b, basestring) for b in i])
+                are_str = all([isinstance(b, six.string_types) for b in i])
                 if not are_str:
                     return False
         except IndexError:
@@ -164,8 +171,8 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             if not are_three:
                 return False
 
-            are_good = all([all([isinstance(b[0], basestring),
-                                 isinstance(b[1], basestring),
+            are_good = all([all([isinstance(b[0], six.string_types),
+                                 isinstance(b[1], six.string_types),
                                  isinstance(b[2], int)])
                             for b in path])
             if not are_good:
@@ -174,8 +181,8 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             # check that at least two points per segment (beginning and end)
             points_num = [int(i[2]) for i in path]
             if any([i < 2 for i in points_num]):
-                raise ValueError("Must set at least two points per path "
-                                 "segment")
+                raise ValueError('Must set at least two points per path '
+                                 'segment')
 
         except IndexError:
             return False
@@ -188,7 +195,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             are_four = all([len(i) == 4 for i in path])
             if not are_four:
                 return False
-            have_labels = all(all([isinstance(i[0], basestring), isinstance(i[2], basestring)]) for i in path)
+            have_labels = all(all([isinstance(i[0], six.string_types), isinstance(i[2], six.string_types)]) for i in path)
             if not have_labels:
                 return False
             for i in path:
@@ -207,7 +214,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             are_five = all([len(i) == 5 for i in path])
             if not are_five:
                 return False
-            have_labels = all(all([isinstance(i[0], basestring), isinstance(i[2], basestring)]) for i in path)
+            have_labels = all(all([isinstance(i[0], six.string_types), isinstance(i[2], six.string_types)]) for i in path)
             if not have_labels:
                 return False
             have_points_num = all([isinstance(i[4], int) for i in path])
@@ -216,8 +223,8 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             # check that at least two points per segment (beginning and end)
             points_num = [int(i[4]) for i in path]
             if any([i < 2 for i in points_num]):
-                raise ValueError("Must set at least two points per path "
-                                 "segment")
+                raise ValueError('Must set at least two points per path '
+                                 'segment')
             for i in path:
                 coord1 = [float(j) for j in i[1]]
                 coord2 = [float(j) for j in i[3]]
@@ -240,29 +247,28 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             max_point_per_interval = 10
             max_interval = max(distances)
             try:
-                points_per_piece = [max(2, int(max_point_per_interval * i / max_interval)) for i in distances]
+                points_per_piece = [max(2, max_point_per_interval * i // max_interval) for i in distances]
             except ValueError:
-                raise ValueError("The beginning and end of each segment in the "
-                                 "path should be different.")
+                raise ValueError('The beginning and end of each segment in the '
+                                 'path should be different.')
 
         else:
-            points_per_piece = [max(2, int(distance / kpoint_distance))
-                                for distance in distances]
+            points_per_piece = [max(2, int(distance // kpoint_distance)) for distance in distances]
         return points_per_piece
 
     if cartesian:
         if cell is None:
-            raise ValueError("To use cartesian coordinates, a cell must "
-                             "be provided")
+            raise ValueError('To use cartesian coordinates, a cell must '
+                             'be provided')
 
     if kpoint_distance is not None:
         if kpoint_distance <= 0.:
-            raise ValueError("kpoints_distance must be a positive float")
+            raise ValueError('kpoints_distance must be a positive float')
 
     if value is None:
         if cell is None:
-            raise ValueError("Cannot set a path not even knowing the "
-                             "kpoints or at least the cell")
+            raise ValueError('Cannot set a path not even knowing the '
+                             'kpoints or at least the cell')
         point_coordinates, path, bravais_info = get_kpoints_path(
             cell=cell, pbc=pbc, cartesian=cartesian,
             epsilon_length=epsilon_length,
@@ -272,8 +278,8 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
     elif _is_path_1(value):
         # in the form [('X','M'),(...),...]
         if cell is None:
-            raise ValueError("Cannot set a path not even knowing the "
-                             "kpoints or at least the cell")
+            raise ValueError('Cannot set a path not even knowing the '
+                             'kpoints or at least the cell')
 
         path = value
         point_coordinates, _, bravais_info = get_kpoints_path(
@@ -285,8 +291,8 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
     elif _is_path_2(value):
         # [('G','M',30), (...), ...]
         if cell is None:
-            raise ValueError("Cannot set a path not even knowing the "
-                             "kpoints or at least the cell")
+            raise ValueError('Cannot set a path not even knowing the '
+                             'kpoints or at least the cell')
 
         path = [(i[0], i[1]) for i in value]
         point_coordinates, _, bravais_info = get_kpoints_path(
@@ -303,7 +309,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
         for piece in value:
             if piece[0] in point_coordinates:
                 if point_coordinates[piece[0]] != piece[1]:
-                    raise ValueError("Different points cannot have the same label")
+                    raise ValueError('Different points cannot have the same label')
             else:
                 if cartesian:
                     point_coordinates[piece[0]] = change_reference(
@@ -314,7 +320,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
                     point_coordinates[piece[0]] = piece[1]
             if piece[2] in point_coordinates:
                 if point_coordinates[piece[2]] != piece[3]:
-                    raise ValueError("Different points cannot have the same label")
+                    raise ValueError('Different points cannot have the same label')
             else:
                 if cartesian:
                     point_coordinates[piece[2]] = change_reference(
@@ -334,7 +340,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
         for piece in value:
             if piece[0] in point_coordinates:
                 if point_coordinates[piece[0]] != piece[1]:
-                    raise ValueError("Different points cannot have the same label")
+                    raise ValueError('Different points cannot have the same label')
             else:
                 if cartesian:
                     point_coordinates[piece[0]] = change_reference(
@@ -345,7 +351,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
                     point_coordinates[piece[0]] = piece[1]
             if piece[2] in point_coordinates:
                 if point_coordinates[piece[2]] != piece[3]:
-                    raise ValueError("Different points cannot have the same label")
+                    raise ValueError('Different points cannot have the same label')
             else:
                 if cartesian:
                     point_coordinates[piece[2]] = change_reference(
@@ -358,7 +364,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
         num_points = [i[4] for i in value]
 
     else:
-        raise ValueError("Input format not recognized")
+        raise ValueError('Input format not recognized')
 
     explicit_kpoints = [tuple(point_coordinates[path[0][0]])]
     labels = [(0, path[0][0])]
@@ -369,13 +375,13 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
         ini_coord = point_coordinates[ini_label]
         end_coord = point_coordinates[end_label]
 
-        path_piece = zip(numpy.linspace(ini_coord[0], end_coord[0],
+        path_piece = list(zip(numpy.linspace(ini_coord[0], end_coord[0],
                                         num_points[count_piece]),
                          numpy.linspace(ini_coord[1], end_coord[1],
                                         num_points[count_piece]),
                          numpy.linspace(ini_coord[2], end_coord[2],
                                         num_points[count_piece]),
-                         )
+                         ))
 
         for count, j in enumerate(path_piece):
             if all(numpy.array(explicit_kpoints[-1]) == j):
@@ -486,38 +492,38 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
             # simple cubic lattice #
             # ======================#
             if comparison_angles.count(True) == 3 and a_are_equals(cosa, _90):
-                bravais_info = {"short_name": "cub",
-                                "extended_name": "cubic",
-                                "index": 1,
-                                "permutation": [0, 1, 2]
+                bravais_info = {'short_name': 'cub',
+                                'extended_name': 'cubic',
+                                'index': 1,
+                                'permutation': [0, 1, 2]
                                 }
             # =====================#
             # face centered cubic #
             # =====================#
             elif comparison_angles.count(True) == 3 and a_are_equals(cosa, _60):
-                bravais_info = {"short_name": "fcc",
-                                "extended_name": "face centered cubic",
-                                "index": 2,
-                                "permutation": [0, 1, 2]
+                bravais_info = {'short_name': 'fcc',
+                                'extended_name': 'face centered cubic',
+                                'index': 2,
+                                'permutation': [0, 1, 2]
                                 }
             # =====================#
             # body centered cubic #
             # =====================#
             elif comparison_angles.count(True) == 3 and a_are_equals(cosa, -1. / 3.):
-                bravais_info = {"short_name": "bcc",
-                                "extended_name": "body centered cubic",
-                                "index": 3,
-                                "permutation": [0, 1, 2]
+                bravais_info = {'short_name': 'bcc',
+                                'extended_name': 'body centered cubic',
+                                'index': 3,
+                                'permutation': [0, 1, 2]
                                 }
             # ==============#
             # rhombohedral #
             # ==============#
             elif comparison_angles.count(True) == 3:
                 # logical order is important, this check must come after the cubic cases
-                bravais_info = {"short_name": "rhl",
-                                "extended_name": "rhombohedral",
-                                "index": 11,
-                                "permutation": [0, 1, 2]
+                bravais_info = {'short_name': 'rhl',
+                                'extended_name': 'rhombohedral',
+                                'index': 11,
+                                'permutation': [0, 1, 2]
                                 }
                 if cosa > 0.:
                     bravais_info['variation'] = 'rhl1'
@@ -536,23 +542,23 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
             # body centered tetragonal #
             # ==========================#
             elif comparison_angles.count(True) == 1:  # two angles are the same
-                bravais_info = {"short_name": "bct",
-                                "extended_name": "body centered tetragonal",
-                                "index": 5,
+                bravais_info = {'short_name': 'bct',
+                                'extended_name': 'body centered tetragonal',
+                                'index': 5,
                                 }
                 if comparison_angles.index(True) == 0:  # alfa=beta
                     ref_ang = cosa
-                    bravais_info["permutation"] = [0, 1, 2]
+                    bravais_info['permutation'] = [0, 1, 2]
                 elif comparison_angles.index(True) == 1:  # beta=gamma
                     ref_ang = cosb
-                    bravais_info["permutation"] = [2, 0, 1]
+                    bravais_info['permutation'] = [2, 0, 1]
                 else:  # comparison_angles.index(True)==2: # gamma = alfa
                     ref_ang = cosc
-                    bravais_info["permutation"] = [1, 2, 0]
+                    bravais_info['permutation'] = [1, 2, 0]
 
                 if ref_ang >= 0.:
-                    raise ValueError("Problems on the definition of "
-                                     "body centered tetragonal lattices")
+                    raise ValueError('Problems on the definition of '
+                                     'body centered tetragonal lattices')
                 the_c = numpy.sqrt(-4. * ref_ang * (a ** 2))
                 the_a = numpy.sqrt(2. * a ** 2 - (the_c ** 2) / 2.)
 
@@ -572,9 +578,9 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                       any([a_are_equals(cosa, bco2), a_are_equals(cosb, bco2), a_are_equals(cosc, bco2)]) and
                       any([a_are_equals(cosa, bco3), a_are_equals(cosb, bco3), a_are_equals(cosc, bco3)])
                   ):
-                bravais_info = {"short_name": "orci",
-                                "extended_name": "body centered orthorhombic",
-                                "index": 8,
+                bravais_info = {'short_name': 'orci',
+                                'extended_name': 'body centered orthorhombic',
+                                'index': 8,
                                 }
                 if a_are_equals(cosa, bco1) and a_are_equals(cosc, bco3):
                     bravais_info['permutation'] = [0, 1, 2]
@@ -597,9 +603,9 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
 
             # if it doesn't fall in the above, is triclinic
             else:
-                bravais_info = {"short_name": "tri",
-                                "extended_name": "triclinic",
-                                "index": 14,
+                bravais_info = {'short_name': 'tri',
+                                'extended_name': 'triclinic',
+                                'index': 14,
                                 }
                 # the check for triclinic variations is at the end of the method
 
@@ -610,16 +616,16 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
             # tetragonal #
             # ============#
             if comparison_angles.count(True) == 3 and a_are_equals(cosa, _90):
-                bravais_info = {"short_name": "tet",
-                                "extended_name": "tetragonal",
-                                "index": 4,
+                bravais_info = {'short_name': 'tet',
+                                'extended_name': 'tetragonal',
+                                'index': 4,
                                 }
                 if comparison_length[0] == True:
-                    bravais_info["permutation"] = [0, 1, 2]
+                    bravais_info['permutation'] = [0, 1, 2]
                 if comparison_length[1] == True:
-                    bravais_info["permutation"] = [2, 0, 1]
+                    bravais_info['permutation'] = [2, 0, 1]
                 if comparison_length[2] == True:
-                    bravais_info["permutation"] = [1, 2, 0]
+                    bravais_info['permutation'] = [1, 2, 0]
             # ====================================#
             # c-centered orthorombic + hexagonal #
             # ====================================#
@@ -628,14 +634,14 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                       any([a_are_equals(cosa, _90), a_are_equals(cosb, _90), a_are_equals(cosc, _90)])
                   ):
                 if any([a_are_equals(cosa, _120), a_are_equals(cosb, _120), a_are_equals(cosc, _120)]):
-                    bravais_info = {"short_name": "hex",
-                                    "extended_name": "hexagonal",
-                                    "index": 10,
+                    bravais_info = {'short_name': 'hex',
+                                    'extended_name': 'hexagonal',
+                                    'index': 10,
                                     }
                 else:
-                    bravais_info = {"short_name": "orcc",
-                                    "extended_name": "c-centered orthorhombic",
-                                    "index": 9,
+                    bravais_info = {'short_name': 'orcc',
+                                    'extended_name': 'c-centered orthorhombic',
+                                    'index': 9,
                                     }
                     if comparison_length[0] == True:
                         the_a1 = a1
@@ -653,34 +659,34 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
 
                 # TODO : re-check this case, permutations look weird
                 if comparison_length[0] == True:
-                    bravais_info["permutation"] = [0, 1, 2]
+                    bravais_info['permutation'] = [0, 1, 2]
                 if comparison_length[1] == True:
-                    bravais_info["permutation"] = [2, 0, 1]
+                    bravais_info['permutation'] = [2, 0, 1]
                 if comparison_length[2] == True:
-                    bravais_info["permutation"] = [1, 2, 0]
+                    bravais_info['permutation'] = [1, 2, 0]
             # =======================#
             # c-centered monoclinic #
             # =======================#
             elif comparison_angles.count(True) == 1:
-                bravais_info = {"short_name": "mclc",
-                                "extended_name": "c-centered monoclinic",
-                                "index": 13,
+                bravais_info = {'short_name': 'mclc',
+                                'extended_name': 'c-centered monoclinic',
+                                'index': 13,
                                 }
                 # TODO : re-check this case, permutations look weird
                 if comparison_length[0] == True:
-                    bravais_info["permutation"] = [0, 1, 2]
+                    bravais_info['permutation'] = [0, 1, 2]
                     the_ka = cosa
                     the_a1 = a1
                     the_a2 = a2
                     the_c = c
                 if comparison_length[1] == True:
-                    bravais_info["permutation"] = [2, 0, 1]
+                    bravais_info['permutation'] = [2, 0, 1]
                     the_ka = cosb
                     the_a1 = a2
                     the_a2 = a3
                     the_c = a
                 if comparison_length[2] == True:
-                    bravais_info["permutation"] = [1, 2, 0]
+                    bravais_info['permutation'] = [1, 2, 0]
                     the_ka = cosc
                     the_a1 = a3
                     the_a2 = a1
@@ -759,9 +765,9 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
 
             # if it doesn't fall in the above, is triclinic
             else:
-                bravais_info = {"short_name": "tri",
-                                "extended_name": "triclinic",
-                                "index": 14,
+                bravais_info = {'short_name': 'tri',
+                                'extended_name': 'triclinic',
+                                'index': 14,
                                 }
                 # the check for triclinic variations is at the end of the method
 
@@ -776,33 +782,33 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
             # orthorhombic #
             # ==============#
             if comparison_angles.count(True) == 3:
-                bravais_info = {"short_name": "orc",
-                                "extended_name": "orthorhombic",
-                                "index": 6,
+                bravais_info = {'short_name': 'orc',
+                                'extended_name': 'orthorhombic',
+                                'index': 6,
                                 }
                 lens = [a, b, c]
                 ind_a = lens.index(min(lens))
                 ind_c = lens.index(max(lens))
                 if ind_a == 0 and ind_c == 1:
-                    bravais_info["permutation"] = [0, 2, 1]
+                    bravais_info['permutation'] = [0, 2, 1]
                 if ind_a == 0 and ind_c == 2:
-                    bravais_info["permutation"] = [0, 1, 2]
+                    bravais_info['permutation'] = [0, 1, 2]
                 if ind_a == 1 and ind_c == 0:
-                    bravais_info["permutation"] = [1, 2, 0]
+                    bravais_info['permutation'] = [1, 2, 0]
                 if ind_a == 1 and ind_c == 2:
-                    bravais_info["permutation"] = [1, 0, 2]
+                    bravais_info['permutation'] = [1, 0, 2]
                 if ind_a == 2 and ind_c == 0:
-                    bravais_info["permutation"] = [2, 1, 0]
+                    bravais_info['permutation'] = [2, 1, 0]
                 if ind_a == 2 and ind_c == 1:
-                    bravais_info["permutation"] = [2, 0, 1]
+                    bravais_info['permutation'] = [2, 0, 1]
             # ============#
             # monoclinic #
             # ============#
             elif (comparison_angles.count(True) == 1 and
                       any([a_are_equals(cosa, _90), a_are_equals(cosb, _90), a_are_equals(cosc, _90)])):
-                bravais_info = {"short_name": "mcl",
-                                "extended_name": "monoclinic",
-                                "index": 12,
+                bravais_info = {'short_name': 'mcl',
+                                'extended_name': 'monoclinic',
+                                'index': 12,
                                 }
                 lens = [a, b, c]
                 # find the angle different from 90
@@ -845,9 +851,9 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                       any([a_are_equals(cosa, fco2), a_are_equals(cosb, fco2), a_are_equals(cosc, fco2)]) and
                       any([a_are_equals(cosa, fco3), a_are_equals(cosb, fco3), a_are_equals(cosc, fco3)])
                   ):
-                bravais_info = {"short_name": "orcf",
-                                "extended_name": "face centered orthorhombic",
-                                "index": 7,
+                bravais_info = {'short_name': 'orcf',
+                                'extended_name': 'face centered orthorhombic',
+                                'index': 7,
                                 }
 
                 lens = [a, b, c]
@@ -910,9 +916,9 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                                              }
 
             else:
-                bravais_info = {"short_name": "tri",
-                                "extended_name": "triclinic",
-                                "index": 14,
+                bravais_info = {'short_name': 'tri',
+                                'extended_name': 'triclinic',
+                                'index': 14,
                                 }
         # ===========#
         # triclinic #
@@ -929,7 +935,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                 the_cosa = cosa
                 the_cosb = cosc
                 the_cosc = cosb
-                bravais_info["permutation"] = [0, 2, 1]
+                bravais_info['permutation'] = [0, 2, 1]
             if ind_a == 0 and ind_c == 2:
                 the_a = a
                 the_b = b
@@ -937,7 +943,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                 the_cosa = cosa
                 the_cosb = cosb
                 the_cosc = cosc
-                bravais_info["permutation"] = [0, 1, 2]
+                bravais_info['permutation'] = [0, 1, 2]
             if ind_a == 1 and ind_c == 0:
                 the_a = b
                 the_b = c
@@ -945,7 +951,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                 the_cosa = cosb
                 the_cosb = cosc
                 the_cosc = cosa
-                bravais_info["permutation"] = [1, 0, 2]
+                bravais_info['permutation'] = [1, 0, 2]
             if ind_a == 1 and ind_c == 2:
                 the_a = b
                 the_b = a
@@ -953,7 +959,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                 the_cosa = cosb
                 the_cosb = cosa
                 the_cosc = cosc
-                bravais_info["permutation"] = [1, 0, 2]
+                bravais_info['permutation'] = [1, 0, 2]
             if ind_a == 2 and ind_c == 0:
                 the_a = c
                 the_b = b
@@ -961,7 +967,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                 the_cosa = cosc
                 the_cosb = cosb
                 the_cosc = cosa
-                bravais_info["permutation"] = [2, 1, 0]
+                bravais_info['permutation'] = [2, 1, 0]
             if ind_a == 2 and ind_c == 1:
                 the_a = c
                 the_b = a
@@ -969,7 +975,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                 the_cosa = cosc
                 the_cosb = cosa
                 the_cosc = cosb
-                bravais_info["permutation"] = [2, 0, 1]
+                bravais_info['permutation'] = [2, 0, 1]
 
             if the_cosa < 0. and the_cosb < 0.:
                 if a_are_equals(the_cosc, 0.):
@@ -977,16 +983,16 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
                 elif the_cosc < 0.:
                     bravais_info['variation'] = 'tri1a'
                 else:
-                    raise ValueError("Structure erroneously fell into the triclinic (a) case")
+                    raise ValueError('Structure erroneously fell into the triclinic (a) case')
             elif the_cosa > 0. and the_cosb > 0.:
                 if a_are_equals(the_cosc, 0.):
                     bravais_info['variation'] = 'tri2b'
                 elif the_cosc > 0.:
                     bravais_info['variation'] = 'tri1b'
                 else:
-                    raise ValueError("Structure erroneously fell into the triclinic (b) case")
+                    raise ValueError('Structure erroneously fell into the triclinic (b) case')
             else:
-                raise ValueError("Structure erroneously fell into the triclinic case")
+                raise ValueError('Structure erroneously fell into the triclinic case')
 
     elif dimension == 2:
         # ========================================#
@@ -1014,18 +1020,18 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
         # square lattice #
         # ================#
         if comparison_angle_90 and comparison_length:
-            bravais_info = {"short_name": "sq",
-                            "extended_name": "square",
-                            "index": 1,
+            bravais_info = {'short_name': 'sq',
+                            'extended_name': 'square',
+                            'index': 1,
                             }
 
         # =========================#
         # (primitive) rectangular #
         # =========================#
         elif comparison_angle_90:
-            bravais_info = {"short_name": "rec",
-                            "extended_name": "rectangular",
-                            "index": 2,
+            bravais_info = {'short_name': 'rec',
+                            'extended_name': 'rectangular',
+                            'index': 2,
                             }
             # set the order such that first_vector < second_vector in norm
             if lens[0] > lens[1]:
@@ -1036,9 +1042,9 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
         # ===========#
         # this has to be put before the centered-rectangular case
         elif (l_are_equals(lens[0], lens[1]) and a_are_equals(cosphi, _120)):
-            bravais_info = {"short_name": "hex",
-                            "extended_name": "hexagonal",
-                            "index": 4,
+            bravais_info = {'short_name': 'hex',
+                            'extended_name': 'hexagonal',
+                            'index': 4,
                             }
 
         # ======================#
@@ -1047,18 +1053,18 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
         elif (comparison_length and
                   l_are_equals(numpy.dot(vectors[0] + vectors[1],
                                          vectors[0] - vectors[1]), 0.)):
-            bravais_info = {"short_name": "recc",
-                            "extended_name": "centered rectangular",
-                            "index": 3,
+            bravais_info = {'short_name': 'recc',
+                            'extended_name': 'centered rectangular',
+                            'index': 3,
                             }
 
         # =========#
         # oblique #
         # =========#
         else:
-            bravais_info = {"short_name": "obl",
-                            "extended_name": "oblique",
-                            "index": 5,
+            bravais_info = {'short_name': 'obl',
+                            'extended_name': 'oblique',
+                            'index': 5,
                             }
             # set the order such that first_vector < second_vector in norm
             if lens[0] > lens[1]:
@@ -1070,7 +1076,7 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
         # coordinates) works also when the out-of-plane axis is not aligned
         # with one of the cartesian axis (I suspect that it doesn't...)
         permutation = in_plane_indexes + [out_of_plane_index]
-        bravais_info["permutation"] = permutation
+        bravais_info['permutation'] = permutation
 
     elif dimension <= 1:
         # ====================================================#
@@ -1088,10 +1094,10 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length,
             permutation = [0, 1, 2]
 
         bravais_info = {
-            "short_name": "{}D".format(dimension),
-            "extended_name": "{}D".format(dimension),
-            "index": 1,
-            "permutation": permutation,
+            'short_name': '{}D'.format(dimension),
+            'extended_name': '{}D'.format(dimension),
+            'index': 1,
+            'permutation': permutation,
         }
 
     return bravais_info
@@ -1877,14 +1883,14 @@ def get_kpoints_path(cell, pbc=None, cartesian=False,
         return [permutation.index(i) for i in range(3)]
 
     the_special_points = {}
-    for k in special_points.iterkeys():
+    for k in special_points.keys():
         # NOTE: this originally returned the inverse of the permutation, but was later changed to permutation
         the_special_points[k] = permute(special_points[k], permutation)
 
     # output crystal or cartesian
     if cartesian:
         the_abs_special_points = {}
-        for k in the_special_points.iterkeys():
+        for k in the_special_points.keys():
             the_abs_special_points[k] = change_reference(
                 reciprocal_cell, numpy.array(the_special_points[k]), to_cartesian=True
             )

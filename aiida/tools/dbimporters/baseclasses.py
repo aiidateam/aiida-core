@@ -3,13 +3,15 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
-
-from aiida.orm.calculation.inline import optional_inline
+import six
 
 
 class DbImporter(object):
@@ -61,14 +63,14 @@ class DbImporter(object):
         :raises NotImplementedError: if search using given keyword is not
             implemented.
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
     def setup_db(self, **kwargs):
         """
         Sets the database parameters. The method should reconnect to the
         database using updated parameters, if already connected.
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
     def get_supported_keywords(self):
         """
@@ -76,7 +78,7 @@ class DbImporter(object):
 
         :return: list of strings
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
 
 class DbSearchResults(object):
@@ -102,13 +104,20 @@ class DbSearchResults(object):
             self._position = 0
             self._increment = increment
 
-        def next(self):
+        def __next__(self):
             pos = self._position
             if pos >= 0 and pos < len(self._results):
                 self._position = self._position + self._increment
                 return self._results[pos]
             else:
                 raise StopIteration()
+
+        def next(self):
+            """
+            The iterator method expected by python 2.x,
+            implemented as python 3.x style method.
+            """
+            return self.__next__()
 
     def __iter__(self):
         """
@@ -119,7 +128,7 @@ class DbSearchResults(object):
         return self.DbSearchResultsIterator(self)
 
     def __len__(self):
-        return len(self.results)
+        return len(self._results)
 
     def __getitem__(self, key):
         return self.at(key)
@@ -141,7 +150,7 @@ class DbSearchResults(object):
 
         :raise StopIteration: when the end of result array is reached.
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
     def at(self, position):
         """
@@ -153,7 +162,7 @@ class DbSearchResults(object):
         :raise IndexError: if ``position`` is out of bounds.
         """
         if position < 0 | position >= len(self._results):
-            raise IndexError("index out of bounds")
+            raise IndexError('index out of bounds')
         if position not in self._entries:
             source_dict = self._get_source_dict(self._results[position])
             url = self._get_url(self._results[position])
@@ -167,7 +176,7 @@ class DbSearchResults(object):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
     def _get_url(self, result_dict):
         """
@@ -175,7 +184,7 @@ class DbSearchResults(object):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
 
 class DbEntry(object):
@@ -210,11 +219,11 @@ class DbEntry(object):
         self._contents = None
 
     def __repr__(self):
-        return "{}({})".format(self.__class__.__name__,
-                               ",".join(["{}={}".format(k, '"{}"'.format(v)
-                               if issubclass(v.__class__, basestring)
-                               else v)
-                                         for k, v in self.source.iteritems()]))
+        return '{}({})'.format(self.__class__.__name__,
+                               ','.join(['{}={}'.format(k, '"{}"'.format(self.source[k])
+                               if issubclass(self.source[k].__class__, six.string_types)
+                               else self.source[k])
+                                         for k in sorted(self.source.keys())]))
 
     @property
     def contents(self):
@@ -222,11 +231,11 @@ class DbEntry(object):
         Returns raw contents of a file as string.
         """
         if self._contents is None:
-            import urllib2
+            from six.moves import urllib
             from hashlib import md5
 
-            self._contents = urllib2.urlopen(self.source['uri']).read()
-            self.source['source_md5'] = md5(self._contents).hexdigest()
+            self._contents = urllib.request.urlopen(self.source['uri']).read().decode('utf-8')
+            self.source['source_md5'] = md5(self._contents.encode('utf-8')).hexdigest()
         return self._contents
 
     @contents.setter
@@ -236,7 +245,7 @@ class DbEntry(object):
         """
         from hashlib import md5
         self._contents = contents
-        self.source['source_md5'] = md5(self._contents).hexdigest()
+        self.source['source_md5'] = md5(self._contents.encode('utf-8')).hexdigest()
 
 
 class CifEntry(DbEntry):
@@ -271,29 +280,28 @@ class CifEntry(DbEntry):
         Returns ASE representation of the CIF.
 
         .. note:: To be removed, as it is duplicated in
-            :py:class:`aiida.orm.data.cif.CifData`.
+            :py:class:`aiida.orm.nodes.data.cif.CifData`.
         """
-        import StringIO
-        from aiida.orm.data.cif import CifData
-        return CifData.read_cif(StringIO.StringIO(self.cif))
+        from six.moves import cStringIO as StringIO
+        from aiida.orm import CifData
+        return CifData.read_cif(StringIO(self.cif))
 
-    def get_cif_node(self, store=False):
+    def get_cif_node(self, store=False, parse_policy='lazy'):
         """
 
         Creates a CIF node, that can be used in AiiDA workflow.
 
-        :return: :py:class:`aiida.orm.data.cif.CifData` object
+        :return: :py:class:`aiida.orm.nodes.data.cif.CifData` object
         """
-        from aiida.common.utils import md5_file
-        from aiida.orm.data.cif import CifData
+        from aiida.orm.nodes.data.cif import CifData
         import tempfile
 
         cifnode = None
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.cif)
             f.flush()
-            cifnode = CifData(file=f.name, source=self.source)
+            cifnode = CifData(file=f.name, source=self.source, parse_policy=parse_policy)
 
         # Maintaining backwards-compatibility. Parameter 'store' should
         # be removed in the future, as the new node can be stored later.
@@ -302,15 +310,12 @@ class CifEntry(DbEntry):
 
         return cifnode
 
-    def get_aiida_structure(self):
+    def get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
         """
         :return: AiiDA structure corresponding to the CIF file.
         """
-        from aiida.orm import DataFactory
-
-        S = DataFactory("structure")
-        aiida_structure = S(ase=self.get_ase_structure())
-        return aiida_structure
+        cif = self.get_cif_node(store=store, parse_policy='lazy')
+        return cif.get_structure(converter=converter, store=store, **kwargs)
 
     def get_parsed_cif(self):
         """
@@ -319,7 +324,7 @@ class CifEntry(DbEntry):
 
         :return: list of lists
         """
-        raise NotImplementedError("not implemented in base class")
+        raise NotImplementedError('not implemented in base class')
 
 
 class UpfEntry(DbEntry):
@@ -331,17 +336,16 @@ class UpfEntry(DbEntry):
         """
         Creates an UPF node, that can be used in AiiDA workflow.
 
-        :return: :py:class:`aiida.orm.data.upf.UpfData` object
+        :return: :py:class:`aiida.orm.nodes.data.upf.UpfData` object
         """
-        from aiida.common.utils import md5_file
-        from aiida.orm.data.upf import UpfData
+        from aiida.orm import UpfData
         import tempfile
 
         upfnode = None
 
         # Prefixing with an ID in order to start file name with the name
         # of the described element.
-        with tempfile.NamedTemporaryFile(prefix=self.source['id']) as f:
+        with tempfile.NamedTemporaryFile(mode='w+', prefix=self.source['id']) as f:
             f.write(self.contents)
             f.flush()
             upfnode = UpfData(file=f.name, source=self.source)

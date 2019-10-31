@@ -52,15 +52,25 @@ py:exc  ZeroDivisionError
 # python builtins
 py:class  classmethod
 py:class  dict
+py:class  callable
+py:class  filter
 py:class  list
 py:class  object
 py:class  unittest.case.TestCase
 py:class  unittest.runner.TextTestRunner
+py:class  unittest2.case.TestCase
 py:meth   unittest.TestLoader.discover
+py:meth   copy.copy
 py:class  ABCMeta
 py:class  exceptions.Exception
+py:class  exceptions.ValueError
 py:class  exceptions.BaseException
+# repeat for Python 3
+py:class  Exception
+py:class  ValueError
+py:class  BaseException
 py:class  str
+py:class  bytes
 py:class  tuple
 py:class  int
 py:class  float
@@ -68,10 +78,21 @@ py:class  bool
 py:class  basestring
 py:class  None
 py:class  type
+py:class  typing.Final
+# this is required for metaclasses(?)
 py:class  __builtin__.bool
 py:class  __builtin__.float
 py:class  __builtin__.int
+py:class  __builtin__.object
 py:class  __builtin__.str
+py:class  __builtin__.dict
+# ... and the same for Python 3
+py:class  builtins.bool
+py:class  builtins.float
+py:class  builtins.int
+py:class  builtins.object
+py:class  builtins.str
+py:class  builtins.dict
 
 # python builtin objects
 py:obj basestring
@@ -79,17 +100,38 @@ py:obj bool
 py:obj float
 py:obj int
 py:obj str
+py:obj string
 py:obj tuple
 py:obj None
+py:obj bool
 
 # python packages
 # Note: These are needed, if they are provided, e.g.
 # as types or rtypes without actually being imported
 py:class  abc.ABCMeta
 
+py:exc    click.BadParameter
+py:exc    click.UsageError
+py:class  click.ParamType
+py:class  click.core.Group
+py:class  click.core.Option
+py:class  click.Command
+py:class  click.Group
+py:class  click.Option
+py:class  click.types.ParamType
+py:class  click.types.Choice
+py:class  click.types.IntParamType
+py:class  click.types.StringParamType
+py:class  click.types.Path
+
+py:class  concurrent.futures._base.TimeoutError
+
 py:class  distutils.version.Version
 
+py:class  docutils.parsers.rst.Directive
+
 py:class  enum.Enum
+py:class  enum.IntEnum
 
 py:class  flask.app.Flask
 py:class  flask.json.JSONEncoder
@@ -101,29 +143,61 @@ py:class  frozenset
 py:class  logging.Filter
 py:class  logging.Handler
 py:class  logging.record
+py:class  logging.Logger
+py:class  logging.LoggerAdapter
 
-py:class  plum.class_loader.ClassLoader
-py:class  plum.engine.parallel.MultithreadedEngine
-py:class  plum.knowledge_provider.KnowledgeProvider
-py:class  plum.persistence.Bundle
-py:class  plum.persistence.pickle_persistence.PicklePersistence
-py:class  plum.process.Process
-py:class  plum.process_monitor.ProcessMonitorListener
-py:class  plum.process_spec.ProcessSpec
-py:class  plum.wait.WaitOn
-py:class  plum.workflow.Workflow
-py:class  plum.workflow.WorkflowSpec
+py:class  paramiko.proxy.ProxyCommand
+
+py:class  StateMachine
+py:class  plumpy.futures.Future
+py:class  plumpy.processes.Process
+py:class  plumpy.process_comms.ProcessLauncher
+py:class  plumpy.process_spec.ProcessSpec
+py:class  plumpy.Port
+py:class  plumpy.Process
+py:class  plumpy.Communicator
+py:class  plumpy.RemoteProcessThreadController
+py:class  plumpy.Bundle
+py:class  plumpy.workchains.WorkChainSpec
+py:class  plumpy.WorkChainSpec
+py:class  plumpy.Persister
+py:class  plumpy.persistence.Persister
+py:class  plumpy.PersistenceError
+py:class  plumpy.ports.Port
+py:class  plumpy.ports.InputPort
+py:class  plumpy.ports.OutputPort
+py:class  plumpy.ports.PortNamespace
+py:class  plumpy.utils.AttributesDict
+py:class  plumpy.loaders.DefaultObjectLoader
+py:class  plumpy.ObjectLoader
+py:class  plumpy.process_states.Waiting
+py:class  plumpy.process_comms.RemoteProcessThreadController
+py:exc    plumpy.TaskRejected
+py:meth   plumpy.ProcessSpec.output
+py:meth   plumpy.process_spec.ProcessSpec.expose_inputs
+py:meth   plumpy.process_spec.ProcessSpec.expose_outputs
+
+py:class  kiwipy.futures.Future
+py:class  kiwipy.communications.TimeoutError
+py:class  kiwipy.Communicator
+py:class  kiwipy.rmq.communicator.RmqThreadCommunicator
+
+py:class  topika.Connection
+
+py:class  tornado.ioloop.IOLoop
+py:class  tornado.concurrent.Future
 
 py:class  IPython.core.magic.Magics
 
-#py:class  json.json
-
 py:class  HTMLParser.HTMLParser
+py:class  html.parser.HTMLParser
 
 py:class  tuple
 
 py:class  staticmethod
 
+py:class  django.contrib.auth.base_user.AbstractBaseUser
+py:class  django.contrib.auth.base_user.BaseUserManager
 py:class  django.contrib.auth.models.AbstractBaseUser
 py:class  django.contrib.auth.models.BaseUserManager
 py:class  django.contrib.auth.models.PermissionsMixin
@@ -138,18 +212,63 @@ py:class  sqlalchemy.ext.declarative.api.Base
 py:class  sqlalchemy.ext.declarative.api.Model
 py:class  sqlalchemy.sql.functions.FunctionElement
 py:class  sqlalchemy.orm.query.Query
+py:class  sqlalchemy.orm.util.AliasedClass
+py:class  sqlalchemy.orm.session.Session
+py:exc    sqlalchemy.orm.exc.MultipleResultsFound
 
-py:class  portalocker.utils.Lock
+py:class  sphinx.ext.autodoc.ClassDocumenter
 
 py:class  _abcoll.Mapping
 py:class  _abcoll.MutableMapping
 py:class  _abcoll.MutableSequence
+py:class  _abcoll.Iterator
+py:class  _abcoll.Sized
+# repeat for Python 3:
+py:class  collections.abc.Mapping
+py:class  collections.abc.MutableMapping
+py:class  collections.abc.MutableSequence
+py:class  collections.abc.Iterator
+py:class  collections.abc.Sized
 
-py:class  aiida.orm.node.Node
-py:class  aiida.orm.utils.BackendDelegateWithDefault
-# strange class in work/interstep.py
-py:class  aiida.work.interstep.Builder
-py:class  Builder
-py:class  Data
-py:meth   aiida.orm.group.Group.get_from_string
-py:class  _WorkChainSpec
+# backend-dependent implementation
+py:class  WorkChainSpec
+py:class  aiida.orm.nodes.Node
+py:meth   aiida.engine.processes.process_spec.ProcessSpec.input
+py:meth   aiida.engine.processes.process_spec.ProcessSpec.output
+py:meth   aiida.engine.processes.process_spec.ProcessSpec.outline
+
+# This comes from ABCMeta
+py:meth   aiida.orm.groups.Group.get_from_string
+
+py:mod    click
+py:class  click.Choice
+py:func   click.Option.get_default
+
+py:class yaml.Dumper
+py:class yaml.Loader
+py:class yaml.dumper.Dumper
+py:class yaml.loader.Loader
+
+py:class uuid.UUID
+
+# typing
+py:class typing.Generic
+py:class typing.TypeVar
+
+# Python 3 complains about this because of orm.Entity.Collection inner class (no idea why)
+py:class Collection
+
+
+# psychopg2
+py:class psycopg2.extensions.cursor
+
+# Aldjemy exceptions
+py:class aldjemy.orm.DbNode
+py:class aldjemy.orm.DbLink
+py:class aldjemy.orm.DbComputer
+py:class aldjemy.orm.DbUser
+py:class aldjemy.orm.DbGroup
+py:class aldjemy.orm.DbAuthInfo
+py:class aldjemy.orm.DbComment
+py:class aldjemy.orm.DbLog
+py:class aldjemy.orm.DbSetting

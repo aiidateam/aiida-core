@@ -3,69 +3,34 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module for implementations of database backends.
 
-from aiida.backends import settings
-from aiida.common.setup import (DEFAULT_PROCESS, get_default_profile,
-                                get_profile_config)
-from aiida.common.exceptions import InvalidOperation
+.. deprecated:: 1.0.0
+    Will be removed in `v1.1.0`, use :mod:`aiida.backends` instead.
+"""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
+import warnings
+
+from aiida.common.warnings import AiidaDeprecationWarning
+
+warnings.warn('this module is deprecated', AiidaDeprecationWarning)  # pylint: disable=no-member
 
 # Possible choices for backend
-BACKEND_DJANGO = "django"
-BACKEND_SQLA = "sqlalchemy"
+BACKEND_DJANGO = 'django'
+BACKEND_SQLA = 'sqlalchemy'
 
-
-def load_profile(process=None, profile=None):
-    """
-    Load the profile. This function is called by load_dbenv and SHOULD NOT
-    be called by the user by hand.
-    """
-    if settings.LOAD_PROFILE_CALLED:
-        raise InvalidOperation("You cannot call load_profile multiple times!")
-    settings.LOAD_PROFILE_CALLED = True
-
-    # settings.CURRENT_AIIDADB_PROCESS should always be defined
-    # by either verdi or the deamon
-    if settings.CURRENT_AIIDADB_PROCESS is None and process is None:
-        # This is for instance the case of a python script containing a
-        # 'load_dbenv()' command and run with python
-
-        settings.CURRENT_AIIDADB_PROCESS = DEFAULT_PROCESS
-    elif (process is not None and
-          process != settings.CURRENT_AIIDADB_PROCESS):
-        ## The user specified a process that is different from the current one
-
-        # I re-set the process
-        settings.CURRENT_AIIDADB_PROCESS = process
-        # I also remove the old profile
-        settings.AIIDADB_PROFILE = None
-
-    if settings.AIIDADB_PROFILE is not None:
-        if profile is not None and profile != settings.AIIDADB_PROFILE:
-            raise ValueError("Error in profile loading.")
-    else:
-        if profile is not None:
-            the_profile = profile
-        else:
-            the_profile = get_default_profile(
-                settings.CURRENT_AIIDADB_PROCESS)
-        settings.AIIDADB_PROFILE = the_profile
-
-    config = get_profile_config(settings.AIIDADB_PROFILE)
-
-    # Check if AIIDADB_BACKEND is set and if not error (with message)
-    # Migration script should put it in profile (config.json)
-    settings.BACKEND = config.get("AIIDADB_BACKEND", BACKEND_DJANGO)
-
-
-def is_profile_loaded():
-    """
-    Return True if the profile has already been loaded
-    """
-    return settings.LOAD_PROFILE_CALLED
-
-
+# These appearingly random attributes *need* to be here, otherwise the building of the docs will fail on python 3.
+# This problem appeared after the mechanism for loading profiles and the database backend was changed significantly.
+# Since then Sphinx started failing with an exception that the attributes `run` and `runctx` are not defined in the
+# `profile` module. What it should be targeting is the `cProfile` method, but somehow it ends up here. Simply adding
+# the attributes here fixes the problem, even though we have absolutely no idea why. Given that the module is deprecated
+# anyway and will soon be removed at which point the problem should no longer exist.
+run = None
+runctx = None

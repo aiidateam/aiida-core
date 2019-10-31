@@ -4,14 +4,14 @@ BandsData
 =========
 
 ``BandsData`` object is dedicated to store bands object of different types
-(electronic bands, phonons). In this section we describe the usage of the 
-``BandsData`` to store the (part of) electronic band structure of silicon
+(electronic bands, phonons). In this section we describe the usage of the
+``BandsData`` to store the  electronic band structure of silicon
 and some logic behind its methods.
 
 To start working with ``BandsData`` we should import it using the
 ``DataFactory`` and create an object of type ``BandsData``::
 
-    from aiida.orm import DataFactory
+    from aiida.plugins import DataFactory
     BandsData = DataFactory('array.bands')
     bs = BandsData()
 
@@ -22,7 +22,8 @@ should be ``nkpoints * 3``, while the shape of the bands should be
 of states is 5. So the kpoints and the bands array will look as follows::
 
     import numpy as np
-    kpoints = np.array([[0.    , 0.    , 0.    ], # array shape is 12 * 3
+    kpoints = np.array(
+           [[0.    , 0.    , 0.    ], # array shape is 12 * 3
            [0.1   , 0.    , 0.1   ],
            [0.2   , 0.    , 0.2   ],
            [0.3   , 0.    , 0.3   ],
@@ -35,8 +36,9 @@ of states is 5. So the kpoints and the bands array will look as follows::
            [0.6   , 0.2   , 0.6   ],
            [0.625 , 0.25  , 0.625 ]])
 
-    bands = np.array([[-5.64024889,  6.66929678,  6.66929678,  6.66929678,  8.91047649], # array shape is 12 * 5, where 12 is the size of the kpoints mesh
-       [-5.46976726,  5.76113772,  5.97844699,  5.97844699,  8.48186734],                # and 5 is the numbe of states
+    bands = np.array(
+       [[-5.64024889,  6.66929678,  6.66929678,  6.66929678,  8.91047649], # array shape is 12 * 5, where 12 is the size of the kpoints mesh
+       [-5.46976726,  5.76113772,  5.97844699,  5.97844699,  8.48186734],  # and 5 is the numbe of states
        [-4.93870761,  4.06179965,  4.97235487,  4.97235488,  7.68276008],
        [-4.05318686,  2.21579935,  4.18048674,  4.18048675,  7.04145185],
        [-2.83974972,  0.37738276,  3.69024464,  3.69024465,  6.75053465],
@@ -47,7 +49,7 @@ of states is 5. So the kpoints and the bands array will look as follows::
        [-1.42050683, -1.12604118,  2.48497007,  3.69389815,  7.07537154],
        [-1.52788845, -0.95900776,  2.09104321,  3.82330632,  7.20537566],
        [-1.71354964, -0.74425095,  1.82242466,  3.98697455,  7.37979746]])
-    
+
 To insert kpoints and bands in the ``bs`` object we should employ
 ``set_kpoints()`` and ``set_bands()`` methods::
 
@@ -109,7 +111,7 @@ The ``BandsData`` object can also deal with the results of spin-polarized calcul
 provide different bands for two different spins you should just merge them in
 one array and import them again using the ``set_bands()`` method::
 
-    bands_spins = [bands, bands-0.3] # to distinguish the bands of different spins we substitite 0.3 from the second band structure
+    bands_spins = [bands, bands-0.3] # to distinguish the bands of different spins we substitute 0.3 from the second band structure
     bs.set_bands(bands_spins, units='eV')
     bs.show_mpl()
 

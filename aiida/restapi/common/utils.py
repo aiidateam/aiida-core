@@ -3,10 +3,15 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+""" Util methods """
+
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
 from datetime import datetime, timedelta
 
 from flask import jsonify
@@ -17,9 +22,9 @@ from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
 
 # Important to match querybuilder keys
-pk_dbsynonym = 'id'
+PK_DBSYNONYM = 'id'
 # Example uuid (version 4)
-uuid_ref = 'd55082b6-76dc-426b-af89-0e08b59524d2'
+UUID_REF = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 
 ########################## Classes #####################
@@ -30,29 +35,36 @@ class CustomJSONEncoder(JSONEncoder):
     encoder.
     """
 
-    def default(self, obj):
+    def default(self, o):
+        # pylint: disable=method-hidden
+        """
+        Override default method from JSONEncoder to change serializer
+        :param o: Object e.g. dict, list that will be serialized
+        :return: serialized object
+        """
 
         from aiida.restapi.common.config import SERIALIZER_CONFIG
 
         # Treat the datetime objects
-        if isinstance(obj, datetime):
+        if isinstance(o, datetime):
             if 'datetime_format' in SERIALIZER_CONFIG.keys() and \
                             SERIALIZER_CONFIG[
-                                'datetime_format'] is not 'default':
+                                'datetime_format'] != 'default':
                 if SERIALIZER_CONFIG['datetime_format'] == 'asinput':
-                    if obj.utcoffset() is not None:
-                        obj = obj - obj.utcoffset()
-                        return '-'.join([str(obj.year), str(obj.month).zfill(2),
-                                         str(obj.day).zfill(2)]) + 'T' + \
+                    if o.utcoffset() is not None:
+                        o = o - o.utcoffset()
+                        return '-'.join([str(o.year), str(o.month).zfill(2),
+                                         str(o.day).zfill(2)]) + 'T' + \
                                ':'.join([str(
-                                   obj.hour).zfill(2), str(obj.minute).zfill(2),
-                                         str(obj.second).zfill(2)])
+                                   o.hour).zfill(2), str(o.minute).zfill(2),
+                                         str(o.second).zfill(2)])
 
         # If not returned yet, do it in the default way
-        return JSONEncoder.default(self, obj)
+        return JSONEncoder.default(self, o)
 
 
-class datetime_precision():
+class DatetimePrecision(object):
+    # pylint: disable=too-few-public-methods
     """
     A simple class which stores a datetime object with its precision. No
     internal check is done (cause itis not possible).
@@ -63,15 +75,16 @@ class datetime_precision():
                 4 (dare + hour + minute +second)
     """
 
-    def __init__(self, dt, precision):
+    def __init__(self, dtobj, precision):
+        """ Constructor to check valid datetime object and precision """
 
-        if not isinstance(dt, datetime):
-            raise TypeError("dt argument has to be a datetime object")
+        if not isinstance(dtobj, datetime):
+            raise TypeError('dtobj argument has to be a datetime object')
 
-        if type(precision) is not int:
-            raise TypeError("precision argument has to be an integer")
+        if not isinstance(precision, int):
+            raise TypeError('precision argument has to be an integer')
 
-        self.dt = dt
+        self.dtobj = dtobj
         self.precision = precision
 
 
@@ -107,57 +120,55 @@ class Utils(object):
         Sets internally the configuration parameters
         """
 
-        self.PREFIX = kwargs['PREFIX']
-        self.PERPAGE_DEFAULT = kwargs['PERPAGE_DEFAULT']
-        self.LIMIT_DEFAULT = kwargs['LIMIT_DEFAULT']
+        self.prefix = kwargs['PREFIX']
+        self.perpage_default = kwargs['PERPAGE_DEFAULT']
+        self.limit_default = kwargs['LIMIT_DEFAULT']
 
-    def strip_prefix(self, path):
+    def strip_api_prefix(self, path):
         """
         Removes the PREFIX from an URL path. PREFIX must be defined in the
         config.py file::
 
             PREFIX = "/api/v2"
             path = "/api/v2/calculations/page/2"
-            strip_prefix(path) ==> "/calculations/page/2"
+            strip_api_prefix(path) ==> "/calculations/page/2"
 
         :param path: the URL path string
         :return: the same URL without the prefix
         """
+        if path.startswith(self.prefix):
+            return path[len(self.prefix):]
 
-        if path.startswith(self.PREFIX):
-            return path[len(self.PREFIX):]
-        else:
-            raise ValidationError(
-                'path has to start with {}'.format(self.PREFIX))
+        raise ValidationError('path has to start with {}'.format(self.prefix))
 
-    def split_path(self, path):
+    @staticmethod
+    def split_path(path):
         """
         :param path: entire path contained in flask request
         :return: list of each element separated by '/'
         """
-        # type: (string) -> (list_of_strings).
-        return filter(None, path.split('/'))
+        return [f for f in path.split('/') if f]
 
     def parse_path(self, path_string, parse_pk_uuid=None):
+        # pylint: disable=too-many-return-statements,too-many-branches, too-many-statements
         """
         Takes the path and parse it checking its validity. Does not parse "io",
         "content" fields. I do not check the validity of the path, since I assume
         that this is done by the Flask routing methods.
-  
+
         :param path_string: the path string
-        :param parse_id_uuid: if 'pk' ('uuid') expects an integer (uuid 
-            starting pattern) 
+        :param parse_id_uuid: if 'pk' ('uuid') expects an integer (uuid starting pattern)
         :return: resource_type (string)
             page (integer)
-            id (string: uuid starting pattern, int: pk)
+            node_id (string: uuid starting pattern, int: pk)
             query_type (string))
         """
 
         ## Initialization
         page = None
-        id = None
-        query_type = "default"
-        path = self.split_path(self.strip_prefix(path_string))
+        node_id = None
+        query_type = 'default'
+        path = self.split_path(self.strip_api_prefix(path_string))
 
         ## Pop out iteratively the "words" of the path until it is an empty
         # list.
@@ -166,17 +177,17 @@ class Utils(object):
         # Resource type
         resource_type = path.pop(0)
         if not path:
-            return (resource_type, page, id, query_type)
+            return (resource_type, page, node_id, query_type)
 
         # Validate uuid or starting pattern of uuid.
-        # Technique: - take our uuid_ref and replace the first characters the
+        # Technique: - take our UUID_REF and replace the first characters the
         #  string to be validated as uuid.
         #            - validate instead the newly built string
         if parse_pk_uuid == 'pk':
             raw_id = path[0]
             try:
                 # Check whether it can be an integer
-                id = int(raw_id)
+                node_id = int(raw_id)
             except ValueError:
                 pass
             else:
@@ -184,64 +195,53 @@ class Utils(object):
         elif parse_pk_uuid == 'uuid':
             import uuid
             raw_id = path[0]
-            maybe_uuid = raw_id + uuid_ref[len(raw_id):]
+            maybe_uuid = raw_id + UUID_REF[len(raw_id):]
             try:
                 _ = uuid.UUID(maybe_uuid, version=4)
             except ValueError:
                 # assume that it cannot be an id and go to the next check
                 pass
             else:
-                # It is an id so pop out the path element
-                id = raw_id
+                # It is a node_id so pop out the path element
+                node_id = raw_id
                 path.pop(0)
 
         if not path:
-            return (resource_type, page, id, query_type)
+            return (resource_type, page, node_id, query_type)
 
-        # Query type (input, output, attributes, extras, visualization,
-        # schema, statistics)
-        if path[0] == 'schema':
+        if path[0] in [
+            'projectable_properties', 'statistics', 'full_types', 'download', 'download_formats', 'report', 'status',
+            'input_files', 'output_files'
+        ]:
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError(
-                    "url requesting schema resources do not "
-                    "admit further fields")
-            else:
-                return (resource_type, page, id, query_type)
-        elif path[0] == 'statistics':
-            query_type = path.pop(0)
-            if path:
-                raise RestInputValidationError(
-                    "url requesting statistics resources do not "
-                    "admit further fields")
-            else:
-                return (resource_type, page, id, query_type)
-        elif path[0] == 'types':
-            query_type = path.pop(0)
-            if path:
-                raise RestInputValidationError(
-                    "url requesting statistics resources do not "
-                    "admit further fields")
-            else:
-                return (resource_type, page, id, query_type)
-        elif path[0] == "io" or path[0] == "content":
+                raise RestInputValidationError('Given url does not accept further fields')
+        elif path[0] in ['links', 'contents']:
             path.pop(0)
             query_type = path.pop(0)
-            if not path:
-                return (resource_type, page, id, query_type)
+        elif path[0] in ['repo']:
+            path.pop(0)
+            query_type = 'repo_' + path.pop(0)
+
+        if not path:
+            return (resource_type, page, node_id, query_type)
 
         # Page (this has to be in any case the last field)
-        if path[0] == "page":
+        if path[0] == 'page':
             path.pop(0)
             if not path:
                 page = 1
-                return (resource_type, page, id, query_type)
-            else:
-                page = int(path.pop(0))
-                return (resource_type, page, id, query_type)
+                return (resource_type, page, node_id, query_type)
+            page = int(path.pop(0))
+        else:
+            raise RestInputValidationError('The requested URL is not found on the server.')
 
-    def validate_request(self, limit=None, offset=None, perpage=None, page=None,
-                         query_type=None, is_querystring_defined=False):
+        return (resource_type, page, node_id, query_type)
+
+    def validate_request(
+        self, limit=None, offset=None, perpage=None, page=None, query_type=None, is_querystring_defined=False
+    ):
+        # pylint: disable=fixme,no-self-use,too-many-arguments,too-many-branches
         """
         Performs various checks on the consistency of the request.
         Add here all the checks that you want to do, except validity of the page
@@ -252,23 +252,20 @@ class Utils(object):
         # TODO Consider using **kwargs so to make easier to add more validations
         # 1. perpage incompatible with offset and limits
         if perpage is not None and (limit is not None or offset is not None):
-            raise RestValidationError("perpage key is incompatible with "
-                                      "limit and offset")
+            raise RestValidationError('perpage key is incompatible with limit and offset')
         # 2. /page/<int: page> in path is incompatible with limit and offset
         if page is not None and (limit is not None or offset is not None):
-            raise RestValidationError("requesting a specific page is "
-                                      "incompatible "
-                                      "with limit and offset")
+            raise RestValidationError('requesting a specific page is incompatible with limit and offset')
         # 3. perpage requires that the path contains a page request
         if perpage is not None and page is None:
-            raise RestValidationError("perpage key requires that a page is "
-                                      "requested (i.e. the path must contain "
-                                      "/page/)")
-        # 4. No querystring if query type = schema'
-        if query_type in ('schema') and is_querystring_defined:
-            raise RestInputValidationError("schema requests do not allow "
-                                           "specifying a query string")
-
+            raise RestValidationError(
+                'perpage key requires that a page is '
+                'requested (i.e. the path must contain '
+                '/page/)'
+            )
+        # 4. No querystring if query type = projectable_properties'
+        if query_type in ('projectable_properties',) and is_querystring_defined:
+            raise RestInputValidationError('projectable_properties requests do not allow specifying a query string')
 
     def paginate(self, page, perpage, total_count):
         """
@@ -290,19 +287,19 @@ class Utils(object):
         try:
             page = int(page)
         except ValueError:
-            raise InputValidationError("page number must be an integer")
+            raise InputValidationError('page number must be an integer')
         try:
             total_count = int(total_count)
         except ValueError:
-            raise InputValidationError("total_count must be an integer")
+            raise InputValidationError('total_count must be an integer')
         # Non-mandatory params
         if perpage is not None:
             try:
                 perpage = int(perpage)
             except ValueError:
-                raise InputValidationError("perpage must be an integer")
+                raise InputValidationError('perpage must be an integer')
         else:
-            perpage = self.PERPAGE_DEFAULT
+            perpage = self.perpage_default
 
         ## First_page is anyway 1
         first_page = 1
@@ -311,31 +308,28 @@ class Utils(object):
         if total_count == 0:
             last_page = 1
         else:
-            last_page = int(ceil(float(total_count) / float(perpage)))
+            last_page = int(ceil(total_count / perpage))
 
         ## Check validity of required page and calculate limit, offset,
         # previous,
         #  and next page
         if page > last_page or page < 1:
-            raise RestInputValidationError("Non existent page requested. The "
-                                           "page range is [{} : {}]".format(
-                first_page, last_page))
-        else:
-            limit = perpage
-            offset = (page - 1) * perpage
-            if page > 1:
-                prev_page = page - 1
-            else:
-                prev_page = None
-            if page < last_page:
-                next_page = page + 1
-            else:
-                next_page = None
+            raise RestInputValidationError(
+                'Non existent page requested. The '
+                'page range is [{} : {}]'.format(first_page, last_page)
+            )
 
-        rel_pages = dict(prev=prev_page,
-                         next=next_page,
-                         first=first_page,
-                         last=last_page)
+        limit = perpage
+        offset = (page - 1) * perpage
+        prev_page = None
+        if page > 1:
+            prev_page = page - 1
+
+        next_page = None
+        if page < last_page:
+            next_page = page + 1
+
+        rel_pages = dict(prev=prev_page, next=next_page, first=first_page, last=last_page)
 
         return (limit, offset, rel_pages)
 
@@ -353,46 +347,46 @@ class Utils(object):
         try:
             total_count = int(total_count)
         except ValueError:
-            raise InputValidationError("total_count must be a long integer")
+            raise InputValidationError('total_count must be a long integer')
 
         # non mandatory parameters
         if rel_pages is not None and not isinstance(rel_pages, dict):
-            raise InputValidationError("rel_pages must be a dictionary")
+            raise InputValidationError('rel_pages must be a dictionary')
 
         if url is not None:
             try:
                 url = str(url)
             except ValueError:
-                raise InputValidationError("url must be a string")
+                raise InputValidationError('url must be a string')
 
         ## Input consistency
         # rel_pages cannot be defined without url
         if rel_pages is not None and url is None:
-            raise InputValidationError("'rel_pages' parameter requires 'url' "
-                                       "parameter to be defined")
+            raise InputValidationError("'rel_pages' parameter requires 'url' parameter to be defined")
 
         headers = {}
 
         ## Setting mandatory headers
         # set X-Total-Count
         headers['X-Total-Count'] = total_count
-        expose_header = ["X-Total-Count"]
+        expose_header = ['X-Total-Count']
 
         ## Two auxiliary functions
         def split_url(url):
+            """ Split url into path and query string """
             if '?' in url:
                 [path, query_string] = url.split('?')
                 question_mark = '?'
             else:
                 path = url
-                query_string = ""
-                question_mark = ""
+                query_string = ''
+                question_mark = ''
             return (path, query_string, question_mark)
 
         def make_rel_url(rel, page):
             new_path_elems = path_elems + ['page', str(page)]
             return '<' + '/'.join(new_path_elems) + \
-                   question_mark + query_string + ">; rel={}, ".format(rel)
+                   question_mark + query_string + '>; rel={}, '.format(rel)
 
         ## Setting non-mandatory parameters
         # set links to related pages
@@ -402,11 +396,11 @@ class Utils(object):
 
             if path_elems.pop(-1) == 'page' or path_elems.pop(-1) == 'page':
                 links = []
-                for (rel, page) in rel_pages.iteritems():
+                for (rel, page) in rel_pages.items():
                     if page is not None:
                         links.append(make_rel_url(rel, page))
                 headers['Link'] = ''.join(links)
-                expose_header.append("Link")
+                expose_header.append('Link')
             else:
                 pass
 
@@ -415,7 +409,8 @@ class Utils(object):
 
         return headers
 
-    def build_response(self, status=200, headers=None, data=None):
+    @staticmethod
+    def build_response(status=200, headers=None, data=None):
         """
         Build the response
 
@@ -430,35 +425,36 @@ class Utils(object):
         ## Type checks
         # mandatory parameters
         if not isinstance(data, dict):
-            raise InputValidationError("data must be a dictionary")
+            raise InputValidationError('data must be a dictionary')
 
         # non-mandatory parameters
         if status is not None:
             try:
                 status = int(status)
             except ValueError:
-                raise InputValidationError("status must be an integer")
+                raise InputValidationError('status must be an integer')
 
         if headers is not None and not isinstance(headers, dict):
-            raise InputValidationError("header must be a dictionary")
+            raise InputValidationError('header must be a dictionary')
 
         # Build response
         response = jsonify(data)
         response.status_code = status
 
         if headers is not None:
-            for k, v in headers.iteritems():
-                response.headers[k] = v
+            for key, val in headers.items():
+                response.headers[key] = val
 
         return response
 
-    def build_datetime_filter(self, dt):
+    @staticmethod
+    def build_datetime_filter(dtobj):
         """
         This function constructs a filter for a datetime object to be in a
         certain datetime interval according to the precision.
 
-        The interval is [reference_datetime, reference_datetime + Dt],
-        where Dt is a function fo the required precision.
+        The interval is [reference_datetime, reference_datetime + delta_time],
+        where delta_time is a function fo the required precision.
 
         This function should be used to replace a datetime filter based on
         the equality operator that is inehrently "picky" because it implies
@@ -469,31 +465,30 @@ class Utils(object):
         :return: a suitable entry of the filter dictionary
         """
 
-        if not isinstance(dt, datetime_precision):
-            TypeError("dt argument has to be a datetime_precision object")
+        if not isinstance(dtobj, DatetimePrecision):
+            TypeError('dtobj argument has to be a DatetimePrecision object')
 
-        reference_datetime = dt.dt
-        precision = dt.precision
+        reference_datetime = dtobj.dtobj
+        precision = dtobj.precision
 
         ## Define interval according to the precision
         if precision == 1:
-            Dt = timedelta(days=1)
+            delta_time = timedelta(days=1)
         elif precision == 2:
-            Dt = timedelta(hours=1)
+            delta_time = timedelta(hours=1)
         elif precision == 3:
-            Dt = timedelta(minutes=1)
+            delta_time = timedelta(minutes=1)
         elif precision == 4:
-            Dt = timedelta(seconds=1)
+            delta_time = timedelta(seconds=1)
         else:
-            raise RestValidationError("The datetime resolution is not valid.")
+            raise RestValidationError('The datetime resolution is not valid.')
 
-        filter = {
-            'and': [{'>=': reference_datetime}, {'<': reference_datetime + Dt}]
-        }
+        filters = {'and': [{'>=': reference_datetime}, {'<': reference_datetime + delta_time}]}
 
-        return filter
+        return filters
 
     def build_translator_parameters(self, field_list):
+        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         """
         Takes a list of elements resulting from the parsing the query_string and
         elaborates them in order to provide translator-compliant instructions
@@ -501,29 +496,27 @@ class Utils(object):
         :param field_list: a (nested) list of elements resulting from parsing the query_string
         :returns: the filters in the
         """
-
         ## Create void variables
         filters = {}
         orderby = []
         limit = None
         offset = None
         perpage = None
-        alist = None
-        nalist = None
-        elist = None
-        nelist = None
-        downloadformat = None
-        visformat = None
         filename = None
-        rtype = None
+        download_format = None
+        download = True
+        attributes = None
+        attributes_filter = None
+        extras = None
+        extras_filter = None
+        full_type = None
 
         # io tree limit parameters
         tree_in_limit = None
         tree_out_limit = None
 
-        ## Count how many time a key has been used for the filters and check if
-        # reserved keyword
-        # have been used twice,
+        ## Count how many time a key has been used for the filters
+        # and check if reserved keyword have been used twice
         field_counts = {}
         for field in field_list:
             field_key = field[0]
@@ -543,169 +536,123 @@ class Utils(object):
 
         ## Check the reserved keywords
         if 'limit' in field_counts.keys() and field_counts['limit'] > 1:
-            raise RestInputValidationError("You cannot specify limit more than "
-                                           "once")
+            raise RestInputValidationError('You cannot specify limit more than once')
         if 'offset' in field_counts.keys() and field_counts['offset'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify offset more than "
-                "once")
+            raise RestInputValidationError('You cannot specify offset more than once')
         if 'perpage' in field_counts.keys() and field_counts['perpage'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify perpage more than "
-                "once")
+            raise RestInputValidationError('You cannot specify perpage more than once')
         if 'orderby' in field_counts.keys() and field_counts['orderby'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify orderby more than "
-                "once")
-        if 'alist' in field_counts.keys() and field_counts['alist'] > 1:
-            raise RestInputValidationError("You cannot specify alist more than "
-                                           "once")
-        if 'nalist' in field_counts.keys() and field_counts['nalist'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify nalist more than "
-                "once")
-        if 'elist' in field_counts.keys() and field_counts['elist'] > 1:
-            raise RestInputValidationError("You cannot specify elist more than "
-                                           "once")
-        if 'nelist' in field_counts.keys() and field_counts['nelist'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify nelist more than "
-                "once")
-        if 'format' in field_counts.keys() and field_counts['format'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify format more than "
-                "once")
-        if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify visformat more than "
-                "once")
+            raise RestInputValidationError('You cannot specify orderby more than once')
+        if 'download' in field_counts.keys() and field_counts['download'] > 1:
+            raise RestInputValidationError('You cannot specify download more than once')
+        if 'download_format' in field_counts.keys() and field_counts['download_format'] > 1:
+            raise RestInputValidationError('You cannot specify download_format more than once')
         if 'filename' in field_counts.keys() and field_counts['filename'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify filename more than "
-                "once")
-        if 'rtype' in field_counts.keys() and field_counts['rtype'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify rtype more than "
-                "once")
+            raise RestInputValidationError('You cannot specify filename more than once')
         if 'in_limit' in field_counts.keys() and field_counts['in_limit'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify in_limit more than once")
+            raise RestInputValidationError('You cannot specify in_limit more than once')
         if 'out_limit' in field_counts.keys() and field_counts['out_limit'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify out_limit more than once")
+            raise RestInputValidationError('You cannot specify out_limit more than once')
+        if 'attributes' in field_counts.keys() and field_counts['attributes'] > 1:
+            raise RestInputValidationError('You cannot specify attributes more than once')
+        if 'attributes_filter' in field_counts.keys() and field_counts['attributes_filter'] > 1:
+            raise RestInputValidationError('You cannot specify attributes_filter more than once')
+        if 'extras' in field_counts.keys() and field_counts['extras'] > 1:
+            raise RestInputValidationError('You cannot specify extras more than once')
+        if 'extras_filter' in field_counts.keys() and field_counts['extras_filter'] > 1:
+            raise RestInputValidationError('You cannot specify extras_filter more than once')
+        if 'full_type' in field_counts.keys() and field_counts['full_type'] > 1:
+            raise RestInputValidationError('You cannot specify full_type more than once')
 
         ## Extract results
         for field in field_list:
-
             if field[0] == 'limit':
                 if field[1] == '=':
                     limit = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'limit'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'limit'")
             elif field[0] == 'offset':
                 if field[1] == '=':
                     offset = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'offset'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'offset'")
             elif field[0] == 'perpage':
                 if field[1] == '=':
                     perpage = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'perpage'")
-
-            elif field[0] == 'alist':
-                if field[1] == '=':
-                    alist = field[2]
-                else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'alist'")
-            elif field[0] == 'nalist':
-                if field[1] == '=':
-                    nalist = field[2]
-                else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'nalist'")
-            elif field[0] == 'elist':
-                if field[1] == '=':
-                    elist = field[2]
-                else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'elist'")
-            elif field[0] == 'nelist':
-                if field[1] == '=':
-                    nelist = field[2]
-                else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'nelist'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'perpage'")
 
             elif field[0] == 'orderby':
                 if field[1] == '=':
-                    # Consider value (gives string) and valueList (gives list of
+                    # Consider value (gives string) and value_list (gives list of
                     # strings) cases
-                    if type(field[2]) == list:
+                    if isinstance(field[2], list):
                         orderby.extend(field[2])
                     else:
                         orderby.extend([field[2]])
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'orderby'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'orderby'")
 
-            elif field[0] == 'format':
+            elif field[0] == 'download':
                 if field[1] == '=':
-                    downloadformat = field[2]
+                    download = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'format'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'download'")
 
-            elif field[0] == 'visformat':
+            elif field[0] == 'download_format':
                 if field[1] == '=':
-                    visformat = field[2]
+                    download_format = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'visformat'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'download_format'")
 
             elif field[0] == 'filename':
                 if field[1] == '=':
                     filename = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'filename'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'filename'")
 
-            elif field[0] == 'rtype':
+            elif field[0] == 'full_type':
                 if field[1] == '=':
-                    rtype = field[2]
+                    full_type = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'rtype'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'full_type'")
 
             elif field[0] == 'in_limit':
                 if field[1] == '=':
                     tree_in_limit = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' is permitted after 'in_limit'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'in_limit'")
 
             elif field[0] == 'out_limit':
                 if field[1] == '=':
                     tree_out_limit = field[2]
                 else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'out_limit'")
+
+            elif field[0] == 'attributes':
+                if field[1] == '=':
+                    attributes = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'attributes'")
+
+            elif field[0] == 'attributes_filter':
+                if field[1] == '=':
+                    attributes_filter = field[2]
+                else:
                     raise RestInputValidationError(
-                        "only assignment operator '=' is permitted after 'out_limit'")
+                        "only assignment operator '=' is permitted after 'attributes_filter'"
+                    )
+            elif field[0] == 'extras':
+                if field[1] == '=':
+                    extras = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'extras'")
+
+            elif field[0] == 'extras_filter':
+                if field[1] == '=':
+                    extras_filter = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'extras_filter'")
 
             else:
 
@@ -714,8 +661,7 @@ class Utils(object):
                 operator = field[1]
                 field_value = field[2]
 
-                if isinstance(field_value,
-                              datetime_precision) and operator == '=':
+                if isinstance(field_value, DatetimePrecision) and operator == '=':
                     filter_value = self.build_datetime_filter(field_value)
                 else:
                     filter_value = {self.op_conv_map[field[1]]: field_value}
@@ -724,11 +670,7 @@ class Utils(object):
                 if field_counts[field_key] > 1:
 
                     if field_key not in filters.keys():
-                        filters.update({
-                            field_key: {
-                                'and': [filter_value]
-                            }
-                        })
+                        filters.update({field_key: {'and': [filter_value]}})
                     else:
                         filters[field_key]['and'].append(filter_value)
                 else:
@@ -736,12 +678,15 @@ class Utils(object):
 
         # #Impose defaults if needed
         # if limit is None:
-        #     limit = self.LIMIT_DEFAULT
+        #     limit = self.limit_default
 
-        return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-                nelist, downloadformat, visformat, filename, rtype, tree_in_limit, tree_out_limit)
+        return (
+            limit, offset, perpage, orderby, filters, download_format, download, filename, tree_in_limit,
+            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type
+        )
 
     def parse_query_string(self, query_string):
+        # pylint: disable=too-many-locals
         """
         Function that parse the querystring, extracting infos for limit, offset,
         ordering, filters, attribute and extra projections.
@@ -764,45 +709,33 @@ class Utils(object):
         # key types
         key = Word(alphas + '_', alphanums + '_')
         # operators
-        operator = (Literal('=like=') | Literal('=ilike=') |
-                    Literal('=in=') | Literal('=notin=') |
-                    Literal('=') | Literal('!=') |
-                    Literal('>=') | Literal('>') |
-                    Literal('<=') | Literal('<'))
+        operator = (
+            Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |
+            Literal('!=') | Literal('>=') | Literal('>') | Literal('<=') | Literal('<')
+        )
         # Value types
-        valueNum = ppc.number
-        valueBool = (Literal('true') | Literal('false')).addParseAction(
-            lambda toks: bool(toks[0]))
-        valueString = QuotedString('"', escQuote='""')
-        valueOrderby = Combine(Optional(Word('+-', exact=1)) + key)
+        value_num = ppc.number
+        value_bool = (Literal('true') | Literal('false')).addParseAction(lambda toks: bool(toks[0]))
+        value_string = QuotedString('"', escQuote='""')
+        value_orderby = Combine(Optional(Word('+-', exact=1)) + key)
 
         ## DateTimeShift value. First, compose the atomic values and then
         # combine
         #  them and convert them to datetime objects
         # Date
-        valueDate = Combine(
-            Word(nums, exact=4) +
-            Literal('-') + Word(nums, exact=2) +
-            Literal('-') + Word(nums, exact=2)
+        value_date = Combine(
+            Word(nums, exact=4) + Literal('-') + Word(nums, exact=2) + Literal('-') + Word(nums, exact=2)
         )
         # Time
-        valueTime = Combine(
-            Literal('T') +
-            Word(nums, exact=2) +
-            Optional(Literal(':') + Word(nums, exact=2)) +
+        value_time = Combine(
+            Literal('T') + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)) +
             Optional(Literal(':') + Word(nums, exact=2))
         )
         # Shift
-        valueShift = Combine(
-            Word('+-', exact=1) +
-            Word(nums, exact=2) +
-            Optional(Literal(':') + Word(nums, exact=2))
-        )
+        value_shift = Combine(Word('+-', exact=1) + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)))
         # Combine atomic values
-        valueDateTime = Combine(
-            valueDate +
-            Optional(valueTime) +
-            Optional(valueShift) + WE(printables.translate(None, '&'))
+        value_datetime = Combine(
+            value_date + Optional(value_time) + Optional(value_shift) + WE(printables.replace('&', ''))
             # To us the
             # word must end with '&' or end of the string
             # Adding  WordEnd  only here is very important. This makes atomic
@@ -810,11 +743,16 @@ class Utils(object):
             # usable alone individually.
         )
 
-        ############################################################################
-        # Function to convert datetime string into datetime object. The
-        # format is
-        # compliant with ParseAction requirements
-        def validate_time(s, loc, toks):
+        ########################################################################
+
+        def validate_time(toks):
+            """
+            Function to convert datetime string into datetime object. The format is
+            compliant with ParseAction requirements
+
+            :param toks: datetime string passed in tokens
+            :return: datetime object
+            """
 
             datetime_string = toks[0]
 
@@ -823,77 +761,74 @@ class Utils(object):
 
             # Parse
             try:
-                dt = dtparser.parse(datetime_string)
+                dtobj = dtparser.parse(datetime_string)
             except ValueError:
                 raise RestInputValidationError(
-                    "time value has wrong format. The "
-                    "right format is "
-                    "<date>T<time><offset>, "
-                    "where <date> is expressed as "
-                    "[YYYY]-[MM]-[DD], "
-                    "<time> is expressed as [HH]:[MM]:["
-                    "SS], "
-                    "<offset> is expressed as +/-[HH]:["
-                    "MM] "
-                    "given with "
-                    "respect to UTC")
-            if dt.tzinfo is not None:
-                tzoffset_minutes = int(
-                    dt.tzinfo.utcoffset(None).total_seconds() / 60)
+                    'time value has wrong format. The '
+                    'right format is '
+                    '<date>T<time><offset>, '
+                    'where <date> is expressed as '
+                    '[YYYY]-[MM]-[DD], '
+                    '<time> is expressed as [HH]:[MM]:['
+                    'SS], '
+                    '<offset> is expressed as +/-[HH]:['
+                    'MM] '
+                    'given with '
+                    'respect to UTC'
+                )
+            if dtobj.tzinfo is not None and dtobj.utcoffset() is not None:
+                tzoffset_minutes = int(dtobj.utcoffset().total_seconds() // 60)
+                return DatetimePrecision(
+                    dtobj.replace(tzinfo=FixedOffsetTimezone(offset=tzoffset_minutes, name=None)), precision
+                )
 
-                return datetime_precision(dt.replace(tzinfo=FixedOffsetTimezone(
-                    offset=tzoffset_minutes, name=None)), precision)
-            else:
-                return datetime_precision(dt.replace(tzinfo=FixedOffsetTimezone(
-                    offset=0, name=None)), precision)
+            return DatetimePrecision(dtobj.replace(tzinfo=FixedOffsetTimezone(offset=0, name=None)), precision)
 
         ########################################################################
 
         # Convert datetime value to datetime object
-        valueDateTime.setParseAction(validate_time)
+        value_datetime.setParseAction(validate_time)
 
         # More General types
-        value = (valueString | valueBool | valueDateTime | valueNum |
-                 valueOrderby)
+        value = (value_string | value_bool | value_datetime | value_num | value_orderby)
         # List of values (I do not check the homogeneity of the types of values,
         # query builder will do it somehow)
-        valueList = Group(value + OneOrMore(Suppress(',') + value) + Optional(
-            Suppress(',')))
+        value_list = Group(value + OneOrMore(Suppress(',') + value) + Optional(Suppress(',')))
 
         # Fields
-        singleField = Group(key + operator + value)
-        listField = Group(
-            key + (Literal('=in=') | Literal('=notin=')) + valueList)
-        orderbyField = Group(key + Literal('=') + valueList)
-        Field = (listField | orderbyField | singleField)
+        single_field = Group(key + operator + value)
+        list_field = Group(key + (Literal('=in=') | Literal('=notin=')) + value_list)
+        orderby_field = Group(key + Literal('=') + value_list)
+        field = (list_field | orderby_field | single_field)
 
         # Fields separator
         separator = Suppress(Literal('&'))
 
         # General query string
-        generalGrammar = SS() + Optional(Field) + ZeroOrMore(
-            separator + Field) + \
-                         Optional(separator) + SE()
+        general_grammar = SS() + Optional(field) + ZeroOrMore(
+            separator + field) + \
+                          Optional(separator) + SE()
 
         ## Parse the query string
         try:
-            fields = generalGrammar.parseString(query_string)
+            fields = general_grammar.parseString(query_string)
 
             # JQuery adds _=timestamp a parameter to not use cached data/response.
             # To handle query, remove this "_" parameter from the query string
             # For more details check issue #789
-            # (https://github.com/aiidateam/aiida_core/issues/789) in aiida_core
-            field_list = [entry for entry in fields.asList() if entry[0] != "_"]
+            # (https://github.com/aiidateam/aiida-core/issues/789) in aiida-core
+            field_list = [entry for entry in fields.asList() if entry[0] != '_']
 
-        except ParseException as e:
+        except ParseException as err:
             raise RestInputValidationError(
-                "The query string format is invalid. "
+                'The query string format is invalid. '
                 "Parser returned this massage: \"{"
                 "}.\" Please notice that the column "
-                "number "
-                "is counted from "
-                "the first character of the query "
-                "string.".format(e))
+                'number '
+                'is counted from '
+                'the first character of the query '
+                'string.'.format(err)
+            )
 
         ## return the translator instructions elaborated from the field_list
         return self.build_translator_parameters(field_list)
@@ -901,17 +836,16 @@ class Utils(object):
 
 def list_routes():
     """List available routes"""
-    import urllib
-    from flask import current_app, url_for
+    from six.moves import urllib
+    from flask import current_app
 
     output = []
     for rule in current_app.url_map.iter_rules():
-        if rule.endpoint is "static":
+        if rule.endpoint == 'static':
             continue
 
         methods = ','.join(rule.methods)
-        line = urllib.unquote("{:15s} {:20s} {}".format(rule.endpoint, methods, rule))
+        line = urllib.parse.unquote('{:15s} {:20s} {}'.format(rule.endpoint, methods, rule))
         output.append(line)
 
     return sorted(set(output))
-    

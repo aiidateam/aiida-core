@@ -6,6 +6,9 @@ ignore-paths:
     - test
     - utils
 
+pylint:
+  run: true
+
 pyflakes:
   run: false
 

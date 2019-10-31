@@ -1,63 +1,79 @@
-This file lists the authors of the AiiDA code (i.e., the members of the AiiDA team)
+This file lists the authors of the AiiDA code (i.e. the members of the AiiDA team)
 as well as the known contributors to the code.
 
 The current members of the AiiDA team are, in alphabetical order:
 #################################################################
-* Casper Andersen
-* Oscar Arbelaez
-* Marco Borelli
+* Carl S. Adorf
+* Casper W. Andersen
 * Sebastiaan P. Huber
-* Conrad Johnston
 * Leonid Kahle
-* Boris Kozinsky
 * Snehal Kumbhar
 * Nicola Marzari
-* Andrius Merkys
 * Elsa Passaro
 * Giovanni Pizzi
+* Francisco F. Ramirez
 * Leopold Talirz
 * Aliaksandr Yakutovich
-* Spyros Zoupanos
 
 
 Former members of the AiiDA team
 ################################
+* Spyros Zoupanos (2015-2019)
+* Conrad Johnston (2018-2019)
 * Martin Uhrin (2015-2019)
 * Rico Häuselmann (2016-2018)
 * Nicolas Mounet (2015-2018)
-* Andrea Cepellotti (2012-2016)
 * Fernando Gargiulo (2016-2017)
+* Andrius Merkys (2015-2017)
+* Andrea Cepellotti (2012-2016)
+* Boris Kozinsky (2012-2016)
 * Riccardo Sabatini (2013-2015)
 
 
 Contributors
 ############
-We would like to thank the following people for their contibution 
-(beside generic comments and bugfixes):
+We would like to thank the following people for their major contibutions:
 
-* Valentin Bersier (EPFL, Switzerland): for the early version of the 
-  AiiDA web interface
-* Jocelyn Boullier (EPFL, Switzerland): for the first version of the 
-  SQLAlchemy implementation
-* Jens Bröder: (FZ Jülich, Germany) contributions to the workflow engine
-* Marco Dorigo (ICAMS, Germany): for the SGE scheduler plugin
-* Marco Gibertini: for the Quantum ESPRESSO plugin for the NEB code and 
-  the extension of the PW plugin to the ENVIRON code
 * Dominik Gresch (ETHZ): for the caching mechanism and contributions to the workflow engine
-* Eric Hontz (MIT, USA): for the Quantum Espresso pwimmigrant plugin
-* Daniel Marchand (EPFL, Switzerland): for the Quantum ESPRESSO plugins 
-  for PP, PROJWFC, and the first version of the Wannier90 plugin
-* Tiziano Müller (ETHZ, Switzerland): for the first implementation of 
-  the new plugin system (developed in 2017)
-* Phillippe Schwaller (EPFL, Switzerland): for the ICSD importer
+* Tiziano Müller (ETHZ, Switzerland): for the first implementation of
+  the new plugin system (developed in 2017) and making the code python 3 compatibl
 
 And the following people for general improvements to the code, fixing bugs,
 corrections and improvements to the documentation and useful suggestions:
 
-Ivano E. Castelli, Ian Lee, Gianluca Prandini, Jianxing Huang, Antimo Marrazzo,
-Nicola Varini, Mario Zic, Vladimir Dikan, Michael Atambo, Ole Schütt, Y.-W. Fang, Philipp Rüßmann, Bonan Zhu, Philipp Rüßmann, Keija Cui, Daniel Hollas, Jianxing Huang
+* Oscar Arbelaez
+* Michael Atambo
+* Valentin Bersier
+* Marco Borelli
+* Jocelyn Boullier
+* Jens Bröder
+* Ivano E. Castelli
+* Keija Cui
+* Vladimir Dikan
+* Marco Dorigo
+* Y.-W. Fang
+* Marco Gibertini
+* Daniel Hollas
+* Eric Hontz
+* Jianxing Huang
+* Espen Flage Larsen
+* Ian Lee
+* Daniel Marchand
+* Antimo Marrazzo
+* Simon Pintarelli
+* Gianluca Prandini
+* Philipp Rüßmann
+* Philippe Schwaller
+* Ole Schütt
+* Chris Sewell
+* Andreas Stamminger
+* Atsushi Togo
+* Daniele Tomerini
+* Nicola Varini
+* Jason Yu
+* Bonan Zhu
+* Mario Zic
 
 ---
 
-Please, don't hesitate to contact the AiiDA team if you see that 
-information is wrong or missing in this file.
+Please, don't hesitate to contact the AiiDA team if you see that information is wrong or missing in this file.

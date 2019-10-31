@@ -3,7 +3,7 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
@@ -14,6 +14,9 @@ Revises: 89176227b25
 Create Date: 2018-02-21 22:00:43.460534
 
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 from alembic import op
 from sqlalchemy.sql import text
 

@@ -3,14 +3,20 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
+import six
+from six.moves import filter
+
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
-
 
 
 class MpodDbImporter(DbImporter):
@@ -22,10 +28,10 @@ class MpodDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, basestring) and not isinstance(values, int):
+        if not isinstance(values, six.string_types) and not isinstance(values, int):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
-        return "{}={}".format(key, values)
+        return '{}={}'.format(key, values)
 
     _keywords = {'phase_name': ['phase_name', _str_clause],
                  'formula': ['formula', _str_clause],
@@ -34,7 +40,7 @@ class MpodDbImporter(DbImporter):
                  'authors': ['publ_author', _str_clause]}
 
     def __init__(self, **kwargs):
-        self._query_url = "http://mpod.cimav.edu.mx/data/search/"
+        self._query_url = 'http://mpod.cimav.edu.mx/data/search/'
         self.setup_db(**kwargs)
 
     def query_get(self, **kwargs):
@@ -45,8 +51,8 @@ class MpodDbImporter(DbImporter):
         :return: a list containing strings for HTTP GET statement.
         """
         if 'formula' in kwargs.keys() and 'element' in kwargs.keys():
-            raise ValueError("can not query both formula and elements "
-                             "in MPOD")
+            raise ValueError('can not query both formula and elements '
+                             'in MPOD')
 
         elements = []
         if 'element' in kwargs.keys():
@@ -67,15 +73,15 @@ class MpodDbImporter(DbImporter):
         if kwargs.keys():
             raise NotImplementedError("search keyword(s) '"
                                       "', '".join(kwargs.keys()) + "' "
-                                                                   "is(are) not implemented for MPOD")
+                                                                   'is(are) not implemented for MPOD')
 
         queries = []
         for e in elements:
             queries.append(self._query_url + '?' +
-                           "&".join(get_parts +
+                           '&'.join(get_parts +
                                     [self._str_clause('formula', 'element', e)]))
         if not queries:
-            queries.append(self._query_url + '?' + "&".join(get_parts))
+            queries.append(self._query_url + '?' + '&'.join(get_parts))
 
         return queries
 
@@ -87,20 +93,20 @@ class MpodDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodSearchResults`.
         """
-        import urllib2
+        from six.moves import urllib
         import re
 
         query_statements = self.query_get(**kwargs)
         results = None
         for query in query_statements:
-            response = urllib2.urlopen(query).read()
-            this_results = re.findall("/datafiles/(\d+)\.mpod", response)
+            response = urllib.request.urlopen(query).read()
+            this_results = re.findall('/datafiles/(\d+)\.mpod', response)
             if results is None:
                 results = this_results
             else:
-                results = filter(set(results).__contains__, this_results)
+                results = list(filter(set(results).__contains__, this_results))
 
-        return MpodSearchResults([{"id": x} for x in results])
+        return MpodSearchResults([{'id': x} for x in results])
 
     def setup_db(self, query_url=None, **kwargs):
         """
@@ -128,7 +134,7 @@ class MpodSearchResults(DbSearchResults):
     """
     Results of the search, performed on MPOD.
     """
-    _base_url = "http://mpod.cimav.edu.mx/datafiles/"
+    _base_url = 'http://mpod.cimav.edu.mx/datafiles/'
 
     def __init__(self, results):
         super(MpodSearchResults, self).__init__(results)
@@ -152,7 +158,7 @@ class MpodSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return self._base_url + result_dict['id'] + ".mpod"
+        return self._base_url + result_dict['id'] + '.mpod'
 
 
 class MpodEntry(CifEntry):

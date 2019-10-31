@@ -3,180 +3,162 @@
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
-# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Utilities for the implementation of the SqlAlchemy backend."""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
+import contextlib
+
+# pylint: disable=import-error,no-name-in-module
 from sqlalchemy import inspect
-from sqlalchemy.orm.mapper import Mapper
-from sqlalchemy.types import Integer, Boolean
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.attributes import flag_modified
 
-__all__ = ['django_filter', 'get_attr']
+from aiida.backends.sqlalchemy import get_scoped_session
+from aiida.common import exceptions
 
-
-def iter_dict(attrs):
-    if isinstance(attrs, dict):
-        for key in sorted(attrs.iterkeys()):
-            it = iter_dict(attrs[key])
-            for k, v in it:
-                new_key = key
-                if k:
-                    new_key += "." + str(k)
-                yield new_key, v
-    elif isinstance(attrs, list):
-        for i, val in enumerate(attrs):
-            it = iter_dict(val)
-            for k, v in it:
-                new_key = str(i)
-                if k:
-                    new_key += "." + str(k)
-                yield new_key, v
-    else:
-        yield "", attrs
+IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid'}
 
 
-def get_attr(attrs, key):
-    path = key.split('.')
+class ModelWrapper(object):
+    """Wrap a database model instance to correctly update and flush the data model when getting or setting a field.
 
-    d = attrs
-    for p in path:
-        if p.isdigit():
-            p = int(p)
-        # Let it raise the appropriate exception
-        d = d[p]
+    If the model is not stored, the behavior of the get and set attributes is unaltered. However, if the model is
+    stored, which is to say, it has a primary key, the `getattr` and `setattr` are modified as follows:
 
-    return d
+    * `getattr`: if the item corresponds to a mutable model field, the model instance is refreshed first
+    * `setattr`: if the item corresponds to a mutable model field, changes are flushed after performing the change
+    """
 
+    # pylint: disable=too-many-instance-attributes
 
-def _create_op_func(op):
-    def f(attr, val):
-        return getattr(attr, op)(val)
+    def __init__(self, model, auto_flush=()):
+        """Construct the ModelWrapper.
 
-    return f
+        :param model: the database model instance to wrap
+        :param auto_flush: an optional tuple of database model fields that are always to be flushed, in addition to
+            the field that corresponds to the attribute being set through `__setattr__`.
+        """
+        super(ModelWrapper, self).__init__()
+        # Have to do it this way because we overwrite __setattr__
+        object.__setattr__(self, '_model', model)
+        object.__setattr__(self, '_auto_flush', auto_flush)
 
+    def __getattr__(self, item):
+        """Get an attribute of the model instance.
 
-_from_op = {
-    'in': _create_op_func('in_'),
-    'gte': _create_op_func('__ge__'),
-    'gt': _create_op_func('__gt__'),
-    'lte': _create_op_func('__le__'),
-    'lt': _create_op_func('__lt__'),
-    'eq': _create_op_func('__eq__'),
-    'startswith': lambda attr, val: attr.like('{}%'.format(val)),
-    'contains': lambda attr, val: attr.like('%{}%'.format(val)),
-    'endswith': lambda attr, val: attr.like('%{}'.format(val)),
-    'istartswith': lambda attr, val: attr.ilike('{}%'.format(val)),
-    'icontains': lambda attr, val: attr.ilike('%{}%'.format(val)),
-    'iendswith': lambda attr, val: attr.ilike('%{}'.format(val))
-}
+        If the model is saved in the database, the item corresponds to a mutable model field and the current scope is
+        not in an open database connection, then the field's value is first refreshed from the database.
 
+        :param item: the name of the model field
+        :return: the value of the model's attribute
+        """
+        # Python 3's implementation of copy.copy does not call __init__ on the new object
+        # but manually restores attributes instead. Make sure we never get into a recursive
+        # loop by protecting the only special variable here: _model
+        if item == '_model':
+            raise AttributeError()
 
-def django_filter(cls_query, **kwargs):
-    # Pass the query object you want to use.
-    # This also assume a AND between each arguments
+        if self.is_saved() and self._is_mutable_model_field(item) and not self._in_transaction():
+            self._ensure_model_uptodate(fields=(item,))
 
-    cls = inspect(cls_query)._entity_zero().type
-    q = cls_query
+        return getattr(self._model, item)
 
-    # We regroup all the filter on a relationship at the same place, so that
-    # when a join is done, we can filter it, and then reset to the original
-    # query.
-    current_join = None
+    def __setattr__(self, key, value):
+        """Set the attribute on the model instance.
 
-    tmp_attr = dict(key=None, val=None)
-    tmp_extra = dict(key=None, val=None)
+        If the field being set is a mutable model field and the model is saved, the changes are flushed.
 
-    for key in sorted(kwargs.iterkeys()):
-        val = kwargs[key]
+        :param key: the name of the model field
+        :param value: the value to set
+        """
+        setattr(self._model, key, value)
+        if self.is_saved() and self._is_mutable_model_field(key):
+            fields = set((key,) + self._auto_flush)
+            self._flush(fields=fields)
 
-        join, field, op = [None] * 3
+    def is_saved(self):
+        """Retun whether the wrapped model instance is saved in the database.
 
-        splits = key.split("__")
-        if len(splits) > 3:
-            raise ValueError("Too many parameters to handle.")
-        # something like "computer__id__in"
-        elif len(splits) == 3:
-            join, field, op = splits
-        # we have either "computer__id", which means join + field quality or
-        # "id__gte" which means field + op
-        elif len(splits) == 2:
-            if splits[1] in _from_op.iterkeys():
-                field, op = splits
-            else:
-                join, field = splits
-        else:
-            field = splits[0]
+        :return: boolean, True if the model is saved in the database, False otherwise
+        """
+        return self._model.id is not None
 
-        if "dbattributes" == join:
-            if "val" in field:
-                field = "val"
-            if field in ["key", "val"]:
-                tmp_attr[field] = val
-            continue
-        elif "dbextras" == join:
-            if "val" in field:
-                field = "val"
-            if field in ["key", "val"]:
-                tmp_extra[field] = val
-            continue
+    def save(self):
+        """Store the model instance.
 
-        current_cls = cls
-        if join:
-            if current_join != join:
-                q = q.join(join, aliased=True)
-                current_join = join
+        .. note:: If one is currently in a transaction, this method is a no-op.
 
-            current_cls = filter(lambda r: r[0] == join,
-                                 inspect(cls).relationships.items()
-                                 )[0][1].argument
-            if isinstance(current_cls, Mapper):
-                current_cls = current_cls.class_
-            else:
-                current_cls = current_cls()
+        :raises `aiida.common.IntegrityError`: if a database integrity error is raised during the save.
+        """
+        try:
+            commit = not self._in_transaction()
+            self._model.save(commit=commit)
+        except IntegrityError as exception:
+            self._model.session.rollback()
+            raise exceptions.IntegrityError(str(exception))
 
-        else:
-            if current_join is not None:
-                # Filter on the queried class again
-                q = q.reset_joinpoint()
-                current_join = None
+    def _is_mutable_model_field(self, field):
+        """Return whether the field is a mutable field of the model.
 
-        if field == "pk":
-            field = "id"
+        :return: boolean, True if the field is a model field and is not in the `IMMUTABLE_MODEL_FIELDS` set.
+        """
+        if field in IMMUTABLE_MODEL_FIELDS:
+            return False
 
-        filtered_field = getattr(current_cls, field)
-        if not op:
-            op = "eq"
-        f = _from_op[op]
+        return self._is_model_field(field)
 
-        q = q.filter(f(filtered_field, val))
+    def _is_model_field(self, field):
+        """Return whether the field is a field of the model.
 
-    # We reset one last time
-    q.reset_joinpoint()
+        :return: boolean, True if the field is a model field, False otherwise.
+        """
+        return inspect(self._model.__class__).has_property(field)
 
-    key = tmp_attr["key"]
-    if key:
-        val = tmp_attr["val"]
-        if val:
-            q = q.filter(apply_json_cast(cls.attributes[key], val) == val)
-        else:
-            q = q.filter(cls.attributes.has_key(tmp_attr["key"]))
-    key = tmp_extra["key"]
-    if key:
-        val = tmp_extra["val"]
-        if val:
-            q = q.filter(apply_json_cast(cls.extras[key], val) == val)
-        else:
-            q = q.filter(cls.extras.has_key(tmp_extra["key"]))
+    def _flush(self, fields=()):
+        """Flush the fields of the model to the database.
 
-    return q
+        .. note:: If the wrapped model is not actually save in the database yet, this method is a no-op.
+
+        :param fields: the model fields whose currently value to flush to the database
+        """
+        if self.is_saved():
+            for field in fields:
+                flag_modified(self._model, field)
+
+            self.save()
+
+    def _ensure_model_uptodate(self, fields=None):
+        """Refresh all fields of the wrapped model instance by fetching the current state of the database instance.
+
+        :param fields: optionally refresh only these fields, if `None` all fields are refreshed.
+        """
+        self._model.session.expire(self._model, attribute_names=fields)
+
+    @staticmethod
+    def _in_transaction():
+        """Return whether the current scope is within an open database transaction.
+
+        :return: boolean, True if currently in open transaction, False otherwise.
+        """
+        return get_scoped_session().transaction.nested
 
 
-def apply_json_cast(attr, val):
-    if isinstance(val, basestring):
-        attr = attr.astext
-    if isinstance(val, int) or isinstance(val, long):
-        attr = attr.astext.cast(Integer)
-    if isinstance(val, bool):
-        attr = attr.astext.cast(Boolean)
+@contextlib.contextmanager
+def disable_expire_on_commit(session):
+    """Context manager that disables expire_on_commit and restores the original value on exit
 
-    return attr
+    :param session: The SQLA session
+    :type session: :class:`sqlalchemy.orm.session.Session`
+    """
+    current_value = session.expire_on_commit
+    session.expire_on_commit = False
+    try:
+        yield session
+    finally:
+        session.expire_on_commit = current_value

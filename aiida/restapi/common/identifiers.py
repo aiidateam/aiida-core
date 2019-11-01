@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Utility functions to work with node "full types" which are unique node identifiers.
 
 A node's `full_type` is defined as a string that uniquely defines the node type. A valid `full_type` is constructed by
@@ -23,6 +31,8 @@ Examples of invalid full types:
     'process.calculation%.calcfunction.%|aiida.calculations:arithmetic.add'  # More than one operator in segment
 
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 
 import collections

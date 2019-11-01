@@ -21,6 +21,9 @@ from aiida.manage import configuration
 
 AIIDA_ATTRIBUTE_SEP = '.'
 
+SCHEMA_GENERATION_KEY = 'schema_generation'
+SCHEMA_GENERATION_VALUE = '1'
+
 
 Setting = collections.namedtuple('Setting', ['key', 'value', 'description', 'time'])
 
@@ -66,6 +69,32 @@ def get_settings_manager():
         raise Exception('unknown backend type `{}`'.format(configuration.PROFILE.database_backend))
 
     return manager
+
+
+def validate_schema_generation():
+    """Verify that the database schema generation is compatible with the current code schema generation."""
+    from aiida.common.exceptions import ConfigurationError, NotExistent
+    try:
+        schema_generation_database = get_db_schema_generation().value
+    except NotExistent:
+        schema_generation_database = '1'
+
+    if schema_generation_database is None:
+        schema_generation_database = '1'
+
+    if schema_generation_database != SCHEMA_GENERATION_VALUE:
+        raise ConfigurationError(
+            'The schema generation of your database {} is newer than that of the code `{}` and is incompatible.'.format(
+                schema_generation_database, SCHEMA_GENERATION_VALUE
+            )
+        )
+
+
+def get_db_schema_generation():
+    """Get the schema generation of the current database."""
+    from aiida.backends.utils import get_settings_manager
+    manager = get_settings_manager()
+    return manager.get(SCHEMA_GENERATION_KEY)
 
 
 def validate_attribute_key(key):

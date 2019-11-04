@@ -115,6 +115,12 @@ which leads through the installation process and takes care of creating the corr
 For maximum control and customizability, one can use ``verdi setup``
 and set up the database manually as explained below.
 
+.. note:: If you get the message ``Warning: Found host 'localhost' but dropping '-h localhost'`` which ask for a password and then abort, you need to install 
+  the ``postgresql`` package::
+
+    sudo apt-get install postgresql
+
+
 .. _database:
 
 Database setup

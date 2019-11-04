@@ -168,15 +168,15 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
             data_node = load_node(uuid=uuid)
         except exceptions.NotExistent:
             logger.warning('failed to load Node<{}> specified in the `local_copy_list`'.format(uuid))
-
-        # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
-        # combination with the new `Transport.put_object_from_filelike`
-        # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
-        with NamedTemporaryFile(mode='wb+') as handle:
-            handle.write(data_node.get_object_content(filename, mode='rb'))
-            handle.flush()
-            handle.seek(0)
-            transport.put(handle.name, target)
+        finally:
+            # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
+            # combination with the new `Transport.put_object_from_filelike`
+            # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
+            with NamedTemporaryFile(mode='wb+') as handle:
+                handle.write(data_node.get_object_content(filename, mode='rb'))
+                handle.flush()
+                handle.seek(0)
+                transport.put(handle.name, target)
 
     if dry_run:
         if remote_copy_list:

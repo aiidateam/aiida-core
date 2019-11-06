@@ -115,6 +115,8 @@ py:exc    click.UsageError
 py:class  click.ParamType
 py:class  click.core.Group
 py:class  click.core.Option
+py:class  click.Command
+py:class  click.Group
 py:class  click.Option
 py:class  click.types.ParamType
 py:class  click.types.Choice

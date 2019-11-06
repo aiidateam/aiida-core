@@ -16,7 +16,7 @@ from __future__ import absolute_import
 import os
 import django
 
-from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting
+from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting, validate_schema_generation
 from aiida.common import NotExistent
 
 SCHEMA_VERSION_DB_KEY = 'db|schemaversion'
@@ -121,6 +121,7 @@ _aiida_autouser_cache = None  # pylint: disable=invalid-name
 
 def migrate_database():
     """Migrate the database to the latest schema version."""
+    validate_schema_generation()
     from django.core.management import call_command
     call_command('migrate')
 
@@ -150,6 +151,8 @@ def check_schema_version(profile_name):
     # Do not do anything if the table does not exist yet
     if 'db_dbsetting' not in connection.introspection.table_names():
         return
+
+    validate_schema_generation()
 
     code_schema_version = aiida.backends.djsite.db.models.SCHEMA_VERSION
     db_schema_version = get_db_schema_version()

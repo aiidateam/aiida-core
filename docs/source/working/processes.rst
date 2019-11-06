@@ -1,8 +1,8 @@
 .. _working_processes:
 
-*********
-Processes
-*********
+***********
+Application
+***********
 
 Before you start working with processes, make sure you have read and understood the :ref:`basic concept<concepts_processes>`.
 This section will explain the aspects of working with processes that apply to all the various types of processes.

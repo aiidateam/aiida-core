@@ -896,7 +896,7 @@ class StructureData(Data):
         self.cell = struct.lattice.matrix.tolist()
         self.pbc = [True, True, True]
         self.clear_kinds()
- 
+
         required_pmg_version = parse_version('2019.3.13')
         current_pmg_version = parse_version(get_pymatgen_version())
         for site in struct.sites:

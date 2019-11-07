@@ -464,15 +464,19 @@ class CifData(SinglefileData):
 
         return super(CifData, self).store(*args, **kwargs)
 
-    def set_file(self, file):
+    def set_file(self, file, filename=None):
         """
         Set the file.
 
         If the source is set and the MD5 checksum of new file
         is different from the source, the source has to be deleted.
+
+       :param file: filepath or filelike object of the CIF file to store.
+            Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
+        :param filename: specify filename to use (defaults to name of provided file).
         """
         # pylint: disable=redefined-builtin
-        super(CifData, self).set_file(file)
+        super(CifData, self).set_file(file, filename=filename)
         md5sum = self.generate_md5()
         if isinstance(self.source, dict) and \
                 self.source.get('source_md5', None) is not None and \

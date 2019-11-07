@@ -25,20 +25,15 @@ __all__ = ('Data',)
 
 class Data(Node):
     """
-    This class is base class for all data objects.
+    The base class for all Data nodes.
 
-    Specifications of the Data class:
-    AiiDA Data objects are subclasses of Node and should have
-
-    Multiple inheritance must be supported, i.e. Data should have methods for
-    querying and be able to inherit other library objects such as ASE for
+    AiiDA Data classes are subclasses of Node and must support multiple inheritance,
+    i.e. Data nodes should have methods for querying and must be able to inherit other library objects such as ASE for
     structures.
 
     Architecture note:
-    The code plugin is responsible for converting a raw data object produced by
-    code to AiiDA standard object format. The data object then validates itself
-    according to its method. This is done independently in order to allow
-    cross-validation of plugins.
+    Calculation plugins are responsible for converting raw output data from simulation codes to Data nodes.
+    Data nodes are responsible for validating their content (see _validate method).
     """
     _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version', 'extras', 'source_md5', 'description', 'license']
 

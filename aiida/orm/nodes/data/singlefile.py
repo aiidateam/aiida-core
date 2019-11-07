@@ -26,16 +26,21 @@ class SinglefileData(Data):
 
     DEFAULT_FILENAME = 'file.txt'
 
-    def __init__(self, file, **kwargs):
+    def __init__(self, file, filename=None, **kwargs):
         """Construct a new instance and set the contents to that of the file.
 
         :param file: an absolute filepath or filelike object whose contents to copy.
             Hint: Pass io.BytesIO(b"my string") to construct the SinglefileData directly from a string.
+        :param filename: specify filename to use (defaults to name of provided file).
         """
         # pylint: disable=redefined-builtin
         super(SinglefileData, self).__init__(**kwargs)
         if file is not None:
-            self.set_file(file)
+            if filename is None:
+                # for backwards compatibility don't assume that set_file has a 'filename' argument
+                self.set_file(file)
+            else:
+                self.set_file(file, filename=filename)
 
     @property
     def filename(self):
@@ -65,11 +70,12 @@ class SinglefileData(Data):
         with self.open() as handle:
             return handle.read()
 
-    def set_file(self, file):
+    def set_file(self, file, filename=None):
         """Store the content of the file in the node's repository, deleting any other existing objects.
 
         :param file: an absolute filepath or filelike object whose contents to copy
             Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
+        :param filename: specify filename to use (defaults to name of provided file).
         """
         # pylint: disable=redefined-builtin
 
@@ -88,6 +94,8 @@ class SinglefileData(Data):
                 key = os.path.basename(file.name)
             except AttributeError:
                 key = self.DEFAULT_FILENAME
+
+        key = filename or key
 
         existing_object_names = self.list_object_names()
 

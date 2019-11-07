@@ -189,12 +189,12 @@ class Namespace(collections.MutableMapping):
     # plugins. The `node_type` in that case is fixed and the `process_type` should start with the entry point group
     # followed by the plugin name and the wildcard.
     process_full_type_mapping = {
-        'process.calculation.calcjob.': 'process.calculation.calcjob.CalcJobNode|aiida.calculations:{plugin_name}.%',
+        'process.calculation.calcjob.': 'process.calculation.calcjob.CalcJobNode.|aiida.calculations:{plugin_name}.%',
         'process.calculation.calcfunction.':
-        'process.calculation.calcfunction.CalcFunctionNode|aiida.calculations:{plugin_name}.%',
+        'process.calculation.calcfunction.CalcFunctionNode.|aiida.calculations:{plugin_name}.%',
         'process.workflow.workfunction.':
-        'process.workflow.workfunction.WorkFunctionNode|aiida.workflows:{plugin_name}.%',
-        'process.workflow.workchain.': 'process.workflow.workchain.WorkChainNode|aiida.workflows:{plugin_name}.%',
+        'process.workflow.workfunction.WorkFunctionNode.|aiida.workflows:{plugin_name}.%',
+        'process.workflow.workchain.': 'process.workflow.workchain.WorkChainNode.|aiida.workflows:{plugin_name}.%',
     }
 
     def __str__(self):

@@ -471,7 +471,7 @@ class CifData(SinglefileData):
         If the source is set and the MD5 checksum of new file
         is different from the source, the source has to be deleted.
 
-       :param file: filepath or filelike object of the CIF file to store.
+        :param file: filepath or filelike object of the CIF file to store.
             Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
         :param filename: specify filename to use (defaults to name of provided file).
         """

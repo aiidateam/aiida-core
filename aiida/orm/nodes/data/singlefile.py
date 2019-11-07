@@ -29,7 +29,8 @@ class SinglefileData(Data):
     def __init__(self, file, **kwargs):
         """Construct a new instance and set the contents to that of the file.
 
-        :param file: an absolute filepath or filelike object whose contents to copy
+        :param file: an absolute filepath or filelike object whose contents to copy.
+            Hint: Pass io.BytesIO(b"my string") to construct the SinglefileData directly from a string.
         """
         # pylint: disable=redefined-builtin
         super(SinglefileData, self).__init__(**kwargs)
@@ -68,7 +69,7 @@ class SinglefileData(Data):
         """Store the content of the file in the node's repository, deleting any other existing objects.
 
         :param file: an absolute filepath or filelike object whose contents to copy
-            Hint: Pass io.StringIO("my string") to construct the file directly from a string.
+            Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
         """
         # pylint: disable=redefined-builtin
 

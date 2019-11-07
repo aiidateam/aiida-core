@@ -1766,6 +1766,23 @@ class QueryBuilder(object):
             'offset': self._offset,
         })
 
+    @property
+    def queryhelp(self):
+        """queryhelp dictionary correspondig to QueryBuilder instance.
+
+        The queryhelp can be used to create a copy of the QueryBuilder instance like so::
+
+            qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
+            qb2=QueryBuilder(**qb.queryhelp)
+
+        :return: a queryhelp dictionary
+        """
+        return self.get_json_compatible_queryhelp()
+
+    def __deepcopy__(self, memodict={}):
+        qb = type(self)(**self.queryhelp)
+        return qb
+
     def _build_order(self, alias, entitytag, entityspec):
         """
         Build the order parameter of the query

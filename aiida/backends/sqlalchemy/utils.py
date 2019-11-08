@@ -20,7 +20,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy import get_scoped_session
-from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting
+from aiida.backends.utils import validate_attribute_key, SettingsManager, Setting, validate_schema_generation
 from aiida.common import NotExistent
 
 
@@ -347,6 +347,7 @@ def migrate_database(alembic_cfg=None):
 
     :param config: alembic configuration to use, will use default if not provided
     """
+    validate_schema_generation()
     from aiida.backends import sqlalchemy as sa
 
     if alembic_cfg is None:
@@ -367,6 +368,8 @@ def check_schema_version(profile_name):
     from aiida.common.exceptions import ConfigurationError
 
     alembic_cfg = get_alembic_conf()
+
+    validate_schema_generation()
 
     # Getting the version of the code and the database, reusing the existing engine (initialized by AiiDA)
     with sa.ENGINE.begin() as connection:

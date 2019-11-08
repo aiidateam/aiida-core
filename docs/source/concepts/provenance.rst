@@ -1,9 +1,5 @@
 .. _concepts_provenance:
 
-**********
-Provenance
-**********
-
 Graph concept
 =============
 

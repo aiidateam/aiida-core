@@ -1,3 +1,18 @@
+.. _get_started:
+
+===============
+Getting started
+===============
+
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+
+    ../get_started/index
+    ../get_started/computers
+    ../get_started/codes
+
+
 ======================
 Command line interface
 ======================
@@ -27,6 +42,7 @@ Before checking out the individual commands below, start with a brief look at th
 * :ref:`export<verdi_export>`:  Create and manage export archives.
 * :ref:`graph<verdi_graph>`:  Create visual representations of the provenance graph.
 * :ref:`group<verdi_group>`:  Create, inspect and manage groups of nodes.
+* :ref:`help<verdi_help>`:  Show help for given command.
 * :ref:`import<verdi_import>`:  Import data from an AiiDA archive file.
 * :ref:`node<verdi_node>`:  Inspect, create and manage nodes.
 * :ref:`plugin<verdi_plugin>`:  Inspect AiiDA plugins.
@@ -45,32 +61,25 @@ Before checking out the individual commands below, start with a brief look at th
 
 
 
-==========
-Python API
-==========
+================
+Python interface
+================
+
+While the ``verdi`` CLI provides shortcuts for many common tasks, the AiiDA python API provides full access to the underlying AiiDA python objects and their methods.
+This is possible via the interactive ``verdi shell`` and via python scripts:
+
 
 .. toctree::
     :maxdepth: 4
 
     python_api
-
-
-=========
-Scripting
-=========
-
-While the ``verdi`` CLI provides shortcuts for many common tasks, the AiiDA python API provides full access to the underlying AiiDA python objects and their methods.
-This is possible via the interactive ``verdi shell`` and via python scripts:
-
-.. toctree::
-    :maxdepth: 4
-
     scripting
     daemon_service
 
+===========
+Manage data
+===========
 
-
-==========
 Data types
 ==========
 
@@ -82,7 +91,6 @@ Data types
     ../datatypes/bands
     ../datatypes/functionality
 
-======
 Groups
 ======
 
@@ -91,20 +99,6 @@ Groups
 
     groups
 
-==========
-Schedulers
-==========
-
-As described in the section about calculations, ``CalcJobNode`` instances are submitted by the daemon to an external scheduler.
-For this functionality to work, AiiDA needs to be able to interact with these schedulers.
-Interfaces have been written for some of the most used schedulers.
-
-.. toctree::
-    :maxdepth: 4
-
-    ../scheduler/index
-
-=============
 Querying data
 =============
 
@@ -116,6 +110,45 @@ Querying data
     ../querying/querybuilder/queryhelp
     ../querying/backend
 
+Result manager
+==============
+
+.. toctree::
+    :maxdepth: 4
+
+    resultmanager.rst
+
+Deleting Nodes
+==============
+.. toctree::
+    :maxdepth: 2
+
+    deleting_nodes.rst
+
+Provenance Graphs
+=================
+.. toctree::
+    :maxdepth: 2
+
+    visualising_graphs/visualising_graphs
+
+Backups
+=======
+
+.. toctree::
+    :maxdepth: 4
+
+    ../backup/index.rst
+
+Import and Export
+=================
+
+.. toctree::
+    :maxdepth: 4
+
+    ../import_export/main
+    ../import_export/external_dbs
+
 =======
 Caching
 =======
@@ -125,24 +158,19 @@ Caching
 
     caching.rst
 
-==============
-Result manager
-==============
+
+==========
+Schedulers
+==========
+
+Instances of ``CalcJobNode`` instances are submitted by the daemon to an external scheduler.
+For this functionality to work, AiiDA needs to be able to interact with these schedulers.
+Interfaces have been written for some of the most used schedulers.
 
 .. toctree::
     :maxdepth: 4
 
-    resultmanager.rst
-
-
-=======
-Backups
-=======
-
-.. toctree::
-    :maxdepth: 4
-
-    ../backup/index.rst
+    ../scheduler/index
 
 ===============
 Troubleshooting
@@ -154,15 +182,6 @@ Troubleshooting
     troubleshooting.rst
 
 ========
-REST API
-========
-
-.. toctree::
-    :maxdepth: 4
-
-    ../restapi/index.rst
-
-========
 Cookbook
 ========
 
@@ -170,21 +189,4 @@ Cookbook
     :maxdepth: 4
 
     cookbook.rst
-
-=================
-Provenance Graphs
-=================
-.. toctree::
-    :maxdepth: 2
-
-    visualising_graphs/visualising_graphs
-
-
-==============
-Deleting Nodes
-==============
-.. toctree::
-    :maxdepth: 2
-
-    deleting_nodes.rst
 

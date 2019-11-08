@@ -1710,32 +1710,6 @@ class QueryBuilder(object):
                                                    self.tag_to_alias_map.keys()))
         return returnval
 
-    def _get_json_compatible(self, inp):
-        """
-
-        :param inp:
-            The input value that will be converted.
-            Recurses into each value if **inp** is an iterable.
-        """
-        from aiida import orm
-
-        if isinstance(inp, dict):
-            for key, val in inp.items():
-                inp[self._get_json_compatible(key)] = self._get_json_compatible(inp.pop(key))
-        elif isinstance(inp, (list, tuple)):
-            inp = [self._get_json_compatible(val) for val in inp]
-        elif inspect_isclass(inp):
-            if issubclass(inp, self.AiidaNode):
-                return '.'.join(inp._plugin_type_string.strip('.').split('.')[:-1])
-            elif issubclass(inp, orm.Group):
-                return 'group'
-            else:
-                raise InputValidationError
-        else:
-            raise ValueError('unsupported type {} for input value'.format(type(inp)))
-
-        return inp
-
     def get_json_compatible_queryhelp(self):
         """
         Makes the queryhelp a json-compatible dictionary.
@@ -1920,51 +1894,6 @@ class QueryBuilder(object):
         ######################### DONE #################################
 
         return self._query
-
-    def except_if_input_to(self, calc_class):
-        """
-        Makes counterquery based on the own path, only selecting
-        entries that have been input to *calc_class*
-
-        :param calc_class: The calculation class to check against
-
-        :returns: self
-        """
-
-        def build_counterquery(calc_class):
-            if issubclass(calc_class, self.Node):
-                orm_calc_class = calc_class
-                type_spec = None
-            elif issubclass(calc_class, self.AiidaNode):
-                orm_calc_class = self.Node
-                type_spec = calc_class._plugin_type_string
-            else:
-                raise Exception('You have given me {}\n'
-                                'of type {}\n'
-                                "and I don't know what to do with that"
-                                ''.format(calc_class, type(calc_class)))
-
-            input_alias_list = []
-            for node in self._path:
-                tag = node['tag']
-                requested_cols = [key for item in self._projections[tag] for key in item.keys()]
-                if '*' in requested_cols:
-                    input_alias_list.append(aliased(self.tag_to_alias_map[tag]))
-
-            counterquery = self._imp._get_session().query(orm_calc_class)
-            if type_spec:
-                counterquery = counterquery.filter(orm_calc_class.entity_type == type_spec)
-            for alias in input_alias_list:
-                link = aliased(self.Link)
-                counterquery = counterquery.join(link, orm_calc_class.id == link.output_id).join(
-                    alias, alias.id == link.input_id)
-                counterquery = counterquery.add_entity(alias)
-            counterquery._entities.pop(0)
-            return counterquery
-
-        self._query = self.get_query()
-        self._query = self._query.except_(build_counterquery(calc_class))
-        return self
 
     def get_aliases(self):
         """

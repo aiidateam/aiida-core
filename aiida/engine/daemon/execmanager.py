@@ -25,7 +25,7 @@ from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.orm import FolderData
+from aiida.orm import FolderData, Node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.plugins import DataFactory
 from aiida.schedulers.datastructures import JobState
@@ -35,7 +35,7 @@ REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 execlogger = AIIDA_LOGGER.getChild('execmanager')
 
 
-def upload_calculation(node, transport, calc_info, script_filename, dry_run=False):
+def upload_calculation(node, transport, calc_info, script_filename, inputs=None, dry_run=False):
     """Upload a `CalcJob` instance
 
     :param node: the `CalcJobNode`.
@@ -162,21 +162,44 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
     remote_symlink_list = calc_info.remote_symlink_list or []
 
     for uuid, filename, target in local_copy_list:
-        logger.debug('[submission of calculation {}] copying local file/folder to {}'.format(node.pk, target))
+        logger.debug('[submission of calculation {}] copying local file/folder to {}'.format(node.uuid, target))
+
+        def find_data_node(inputs, uuid):
+            """Find and return the node with the given UUID from a nested mapping of input nodes.
+
+            :param inputs: (nested) mapping of nodes
+            :param uuid: UUID of the node to find
+            :return: instance of `Node` or `None` if not found
+            """
+            from collections import Mapping
+            data_node = None
+
+            for link_label, input_node in inputs.items():
+                if isinstance(input_node, Mapping):
+                    data_node = find_data_node(input_node, uuid)
+                elif isinstance(input_node, Node) and input_node.uuid == uuid:
+                    data_node = input_node
+                if data_node is not None:
+                    break
+
+            return data_node
 
         try:
             data_node = load_node(uuid=uuid)
         except exceptions.NotExistent:
-            logger.warning('failed to load Node<{}> specified in the `local_copy_list`'.format(uuid))
+            data_node = find_data_node(inputs, uuid)
 
-        # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
-        # combination with the new `Transport.put_object_from_filelike`
-        # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
-        with NamedTemporaryFile(mode='wb+') as handle:
-            handle.write(data_node.get_object_content(filename, mode='rb'))
-            handle.flush()
-            handle.seek(0)
-            transport.put(handle.name, target)
+        if data_node is None:
+            logger.warning('failed to load Node<{}> specified in the `local_copy_list`'.format(uuid))
+        else:
+            # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
+            # combination with the new `Transport.put_object_from_filelike`
+            # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
+            with NamedTemporaryFile(mode='wb+') as handle:
+                handle.write(data_node.get_object_content(filename, mode='rb'))
+                handle.flush()
+                handle.seek(0)
+                transport.put(handle.name, target)
 
     if dry_run:
         if remote_copy_list:

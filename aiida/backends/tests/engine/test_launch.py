@@ -14,12 +14,37 @@ from __future__ import absolute_import
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
-from aiida.engine import launch, Process, WorkChain, calcfunction
+from aiida.engine import launch, Process, CalcJob, WorkChain, calcfunction
 
 
 @calcfunction
 def add(a, b):
     return a + b
+
+
+class FileCalcJob(CalcJob):
+
+    @classmethod
+    def define(cls, spec):
+        super(FileCalcJob, cls).define(spec)
+        spec.input('single_file', valid_type=orm.SinglefileData)
+        spec.input_namespace('files', valid_type=orm.SinglefileData, dynamic=True)
+
+    def prepare_for_submission(self, folder):
+        from aiida.common.datastructures import CalcInfo, CodeInfo
+
+        local_copy_list = [(self.inputs.single_file.uuid, self.inputs.single_file.filename, 'single_file')]
+
+        for name, node in self.inputs.files.items():
+            local_copy_list.append((node.uuid, node.filename, name))
+
+        codeinfo = CodeInfo()
+        codeinfo.code_uuid = self.inputs.code.uuid
+
+        calcinfo = CalcInfo()
+        calcinfo.codes_info = [codeinfo]
+        calcinfo.local_copy_list = local_copy_list
+        return calcinfo
 
 
 class AddWorkChain(WorkChain):
@@ -208,3 +233,46 @@ class TestLaunchersDryRun(AiidaTestCase):
         node = launch.submit(ArithmeticAddCalculation, **inputs)
         self.assertIsInstance(node, orm.CalcJobNode)
         self.assertFalse(node.is_stored)
+
+    def test_calcjob_dry_run_no_provenance(self):
+        """Test that dry run with `store_provenance=False` still works for unstored inputs.
+
+        The special thing about this test is that the unstored input nodes that will be used in the `local_copy_list`.
+        This was broken as the code in `upload_calculation` assumed that the nodes could be loaded through their UUID
+        which is not the case in the `store_provenance=False` mode with unstored nodes. Note that it also explicitly
+        tests nested namespaces as that is a non-trivial case.
+        """
+        import os
+        import tempfile
+
+        code = orm.Code(
+            input_plugin_name='arithmetic.add',
+            remote_computer_exec=[self.computer, '/bin/true']).store()
+
+        with tempfile.NamedTemporaryFile('w+') as handle:
+            handle.write('dummy_content')
+            handle.flush()
+            single_file = orm.SinglefileData(file=handle.name)
+            file_one = orm.SinglefileData(file=handle.name)
+            file_two = orm.SinglefileData(file=handle.name)
+
+        inputs = {
+            'code': code,
+            'single_file': single_file,
+            'files': {
+                'file_one': file_one,
+                'file_two': file_two,
+            },
+            'metadata': {
+                'dry_run': True,
+                'store_provenance': False,
+                'options': {
+                    'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+                }
+            }
+        }
+
+        result, node = launch.run_get_node(FileCalcJob, **inputs)
+        self.assertIn('folder', node.dry_run_info)
+        for filename in ['single_file', 'file_one', 'file_two']:
+            self.assertIn(filename, os.listdir(node.dry_run_info['folder']))

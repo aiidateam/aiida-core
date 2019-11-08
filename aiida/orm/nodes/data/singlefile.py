@@ -12,10 +12,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import warnings
 import os
 import six
 
 from aiida.common import exceptions
+from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common.lang import get_arg_spec
 from .data import Data
 
 __all__ = ('SinglefileData',)
@@ -35,9 +38,17 @@ class SinglefileData(Data):
         """
         # pylint: disable=redefined-builtin
         super(SinglefileData, self).__init__(**kwargs)
+
+        # 'filename' argument was added to 'set_file' after 1.0.0.
+        if 'filename' not in get_arg_spec(self.set_file)[0]:  # pylint: disable=deprecated-method
+            warnings.warn(  # pylint: disable=no-member
+                "Method '{}.set_file' does not support the 'filename' argument. ".format(type(self).__name__) +
+                'This will raise an exception in AiiDA 2.0.', AiidaDeprecationWarning
+            )
+
         if file is not None:
             if filename is None:
-                # for backwards compatibility don't assume that set_file has a 'filename' argument
+                # don't assume that set_file has a 'filename' argument (remove guard in 2.0.0)
                 self.set_file(file)
             else:
                 self.set_file(file, filename=filename)

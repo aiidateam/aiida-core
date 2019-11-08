@@ -27,9 +27,7 @@ class Data(Node):
     """
     The base class for all Data nodes.
 
-    AiiDA Data classes are subclasses of Node and must support multiple inheritance,
-    i.e. Data nodes should have methods for querying and must be able to inherit other library objects such as ASE for
-    structures.
+    AiiDA Data classes are subclasses of Node and must support multiple inheritance.
 
     Architecture note:
     Calculation plugins are responsible for converting raw output data from simulation codes to Data nodes.

@@ -268,10 +268,12 @@ def parse_upf(fname, check_filename=True):
 class UpfData(SinglefileData):
     """`Data` sub class to represent a pseudopotential single file in UPF format."""
 
-    def __init__(self, file=None, source=None, **kwargs):
+    def __init__(self, file=None, filename=None, source=None, **kwargs):
         """Create UpfData instance from pseudopotential file.
 
           :param file: filepath or filelike object of the UPF potential file to store.
+            Hint: Pass io.BytesIO(b"my string") to construct directly from a string.
+          :param filename: specify filename to use (defaults to name of provided file).
           :param source: Dictionary with information on source of the potential (see ".source" property).
           """
         # pylint: disable=redefined-builtin

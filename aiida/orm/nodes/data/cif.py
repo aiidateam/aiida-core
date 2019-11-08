@@ -244,7 +244,21 @@ class CifData(SinglefileData):
     _values = None
     _ase = None
 
-    def __init__(self, ase=None, file=None, values=None, source=None, scan_type=None, parse_policy=None, **kwargs):
+    def __init__(
+        self, ase=None, file=None, filename=None, values=None, source=None, scan_type=None, parse_policy=None, **kwargs
+    ):
+        """Construct a new instance and set the contents to that of the file.
+
+        :param file: an absolute filepath or filelike object for CIF.
+            Hint: Pass io.BytesIO(b"my string") to construct the SinglefileData directly from a string.
+        :param filename: specify filename to use (defaults to name of provided file).
+        :param ase: ASE Atoms object to construct the CifData instance from.
+        :param values: PyCifRW CifFile object to construct the CifData instance from.
+        :param source:
+        :param scan_type: scan type string for parsing with PyCIFRW ('standard' or 'flex'). See CifFile.ReadCif
+        :param parse_policy: 'eager' (parse CIF file on set_file) or 'lazy' (defer parsing until needed)
+        """
+
         # pylint: disable=too-many-arguments, redefined-builtin
 
         args = {
@@ -257,7 +271,7 @@ class CifData(SinglefileData):
             if args[left] is not None and args[right] is not None:
                 raise ValueError('cannot pass {} and {} at the same time'.format(left, right))
 
-        super(CifData, self).__init__(file, **kwargs)
+        super(CifData, self).__init__(file, filename=filename, **kwargs)
         self.set_scan_type(scan_type or CifData._SCAN_TYPE_DEFAULT)
         self.set_parse_policy(parse_policy or CifData._PARSE_POLICY_DEFAULT)
 

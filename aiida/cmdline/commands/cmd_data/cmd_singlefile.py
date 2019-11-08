@@ -23,12 +23,11 @@ def singlefile():
 
 
 @singlefile.command('content')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:singlefile',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:singlefile',)))
 @decorators.with_dbenv()
-def singlefile_content(data):
+def singlefile_content(datum):
     """Show the content of the file."""
-    for node in data:
-        try:
-            echo.echo(node.get_content())
-        except IOError as exception:
-            echo.echo_warning('could not read the content for SinglefileData<{}>: {}'.format(node.pk, str(exception)))
+    try:
+        echo.echo(datum.get_content())
+    except (IOError, OSError) as exception:
+        echo.echo_critical('could not read the content for SinglefileData<{}>: {}'.format(datum.pk, str(exception)))

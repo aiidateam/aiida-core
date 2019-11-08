@@ -1779,9 +1779,9 @@ class QueryBuilder(object):
         """
         return self.get_json_compatible_queryhelp()
 
-    def __deepcopy__(self, memodict={}):
-        qb = type(self)(**self.queryhelp)
-        return qb
+    def __deepcopy__(self, memo):
+        """Create deep copy of QueryBuilder instance."""
+        return type(self)(**self.queryhelp)
 
     def _build_order(self, alias, entitytag, entityspec):
         """

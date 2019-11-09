@@ -18,7 +18,6 @@ from __future__ import division
 import itertools
 import copy
 from functools import reduce
-from pkg_resources import parse_version
 
 import six
 from six.moves import range, zip
@@ -856,6 +855,8 @@ class StructureData(Data):
 
         :raise ValueError: if there are partial occupancies together with spins.
         """
+
+        from pkg_resources import parse_version
 
         def build_kind_name(species_and_occu):
             """

@@ -18,7 +18,7 @@ modules/classes are already loaded and available::
   from aiida.plugins import DataFactory, CalculationFactory
 
 .. note:: It is possible to customize the shell by adding modules to be loaded
-	automatically, thanks to the ``verdi config verdishell.modules`` command.
+	automatically, thanks to the ``verdi config verdi.shell.auto_import`` command.
 
 A further advantage is that bash completion is enabled, allowing to press the
 ``TAB`` key to see available submethods of a given object (see for instance

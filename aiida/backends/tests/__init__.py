@@ -147,7 +147,6 @@ DB_TEST_LIST = {
         'plugins.entry_point': ['aiida.backends.tests.plugins.test_entry_point'],
         'plugins.factories': ['aiida.backends.tests.plugins.test_factories'],
         'plugins.utils': ['aiida.backends.tests.plugins.test_utils'],
-        'query': ['aiida.backends.tests.test_query'],
         'restapi.identifiers': ['aiida.backends.tests.restapi.test_identifiers'],
         'restapi': ['aiida.backends.tests.test_restapi'],
         'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals'],

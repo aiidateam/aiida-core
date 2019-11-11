@@ -26,8 +26,9 @@ from __future__ import print_function
 from inspect import isclass as inspect_isclass
 import copy
 import logging
+import warnings
 import six
-from six.moves import range, zip
+from six.moves import range
 from sqlalchemy import and_, or_, not_, func as sa_func, select, join
 from sqlalchemy.types import Integer
 from sqlalchemy.orm import aliased
@@ -39,6 +40,7 @@ from aiida.common.exceptions import InputValidationError
 from aiida.common.links import LinkType
 from aiida.manage.manager import get_manager
 from aiida.common.exceptions import ConfigurationError
+from aiida.common.warnings import AiidaDeprecationWarning
 
 from . import authinfos
 from . import comments
@@ -1730,6 +1732,30 @@ class QueryBuilder(object):
             qb.all()==qb2.all()
 
         :returns: the json-compatible queryhelp
+
+        .. deprecated:: 1.0.0
+            Will be removed in `v2.0.0`, use the :meth:`.queryhelp` property instead.
+        """
+        warnings.warn('method is deprecated, use the `queryhelp` property instead', AiidaDeprecationWarning)
+        return self.queryhelp
+
+    @property
+    def queryhelp(self):
+        """queryhelp dictionary correspondig to QueryBuilder instance.
+
+        The queryhelp can be used to create a copy of the QueryBuilder instance like so::
+
+            qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
+            qb2 = QueryBuilder(**qb.queryhelp)
+
+        This is a json-comptible dictionary.
+        In this way, the queryhelp can be stored in the database or a json-object, retrieved or shared and used later.
+        The following is True if no change has been made to the database::
+
+            # Note that such a comparison can only be True if the order of results is enforced
+            qb.all() == qb2.all()
+
+        :return: a json-compatible queryhelp dictionary
         """
         return copy.deepcopy({
             'path': self._path,
@@ -1739,19 +1765,6 @@ class QueryBuilder(object):
             'limit': self._limit,
             'offset': self._offset,
         })
-
-    @property
-    def queryhelp(self):
-        """queryhelp dictionary correspondig to QueryBuilder instance.
-
-        The queryhelp can be used to create a copy of the QueryBuilder instance like so::
-
-            qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
-            qb2=QueryBuilder(**qb.queryhelp)
-
-        :return: a queryhelp dictionary
-        """
-        return self.get_json_compatible_queryhelp()
 
     def __deepcopy__(self, memo):
         """Create deep copy of QueryBuilder instance."""

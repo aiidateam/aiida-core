@@ -1752,7 +1752,7 @@ class QueryBuilder(object):
             # Note that such a comparison can only be True if the order of results is enforced
             qb.all() == qb2.all()
 
-        :return: a json-compatible queryhelp dictionary
+        :return: a queryhelp dictionary
         """
         return copy.deepcopy({
             'path': self._path,

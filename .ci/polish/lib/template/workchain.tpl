@@ -2,6 +2,7 @@ class ${class_name}(WorkChain):
 
     ERROR_NO_JOB_CALCULATION = 1
     ERROR_NO_OUTPUT_NODE = 2
+    child_class = ${child_class}
 
     @classmethod
     def define(cls, spec):
@@ -15,7 +16,6 @@ ${outline}
         spec.output('result', valid_type=Int)
 
     def setup(self):
-        self.ctx.child_class = ${child_class}
         self.ctx.result = Int(0)
         self.ctx.operands = [int(i) for i in self.inputs.operands.value.split(' ')]
         self.ctx.workchains = []
@@ -111,8 +111,8 @@ ${outline}
             inputs['code'] = self.inputs.code
 
         for i in range(operand):
-            running = self.submit(self.ctx.child_class, **inputs)
-            self.report('launching {}<{}> with operands {}'.format(self.ctx.child_class.__name__, running.pk, operands.value))
+            running = self.submit(self.child_class, **inputs)
+            self.report('launching {}<{}> with operands {}'.format(self.child_class.__name__, running.pk, operands.value))
             self.to_context(workchains=append_(running))
 
     def post_raise_power(self):

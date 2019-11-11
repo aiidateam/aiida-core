@@ -1734,7 +1734,7 @@ class QueryBuilder(object):
         :returns: the json-compatible queryhelp
 
         .. deprecated:: 1.0.0
-            Will be removed in `v2.0.0`, use the :meth:`.queryhelp` property instead.
+            Will be removed in `v2.0.0`, use the :meth:`aiida.orm.querybuilder.QueryBuilder.queryhelp` property instead.
         """
         warnings.warn('method is deprecated, use the `queryhelp` property instead', AiidaDeprecationWarning)
         return self.queryhelp
@@ -1748,10 +1748,7 @@ class QueryBuilder(object):
             qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
             qb2 = QueryBuilder(**qb.queryhelp)
 
-        This is a json-comptible dictionary.
-        In this way, the queryhelp can be stored in the database or a json-object, retrieved or shared and used later.
-        The following is True if no change has been made to the database::
-
+            # The following is True if no change has been made to the database.
             # Note that such a comparison can only be True if the order of results is enforced
             qb.all() == qb2.all()
 
@@ -1976,7 +1973,7 @@ class QueryBuilder(object):
         # The queryhelp_hash is used to determine
         # whether the query is still valid
 
-        queryhelp_hash = make_hash(self.get_json_compatible_queryhelp())
+        queryhelp_hash = make_hash(self.queryhelp)
         # if self._hash (which is None if this function has not been invoked
         # and is a string (hash) if it has) is the same as the queryhelp
         # I can use the query again:

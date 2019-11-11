@@ -26,8 +26,9 @@ from __future__ import print_function
 from inspect import isclass as inspect_isclass
 import copy
 import logging
+import warnings
 import six
-from six.moves import range, zip
+from six.moves import range
 from sqlalchemy import and_, or_, not_, func as sa_func, select, join
 from sqlalchemy.types import Integer
 from sqlalchemy.orm import aliased
@@ -39,6 +40,7 @@ from aiida.common.exceptions import InputValidationError
 from aiida.common.links import LinkType
 from aiida.manage.manager import get_manager
 from aiida.common.exceptions import ConfigurationError
+from aiida.common.warnings import AiidaDeprecationWarning
 
 from . import authinfos
 from . import comments
@@ -1710,32 +1712,6 @@ class QueryBuilder(object):
                                                    self.tag_to_alias_map.keys()))
         return returnval
 
-    def _get_json_compatible(self, inp):
-        """
-
-        :param inp:
-            The input value that will be converted.
-            Recurses into each value if **inp** is an iterable.
-        """
-        from aiida import orm
-
-        if isinstance(inp, dict):
-            for key, val in inp.items():
-                inp[self._get_json_compatible(key)] = self._get_json_compatible(inp.pop(key))
-        elif isinstance(inp, (list, tuple)):
-            inp = [self._get_json_compatible(val) for val in inp]
-        elif inspect_isclass(inp):
-            if issubclass(inp, self.AiidaNode):
-                return '.'.join(inp._plugin_type_string.strip('.').split('.')[:-1])
-            elif issubclass(inp, orm.Group):
-                return 'group'
-            else:
-                raise InputValidationError
-        else:
-            raise ValueError('unsupported type {} for input value'.format(type(inp)))
-
-        return inp
-
     def get_json_compatible_queryhelp(self):
         """
         Makes the queryhelp a json-compatible dictionary.
@@ -1756,6 +1732,27 @@ class QueryBuilder(object):
             qb.all()==qb2.all()
 
         :returns: the json-compatible queryhelp
+
+        .. deprecated:: 1.0.0
+            Will be removed in `v2.0.0`, use the :meth:`aiida.orm.querybuilder.QueryBuilder.queryhelp` property instead.
+        """
+        warnings.warn('method is deprecated, use the `queryhelp` property instead', AiidaDeprecationWarning)
+        return self.queryhelp
+
+    @property
+    def queryhelp(self):
+        """queryhelp dictionary correspondig to QueryBuilder instance.
+
+        The queryhelp can be used to create a copy of the QueryBuilder instance like so::
+
+            qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
+            qb2 = QueryBuilder(**qb.queryhelp)
+
+            # The following is True if no change has been made to the database.
+            # Note that such a comparison can only be True if the order of results is enforced
+            qb.all() == qb2.all()
+
+        :return: a queryhelp dictionary
         """
         return copy.deepcopy({
             'path': self._path,
@@ -1765,19 +1762,6 @@ class QueryBuilder(object):
             'limit': self._limit,
             'offset': self._offset,
         })
-
-    @property
-    def queryhelp(self):
-        """queryhelp dictionary correspondig to QueryBuilder instance.
-
-        The queryhelp can be used to create a copy of the QueryBuilder instance like so::
-
-            qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
-            qb2=QueryBuilder(**qb.queryhelp)
-
-        :return: a queryhelp dictionary
-        """
-        return self.get_json_compatible_queryhelp()
 
     def __deepcopy__(self, memo):
         """Create deep copy of QueryBuilder instance."""
@@ -1938,51 +1922,6 @@ class QueryBuilder(object):
 
         return self._query
 
-    def except_if_input_to(self, calc_class):
-        """
-        Makes counterquery based on the own path, only selecting
-        entries that have been input to *calc_class*
-
-        :param calc_class: The calculation class to check against
-
-        :returns: self
-        """
-
-        def build_counterquery(calc_class):
-            if issubclass(calc_class, self.Node):
-                orm_calc_class = calc_class
-                type_spec = None
-            elif issubclass(calc_class, self.AiidaNode):
-                orm_calc_class = self.Node
-                type_spec = calc_class._plugin_type_string
-            else:
-                raise Exception('You have given me {}\n'
-                                'of type {}\n'
-                                "and I don't know what to do with that"
-                                ''.format(calc_class, type(calc_class)))
-
-            input_alias_list = []
-            for node in self._path:
-                tag = node['tag']
-                requested_cols = [key for item in self._projections[tag] for key in item.keys()]
-                if '*' in requested_cols:
-                    input_alias_list.append(aliased(self.tag_to_alias_map[tag]))
-
-            counterquery = self._imp._get_session().query(orm_calc_class)
-            if type_spec:
-                counterquery = counterquery.filter(orm_calc_class.entity_type == type_spec)
-            for alias in input_alias_list:
-                link = aliased(self.Link)
-                counterquery = counterquery.join(link, orm_calc_class.id == link.output_id).join(
-                    alias, alias.id == link.input_id)
-                counterquery = counterquery.add_entity(alias)
-            counterquery._entities.pop(0)
-            return counterquery
-
-        self._query = self.get_query()
-        self._query = self._query.except_(build_counterquery(calc_class))
-        return self
-
     def get_aliases(self):
         """
         :returns: the list of aliases
@@ -2034,7 +1973,7 @@ class QueryBuilder(object):
         # The queryhelp_hash is used to determine
         # whether the query is still valid
 
-        queryhelp_hash = make_hash(self.get_json_compatible_queryhelp())
+        queryhelp_hash = make_hash(self.queryhelp)
         # if self._hash (which is None if this function has not been invoked
         # and is a string (hash) if it has) is the same as the queryhelp
         # I can use the query again:

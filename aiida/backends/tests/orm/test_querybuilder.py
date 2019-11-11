@@ -601,7 +601,7 @@ class TestQueryBuilder(AiidaTestCase):
         qb.append(orm.Data, with_incoming='c1', tag='d2or4')
         qb.append(orm.CalculationNode, tag='c2', with_incoming='d2or4')
         qb.append(orm.Data, tag='d3', with_incoming='c2', project='id')
-        qh = qb.get_json_compatible_queryhelp()  # saving query for later
+        qh = qb.queryhelp  # saving query for later
         qb.append(orm.Data, direction=-4, project='id')
         res1 = {item[1] for item in qb.all()}
         self.assertEqual(res1, {d1.id})
@@ -658,7 +658,7 @@ class TestQueryHelp(AiidaTestCase):
             qb.append(cls, filters={'attributes.foo-qh2': 'bar'}, subclassing=subclassing, project='uuid')
             self.assertEqual(qb.count(), expected_count)
 
-            qh = qb.get_json_compatible_queryhelp()
+            qh = qb.queryhelp
             qb_new = orm.QueryBuilder(**qh)
             self.assertEqual(qb_new.count(), expected_count)
             self.assertEqual(sorted([uuid for uuid, in qb.all()]), sorted([uuid for uuid, in qb_new.all()]))

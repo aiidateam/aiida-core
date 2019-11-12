@@ -674,7 +674,7 @@ def export_tree(
     }
 
     # N.B. We're really calling zipfolder.open (if exporting a zipfile)
-    with folder.open('data.json', mode='w') as fhandle:
+    with folder.open('data.json', mode='w', encoding='utf-8') as fhandle:
         # fhandle.write(json.dumps(data, cls=UUIDEncoder))
         fhandle.write(json.dumps(data))
 
@@ -695,7 +695,7 @@ def export_tree(
         }
     }
 
-    with folder.open('metadata.json', 'w') as fhandle:
+    with folder.open('metadata.json', 'w', encoding='utf-8') as fhandle:
         fhandle.write(json.dumps(metadata))
 
     EXPORT_LOGGER.debug('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')

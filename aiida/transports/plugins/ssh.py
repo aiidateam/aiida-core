@@ -330,8 +330,9 @@ class SshTransport(Transport):
         try:
             self._client.connect(self._machine, **connection_arguments)
         except Exception as exc:
-            self.logger.error('Error connecting through SSH: [{}] {}, '
-                              'connect_args were: {}'.format(exc.__class__.__name__, exc, self._connect_args))
+            self.logger.error("Error connecting to '{}' through SSH: ".format(self._machine) +
+                              '[{}] {}, '.format(self.__class__.__name__, exc) +
+                              'connect_args were: {}'.format(self._connect_args))
             raise
 
         # Open also a SFTPClient

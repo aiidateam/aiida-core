@@ -16,10 +16,11 @@ import zipfile
 
 class MyWritingZipFile:
 
-    def __init__(self, zip_file, fname):
+    def __init__(self, zip_file, fname, encoding):
         self._zipfile = zip_file
         self._fname = fname
         self._buffer = None
+        self._encoding = encoding
 
     def open(self):
         if self._buffer is not None:
@@ -27,7 +28,10 @@ class MyWritingZipFile:
         self._buffer = io.StringIO()
 
     def write(self, data):
-        self._buffer.write(data)
+        if self._encoding:
+            self._buffer.write(str(data.encode(self._encoding)))
+        else:
+            self._buffer.write(data)
 
     def close(self):
         self._buffer.seek(0)
@@ -94,9 +98,12 @@ class ZipFolder:
     def pwd(self):
         return self._pwd
 
-    def open(self, fname, mode='r'):
+    def open(self, fname, mode='r', encoding='utf8'):
+        if 'b' in mode:
+            encoding = None
+
         if mode == 'w':
-            return MyWritingZipFile(zip_file=self._zipfile, fname=self._get_internal_path(fname))
+            return MyWritingZipFile(zip_file=self._zipfile, fname=self._get_internal_path(fname), encoding=encoding)
         # else
         return self._zipfile.open(self._get_internal_path(fname), mode)
 

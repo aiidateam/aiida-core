@@ -76,14 +76,18 @@ class TestManager(object):
          Uses :py:class:`aiida.manage.tests.TemporaryProfileManager` internally.
 
         :param backend: Backend to use.
-        :param pgtest: parameters for pgtest.pgtest.PGTest
+        :param pgtest: a dictionary of arguments to be passed to PGTest() for starting the postgresql cluster,
+           e.g. {'pg_ctl': '/somepath/pg_ctl'}. Should usually not be necessary.
+
         """
         if configuration.PROFILE is not None:
             raise TestManagerError('AiiDA dbenv must not be loaded before setting up a test profile.')
         if self._manager is not None:
             raise TestManagerError('Profile manager already loaded.')
-        self._manager = TemporaryProfileManager(backend=backend)
-        self._manager.create_profile(pgtest=pgtest)
+
+        mngr = TemporaryProfileManager(backend=backend, pgtest=pgtest)
+        mngr.create_profile()
+        self._manager = mngr  # don't assign before profile has actually been created!
 
     def use_profile(self, profile_name):
         """Set up Test manager to use existing profile.
@@ -109,7 +113,7 @@ class TestManager(object):
     def destroy_all(self):
         if self._manager:
             self._manager.destroy_all()
-        #self._manager = None
+        self._manager = None
 
 
 class ProfileManager(object):
@@ -232,12 +236,20 @@ class TemporaryProfileManager(ProfileManager):
 
     _test_case = None
 
-    def __init__(self, backend=BACKEND_DJANGO):  # pylint: disable=super-init-not-called
+    def __init__(self, backend=BACKEND_DJANGO, pgtest=None):  # pylint: disable=super-init-not-called
+        """Construct a TemporaryProfileManager
+
+        :param backend: a database backend
+        :param pgtest: a dictionary of arguments to be passed to PGTest() for starting the postgresql cluster,
+           e.g. {'pg_ctl': '/somepath/pg_ctl'}. Should usually not be necessary.
+
+        """
         from aiida.manage.configuration import settings
 
         self.dbinfo = {}
         self.profile_info = _DEFAULT_PROFILE_INFO
         self.profile_info['database_backend'] = backend
+        self._pgtest = pgtest or {}
 
         self.pg_cluster = None
         self.postgres = None
@@ -266,11 +278,9 @@ class TemporaryProfileManager(ProfileManager):
         }
         return dictionary
 
-    def create_db_cluster(self, pgtest=None):
+    def create_db_cluster(self):
         """
         Create the database cluster using PGTest.
-
-        :param pgtest: a dictionary containing input to PGTest()
         """
         from pgtest.pgtest import PGTest
 
@@ -278,40 +288,33 @@ class TemporaryProfileManager(ProfileManager):
             raise TestManagerError(
                 'Running temporary postgresql cluster detected.' + 'Use destroy_all() before creating a new cluster.'
             )
-        if pgtest is None:
-            pgtest = {}
-        self.pg_cluster = PGTest(**pgtest)
+        self.pg_cluster = PGTest(**self._pgtest)
         self.dbinfo.update(self.pg_cluster.dsn)
 
-    def create_aiida_db(self, pgtest=None):
+    def create_aiida_db(self):
         """
         Create the necessary database on the temporary postgres instance.
-
-        By utilizing pgtest it is possible to forward initialization arguments to PGTest().
-
-        :param pgtest: a dictionary containing input to PGTest()
         """
         if configuration.PROFILE is not None:
             raise TestManagerError('AiiDA dbenv can not be loaded while creating a tests db environment')
         if self.pg_cluster is None:
-            self.create_db_cluster(pgtest)
+            self.create_db_cluster()
         self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.dbinfo)
         self.dbinfo = self.postgres.dbinfo.copy()
         self.postgres.create_dbuser(self.profile_info['database_username'], self.profile_info['database_password'])
         self.postgres.create_db(self.profile_info['database_username'], self.profile_info['database_name'])
         self._has_test_db = True
 
-    def create_profile(self, pgtest=None):
+    def create_profile(self):
         """
         Set AiiDA to use the tests config dir and create a default profile there
 
         Warning: the AiiDA dbenv must not be loaded when this is called!
-        :param pgtest: a dictionary containing input to PGTest()
         """
         from aiida.manage.configuration import settings, load_profile, Profile
 
         if not self._has_test_db:
-            self.create_aiida_db(pgtest)
+            self.create_aiida_db()
 
         if not self.root_dir:
             self.root_dir = tempfile.mkdtemp()

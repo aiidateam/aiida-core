@@ -268,7 +268,14 @@ def parse_upf(fname, check_filename=True):
 class UpfData(SinglefileData):
     """`Data` sub class to represent a pseudopotential single file in UPF format."""
 
-    def __init__(self, file=None, source=None, **kwargs):
+    def __init__(self, file=None, filename=None, source=None, **kwargs):
+        """Create UpfData instance from pseudopotential file.
+
+          :param file: filepath or filelike object of the UPF potential file to store.
+            Hint: Pass io.BytesIO(b"my string") to construct directly from a string.
+          :param filename: specify filename to use (defaults to name of provided file).
+          :param source: Dictionary with information on source of the potential (see ".source" property).
+          """
         # pylint: disable=redefined-builtin
         super(UpfData, self).__init__(file, **kwargs)
         if source is not None:
@@ -356,10 +363,12 @@ class UpfData(SinglefileData):
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
         return [upf for upf, in builder.all()]
 
-    def set_file(self, file):
+    def set_file(self, file, filename=None):
         """Store the file in the repository and parse it to set the `element` and `md5` attributes.
 
         :param file: filepath or filelike object of the UPF potential file to store.
+            Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
+        :param filename: specify filename to use (defaults to name of provided file).
         """
         # pylint: disable=redefined-builtin
         from aiida.common.exceptions import ParsingError
@@ -377,7 +386,7 @@ class UpfData(SinglefileData):
         except KeyError:
             raise ParsingError("No 'element' parsed in the UPF file {}; unable to store".format(self.filename))
 
-        super(UpfData, self).set_file(file)
+        super(UpfData, self).set_file(file, filename=filename)
 
         self.set_attribute('element', str(element))
         self.set_attribute('md5', md5sum)

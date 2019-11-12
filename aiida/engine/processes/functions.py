@@ -15,7 +15,6 @@ from __future__ import absolute_import
 import functools
 import logging
 import signal
-import inspect
 
 from six.moves import zip  # pylint: disable=unused-import
 from six import PY2
@@ -235,16 +234,16 @@ class FunctionProcess(Process):
         :rtype: :class:`FunctionProcess`
         """
         from aiida import orm
-        from aiida.orm import ProcessNode
+        from aiida.common.lang import get_arg_spec
         from aiida.orm.utils.mixins import FunctionCalculationMixin
 
-        if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
+        if not issubclass(node_class, orm.ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
         if PY2:
-            args, varargs, keywords, defaults = inspect.getargspec(func)  # pylint: disable=deprecated-method
+            args, varargs, keywords, defaults = get_arg_spec(func)  # pylint: disable=deprecated-method
         else:
-            args, varargs, keywords, defaults, _, _, _ = inspect.getfullargspec(func)  # pylint: disable=no-member
+            args, varargs, keywords, defaults, _, _, _ = get_arg_spec(func)  # pylint: disable=deprecated-method
         nargs = len(args)
         ndefaults = len(defaults) if defaults else 0
         first_default_pos = nargs - ndefaults

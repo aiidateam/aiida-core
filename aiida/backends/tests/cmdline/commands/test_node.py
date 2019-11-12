@@ -74,6 +74,34 @@ class TestVerdiNode(AiidaTestCase):
         with Capturing():
             NodeTreePrinter.print_node_tree(self.node, max_depth=1, follow_links=())
 
+    def test_node_show(self):
+        """Test `verdi node show`"""
+        node = orm.Data().store()
+        node.label = 'SOMELABEL'
+        options = [str(node.pk)]
+        result = self.cli_runner.invoke(cmd_node.node_show, options)
+        self.assertClickResultNoException(result)
+
+        # Let's check some content in the output. At least the UUID and the label should be in there
+        self.assertIn(node.label, result.output)
+        self.assertIn(node.uuid, result.output)
+
+        ## Let's now test the '--print-groups' option
+        options.append('--print-groups')
+        result = self.cli_runner.invoke(cmd_node.node_show, options)
+        self.assertClickResultNoException(result)
+        # I don't check the list of groups - it might be in an autogroup
+
+        # Let's create a group and put the node in there
+        group_name = 'SOMEGROUPNAME'
+        group = orm.Group(group_name).store()
+        group.add_nodes(node)
+
+        result = self.cli_runner.invoke(cmd_node.node_show, options)
+        self.assertClickResultNoException(result)
+        # Now the group should be in there
+        self.assertIn(group_name, result.output)
+
     def test_node_attributes(self):
         """Test verdi node attributes"""
         options = [str(self.node.uuid)]

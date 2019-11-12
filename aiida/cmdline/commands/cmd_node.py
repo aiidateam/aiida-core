@@ -154,17 +154,19 @@ def node_show(nodes, print_groups):
             # pylint: disable=invalid-name
             qb = QueryBuilder()
             qb.append(Node, tag='node', filters={'id': {'==': node.pk}})
-            qb.append(Group, tag='groups', with_node='node', project=['id', 'name'])
+            qb.append(Group, tag='groups', with_node='node', project=['id', 'label', 'type_string'])
 
             echo.echo('#### GROUPS:')
 
             if qb.count() == 0:
-                echo.echo('No groups found containing node {}'.format(node.pk))
+                echo.echo('Node {} does not belong to any group'.format(node.pk))
             else:
+                echo.echo('Node {} belongs to the following groups:'.format(node.pk))
                 res = qb.iterdict()
-                for gr in res:
-                    gr_specs = '{} {}'.format(gr['groups']['name'], gr['groups']['id'])
-                    echo.echo(gr_specs)
+                table = [(gr['groups']['id'], gr['groups']['label'], gr['groups']['type_string']) for gr in res]
+                table.sort()
+
+                echo.echo(tabulate.tabulate(table, headers=['PK', 'Label', 'Group type']))
 
 
 def echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=True):

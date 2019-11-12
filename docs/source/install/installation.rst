@@ -47,35 +47,28 @@ To leave or deactivate the environment, simply run::
 Aiida python package
 ====================
 
-.. _PyPI: https://pypi.python.org/pypi/aiida
+.. _PyPI: https://pypi.python.org/pypi/aiida-core
 .. _github repository: https://github.com/aiidateam/aiida-core
 
 AiiDA can be installed either from the python package index `PyPI`_ (good for general use) or directly from the aiida-core `github repository`_ (good for developers).
 
-Install the ``aiida`` python package from `PyPI`_ using:
+Install the ``aiida-core`` python package from `PyPI`_ using:
 
 .. code-block:: bash
 
-    pip install --pre aiida
+    (aiida) $ pip install aiida-core
 
 .. note::
     If you are installing AiiDA in your system environment,
     consider adding the ``--user`` flag to avoid the need for
     administrator privileges.
 
-This will install the ``aiida-core`` package along with the four base plugins:
-
-    * ``aiida-ase``
-    * ``aiida-codtools``
-    * ``aiida-nwchem``
-    * ``aiida-quantumespresso``
-
 Alternatively, you can create a directory where to clone the AiiDA source code and install AiiDA from source::
 
-    mkdir <your_directory>
-    cd <your_directory>
-    git clone https://github.com/aiidateam/aiida-core
-    pip install -e aiida-core
+    $ mkdir <your_directory>
+    $ cd <your_directory>
+    $ git clone https://github.com/aiidateam/aiida-core
+    (aiida) $ pip install -e aiida-core
 
 
 .. _install_optional_dependencies:

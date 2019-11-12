@@ -42,6 +42,7 @@ Before checking out the individual commands below, start with a brief look at th
 * :ref:`export<verdi_export>`:  Create and manage export archives.
 * :ref:`graph<verdi_graph>`:  Create visual representations of the provenance graph.
 * :ref:`group<verdi_group>`:  Create, inspect and manage groups of nodes.
+* :ref:`help<verdi_help>`:  Show help for given command.
 * :ref:`import<verdi_import>`:  Import data from an AiiDA archive file.
 * :ref:`node<verdi_node>`:  Inspect, create and manage nodes.
 * :ref:`plugin<verdi_plugin>`:  Inspect AiiDA plugins.

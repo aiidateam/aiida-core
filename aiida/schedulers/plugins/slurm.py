@@ -632,6 +632,13 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         """
         Convert a string in the format DD-HH:MM:SS to a number of seconds.
         """
+
+        if string == 'UNLIMITED':
+            return 2147483647  # == 2**31 - 1, largest 32-bit signed integer (68 years)
+
+        if string == 'NOT_SET':
+            return None
+
         groups = _TIME_REGEXP.match(string)
         if groups is None:
             self.logger.warning("Unrecognized format for time string '{}'".format(string))

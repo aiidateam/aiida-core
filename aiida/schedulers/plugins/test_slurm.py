@@ -18,6 +18,8 @@ import datetime
 
 from aiida.schedulers.plugins.slurm import *
 
+# job_id, state_raw, annotation, executing_host, username, number_nodes, number_cpus, allocated_machines, partition, time_limit, time_used, dispatch_time, job_name, submission_time
+# See SlurmScheduler.fields
 TEXT_SQUEUE_TO_TEST = """862540^^^PD^^^Dependency^^^n/a^^^user1^^^20^^^640^^^(Dependency)^^^normal^^^1-00:00:00^^^0:00^^^N/A^^^longsqw_L24_q_10_0^^^2013-05-22T01:41:11
 863100^^^PD^^^Resources^^^n/a^^^user2^^^32^^^1024^^^(Resources)^^^normal^^^10:00^^^0:00^^^2013-05-23T14:44:44^^^eq_solve_e4.slm^^^2013-05-22T04:23:59
 863546^^^PD^^^Priority^^^n/a^^^user3^^^2^^^64^^^(Priority)^^^normal^^^8:00:00^^^0:00^^^2013-05-23T14:44:44^^^S2-H2O^^^2013-05-22T08:08:41
@@ -25,7 +27,13 @@ TEXT_SQUEUE_TO_TEST = """862540^^^PD^^^Dependency^^^n/a^^^user1^^^20^^^640^^^(De
 862538^^^R^^^None^^^rosa10^^^user5^^^20^^^640^^^nid0[0099,0156-0157,0162-0163,0772-0773,0826,0964-0965,1018-1019,1152-1153,1214-1217,1344-1345]^^^normal^^^1-00:00:00^^^32:10^^^2013-05-23T11:41:30^^^longsqw_L24_q_11_0^^^2013-05-23T03:04:21
 861352^^^R^^^None^^^rosa11^^^user6^^^4^^^128^^^nid00[192,246,264-265]^^^normal^^^1-00:00:00^^^23:30:20^^^2013-05-22T12:43:20^^^Pressure_PBEsol_0^^^2013-05-23T09:35:23
 863553^^^R^^^None^^^rosa1^^^user5^^^1^^^32^^^nid00471^^^normal^^^30:00^^^29:29^^^2013-05-23T11:44:11^^^bash^^^2013-05-23T10:42:11
+863554^^^R^^^None^^^rosa1^^^user5^^^1^^^32^^^nid00471^^^normal^^^NOT_SET^^^29:29^^^2013-05-23T11:44:11^^^bash^^^2013-05-23T10:42:11
 """
+JOBS_ON_CLUSTER = 8
+JOBS_HELD = 2
+JOBS_QUEUED = 2
+USERS_RUNNING = ['user5', 'user6']
+JOBS_RUNNING = ['862538', '861352', '863553', '863554']
 
 
 class TestParserSqueue(unittest.TestCase):
@@ -46,43 +54,46 @@ class TestParserSqueue(unittest.TestCase):
 
         job_list = scheduler._parse_joblist_output(retval, stdout, stderr)
 
-        # The parameters are hard coded in the text to parse
-        job_on_cluster = 7
-        job_parsed = len(job_list)
-        self.assertEquals(job_parsed, job_on_cluster)
+        def get_job(id):
+            try:
+                return [ j for j in job_list if j.job_id == id][0]
+            except IndexError:
+                raise IndexError("Job '{}' not found.".format(id))
 
-        job_running = 3
+
+        # The parameters are hard coded in the text to parse
+        job_parsed = len(job_list)
+        self.assertEquals(job_parsed, JOBS_ON_CLUSTER)
+
         job_running_parsed = len([j for j in job_list if j.job_state \
                                   and j.job_state == JobState.RUNNING])
-        self.assertEquals(job_running, job_running_parsed)
+        self.assertEquals(len(JOBS_RUNNING), job_running_parsed)
 
-        job_held = 2
         job_held_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED_HELD])
-        self.assertEquals(job_held, job_held_parsed)
+        self.assertEquals(JOBS_HELD, job_held_parsed)
 
-        job_queued = 2
         job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
-        self.assertEquals(job_queued, job_queued_parsed)
+        self.assertEquals(JOBS_QUEUED, job_queued_parsed)
 
-        running_users = ['user5', 'user6']
         parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
-        self.assertEquals(set(running_users), set(parsed_running_users))
+        self.assertEquals(set(USERS_RUNNING), set(parsed_running_users))
 
-        running_jobs = ['862538', '861352', '863553']
         parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
-        self.assertEquals(set(running_jobs), set(parsed_running_jobs))
+        self.assertEquals(set(JOBS_RUNNING), set(parsed_running_jobs))
 
-        self.assertEquals([j.requested_wallclock_time_seconds for j in job_list if j.job_id == '863553'][0], 30 * 60)
-        self.assertEquals([j.wallclock_time_seconds for j in job_list if j.job_id == '863553'][0], 29 * 60 + 29)
-        self.assertEquals([j.dispatch_time for j in job_list if j.job_id == '863553'][0],
-                          datetime.datetime(2013, 5, 23, 11, 44, 11))
-        self.assertEquals([j.submission_time for j in job_list if j.job_id == '863553'][0],
-                          datetime.datetime(2013, 5, 23, 10, 42, 11))
-        self.assertEquals([j.annotation for j in job_list if j.job_id == '863100'][0], 'Resources')
-        self.assertEquals([j.num_machines for j in job_list if j.job_id == '863100'][0], 32)
-        self.assertEquals([j.num_mpiprocs for j in job_list if j.job_id == '863100'][0], 1024)
-        self.assertEquals([j.queue_name for j in job_list if j.job_id == '863100'][0], 'normal')
-        self.assertEquals([j.title for j in job_list if j.job_id == '861352'][0], 'Pressure_PBEsol_0')
+        self.assertEquals(get_job('863553').requested_wallclock_time_seconds, 30 * 60)
+        self.assertEquals(get_job('863553').wallclock_time_seconds, 29 * 60 + 29)
+        self.assertEquals(get_job('863553').dispatch_time, datetime.datetime(2013, 5, 23, 11, 44, 11))
+        self.assertEquals(get_job('863553').submission_time, datetime.datetime(2013, 5, 23, 10, 42, 11))
+
+        self.assertEquals(get_job('863100').annotation, 'Resources')
+        self.assertEquals(get_job('863100').num_machines, 32)
+        self.assertEquals(get_job('863100').num_mpiprocs, 1024)
+        self.assertEquals(get_job('863100').queue_name, 'normal')
+
+        self.assertEquals(get_job('861352').title, 'Pressure_PBEsol_0')
+
+        self.assertEquals(get_job('863554').requested_wallclock_time_seconds, None)  # not set
 
         # allocated_machines is not implemented in this version of the plugin
         #        for j in job_list:
@@ -128,6 +139,9 @@ class TestTimes(unittest.TestCase):
         self.assertEquals(scheduler._convert_time('1-3:5:7'), 86400 + 3 * 3600 + 5 * 60 + 7)
         self.assertEquals(scheduler._convert_time('01-3:05:7'), 86400 + 3 * 3600 + 5 * 60 + 7)
         self.assertEquals(scheduler._convert_time('01-03:05:07'), 86400 + 3 * 3600 + 5 * 60 + 7)
+
+        self.assertEquals(scheduler._convert_time('UNLIMITED'), 2**31 - 1)
+        self.assertEquals(scheduler._convert_time('NOT_SET'), None)
 
         # Disable logging to avoid excessive output during test
         logging.disable(logging.ERROR)

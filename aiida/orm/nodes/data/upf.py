@@ -277,7 +277,7 @@ class UpfData(SinglefileData):
           :param source: Dictionary with information on source of the potential (see ".source" property).
           """
         # pylint: disable=redefined-builtin
-        super(UpfData, self).__init__(file, **kwargs)
+        super(UpfData, self).__init__(file, filename=filename, **kwargs)
         if source is not None:
             self.set_source(source)
 

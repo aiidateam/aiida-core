@@ -86,12 +86,12 @@ class TestUpfParser(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         super(TestUpfParser, cls).setUpClass(*args, **kwargs)
         filepath_base = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos'))
-        filepath_barium = os.path.join(filepath_base, 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
-        filepath_oxygen = os.path.join(filepath_base, 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF')
-        filepath_carbon = os.path.join(filepath_base, 'C_pbe_v1.2.uspp.F.UPF')
-        cls.pseudo_barium = orm.UpfData(file=filepath_barium).store()
-        cls.pseudo_oxygen = orm.UpfData(file=filepath_oxygen).store()
-        cls.pseudo_carbon = orm.UpfData(file=filepath_carbon).store()
+        cls.filepath_barium = os.path.join(filepath_base, 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
+        cls.filepath_oxygen = os.path.join(filepath_base, 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF')
+        cls.filepath_carbon = os.path.join(filepath_base, 'C_pbe_v1.2.uspp.F.UPF')
+        cls.pseudo_barium = orm.UpfData(file=cls.filepath_barium).store()
+        cls.pseudo_oxygen = orm.UpfData(file=cls.filepath_oxygen).store()
+        cls.pseudo_carbon = orm.UpfData(file=cls.filepath_carbon).store()
 
     def setUp(self):
         """Setup a temporary directory to store UPF files."""
@@ -111,6 +111,16 @@ class TestUpfParser(AiidaTestCase):
                 os.remove(self.temp_dir)
             else:
                 raise IOError(exception)
+
+    def test_constructor(self):
+        """Tests for the constructor of `UpfData`."""
+        filename = 'C.some_custom_filename.upf'
+        upf = orm.UpfData(file=self.filepath_carbon, filename=filename)
+        self.assertEqual(upf.filename, filename)
+
+        # Store and check that the filename is unchanged
+        upf.store()
+        self.assertEqual(upf.filename, filename)
 
     def test_get_upf_family_names(self):
         """Test the `UpfData.get_upf_family_names` method."""

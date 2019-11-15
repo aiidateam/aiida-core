@@ -30,7 +30,7 @@ jobs:
     - name: Install python dependencies
       run: |
         pip install --upgrade pip
-        pip install -e .[all]
+        pip install -e .[testing,dev_precommit]
         reentry scan
     - name: Run pre-commit
       run: |

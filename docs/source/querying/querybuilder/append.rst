@@ -721,11 +721,8 @@ Let's take the above example, but put a filter on the label of the link and proj
 Ordering results
 ++++++++++++++++
 
-
-You can also order by properties of the node, although ordering by attributes
-or extras is not implemented yet.
+You can also order by properties of the node.
 Assuming you want to order the above example by the time of the calculations::
-
 
     qb = QueryBuilder()
     qb.append(
@@ -738,6 +735,60 @@ Assuming you want to order the above example by the time of the calculations::
          )
 
     qb.order_by({CalcJobNode:{'ctime':'asc'}}) # 'asc' or 'desc' (ascending/descending)
+
+The ordering can furthermore be done in a prioritized manner for several node properties.
+E.g., taking the example above and further sorting the node's by their modification time in descending order would look like this::
+
+    qb = QueryBuilder()
+    qb.append(
+            CalcJobNode,
+            project=['*']
+        )
+    qb.append(
+            Dict,
+            filters={'attributes.energy':{'>':-5.0}},
+         )
+
+    qb.order_by({CalcJobNode: [{'ctime': 'asc'}, {'mtime': 'desc'}]})
+
+Here the nodes will *first* be sorted by their creation time in ascending order, and then by their modification time in descending order.
+
+Finally, attributes and extras can be used for sorting.
+However, the QueryBuilder cannot infer their value types, so you will have to cast the type::
+
+    qb = QueryBuilder()
+    qb.append(
+            CalcJobNode,
+            project=['*']
+        )
+    qb.append(
+            Dict,
+            filters={'attributes.energy':{'>':-5.0}},
+         )
+
+    qb.order_by({CalcJobNode: [
+        {'ctime': 'asc'},
+        {'attributes.energy': {'order': 'desc', 'cast': 'f'}}  # 'f' is an alias for type float
+    }])
+
+Here follows a list of the available cast types and their aliases:
+
++-------------------+-----------+---------------------+
+| **Python type**   | **Alias** | **SQLAlchemy type** |
++===================+===========+=====================+
+| float             | f         | Float               |
++-------------------+-----------+---------------------+
+| int               | i         | Integer             |
++-------------------+-----------+---------------------+
+| bool              | b         | Boolean             |
++-------------------+-----------+---------------------+
+| str               | t         | String              |
++-------------------+-----------+---------------------+
+| dict              | j         | JSONB               |
++-------------------+-----------+---------------------+
+| datetime.datetime | d         | DateTime            |
++-------------------+-----------+---------------------+
+
 
 
 Limiting the number of results
@@ -761,5 +812,4 @@ You can also limit the number of rows returned with the method *limit*::
     # Limit to results to the first 10 results:
     qb.limit(10)
 
-The above query returns the latest 10 calculation that produced
-a final energy above -5.0.
+The above query returns the latest 10 calculation that produced a final energy above -5.0.

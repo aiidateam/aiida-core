@@ -26,6 +26,7 @@ jobs:
         sudo apt install rabbitmq-server
         sudo systemctl status rabbitmq-server.service
         sudo apt install libkrb5-dev
+        sudo apt install -y ruby ruby-dev
     - name: Install python dependencies
       run: |
         pip install --upgrade pip

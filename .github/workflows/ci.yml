@@ -1,0 +1,38 @@
+name: aiida-core
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install postgresql postgresql-server-dev-all postgresql-client
+        wget -O - "https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc" | sudo apt-key add -
+        echo 'deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
+        echo 'deb https://dl.bintray.com/rabbitmq/debian bionic main' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
+        sudo apt update
+        sudo apt install rabbitmq-server
+        sudo systemctl status rabbitmq-server.service
+    - name: Install python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -e .[dev]
+        reentry scan
+    - name: Run pre-commit
+      run: |
+        pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+    - name: Run pytest
+      run: |
+        pytest -sv tests

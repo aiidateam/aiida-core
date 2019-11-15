@@ -56,7 +56,6 @@ def CalculationFactory(entry_point_name):
     :return: sub class of :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
-    from inspect import isclass
     from aiida.engine import CalcJob, calcfunction, is_process_function
     from aiida.orm import CalcFunctionNode
 

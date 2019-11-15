@@ -28,7 +28,7 @@ jobs:
     - name: Install python dependencies
       run: |
         pip install --upgrade pip
-        pip install -e .[dev]
+        pip install -e .[all]
         reentry scan
     - name: Run pre-commit
       run: |

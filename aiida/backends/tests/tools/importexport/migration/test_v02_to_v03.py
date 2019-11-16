@@ -154,6 +154,7 @@ class TestMigrateV02toV03(AiidaTestCase):
                 'made': []
             }
         }  # User is special, see below
+        add = None
         for entity, details in entities.items():
             for node in data_v2['export_data'][entity].values():
                 if entity == 'Node':  # Node

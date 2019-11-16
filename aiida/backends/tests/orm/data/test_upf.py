@@ -329,7 +329,7 @@ class TestUpfParser(AiidaTestCase):
         json_string, _ = self.pseudo_carbon._prepare_json()
         filepath_base = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos'))
         reference_dict = json.load(open(os.path.join(filepath_base, 'C.json'), 'r'))
-        pp_dict = json.loads(json_string)
+        pp_dict = json.loads(json_string.decode('utf-8'))
         # remove path information
         pp_dict['pseudo_potential']['header']['original_upf_file'] = ''
         reference_dict['pseudo_potential']['header']['original_upf_file'] = ''
@@ -341,7 +341,7 @@ class TestUpfParser(AiidaTestCase):
         json_string, _ = self.pseudo_barium._prepare_json()
         filepath_base = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos'))
         reference_dict = json.load(open(os.path.join(filepath_base, 'Ba.json'), 'r'))
-        pp_dict = json.loads(json_string)
+        pp_dict = json.loads(json_string.decode('utf-8'))
         # remove path information
         pp_dict['pseudo_potential']['header']['original_upf_file'] = ''
         reference_dict['pseudo_potential']['header']['original_upf_file'] = ''

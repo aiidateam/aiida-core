@@ -155,7 +155,6 @@
         aiida/transports/plugins/test_all_plugins.py|
         aiida/transports/plugins/test_local.py|
         aiida/transports/plugins/test_ssh.py|
-        .ci/test_daemon.py|
         .ci/workchains.py|
       )$
 

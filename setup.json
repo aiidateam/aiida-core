@@ -109,7 +109,7 @@
     ],
     "dev_precommit": [
       "astroid==2.2.5",
-      "pep8-naming==0.8.2",
+      "pep8-naming==0.4.1",
       "pre-commit==1.18.3",
       "prospector==1.1.7",
       "pylint==2.3.1",

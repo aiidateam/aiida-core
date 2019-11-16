@@ -26,7 +26,7 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """Create a basic valid graph that should help detect false positives."""
-        super(TestVerdiDatabasaIntegrity, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         data_input = Data().store()
         data_output = Data().store()
         calculation = CalculationNode()

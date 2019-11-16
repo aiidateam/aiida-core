@@ -43,7 +43,7 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
         dbomputer = models.DbComputer.objects.get(pk=self.pk)
         dbomputer.pk = None
 
-        newobject = self.__class__.from_dbmodel(dbomputer)
+        newobject = self.__class__.from_dbmodel(dbomputer)  # pylint: disable=no-value-for-parameter
 
         return newobject
 

@@ -137,7 +137,7 @@ class SqlaBackendManager(BackendManager):
 
     def _migrate_database_version(self):
         """Migrate the database to the current schema version."""
-        super(SqlaBackendManager, self)._migrate_database_version()
+        super()._migrate_database_version()
         with self.alembic_config() as config:
             command.upgrade(config, 'head')
 

@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for dealing with links between nodes."""
-
-from collections import namedtuple, OrderedDict, Mapping
+from collections import namedtuple, OrderedDict
+from collections.abc import Mapping
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check

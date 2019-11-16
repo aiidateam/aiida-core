@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Module for converting backend entities into frontend, ORM, entities"""
-
 from collections.abc import Mapping, Iterator, Sized
 from functools import singledispatch
 

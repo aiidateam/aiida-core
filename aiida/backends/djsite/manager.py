@@ -108,7 +108,7 @@ class DjangoBackendManager(BackendManager):
         """
         # pylint: disable=cyclic-import
         from aiida.manage.manager import get_manager
-        super(DjangoBackendManager, self)._migrate_database_generation()
+        super()._migrate_database_generation()
 
         backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
         backend.execute_raw(r"""DELETE FROM django_migrations WHERE app = 'db';""")
@@ -118,7 +118,7 @@ class DjangoBackendManager(BackendManager):
 
     def _migrate_database_version(self):
         """Migrate the database to the current schema version."""
-        super(DjangoBackendManager, self)._migrate_database_version()
+        super()._migrate_database_version()
         from django.core.management import call_command  # pylint: disable=no-name-in-module,import-error
         call_command('migrate')
 

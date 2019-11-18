@@ -20,7 +20,7 @@ PERPAGE_DEFAULT = 20
 
 ##Version prefix for all the URLs
 PREFIX = '/api/v4'
-VERSION = '4.0.0'
+VERSION = '4.0.1'
 """
 Flask app configs.
 

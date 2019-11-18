@@ -328,24 +328,6 @@ class Node(BaseResource):
                 ## Retrieve results
                 results = self.trans.get_results()
 
-                if attributes_filter is not None and attributes:
-                    for node in results['nodes']:
-                        node['attributes'] = {}
-                        if not isinstance(attributes_filter, list):
-                            attributes_filter = [attributes_filter]
-                        for attr in attributes_filter:
-                            node['attributes'][str(attr)] = node['attributes.' + str(attr)]
-                            del node['attributes.' + str(attr)]
-
-                if extras_filter is not None and extras:
-                    for node in results['nodes']:
-                        node['extras'] = {}
-                        if not isinstance(extras_filter, list):
-                            extras_filter = [extras_filter]
-                        for extra in extras_filter:
-                            node['extras'][str(extra)] = node['extras.' + str(extra)]
-                            del node['extras.' + str(extra)]
-
                 if query_type == 'repo_contents' and results:
                     response = make_response(results)
                     response.headers['content-type'] = 'application/octet-stream'
@@ -365,6 +347,24 @@ class Node(BaseResource):
                     results = results['download']['data']
 
                 headers = self.utils.build_headers(url=request.url, total_count=total_count)
+
+            if attributes_filter is not None and attributes:
+                for node in results['nodes']:
+                    node['attributes'] = {}
+                    if not isinstance(attributes_filter, list):
+                        attributes_filter = [attributes_filter]
+                    for attr in attributes_filter:
+                        node['attributes'][str(attr)] = node['attributes.' + str(attr)]
+                        del node['attributes.' + str(attr)]
+
+            if extras_filter is not None and extras:
+                for node in results['nodes']:
+                    node['extras'] = {}
+                    if not isinstance(extras_filter, list):
+                        extras_filter = [extras_filter]
+                    for extra in extras_filter:
+                        node['extras'][str(extra)] = node['extras.' + str(extra)]
+                        del node['extras.' + str(extra)]
 
         ## Build response
         data = dict(

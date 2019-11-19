@@ -185,12 +185,14 @@ def task_update_job(node, job_manager, cancellable):
 
         if job_info is None:
             # If the job is computed or not found assume it's done
+            node.logger.warning('Job info not present, assuming it was completed')
             node.set_scheduler_state(JobState.DONE)
             job_done = True
         else:
             node.set_last_job_info(job_info)
             node.set_scheduler_state(job_info.job_state)
             job_done = job_info.job_state == JobState.DONE
+            node.logger.warning('Job state: {}'.format(job_info.job_state))
 
         raise Return(job_done)
 

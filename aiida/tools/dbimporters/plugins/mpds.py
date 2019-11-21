@@ -274,7 +274,7 @@ class MpdsDbImporter(DbImporter):
         return entry_id
 
 
-class StructuresCollection(object):
+class StructuresCollection:
 
     def __init__(self, engine):
         self._engine = engine

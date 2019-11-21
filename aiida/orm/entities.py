@@ -172,7 +172,7 @@ class Collection(typing.Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(object):
+class Entity:
     """An AiiDA entity"""
 
     _objects = None

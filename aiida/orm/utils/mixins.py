@@ -17,7 +17,7 @@ from aiida.common.lang import override
 from aiida.common.lang import classproperty
 
 
-class FunctionCalculationMixin(object):
+class FunctionCalculationMixin:
     """
     This mixin should be used for ProcessNode subclasses that are used to record the execution
     of a python function. For example the process nodes that are used for a function that
@@ -114,7 +114,7 @@ class FunctionCalculationMixin(object):
         return self.get_object_content(self.FUNCTION_SOURCE_FILE_PATH)
 
 
-class Sealable(object):
+class Sealable:
     """Mixin to mark a Node as `sealable`."""
     # pylint: disable=no-member,unsupported-membership-test
 

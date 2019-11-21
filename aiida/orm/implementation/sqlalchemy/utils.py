@@ -22,7 +22,7 @@ from aiida.common import exceptions
 IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid'}
 
 
-class ModelWrapper(object):
+class ModelWrapper:
     """Wrap a database model instance to correctly update and flush the data model when getting or setting a field.
 
     If the model is not stored, the behavior of the get and set attributes is unaltered. However, if the model is

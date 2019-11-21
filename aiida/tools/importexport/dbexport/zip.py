@@ -14,7 +14,7 @@ import os
 import zipfile
 
 
-class MyWritingZipFile(object):
+class MyWritingZipFile:
 
     def __init__(self, zip_file, fname):
         self._zipfile = zip_file
@@ -42,7 +42,7 @@ class MyWritingZipFile(object):
         self.close()
 
 
-class ZipFolder(object):
+class ZipFolder:
     """
     To improve: if zipfile is closed, do something
     (e.g. add explicit open method, rename open to openfile,

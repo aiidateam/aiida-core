@@ -15,7 +15,7 @@
 import click
 
 
-class OverridableArgument(object):
+class OverridableArgument:
     """
     Wrapper around click.argument that increases reusability
 

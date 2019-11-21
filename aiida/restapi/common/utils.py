@@ -60,7 +60,7 @@ class CustomJSONEncoder(JSONEncoder):
         return JSONEncoder.default(self, o)
 
 
-class DatetimePrecision(object):
+class DatetimePrecision:
     # pylint: disable=too-few-public-methods
     """
     A simple class which stores a datetime object with its precision. No
@@ -85,7 +85,7 @@ class DatetimePrecision(object):
         self.precision = precision
 
 
-class Utils(object):
+class Utils:
     """
     A class that gathers all the utility functions for parsing URI,
     validating request, pass it to the translator, and building HTTP response

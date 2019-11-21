@@ -20,7 +20,7 @@ KEY_VERSION_CORE = 'core'  # The version of `aiida-core`
 KEY_VERSION_PLUGIN = 'plugin'  # The version of the plugin top level module, e.g. `aiida-quantumespresso`
 
 
-class PluginVersionProvider(object):
+class PluginVersionProvider:
     """Utility class that determines version information about a given plugin resource."""
 
     def __init__(self):

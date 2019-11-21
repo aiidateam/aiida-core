@@ -25,7 +25,7 @@ from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 from aiida.manage.backup import backup_utils as utils
 
 
-class BackupSetup(object):
+class BackupSetup:
     """
     This class setups the main backup script related information & files like::
 

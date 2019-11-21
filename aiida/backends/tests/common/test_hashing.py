@@ -174,7 +174,7 @@ class MakeHashTest(unittest.TestCase):
 
     def test_unhashable_type(self):
 
-        class MadeupClass(object):
+        class MadeupClass:
             pass
 
         with self.assertRaises(ValueError):

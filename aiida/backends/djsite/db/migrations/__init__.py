@@ -353,7 +353,7 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
     return retval
 
 
-class ModelModifierV0025(object):
+class ModelModifierV0025:
 
     from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
 

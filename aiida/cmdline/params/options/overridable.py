@@ -17,7 +17,7 @@
 import click
 
 
-class OverridableOption(object):
+class OverridableOption:
     """
     Wrapper around click option that increases reusability
 

@@ -18,7 +18,7 @@ from aiida.common.links import LinkType
 __all__ = ('NodeLinksManager', 'AttributeManager')
 
 
-class NodeLinksManager(object):  # pylint: disable=too-few-public-methods
+class NodeLinksManager:  # pylint: disable=too-few-public-methods
     """
     A manager that allows to inspect, with tab-completion, nodes linked to a given one.
     See an example of its use in `CalculationNode.inputs`.
@@ -104,7 +104,7 @@ class NodeLinksManager(object):  # pylint: disable=too-few-public-methods
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
 
-class AttributeManager(object):  # pylint: disable=too-few-public-methods
+class AttributeManager:  # pylint: disable=too-few-public-methods
     """
     An object used internally to return the attributes as a dictionary.
     This is currently used in :py:class:`~aiida.orm.nodes.data.dict.Dict`,

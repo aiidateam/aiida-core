@@ -235,7 +235,7 @@ def tree(nodes, depth):
             echo.echo('')
 
 
-class NodeTreePrinter(object):
+class NodeTreePrinter:
     """Utility functions for printing node trees."""
 
     @classmethod

@@ -182,7 +182,7 @@ def xyz_parser_iterator(xyz_string):
     :param xyz_string: a string containing XYZ-structured text
     """
 
-    class BlockIterator(object):
+    class BlockIterator:
         """
         An iterator for wrapping the iterator returned by `match.finditer`
         to extract the required fields directly from the match object

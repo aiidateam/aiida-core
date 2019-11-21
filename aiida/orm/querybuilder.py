@@ -264,7 +264,7 @@ def get_process_type_filter(classifiers, subclassing):
     return filter
 
 
-class QueryBuilder(object):
+class QueryBuilder:
     """
     The class to query the AiiDA database.
 

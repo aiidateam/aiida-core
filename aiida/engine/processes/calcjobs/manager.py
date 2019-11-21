@@ -20,7 +20,7 @@ from aiida.common import exceptions, lang
 __all__ = ('JobsList', 'JobManager')
 
 
-class JobsList(object):
+class JobsList:
     """Manager of calculation jobs submitted with a specific ``AuthInfo``, i.e. computer configured for a specific user.
 
     This container of active calculation jobs is used to update their status periodically in batches, ensuring that
@@ -247,7 +247,7 @@ class JobsList(object):
         return [str(job_id) for job_id, _ in self._job_update_requests.items()]
 
 
-class JobManager(object):
+class JobManager:
     """A manager for :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` submitted to ``Computer`` instances.
 
     When a calculation job is submitted to a :py:class:`~aiida.orm.computers.Computer`, it actually uses a specific

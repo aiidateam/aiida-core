@@ -331,7 +331,7 @@ def _add_graphviz_edge(graph, in_node, out_node, style=None):
     return graph.edge('N{}'.format(in_node.pk), 'N{}'.format(out_node.pk), **style)
 
 
-class Graph(object):
+class Graph:
     """a class to create graphviz graphs of the AiiDA node provenance"""
 
     def __init__(

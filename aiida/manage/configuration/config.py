@@ -21,7 +21,7 @@ from .profile import Profile
 __all__ = ('Config',)
 
 
-class Config(object):  # pylint: disable=too-many-public-methods
+class Config:  # pylint: disable=too-many-public-methods
     """Object that represents the configuration file of an AiiDA instance."""
 
     KEY_VERSION = 'CONFIG_VERSION'

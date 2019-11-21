@@ -19,7 +19,7 @@ VERDIAUTOGROUP_TYPE = GroupTypeString.VERDIAUTOGROUP_TYPE.value
 
 # TODO: make the Autogroup usable to the user, and not only to the verdi run
 
-class Autogroup(object):
+class Autogroup:
     """
     An object used for the autogrouping of objects.
     The autogrouping is checked by the Node.store() method.

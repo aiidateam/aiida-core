@@ -16,7 +16,7 @@ from aiida.restapi.common.exceptions import RestValidationError, \
 from aiida.restapi.common.utils import PK_DBSYNONYM
 
 
-class BaseTranslator(object):
+class BaseTranslator:
     """
     Generic class for translator. It contains the methods
     required to build a related QueryBuilder object

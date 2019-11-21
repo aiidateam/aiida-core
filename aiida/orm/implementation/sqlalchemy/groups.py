@@ -140,7 +140,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
     def nodes(self):
         """Get an iterator to all the nodes in the group"""
 
-        class Iterator(object):
+        class Iterator:
             """Nodes iterator"""
 
             def __init__(self, dbnodes, backend):

@@ -80,7 +80,7 @@ def validate_len3_list_or_none(value):
     return validate_len3_list(value)
 
 
-class Orbital(object):
+class Orbital:
     """
     Base class for Orbitals. Can handle certain basic fields, their setting
     and validation. More complex Orbital objects should then inherit from

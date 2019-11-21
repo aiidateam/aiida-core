@@ -16,9 +16,6 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
  * aiida_local_code_factory
 
 """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 import tempfile
 import shutil

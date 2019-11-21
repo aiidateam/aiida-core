@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test export file migration from export version 0.1 to 0.2"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida import get_version
 from aiida.backends.testbase import AiidaTestCase

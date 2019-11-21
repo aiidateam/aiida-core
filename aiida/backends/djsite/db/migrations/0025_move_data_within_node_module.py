@@ -9,10 +9,6 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-few-public-methods
 """Data migration for `Data` nodes after it was moved in the `aiida.orm.node` module changing the type string."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error

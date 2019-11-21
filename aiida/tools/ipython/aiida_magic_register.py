@@ -14,9 +14,6 @@ This file can be put into the startup folder in order to have the line
 magic available at startup.
 The start up folder is usually at ``.ipython/profile_default/startup/``
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 if __name__ == '__main__':
 

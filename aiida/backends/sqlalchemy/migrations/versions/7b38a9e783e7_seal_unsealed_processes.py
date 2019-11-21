@@ -24,9 +24,6 @@ Revises: e734dd5e50d7
 Create Date: 2019-10-28 13:22:56.224234
 
 """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error

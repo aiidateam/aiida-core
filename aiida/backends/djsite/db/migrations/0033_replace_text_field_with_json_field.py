@@ -9,10 +9,6 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-few-public-methods
 """Replace use of text fields to store JSON data with builtin JSONField."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error,no-member

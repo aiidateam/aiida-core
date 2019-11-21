@@ -24,9 +24,6 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 # -- General configuration ------------------------------------------------
 

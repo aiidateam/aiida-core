@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to define the database models for the SqlAlchemy backend."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from sqlalchemy_utils import force_instant_defaults
 

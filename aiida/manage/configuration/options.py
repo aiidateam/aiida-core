@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of known configuration options and methods to parse and get option values."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import collections
 import six

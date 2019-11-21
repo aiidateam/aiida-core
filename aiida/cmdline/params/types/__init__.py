@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Provides all parameter types."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .calculation import CalculationParamType
 from .choice import LazyChoice

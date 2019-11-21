@@ -9,9 +9,6 @@
 ###########################################################################
 """Test export file migration from export version 0.3 to 0.4"""
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import io
 import tarfile

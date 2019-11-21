@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to define the (physical) constants used throughout the code."""
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
 # This is the precision with which AiiDA internally will store float numbers
 # In particular, before storing a number (in attributes/extras),

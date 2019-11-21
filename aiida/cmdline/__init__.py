@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=wildcard-import,undefined-variable
 """The command line interface of AiiDA."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .params.arguments import *
 from .params.options import *

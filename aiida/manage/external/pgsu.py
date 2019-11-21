@@ -13,9 +13,6 @@ Note: Once the API of this functionality has converged, this module should be mo
   separate package that can then be tested on multiple OS / postgres setups. Therefore, **please keep this
   module entirely AiiDA-agnostic**.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 try:
     import subprocess32 as subprocess

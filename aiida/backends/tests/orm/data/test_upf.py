@@ -10,9 +10,6 @@
 """
 This module contains tests for UpfData and UpfData related functions.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import errno
 import tempfile

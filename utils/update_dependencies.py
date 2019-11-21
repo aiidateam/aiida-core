@@ -9,9 +9,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility CLI to update dependency version requirements of the `setup.json`."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import copy
 import os

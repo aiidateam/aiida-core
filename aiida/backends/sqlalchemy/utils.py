@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Utility functions specific to the SqlAlchemy backend."""
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 
 def delete_nodes_and_connections_sqla(pks_to_delete):  # pylint: disable=invalid-name

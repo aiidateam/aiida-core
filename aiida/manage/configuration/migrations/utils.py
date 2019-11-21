@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Defines utilities for verifying the version of the configuration file and migrating it when necessary."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.common import exceptions
 from .migrations import _MIGRATION_LOOKUP, CURRENT_CONFIG_VERSION

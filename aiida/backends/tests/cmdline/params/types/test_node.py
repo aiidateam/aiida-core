@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `NodeParamType`."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import NodeParamType
 from aiida.orm import Data

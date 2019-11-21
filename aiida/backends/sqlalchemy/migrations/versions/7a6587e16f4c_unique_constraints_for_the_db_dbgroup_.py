@@ -15,9 +15,6 @@ Revises: 35d4ee9a1b0e
 Create Date: 2019-02-11 19:25:11.744902
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from alembic import op
 
 # revision identifiers, used by Alembic.

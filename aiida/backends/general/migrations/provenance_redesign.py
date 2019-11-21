@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQL statements to detect invalid/ununderstood links for the provenance redesign migration."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 SELECT_CALCULATIONS_WITH_OUTGOING_CALL = """
     SELECT node_in.uuid, node_out.uuid, link.type, link.label

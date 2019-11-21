@@ -12,9 +12,6 @@
 Sub-classes can be registered in the `aiida.tools.calculations` category to enable the `CalcJobNode` class from being
 able to find the tools plugin, load it and expose it through the `tools` property of the `CalcJobNode`.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 __all__ = ('CalculationTools',)
 

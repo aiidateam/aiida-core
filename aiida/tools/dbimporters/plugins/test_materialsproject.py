@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that contains the class definitions necessary to offer support for queries to Materials Project."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.plugins import DbImporterFactory

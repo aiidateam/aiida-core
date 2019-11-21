@@ -1,6 +1,5 @@
 #!/usr/bin/env runaiida
 # -*- coding: utf-8 -*-
-from __future__ import print_function
 
 from aiida.orm import Bool, Float, Int
 from aiida.engine import run

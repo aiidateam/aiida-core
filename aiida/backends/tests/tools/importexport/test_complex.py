@@ -9,10 +9,6 @@
 ###########################################################################
 """Complex tests for the export and import routines"""
 # pylint: disable=too-many-locals
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import with_statement
 
 import os
 from six.moves import range

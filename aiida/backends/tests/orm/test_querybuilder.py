@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=invalid-name,missing-docstring,too-many-lines
 """Tests for the QueryBuilder."""
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 import warnings
 

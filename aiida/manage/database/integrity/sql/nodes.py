@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQL statements that test the integrity of the database with respect to nodes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.common.extendeddicts import AttributeDict
 from aiida.orm import Data, CalculationNode, WorkflowNode

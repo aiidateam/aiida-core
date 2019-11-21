@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for the `Orbital` class and subclasses."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 #from aiida import orm
 from aiida.backends.testbase import AiidaTestCase

@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-lines
 """Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 from contextlib import contextmanager
 import os

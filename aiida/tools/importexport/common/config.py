@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """ Configuration file for AiiDA Import/Export module """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from aiida.orm import Computer, Group, GroupTypeString, Node, User, Log, Comment
 

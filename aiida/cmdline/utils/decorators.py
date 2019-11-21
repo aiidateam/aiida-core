@@ -19,9 +19,6 @@ Provides:
     code branch gets visited and possibly avoiding the overhead if not
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from contextlib import contextmanager
 

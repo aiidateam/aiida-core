@@ -12,9 +12,6 @@
 .. py:module::config
     :synopsis: Convenience class for configuration file option
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import yaml
 import click_config_file

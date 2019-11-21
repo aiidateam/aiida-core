@@ -10,9 +10,6 @@
 """
 Base class for AiiDA tests
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.backends.testimplbase import AiidaTestImplementation
 from aiida.orm.implementation.django.backend import DjangoBackend

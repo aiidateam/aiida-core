@@ -9,9 +9,6 @@
 ###########################################################################
 """Django implementations for the Comment entity and collection."""
 # pylint: disable=import-error,no-name-in-module
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist

@@ -19,9 +19,6 @@ Revises: 7ca08c391c49
 Create Date: 2018-12-28 15:53:14.596810
 """
 # pylint: disable=wrong-import-order
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 import sys
 from six.moves import zip

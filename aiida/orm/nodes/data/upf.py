@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module of `Data` sub class to represent a pseudopotential single file in UPF format and related utilities."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import io
 import json

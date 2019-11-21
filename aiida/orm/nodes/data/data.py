@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import io
 

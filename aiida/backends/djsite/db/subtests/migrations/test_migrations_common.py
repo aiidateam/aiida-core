@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module,invalid-name
 """ The basic functionality for the migration tests"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from django.apps import apps
 from django.db.migrations.executor import MigrationExecutor

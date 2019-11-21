@@ -19,9 +19,6 @@ An instance of one of the implementation classes becomes a member of the :func:`
 when instantiated by the user.
 """
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
 import copy

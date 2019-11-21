@@ -8,12 +8,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module,unused-argument
 """Simple wrapper around Django's `manage.py` CLI script."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 import click
 
 from aiida.cmdline.params import options, types
@@ -22,9 +17,9 @@ from aiida.cmdline.params import options, types
 @click.command()
 @options.PROFILE(required=True, type=types.ProfileParamType(load_profile=True))
 @click.argument('command', nargs=-1)
-def main(profile, command):
+def main(profile, command):  # pylint: disable=unused-argument
     """Simple wrapper around the Django command line tool that first loads an AiiDA profile."""
-    from django.core.management import execute_from_command_line
+    from django.core.management import execute_from_command_line  # pylint: disable=import-error,no-name-in-module
     from aiida.manage.manager import get_manager
 
     manager = get_manager()

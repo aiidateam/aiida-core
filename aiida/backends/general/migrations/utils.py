@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Various utils that should be used during migrations and migrations tests because the AiiDA ORM cannot be used."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import datetime
 import errno

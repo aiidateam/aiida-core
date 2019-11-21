@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module containing utilities and classes relating to job calculations running on systems that require transport."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import contextlib
 import logging

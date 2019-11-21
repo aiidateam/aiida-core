@@ -11,10 +11,6 @@
 Defines an rst directive to auto-document AiiDA calculation job.
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 from .process import AiidaProcessDocumenter, AiidaProcessDirective
 
 

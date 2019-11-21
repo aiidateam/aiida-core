@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=wildcard-import,undefined-variable
 """Module for classes and utilities to define transports to other machines."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .transport import *
 

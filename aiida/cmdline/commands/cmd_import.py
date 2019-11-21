@@ -9,9 +9,6 @@
 ###########################################################################
 """`verdi import` command."""
 # pylint: disable=broad-except,too-many-arguments,too-many-locals,too-many-branches
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from enum import Enum
 import traceback
 import click

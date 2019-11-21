@@ -7,11 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the SLURM scheduler plugin.
-"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
+"""Tests for the SLURM scheduler plugin."""
 import unittest
 import logging
 import uuid

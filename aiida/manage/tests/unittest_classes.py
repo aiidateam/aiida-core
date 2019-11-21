@@ -11,10 +11,6 @@
 Test classes and test runners for testing AiiDA plugins with unittest.
 """
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import unittest
 
 from aiida.manage.manager import get_manager

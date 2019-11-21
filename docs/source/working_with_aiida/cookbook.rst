@@ -12,7 +12,6 @@ If you want to know if which jobs are currently on the scheduler (e.g.
 to dynamically decide on which computer to submit, or to delay submission, etc.)
 you can use a modification of the following script::
 
-    from __future__ import print_function
 
 
     def get_scheduler_jobs(only_current_user=True):

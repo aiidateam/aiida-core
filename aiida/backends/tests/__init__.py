@@ -11,9 +11,6 @@
 """
 Module for defining tests that required access to (a temporary) database
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from six.moves import range
 from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO

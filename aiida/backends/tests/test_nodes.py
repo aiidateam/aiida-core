@@ -10,9 +10,6 @@
 # pylint: disable=too-many-lines,invalid-name,protected-access
 # pylint: disable=missing-docstring,too-many-locals,too-many-statements
 # pylint: disable=too-many-public-methods
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 import copy
 import io

@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=undefined-variable,wildcard-import,global-statement,redefined-outer-name,cyclic-import
 """Modules related to the configuration of an AiiDA instance."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .config import *
 from .options import *

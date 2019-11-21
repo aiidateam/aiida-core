@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=no-member
 """Django Group entity"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import collections
 

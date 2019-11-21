@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the Comment ORM class."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida import orm
 from aiida.orm.comments import Comment

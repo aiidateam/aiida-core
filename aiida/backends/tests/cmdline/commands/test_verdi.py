@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi`."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from click.testing import CliRunner
 
 from aiida import get_version

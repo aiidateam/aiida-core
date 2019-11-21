@@ -11,9 +11,6 @@
 This module implements a generic output plugin, that is general enough
 to allow the reading of the outputs of a calculation.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 import six

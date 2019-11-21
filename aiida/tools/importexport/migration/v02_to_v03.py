@@ -9,9 +9,6 @@
 ###########################################################################
 """Migration from v0.2 to v0.3, used by `verdi export migrate` command."""
 # pylint: disable=too-many-locals,too-many-statements,too-many-branches,unused-argument
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import enum
 

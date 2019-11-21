@@ -9,10 +9,6 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module,global-statement
 """Module with implementation of the database backend using SqlAlchemy."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker

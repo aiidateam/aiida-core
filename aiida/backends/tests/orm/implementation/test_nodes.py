@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-public-methods
 """Unit tests for the BackendNode and BackendNodeCollection classes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from collections import OrderedDict
 from datetime import datetime

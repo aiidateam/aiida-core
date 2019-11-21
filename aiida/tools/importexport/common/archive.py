@@ -26,7 +26,7 @@ from aiida.tools.importexport.common.exceptions import CorruptArchive
 __all__ = ('Archive', 'extract_zip', 'extract_tar', 'extract_tree')
 
 
-class Archive(object):
+class Archive:
     """Utility class to operate on exported archive files or directories.
 
     The main usage should be to construct the class with the filepath of the export archive as an argument.

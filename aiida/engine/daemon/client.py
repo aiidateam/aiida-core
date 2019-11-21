@@ -55,7 +55,7 @@ def get_daemon_client(profile_name=None):
     return DaemonClient(profile)
 
 
-class DaemonClient(object):  # pylint: disable=too-many-public-methods
+class DaemonClient:  # pylint: disable=too-many-public-methods
     """
     Extension of the Profile which also provides handles to retrieve profile specific
     properties related to the daemon client

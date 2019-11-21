@@ -34,5 +34,5 @@ class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
         spec.output('z', valid_type=Bool, help='Output of the demoworkchain.')
 
 
-class NormalClass(object):  # pylint: disable=too-few-public-methods
+class NormalClass:  # pylint: disable=too-few-public-methods
     """This is here to check that we didn't break the regular autoclass."""

@@ -14,7 +14,7 @@ from aiida.common import exceptions
 __all__ = ('CalcJobResultManager',)
 
 
-class CalcJobResultManager(object):
+class CalcJobResultManager:
     """
     Utility class to easily access the contents of the 'default output' node of a `CalcJobNode`.
 

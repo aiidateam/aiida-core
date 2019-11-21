@@ -11,7 +11,7 @@
 from aiida.cmdline.utils.query import formatting
 
 
-class ProjectionMapper(object):
+class ProjectionMapper:
     """
     Class to map projection names from the CLI to entity labels, attributes and formatters.
 

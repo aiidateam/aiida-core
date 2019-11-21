@@ -29,7 +29,7 @@ CALC_JOB_DRY_RUN_BASE_PATH = 'submit_test'
 VALID_SECTIONS = ['node']
 
 
-class Folder(object):
+class Folder:
     """
     A class to manage generic folders, avoiding to get out of
     specific given folder borders.

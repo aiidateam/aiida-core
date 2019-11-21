@@ -53,7 +53,7 @@ class TestManagerError(Exception):
         return repr(self.msg)
 
 
-class TestManager(object):
+class TestManager:
     """
     Test manager for plugin tests.
 
@@ -113,7 +113,7 @@ class TestManager(object):
         self._manager = None
 
 
-class ProfileManager(object):
+class ProfileManager:
     """
     Wraps existing AiiDA profile.
     """

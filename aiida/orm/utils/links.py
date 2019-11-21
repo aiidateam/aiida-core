@@ -185,7 +185,7 @@ def validate_link(source, target, link_type, link_label):
             target.uuid, link_type, link_label, source.uuid))
 
 
-class LinkManager(object):
+class LinkManager:
     """
     Class to convert a list of LinkTriple tuples into an iterator.
 

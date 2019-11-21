@@ -16,7 +16,7 @@ able to find the tools plugin, load it and expose it through the `tools` propert
 __all__ = ('CalculationTools',)
 
 
-class CalculationTools(object):
+class CalculationTools:
     """Base class for CalculationTools."""
 
     # pylint: disable=too-few-public-methods

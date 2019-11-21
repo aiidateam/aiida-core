@@ -108,7 +108,7 @@ protected = protected_decorator(check=False)  # pylint: disable=invalid-name
 override = override_decorator(check=False)  # pylint: disable=invalid-name
 
 
-class classproperty(object):  # pylint: disable=too-few-public-methods,invalid-name
+class classproperty:  # pylint: disable=too-few-public-methods,invalid-name
     """
     A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together
@@ -152,7 +152,7 @@ class abstractstaticmethod(staticmethod):  # pylint: disable=too-few-public-meth
         super(abstractstaticmethod, self).__init__(callable)
 
 
-class combomethod(object):  # pylint: disable=invalid-name,too-few-public-methods
+class combomethod:  # pylint: disable=invalid-name,too-few-public-methods
     """
     A decorator that wraps a function that can be both a classmethod or
     instancemethod and behaves accordingly::
@@ -194,7 +194,7 @@ class combomethod(object):  # pylint: disable=invalid-name,too-few-public-method
         return _wrapper
 
 
-class EmptyContextManager(object):  # pylint: disable=too-few-public-methods
+class EmptyContextManager:  # pylint: disable=too-few-public-methods
     """
     A dummy/no-op context manager.
     """

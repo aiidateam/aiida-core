@@ -17,7 +17,7 @@ from tornado import concurrent, gen, ioloop
 _LOGGER = logging.getLogger(__name__)
 
 
-class TransportRequest(object):
+class TransportRequest:
     """ Information kept about request for a transport object """
 
     # pylint: disable=too-few-public-methods
@@ -27,7 +27,7 @@ class TransportRequest(object):
         self.count = 0
 
 
-class TransportQueue(object):
+class TransportQueue:
     """
     A queue to get transport objects from authinfo.  This class allows clients
     to register their interest in a transport object which will be provided at

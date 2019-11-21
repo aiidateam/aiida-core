@@ -1900,7 +1900,7 @@ class StructureData(Data):
         return Molecule(species, positions)
 
 
-class Kind(object):
+class Kind:
     """
     This class contains the information about the species (kinds) of the system.
 
@@ -2274,7 +2274,7 @@ class Kind(object):
         return "name '{}', symbol '{}'".format(self.name, symbol)
 
 
-class Site(object):
+class Site:
     """
     This class contains the information about a given site of the system.
 

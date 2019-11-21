@@ -17,7 +17,7 @@ from aiida.common.exceptions import InputValidationError
 __all__ = ('BackendQueryBuilder',)
 
 
-class BackendQueryBuilder(object):
+class BackendQueryBuilder:
     """Backend query builder interface"""
 
     # pylint: disable=invalid-name,too-many-public-methods

@@ -24,7 +24,7 @@ PORT_NAMESPACE_SEPARATOR = '__'  # The character sequence to represent a nested 
 OutputPort = ports.OutputPort  # pylint: disable=invalid-name
 
 
-class WithNonDb(object):
+class WithNonDb:
     """
     A mixin that adds support to a port to flag a that should not be stored
     in the database using the non_db=True flag.
@@ -65,7 +65,7 @@ class WithNonDb(object):
         self._non_db = non_db
 
 
-class WithSerialize(object):
+class WithSerialize:
     """
     A mixin that adds support for a serialization function which is automatically applied on inputs
     that are not AiiDA data types.

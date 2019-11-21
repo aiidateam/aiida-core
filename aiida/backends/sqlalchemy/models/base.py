@@ -20,7 +20,7 @@ from aiida.common.exceptions import InvalidOperation
 # https://github.com/mitsuhiko/flask-sqlalchemy/blob/master/flask_sqlalchemy/__init__.py#L491
 
 
-class _QueryProperty(object):
+class _QueryProperty:
 
     def __init__(self, query_class=orm.Query):
         self.query_class = query_class
@@ -35,7 +35,7 @@ class _QueryProperty(object):
             return None
 
 
-class _SessionProperty(object):
+class _SessionProperty:
     def __get__(self, obj, _type):
         if not aiida.backends.sqlalchemy.get_scoped_session():
             raise InvalidOperation('You need to call load_dbenv before '
@@ -64,7 +64,7 @@ class _AiidaQuery(orm.Query):
 from aiida.backends.sqlalchemy import get_scoped_session
 
 
-class Model(object):
+class Model:
     query = _QueryProperty()
 
     session = _SessionProperty()

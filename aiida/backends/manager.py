@@ -64,7 +64,7 @@ After the database schema is migrated to version `{schema_version_reset}` you ca
 Setting = collections.namedtuple('Setting', ['key', 'value', 'description', 'time'])
 
 
-class SettingsManager(object):  # pylint: disable=useless-object-inheritance
+class SettingsManager:
     """Class to get, set and delete settings from the `DbSettings` table."""
 
     @abc.abstractmethod
@@ -94,7 +94,7 @@ class SettingsManager(object):  # pylint: disable=useless-object-inheritance
         """
 
 
-class BackendManager(object):  # pylint: disable=useless-object-inheritance
+class BackendManager:
     """Class to manage the database schema and environment."""
 
     _settings_manager = None

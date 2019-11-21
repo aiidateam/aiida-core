@@ -10,7 +10,7 @@
 
 
 
-class DbImporter(object):
+class DbImporter:
     """
     Base class for database importers.
     """
@@ -77,7 +77,7 @@ class DbImporter(object):
         raise NotImplementedError('not implemented in base class')
 
 
-class DbSearchResults(object):
+class DbSearchResults:
     """
     Base class for database results.
 
@@ -90,7 +90,7 @@ class DbSearchResults(object):
         self._results = results
         self._entries = {}
 
-    class DbSearchResultsIterator(object):
+    class DbSearchResultsIterator:
         """
         Iterator for search results
         """
@@ -183,7 +183,7 @@ class DbSearchResults(object):
         raise NotImplementedError('not implemented in base class')
 
 
-class DbEntry(object):
+class DbEntry:
     """
     Represents an entry from external database.
     """

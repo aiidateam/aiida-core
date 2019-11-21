@@ -17,7 +17,7 @@ from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.common.utils import ErrorAccumulator
 
 
-class CodeBuilder(object):
+class CodeBuilder:
     """Build a code with validation of attribute combinations"""
 
     def __init__(self, **kwargs):

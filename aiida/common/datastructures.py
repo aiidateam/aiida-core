@@ -169,7 +169,7 @@ class CodeRunMode(IntEnum):
     PARALLEL = 1
 
 
-class LazyStore(object):
+class LazyStore:
     """
     A container that provides a mapping to objects based on a key, if the object is not
     found in the container when it is retrieved it will created using a provided factory

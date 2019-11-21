@@ -16,7 +16,7 @@ protected_checked = lang.protected_decorator(check=True)  # pylint: disable=inva
 protected_unchecked = lang.protected_decorator(check=False)  # pylint: disable=invalid-name
 
 
-class Protected(object):
+class Protected:
     """Class to test the protected decorator."""
 
     # pylint: disable=no-self-use
@@ -67,7 +67,7 @@ class TestProtectedDecorator(AiidaTestCase):
         """The protected decorator should raise if applied before the property decorator."""
         with self.assertRaises(RuntimeError):
 
-            class InvalidProtected(object):
+            class InvalidProtected:
                 """Invalid use of protected decorator."""
 
                 @staticmethod

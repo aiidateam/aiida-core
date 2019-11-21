@@ -1552,7 +1552,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.RETURN).all()), 2)
 
 
-class AnyValue(object):
+class AnyValue:
     """
     Helper class that compares equal to everything.
     """

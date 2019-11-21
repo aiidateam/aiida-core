@@ -39,7 +39,7 @@ class PostgresConnectionMode(IntEnum):
     PSQL = 2
 
 
-class PGSU(object):
+class PGSU:
     """
     Connect to an existing PostgreSQL cluster as the `postgres` superuser and execute SQL commands.
 

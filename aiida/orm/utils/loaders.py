@@ -57,7 +57,7 @@ class IdentifierType(Enum):
     LABEL = 'LABEL'
 
 
-class OrmEntityLoader(object):
+class OrmEntityLoader:
     """Base class for entity loaders."""
 
     label_ambiguity_breaker = '!'

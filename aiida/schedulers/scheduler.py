@@ -27,7 +27,7 @@ class SchedulerParsingError(SchedulerError):
     pass
 
 
-class Scheduler(object):
+class Scheduler:
     """
     Base class for all schedulers.
     """

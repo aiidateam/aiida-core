@@ -7,15 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+import glob
 import io
 import os
-import click
-import glob
 from stat import S_ISDIR, S_ISREG
 
-import six
-from six.moves import cStringIO as StringIO
+import click
 
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathParamType
@@ -120,7 +117,7 @@ class SshTransport(Transport):
         try:
             identities = config['identityfile']
             # In paramiko > 0.10, identity file is a list of strings.
-            if isinstance(identities, six.string_types):
+            if isinstance(identities, str):
                 identity = identities
             elif isinstance(identities, (list, tuple)):
                 if not identities:
@@ -1139,8 +1136,8 @@ class SshTransport(Transport):
         ssh_stdin, stdout, stderr, channel = self._exec_command_internal(command, combine_stderr, bufsize=bufsize)
 
         if stdin is not None:
-            if isinstance(stdin, six.string_types):
-                filelike_stdin = StringIO(stdin)
+            if isinstance(stdin, str):
+                filelike_stdin = io.StringIO(stdin)
             else:
                 filelike_stdin = stdin
 

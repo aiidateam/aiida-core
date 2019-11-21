@@ -9,6 +9,8 @@
 ###########################################################################
 """Click parameter types for paths."""
 import os
+import urllib
+
 import click
 
 URL_TIMEOUT_SECONDS = 10
@@ -61,7 +63,6 @@ class ImportPath(click.Path):
 
     def checks_url(self, value, param, ctx):
         """Do checks for possible URL path"""
-        from six.moves import urllib
         from socket import timeout
 
         url = value

@@ -18,11 +18,10 @@ Revision ID: 041a79fc615f
 Revises: 7ca08c391c49
 Create Date: 2018-12-28 15:53:14.596810
 """
-# pylint: disable=wrong-import-order
-
 import sys
-from six.moves import zip
+
 import click
+
 import sqlalchemy as sa
 from sqlalchemy.sql import text
 from alembic import op

@@ -10,7 +10,6 @@
 """Module with `Node` sub class for processes."""
 
 import enum
-import six
 
 from plumpy import ProcessState
 
@@ -210,7 +209,7 @@ class ProcessNode(Sealable, Node):
                 pass
             return None
 
-        if not isinstance(status, six.string_types):
+        if not isinstance(status, str):
             raise TypeError('process status should be a string')
 
         return self.set_attribute(self.PROCESS_STATUS_KEY, status)
@@ -332,7 +331,7 @@ class ProcessNode(Sealable, Node):
         if message is None:
             return None
 
-        if not isinstance(message, six.string_types):
+        if not isinstance(message, str):
             raise ValueError('exit message has to be a string type, got {}'.format(type(message)))
 
         return self.set_attribute(self.EXIT_MESSAGE_KEY, message)
@@ -357,7 +356,7 @@ class ProcessNode(Sealable, Node):
 
         :param exception: the exception message
         """
-        if not isinstance(exception, six.string_types):
+        if not isinstance(exception, str):
             raise ValueError('exception message has to be a string type, got {}'.format(type(exception)))
 
         return self.set_attribute(self.EXCEPTION_KEY, exception)

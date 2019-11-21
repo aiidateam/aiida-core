@@ -9,11 +9,7 @@
 ###########################################################################
 # pylint: disable=invalid-name,missing-docstring,too-many-lines
 """Tests for the QueryBuilder."""
-
 import warnings
-
-from six.moves import range, zip
-from six import string_types
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -622,7 +618,7 @@ class TestMultipleProjections(AiidaTestCase):
 
         self.assertEqual(type(result), list)
         self.assertEqual(len(result), 2)
-        self.assertIsInstance(result[0], string_types)
+        self.assertIsInstance(result[0], str)
         self.assertIsInstance(result[1], orm.Data)
 
 

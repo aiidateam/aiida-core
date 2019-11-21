@@ -12,7 +12,6 @@
 import time
 
 from paramiko import ProxyCommand
-from six.moves import range
 
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 

@@ -12,8 +12,6 @@ A module defining hydrogen-like orbitals that are real valued (rather than
 complex-valued).
 """
 
-import six
-
 from aiida.common.exceptions import ValidationError, InputValidationError
 
 from .orbital import Orbital, validate_len3_list_or_none, validate_float_or_none
@@ -23,7 +21,7 @@ def validate_l(value):
     """
     Validate the value of the angular momentum
     """
-    if not isinstance(value, six.integer_types):
+    if not isinstance(value, int):
         raise ValidationError('angular momentum (l) must be integer')
 
     if value < -5 or value > 3:
@@ -36,7 +34,7 @@ def validate_m(value):
     """
     Validate the value of the magnetic number
     """
-    if not isinstance(value, six.integer_types):
+    if not isinstance(value, int):
         raise ValidationError('magnetic number (m) must be integer')
 
     # without knowing l we cannot validate the value of m. We will call an additional function
@@ -49,7 +47,7 @@ def validate_kind_name(value):
     """
     Validate the value of the kind_name
     """
-    if value is not None and not isinstance(value, six.string_types):
+    if value is not None and not isinstance(value, str):
         raise ValidationError('kind_name must be a string')
 
     return value
@@ -59,7 +57,7 @@ def validate_n(value):
     """
     Validate the value of the number of radial nodes
     """
-    if not isinstance(value, six.integer_types):
+    if not isinstance(value, int):
         raise ValidationError('number of radial nodes (n) must be integer')
 
     if value < 0 or value > 2:
@@ -72,7 +70,7 @@ def validate_spin(value):
     """
     Validate the value of the spin
     """
-    if not isinstance(value, six.integer_types):
+    if not isinstance(value, int):
         raise ValidationError('spin must be integer')
 
     if value < -1 or value > 1:

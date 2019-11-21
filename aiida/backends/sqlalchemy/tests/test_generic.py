@@ -11,7 +11,6 @@
 Generic tests that need the be specific to sqlalchemy
 """
 
-from six.moves import range
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Data

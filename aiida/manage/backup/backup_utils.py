@@ -7,14 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-builtin
 """Utilities for the backup functionality."""
 
 import datetime
 import sys
 
 import dateutil
-
-from six.moves import input
 
 
 def ask_question(question, reply_type, allow_none_as_answer=True):

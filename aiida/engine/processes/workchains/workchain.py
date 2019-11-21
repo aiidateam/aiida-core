@@ -11,7 +11,6 @@
 
 import collections
 import functools
-import six
 
 import plumpy
 from plumpy import auto_persist, Wait, Continue
@@ -180,7 +179,7 @@ class WorkChain(Process):
             finished, result = True, exception.exit_code
         else:
             # Set result to None unless stepper_result was non-zero positive integer or ExitCode with similar status
-            if isinstance(stepper_result, six.integer_types) and stepper_result > 0:
+            if isinstance(stepper_result, int) and stepper_result > 0:
                 result = ExitCode(stepper_result)
             elif isinstance(stepper_result, ExitCode) and stepper_result.status > 0:
                 result = stepper_result
@@ -209,7 +208,7 @@ class WorkChain(Process):
         elif isinstance(data, collections.Mapping):
             for _, value in data.items():
                 self._store_nodes(value)
-        elif isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
+        elif isinstance(data, collections.Sequence) and not isinstance(data, str):
             for value in data:
                 self._store_nodes(value)
 

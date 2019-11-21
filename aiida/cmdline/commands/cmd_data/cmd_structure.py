@@ -11,7 +11,6 @@
 
 import io
 
-from six.moves import range
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data

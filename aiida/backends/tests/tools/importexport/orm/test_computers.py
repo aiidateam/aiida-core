@@ -11,7 +11,6 @@
 # pylint: disable=too-many-statements,no-member
 
 import os
-import six
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -60,8 +59,8 @@ class TestComputer(AiidaTestCase):
         calc2.seal()
 
         # Store locally the computer name
-        comp_name = six.text_type(comp.name)
-        comp_uuid = six.text_type(comp.uuid)
+        comp_name = str(comp.name)
+        comp_uuid = str(comp.uuid)
 
         # Export the first job calculation
         filename1 = os.path.join(temp_dir, 'export1.tar.gz')
@@ -92,14 +91,14 @@ class TestComputer(AiidaTestCase):
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['label'])
         self.assertEqual(builder.count(), 1, 'Only one calculation should be found.')
-        self.assertEqual(six.text_type(builder.first()[0]), calc1_label, 'The calculation label is not correct.')
+        self.assertEqual(str(builder.first()[0]), calc1_label, 'The calculation label is not correct.')
 
         # Check that the referenced computer is imported correctly.
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['name', 'uuid', 'id'])
         self.assertEqual(builder.count(), 1, 'Only one computer should be found.')
-        self.assertEqual(six.text_type(builder.first()[0]), comp_name, 'The computer name is not correct.')
-        self.assertEqual(six.text_type(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
+        self.assertEqual(str(builder.first()[0]), comp_name, 'The computer name is not correct.')
+        self.assertEqual(str(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
 
         # Store the id of the computer
         comp_id = builder.first()[2]
@@ -115,8 +114,8 @@ class TestComputer(AiidaTestCase):
             builder.count(), 1, 'Found {} computers'
             'but only one computer should be found.'.format(builder.count())
         )
-        self.assertEqual(six.text_type(builder.first()[0]), comp_name, 'The computer name is not correct.')
-        self.assertEqual(six.text_type(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
+        self.assertEqual(str(builder.first()[0]), comp_name, 'The computer name is not correct.')
+        self.assertEqual(str(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
         self.assertEqual(builder.first()[2], comp_id, 'The computer id is not correct.')
 
         # Check that now you have two calculations attached to the same
@@ -149,7 +148,7 @@ class TestComputer(AiidaTestCase):
         calc1.seal()
 
         # Store locally the computer name
-        comp1_name = six.text_type(comp1.name)
+        comp1_name = str(comp1.name)
 
         # Export the first job calculation
         filename1 = os.path.join(temp_dir, 'export1.tar.gz')
@@ -192,13 +191,13 @@ class TestComputer(AiidaTestCase):
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['label'])
         self.assertEqual(builder.count(), 1, 'Only one calculation should be found.')
-        self.assertEqual(six.text_type(builder.first()[0]), calc1_label, 'The calculation label is not correct.')
+        self.assertEqual(str(builder.first()[0]), calc1_label, 'The calculation label is not correct.')
 
         # Check that the referenced computer is imported correctly.
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['name', 'uuid', 'id'])
         self.assertEqual(builder.count(), 1, 'Only one computer should be found.')
-        self.assertEqual(six.text_type(builder.first()[0]), comp1_name, 'The computer name is not correct.')
+        self.assertEqual(str(builder.first()[0]), comp1_name, 'The computer name is not correct.')
 
         # Import the second calculation
         import_data(filename2, silent=True)
@@ -211,7 +210,7 @@ class TestComputer(AiidaTestCase):
             builder.count(), 1, 'Found {} computers'
             'but only one computer should be found.'.format(builder.count())
         )
-        self.assertEqual(six.text_type(builder.first()[0]), comp1_name, 'The computer name is not correct.')
+        self.assertEqual(str(builder.first()[0]), comp1_name, 'The computer name is not correct.')
 
     @with_temp_dir
     def test_different_computer_same_name_import(self, temp_dir):

@@ -14,8 +14,6 @@ import copy
 import pickle
 import unittest
 
-from six import integer_types
-
 from aiida.common import json
 from aiida.common import exceptions
 from aiida.common import extendeddicts
@@ -41,7 +39,7 @@ class TestDFADExample(extendeddicts.DefaultFieldsAttributeDict):
         if value is None:
             return
 
-        if not isinstance(value, integer_types):
+        if not isinstance(value, int):
             raise TypeError('expecting integer')
         if value < 0:
             raise ValueError('expecting a positive or zero value')

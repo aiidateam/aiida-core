@@ -7,16 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from abc import ABCMeta, abstractmethod
-
-import six
+from abc import ABC, abstractmethod
 
 from aiida import orm
 from aiida.common import exceptions
 
 
-@six.add_metaclass(ABCMeta)
-class AiidaTestImplementation(object):
+class AiidaTestImplementation(ABC):
     """
     For each implementation, define what to do at setUp and tearDown.
 

@@ -12,7 +12,6 @@ Plugin for LSF.
 This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 
-import six
 
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
@@ -266,7 +265,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
 
         if jobs:
             joblist = []
-            if isinstance(jobs, six.string_types):
+            if isinstance(jobs, str):
                 joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):

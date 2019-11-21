@@ -8,9 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of `Scheduler` base class."""
-
-from abc import ABCMeta, abstractmethod
-import six
+from abc import abstractmethod
 
 import aiida.common
 from aiida.common.lang import classproperty
@@ -29,7 +27,6 @@ class SchedulerParsingError(SchedulerError):
     pass
 
 
-@six.add_metaclass(ABCMeta)
 class Scheduler(object):
     """
     Base class for all schedulers.

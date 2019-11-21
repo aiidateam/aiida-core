@@ -9,8 +9,6 @@
 ###########################################################################
 """`Data` sub class to represent a string value."""
 
-import six
-
 from .base import BaseType, to_aiida_type
 
 __all__ = ('Str',)
@@ -22,6 +20,6 @@ class Str(BaseType):
     _type = str
 
 
-@to_aiida_type.register(six.string_types[0])
+@to_aiida_type.register(str)
 def _(value):
     return Str(value)

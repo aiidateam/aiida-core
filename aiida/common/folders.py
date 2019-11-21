@@ -16,8 +16,6 @@ import os
 import shutil
 import tempfile
 
-import six
-
 from . import timezone
 from .utils import get_repository_folder
 
@@ -100,7 +98,7 @@ class Folder(object):
 
         :Returns: a Folder object pointing to the subfolder.
         """
-        dest_abs_dir = os.path.abspath(os.path.join(self.abspath, six.text_type(subfolder)))
+        dest_abs_dir = os.path.abspath(os.path.join(self.abspath, str(subfolder)))
 
         if reset_limit:
             # Create a new Folder object, with a limit to itself (cannot go
@@ -170,11 +168,11 @@ class Folder(object):
         """
         # pylint: disable=too-many-branches
         if dest_name is None:
-            filename = six.text_type(os.path.basename(src))
+            filename = str(os.path.basename(src))
         else:
-            filename = six.text_type(dest_name)
+            filename = str(dest_name)
 
-        src = six.text_type(src)
+        src = str(src)
 
         dest_abs_path = self.get_abs_path(filename)
 
@@ -226,29 +224,14 @@ class Folder(object):
         :param encoding: the encoding with which the target file will be written
         :return: the absolute filepath of the created file
         """
-        filename = six.text_type(filename)
+        filename = str(filename)
         filepath = self.get_abs_path(filename)
 
         if 'b' in mode:
             encoding = None
 
         with io.open(filepath, mode=mode, encoding=encoding) as handle:
-
-            # In python 2 a string literal can either be of unicode or string (bytes) type. Since we do not know what
-            # will be coming in, if the requested mode is not binary, in the case of incoming bytes, the content will
-            # have to be encoded. Therefore in the case of a non-binary mode for python2, we attempt to encode the
-            # incoming filelike object and in case of failure do nothing.
-            if six.PY2 and 'b' not in mode:
-                import codecs
-                utf8reader = codecs.getreader('utf8')
-
-                try:
-                    shutil.copyfileobj(utf8reader(filelike), handle)
-                except (UnicodeDecodeError, UnicodeEncodeError):
-                    filelike.seek(0)
-                    shutil.copyfileobj(filelike, handle)
-            else:
-                shutil.copyfileobj(filelike, handle)
+            shutil.copyfileobj(filelike, handle)
 
         os.chmod(filepath, self.mode_file)
 
@@ -550,12 +533,12 @@ class RepositoryFolder(Folder):
         # normpath, that may be slow): this is done abywat by the super
         # class.
         entity_dir = os.path.join(
-            get_repository_folder('repository'), six.text_type(section),
-            six.text_type(uuid)[:2],
-            six.text_type(uuid)[2:4],
-            six.text_type(uuid)[4:]
+            get_repository_folder('repository'), str(section),
+            str(uuid)[:2],
+            str(uuid)[2:4],
+            str(uuid)[4:]
         )
-        dest = os.path.join(entity_dir, six.text_type(subfolder))
+        dest = os.path.join(entity_dir, str(subfolder))
 
         # Internal variable of this class
         self._subfolder = subfolder

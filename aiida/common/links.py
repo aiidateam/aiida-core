@@ -12,8 +12,6 @@
 from collections import namedtuple
 from enum import Enum
 
-import six
-
 from .lang import isidentifier, type_check
 
 __all__ = ('GraphTraversalRule', 'GraphTraversalRules', 'LinkType', 'validate_link_label')
@@ -94,7 +92,7 @@ def validate_link_label(link_label):
     import re
 
     message = 'invalid link label `{}`: should be string type but is instead: {}'.format(link_label, type(link_label))
-    type_check(link_label, six.string_types, message)
+    type_check(link_label, str, message)
 
     allowed_character_set = '[a-zA-Z0-9_]'
 

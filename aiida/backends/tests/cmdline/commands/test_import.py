@@ -9,8 +9,6 @@
 ###########################################################################
 """Tests for `verdi import`."""
 
-from six.moves import range
-
 from click.testing import CliRunner
 from click.exceptions import BadParameter
 

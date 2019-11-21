@@ -10,7 +10,7 @@
 """
 Tests for IcsdDbImporter
 """
-
+import urllib
 import unittest
 
 from aiida.backends.testbase import AiidaTestCase
@@ -74,7 +74,6 @@ class TestIcsd(AiidaTestCase):
         """
         Test Icsd intranet webinterface
         """
-        from six.moves import urllib
         urllib.request.urlopen(self.server + 'icsd/').read()
 
     def test_mysqldb(self):

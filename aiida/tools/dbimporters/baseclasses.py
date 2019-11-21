@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import six
 
 
 class DbImporter(object):
@@ -218,7 +217,7 @@ class DbEntry(object):
     def __repr__(self):
         return '{}({})'.format(self.__class__.__name__,
                                ','.join(['{}={}'.format(k, '"{}"'.format(self.source[k])
-                               if issubclass(self.source[k].__class__, six.string_types)
+                               if issubclass(self.source[k].__class__, str)
                                else self.source[k])
                                          for k in sorted(self.source.keys())]))
 
@@ -228,7 +227,6 @@ class DbEntry(object):
         Returns raw contents of a file as string.
         """
         if self._contents is None:
-            from six.moves import urllib
             from hashlib import md5
 
             self._contents = urllib.request.urlopen(self.source['uri']).read().decode('utf-8')
@@ -279,7 +277,6 @@ class CifEntry(DbEntry):
         .. note:: To be removed, as it is duplicated in
             :py:class:`aiida.orm.nodes.data.cif.CifData`.
         """
-        from six.moves import cStringIO as StringIO
         from aiida.orm import CifData
         return CifData.read_cif(StringIO(self.cif))
 

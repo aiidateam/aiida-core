@@ -9,8 +9,6 @@
 ###########################################################################
 """Base translator class"""
 
-import six
-
 from aiida.common.exceptions import InputValidationError, InvalidOperation
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.common.exceptions import RestValidationError, \
@@ -477,7 +475,7 @@ class BaseTranslator(object):
         if self._has_uuid:
 
             # For consistency check that id is a string
-            if not isinstance(node_id, six.string_types):
+            if not isinstance(node_id, str):
                 raise RestValidationError('parameter id has to be a string')
 
             identifier_type = IdentifierType.UUID

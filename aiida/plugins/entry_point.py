@@ -9,7 +9,6 @@
 ###########################################################################
 
 import enum
-import six
 import traceback
 
 try:
@@ -125,7 +124,7 @@ def parse_entry_point_string(entry_point_string):
     :raises TypeError: if the entry_point_string is not a string type
     :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
     """
-    if not isinstance(entry_point_string, six.string_types):
+    if not isinstance(entry_point_string, str):
         raise TypeError('the entry_point_string should be a string')
 
     try:

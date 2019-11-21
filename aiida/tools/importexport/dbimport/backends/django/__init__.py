@@ -16,7 +16,6 @@ import os
 import tarfile
 import zipfile
 from itertools import chain
-import six
 
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
@@ -168,7 +167,7 @@ def import_data_dj(
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
         ##########################################################################
         linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
-        group_nodes = set(chain.from_iterable(six.itervalues(data['groups_uuid'])))
+        group_nodes = set(chain.from_iterable(data['groups_uuid'].values()))
 
         if NODE_ENTITY_NAME in data['export_data']:
             import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
@@ -649,9 +648,9 @@ def import_data_dj(
         # Put everything in a specific group
         ######################################################
         existing = existing_entries.get(NODE_ENTITY_NAME, {})
-        existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in six.itervalues(existing)]
+        existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in existing.values()]
         new = new_entries.get(NODE_ENTITY_NAME, {})
-        new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in six.itervalues(new)]
+        new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in new.values()]
 
         pks_for_group = existing_pk + new_pk
 

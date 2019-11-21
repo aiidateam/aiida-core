@@ -17,7 +17,6 @@ format, ...)
 import copy
 import re
 
-from six.moves import zip
 import numpy as np
 
 from aiida.common.constants import elements

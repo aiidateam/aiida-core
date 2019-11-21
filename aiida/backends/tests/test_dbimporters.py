@@ -13,7 +13,6 @@ Tests for subclasses of DbImporter, DbSearchResults and DbEntry
 import io
 import unittest
 
-from six.moves import range
 
 from aiida.backends.testbase import AiidaTestCase
 

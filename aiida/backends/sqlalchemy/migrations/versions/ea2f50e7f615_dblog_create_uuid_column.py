@@ -18,7 +18,6 @@ Create Date: 2019-01-30 19:22:50.984380
 
 """
 # pylint: disable=no-name-in-module,import-error
-from six.moves import zip
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql

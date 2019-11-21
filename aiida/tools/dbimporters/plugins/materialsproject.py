@@ -13,7 +13,6 @@ queries to Materials Project."""
 import os
 import datetime
 import requests
-from six import raise_from
 from pymatgen import MPRester
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
@@ -42,14 +41,11 @@ class MaterialsProjectImporter(DbImporter):
         except KeyError:
             try:
                 api_key = os.environ['PMG_MAPI_KEY']
-            except KeyError as exc:
-                raise_from(
-                    KeyError(
-                        'API key not supplied and PMG_MAPI_KEY environment '
-                        'variable not set. Either pass it when initializing the class, '
-                        'or set the environment variable PMG_MAPI_KEY to your API key.'
-                    ), exc
-                )
+            except KeyError as exception:
+                raise KeyError(
+                    'API key not supplied and PMG_MAPI_KEY environment variable not set. Either pass it when '
+                    'initializing the class, or set the environment variable PMG_MAPI_KEY to your API key.'
+                ) from exception
             api_key = None
 
         self._api_key = api_key

@@ -16,7 +16,6 @@ plugin-specific operations.
 
 import os
 
-from six.moves import zip
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcJobState

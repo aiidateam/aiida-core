@@ -9,7 +9,6 @@
 ###########################################################################
 
 
-import six
 
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
@@ -25,7 +24,7 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying integer fields.
         """
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, six.string_types):
+            if not isinstance(e, int) and not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
         return key + ' IN (' + ', '.join(str(int(i)) for i in values) + ')'
@@ -36,7 +35,7 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, six.string_types):
+            if not isinstance(e, int) and not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
             if isinstance(e, int):
@@ -67,7 +66,7 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying formula fields.
         """
         for e in values:
-            if not isinstance(e, six.string_types):
+            if not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return self._str_exact_clause(key, \
@@ -80,7 +79,7 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, six.string_types):
+            if not isinstance(e, int) and not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
             if isinstance(e, int):
@@ -94,7 +93,7 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, six.string_types):
+            if not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
             clause_parts.append("formula REGEXP ' " + e + "[0-9 ]'")

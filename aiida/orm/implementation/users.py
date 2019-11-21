@@ -9,14 +9,12 @@
 ###########################################################################
 """Backend user"""
 import abc
-import six
 
 from . import backends
 
 __all__ = ('BackendUser', 'BackendUserCollection')
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendUser(backends.BackendEntity):
     """
     This is the base class for User information in AiiDA.  An implementing

@@ -8,16 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The AiiDA process class"""
-
-import abc
 import collections
 import enum
 import inspect
 import uuid
 import traceback
 
-import six
-from six.moves import filter, range
 from pika.exceptions import ConnectionClosed
 
 import plumpy
@@ -40,7 +36,6 @@ __all__ = ('Process', 'ProcessState')
 
 
 @plumpy.auto_persist('_parent_pid', '_enable_persistence')
-@six.add_metaclass(abc.ABCMeta)
 class Process(plumpy.Process):
     """
     This class represents an AiiDA process which can be executed and will
@@ -67,11 +62,11 @@ class Process(plumpy.Process):
         spec.input_namespace(spec.metadata_key, required=False, non_db=True)
         spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True,
             help='If set to `False` provenance will not be stored in the database.')
-        spec.input('{}.description'.format(spec.metadata_key), valid_type=six.string_types, required=False,
+        spec.input('{}.description'.format(spec.metadata_key), valid_type=str, required=False,
             help='Description to set on the process node.')
-        spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types, required=False,
+        spec.input('{}.label'.format(spec.metadata_key), valid_type=str, required=False,
             help='Label to set on the process node.')
-        spec.input('{}.call_link_label'.format(spec.metadata_key), valid_type=six.string_types, default='CALL',
+        spec.input('{}.call_link_label'.format(spec.metadata_key), valid_type=str, default='CALL',
             help='The label to use for the `CALL` link if the process is called by another process.')
         spec.exit_code(1, 'ERROR_UNSPECIFIED', message='The process has failed with an unspecified error.')
         spec.exit_code(2, 'ERROR_LEGACY_FAILURE', message='The process failed with legacy failure mode.')

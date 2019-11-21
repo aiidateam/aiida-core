@@ -13,7 +13,6 @@ lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
 
-from six.moves import range, zip
 import numpy
 
 from .array import ArrayData

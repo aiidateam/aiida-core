@@ -9,8 +9,6 @@
 ###########################################################################
 
 import copy
-import six
-from six.moves import zip
 
 from .data import Data
 from .structure import Site as site_class

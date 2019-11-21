@@ -12,7 +12,6 @@
 import io
 import os
 import tarfile
-from six.moves import range
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase

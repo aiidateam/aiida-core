@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ Resources for REST API """
+from urllib.parse import unquote
 
-from six.moves.urllib.parse import unquote  # pylint: disable=import-error
 from flask import request, make_response
 from flask_restful import Resource
 

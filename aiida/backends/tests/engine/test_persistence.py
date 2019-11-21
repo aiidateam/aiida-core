@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import six
 import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
@@ -58,7 +57,7 @@ class TestAiiDAPersister(AiidaTestCase):
         process = DummyProcess()
 
         self.persister.save_checkpoint(process)
-        self.assertTrue(isinstance(process.node.checkpoint, six.string_types))
+        self.assertTrue(isinstance(process.node.checkpoint, str))
 
         self.persister.delete_checkpoint(process.pid)
         self.assertEquals(process.node.checkpoint, None)

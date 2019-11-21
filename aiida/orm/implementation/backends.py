@@ -8,18 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Generic backend related objects"""
-
 import abc
 import typing
-import six
 
 __all__ = ('Backend', 'BackendEntity', 'BackendCollection', 'EntityType')
 
 EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Backend(object):
+class Backend(abc.ABC):
     """The public interface that defines a backend factory that creates backend specific concrete objects."""
 
     @abc.abstractmethod
@@ -118,8 +115,7 @@ class Backend(object):
         """
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BackendEntity(object):
+class BackendEntity(abc.ABC):
     """An first-class entity in the backend"""
 
     def __init__(self, backend):

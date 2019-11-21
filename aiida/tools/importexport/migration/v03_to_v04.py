@@ -407,14 +407,13 @@ def migration_replace_text_field_with_json_field(data):
     Store dict-values as JSON serializable dicts instead of strings
     NB! Specific for Django backend
     """
-    import six
     from aiida.common import json
     for content in data['export_data'].get('Computer', {}).values():
         for value in ['metadata', 'transport_params']:
-            if isinstance(content[value], six.text_type):
+            if isinstance(content[value], str):
                 content[value] = json.loads(content[value])
     for content in data['export_data'].get('Log', {}).values():
-        if isinstance(content['metadata'], six.text_type):
+        if isinstance(content['metadata'], str):
             content['metadata'] = json.loads(content['metadata'])
 
 

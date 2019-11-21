@@ -9,8 +9,6 @@
 ###########################################################################
 
 
-import six
-from six.moves import filter
 
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
@@ -25,7 +23,7 @@ class MpodDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, six.string_types) and not isinstance(values, int):
+        if not isinstance(values, str) and not isinstance(values, int):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
         return '{}={}'.format(key, values)
@@ -90,7 +88,6 @@ class MpodDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodSearchResults`.
         """
-        from six.moves import urllib
         import re
 
         query_statements = self.query_get(**kwargs)

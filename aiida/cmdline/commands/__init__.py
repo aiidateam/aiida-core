@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-arguments, wrong-import-position
+# pylint: disable=too-many-arguments,wrong-import-position
 """The `verdi` command line interface."""
 import click_completion
 

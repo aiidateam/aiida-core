@@ -18,7 +18,6 @@ import uuid
 
 import numpy as np
 import pytz
-from six.moves import range
 
 try:
     import unittest2 as unittest

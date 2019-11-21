@@ -9,11 +9,9 @@
 ###########################################################################
 # pylint: disable=too-many-lines
 """Package for node ORM classes."""
-
 import copy
 import importlib
 import warnings
-import six
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -38,8 +36,7 @@ __all__ = ('Node',)
 _NO_DEFAULT = tuple()
 
 
-@six.add_metaclass(AbstractNodeMeta)
-class Node(Entity):
+class Node(Entity, metaclass=AbstractNodeMeta):
     """
     Base class for all nodes in AiiDA.
 

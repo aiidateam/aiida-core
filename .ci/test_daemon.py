@@ -12,7 +12,6 @@ import subprocess
 import sys
 import time
 
-from six.moves import range
 
 from aiida.common import exceptions
 from aiida.engine import run_get_node, submit

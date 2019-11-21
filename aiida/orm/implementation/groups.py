@@ -10,7 +10,6 @@
 """Backend group module"""
 
 import abc
-import six
 
 from aiida.common import exceptions
 
@@ -20,7 +19,6 @@ from .nodes import BackendNode
 __all__ = ('BackendGroup', 'BackendGroupCollection')
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendGroup(backends.BackendEntity):
     """
     An AiiDA ORM implementation of group of nodes.
@@ -195,7 +193,6 @@ class BackendGroup(backends.BackendEntity):
         return '"{}" [user-defined], of user {}'.format(self.label, self.user.email)
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendGroupCollection(backends.BackendCollection[BackendGroup]):
     """The collection of Group entries."""
 

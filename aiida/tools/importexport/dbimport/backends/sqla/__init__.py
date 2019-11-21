@@ -16,7 +16,6 @@ import os
 import tarfile
 import zipfile
 from itertools import chain
-import six
 
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
@@ -171,7 +170,7 @@ def import_data_sqla(
         #              I HAVE ALL NODES FOR THE LINKS                     #
         ###################################################################
         linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
-        group_nodes = set(chain.from_iterable(six.itervalues(data['groups_uuid'])))
+        group_nodes = set(chain.from_iterable(data['groups_uuid'].values()))
 
         # Check that UUIDs are valid
         linked_nodes = set(x for x in linked_nodes if validate_uuid(x))
@@ -322,7 +321,7 @@ def import_data_sqla(
                                 # stored as (unicode) strings of the serialized
                                 # JSON objects and not as simple serialized
                                 # JSON objects.
-                                if isinstance(value['metadata'], (six.string_types, six.binary_type)):
+                                if isinstance(value['metadata'], (str, bytes)):
                                     value['metadata'] = json.loads(value['metadata'])
 
                                 # Check if there is already a computer with the
@@ -644,9 +643,9 @@ def import_data_sqla(
             # Put everything in a specific group
             ######################################################
             existing = existing_entries.get(NODE_ENTITY_NAME, {})
-            existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in six.itervalues(existing)]
+            existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in existing.values()]
             new = new_entries.get(NODE_ENTITY_NAME, {})
-            new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in six.itervalues(new)]
+            new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in new.values()]
 
             pks_for_group = existing_pk + new_pk
 

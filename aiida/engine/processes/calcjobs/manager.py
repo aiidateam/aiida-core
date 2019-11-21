@@ -8,12 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module containing utilities and classes relating to job calculations running on systems that require transport."""
-
 import contextlib
 import logging
 import time
 
-from six import iteritems, itervalues
 from tornado import concurrent, gen
 
 from aiida import schedulers
@@ -113,7 +111,7 @@ class JobsList(object):
             jobs_cache = {}
             self.logger.info('AuthInfo<{}>: successfully retrieved status of active jobs'.format(self._authinfo.pk))
 
-            for job_id, job_info in iteritems(scheduler_response):
+            for job_id, job_info in scheduler_response.items():
                 # If the job is done then get detailed job information
                 detailed_job_info = None
                 if job_info.job_state == schedulers.JobState.DONE:
@@ -142,7 +140,7 @@ class JobsList(object):
             self._jobs_cache = yield self._get_jobs_from_scheduler()
         except Exception as exception:
             # Set the exception on all the update futures
-            for future in itervalues(self._job_update_requests):
+            for future in self._job_update_requests.values():
                 if not future.done():
                     future.set_exception(exception)
 
@@ -154,7 +152,7 @@ class JobsList(object):
 
             raise
         else:
-            for job_id, future in iteritems(self._job_update_requests):
+            for job_id, future in self._job_update_requests.items():
                 if not future.done():
                     future.set_result(self._jobs_cache.get(job_id, None))
         finally:
@@ -238,7 +236,7 @@ class JobsList(object):
         return delay
 
     def _update_requests_outstanding(self):
-        return any(not request.done() for request in itervalues(self._job_update_requests))
+        return any(not request.done() for request in self._job_update_requests.values())
 
     def _get_jobs_with_scheduler(self):
         """Get all the jobs that are currently with scheduler.

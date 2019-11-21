@@ -11,7 +11,6 @@
 # pylint: disable=invalid-name
 
 import os
-from six.moves import range
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase

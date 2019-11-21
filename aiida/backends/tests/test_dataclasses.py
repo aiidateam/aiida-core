@@ -16,7 +16,6 @@ import os
 import tempfile
 import unittest
 
-from six.moves import range
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed

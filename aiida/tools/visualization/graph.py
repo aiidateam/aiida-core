@@ -12,7 +12,6 @@
 """
 
 import os
-import six
 from graphviz import Digraph
 from aiida.orm import load_node, Data, ProcessNode
 from aiida.orm.querybuilder import QueryBuilder
@@ -409,7 +408,7 @@ class Graph(object):
         :returns: aiida.orm.nodes.node.Node
 
         """
-        if isinstance(node, (int, six.string_types)):
+        if isinstance(node, (int, str)):
             return load_node(node)
         return node
 
@@ -477,9 +476,9 @@ class Graph(object):
         """
         if link_types is None:
             return None
-        if isinstance(link_types, six.string_types):
+        if isinstance(link_types, str):
             link_types = [link_types]
-        link_types = tuple([getattr(LinkType, l.upper()) if isinstance(l, six.string_types) else l for l in link_types])
+        link_types = tuple([getattr(LinkType, l.upper()) if isinstance(l, str) else l for l in link_types])
         return link_types
 
     def add_incoming(self, node, link_types=(), annotate_links=None, return_pks=True):

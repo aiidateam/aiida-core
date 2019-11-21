@@ -8,14 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a list."""
-from six import PY2
+from collections.abc import MutableSequence
 
-if PY2:
-    from collections import MutableSequence  # pylint: disable=no-name-in-module
-else:
-    from collections.abc import MutableSequence  # pylint: disable=no-name-in-module, import-error
-
-from .data import Data  # pylint: disable=wrong-import-position
+from .data import Data
 
 __all__ = ('List',)
 

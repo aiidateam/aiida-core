@@ -13,7 +13,6 @@
 import contextlib
 import logging
 
-from six.moves import range
 import tornado.ioloop
 from tornado import concurrent, gen
 

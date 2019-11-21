@@ -7,12 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-import six
-
 from django.core.exceptions import ObjectDoesNotExist
 from aiida.common.exceptions import AiidaException, DbContentError
-from six.moves import range
 
 from aiida.backends.manager import SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION, SCHEMA_GENERATION_KEY, SCHEMA_GENERATION_DESCRIPTION
 
@@ -403,7 +399,7 @@ class ModelModifierV0025(object):
         from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
         from aiida.common.exceptions import ValidationError
 
-        if not isinstance(key, six.string_types):
+        if not isinstance(key, str):
             raise ValidationError('The key must be a string.')
         if not key:
             raise ValidationError('The key cannot be an empty string.')
@@ -424,7 +420,7 @@ class ModelModifierV0025(object):
         cls = self._model_class
         DbNode = self.apps.get_model('db', 'DbNode')
 
-        if isinstance(dbnode, six.integer_types):
+        if isinstance(dbnode, int):
             dbnode_node = DbNode(id=dbnode)
         else:
             dbnode_node = dbnode
@@ -528,7 +524,7 @@ class ModelModifierV0025(object):
         cls = self._model_class
         DbNode = self.apps.get_model('db', 'DbNode')
 
-        if isinstance(dbnode, six.integer_types):
+        if isinstance(dbnode, int):
             dbnode_node = DbNode(id=dbnode)
         else:
             dbnode_node = dbnode
@@ -736,7 +732,7 @@ class ModelModifierV0025(object):
             new_entry.fval = None
             new_entry.dval = None
 
-        elif isinstance(value, six.integer_types):
+        elif isinstance(value, int):
             new_entry.datatype = 'int'
             new_entry.ival = value
             new_entry.tval = ''
@@ -752,7 +748,7 @@ class ModelModifierV0025(object):
             new_entry.bval = None
             new_entry.dval = None
 
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             new_entry.datatype = 'txt'
             new_entry.tval = value
             new_entry.bval = None

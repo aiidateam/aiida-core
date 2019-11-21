@@ -15,7 +15,6 @@ import tarfile
 import traceback
 import zipfile
 
-from six.moves import range
 
 from click.testing import CliRunner
 

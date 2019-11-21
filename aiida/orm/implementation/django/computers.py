@@ -9,8 +9,6 @@
 ###########################################################################
 """Django implementations for the `Computer` entity and collection."""
 
-import six
-
 # pylint: disable=import-error,no-name-in-module
 from django.db import IntegrityError, transaction
 
@@ -36,7 +34,7 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
 
     @property
     def uuid(self):
-        return six.text_type(self._dbmodel.uuid)
+        return str(self._dbmodel.uuid)
 
     def copy(self):
         """Create an unstored clone of an already stored `Computer`."""

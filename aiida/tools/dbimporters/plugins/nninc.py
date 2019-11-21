@@ -9,7 +9,6 @@
 ###########################################################################
 
 
-import six
 
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  UpfEntry)
@@ -24,7 +23,7 @@ class NnincDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, six.string_types):
+        if not isinstance(values, str):
             raise ValueError("incorrect value for keyword '{}' -- only "
                              'strings and integers are accepted'.format(alias))
         return '{}={}'.format(key, values)
@@ -71,7 +70,6 @@ class NnincDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincSearchResults`.
         """
-        from six.moves import urllib
         import re
 
         query = self.query_get(**kwargs)

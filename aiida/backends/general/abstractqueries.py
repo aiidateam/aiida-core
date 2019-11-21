@@ -7,13 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-from abc import ABCMeta
-import six
+import abc
 
 
-@six.add_metaclass(ABCMeta)
-class AbstractQueryManager(object):
+class AbstractQueryManager(abc.ABC):
 
     def __init__(self, backend):
         """

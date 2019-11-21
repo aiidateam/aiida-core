@@ -12,7 +12,6 @@
 Module for defining tests that required access to (a temporary) database
 """
 
-from six.moves import range
 from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
 
 DB_TEST_LIST = {

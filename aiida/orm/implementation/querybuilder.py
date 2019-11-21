@@ -9,7 +9,6 @@
 ###########################################################################
 """Backend query implementation classes"""
 import abc
-import six
 
 from aiida.common import exceptions
 from aiida.common.lang import abstractclassmethod, type_check
@@ -18,7 +17,6 @@ from aiida.common.exceptions import InputValidationError
 __all__ = ('BackendQueryBuilder',)
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendQueryBuilder(object):
     """Backend query builder interface"""
 

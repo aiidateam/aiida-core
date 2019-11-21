@@ -10,17 +10,15 @@
 """
 Module for custom click param type identifier
 """
-from abc import ABCMeta, abstractproperty
+from abc import ABC, abstractproperty
 
-import six
 import click
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.plugins.entry_point import get_entry_point_from_string
 
 
-@six.add_metaclass(ABCMeta)
-class IdentifierParamType(click.ParamType):
+class IdentifierParamType(click.ParamType, ABC):
     """
     An extension of click.ParamType for a generic identifier parameter. In AiiDA, orm entities can often be
     identified by either their ID, UUID or optionally some LABEL identifier. This parameter type implements

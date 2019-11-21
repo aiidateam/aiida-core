@@ -7,18 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Tests for the folder class
-"""
-
+"""Tests for the folder class."""
 import io
 import os
 import sys
 import shutil
 import tempfile
 import unittest
-
-import six
 
 from aiida.common.folders import Folder
 
@@ -68,30 +63,6 @@ class FoldersTest(unittest.TestCase):
         # Should not raise any exception
         self.assertEqual(folder.get_abs_path('test_file.txt'), '/tmp/test_file.txt')
 
-    @staticmethod
-    @unittest.skipUnless(six.PY2, 'test is only for python2')
-    def test_create_file_from_filelike_py2():
-        """Test `aiida.common.folders.Folder.create_file_from_filelike` for python 2."""
-        unicode_string = u'unicode_string'
-        byte_string = 'byte_string'
-
-        try:
-            tempdir = tempfile.mkdtemp()
-            folder = Folder(tempdir)
-
-            # Passing a stream with matching file mode should work ofcourse
-            folder.create_file_from_filelike(six.StringIO(unicode_string), 'random.dat', mode='w', encoding='utf-8')
-            folder.create_file_from_filelike(six.StringIO(byte_string), 'random.dat', mode='wb', encoding=None)
-
-            # For python 2 the `create_file_from_filelike` should be able to deal with incoherent arguments, such as
-            # the examples below where a unicode string is passed with a binary mode, or a byte stream in unicode mode.
-            folder.create_file_from_filelike(six.StringIO(unicode_string), 'random.dat', mode='wb', encoding=None)
-            folder.create_file_from_filelike(six.StringIO(byte_string), 'random.dat', mode='w', encoding='utf-8')
-
-        finally:
-            shutil.rmtree(tempdir)
-
-    @unittest.skipUnless(six.PY3, 'test is only for python3')
     def test_create_file_from_filelike_py3(self):
         """Test `aiida.common.folders.Folder.create_file_from_filelike` for python 3."""
         unicode_string = 'unicode_string'
@@ -101,16 +72,16 @@ class FoldersTest(unittest.TestCase):
             tempdir = tempfile.mkdtemp()
             folder = Folder(tempdir)
 
-            folder.create_file_from_filelike(six.StringIO(unicode_string), 'random.dat', mode='w', encoding='utf-8')
-            folder.create_file_from_filelike(six.BytesIO(byte_string), 'random.dat', mode='wb', encoding=None)
+            folder.create_file_from_filelike(io.StringIO(unicode_string), 'random.dat', mode='w', encoding='utf-8')
+            folder.create_file_from_filelike(io.BytesIO(byte_string), 'random.dat', mode='wb', encoding=None)
 
             # For python three we make no exceptions, if you pass a unicode stream with binary mode, one should expect
             # a TypeError. Same for the inverse case of wanting to write in unicode mode but passing a byte stream
             with self.assertRaises(TypeError):
-                folder.create_file_from_filelike(six.StringIO(unicode_string), 'random.dat', mode='wb')
+                folder.create_file_from_filelike(io.StringIO(unicode_string), 'random.dat', mode='wb')
 
             with self.assertRaises(TypeError):
-                folder.create_file_from_filelike(six.BytesIO(byte_string), 'random.dat', mode='w')
+                folder.create_file_from_filelike(io.BytesIO(byte_string), 'random.dat', mode='w')
 
         finally:
             shutil.rmtree(tempdir)

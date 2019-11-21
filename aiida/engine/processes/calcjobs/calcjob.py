@@ -8,8 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of the CalcJob process."""
-
-import six
+import io
 
 import plumpy
 
@@ -118,13 +117,13 @@ class CalcJob(Process):
         spec.input('metadata.computer', valid_type=orm.Computer, required=False,
             help='When using a "local" code, set the computer on which the calculation should be run.')
         spec.input_namespace('{}.{}'.format(spec.metadata_key, spec.options_key), required=False)
-        spec.input('metadata.options.input_filename', valid_type=six.string_types, required=False,
+        spec.input('metadata.options.input_filename', valid_type=str, required=False,
             help='Filename to which the input for the code that is to be run will be written.')
-        spec.input('metadata.options.output_filename', valid_type=six.string_types, required=False,
+        spec.input('metadata.options.output_filename', valid_type=str, required=False,
             help='Filename to which the content of stdout of the code that is to be run will be written.')
-        spec.input('metadata.options.scheduler_stdout', valid_type=six.string_types, default='_scheduler-stdout.txt',
+        spec.input('metadata.options.scheduler_stdout', valid_type=str, default='_scheduler-stdout.txt',
             help='Filename to which the content of stdout of the scheduler will be written.')
-        spec.input('metadata.options.scheduler_stderr', valid_type=six.string_types, default='_scheduler-stderr.txt',
+        spec.input('metadata.options.scheduler_stderr', valid_type=str, default='_scheduler-stderr.txt',
             help='Filename to which the content of stderr of the scheduler will be written.')
         spec.input('metadata.options.resources', valid_type=dict, required=True,
             help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
@@ -132,16 +131,16 @@ class CalcJob(Process):
                  'scheduler for more details.')
         spec.input('metadata.options.max_wallclock_seconds', valid_type=int, required=False,
             help='Set the wallclock in seconds asked to the scheduler')
-        spec.input('metadata.options.custom_scheduler_commands', valid_type=six.string_types, default='',
+        spec.input('metadata.options.custom_scheduler_commands', valid_type=str, default='',
             help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
                  'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
                  'the scheduler submission file where such text is inserted: with this option, the string is '
                  'inserted before any non-scheduler command')
-        spec.input('metadata.options.queue_name', valid_type=six.string_types, required=False,
+        spec.input('metadata.options.queue_name', valid_type=str, required=False,
             help='Set the name of the queue on the remote computer')
-        spec.input('metadata.options.account', valid_type=six.string_types, required=False,
+        spec.input('metadata.options.account', valid_type=str, required=False,
             help='Set the account to use in for the queue on the remote computer')
-        spec.input('metadata.options.qos', valid_type=six.string_types, required=False,
+        spec.input('metadata.options.qos', valid_type=str, required=False,
             help='Set the quality of service to use in for the queue on the remote computer')
         spec.input('metadata.options.withmpi', valid_type=bool, default=False,
             help='Set the calculation to use mpi',)
@@ -152,17 +151,17 @@ class CalcJob(Process):
             help='If set to true, the submission script will load the system environment variables',)
         spec.input('metadata.options.environment_variables', valid_type=dict, default={},
             help='Set a dictionary of custom environment variables for this calculation',)
-        spec.input('metadata.options.priority', valid_type=six.string_types, required=False,
+        spec.input('metadata.options.priority', valid_type=str, required=False,
             help='Set the priority of the job to be queued')
         spec.input('metadata.options.max_memory_kb', valid_type=int, required=False,
             help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
-        spec.input('metadata.options.prepend_text', valid_type=six.string_types, default='',
+        spec.input('metadata.options.prepend_text', valid_type=str, default='',
             help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
                  'script, just before the code execution',)
-        spec.input('metadata.options.append_text', valid_type=six.string_types, default='',
+        spec.input('metadata.options.append_text', valid_type=str, default='',
             help='Set the calculation-specific append text, which is going to be appended in the scheduler-job '
                  'script, just after the code execution',)
-        spec.input('metadata.options.parser_name', valid_type=six.string_types, required=False,
+        spec.input('metadata.options.parser_name', valid_type=str, required=False,
             help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
         spec.output('remote_folder', valid_type=orm.RemoteData,
@@ -479,11 +478,11 @@ class CalcJob(Process):
 
         script_filename = '_aiidasubmit.sh'
         script_content = scheduler.get_submit_script(job_tmpl)
-        folder.create_file_from_filelike(six.StringIO(script_content), script_filename, 'w', encoding='utf8')
+        folder.create_file_from_filelike(io.StringIO(script_content), script_filename, 'w', encoding='utf8')
 
         subfolder = folder.get_subfolder('.aiida', create=True)
-        subfolder.create_file_from_filelike(six.StringIO(json.dumps(job_tmpl)), 'job_tmpl.json', 'w', encoding='utf8')
-        subfolder.create_file_from_filelike(six.StringIO(json.dumps(calcinfo)), 'calcinfo.json', 'w', encoding='utf8')
+        subfolder.create_file_from_filelike(io.StringIO(json.dumps(job_tmpl)), 'job_tmpl.json', 'w', encoding='utf8')
+        subfolder.create_file_from_filelike(io.StringIO(json.dumps(calcinfo)), 'calcinfo.json', 'w', encoding='utf8')
 
         if calcinfo.local_copy_list is None:
             calcinfo.local_copy_list = []

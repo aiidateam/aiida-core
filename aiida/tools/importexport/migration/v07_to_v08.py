@@ -31,7 +31,7 @@ from __future__ import absolute_import
 from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
 
 
-def migration_default_link_label(_, data):
+def migration_default_link_label(data):
     """Apply migration 0043 - REV. 1.0.43
 
     Rename all link labels `_return` to `result`.
@@ -50,4 +50,4 @@ def migrate_v7_to_v8(metadata, data, *args):  # pylint: disable=unused-argument
     update_metadata(metadata, new_version)
 
     # Apply migrations
-    migration_default_link_label(metadata, data)
+    migration_default_link_label(data)

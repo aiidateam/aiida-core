@@ -23,7 +23,7 @@ class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0042_prepare_schema_reset'
+LATEST_MIGRATION = '0043_default_link_label'
 
 
 def _update_schema_version(version, apps, schema_editor):

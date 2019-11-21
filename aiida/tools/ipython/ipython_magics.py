@@ -34,7 +34,6 @@ Usage
    In [2]: %aiida
 """
 
-import six
 from IPython import version_info
 from IPython.core import magic
 
@@ -86,7 +85,7 @@ class AiiDALoaderMagics(magic.Magics):
         self.current_state = 'Loaded AiiDA DB environment.'
 
         user_ns = get_start_namespace()
-        for key, value in six.iteritems(user_ns):
+        for key, value in user_ns.items():
             add_to_ns(local_ns, key, value)
 
         return self

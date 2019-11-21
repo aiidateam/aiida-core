@@ -33,7 +33,6 @@ Examples of invalid full types:
 """
 
 import collections
-import six
 
 from aiida.common.escaping import escape_for_sql_like
 
@@ -51,7 +50,7 @@ def validate_full_type(full_type):
     """
     from aiida.common.lang import type_check
 
-    type_check(full_type, six.string_types)
+    type_check(full_type, str)
 
     if FULL_TYPE_CONCATENATOR not in full_type:
         raise ValueError(
@@ -291,7 +290,7 @@ class Namespace(collections.MutableMapping):
         :returns: Namespace
         :raises: ValueError if any sub namespace is occupied by a non-Namespace port
         """
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise ValueError('name has to be a string type, not {}'.format(type(name)))
 
         if not name:

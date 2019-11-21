@@ -10,14 +10,12 @@
 """Backend group module"""
 
 import abc
-import six
 
 from . import backends
 
 __all__ = ('BackendLog', 'BackendLogCollection')
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendLog(backends.BackendEntity):
     """
     Backend Log interface
@@ -87,7 +85,6 @@ class BackendLog(backends.BackendEntity):
         """
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendLogCollection(backends.BackendCollection[BackendLog]):
     """The collection of Log entries."""
 

@@ -10,7 +10,6 @@
 
 import io
 import os
-import six
 
 from aiida.common.exceptions import ValidationError, EntryPointError, InputValidationError
 
@@ -88,7 +87,7 @@ class Code(Data):
              to be able to call this function.
         """
 
-        if isinstance(files, six.string_types):
+        if isinstance(files, str):
             files = [files]
 
         for filename in files:
@@ -295,7 +294,7 @@ class Code(Data):
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
         """
-        self.set_attribute('prepend_text', six.text_type(code))
+        self.set_attribute('prepend_text', str(code))
 
     def get_prepend_text(self):
         """
@@ -312,7 +311,7 @@ class Code(Data):
         if input_plugin is None:
             self.set_attribute('input_plugin', None)
         else:
-            self.set_attribute('input_plugin', six.text_type(input_plugin))
+            self.set_attribute('input_plugin', str(input_plugin))
 
     def get_input_plugin_name(self):
         """
@@ -326,7 +325,7 @@ class Code(Data):
         Pass a string of code that will be put in the scheduler script after the
         execution of the code.
         """
-        self.set_attribute('append_text', six.text_type(code))
+        self.set_attribute('append_text', str(code))
 
     def get_append_text(self):
         """

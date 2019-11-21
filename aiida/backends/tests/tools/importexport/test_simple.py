@@ -14,7 +14,6 @@ import os
 import shutil
 import tarfile
 import tempfile
-from six.moves import zip
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase

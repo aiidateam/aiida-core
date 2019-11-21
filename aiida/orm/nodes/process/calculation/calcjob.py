@@ -10,7 +10,6 @@
 """Module with `Node` sub class for calculation job processes."""
 
 import warnings
-import six
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
@@ -267,17 +266,17 @@ class CalcJobNode(CalculationNode):
         for directive in directives:
 
             # A string as a directive is valid, so we continue
-            if isinstance(directive, six.string_types):
+            if isinstance(directive, str):
                 continue
 
             # Otherwise, it has to be a tuple of length three with specific requirements
             if not isinstance(directive, (tuple, list)) or len(directive) != 3:
                 raise ValueError('invalid directive, not a list or tuple of length three: {}'.format(directive))
 
-            if not isinstance(directive[0], six.string_types):
+            if not isinstance(directive[0], str):
                 raise ValueError('invalid directive, first element has to be a string representing remote path')
 
-            if not isinstance(directive[1], six.string_types):
+            if not isinstance(directive[1], str):
                 raise ValueError('invalid directive, second element has to be a string representing local path')
 
             if not isinstance(directive[2], int):
@@ -343,7 +342,7 @@ class CalcJobNode(CalculationNode):
             raise TypeError('retrieve_singlefile_list has to be a list or tuple')
 
         for j in retrieve_singlefile_list:
-            if not isinstance(j, (tuple, list)) or not all(isinstance(i, six.string_types) for i in j):
+            if not isinstance(j, (tuple, list)) or not all(isinstance(i, str) for i in j):
                 raise ValueError('You have to pass a list (or tuple) of lists of strings as retrieve_singlefile_list')
 
         self.set_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, retrieve_singlefile_list)
@@ -366,7 +365,7 @@ class CalcJobNode(CalculationNode):
 
         :param job_id: the id assigned by the scheduler after submission
         """
-        return self.set_attribute(self.SCHEDULER_JOB_ID_KEY, six.text_type(job_id))
+        return self.set_attribute(self.SCHEDULER_JOB_ID_KEY, str(job_id))
 
     def get_job_id(self):
         """Return job id that was assigned to the calculation by the scheduler.

@@ -10,7 +10,6 @@
 """SqlAlchemy implementations for the `Computer` entity and collection."""
 
 from copy import copy
-import six
 
 # pylint: disable=import-error,no-name-in-module
 from sqlalchemy.exc import SQLAlchemyError
@@ -38,7 +37,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     @property
     def uuid(self):
-        return six.text_type(self._dbmodel.uuid)
+        return str(self._dbmodel.uuid)
 
     @property
     def pk(self):

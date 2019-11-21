@@ -22,7 +22,6 @@ More information at http://www.aiida.net
 """
 
 import warnings
-import six
 
 from aiida.common.log import configure_logging
 from aiida.common.warnings import AiidaDeprecationWarning
@@ -54,9 +53,6 @@ if get_config_option('warnings.showdeprecations'):
     # This should default to 'once', i.e. once per different message
 else:
     warnings.simplefilter('ignore', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-if six.PY2:
-    warnings.warn('python 2 will be deprecated in `aiida-core v2.0.0`', DeprecationWarning)  # pylint: disable=no-member
 
 
 def load_dbenv(profile=None):

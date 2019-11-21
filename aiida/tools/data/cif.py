@@ -10,8 +10,6 @@
 # pylint: disable=invalid-name
 """Tools to operate on `CifData` nodes."""
 
-from six.moves import range
-
 from aiida.engine import calcfunction
 from aiida.orm import CifData
 from aiida.orm.utils.node import clean_value

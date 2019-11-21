@@ -13,8 +13,6 @@ Tests for the migrations of the attributes, extras and settings from EAV to JSON
 Migration 0037_attributes_extras_settings_json
 """
 
-import six
-
 from aiida.backends.djsite.db.subtests.migrations.test_migrations_common import TestMigrations
 from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 
@@ -52,4 +50,4 @@ class TestLegacyJobCalcStateDataMigration(TestMigrations):
 
             exit_status = node.attributes.get('exit_status', None)
             if exit_status is not None:
-                self.assertIsInstance(exit_status, six.integer_types)
+                self.assertIsInstance(exit_status, int)

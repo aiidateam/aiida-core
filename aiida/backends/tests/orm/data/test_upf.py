@@ -18,7 +18,6 @@ import json
 import os
 import numpy
 from numpy import array, isclose
-from six.moves import zip
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase

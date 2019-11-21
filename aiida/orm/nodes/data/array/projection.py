@@ -9,8 +9,6 @@
 ###########################################################################
 
 import copy
-import six
-from six.moves import range
 import numpy as np
 
 from aiida.common import exceptions
@@ -287,7 +285,7 @@ class ProjectionData(OrbitalData, ArrayData):
             except IndexError:
                 return exceptions.ValidationError('tags must be a list')
 
-            if not all([isinstance(_,six.string_types) for _ in tags]):
+            if not all([isinstance(_,str) for _ in tags]):
                 raise exceptions.ValidationError('Tags must set a list of strings')
             self.set_attribute('tags', tags)
 

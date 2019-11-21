@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi data cif` command."""
-from six.moves import range
 
 import click
 

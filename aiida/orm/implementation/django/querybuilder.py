@@ -10,7 +10,6 @@
 """Django query builder"""
 
 import uuid
-import six
 
 from aldjemy import core
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
@@ -201,7 +200,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             if not isinstance(value, int):
                 raise InputValidationError('You have to give an integer when comparing to a length')
         elif operator in ('like', 'ilike'):
-            if not isinstance(value, six.string_types):
+            if not isinstance(value, str):
                 raise InputValidationError(
                     'Value for operator {} has to be a string (you gave {})'
                     ''.format(operator, value)
@@ -285,7 +284,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             elif isinstance(value, dict):
                 type_filter = jsonb_typeof(path_in_json) == 'array'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
-            elif isinstance(value, six.string_types):
+            elif isinstance(value, str):
                 type_filter = jsonb_typeof(path_in_json) == 'string'
                 casted_entity = path_in_json.astext
             elif value is None:
@@ -394,7 +393,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         if isinstance(res, Choice):
             result = res.value
         elif isinstance(res, uuid.UUID):
-            result = six.text_type(res)
+            result = str(res)
         else:
             try:
                 result = self._backend.get_backend_entity(res)

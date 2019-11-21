@@ -11,7 +11,6 @@
 import inspect
 import unittest
 
-import six
 import plumpy
 import plumpy.test_utils
 from tornado import gen
@@ -25,7 +24,6 @@ from aiida.engine import ExitCode, Process, ToContext, WorkChain, if_, while_, r
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.manager import get_manager
 from aiida.orm import load_node, Bool, Float, Int, Str
-from six.moves import range
 
 
 def run_until_paused(proc):
@@ -471,7 +469,7 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(TestWorkChain)
 
     def test_str(self):
-        self.assertIsInstance(str(Wf.spec()), six.string_types)
+        self.assertIsInstance(str(Wf.spec()), str)
 
     def test_malformed_outline(self):
         """

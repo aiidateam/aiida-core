@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ Util methods """
-
+import urllib
 from datetime import datetime, timedelta
 
 from flask import jsonify
@@ -833,7 +833,6 @@ class Utils(object):
 
 def list_routes():
     """List available routes"""
-    from six.moves import urllib
     from flask import current_app
 
     output = []

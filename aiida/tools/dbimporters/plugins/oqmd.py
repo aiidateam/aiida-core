@@ -9,7 +9,6 @@
 ###########################################################################
 
 
-import six
 
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
@@ -24,7 +23,7 @@ class OqmdDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, six.string_types) and not isinstance(values, int):
+        if not isinstance(values, str) and not isinstance(values, int):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
         return '{}={}'.format(key, values)
@@ -57,7 +56,6 @@ class OqmdDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdSearchResults`.
         """
-        from six.moves import urllib
         import re
 
         query_statement = self.query_get(**kwargs)

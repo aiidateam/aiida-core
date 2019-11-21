@@ -7,13 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 import functools
 import logging
-import sys
 import tempfile
 
-import six
 from tornado.gen import coroutine, Return
 
 import plumpy
@@ -356,10 +353,9 @@ class Waiting(plumpy.Waiting):
         except TransportTaskException as exception:
             raise plumpy.PauseInterruption('Pausing after failed transport task: {}'.format(exception))
         except plumpy.KillInterruption:
-            exc_info = sys.exc_info()
             yield self._launch_task(task_kill_job, node, transport_queue)
             self._killing.set_result(True)
-            six.reraise(*exc_info)
+            raise
         except Return:
             node.set_process_status(None)
             raise

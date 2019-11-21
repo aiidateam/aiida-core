@@ -13,16 +13,13 @@ the plugin.
 Every transport plugin should be able to pass all of these common tests.
 Plugin specific tests will be written in the plugin itself.
 """
+import io
+import unittest
 
 # TODO : test for copy with pattern
 # TODO : test for copy with/without patterns, overwriting folder
 # TODO : test for exotic cases of copy with source = destination
 # TODO : silly cases of copy/put/get from self to self
-
-import io
-import unittest
-
-from six.moves import range
 
 
 def get_all_custom_transports():
@@ -1313,10 +1310,9 @@ class TestExecuteCommandWait(unittest.TestCase):
 
     @run_for_all_plugins
     def test_exec_with_stdin_filelike(self, custom_transport):
-        from six.moves import cStringIO as StringIO
 
         test_string = 'some_test String'
-        stdin = StringIO(test_string)
+        stdin = io.StringIO(test_string)
         with custom_transport as t:
             retcode, stdout, stderr = t.exec_command_wait('cat', stdin=stdin)
             self.assertEquals(retcode, 0)

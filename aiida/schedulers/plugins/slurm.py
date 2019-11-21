@@ -13,8 +13,6 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 """
 import re
 
-import six
-from six.moves import zip
 
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
@@ -207,7 +205,7 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
 
         if jobs:
             joblist = []
-            if isinstance(jobs, six.string_types):
+            if isinstance(jobs, str):
                 joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):

@@ -18,8 +18,6 @@ import shutil
 import socket
 import tempfile
 
-import six
-
 from aiida.common.files import which
 from aiida.manage.configuration import get_config
 
@@ -159,7 +157,7 @@ class DaemonClient(object):  # pylint: disable=too-many-public-methods
         else:
             port = self.get_available_port()
             with io.open(self.circus_port_file, 'w', encoding='utf8') as fhandle:
-                fhandle.write(six.text_type(port))
+                fhandle.write(str(port))
 
             return port
 
@@ -192,7 +190,7 @@ class DaemonClient(object):  # pylint: disable=too-many-public-methods
 
             socket_dir_path = tempfile.mkdtemp()
             with io.open(self.circus_socket_file, 'w', encoding='utf8') as fhandle:
-                fhandle.write(six.text_type(socket_dir_path))
+                fhandle.write(str(socket_dir_path))
 
             self._SOCKET_DIRECTORY = socket_dir_path
             return socket_dir_path

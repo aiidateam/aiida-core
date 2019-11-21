@@ -8,15 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Various dictionary types with extended functionality."""
+from collections.abc import Mapping
 
-from six import PY2
-
-if PY2:
-    from collections import Mapping  # pylint: disable=no-name-in-module
-else:
-    from collections.abc import Mapping  # pylint: disable=no-name-in-module, import-error
-
-from . import exceptions  # pylint: disable=wrong-import-position
+from . import exceptions
 
 __all__ = ('AttributeDict', 'FixedFieldsAttributeDict', 'DefaultFieldsAttributeDict')
 

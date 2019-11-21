@@ -15,9 +15,6 @@ Migration 0037_attributes_extras_settings_json
 
 import copy
 
-import six
-from six.moves import range
-
 from django.db import transaction
 from django.utils.encoding import python_2_unicode_compatible
 
@@ -292,7 +289,7 @@ class DbMultipleValueAttributeBaseClass():
         from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
         from aiida.common.exceptions import ValidationError
 
-        if not isinstance(key, six.string_types):
+        if not isinstance(key, str):
             raise ValidationError('The key must be a string.')
         if not key:
             raise ValidationError('The key cannot be an empty string.')
@@ -457,7 +454,7 @@ class DbMultipleValueAttributeBaseClass():
             new_entry.fval = None
             new_entry.dval = None
 
-        elif isinstance(value, six.integer_types):
+        elif isinstance(value, int):
             new_entry.datatype = 'int'
             new_entry.ival = value
             new_entry.tval = ''
@@ -473,7 +470,7 @@ class DbMultipleValueAttributeBaseClass():
             new_entry.bval = None
             new_entry.dval = None
 
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             new_entry.datatype = 'txt'
             new_entry.tval = value
             new_entry.bval = None
@@ -612,7 +609,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         :raise ValueError: if the key contains the separator symbol used
             internally to unpack dictionaries and lists (defined in cls._sep).
         """
-        if isinstance(dbnode, six.integer_types):
+        if isinstance(dbnode, int):
             raise ValueError('Integers (the dbnode pk) are not supported as input.')
         else:
             dbnode_node = dbnode

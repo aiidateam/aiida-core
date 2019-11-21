@@ -10,14 +10,10 @@
 # pylint: disable=too-many-lines,invalid-name,protected-access
 # pylint: disable=missing-docstring,too-many-locals,too-many-statements
 # pylint: disable=too-many-public-methods
-
 import copy
 import io
 import tempfile
-import unittest
 
-import six
-from six.moves import range
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -175,8 +171,8 @@ class TestTypes(AiidaTestCase):
 
         results = orm.QueryBuilder().append(orm.Data, project=('uuid', '*')).all()
         for uuid, data in results:
-            self.assertTrue(isinstance(uuid, six.string_types))
-            self.assertTrue(isinstance(data.uuid, six.string_types))
+            self.assertTrue(isinstance(uuid, str))
+            self.assertTrue(isinstance(data.uuid, str))
 
 
 class TestQueryWithAiidaObjects(AiidaTestCase):
@@ -564,7 +560,6 @@ class TestNodeBasic(AiidaTestCase):
         import shutil
         import random
         import string
-        from six.moves import StringIO
 
         a = orm.Data()
 
@@ -628,7 +623,7 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(ValueError):
             b.put_object_from_tree('dir3', os.path.join('tree_1', 'dir3'))
 
-        stream = StringIO(file_content_different)
+        stream = io.StringIO(file_content_different)
         b.put_object_from_filelike(stream, 'file3.txt')
 
         # I check the new content, and that the old one has not changed old
@@ -655,7 +650,7 @@ class TestNodeBasic(AiidaTestCase):
         c = a.clone()
         # I overwrite a file, create a new one and remove a directory
         # in the copy only
-        stream = StringIO(file_content_different)
+        stream = io.StringIO(file_content_different)
         c.put_object_from_filelike(stream, os.path.join('tree_1', 'file1.txt'))
         c.put_object_from_filelike(stream, os.path.join('tree_1', 'dir1', 'file4.txt'))
         c.delete_object(os.path.join('tree_1', 'dir1', 'dir2'))
@@ -922,7 +917,7 @@ class TestNodeBasic(AiidaTestCase):
         p = orm.Dict(dict={'b': orm.Str('sometext'), 'c': l1})
         p.store()
         self.assertEqual(p.get_attribute('b'), 'sometext')
-        self.assertIsInstance(p.get_attribute('b'), six.string_types)
+        self.assertIsInstance(p.get_attribute('b'), str)
         self.assertEqual(p.get_attribute('c'), ['b', [1, 2]])
         self.assertIsInstance(p.get_attribute('c'), (list, tuple))
 
@@ -942,7 +937,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertIsInstance(n.get_attribute('a')['b'][0], orm.Str)
         n.store()
         self.assertEqual(n.get_attribute('a')['b'][0], 'sometext3')
-        self.assertIsInstance(n.get_attribute('a')['b'][0], six.string_types)
+        self.assertIsInstance(n.get_attribute('a')['b'][0], str)
 
     def test_basetype_as_extra(self):
         """
@@ -964,7 +959,7 @@ class TestNodeBasic(AiidaTestCase):
         n.set_extra('c', l1)
         n.set_extra('d', l2)
         self.assertEqual(n.get_extra('a'), 'sometext2')
-        self.assertIsInstance(n.get_extra('a'), six.string_types)
+        self.assertIsInstance(n.get_extra('a'), str)
         self.assertEqual(n.get_extra('c'), ['b', [1, 2]])
         self.assertIsInstance(n.get_extra('c'), (list, tuple))
         self.assertEqual(n.get_extra('d'), ['f', True, {'gg': None}])
@@ -975,7 +970,7 @@ class TestNodeBasic(AiidaTestCase):
         n.store()
         n.set_extra('a', {'b': [orm.Str('sometext3')]})
         self.assertEqual(n.get_extra('a')['b'][0], 'sometext3')
-        self.assertIsInstance(n.get_extra('a')['b'][0], six.string_types)
+        self.assertIsInstance(n.get_extra('a')['b'][0], str)
 
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead
@@ -1582,24 +1577,13 @@ class TestNodeDeletion(AiidaTestCase):
         # raised from the exception management block below
         uuid = None
 
-        try:
-            for uuid in uuids_check_existence:
-                # This will raise if node is not existent:
+        for uuid in uuids_check_existence:
+            # This will raise if node is not existent:
+            orm.load_node(uuid)
+        for uuid in uuids_check_deleted:
+            # I check that it raises
+            with self.assertRaises(NotExistent):
                 orm.load_node(uuid)
-            for uuid in uuids_check_deleted:
-                # I check that it raises
-                with self.assertRaises(NotExistent):
-                    orm.load_node(uuid)
-        except Exception as exc:  # pylint: disable=broad-except
-            import sys
-            six.reraise(
-                type(exc),
-                exc.__class__((
-                    str(exc) + '\nCurrent UUID being processed: {}' + '\nFull uuids_check_existence: {}' +
-                    '\nFull uuids_check_deleted: {}'
-                ).format(uuid, uuids_check_existence, uuids_check_deleted)),
-                sys.exc_info()[2]
-            )
 
     def test_deletion_non_existing_pk(self):
         """Verify that passing a non-existing pk should not raise."""

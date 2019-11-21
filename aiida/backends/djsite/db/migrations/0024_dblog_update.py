@@ -12,7 +12,6 @@
 """Migration for the update of the DbLog table. Addition of uuids"""
 
 import sys
-from six.moves import zip
 import click
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed

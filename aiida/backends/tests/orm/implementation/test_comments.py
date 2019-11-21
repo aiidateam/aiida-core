@@ -12,8 +12,6 @@
 from datetime import datetime
 from uuid import UUID
 
-from six.moves import zip
-
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import timezone

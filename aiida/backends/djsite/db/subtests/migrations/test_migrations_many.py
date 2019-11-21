@@ -13,8 +13,6 @@ This file contains the majority of the migration tests that are too short to
 go to a separate file.
 """
 
-from six.moves import range
-
 import numpy
 
 from aiida.backends.testbase import AiidaTestCase

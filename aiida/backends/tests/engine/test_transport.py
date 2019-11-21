@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from six.moves import range
 from tornado.gen import coroutine, Return
 
 from aiida.backends.testbase import AiidaTestCase

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import sys
 import io
 import os
 import shutil
@@ -16,9 +15,6 @@ import tempfile
 import numpy as np
 import subprocess as sp
 
-from six.moves import cStringIO as StringIO
-
-from contextlib import contextmanager
 from click.testing import CliRunner
 
 from aiida import orm
@@ -27,17 +23,6 @@ from aiida.cmdline.commands.cmd_data import cmd_array, cmd_bands, cmd_cif, cmd_d
 from aiida.engine import calcfunction
 from aiida.orm.nodes.data.cif import has_pycifrw
 from aiida.orm import Group, ArrayData, BandsData, KpointsData, CifData, Dict, RemoteData, StructureData, TrajectoryData
-
-
-@contextmanager
-def captured_output():
-    new_out, new_err = StringIO(), StringIO()
-    old_out, old_err = sys.stdout, sys.stderr
-    try:
-        sys.stdout, sys.stderr = new_out, new_err
-        yield sys.stdout, sys.stderr
-    finally:
-        sys.stdout, sys.stderr = old_out, old_err
 
 
 class TestVerdiDataExportable:
@@ -76,7 +61,6 @@ class TestVerdiDataExportable:
         dump_flags = ['-F', '--format']
         for flag in dump_flags:
             for format in supported_formats:
-                # with captured_output() as (out, err):
                 options = [flag, format, str(ids[self.NODE_ID_STR])]
                 res = self.cli_runner.invoke(export_cmd, options,
                                              catch_exceptions=False)
@@ -256,7 +240,6 @@ class TestVerdiDataArray(AiidaTestCase):
         self.assertIn(b'Usage:', output, 'Sub-command verdi data array show --help failed.')
 
     def test_arrayshow(self):
-        # with captured_output() as (out, err):
         options = [str(self.a.id)]
         res = self.cli_runner.invoke(cmd_array.array_show, options, catch_exceptions=False)
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')

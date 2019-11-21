@@ -10,7 +10,6 @@
 
 import operator
 
-from six.moves import range, zip
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed

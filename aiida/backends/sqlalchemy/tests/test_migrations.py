@@ -15,8 +15,6 @@ import os
 
 from alembic import command
 from alembic.config import Config
-import six
-from six.moves import zip
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.general.migrations import utils
@@ -1348,7 +1346,7 @@ class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
 
                     exit_status = attrs.get('exit_status', None)
                     if exit_status is not None:
-                        self.assertIsInstance(exit_status, six.integer_types)
+                        self.assertIsInstance(exit_status, int)
             finally:
                 session.close()
 

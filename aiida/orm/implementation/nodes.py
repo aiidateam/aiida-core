@@ -10,14 +10,12 @@
 """Abstract BackendNode and BackendNodeCollection implementation."""
 
 import abc
-import six
 
 from . import backends
 
 __all__ = ('BackendNode', 'BackendNodeCollection')
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendNode(backends.BackendEntity):
     """Wrapper around a `DbNode` instance to set and retrieve data independent of the database implementation."""
 
@@ -382,7 +380,6 @@ class BackendNode(backends.BackendEntity):
         """
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendNodeCollection(backends.BackendCollection[BackendNode]):
     """The collection of `BackendNode` entries."""
 

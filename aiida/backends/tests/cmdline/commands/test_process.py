@@ -15,7 +15,6 @@ import sys
 import time
 from concurrent.futures import Future
 
-import six
 from click.testing import CliRunner
 from tornado import gen
 import plumpy
@@ -401,7 +400,7 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         limit = int(_RMQ_TASK_PREFETCH_COUNT * 0.9)
 
         # Create additional active nodes such that we have 90% of the active slot limit
-        for _ in six.moves.range(limit):
+        for _ in range(limit):
             calc = WorkFunctionNode()
             calc.set_process_state(ProcessState.RUNNING)
             calc.store()

@@ -10,14 +10,12 @@
 """Module for the backend implementation of the `AuthInfo` ORM class."""
 
 import abc
-import six
 
 from . import backends
 
 __all__ = ('BackendAuthInfo', 'BackendAuthInfoCollection')
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendAuthInfo(backends.BackendEntity):
     """Backend implementation for the `AuthInfo` ORM class."""
 
@@ -80,7 +78,6 @@ class BackendAuthInfo(backends.BackendEntity):
         """
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendAuthInfoCollection(backends.BackendCollection[BackendAuthInfo]):
     """The collection of backend `AuthInfo` entries."""
 

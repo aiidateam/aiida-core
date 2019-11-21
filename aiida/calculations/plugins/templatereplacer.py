@@ -8,8 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of CalcJobNode to replace a template for testing and demonstration purposes."""
-
-import six
+import io
 
 from aiida import orm
 from aiida.common import exceptions
@@ -64,7 +63,7 @@ class TemplatereplacerCalculation(CalcJob):
     def define(cls, spec):
         # yapf: disable
         super(TemplatereplacerCalculation, cls).define(spec)
-        spec.input('metadata.options.parser_name', valid_type=six.string_types, default='templatereplacer.doubler',
+        spec.input('metadata.options.parser_name', valid_type=str, default='templatereplacer.doubler',
             non_db=True)
         spec.input('template', valid_type=orm.Dict,
             help='A template for the input file.')
@@ -95,7 +94,6 @@ class TemplatereplacerCalculation(CalcJob):
         :param folder: a aiida.common.folders.Folder subclass where the plugin should put all its files.
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-        from six.moves import StringIO
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.exceptions import ValidationError
 
@@ -153,7 +151,7 @@ class TemplatereplacerCalculation(CalcJob):
 
         input_content = input_file_template.format(**parameters)
         if input_file_name:
-            folder.create_file_from_filelike(StringIO(input_content), input_file_name, 'w', encoding='utf8')
+            folder.create_file_from_filelike(io.StringIO(input_content), input_file_name, 'w', encoding='utf8')
         else:
             if input_file_template:
                 self.logger.warning('No input file name passed, but a input file template is present')

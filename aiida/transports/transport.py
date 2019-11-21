@@ -8,15 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Transport interface."""
-
-from abc import ABCMeta
+import abc
 import os
 import re
 import fnmatch
 import sys
 from collections import OrderedDict
 
-import six
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 
@@ -38,12 +36,8 @@ def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argum
         raise BadParameter('{} is not a valid positive number'.format(value))
 
 
-@six.add_metaclass(ABCMeta)
-class Transport(object):
-    """
-    Abstract class for a generic transport (ssh, local, ...)
-    Contains the set of minimal methods
-    """
+class Transport(abc.ABC):
+    """Abstract class for a generic transport (ssh, local, ...) ontains the set of minimal methods."""
     # pylint: disable=too-many-public-methods
 
     _DEFAULT_SAFE_OPEN_INTERVAL = DEFAULT_TRANSPORT_INTERVAL
@@ -745,13 +739,13 @@ class Transport(object):
         if not dirname:
             # dirname = os.curdir # ORIGINAL
             dirname = self.getcwd()
-        if isinstance(pattern, six.text_type) and not isinstance(dirname, six.text_type):
+        if isinstance(pattern, str) and not isinstance(dirname, str):
             dirname = dirname.decode(sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
             # names = os.listdir(dirname)
             # print dirname
             names = self.listdir(dirname)
-        except EnvironmentError:  # in PY2 a superclass of OS/IOError, in PY3 an alias for OSError, like IOError
+        except EnvironmentError:
             return []
         if pattern[0] != '.':
             names = [name for name in names if name[0] != '.']

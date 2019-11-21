@@ -16,8 +16,6 @@ import itertools
 import copy
 from functools import reduce
 
-import six
-from six.moves import range, zip
 
 from .data import Data
 from aiida.common.constants import elements
@@ -160,7 +158,7 @@ def _create_symbols_tuple(symbols):
     Returns a tuple with the symbols provided. If a string is provided,
     this is converted to a tuple with one single element.
     """
-    if isinstance(symbols, six.string_types):
+    if isinstance(symbols, str):
         symbols_list = (symbols,)
     else:
         symbols_list = tuple(symbols)
@@ -317,7 +315,7 @@ def get_formula_from_symbol_list(_list, separator=''):
         else:
             multiplicity_str = str(elem[0])
 
-        if isinstance(elem[1], six.string_types):
+        if isinstance(elem[1], str):
             list_str.append('{}{}'.format(elem[1], multiplicity_str))
         elif elem[0] > 1:
             list_str.append('({}){}'.format(
@@ -2077,7 +2075,7 @@ class Kind(object):
         """
         Set the name of this site (a string).
         """
-        self._name = six.text_type(value)
+        self._name = str(value)
 
     def set_automatic_kind_name(self, tag=None):
         """
@@ -2359,7 +2357,7 @@ class Site(object):
                 tag_list.append(None)
             # If the kind name is equal to the specie name,
             # then no tag should be set
-            elif six.text_type(k.name) == six.text_type(k.symbols[0]):
+            elif str(k.name) == str(k.symbols[0]):
                 tag_list.append(None)
             else:
                 # Name is not the specie name
@@ -2377,7 +2375,7 @@ class Site(object):
             # If it is a string, it is the name of the element,
             # and I have to generate a new integer for this element
             # and replace tag_list[i] with this new integer
-            if isinstance(tag_list[i], six.string_types):
+            if isinstance(tag_list[i], str):
                 # I get a list of used tags for this element
                 existing_tags = used_tags[tag_list[i]]
                 if existing_tags:
@@ -2421,7 +2419,7 @@ class Site(object):
         """
         Set the type of this site (a string).
         """
-        self._kind_name = six.text_type(value)
+        self._kind_name = str(value)
 
     @property
     def position(self):

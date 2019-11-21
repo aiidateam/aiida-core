@@ -8,23 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Class and decorators to generate processes out of simple python functions."""
-
+import collections
 import functools
+import inspect
 import logging
 import signal
 
-from six.moves import zip  # pylint: disable=unused-import
-from six import PY2
+from aiida.common.lang import override
+from aiida.manage.manager import get_manager
 
-if PY2:
-    import collections
-else:
-    import collections.abc as collections  # pylint: disable=ungrouped-imports, no-name-in-module, import-error
-
-from aiida.common.lang import override  # pylint: disable=wrong-import-position
-from aiida.manage.manager import get_manager  # pylint: disable=wrong-import-position
-
-from .process import Process  # pylint: disable=wrong-import-position
+from .process import Process
 
 __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
@@ -231,16 +224,12 @@ class FunctionProcess(Process):
         :rtype: :class:`FunctionProcess`
         """
         from aiida import orm
-        from aiida.common.lang import get_arg_spec
         from aiida.orm.utils.mixins import FunctionCalculationMixin
 
         if not issubclass(node_class, orm.ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
-        if PY2:
-            args, varargs, keywords, defaults = get_arg_spec(func)  # pylint: disable=deprecated-method
-        else:
-            args, varargs, keywords, defaults, _, _, _ = get_arg_spec(func)  # pylint: disable=deprecated-method
+        args, varargs, keywords, defaults, _, _, _ = inspect.getfullargspec(func)
         nargs = len(args)
         ndefaults = len(defaults) if defaults else 0
         first_default_pos = nargs - ndefaults
@@ -423,7 +412,7 @@ class FunctionProcess(Process):
 
         if isinstance(result, Data):
             self.out(self.SINGLE_OUTPUT_LINKNAME, result)
-        elif isinstance(result, collections.Mapping):
+        elif isinstance(result, collections.abc.Mapping):
             for name, value in result.items():
                 self.out(name, value)
         else:

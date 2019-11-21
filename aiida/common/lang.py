@@ -8,56 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities that extend the basic python language."""
-
 import functools
-from inspect import stack, currentframe  # pylint: disable=ungrouped-imports
 import keyword
-import six
+from inspect import stack, currentframe, getfullargspec
 
-# Python 3 has a nice built-in solution, but while we support python 2 we need this ugly switch
-# Note that there is a difference between the PY2 and PY3 implementations as the latter allows unicode characters
-# We also need to discriminate between the getargspec versus getfullargspec
-if six.PY2:
-    from inspect import getargspec as get_arg_spec  # pylint: disable=deprecated-method
 
-    def isidentifier(identifier):
-        """Return whether the given string is a valid python identifier.
+def isidentifier(identifier):
+    """Return whether the given string is a valid python identifier.
 
-        :return: boolean, True if identifier is valid, False otherwise
-        :raises TypeError: if identifier is not string type
-        """
-        import string
-
-        type_check(identifier, six.string_types)
-
-        if not identifier:
-            return False
-
-        if keyword.iskeyword(identifier):
-            return False
-
-        first = '_' + string.lowercase + string.uppercase  # pylint: disable=no-member
-        if identifier[0] not in first:
-            return False
-
-        other = first + string.digits
-        for character in identifier[1:]:
-            if character not in other:
-                return False
-
-        return True
-
-else:
-    from inspect import getfullargspec as get_arg_spec  # pylint: disable=no-name-in-module
-
-    def isidentifier(identifier):
-        """Return whether the given string is a valid python identifier.
-
-        :return: boolean, True if identifier is valid, False otherwise
-        :raises TypeError: if identifier is not string type
-        """
-        type_check(identifier, six.string_types)
-        return identifier.isidentifier() and not keyword.iskeyword(identifier)
+    :return: boolean, True if identifier is valid, False otherwise
+    :raises TypeError: if identifier is not string type
+    """
+    type_check(identifier, str)
+    return identifier.isidentifier() and not keyword.iskeyword(identifier)
 
 
 def type_check(what, of_type, msg=None, allow_none=False):
@@ -84,7 +47,7 @@ def protected_decorator(check=False):
         if isinstance(func, property):
             raise RuntimeError('Protected must go after @property decorator')
 
-        args = get_arg_spec(func)[0]  # pylint: disable=deprecated-method
+        args = getfullargspec(func)[0]
         if not args:
             raise RuntimeError('Can only use the protected decorator on member functions')
 
@@ -119,7 +82,7 @@ def override_decorator(check=False):
         if isinstance(func, property):
             raise RuntimeError('Override must go after @property decorator')
 
-        args = get_arg_spec(func)[0]  # pylint: disable=deprecated-method
+        args = getfullargspec(func)[0]
         if not args:
             raise RuntimeError('Can only use the override decorator on member functions')
 

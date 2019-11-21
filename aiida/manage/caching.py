@@ -17,7 +17,6 @@ from enum import Enum
 from contextlib import contextmanager
 
 import yaml
-import six
 from wrapt import decorator
 
 from aiida.common import exceptions
@@ -138,7 +137,7 @@ def get_use_cache(node_class=None, identifier=None):
         )
 
     if identifier is not None:
-        type_check(identifier, six.string_types)
+        type_check(identifier, str)
 
         enabled = identifier in _CONFIG[ConfigKeys.ENABLED.value]
         disabled = identifier in _CONFIG[ConfigKeys.DISABLED.value]

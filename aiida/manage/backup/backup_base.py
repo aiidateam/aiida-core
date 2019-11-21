@@ -8,23 +8,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Base abstract Backup class for all backends."""
-
-import io
 import datetime
-import shutil
+import io
 import os
 import logging
+import shutil
 
-from abc import abstractmethod, ABCMeta
-import six
+from abc import ABC, abstractmethod
 from dateutil.parser import parse
 
 from aiida.common import json
 from aiida.common import timezone as dtimezone
 
 
-@six.add_metaclass(ABCMeta)  # pylint: disable=useless-object-inheritance
-class AbstractBackup(object):
+class AbstractBackup(ABC):
     """
     This class handles the backup of the AiiDA repository that is referenced
     by the current AiiDA database. The backup will start from the

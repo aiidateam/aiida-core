@@ -9,8 +9,6 @@
 ###########################################################################
 """Tests for `verdi profile`."""
 
-import six
-
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaPostgresTestCase
@@ -106,7 +104,7 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         result = self.cli_runner.invoke(cmd_profile.profile_show, [profile_name])
         self.assertClickSuccess(result)
         for key, value in profile.dictionary.items():
-            if isinstance(value, six.string_types):
+            if isinstance(value, str):
                 self.assertIn(key.lower(), result.output)
                 self.assertIn(value, result.output)
 

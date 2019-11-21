@@ -20,13 +20,11 @@ Local transport
 ### in the exact same way as paramiko does already.
 
 import errno
+import io
 import os
 import shutil
 import subprocess
 import glob
-
-import six
-from six.moves import cStringIO as StringIO
 
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import Transport, TransportInternalError
@@ -773,8 +771,8 @@ class LocalTransport(Transport):
         local_stdin, _, _, local_proc = self._exec_command_internal(command)
 
         if stdin is not None:
-            if isinstance(stdin, six.string_types):
-                filelike_stdin = StringIO(stdin)
+            if isinstance(stdin, str):
+                filelike_stdin = io.StringIO(stdin)
             else:
                 filelike_stdin = stdin
 

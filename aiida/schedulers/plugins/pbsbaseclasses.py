@@ -13,7 +13,6 @@ Base classes for PBSPro and PBS/Torque plugins.
 import abc
 import logging
 
-import six
 
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import Scheduler, SchedulerError, SchedulerParsingError
@@ -109,7 +108,6 @@ class PbsJobResource(NodeNumberJobResource):
             self.num_cores_per_machine = (self.num_cores_per_mpiproc * self.num_mpiprocs_per_machine)
 
 
-@six.add_metaclass(abc.ABCMeta)
 class PbsBaseClass(Scheduler):
     """
     Base class with support for the PBSPro scheduler
@@ -165,7 +163,7 @@ class PbsBaseClass(Scheduler):
             command.append('-u{}'.format(user))
 
         if jobs:
-            if isinstance(jobs, six.string_types):
+            if isinstance(jobs, str):
                 command.append('{}'.format(escape_for_bash(jobs)))
             else:
                 try:

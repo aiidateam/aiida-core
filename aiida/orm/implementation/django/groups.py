@@ -16,7 +16,6 @@ try:
     from collections.abc import Iterator, Sized  # only works on python 3.3+
 except ImportError:
     from collections import Iterator, Sized
-import six
 
 # pylint: disable=no-name-in-module, import-error
 from django.db import transaction
@@ -86,7 +85,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
     @property
     def uuid(self):
-        return six.text_type(self._dbmodel.uuid)
+        return str(self._dbmodel.uuid)
 
     def __int__(self):
         if not self.is_stored:
@@ -254,7 +253,7 @@ class DjangoGroupCollection(BackendGroupCollection):
             queryobject &= Q(dbnodes__in=pk_list)
 
         if user is not None:
-            if isinstance(user, six.string_types):
+            if isinstance(user, str):
                 queryobject &= Q(user__email=user)
             else:
                 queryobject &= Q(user=user.id)
@@ -267,7 +266,7 @@ class DjangoGroupCollection(BackendGroupCollection):
 
         if node_attributes is not None:
             for k, vlist in node_attributes.items():
-                if isinstance(vlist, six.string_types) or not isinstance(vlist, collections.Iterable):
+                if isinstance(vlist, str) or not isinstance(vlist, collections.Iterable):
                     vlist = [vlist]
 
                 for value in vlist:

@@ -15,8 +15,6 @@ in a Brillouin zone, and how to operate on them.
 import io
 from string import Template
 
-import six
-from six.moves import range, zip
 import numpy
 
 from aiida.common.exceptions import ValidationError
@@ -304,9 +302,9 @@ class BandsData(KpointsData):
 
         # check the labels
         if labels is not None:
-            if isinstance(labels, six.string_types):
+            if isinstance(labels, str):
                 the_labels = [str(labels)]
-            elif isinstance(labels, (tuple, list)) and all([isinstance(_, six.string_types) for _ in labels]):
+            elif isinstance(labels, (tuple, list)) and all([isinstance(_, str) for _ in labels]):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError('Band labels have an unrecognized type ({})'

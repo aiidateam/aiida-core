@@ -12,7 +12,6 @@
 
 import io
 from functools import partial
-from six.moves import zip
 
 import click
 

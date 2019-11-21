@@ -8,16 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA profile related code"""
+import collections
 import os
-from six import PY2
 
-if PY2:
-    import collections
-else:
-    import collections.abc as collections  # pylint: disable=import-error, no-name-in-module
-
-from aiida.common import exceptions  # pylint: disable=wrong-import-position
-from .settings import DAEMON_DIR, DAEMON_LOG_DIR  # pylint: disable=wrong-import-position
+from aiida.common import exceptions
+from .settings import DAEMON_DIR, DAEMON_LOG_DIR
 
 __all__ = ('Profile',)
 
@@ -73,7 +68,7 @@ class Profile(object):  # pylint: disable=too-many-public-methods
         return set(dictionary.keys()) - set(cls._map_config_to_internal.keys())
 
     def __init__(self, name, attributes, from_config=False):
-        if not isinstance(attributes, collections.Mapping):
+        if not isinstance(attributes, collections.abc.Mapping):
             raise TypeError('attributes should be a mapping but is {}'.format(type(attributes)))
 
         self._name = name

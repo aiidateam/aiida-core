@@ -11,14 +11,12 @@
 
 import abc
 import logging
-import six
 
 from . import backends
 
 __all__ = ('BackendComputer', 'BackendComputerCollection')
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendComputer(backends.BackendEntity):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -119,7 +117,6 @@ class BackendComputer(backends.BackendEntity):
         pass
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendComputerCollection(backends.BackendCollection[BackendComputer]):
     """The collection of Computer entries."""
 

@@ -317,12 +317,11 @@ class Data(Node):
         :param object_format: Specify the output format
         """
         # pylint: disable=keyword-arg-before-vararg
-        import six
 
         if object_format is None:
             raise ValueError('object_format must be provided')
 
-        if not isinstance(object_format, six.string_types):
+        if not isinstance(object_format, str):
             raise ValueError('object_format should be a string')
 
         converters = self._get_converters()

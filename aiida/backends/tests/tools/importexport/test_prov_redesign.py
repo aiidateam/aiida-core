@@ -11,7 +11,6 @@
 # pylint: disable=too-many-locals
 
 import os
-from six.moves import zip
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase

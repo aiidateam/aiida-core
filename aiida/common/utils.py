@@ -8,16 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Miscellaneous generic utility functions and classes."""
-
 import filecmp
 import inspect
+import io
 import os
 import re
 import sys
-
-import six
-from six.moves import range
-from six.moves import cStringIO as StringIO
 
 from .lang import classproperty
 
@@ -29,7 +25,7 @@ def get_new_uuid():
     aiida.backends.settings.AIIDANODES_UUID_VERSION
     """
     import uuid
-    return six.text_type(uuid.uuid4())
+    return str(uuid.uuid4())
 
 
 # To speed up the process (os.path.abspath calls are slow)
@@ -87,7 +83,7 @@ def validate_list_of_string_tuples(val, tuple_length):
     for element in val:
         if (
             not isinstance(element, (list, tuple)) or (len(element) != tuple_length) or
-            not all(isinstance(s, six.string_types) for s in element)
+            not all(isinstance(s, str) for s in element)
         ):
             raise ValidationError(err_msg)
 
@@ -558,11 +554,11 @@ class Capturing(object):
     def __enter__(self):
         """Enter the context where all output is captured."""
         self._stdout = sys.stdout
-        self._stringioout = StringIO()
+        self._stringioout = io.StringIO()
         sys.stdout = self._stringioout
         if self._capture_stderr:
             self._stderr = sys.stderr
-            self._stringioerr = StringIO()
+            self._stringioerr = io.StringIO()
             sys.stderr = self._stringioerr
         return self
 

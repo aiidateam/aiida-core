@@ -24,8 +24,6 @@ from datetime import datetime
 from operator import itemgetter
 from itertools import chain
 
-import six
-from six.moves import range
 from passlib.context import CryptContext
 import pytz
 
@@ -160,7 +158,7 @@ def _single_digest(obj_type, obj_bytes=b''):
 _END_DIGEST = _single_digest(')')
 
 
-@_make_hash.register(six.binary_type)
+@_make_hash.register(bytes)
 def _(bytes_obj, **kwargs):
     """
     Hash arbitrary binary strings (str in Python 2, bytes in Python 3).
@@ -169,7 +167,7 @@ def _(bytes_obj, **kwargs):
     return [_single_digest('str', bytes_obj)]
 
 
-@_make_hash.register(six.text_type)
+@_make_hash.register(str)
 def _(val, **kwargs):
     """
     If the type is unicode in Python 2 or a str in Python 3, convert it
@@ -266,17 +264,10 @@ def _(val, **kwargs):
 @_make_hash.register(datetime)
 def _(val, **kwargs):
     """hashes the little-endian rep of the float <epoch-seconds>.<subseconds>"""
-
     # see also https://stackoverflow.com/a/8778548 for an excellent elaboration
-
-    if six.PY2:
-        if val.tzinfo is not None and val.utcoffset() is not None:
-            val = val.replace(tzinfo=None) - val.utcoffset()
-        timestamp = (val - datetime(1970, 1, 1)).total_seconds()
-    else:
-        if val.tzinfo is None or val.utcoffset() is None:
-            val = val.replace(tzinfo=pytz.utc)
-        timestamp = val.timestamp()
+    if val.tzinfo is None or val.utcoffset() is None:
+        val = val.replace(tzinfo=pytz.utc)
+    timestamp = val.timestamp()
 
     return [_single_digest('datetime', float_to_text(timestamp, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
 

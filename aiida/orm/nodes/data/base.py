@@ -8,14 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to be used as a base for data containers that represent base python data types."""
-
-import abc
-import six
-
-try:
-    from functools import singledispatch  # Python 3.4+
-except ImportError:
-    from singledispatch import singledispatch
+from functools import singledispatch
 
 from .data import Data
 
@@ -24,13 +17,10 @@ __all__ = ('BaseType', 'to_aiida_type')
 
 @singledispatch
 def to_aiida_type(value):
-    """
-    Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types.
-    """
+    """Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types."""
     raise TypeError('Cannot convert value of type {} to AiiDA type.'.format(type(value)))
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 

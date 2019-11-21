@@ -10,14 +10,12 @@
 """Module for comment backend classes."""
 
 import abc
-import six
 
 from . import backends
 
 __all__ = ('BackendComment', 'BackendCommentCollection')
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendComment(backends.BackendEntity):
     """Base class for a node comment."""
 
@@ -58,7 +56,6 @@ class BackendComment(backends.BackendEntity):
         pass
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendCommentCollection(backends.BackendCollection[BackendComment]):
     """The collection of Comment entries."""
 

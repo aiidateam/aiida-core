@@ -12,7 +12,6 @@
 import logging
 from datetime import datetime
 from uuid import UUID
-import six
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -58,10 +57,10 @@ class TestBackendLog(AiidaTestCase):
         # Before storing
         self.assertIsNone(log.id)
         self.assertIsNone(log.pk)
-        self.assertTrue(isinstance(log.uuid, six.string_types))
+        self.assertTrue(isinstance(log.uuid, str))
         self.assertTrue(isinstance(log.time, datetime))
         self.assertEqual(log.loggername, 'loggername')
-        self.assertTrue(isinstance(log.levelname, six.string_types))
+        self.assertTrue(isinstance(log.levelname, str))
         self.assertTrue(isinstance(log.dbnode_id, int))
         self.assertEqual(log.message, self.log_message)
         self.assertEqual(log.metadata, {'content': 'test'})
@@ -71,10 +70,10 @@ class TestBackendLog(AiidaTestCase):
         # After storing
         self.assertTrue(isinstance(log.id, int))
         self.assertTrue(isinstance(log.pk, int))
-        self.assertTrue(isinstance(log.uuid, six.string_types))
+        self.assertTrue(isinstance(log.uuid, str))
         self.assertTrue(isinstance(log.time, datetime))
         self.assertEqual(log.loggername, 'loggername')
-        self.assertTrue(isinstance(log.levelname, six.string_types))
+        self.assertTrue(isinstance(log.levelname, str))
         self.assertTrue(isinstance(log.dbnode_id, int))
         self.assertEqual(log.message, self.log_message)
         self.assertEqual(log.metadata, {'content': 'test'})

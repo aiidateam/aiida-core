@@ -25,7 +25,6 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 """
 # pylint: disable=invalid-name
 
-from six.moves import zip
 from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
 
 

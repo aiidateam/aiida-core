@@ -11,8 +11,6 @@
 
 import logging
 
-from six.moves import range
-
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions

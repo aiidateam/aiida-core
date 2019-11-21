@@ -12,8 +12,6 @@
 import collections
 import logging
 
-import six
-
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
@@ -105,7 +103,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
     @property
     def uuid(self):
-        return six.text_type(self._dbmodel.uuid)
+        return str(self._dbmodel.uuid)
 
     def __int__(self):
         if not self.is_stored:
@@ -325,7 +323,7 @@ class SqlaGroupCollection(BackendGroupCollection):
 
             filters.append(sub_query)
         if user:
-            if isinstance(user, six.string_types):
+            if isinstance(user, str):
                 filters.append(DbGroup.user.has(email=user.email))
             else:
                 type_check(user, users.SqlaUser)

@@ -9,11 +9,9 @@
 ###########################################################################
 """Export a zip-file."""
 # pylint: disable=missing-docstring,redefined-builtin
-
+import io
 import os
 import zipfile
-
-import six
 
 
 class MyWritingZipFile(object):
@@ -26,7 +24,7 @@ class MyWritingZipFile(object):
     def open(self):
         if self._buffer is not None:
             raise IOError('Cannot open again!')
-        self._buffer = six.moves.StringIO()
+        self._buffer = io.StringIO()
 
     def write(self, data):
         self._buffer.write(data)
@@ -65,7 +63,7 @@ class ZipFolder(object):
           False if you just want to pack them together without compressing.
           It is ignored if zipfolder_or_fname is a ZipFolder isntance.
         """
-        if isinstance(zipfolder_or_fname, six.string_types):
+        if isinstance(zipfolder_or_fname, str):
             the_mode = mode
             if the_mode is None:
                 the_mode = 'r'
@@ -122,13 +120,13 @@ class ZipFolder(object):
 
     def insert_path(self, src, dest_name=None, overwrite=True):
         if dest_name is None:
-            base_filename = six.text_type(os.path.basename(src))
+            base_filename = str(os.path.basename(src))
         else:
-            base_filename = six.text_type(dest_name)
+            base_filename = str(dest_name)
 
         base_filename = self._get_internal_path(base_filename)
 
-        src = six.text_type(src)
+        src = str(src)
 
         if not os.path.isabs(src):
             raise ValueError('src must be an absolute path in insert_file')

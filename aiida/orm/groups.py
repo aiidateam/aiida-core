@@ -11,7 +11,6 @@
 
 from enum import Enum
 import warnings
-import six
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -58,7 +57,7 @@ class Group(entities.Entity):
             filters = {'label': label}
 
             if 'type_string' in kwargs:
-                if not isinstance(kwargs['type_string'], six.string_types):
+                if not isinstance(kwargs['type_string'], str):
                     raise exceptions.ValidationError(
                         'type_string must be {}, you provided an object of type '
                         '{}'.format(str, type(kwargs['type_string']))
@@ -107,7 +106,7 @@ class Group(entities.Entity):
             raise ValueError('Group label must be provided')
 
         # Check that chosen type_string is allowed
-        if not isinstance(type_string, six.string_types):
+        if not isinstance(type_string, str):
             raise exceptions.ValidationError(
                 'type_string must be {}, you provided an object of type '
                 '{}'.format(str, type(type_string))
@@ -296,7 +295,7 @@ class Group(entities.Entity):
 
         filters = {}
         if 'type_string' in kwargs:
-            if not isinstance(kwargs['type_string'], six.string_types):
+            if not isinstance(kwargs['type_string'], str):
                 raise exceptions.ValidationError(
                     'type_string must be {}, you provided an object of type '
                     '{}'.format(str, type(kwargs['type_string']))

@@ -12,7 +12,6 @@
 import io
 import json
 import re
-import six
 
 from upf_to_json import upf_to_json
 
@@ -492,7 +491,7 @@ class UpfData(SinglefileData):
         if user:
             builder.append(User, filters={'email': {'==': user}}, with_group='group')
 
-        if isinstance(filter_elements, six.string_types):
+        if isinstance(filter_elements, str):
             filter_elements = [filter_elements]
 
         if filter_elements is not None:

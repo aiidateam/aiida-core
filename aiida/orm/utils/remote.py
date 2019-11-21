@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import os
-import six
 
 
 def clean_remote(transport, path):
@@ -19,7 +18,7 @@ def clean_remote(transport, path):
     :param transport: an open Transport channel
     :param path: an absolute path on the remote made available through the transport
     """
-    if not isinstance(path, six.string_types):
+    if not isinstance(path, str):
         raise ValueError('the path has to be a string type')
 
     if not os.path.isabs(path):

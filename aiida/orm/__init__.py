@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=wildcard-import,undefined-variable,redefined-builtin,cyclic-import
 """Main module to expose all orm classes and methods"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .authinfos import *
 from .comments import *

@@ -9,9 +9,6 @@
 ###########################################################################
 """ Utility functions for export of AiiDA entities """
 # pylint: disable=too-many-locals,too-many-branches,too-many-nested-blocks
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from aiida.orm import QueryBuilder, ProcessNode
 from aiida.tools.importexport.common import exceptions

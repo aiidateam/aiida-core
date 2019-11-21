@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration export files from old export versions to the newest, used by `verdi export migrate` command."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.cmdline.utils import echo
 from aiida.tools.importexport.common.exceptions import DanglingLinkError

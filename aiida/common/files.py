@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to operate on filesystem files."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import hashlib
 import io

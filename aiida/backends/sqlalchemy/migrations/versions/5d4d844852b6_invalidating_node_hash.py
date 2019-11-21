@@ -15,9 +15,6 @@ Revises: 62fe0d36de90
 Create Date: 2018-10-26 17:14:33.566670
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from alembic import op
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed

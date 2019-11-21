@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-arguments,import-error,too-many-locals
 """`verdi export` command."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import io
 import os

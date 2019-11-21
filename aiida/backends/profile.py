@@ -12,9 +12,6 @@
 .. deprecated:: 1.0.0
     Will be removed in `v1.1.0`, use :mod:`aiida.backends` instead.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import warnings
 

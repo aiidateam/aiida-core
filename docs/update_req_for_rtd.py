@@ -12,9 +12,6 @@
 Whenever the requirements in ../setup.json are updated, run
 also this script to update the requirements for Read the Docs.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import os
 import json

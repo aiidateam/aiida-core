@@ -11,9 +11,6 @@
 This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
 import io
 from string import Template
@@ -1632,7 +1629,6 @@ print_comment = False
 # see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
 matplotlib_header_template = Template('''# -*- coding: utf-8 -*-
 
-from __future__ import print_function
 from matplotlib import rc
 # Uncomment to change default font
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})

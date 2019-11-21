@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a list."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from six import PY2
 
 if PY2:

@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for the implementation of the Django backend."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 # pylint: disable=import-error,no-name-in-module
 from django.db import transaction, IntegrityError

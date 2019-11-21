@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import tornado.gen
 
 import plumpy

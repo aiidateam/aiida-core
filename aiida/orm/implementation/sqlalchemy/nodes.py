@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SqlAlchemy implementation of the `BackendNode` and `BackendNodeCollection` classes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 # pylint: disable=no-name-in-module,import-error
 from datetime import datetime

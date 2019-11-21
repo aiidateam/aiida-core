@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=wildcard-import,undefined-variable,redefined-builtin
 """Module with all the internals that make up the engine of `aiida-core`."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .launch import *
 from .processes import *

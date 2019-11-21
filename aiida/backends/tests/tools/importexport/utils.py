@@ -8,10 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions for tests for the export and import routines"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import with_statement
 
 from aiida.orm import QueryBuilder, Node
 

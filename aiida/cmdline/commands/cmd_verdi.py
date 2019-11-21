@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The main `verdi` click group."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import difflib
 import click

@@ -12,9 +12,6 @@
 This example implements exactly the same functionality as seen in the basic WorkChain example, except in this case it
 utilizes calcfunctions instead of workchains.
 """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from aiida.engine import calcfunction
 from aiida.orm import Float, Int

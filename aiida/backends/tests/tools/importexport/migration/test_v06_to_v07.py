@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test export file migration from export version 0.6 to 0.7"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.archives import get_json_files

@@ -10,10 +10,6 @@
 # pylint: disable=invalid-name
 """Methods to validate the database integrity and fix violations."""
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 WARNING_BORDER = '*' * 120
 
 

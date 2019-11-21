@@ -11,10 +11,6 @@
 Defines reStructuredText directives to simplify documenting AiiDA and its plugins.
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 from sphinx.errors import ExtensionError
 
 

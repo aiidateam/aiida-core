@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Comment objects and functions"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.manage.manager import get_manager
 from . import entities

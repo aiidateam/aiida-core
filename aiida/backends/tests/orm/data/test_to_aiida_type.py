@@ -10,9 +10,6 @@
 """
 This module contains tests for the to_aiida_type serializer
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from aiida.orm.nodes.data.base import to_aiida_type
 from aiida.orm import Dict, Int, Float, Bool, Str
 

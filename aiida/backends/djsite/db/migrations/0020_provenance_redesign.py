@@ -10,11 +10,6 @@
 # pylint: disable=invalid-name,too-few-public-methods,unused-argument
 """Migration after the provenance redesign"""
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from django.db import migrations

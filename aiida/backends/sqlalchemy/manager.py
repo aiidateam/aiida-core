@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=import-error,no-name-in-module
 """Utilities and configuration of the SqlAlchemy database schema."""
-from __future__ import absolute_import
 
 import os
 import contextlib

@@ -14,9 +14,6 @@ WARNING: Changing the representation of things here may break people's current s
 checkpoints and messages in the RabbitMQ queue so do so with caution.  It is fine to add representers
 for new types though.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from functools import partial
 import yaml

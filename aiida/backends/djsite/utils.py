@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions specific to the Django backend."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 
 def delete_nodes_and_connections_django(pks_to_delete):  # pylint: disable=invalid-name

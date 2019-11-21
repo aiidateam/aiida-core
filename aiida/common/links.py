@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with utilities and data structures pertaining to links between nodes in the provenance graph."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from collections import namedtuple
 from enum import Enum

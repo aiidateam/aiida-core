@@ -9,9 +9,6 @@
 ###########################################################################
 """Migration from v0.1 to v0.2, used by `verdi export migrate` command."""
 # pylint: disable=unused-argument
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
 

@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for utilities dealing with plugins and entry points."""
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from aiida import __version__ as version_core
 from aiida.backends.testbase import AiidaTestCase

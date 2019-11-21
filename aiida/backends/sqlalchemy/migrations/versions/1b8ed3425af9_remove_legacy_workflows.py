@@ -15,9 +15,6 @@ Revises: 3d6190594e19
 Create Date: 2019-04-03 17:11:44.073582
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import sys
 import click
 

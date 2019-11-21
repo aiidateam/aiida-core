@@ -9,9 +9,6 @@
 ###########################################################################
 """Module with the implementations of the various backend entities for various database backends."""
 # pylint: disable=wildcard-import,undefined-variable
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .authinfos import *
 from .backends import *

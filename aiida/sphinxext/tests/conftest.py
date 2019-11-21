@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Pytest fixtures for AiiDA sphinx extension tests."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import os
 from os import path
 import sys

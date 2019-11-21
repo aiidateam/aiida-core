@@ -11,9 +11,6 @@
 For pytest, put this file in the root directory of the package to make
 the fixtures available to all tests.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import pytest  # pylint: disable=unused-import
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name

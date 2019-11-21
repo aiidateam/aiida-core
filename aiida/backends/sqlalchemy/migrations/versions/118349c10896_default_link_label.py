@@ -18,9 +18,6 @@ Revises: 91b573400be5
 Create Date: 2019-11-21 09:43:45.006053
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 # pylint: disable=no-member,no-name-in-module,import-error
 from alembic import op

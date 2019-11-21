@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-nested-blocks,protected-access,fixme,too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 """ SQLAlchemy-specific import of AiiDA entities """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from distutils.version import StrictVersion
 import io

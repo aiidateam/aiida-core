@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data structures for mapping legacy `JobCalculation` data to new process attributes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from collections import namedtuple
 
 StateMapping = namedtuple('StateMapping', ['state', 'process_state', 'exit_status', 'process_status'])

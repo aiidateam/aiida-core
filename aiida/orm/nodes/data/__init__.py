@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub classes for data structures."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .array import ArrayData, BandsData, KpointsData, ProjectionData, TrajectoryData, XyData
 from .base import BaseType

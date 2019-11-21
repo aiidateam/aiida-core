@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for dealing with links between nodes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from collections import namedtuple, OrderedDict, Mapping
 

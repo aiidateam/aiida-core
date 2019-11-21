@@ -118,7 +118,6 @@ Here is a full example how the ICSD importer can be used:
 
 .. code-block:: python
 
-  from __future__ import print_function
 
   from aiida.tools.dbimporters.plugins.icsd import IcsdDbImporter
 

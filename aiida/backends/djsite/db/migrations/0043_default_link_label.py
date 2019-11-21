@@ -13,10 +13,6 @@
 The old process functions used to use `_return` as the default link label, however, since labels that start or end with
 and underscore are illegal because they are used for namespacing.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error

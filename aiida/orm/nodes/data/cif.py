@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-locals,too-many-statements
 """Tools for handling Crystallographic Information Files (CIF)"""
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
 from aiida.common.utils import Capturing
 

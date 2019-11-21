@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for calculation processes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.common.links import LinkType
 from aiida.orm.utils.managers import NodeLinksManager

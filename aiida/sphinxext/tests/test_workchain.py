@@ -9,9 +9,6 @@
 ###########################################################################
 """Tests for the AiiDA workchain Sphinx directive."""
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from os.path import join, dirname
 
 import six

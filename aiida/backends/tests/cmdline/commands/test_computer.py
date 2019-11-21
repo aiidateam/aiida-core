@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the 'verdi computer' command."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from collections import OrderedDict
 import os

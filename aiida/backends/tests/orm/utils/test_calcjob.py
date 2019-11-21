@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `CalcJob` utils."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType

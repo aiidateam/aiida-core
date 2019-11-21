@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-arguments, wrong-import-position
 """The `verdi` command line interface."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import click_completion
 
 # Activate the completion of parameter types provided by the click_completion package

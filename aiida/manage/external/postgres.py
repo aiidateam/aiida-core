@@ -15,9 +15,6 @@ functionality from within python without knowing details about how postgres is
 installed by default on various systems. If the postgres setup is not the
 default installation, additional information needs to be provided.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 __all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
 

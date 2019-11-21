@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Define the current configuration version and migrations."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 __all__ = ('CURRENT_CONFIG_VERSION', 'OLDEST_COMPATIBLE_CONFIG_VERSION')
 

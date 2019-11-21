@@ -12,9 +12,6 @@
 Tests for the migrations of the attributes, extras and settings from EAV to JSONB
 Migration 0037_attributes_extras_settings_json
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import copy
 

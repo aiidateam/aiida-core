@@ -13,9 +13,6 @@ Various utilities to deal with StructureData instances or create new ones
 format, ...)
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import copy
 import re

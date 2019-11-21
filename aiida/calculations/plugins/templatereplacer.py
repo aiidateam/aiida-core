@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of CalcJobNode to replace a template for testing and demonstration purposes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import six
 

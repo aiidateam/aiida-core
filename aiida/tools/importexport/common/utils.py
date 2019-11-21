@@ -10,9 +10,6 @@
 """ Utility functions for import/export of AiiDA entities """
 # pylint: disable=inconsistent-return-statements,too-many-branches,too-many-return-statements
 # pylint: disable=too-many-nested-blocks,too-many-locals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from six.moves.html_parser import HTMLParser
 

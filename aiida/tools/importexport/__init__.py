@@ -15,9 +15,6 @@ explore tree: https://github.com/aiidateam/aiida-core/tree/eebef392c81e8b130834a
 Functionality: <tree>/aiida/orm/importexport.py
 Tests: <tree>/aiida/backends/tests/test_export_and_import.py
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .dbexport import *
 from .dbimport import *

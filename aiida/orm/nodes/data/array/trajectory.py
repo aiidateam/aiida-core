@@ -10,9 +10,6 @@
 """
 AiiDA class to deal with crystal structure trajectories.
 """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 import collections
 import six

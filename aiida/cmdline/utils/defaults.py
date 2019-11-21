@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Default values and lazy default get methods for command line options."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.cmdline.utils import echo
 from aiida.common import exceptions

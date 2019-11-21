@@ -31,9 +31,6 @@ Examples of invalid full types:
     'process.calculation%.calcfunction.%|aiida.calculations:arithmetic.add'  # More than one operator in segment
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import collections
 import six

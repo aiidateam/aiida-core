@@ -9,10 +9,6 @@
 ###########################################################################
 """Setup script for aiida-core package."""
 
-from __future__ import division
-from __future__ import print_function
-
-from __future__ import absolute_import
 import json
 from os import path
 # pylint: disable=wrong-import-order

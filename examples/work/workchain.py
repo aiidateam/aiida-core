@@ -12,9 +12,6 @@
 This example illustrates in a very minimal way how a WorkChain can be defined and how it can be run. This mostly
 illustrates how the spec of the WorkChain is defined and how functions in the outline of the spec have to be defined.
 """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from aiida.engine import WorkChain, run
 from aiida.orm import NumericType, Float, Int

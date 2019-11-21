@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=too-few-public-methods
 """Enums and function for the awaitables of Processes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from enum import Enum
 

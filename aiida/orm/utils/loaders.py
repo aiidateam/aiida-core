@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `OrmEntityLoader` and its sub classes that simplify loading entities through their identifiers."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from abc import ABCMeta
 from enum import Enum

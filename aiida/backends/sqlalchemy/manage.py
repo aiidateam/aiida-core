@@ -9,9 +9,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Simple wrapper around the alembic command line tool that first loads an AiiDA profile."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import alembic
 import click

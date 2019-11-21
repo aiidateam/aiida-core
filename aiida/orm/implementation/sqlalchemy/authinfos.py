@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the SqlAlchemy backend implementation of the `AuthInfo` ORM class."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo

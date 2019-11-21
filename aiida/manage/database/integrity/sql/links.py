@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQL statements that test the integrity of the database with respect to links."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.links import LinkType

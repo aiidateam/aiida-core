@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub classes for calculation processes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .calculation import CalculationNode
 from .calcfunction import CalcFunctionNode

@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Generic functions to verify the integrity of the database and optionally apply patches to fix problems."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.common import exceptions
 from aiida.manage.manager import get_manager

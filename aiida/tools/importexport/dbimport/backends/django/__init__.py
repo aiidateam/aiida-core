@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=protected-access,fixme,inconsistent-return-statements,too-many-arguments,too-many-locals,too-many-statements,too-many-branches
 """ Django-specific import of AiiDA entities """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from distutils.version import StrictVersion
 import io

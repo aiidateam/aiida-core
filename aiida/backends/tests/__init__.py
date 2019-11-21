@@ -27,6 +27,7 @@ DB_TEST_LIST = {
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0038_data_migration_legacy_job_calculations',
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0040_data_migration_legacy_process_attributes',
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0041_seal_unsealed_processes',
+            'aiida.backends.djsite.db.subtests.migrations.test_migrations_0043_default_link_label',
         ],
     },
     BACKEND_SQLA: {

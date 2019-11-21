@@ -60,6 +60,7 @@ class TestMigrations(AiidaTestCase):
         # Reset session after the migration
         sa.get_scoped_session().close()
 
+        self.DbLink = self.apps.get_model('db', 'DbLink')
         self.DbNode = self.apps.get_model('db', 'DbNode')
         self.DbUser = self.apps.get_model('db', 'DbUser')
         self.DbUser.objects.all().delete()

@@ -105,7 +105,7 @@
       "notebook<6"
     ],
     "testing": [
-      "aiida-export-migration-tests==0.7.0",
+      "aiida-export-migration-tests==0.8.0",
       "codecov==2.0.15",
       "coverage==4.5.4",
       "futures==3.3.0; python_version=='2.7'",

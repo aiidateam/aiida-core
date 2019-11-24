@@ -40,7 +40,7 @@ We expect AiiDA to also run on:
 
 * Older and newer Ubuntu versions
 * Other Linux distributions
-* Windows subsystem for Linux
+* Windows Subsystem for Linux (WSL)
 
 Below, we provide installation instructions for a number of operating systems.
 
@@ -210,16 +210,43 @@ Make sure that RabbitMQ is running with:
 Windows Subsystem for Linux (Ubuntu)
 ====================================
 
+The Windows Subsystem for Linux (WSL) 2 is recommended.
+It is available from Windows 10 builds 18917 or higher.
+For more information, see `here <https://docs.microsoft.com/en-us/windows/wsl/wsl2-install>`_.
+
 The guide for Ubuntu above can be followed but there are a few things to note:
 
 #. The `windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_
    should be installed and started,
    since the version in WSL Ubuntu 18.04 does not work properly.
 
+   .. note:: For WSL 2 it should be enough to install and start the service in the Ubuntu system.
+
 #. Linux services under WSL are not started automatically.
-   To start the PostgreSQL service, type the command below in the terminal::
+   To start the PostgreSQL and RabbitMQ-server service, type the command below in the terminal::
 
      sudo service postgresql start
+     sudo service rabbitmq-server start
+
+   .. tip::
+
+       These lines may be added to a ``.sh`` file and run at startup without using a password in the follwing way:
+
+       Create a file with the lines above, but *without* the ``sudo``.
+       Make the file executeable, i.e., type::
+
+         chmod +x /path/to/file.sh
+
+       Then type::
+
+         sudo visudo
+
+       And add the line::
+
+         <username> ALL=(root) NOPASSWD: /path/to/file.sh
+
+       Replacing ``<username>`` with your Ubuntu username.
+       This will make you able to run the ``.sh`` file with ``root`` access, but without lowering security on your system.
 
 #. There is a `known issue <https://github.com/Microsoft/WSL/issues/856>`_ in WSL Ubuntu 18.04 where the timezone is not
    configured correctly out-of-the-box, which may cause problem for the database.
@@ -230,5 +257,23 @@ The guide for Ubuntu above can be followed but there are a few things to note:
 #. The file open limit may need to be raised using ``ulimit -n 2048`` (default is 1024), when running tests.
    You can check the limit by using ``ulimit -n``.
 
+   .. note:: This may need to be run every time the system starts up.
+
 It may be worth considering adding some of these commands to your ``~/.bashrc`` file, since some of these settings may reset upon reboot.
 
+.. note::
+
+    **For developers**: To get ``pre-commit`` to run, you should install ruby via::
+
+        sudo apt-get install ruby-full
+
+    Since the ``.travis.yml`` check runs with ruby.
+
+    You may also have to introduce a new $PATH, prior to running the check, restoring the original $PATH afterwards.
+    This, however, is only necessary if you run into problems and Ruby refuses to run due to wrong access rights.
+    The problem arises due to the ``/mnt/c/`` paths in the $PATH environment variable, so these should be temporarily removed.
+
+    .. tip::
+
+        Consider using VS Code with the Remote WSL extension for a full IDE experience, if you're not using in-terminal IDEs.
+        See `here <https://code.visualstudio.com/docs/remote/wsl>`_.

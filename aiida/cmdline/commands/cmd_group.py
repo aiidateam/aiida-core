@@ -13,7 +13,7 @@ import click
 
 from aiida.common.exceptions import UniquenessError
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments, types
+from aiida.cmdline.params import options, arguments
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 
@@ -178,18 +178,6 @@ def group_show(group, raw, limit, uuid):
         echo.echo(tabulate(table, headers=header))
 
 
-@with_dbenv()
-def valid_group_type_strings():
-    from aiida.orm import GroupTypeString
-    return tuple(i.value for i in GroupTypeString)
-
-
-@with_dbenv()
-def user_defined_group():
-    from aiida.orm import GroupTypeString
-    return GroupTypeString.USER.value
-
-
 @verdi_group.command('list')
 @options.ALL_USERS(help='Show groups for all users, rather than only for the current user')
 @click.option(
@@ -204,8 +192,7 @@ def user_defined_group():
     '-t',
     '--type',
     'group_type',
-    type=types.LazyChoice(valid_group_type_strings),
-    default=user_defined_group,
+    default='core',
     help='Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to '
     'specify aiida-internal type'
 )
@@ -330,9 +317,8 @@ def group_list(
 def group_create(group_label):
     """Create an empty group with a given name."""
     from aiida import orm
-    from aiida.orm import GroupTypeString
 
-    group, created = orm.Group.objects.get_or_create(label=group_label, type_string=GroupTypeString.USER.value)
+    group, created = orm.Group.objects.get_or_create(label=group_label)
 
     if created:
         echo.echo_success("Group created with PK = {} and name '{}'".format(group.id, group.label))
@@ -351,7 +337,7 @@ def group_copy(source_group, destination_group):
     Note that the destination group may not exist."""
     from aiida import orm
 
-    dest_group, created = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)
+    dest_group, created = orm.Group.objects.get_or_create(label=destination_group)
 
     # Issue warning if destination group is not empty and get user confirmation to continue
     if not created and not dest_group.is_empty:
@@ -386,8 +372,7 @@ def verdi_group_path():
     '-t',
     '--type',
     'group_type',
-    type=types.LazyChoice(valid_group_type_strings),
-    default=user_defined_group,
+    default='core',
     help='Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to '
     'specify aiida-internal type'
 )
@@ -396,10 +381,11 @@ def verdi_group_path():
 def group_path_ls(path, recursive, as_table, no_virtual, group_type, with_description, no_warn):
     # pylint: disable=too-many-arguments
     """Show a list of existing group paths."""
+    from aiida.plugins import GroupFactory
     from aiida.tools.groups.paths import GroupPath, InvalidPath
 
     try:
-        path = GroupPath(path or '', type_string=group_type, warn_invalid_child=not no_warn)
+        path = GroupPath(path or '', cls=GroupFactory(group_type), warn_invalid_child=not no_warn)
     except InvalidPath as err:
         echo.echo_critical(str(err))
 

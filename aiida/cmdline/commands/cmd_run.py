@@ -150,5 +150,6 @@ def run(scriptname, varargs, auto_group, auto_group_label_prefix, group_name, ex
             # Re-raise the exception to have the error code properly returned at the end
             raise
     finally:
+        autogroup.current_autogroup = None
         if handle:
             handle.close()

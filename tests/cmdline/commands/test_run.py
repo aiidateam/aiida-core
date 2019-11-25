@@ -9,6 +9,7 @@
 ###########################################################################
 """Tests for `verdi run`."""
 import tempfile
+import textwrap
 import warnings
 
 from click.testing import CliRunner
@@ -31,21 +32,22 @@ class TestVerdiRun(AiidaTestCase):
         that are defined within the script will fail, as the inspect module will not correctly be able to determin
         the full path of the source file.
         """
-        from aiida.orm import load_node
-        from aiida.orm import WorkFunctionNode
+        from aiida.orm import load_node, WorkFunctionNode
 
-        script_content = """
-#!/usr/bin/env python
-from aiida.engine import workfunction
+        script_content = textwrap.dedent(
+            """\
+            #!/usr/bin/env python
+            from aiida.engine import workfunction
 
-@workfunction
-def wf():
-    pass
+            @workfunction
+            def wf():
+                pass
 
-if __name__ == '__main__':
-    result, node = wf.run_get_node()
-    print(node.pk)
-        """
+            if __name__ == '__main__':
+                result, node = wf.run_get_node()
+                print(node.pk)
+            """
+        )
 
         # If `verdi run` is not setup correctly, the script above when run with `verdi run` will fail, because when
         # the engine will try to create the node for the workfunction and create a copy of its sourcefile, namely the
@@ -77,9 +79,8 @@ class TestAutoGroups(AiidaTestCase):
 
         super().setUp()
         self.cli_runner = CliRunner()
-        # I need to disable the global variable of this test environment,
-        # because invoke is just calling the function and therefore inheriting
-        # the global variable
+        # I need to disable the global variable of this test environment, because invoke is just calling the function
+        # and therefore inheriting the global variable
         self._old_autogroup = autogroup.CURRENT_AUTOGROUP
         autogroup.CURRENT_AUTOGROUP = None
 
@@ -92,12 +93,15 @@ class TestAutoGroups(AiidaTestCase):
 
     def test_autogroup(self):
         """Check if the autogroup is properly generated."""
-        from aiida.orm import QueryBuilder, Node, Group, load_node
+        from aiida.orm import QueryBuilder, Node, AutoGroup, load_node
 
-        script_content = """from aiida.orm import Data
-node = Data().store()
-print(node.pk)
-"""
+        script_content = textwrap.dedent(
+            """\
+            from aiida.orm import Data
+            node = Data().store()
+            print(node.pk)
+            """
+        )
 
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write(script_content)
@@ -111,7 +115,7 @@ print(node.pk)
             _ = load_node(pk)  # Check if the node can be loaded
 
             queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
-            queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+            queryb.append(AutoGroup, with_node='node', project='*')
             all_auto_groups = queryb.all()
             self.assertEqual(
                 len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'
@@ -119,12 +123,16 @@ print(node.pk)
 
     def test_autogroup_custom_label(self):
         """Check if the autogroup is properly generated with the label specified."""
-        from aiida.orm import QueryBuilder, Node, Group, load_node
+        from aiida.orm import QueryBuilder, Node, AutoGroup, load_node
 
-        script_content = """from aiida.orm import Data
-node = Data().store()
-print(node.pk)
-"""
+        script_content = textwrap.dedent(
+            """\
+            from aiida.orm import Data
+            node = Data().store()
+            print(node.pk)
+            """
+        )
+
         autogroup_label = 'SOME_group_LABEL'
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write(script_content)
@@ -138,7 +146,7 @@ print(node.pk)
             _ = load_node(pk)  # Check if the node can be loaded
 
             queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
-            queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+            queryb.append(AutoGroup, with_node='node', project='*')
             all_auto_groups = queryb.all()
             self.assertEqual(
                 len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'
@@ -147,12 +155,15 @@ print(node.pk)
 
     def test_no_autogroup(self):
         """Check if the autogroup is not generated if ``verdi run`` is asked not to."""
-        from aiida.orm import QueryBuilder, Node, Group, load_node
+        from aiida.orm import QueryBuilder, Node, AutoGroup, load_node
 
-        script_content = """from aiida.orm import Data
-node = Data().store()
-print(node.pk)
-"""
+        script_content = textwrap.dedent(
+            """\
+            from aiida.orm import Data
+            node = Data().store()
+            print(node.pk)
+            """
+        )
 
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write(script_content)
@@ -166,61 +177,64 @@ print(node.pk)
             _ = load_node(pk)  # Check if the node can be loaded
 
             queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
-            queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+            queryb.append(AutoGroup, with_node='node', project='*')
             all_auto_groups = queryb.all()
             self.assertEqual(len(all_auto_groups), 0, 'There should be no autogroup generated')
 
     def test_autogroup_filter_class(self):  # pylint: disable=too-many-locals
         """Check if the autogroup is properly generated but filtered classes are skipped."""
-        from aiida.orm import QueryBuilder, Node, Group, load_node
+        from aiida.orm import Code, QueryBuilder, Node, AutoGroup, load_node
 
-        script_content = """import sys
-from aiida.orm import Computer, Int, ArrayData, KpointsData, CalculationNode, WorkflowNode
-from aiida.plugins import CalculationFactory
-from aiida.engine import run_get_node
-ArithmeticAdd = CalculationFactory('arithmetic.add')
+        script_content = textwrap.dedent(
+            """\
+            import sys
+            from aiida.orm import Computer, Int, ArrayData, KpointsData, CalculationNode, WorkflowNode
+            from aiida.plugins import CalculationFactory
+            from aiida.engine import run_get_node
+            ArithmeticAdd = CalculationFactory('arithmetic.add')
 
-computer = Computer(
-    name='localhost-example-{}'.format(sys.argv[1]),
-    hostname='localhost',
-    description='my computer',
-    transport_type='local',
-    scheduler_type='direct',
-    workdir='/tmp'
-).store()
-computer.configure()
+            computer = Computer(
+                name='localhost-example-{}'.format(sys.argv[1]),
+                hostname='localhost',
+                description='my computer',
+                transport_type='local',
+                scheduler_type='direct',
+                workdir='/tmp'
+            ).store()
+            computer.configure()
 
-code = Code(
-    input_plugin_name='arithmetic.add',
-    remote_computer_exec=[computer, '/bin/true']).store()
-inputs = {
-    'x': Int(1),
-    'y': Int(2),
-    'code': code,
-    'metadata': {
-        'options': {
-            'resources': {
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
+            code = Code(
+                input_plugin_name='arithmetic.add',
+                remote_computer_exec=[computer, '/bin/true']).store()
+            inputs = {
+                'x': Int(1),
+                'y': Int(2),
+                'code': code,
+                'metadata': {
+                    'options': {
+                        'resources': {
+                            'num_machines': 1,
+                            'num_mpiprocs_per_machine': 1
+                        }
+                    }
+                }
             }
-        }
-    }
-}
 
-node1 = KpointsData().store()
-node2 = ArrayData().store()
-node3 = Int(3).store()
-node4 = CalculationNode().store()
-node5 = WorkflowNode().store()
-_, node6 = run_get_node(ArithmeticAdd, **inputs)
-print(node1.pk)
-print(node2.pk)
-print(node3.pk)
-print(node4.pk)
-print(node5.pk)
-print(node6.pk)
-"""
-        from aiida.orm import Code
+            node1 = KpointsData().store()
+            node2 = ArrayData().store()
+            node3 = Int(3).store()
+            node4 = CalculationNode().store()
+            node5 = WorkflowNode().store()
+            _, node6 = run_get_node(ArithmeticAdd, **inputs)
+            print(node1.pk)
+            print(node2.pk)
+            print(node3.pk)
+            print(node4.pk)
+            print(node5.pk)
+            print(node6.pk)
+            """
+        )
+
         Code()
         for idx, (
             flags,
@@ -283,27 +297,27 @@ print(node6.pk)
                 _ = load_node(pk6)  # Check if the node can be loaded
 
                 queryb = QueryBuilder().append(Node, filters={'id': pk1}, tag='node')
-                queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+                queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups_kptdata = queryb.all()
 
                 queryb = QueryBuilder().append(Node, filters={'id': pk2}, tag='node')
-                queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+                queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups_arraydata = queryb.all()
 
                 queryb = QueryBuilder().append(Node, filters={'id': pk3}, tag='node')
-                queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+                queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups_int = queryb.all()
 
                 queryb = QueryBuilder().append(Node, filters={'id': pk4}, tag='node')
-                queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+                queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups_calc = queryb.all()
 
                 queryb = QueryBuilder().append(Node, filters={'id': pk5}, tag='node')
-                queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+                queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups_wf = queryb.all()
 
                 queryb = QueryBuilder().append(Node, filters={'id': pk6}, tag='node')
-                queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+                queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups_calcarithmetic = queryb.all()
 
                 self.assertEqual(
@@ -339,12 +353,16 @@ print(node6.pk)
 
     def test_autogroup_clashing_label(self):
         """Check if the autogroup label is properly (re)generated when it clashes with an existing group name."""
-        from aiida.orm import QueryBuilder, Node, Group, load_node
+        from aiida.orm import QueryBuilder, Node, AutoGroup, load_node
 
-        script_content = """from aiida.orm import Data
-node = Data().store()
-print(node.pk)
-"""
+        script_content = textwrap.dedent(
+            """\
+            from aiida.orm import Data
+            node = Data().store()
+            print(node.pk)
+            """
+        )
+
         autogroup_label = 'SOME_repeated_group_LABEL'
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write(script_content)
@@ -358,7 +376,7 @@ print(node.pk)
             pk = int(result.output)
             _ = load_node(pk)  # Check if the node can be loaded
             queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
-            queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+            queryb.append(AutoGroup, with_node='node', project='*')
             all_auto_groups = queryb.all()
             self.assertEqual(
                 len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'
@@ -374,7 +392,7 @@ print(node.pk)
                 pk = int(result.output)
                 _ = load_node(pk)  # Check if the node can be loaded
                 queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
-                queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+                queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups = queryb.all()
                 self.assertEqual(
                     len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'
@@ -383,12 +401,15 @@ print(node.pk)
 
     def test_legacy_autogroup_name(self):
         """Check if the autogroup is properly generated when using the legacy --group-name flag."""
-        from aiida.orm import QueryBuilder, Node, Group, load_node
+        from aiida.orm import QueryBuilder, Node, AutoGroup, load_node
 
-        script_content = """from aiida.orm import Data
-node = Data().store()
-print(node.pk)
-"""
+        script_content = textwrap.dedent(
+            """\
+            from aiida.orm import Data
+            node = Data().store()
+            print(node.pk)
+            """
+        )
         group_label = 'legacy-group-name'
 
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
@@ -409,7 +430,7 @@ print(node.pk)
             _ = load_node(pk)  # Check if the node can be loaded
 
             queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
-            queryb.append(Group, with_node='node', filters={'type_string': 'auto.run'}, project='*')
+            queryb.append(AutoGroup, with_node='node', project='*')
             all_auto_groups = queryb.all()
             self.assertEqual(
                 len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'

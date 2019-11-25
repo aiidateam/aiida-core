@@ -40,12 +40,12 @@ class GroupParamType(IdentifierParamType):
 
     @with_dbenv()
     def convert(self, value, param, ctx):
-        from aiida.orm import Group, GroupTypeString
+        from aiida.orm import Group
         try:
             group = super().convert(value, param, ctx)
         except click.BadParameter:
             if self._create_if_not_exist:
-                group = Group(label=value, type_string=GroupTypeString.USER.value)
+                group = Group(label=value)
             else:
                 raise
 

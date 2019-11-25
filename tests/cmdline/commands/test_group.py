@@ -165,7 +165,7 @@ class TestVerdiGroup(AiidaTestCase):
         self.assertClickResultNoException(result)
 
         for grpline in [
-            'Group label', 'dummygroup1', 'Group type_string', 'user', 'Group description', '<no description>'
+            'Group label', 'dummygroup1', 'Group type_string', 'core', 'Group description', '<no description>'
         ]:
             self.assertIn(grpline, result.output)
 

@@ -21,7 +21,6 @@ import logging
 from abc import abstractmethod, ABCMeta
 import six
 from dateutil.parser import parse
-from pytz import timezone as ptimezone
 
 from aiida.common import json
 from aiida.common import timezone as dtimezone
@@ -136,11 +135,11 @@ class AbstractBackup(object):
             try:
                 self._oldest_object_bk = parse(backup_variables.get(self.OLDEST_OBJECT_BK_KEY))
                 if self._oldest_object_bk.tzinfo is None:
-                    curr_timezone = str(dtimezone.get_current_timezone())
-                    self._oldest_object_bk = ptimezone(curr_timezone).localize(self._oldest_object_bk)
+                    curr_timezone = dtimezone.get_current_timezone()
+                    self._oldest_object_bk = dtimezone.get_current_timezone().localize(self._oldest_object_bk)
                     self._logger.info(
                         'No timezone defined in the oldest modification date timestamp. Setting current timezone (%s).',
-                        curr_timezone
+                        curr_timezone.zone
                     )
             # If it is not parsable...
             except ValueError:
@@ -168,13 +167,13 @@ class AbstractBackup(object):
                 self._end_date_of_backup = parse(backup_variables.get(self.END_DATE_OF_BACKUP_KEY))
 
                 if self._end_date_of_backup.tzinfo is None:
-                    curr_timezone = str(dtimezone.get_current_timezone())
+                    curr_timezone = dtimezone.get_current_timezone()
                     self._end_date_of_backup = \
-                        ptimezone(curr_timezone).localize(
+                        curr_timezone.localize(
                             self._end_date_of_backup)
                     self._logger.info(
                         'No timezone defined in the end date of backup timestamp. Setting current timezone (%s).',
-                        curr_timezone
+                        curr_timezone.zone
                     )
 
                 self._internal_end_date_of_backup = self._end_date_of_backup

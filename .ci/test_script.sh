@@ -40,6 +40,7 @@ case "$TEST_TYPE" in
 
         # Run preliminary tests
         coverage run -a "${CI_DIR}/test_test_manager.py"
+        coverage run -a "${CI_DIR}/test_profile_manager.py"
         coverage run -a "${CI_DIR}/test_plugin_testcase.py"
         # append to coverage file, do not create final report
         pytest --cov=aiida --cov-append --cov-report= "${CI_DIR}/pytest"

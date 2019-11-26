@@ -21,7 +21,7 @@ import six
 # Note that there is a difference between the PY2 and PY3 implementations as the latter allows unicode characters
 # We also need to discriminate between the getargspec versus getfullargspec
 if six.PY2:
-    from inspect import getargspec as get_arg_spec
+    from inspect import getargspec as get_arg_spec  # pylint: disable=deprecated-method
 
     def isidentifier(identifier):
         """Return whether the given string is a valid python identifier.

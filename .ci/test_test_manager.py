@@ -11,19 +11,15 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import os
 import unittest
 import warnings
 import sys
 
-from pgtest import pgtest
-
-from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend_name
-from aiida.common.utils import Capturing
+from aiida.manage.tests import TestManager, get_test_backend_name
 
 
-class TemporaryProfileManagerTestCase(unittest.TestCase):
-    """Test the TemporaryProfileManager class"""
+class TestManagerTestCase(unittest.TestCase):
+    """Test the TestManager class"""
 
     def setUp(self):
         if sys.version_info[0] >= 3:
@@ -31,59 +27,25 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
             warnings.simplefilter('ignore', ResourceWarning)  # pylint: disable=no-member,undefined-variable
 
         self.backend = get_test_backend_name()
-        self.profile_manager = TemporaryProfileManager(backend=self.backend)
+        self.test_manager = TestManager()
 
     def tearDown(self):
-        self.profile_manager.destroy_all()
+        self.test_manager.destroy_all()
 
-    def test_create_db_cluster(self):
-        self.profile_manager.create_db_cluster()
-        self.assertTrue(pgtest.is_server_running(self.profile_manager.pg_cluster.cluster))
-
-    def test_create_aiida_db(self):
-        self.profile_manager.create_db_cluster()
-        self.profile_manager.create_aiida_db()
-        self.assertTrue(self.profile_manager.postgres.db_exists(self.profile_manager.profile_info['database_name']))
-
-    def test_create_use_destroy_profile(self):
+    def test_pgtest_argument(self):
         """
-        Test temporary test profile creation
-
-        * The profile gets created, the dbenv loaded
-        * Data can be stored in the db
-        * reset_db deletes all data added after profile creation
-        * destroy_all removes all traces of the test run
+        Create a temporary profile, passing the pgtest argument.
         """
-        with Capturing() as output:
-            self.profile_manager.create_profile()
+        from pgtest.pgtest import which
 
-        self.assertTrue(self.profile_manager.root_dir_ok, msg=output)
-        self.assertTrue(self.profile_manager.config_dir_ok, msg=output)
-        self.assertTrue(self.profile_manager.repo_ok, msg=output)
-        from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
-        self.assertEqual(AIIDA_CONFIG_FOLDER, self.profile_manager.config_dir, msg=output)
+        # this should fail
+        pgtest = {'pg_ctl': 'notapath'}
+        with self.assertRaises(AssertionError):
+            self.test_manager.use_temporary_profile(backend=self.backend, pgtest=pgtest)
 
-        from aiida.orm import load_node
-        from aiida.plugins import DataFactory
-        data = DataFactory('dict')(dict={'key': 'value'})
-        data.store()
-        data_pk = data.pk
-        self.assertTrue(load_node(data_pk))
-
-        with self.assertRaises(TestManagerError):
-            self.test_create_aiida_db()
-
-        self.profile_manager.reset_db()
-        with self.assertRaises(Exception):
-            load_node(data_pk)
-
-        temp_dir = self.profile_manager.root_dir
-        self.profile_manager.destroy_all()
-        with self.assertRaises(Exception):
-            self.profile_manager.postgres.db_exists(self.profile_manager.dbinfo['db_name'])
-        self.assertFalse(os.path.exists(temp_dir))
-        self.assertIsNone(self.profile_manager.root_dir)
-        self.assertIsNone(self.profile_manager.pg_cluster)
+        # pg_ctl is what PGTest also looks for (although it might be more clever)
+        pgtest = {'pg_ctl': which('pg_ctl')}
+        self.test_manager.use_temporary_profile(backend=self.backend, pgtest=pgtest)
 
 
 if __name__ == '__main__':

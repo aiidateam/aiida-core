@@ -1610,3 +1610,58 @@ class TestSealUnsealedProcessesMigration(TestMigrationsSQLA):
 
             finally:
                 session.close()
+
+
+class TestDefaultLinkLabelMigration(TestMigrationsSQLA):
+    """Test the migration that performs a data migration of legacy default link labels."""
+
+    migrate_from = '91b573400be5'
+    migrate_to = '118349c10896'
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbLink = self.get_auto_base().classes.db_dblink  # pylint: disable=invalid-name
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                session.add(user)
+                session.commit()
+
+                node_process = DbNode(node_type='process.calculation.calcjob.CalcJobNode.', user_id=user.id)
+                node_data = DbNode(node_type='data.dict.Dict.', user_id=user.id)
+                link = DbLink(input_id=node_data.id, output_id=node_process.id, type='input', label='_return')
+
+                session.add(node_process)
+                session.add(node_data)
+                session.add(link)
+                session.commit()
+
+                self.node_process_id = node_process.id
+                self.node_data_id = node_data.id
+                self.link_id = link.id
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_data_migrated(self):
+        """Verify that the attributes for process node have been deleted and `_sealed` has been changed to `sealed`."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbLink = self.get_auto_base().classes.db_dblink  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+                link = session.query(DbLink).filter(DbLink.id == self.link_id).one()
+                self.assertEqual(link.label, 'result')
+
+            finally:
+                session.close()

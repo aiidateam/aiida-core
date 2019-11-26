@@ -479,3 +479,58 @@ class TestExportFileMigration(AiidaTestCase):
         builder.append(orm.CalculationNode, tag='parent')
         builder.append(orm.RemoteData, with_incoming='parent')
         self.assertGreater(len(builder.all()), 0)
+
+    @with_temp_dir
+    def test_v07_to_newest(self, temp_dir):
+        """Test migration of exported files from v0.7 to newest export version"""
+        input_file = get_archive_file('export_v0.7_manual.aiida', **self.external_archive)
+        output_file = os.path.join(temp_dir, 'output_file.aiida')
+
+        # Perform the migration
+        migrate_archive(input_file, output_file)
+        metadata, _ = get_json_files(output_file)
+        verify_metadata_version(metadata, version=newest_version)
+
+        # Load the migrated file
+        import_data(output_file, silent=True)
+
+        # Do the necessary checks
+        self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), self.node_count + 2)
+
+        # Verify that CalculationNodes have non-empty attribute dictionaries
+        builder = orm.QueryBuilder().append(orm.CalculationNode)
+        for [calculation] in builder.iterall():
+            self.assertIsInstance(calculation.attributes, dict)
+            self.assertNotEqual(len(calculation.attributes), 0)
+
+        # Verify that the StructureData nodes maintained their (same) label, cell, and kinds
+        builder = orm.QueryBuilder().append(orm.StructureData)
+        self.assertEqual(
+            builder.count(),
+            self.struct_count,
+            msg='There should be {} StructureData, instead {} were/was found'.format(
+                self.struct_count, builder.count()
+            )
+        )
+        for structures in builder.all():
+            structure = structures[0]
+            self.assertEqual(structure.label, self.known_struct_label)
+            self.assertEqual(structure.cell, self.known_cell)
+
+        builder = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
+        for [kinds] in builder.iterall():
+            self.assertEqual(len(kinds), len(self.known_kinds))
+            for kind in kinds:
+                self.assertIn(kind, self.known_kinds, msg="Kind '{}' not found in: {}".format(kind, self.known_kinds))
+
+        # Check that there is a StructureData that is an input of a CalculationNode
+        builder = orm.QueryBuilder()
+        builder.append(orm.StructureData, tag='structure')
+        builder.append(orm.CalculationNode, with_incoming='structure')
+        self.assertGreater(len(builder.all()), 0)
+
+        # Check that there is a RemoteData that is the output of a CalculationNode
+        builder = orm.QueryBuilder()
+        builder.append(orm.CalculationNode, tag='parent')
+        builder.append(orm.RemoteData, with_incoming='parent')
+        self.assertGreater(len(builder.all()), 0)

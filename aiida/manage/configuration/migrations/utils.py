@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from aiida.common import exceptions
 from .migrations import _MIGRATION_LOOKUP, CURRENT_CONFIG_VERSION
 
-__all__ = ('check_and_migrate_config',)
+__all__ = ('check_and_migrate_config', 'config_needs_migrating', 'get_current_version')
 
 
 def check_and_migrate_config(config):
@@ -37,7 +37,7 @@ def config_needs_migrating(config):
     in the code, the config cannot be used and so the function will raise.
 
     :return: True if the configuration has an older version and needs to be migrated, False otherwise
-    :raises ConfigurationVersionError: if the oldest compatible version of the config is higher than the current.
+    :raises aiida.common.ConfigurationVersionError: if the config's oldest compatible version is higher than the current
     """
     current_version = get_current_version(config)
     oldest_compatible_version = get_oldest_compatible_version(config)

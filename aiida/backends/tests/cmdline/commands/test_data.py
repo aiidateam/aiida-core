@@ -26,14 +26,7 @@ from click.testing import CliRunner
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_data import cmd_array
-from aiida.cmdline.commands.cmd_data import cmd_bands
-from aiida.cmdline.commands.cmd_data import cmd_cif
-from aiida.cmdline.commands.cmd_data import cmd_dict
-from aiida.cmdline.commands.cmd_data import cmd_remote
-from aiida.cmdline.commands.cmd_data import cmd_structure
-from aiida.cmdline.commands.cmd_data import cmd_trajectory
-from aiida.cmdline.commands.cmd_data import cmd_upf
+from aiida.cmdline.commands.cmd_data import cmd_array, cmd_bands, cmd_cif, cmd_dict, cmd_remote, cmd_structure, cmd_trajectory, cmd_upf, cmd_singlefile
 from aiida.engine import calcfunction
 from aiida.orm.nodes.data.cif import has_pycifrw
 from aiida.orm import Group, ArrayData, BandsData, KpointsData, CifData, Dict, RemoteData, StructureData, TrajectoryData
@@ -67,15 +60,10 @@ class TestVerdiDataExportable:
         This method tests that the data listing works as expected with all
         possible flags and arguments for different datatypes.
         """
-
-        from aiida.cmdline.commands.cmd_data.cmd_cif import cif_export
-        from aiida.cmdline.commands.cmd_data.cmd_structure import structure_export
-        from aiida.cmdline.commands.cmd_data.cmd_trajectory import trajectory_export
-
         datatype_mapping = {
-            CifData: cif_export,
-            StructureData: structure_export,
-            TrajectoryData: trajectory_export,
+            CifData: cmd_cif.cif_export,
+            StructureData: cmd_structure.structure_export,
+            TrajectoryData: cmd_trajectory.trajectory_export,
         }
 
         if datatype is None or datatype not in datatype_mapping.keys():
@@ -146,24 +134,18 @@ class TestVerdiDataListable:
         This method tests that the data listing works as expected with all
         possible flags and arguments for different datatypes.
         """
-
-        from aiida.cmdline.commands.cmd_data.cmd_cif import cif_list
-        from aiida.cmdline.commands.cmd_data.cmd_structure import structure_list
-        from aiida.cmdline.commands.cmd_data.cmd_trajectory import trajectory_list
-        from aiida.cmdline.commands.cmd_data.cmd_bands import bands_list
-
-        from aiida.cmdline.commands.cmd_data.cmd_structure import LIST_PROJECT_HEADERS as p_str
-        from aiida.cmdline.commands.cmd_data.cmd_cif import LIST_PROJECT_HEADERS as p_cif
-        from aiida.cmdline.commands.cmd_data.cmd_trajectory import LIST_PROJECT_HEADERS as p_tr
-        from aiida.cmdline.commands.cmd_data.cmd_bands import LIST_PROJECT_HEADERS as p_bands
+        p_str = cmd_structure.LIST_PROJECT_HEADERS
+        p_cif = cmd_cif.LIST_PROJECT_HEADERS
+        p_tr = cmd_trajectory.LIST_PROJECT_HEADERS
+        p_bands = cmd_bands.LIST_PROJECT_HEADERS
 
         headers_mapping = {CifData: p_cif, StructureData: p_str, TrajectoryData: p_tr, BandsData: p_bands}
 
         datatype_mapping = {
-            CifData: cif_list,
-            StructureData: structure_list,
-            TrajectoryData: trajectory_list,
-            BandsData: bands_list
+            CifData: cmd_cif.cif_list,
+            StructureData: cmd_structure.structure_list,
+            TrajectoryData: cmd_trajectory.trajectory_list,
+            BandsData: cmd_bands.bands_list
         }
 
         if datatype is None or datatype not in datatype_mapping.keys():
@@ -563,9 +545,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
 
     @unittest.skipUnless(has_pycifrw(), 'Unable to import PyCifRW')
     def test_export(self):
-        from aiida.cmdline.commands.cmd_data.cmd_trajectory import EXPORT_FORMATS, trajectory_export
-
-        new_supported_formats = list(EXPORT_FORMATS)
+        new_supported_formats = list(cmd_trajectory.EXPORT_FORMATS)
         self.data_export_test(TrajectoryData, self.ids, new_supported_formats)
 
 
@@ -730,8 +710,7 @@ PRIMVEC
         self.data_listing_test(StructureData, 'BaO3Ti', self.ids)
 
     def test_export(self):
-        from aiida.cmdline.commands.cmd_data.cmd_structure import EXPORT_FORMATS
-        self.data_export_test(StructureData, self.ids, EXPORT_FORMATS)
+        self.data_export_test(StructureData, self.ids, cmd_structure.EXPORT_FORMATS)
 
 
 @unittest.skipUnless(has_pycifrw(), 'Unable to import PyCifRW')
@@ -842,8 +821,40 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
         This method checks if the Cif export works as expected with all
         possible flags and arguments.
         """
-        from aiida.cmdline.commands.cmd_data.cmd_cif import EXPORT_FORMATS
-        self.data_export_test(CifData, self.ids, EXPORT_FORMATS)
+        self.data_export_test(CifData, self.ids, cmd_cif.EXPORT_FORMATS)
+
+
+
+class TestVerdiDataSinglefile(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
+    sample_str = u'''
+        data_test
+    '''
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestVerdiDataSinglefile, cls).setUpClass()
+
+    def setUp(self):
+        super(TestVerdiDataSinglefile, self).setUp()
+        self.comp = self.computer
+        self.runner = CliRunner()
+        self.this_folder = os.path.dirname(__file__)
+        self.this_file = os.path.basename(__file__)
+
+        self.cli_runner = CliRunner()
+
+    def test_content(self):
+        """Test that `verdi data singlefile content` returns the content of the file."""
+        content = 'abc\ncde'
+        s = orm.SinglefileData(file=io.BytesIO(content.encode('utf8')))
+        s.store()
+
+        options = [str(s.uuid)]
+        result = self.cli_runner.invoke(cmd_singlefile.singlefile_content, options, catch_exceptions=False)
+
+        for line in result.output.split('\n'):
+            self.assertIn(line, content)
+
 
 
 class TestVerdiDataUpf(AiidaTestCase):

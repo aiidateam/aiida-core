@@ -1050,7 +1050,6 @@ class BandsData(KpointsData):
         # I don't exec it because I might mess up with the matplotlib backend etc.
         # I run instead in a different process, with the same executable
         # (so it should work properly with virtualenvs)
-        #exec s
         with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(s)
             f.flush()
@@ -1074,12 +1073,7 @@ class BandsData(KpointsData):
 
         Other kwargs are passed to self._exportcontent.
         """
-        # In Python 2, exec is a statement which was extended to also take a tuple, while Python 3's exec
-        # is a real function. We could unpack the tuple into arguments in Python 3 as follows:
-        #    exec(*self._exportcontent(...))
-        # but this does not work in Python 2. But it is anyway clearer to explicitly unpack the 2-tuple instead.
-        code_obj, code_globals = self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs)
-        exec (code_obj, code_globals)  # pylint: disable=exec-used
+        exec(*self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs))  # pylint: disable=exec-used
 
     def _prepare_agr(self,
                      main_file_name='',

@@ -24,11 +24,6 @@ class Bool(BaseType):
     def __int__(self):
         return int(bool(self))
 
-    # Python 2
-    def __nonzero__(self):
-        return self.__bool__()
-
-    # Python 3
     def __bool__(self):
         return self.value
 

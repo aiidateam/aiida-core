@@ -7,20 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cyclic-import,ungrouped-imports
+# pylint: disable=cyclic-import
 """Module for converting backend entities into frontend, ORM, entities"""
 
-from collections import Mapping
-
-try:  # Python3
-    from functools import singledispatch
-except ImportError:  # Python2
-    from singledispatch import singledispatch
-
-try:
-    from collections.abc import Iterator, Sized  # only works on python 3.3+
-except ImportError:
-    from collections import Iterator, Sized
+from collections.abc import Mapping, Iterator, Sized
+from functools import singledispatch
 
 from aiida.orm.implementation import BackendComputer, BackendGroup, BackendUser, BackendAuthInfo, BackendComment, \
     BackendLog, BackendNode
@@ -109,9 +100,5 @@ class ConvertIterator(Iterator, Sized):
 
         return get_orm_entity(self._backend_iterator[value])
 
-    # For future python-3 compatibility
     def __next__(self):
-        return next(self.generator)
-
-    def next(self):
         return next(self.generator)

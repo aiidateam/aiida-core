@@ -9,21 +9,15 @@
 ###########################################################################
 # pylint: disable=no-member
 """Django Group entity"""
+from collections.abc import Iterable, Iterator, Sized
 
-import collections
-
-try:
-    from collections.abc import Iterator, Sized  # only works on python 3.3+
-except ImportError:
-    from collections import Iterator, Sized
-
-# pylint: disable=no-name-in-module, import-error
+# pylint: disable=no-name-in-module,import-error
 from django.db import transaction
 from django.db.models import Q
 
-from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
-from aiida.common.lang import type_check
 from aiida.backends.djsite.db import models
+from aiida.common.lang import type_check
+from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
 from . import entities
 from . import users
@@ -149,11 +143,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
                 return self._backend.get_backend_entity(self._dbnodes[value])
 
-            # For future python-3 compatibility
             def __next__(self):
-                return next(self.generator)
-
-            def next(self):
                 return next(self.generator)
 
         return NodesIterator(self._dbmodel.dbnodes.all(), self._backend)
@@ -238,7 +228,7 @@ class DjangoGroupCollection(BackendGroupCollection):
         if nodes is not None:
             pk_list = []
 
-            if not isinstance(nodes, collections.Iterable):
+            if not isinstance(nodes, Iterable):
                 nodes = [nodes]
 
             for node in nodes:
@@ -266,7 +256,7 @@ class DjangoGroupCollection(BackendGroupCollection):
 
         if node_attributes is not None:
             for k, vlist in node_attributes.items():
-                if isinstance(vlist, str) or not isinstance(vlist, collections.Iterable):
+                if isinstance(vlist, str) or not isinstance(vlist, Iterable):
                     vlist = [vlist]
 
                 for value in vlist:

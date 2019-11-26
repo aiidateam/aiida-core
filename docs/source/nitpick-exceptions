@@ -218,12 +218,6 @@ py:exc    sqlalchemy.orm.exc.MultipleResultsFound
 
 py:class  sphinx.ext.autodoc.ClassDocumenter
 
-py:class  _abcoll.Mapping
-py:class  _abcoll.MutableMapping
-py:class  _abcoll.MutableSequence
-py:class  _abcoll.Iterator
-py:class  _abcoll.Sized
-# repeat for Python 3:
 py:class  collections.abc.Mapping
 py:class  collections.abc.MutableMapping
 py:class  collections.abc.MutableSequence

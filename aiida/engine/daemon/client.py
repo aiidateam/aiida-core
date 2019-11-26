@@ -18,10 +18,9 @@ import shutil
 import socket
 import tempfile
 
-from aiida.common.files import which
 from aiida.manage.configuration import get_config
 
-VERDI_BIN = which('verdi')
+VERDI_BIN = shutil.which('verdi')
 # Recent versions of virtualenv create the environment variable VIRTUAL_ENV
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 

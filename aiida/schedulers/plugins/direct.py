@@ -89,7 +89,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
         """
-        # Using subprocess.Popen with `preexec_fn=os.setsid` (as done in both local and ssh transport) results in
+        # Using subprocess.Popen with `start_new_session=True` (as done in both local and ssh transport) results in
         # processes without a controlling terminal.
         # The -x option tells ps to include processes which do not have a controlling terminal, which would not be
         # listed otherwise (leading the direct scheduler to conclude that the process already completed).

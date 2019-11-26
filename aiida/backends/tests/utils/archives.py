@@ -21,8 +21,9 @@ from aiida.common.folders import SandboxFolder
 
 
 def get_archive_file(archive, filepath=None, external_module=None):
-    """
-    Return the absolute path of the archive file used for testing purposes. The expected path for these files:
+    """Return the absolute path of the archive file used for testing purposes.
+
+    The expected path for these files:
 
         aiida.backends.tests.fixtures.filepath
 
@@ -44,14 +45,7 @@ def get_archive_file(archive, filepath=None, external_module=None):
     if filepath and not isinstance(filepath, str):
         raise TypeError('filepath must be a string')
     elif filepath:
-        # NOTE: This part should be changed, ending with:
-        # dirpath_archive = os.path.join(*filepath, dirpath_archive)
-        # When support for python 2 is dropped.
-        # This will allow `filepath` to be a str or list/tuple,
-        # and there will be no need to "take care" of misplaced dashes (`/`), ideally
-        while filepath.startswith('/'):
-            filepath = filepath[1:]
-        dirpath_archive = os.path.join(filepath, dirpath_archive)
+        dirpath_archive = os.path.join(*filepath.split(os.sep), dirpath_archive)
 
     # Use possible external module (otherwise use default, see above)
     if external_module and not isinstance(external_module, str):

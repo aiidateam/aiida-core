@@ -27,20 +27,14 @@ def fs_encoding_is_utf8():
 
 
 class FoldersTest(unittest.TestCase):
-    """
-    Tests for the Folder class.
-    """
+    """Tests for the Folder class."""
 
     @classmethod
     @unittest.skipUnless(
-        fs_encoding_is_utf8(), ('Testing for unicode folders '
-                                'requires UTF-8 to be set for filesystem encoding')
+        fs_encoding_is_utf8(), ('Testing for unicode folders requires UTF-8 to be set for filesystem encoding')
     )
     def test_unicode(cls):
-        """
-        Check that there are no exceptions raised when
-        using unicode folders.
-        """
+        """Check that there are no exceptions raised when using unicode folders."""
         tmpsource = tempfile.mkdtemp()
         tmpdest = tempfile.mkdtemp()
         with io.open(os.path.join(tmpsource, 'sąžininga'), 'w', encoding='utf8') as fhandle:
@@ -63,8 +57,8 @@ class FoldersTest(unittest.TestCase):
         # Should not raise any exception
         self.assertEqual(folder.get_abs_path('test_file.txt'), '/tmp/test_file.txt')
 
-    def test_create_file_from_filelike_py3(self):
-        """Test `aiida.common.folders.Folder.create_file_from_filelike` for python 3."""
+    def test_create_file_from_filelike(self):
+        """Test `aiida.common.folders.Folder.create_file_from_filelike`."""
         unicode_string = 'unicode_string'
         byte_string = b'byte_string'
 
@@ -75,8 +69,6 @@ class FoldersTest(unittest.TestCase):
             folder.create_file_from_filelike(io.StringIO(unicode_string), 'random.dat', mode='w', encoding='utf-8')
             folder.create_file_from_filelike(io.BytesIO(byte_string), 'random.dat', mode='wb', encoding=None)
 
-            # For python three we make no exceptions, if you pass a unicode stream with binary mode, one should expect
-            # a TypeError. Same for the inverse case of wanting to write in unicode mode but passing a byte stream
             with self.assertRaises(TypeError):
                 folder.create_file_from_filelike(io.StringIO(unicode_string), 'random.dat', mode='wb')
 

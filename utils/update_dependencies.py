@@ -39,11 +39,7 @@ def cli():
     extra requirements as well. Since there are no explicit version requirements anymore, pip should install the latest
     available version for each dependency.
 
-    Now run the unit test suite and reinstate dependency version requirements on packages that break the tests. Note
-    that as long as we support python 2, this will have to be done for both python versions in separate virtual
-    environments. Since the packages with special qualifiers relating to the python version are not handled by this CLI
-    anyway, however, it often suffices to perform this method for one python version and then let the tests on Travis
-    verify that it works for all versions. Once all the tests complete successfully, run the following command:
+    Once all the tests complete successfully, run the following command:
 
         pip freeze > requirements.txt
 

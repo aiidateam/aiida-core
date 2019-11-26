@@ -6,13 +6,13 @@ set -ev
 declare -a EXPRESSIONS=("1 -2 -1 4 -5 -5 * * * * +" "2 1 3 3 -1 + ^ ^ +" "3 -5 -1 -4 + * ^" "2 4 2 -4 * * +" "3 1 1 5 ^ ^ ^" "3 1 3 4 -4 2 * + + ^ ^")
 NUMBER_WORKCHAINS=5
 TIMEOUT=600
-CODE='add@torquessh'
+CODE='add!'  # Note the exclamation point is necessary to force the value to be interpreted as LABEL type identifier
 
 # Needed on Jenkins
 if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi
 
 # Define the absolute path to the RPN cli script
-DATA_DIR="${TRAVIS_BUILD_DIR}/.ci"
+DATA_DIR="${WORKSPACE_PATH}/.ci"
 CLI_SCRIPT="${DATA_DIR}/polish/cli.py"
 
 # Export the polish module to the python path so generated workchains can be imported

@@ -18,7 +18,7 @@ from aiida.orm import Computer, Group, GroupTypeString, Node, User, Log, Comment
 __all__ = ('EXPORT_VERSION',)
 
 # Current export version
-EXPORT_VERSION = '0.7'
+EXPORT_VERSION = '0.8'
 
 IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE.value
 DUPL_SUFFIX = ' (Imported #{})'

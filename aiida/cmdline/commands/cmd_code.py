@@ -172,32 +172,25 @@ def show(code, verbose):
 
 @verdi_code.command()
 @arguments.CODES()
-@options.FORCE(help='Force deletion of code and all calculations using it.')
+@options.VERBOSE()
+@options.DRY_RUN()
+@options.FORCE()
 @with_dbenv()
-def delete(codes, force):
+def delete(codes, verbose, dry_run, force):
     """Delete a code.
 
     Note that codes are part of the data provenance, and deleting a code will delete all calculations using it.
     """
-    from aiida.common.exceptions import InvalidOperation
-    from aiida.orm import Node
+    from aiida.manage.database.delete.nodes import delete_nodes
 
-    for code in codes:
-        pk = code.pk
-        full_label = code.full_label
+    verbosity = 1
+    if force:
+        verbosity = 0
+    elif verbose:
+        verbosity = 2
 
-        if force:
-            from aiida.manage.database.delete.nodes import delete_nodes
-            delete_nodes([pk])
-            echo.echo_success('Code<{}> {} deleted'.format(pk, full_label))
-        else:
-            try:
-                Node.objects.delete(pk)  # pylint: disable=no-member
-            except InvalidOperation as exception:
-                echo.echo_error(str(exception))
-                echo.echo_info('Use --force in order to delete the code and all calculations using it.')
-            else:
-                echo.echo_success('Code<{}> {} deleted'.format(pk, full_label))
+    node_pks_to_delete = [code.pk for code in codes]
+    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force)
 
 
 @verdi_code.command()

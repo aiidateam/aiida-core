@@ -1,8 +1,10 @@
-This file lists the authors of the AiiDA code (i.e. the members of the AiiDA team)
-as well as the known contributors to the code.
+# Authors
 
-The current members of the AiiDA team are, in alphabetical order:
-#################################################################
+This file lists the authors of the AiiDA code in alphabetical order,
+including both the members of the AiiDA team at EPFL and external contributors.
+
+## The AiiDA team at EPFL
+
 * Carl S. Adorf
 * Casper W. Andersen
 * Sebastiaan P. Huber
@@ -15,9 +17,8 @@ The current members of the AiiDA team are, in alphabetical order:
 * Leopold Talirz
 * Aliaksandr Yakutovich
 
+## Former members of the AiiDA team
 
-Former members of the AiiDA team
-################################
 * Spyros Zoupanos (2015-2019)
 * Conrad Johnston (2018-2019)
 * Martin Uhrin (2015-2019)
@@ -30,16 +31,15 @@ Former members of the AiiDA team
 * Riccardo Sabatini (2013-2015)
 
 
-Contributors
-############
-We would like to thank the following people for their major contibutions:
+## Contributors
+
+We would like to thank
 
 * Dominik Gresch (ETHZ): for the caching mechanism and contributions to the workflow engine
 * Tiziano Müller (ETHZ, Switzerland): for the first implementation of
   the new plugin system (developed in 2017) and making the code python 3 compatibl
 
-And the following people for general improvements to the code, fixing bugs,
-corrections and improvements to the documentation and useful suggestions:
+and the following people for code contributions, bug fixes, improvements of the documentation and useful suggestions:
 
 * Oscar Arbelaez
 * Michael Atambo
@@ -74,6 +74,4 @@ corrections and improvements to the documentation and useful suggestions:
 * Bonan Zhu
 * Mario Zic
 
----
-
-Please, don't hesitate to contact the AiiDA team if you see that information is wrong or missing in this file.
+Please contact the AiiDA team if you notice any missing or incorrect information.

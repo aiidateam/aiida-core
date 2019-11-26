@@ -68,7 +68,9 @@ MANAGERS = ADMINS
 # http://www.i18nguy.com/unicode/language-identifiers.html
 LANGUAGE_CODE = 'en-us'
 
-# Local time zone for this installation. Always choose the system timezone
+# Local time zone for this installation. Always choose the system timezone.
+# Note: This causes django to set the 'TZ' environment variable, which is read by tzlocal from then onwards.
+# See https://docs.djangoproject.com/en/2.2/ref/settings/#std:setting-TIME_ZONE
 TIME_ZONE = get_current_timezone().zone
 
 SITE_ID = 1

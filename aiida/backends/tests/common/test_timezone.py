@@ -23,9 +23,14 @@ class TimezoneTest(unittest.TestCase):
     """Tests for the timezone utility module."""
 
     def test_timezone_now(self):
-        """Test timezone.now function."""
+        """Test timezone.now function.
+
+        Check that the time returned by AiiDA's timezone.now() function is compatible
+        with attaching a timezone to a "naive" time stamp using timezone.make_aware().
+        """
         delta = datetime.timedelta(minutes=1)
         ref = timezone.now()
+
         from_tz = timezone.make_aware(datetime.datetime.fromtimestamp(time.time()))
         self.assertLessEqual(from_tz, ref + delta)
         self.assertGreaterEqual(from_tz, ref - delta)

@@ -371,6 +371,7 @@ Below is a list with all available subcommands.
 
     Commands:
       check-load-time   Check for common indicators that slowdown `verdi`.
+      configure-backup  Configure backup of the repository folder.
       run_daemon        Run a daemon instance in the current interpreter.
       tests             Run the unittest suite or parts of it.
       validate-plugins  Validate all plugins by checking they can be loaded.

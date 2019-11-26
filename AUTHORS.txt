@@ -35,9 +35,8 @@ including both the members of the AiiDA team at EPFL and external contributors.
 
 We would like to thank
 
-* Dominik Gresch (ETHZ): for the caching mechanism and contributions to the workflow engine
-* Tiziano Müller (ETHZ, Switzerland): for the first implementation of
-  the new plugin system (developed in 2017) and making the code python 3 compatibl
+* Dominik Gresch: for the caching mechanism and contributions to the workflow engine
+* Tiziano Müller: for the first implementation of the plugin system and making the code python 3 compatible
 
 and the following people for code contributions, bug fixes, improvements of the documentation and useful suggestions:
 

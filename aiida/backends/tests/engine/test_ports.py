@@ -91,9 +91,7 @@ class TestPortNamespace(AiidaTestCase):
         port_namespace = PortNamespace(base_namespace)
         port_namespace.create_port_namespace(nested_namespace)
 
-        # pylint: disable=deprecated-method
-        # The `assertRaisesRegexp` method is deprecated in python 3 but assertRaisesRegex` does not exist in python 2
-        with self.assertRaisesRegexp(TypeError, '.*{}.*{}.*'.format(base_namespace, nested_namespace)):
+        with self.assertRaisesRegex(TypeError, '.*{}.*{}.*'.format(base_namespace, nested_namespace)):
             port_namespace.serialize({'some': {'nested': {'namespace': {Dict()}}}})
 
     def test_lambda_default(self):

@@ -160,19 +160,13 @@ _END_DIGEST = _single_digest(')')
 
 @_make_hash.register(bytes)
 def _(bytes_obj, **kwargs):
-    """
-    Hash arbitrary binary strings (str in Python 2, bytes in Python 3).
-    For compat reason between Python 2 and 3, this gets the same hash-type
-    as for unicode in Python 2, resp. str in Python 3."""
+    """Hash arbitrary byte strings."""
     return [_single_digest('str', bytes_obj)]
 
 
 @_make_hash.register(str)
 def _(val, **kwargs):
-    """
-    If the type is unicode in Python 2 or a str in Python 3, convert it
-    to a str in Python 2 and bytes in Python 3 using the utf-8 encoding.
-    """
+    """Convert strings explicitly to bytes."""
     return [_single_digest('str', val.encode('utf-8'))]
 
 

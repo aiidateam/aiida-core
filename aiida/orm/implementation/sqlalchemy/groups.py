@@ -165,11 +165,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
                 return self._backend.get_backend_entity(self._dbnodes[value])
 
-            # For future python-3 compatibility
             def __next__(self):
-                return next(self.generator)
-
-            def next(self):
                 return next(self.generator)
 
         return Iterator(self._dbmodel.dbnodes, self._backend)

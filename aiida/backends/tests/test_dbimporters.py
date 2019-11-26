@@ -41,7 +41,7 @@ class TestCodDbImporter(AiidaTestCase):
                            measurement_pressure=[1000, 1001],
                            determination_method=['single crystal', None])
 
-        # Rounding errors occurr in Python 2 and Python 3 thus they are averted using
+        # Rounding errors occur in Python 3 thus they are averted using
         # the following precision stripping regular expressions.
         q = re.sub(r'(\d\.\d{6})\d+', r'\1', q)
         q = re.sub(r'(120.00)39+', r'\g<1>4', q)

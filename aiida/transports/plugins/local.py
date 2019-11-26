@@ -753,7 +753,7 @@ class LocalTransport(Transport):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=self.getcwd(),
-            preexec_fn=os.setsid
+            start_new_session=True
         )
 
         return proc.stdin, proc.stdout, proc.stderr, proc

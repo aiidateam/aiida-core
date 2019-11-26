@@ -9,7 +9,6 @@
 ###########################################################################
 """Pytest fixtures for AiiDA sphinx extension tests."""
 import os
-from os import path
 import sys
 import shutil
 import tempfile
@@ -24,7 +23,7 @@ def reference_result():
     """Return reference results (for check)."""
 
     def inner(name):
-        return path.join(path.dirname(__file__), 'reference_results', name)
+        return os.path.join(os.path.dirname(__file__), 'reference_results', name)
 
     return inner
 
@@ -32,10 +31,8 @@ def reference_result():
 @pytest.fixture
 def build_dir():
     """Create directory to build documentation."""
-    # Python 2 doesn't have tempfile.TemporaryDirectory
-    dirname = tempfile.mkdtemp()
-    yield dirname
-    shutil.rmtree(dirname)
+    with tempfile.TemporaryDirectory() as dirpath:
+        yield dirpath
 
 
 @pytest.fixture
@@ -44,13 +41,13 @@ def build_sphinx(build_dir):  # pylint: disable=redefined-outer-name
 
     def inner(source_dir, builder='xml'):
         """Run sphinx to build documentation."""
-        doctree_dir = path.join(build_dir, 'doctrees')
-        out_dir = path.join(build_dir, builder)
+        doctree_dir = os.path.join(build_dir, 'doctrees')
+        out_dir = os.path.join(build_dir, builder)
 
         subprocess.check_call(
             [sys.executable, '-m', 'sphinx', '-b', builder, '-d', doctree_dir, source_dir, out_dir],
             # add demo_workchain.py to the PYTHONPATH
-            cwd=path.join(source_dir, os.pardir)
+            cwd=os.path.join(source_dir, os.pardir)
         )
 
         return out_dir

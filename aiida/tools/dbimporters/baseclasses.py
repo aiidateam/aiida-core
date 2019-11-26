@@ -108,13 +108,6 @@ class DbSearchResults:
             else:
                 raise StopIteration()
 
-        def next(self):
-            """
-            The iterator method expected by python 2.x,
-            implemented as python 3.x style method.
-            """
-            return self.__next__()
-
     def __iter__(self):
         """
         Instances of

@@ -219,10 +219,6 @@ class LinkManager:
         for link_triple in self.link_triples:
             yield link_triple
 
-    # Python 2 specific, python 3 uses `__bool__`
-    def __nonzero__(self):
-        return len(self.link_triples)
-
     def __bool__(self):
         return bool(len(self.link_triples))
 

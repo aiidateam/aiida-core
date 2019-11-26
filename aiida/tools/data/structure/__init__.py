@@ -223,13 +223,6 @@ def xyz_parser_iterator(xyz_string):
 
             return (match.group('sym'), (float(match.group('x')), float(match.group('y')), float(match.group('z'))))
 
-        def next(self):
-            """
-            The iterator method expected by python 2.x,
-            implemented as python 3.x style method.
-            """
-            return self.__next__()
-
     pos_regex = re.compile(
         r"""
 ^                                                                             # Linestart

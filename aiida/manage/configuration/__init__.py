@@ -119,7 +119,6 @@ def load_config(create=False):
         config = Config.from_file(filepath)
     except ValueError:
         raise exceptions.ConfigurationError('configuration file {} contains invalid JSON'.format(filepath))
-    config.store()
 
     return config
 

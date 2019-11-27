@@ -38,15 +38,15 @@ class Config(object):  # pylint: disable=too-many-public-methods
     def from_file(cls, filepath):
         """Instantiate a configuration object from the contents of a given file.
 
-        .. note:: if the filepath does not exist an empty file will be created and a `Config` instance with the default
-            configuration will be returned. Note that its contents are *not* yet written to disk but are only kept in
-            memory until `Config.store` is called.
+        .. note:: if the filepath does not exist an empty file will be created with the default configuration.
 
         :param filepath: the absolute path to the configuration file
         :return: `Config` instance
         """
         from aiida.cmdline.utils import echo
         from .migrations import check_and_migrate_config, config_needs_migrating
+
+        created = False
 
         try:
             with io.open(filepath, 'r', encoding='utf8') as handle:
@@ -56,6 +56,7 @@ class Config(object):  # pylint: disable=too-many-public-methods
             with io.open(filepath, 'ab'):
                 pass
             config = {}
+            created = True
 
         # If the configuration file needs to be migrated, first create a specific backup so it can easily be reverted
         if config_needs_migrating(config):
@@ -64,8 +65,12 @@ class Config(object):  # pylint: disable=too-many-public-methods
             echo.echo_warning('original backed up to `{}`'.format(filepath_backup))
 
         config = check_and_migrate_config(config)
+        config = Config(filepath, config)
 
-        return Config(filepath, config)
+        if created:
+            config.store()
+
+        return config
 
     @classmethod
     def _backup(cls, filepath):

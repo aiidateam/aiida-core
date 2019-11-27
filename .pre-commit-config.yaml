@@ -139,7 +139,6 @@
         aiida/schedulers/plugins/test_lsf.py|
         aiida/schedulers/plugins/test_pbspro.py|
         aiida/schedulers/plugins/test_sge.py|
-        aiida/schedulers/plugins/test_slurm.py|
         aiida/schedulers/plugins/test_torque.py|
         aiida/sphinxext/tests/workchain_source/conf.py|
         aiida/tools/data/array/kpoints/legacy.py|

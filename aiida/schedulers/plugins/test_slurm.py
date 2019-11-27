@@ -7,7 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Tests for the SLURM scheduler plugin.
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -16,8 +17,9 @@ import logging
 import uuid
 import datetime
 
-from aiida.schedulers.plugins.slurm import *
+from aiida.schedulers.plugins.slurm import SlurmScheduler, JobState
 
+# pylint: disable=line-too-long
 # job_id, state_raw, annotation, executing_host, username, number_nodes, number_cpus, allocated_machines, partition, time_limit, time_used, dispatch_time, job_name, submission_time
 # See SlurmScheduler.fields
 TEXT_SQUEUE_TO_TEST = """862540^^^PD^^^Dependency^^^n/a^^^user1^^^20^^^640^^^(Dependency)^^^normal^^^1-00:00:00^^^0:00^^^N/A^^^longsqw_L24_q_10_0^^^2013-05-22T01:41:11
@@ -52,48 +54,42 @@ class TestParserSqueue(unittest.TestCase):
         stdout = TEXT_SQUEUE_TO_TEST
         stderr = ''
 
-        job_list = scheduler._parse_joblist_output(retval, stdout, stderr)
-
-        def get_job(id):
-            try:
-                return [ j for j in job_list if j.job_id == id][0]
-            except IndexError:
-                raise IndexError("Job '{}' not found.".format(id))
-
+        job_list = scheduler._parse_joblist_output(retval, stdout, stderr)  # pylint: disable=protected-access
+        job_dict = {j.job_id: j for j in job_list}
 
         # The parameters are hard coded in the text to parse
         job_parsed = len(job_list)
-        self.assertEquals(job_parsed, JOBS_ON_CLUSTER)
+        self.assertEqual(job_parsed, JOBS_ON_CLUSTER)
 
         job_running_parsed = len([j for j in job_list if j.job_state \
                                   and j.job_state == JobState.RUNNING])
-        self.assertEquals(len(JOBS_RUNNING), job_running_parsed)
+        self.assertEqual(len(JOBS_RUNNING), job_running_parsed)
 
         job_held_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED_HELD])
-        self.assertEquals(JOBS_HELD, job_held_parsed)
+        self.assertEqual(JOBS_HELD, job_held_parsed)
 
         job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
-        self.assertEquals(JOBS_QUEUED, job_queued_parsed)
+        self.assertEqual(JOBS_QUEUED, job_queued_parsed)
 
         parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
-        self.assertEquals(set(USERS_RUNNING), set(parsed_running_users))
+        self.assertEqual(set(USERS_RUNNING), set(parsed_running_users))
 
         parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
-        self.assertEquals(set(JOBS_RUNNING), set(parsed_running_jobs))
+        self.assertEqual(set(JOBS_RUNNING), set(parsed_running_jobs))
 
-        self.assertEquals(get_job('863553').requested_wallclock_time_seconds, 30 * 60)
-        self.assertEquals(get_job('863553').wallclock_time_seconds, 29 * 60 + 29)
-        self.assertEquals(get_job('863553').dispatch_time, datetime.datetime(2013, 5, 23, 11, 44, 11))
-        self.assertEquals(get_job('863553').submission_time, datetime.datetime(2013, 5, 23, 10, 42, 11))
+        self.assertEqual(job_dict['863553'].requested_wallclock_time_seconds, 30 * 60)
+        self.assertEqual(job_dict['863553'].wallclock_time_seconds, 29 * 60 + 29)
+        self.assertEqual(job_dict['863553'].dispatch_time, datetime.datetime(2013, 5, 23, 11, 44, 11))
+        self.assertEqual(job_dict['863553'].submission_time, datetime.datetime(2013, 5, 23, 10, 42, 11))
 
-        self.assertEquals(get_job('863100').annotation, 'Resources')
-        self.assertEquals(get_job('863100').num_machines, 32)
-        self.assertEquals(get_job('863100').num_mpiprocs, 1024)
-        self.assertEquals(get_job('863100').queue_name, 'normal')
+        self.assertEqual(job_dict['863100'].annotation, 'Resources')
+        self.assertEqual(job_dict['863100'].num_machines, 32)
+        self.assertEqual(job_dict['863100'].num_mpiprocs, 1024)
+        self.assertEqual(job_dict['863100'].queue_name, 'normal')
 
-        self.assertEquals(get_job('861352').title, 'Pressure_PBEsol_0')
+        self.assertEqual(job_dict['861352'].title, 'Pressure_PBEsol_0')
 
-        self.assertEquals(get_job('863554').requested_wallclock_time_seconds, None)  # not set
+        self.assertEqual(job_dict['863554'].requested_wallclock_time_seconds, None)  # not set
 
         # allocated_machines is not implemented in this version of the plugin
         #        for j in job_list:
@@ -109,6 +105,7 @@ class TestParserSqueue(unittest.TestCase):
 
 
 class TestTimes(unittest.TestCase):
+    """Test time parsing of SLURM scheduler plugin."""
 
     def test_time_conversion(self):
         """
@@ -118,30 +115,31 @@ class TestTimes(unittest.TestCase):
         "minutes", "minutes:seconds", "hours:minutes:seconds",
         "days-hours", "days-hours:minutes" and "days-hours:minutes:seconds".
         """
+        # pylint: disable=protected-access
         scheduler = SlurmScheduler()
-        self.assertEquals(scheduler._convert_time('2'), 2 * 60)
-        self.assertEquals(scheduler._convert_time('02'), 2 * 60)
+        self.assertEqual(scheduler._convert_time('2'), 2 * 60)
+        self.assertEqual(scheduler._convert_time('02'), 2 * 60)
 
-        self.assertEquals(scheduler._convert_time('02:3'), 2 * 60 + 3)
-        self.assertEquals(scheduler._convert_time('02:03'), 2 * 60 + 3)
+        self.assertEqual(scheduler._convert_time('02:3'), 2 * 60 + 3)
+        self.assertEqual(scheduler._convert_time('02:03'), 2 * 60 + 3)
 
-        self.assertEquals(scheduler._convert_time('1:02:03'), 3600 + 2 * 60 + 3)
-        self.assertEquals(scheduler._convert_time('01:02:03'), 3600 + 2 * 60 + 3)
+        self.assertEqual(scheduler._convert_time('1:02:03'), 3600 + 2 * 60 + 3)
+        self.assertEqual(scheduler._convert_time('01:02:03'), 3600 + 2 * 60 + 3)
 
-        self.assertEquals(scheduler._convert_time('1-3'), 86400 + 3 * 3600)
-        self.assertEquals(scheduler._convert_time('01-3'), 86400 + 3 * 3600)
-        self.assertEquals(scheduler._convert_time('01-03'), 86400 + 3 * 3600)
+        self.assertEqual(scheduler._convert_time('1-3'), 86400 + 3 * 3600)
+        self.assertEqual(scheduler._convert_time('01-3'), 86400 + 3 * 3600)
+        self.assertEqual(scheduler._convert_time('01-03'), 86400 + 3 * 3600)
 
-        self.assertEquals(scheduler._convert_time('1-3:5'), 86400 + 3 * 3600 + 5 * 60)
-        self.assertEquals(scheduler._convert_time('01-3:05'), 86400 + 3 * 3600 + 5 * 60)
-        self.assertEquals(scheduler._convert_time('01-03:05'), 86400 + 3 * 3600 + 5 * 60)
+        self.assertEqual(scheduler._convert_time('1-3:5'), 86400 + 3 * 3600 + 5 * 60)
+        self.assertEqual(scheduler._convert_time('01-3:05'), 86400 + 3 * 3600 + 5 * 60)
+        self.assertEqual(scheduler._convert_time('01-03:05'), 86400 + 3 * 3600 + 5 * 60)
 
-        self.assertEquals(scheduler._convert_time('1-3:5:7'), 86400 + 3 * 3600 + 5 * 60 + 7)
-        self.assertEquals(scheduler._convert_time('01-3:05:7'), 86400 + 3 * 3600 + 5 * 60 + 7)
-        self.assertEquals(scheduler._convert_time('01-03:05:07'), 86400 + 3 * 3600 + 5 * 60 + 7)
+        self.assertEqual(scheduler._convert_time('1-3:5:7'), 86400 + 3 * 3600 + 5 * 60 + 7)
+        self.assertEqual(scheduler._convert_time('01-3:05:7'), 86400 + 3 * 3600 + 5 * 60 + 7)
+        self.assertEqual(scheduler._convert_time('01-03:05:07'), 86400 + 3 * 3600 + 5 * 60 + 7)
 
-        self.assertEquals(scheduler._convert_time('UNLIMITED'), 2**31 - 1)
-        self.assertEquals(scheduler._convert_time('NOT_SET'), None)
+        self.assertEqual(scheduler._convert_time('UNLIMITED'), 2**31 - 1)
+        self.assertEqual(scheduler._convert_time('NOT_SET'), None)
 
         # Disable logging to avoid excessive output during test
         logging.disable(logging.ERROR)
@@ -160,6 +158,7 @@ class TestTimes(unittest.TestCase):
 
 
 class TestSubmitScript(unittest.TestCase):
+    """Test submit script generation by SLURM scheduler plugin."""
 
     def test_submit_script(self):
         """
@@ -193,6 +192,7 @@ class TestSubmitScript(unittest.TestCase):
                         " < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_bad_shebang(self):
+        """Test that first line of submit script is as expected."""
         from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
@@ -214,9 +214,9 @@ class TestSubmitScript(unittest.TestCase):
             submit_script_text = scheduler.get_submit_script(job_tmpl)
 
             # This tests if the implementation correctly chooses the default:
-            self.assertEquals(submit_script_text.split('\n')[0], expected_first_line)
+            self.assertEqual(submit_script_text.split('\n')[0], expected_first_line)
 
-    def test_submit_script_with_num_cores_per_machine(self):
+    def test_submit_script_with_num_cores_per_machine(self):  # pylint: disable=invalid-name
         """
         Test to verify if script works fine if we specify only
         num_cores_per_machine value.
@@ -229,7 +229,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = scheduler.create_job_resource(
-            num_machines=1, num_mpiprocs_per_machine=2, num_cores_per_machine=24)
+            num_machines=1, num_mpiprocs_per_machine=2, num_cores_per_machine=24
+        )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -249,7 +250,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                         " < 'aiida.in'" in submit_script_text)
 
-    def test_submit_script_with_num_cores_per_mpiproc(self):
+    def test_submit_script_with_num_cores_per_mpiproc(self):  # pylint: disable=invalid-name
         """
         Test to verify if scripts works fine if we pass only num_cores_per_mpiproc value
         """
@@ -261,7 +262,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = scheduler.create_job_resource(
-            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_mpiproc=24)
+            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_mpiproc=24
+        )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -281,7 +283,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                         " < 'aiida.in'" in submit_script_text)
 
-    def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):
+    def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):  # pylint: disable=invalid-name
         """
         Test to verify if scripts works fine if we pass both
         num_cores_per_machine and num_cores_per_mpiproc correct values.
@@ -296,7 +298,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = scheduler.create_job_resource(
-            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=24)
+            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=24
+        )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -316,7 +319,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                         " < 'aiida.in'" in submit_script_text)
 
-    def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):
+    def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):  # pylint: disable=invalid-name
         """
         Test to verify if scripts works fine if we pass
         num_cores_per_machine and num_cores_per_mpiproc wrong values.
@@ -331,7 +334,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         with self.assertRaises(ValueError):
             job_tmpl.job_resource = scheduler.create_job_resource(
-                num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23)
+                num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
+            )
 
 
 if __name__ == '__main__':

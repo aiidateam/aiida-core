@@ -80,7 +80,6 @@ def load_config(create=False):
     :rtype: :class:`~aiida.manage.configuration.config.Config`
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
-    import io
     import os
     from aiida.common import exceptions
     from .config import Config
@@ -115,12 +114,6 @@ def load_config(create=False):
 
     if not os.path.isfile(filepath) and not create:
         raise exceptions.MissingConfigurationError('configuration file {} does not exist'.format(filepath))
-
-    # If it doesn't exist, just create the file
-    if not os.path.isfile(filepath):
-        from aiida.common import json
-        with io.open(filepath, 'ab') as handle:
-            json.dump({}, handle)
 
     try:
         config = Config.from_file(filepath)

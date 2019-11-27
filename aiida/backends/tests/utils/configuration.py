@@ -54,6 +54,7 @@ def temporary_config_instance():
     current_profile_name = None
     temporary_config_directory = None
 
+    from aiida.common.utils import Capturing
     from aiida.manage import configuration
     from aiida.manage.configuration import settings, load_profile, reset_profile
 
@@ -75,7 +76,11 @@ def temporary_config_instance():
 
         # Create the instance base directory structure, the config file and a dummy profile
         create_instance_directories()
-        configuration.CONFIG = configuration.load_config(create=True)
+
+        # The constructor of `Config` called by `load_config` will print warning messages about migrating it
+        with Capturing():
+            configuration.CONFIG = configuration.load_config(create=True)
+
         profile = create_mock_profile(name=profile_name, repository_dirpath=temporary_config_directory)
 
         # Add the created profile and set it as the default

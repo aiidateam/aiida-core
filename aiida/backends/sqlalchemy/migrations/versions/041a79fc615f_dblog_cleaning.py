@@ -258,12 +258,7 @@ def upgrade():
     connection.execute(text("""UPDATE db_dblog SET dbnode_id=objpk"""))
 
     op.create_foreign_key(
-        None,
-        'db_dblog',
-        'db_dbnode', ['dbnode_id'], ['id'],
-        ondelete=u'CASCADE',
-        initially=u'DEFERRED',
-        deferrable=True
+        None, 'db_dblog', 'db_dbnode', ['dbnode_id'], ['id'], ondelete='CASCADE', initially='DEFERRED', deferrable=True
     )
 
     # Update the dbnode_id column to not nullable

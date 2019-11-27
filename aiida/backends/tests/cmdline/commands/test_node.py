@@ -362,7 +362,7 @@ class TestVerdiGraph(AiidaTestCase):
                 delete_temporary_file(filename)
 
 
-COMMENT = u'Well I never...'
+COMMENT = 'Well I never...'
 
 
 class TestVerdiUserCommand(AiidaTestCase):

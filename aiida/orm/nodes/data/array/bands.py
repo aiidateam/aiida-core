@@ -913,7 +913,7 @@ class BandsData(KpointsData):
         # first prepare the xy coordinates of the sets
         raw_data, _ = self._prepare_dat_blocks(plot_info, comments=comments)
 
-        xtics_string = u', '.join(u'"{}" {}'.format(label, pos) for pos, label in plot_info['labels'])
+        xtics_string = ', '.join('"{}" {}'.format(label, pos) for pos, label in plot_info['labels'])
 
         script = []
         # Start with some useful comments
@@ -940,25 +940,25 @@ class BandsData(KpointsData):
 """)
 
         # Actual logic
-        script.append(u'set termopt enhanced')  # Properly deals with e.g. subscripts
-        script.append(u'set encoding utf8')  # To deal with Greek letters
-        script.append(u'set xtics ({})'.format(xtics_string))
-        script.append(u'set grid xtics lt 1 lc rgb "#888888"')
+        script.append('set termopt enhanced')  # Properly deals with e.g. subscripts
+        script.append('set encoding utf8')  # To deal with Greek letters
+        script.append('set xtics ({})'.format(xtics_string))
+        script.append('set grid xtics lt 1 lc rgb "#888888"')
 
-        script.append(u'unset key')
+        script.append('unset key')
 
-        script.append(u'set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
-        script.append(u'set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
+        script.append('set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
+        script.append('set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
 
-        script.append(u'set ylabel "{}"'.format(u'Dispersion ({})'.format(self.units)))
+        script.append('set ylabel "{}"'.format('Dispersion ({})'.format(self.units)))
 
         if title:
-            script.append(u'set title "{}"'.format(title.replace('"', '\"')))
+            script.append('set title "{}"'.format(title.replace('"', '\"')))
 
         # Plot, escaping filename
-        script.append(u'plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
+        script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
 
-        script_data = u'\n'.join(script) + u'\n'
+        script_data = '\n'.join(script) + '\n'
         extra_files = {dat_filename: raw_data}
 
         return script_data.encode('utf-8'), extra_files

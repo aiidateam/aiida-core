@@ -14,7 +14,7 @@ if __name__ == '__main__':
     )
     print(result)
     # {
-    #     u'e': 1.2,
-    #     u'child_1.d': 1, u'child_1.f': True,
-    #     u'child_2.d': 1, u'child_2.f': False
+    #     'e': 1.2,
+    #     'child_1.d': 1, 'child_1.f': True,
+    #     'child_2.d': 1, 'child_2.f': False
     # }

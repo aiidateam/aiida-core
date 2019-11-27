@@ -173,7 +173,7 @@ class TestUpfParser(AiidaTestCase):
 
         upf_filename = 'O.test_file_v1.UPF'
         # regular upf file version 1 header
-        upf_contents = u'\n'.join([
+        upf_contents = '\n'.join([
             '<PP_INFO>'
             'Human readable section is completely irrelevant for parsing!',
             '<PP_HEADER',
@@ -196,7 +196,7 @@ class TestUpfParser(AiidaTestCase):
 
         upf_filename = 'Al.test_file_v2.UPF'
         # regular upf file version 2 header
-        upf_contents = u'\n'.join([
+        upf_contents = '\n'.join([
             "<UPF version=\"2.0.1\">",
             'Human readable section is completely irrelevant for parsing!',
             '<PP_HEADER',
@@ -220,7 +220,7 @@ class TestUpfParser(AiidaTestCase):
         upf_filename = 'Pt.test_file.UPF'
         # minimal contents required for parsing including additional header
         # file
-        upf_contents = u'\n'.join([
+        upf_contents = '\n'.join([
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
             "<UPF version=\"2.0.1\">",
             'Human readable section is completely irrelevant for parsing!',
@@ -244,7 +244,7 @@ class TestUpfParser(AiidaTestCase):
 
         upf_filename = 'Al.test_file.UPF'
         # upf file header contents
-        upf_contents = u'\n'.join([
+        upf_contents = '\n'.join([
             "<UPF version=\"2.0.1\">",
             'Human readable section is completely irrelevant for parsing!',
             '<PP_HEADER',
@@ -265,7 +265,7 @@ class TestUpfParser(AiidaTestCase):
 
         upf_filename = 'Ab.test_file_missing_element_v2.UPF'
         # upf file header contents
-        upf_contents = u'\n'.join([
+        upf_contents = '\n'.join([
             "<UPF version=\"2.0.1\">",
             'Human readable section is completely irrelevant for parsing!',
             '<PP_HEADER',
@@ -286,7 +286,7 @@ class TestUpfParser(AiidaTestCase):
 
         upf_filename = 'Ab.test_file_invalid_element_v2.UPF'
         # upf file header contents
-        upf_contents = u'\n'.join([
+        upf_contents = '\n'.join([
             "<UPF version=\"2.0.1\">",
             'Human readable section is completely irrelevant for parsing!',
             '<PP_HEADER',
@@ -307,7 +307,7 @@ class TestUpfParser(AiidaTestCase):
 
         upf_filename = 'O.test_file_missing_element_v1.UPF'
         # upf file header contents
-        upf_contents = u'\n'.join([
+        upf_contents = '\n'.join([
             '<PP_INFO>'
             'Human readable section is completely irrelevant for parsing!',
             '<PP_HEADER',
@@ -352,7 +352,7 @@ class TestUpfParser(AiidaTestCase):
 
         upf_filename = 'Ab.test_file_invalid_element_v1.UPF'
         # upf file header contents
-        upf_contents = u'\n'.join([
+        upf_contents = '\n'.join([
             '<PP_INFO>'
             'Human readable section is completely irrelevant for parsing!',
             '<PP_HEADER',

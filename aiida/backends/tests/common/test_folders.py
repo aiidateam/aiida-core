@@ -38,16 +38,16 @@ class FoldersTest(unittest.TestCase):
         tmpsource = tempfile.mkdtemp()
         tmpdest = tempfile.mkdtemp()
         with io.open(os.path.join(tmpsource, 'sąžininga'), 'w', encoding='utf8') as fhandle:
-            fhandle.write(u'test')
+            fhandle.write('test')
         with io.open(os.path.join(tmpsource, 'žąsis'), 'w', encoding='utf8') as fhandle:
-            fhandle.write(u'test')
+            fhandle.write('test')
         folder = Folder(tmpdest)
         folder.insert_path(tmpsource, 'destination')
-        folder.insert_path(tmpsource, u'šaltinis')
+        folder.insert_path(tmpsource, 'šaltinis')
 
-        folder = Folder(os.path.join(tmpsource, u'šaltinis'))
+        folder = Folder(os.path.join(tmpsource, 'šaltinis'))
         folder.insert_path(tmpsource, 'destination')
-        folder.insert_path(tmpdest, u'kitas-šaltinis')
+        folder.insert_path(tmpdest, 'kitas-šaltinis')
 
     def test_get_abs_path_without_limit(self):
         """

@@ -94,7 +94,7 @@ def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyz' 'ABC
         # properties of the chosen random sequence slightly, but this
         # is better than absolute predictability.
         random.seed(hashlib.sha256(('%s%s%s' % (random.getstate(), time.time(), HASHING_KEY)).encode('utf-8')).digest())
-    return u''.join(random.choice(allowed_chars) for i in range(length))
+    return ''.join(random.choice(allowed_chars) for i in range(length))
 
 
 BLAKE2B_OPTIONS = {
@@ -232,7 +232,7 @@ def _(val, **kwargs):
     """
     return [
         _single_digest(
-            'complex', u'{}!{}'.format(
+            'complex', '{}!{}'.format(
                 float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION), float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)
             ).encode('utf-8')
         )
@@ -242,7 +242,7 @@ def _(val, **kwargs):
 @_make_hash.register(numbers.Integral)
 def _(val, **kwargs):
     """get the hash of the little-endian signed long long representation of the integer"""
-    return [_single_digest('int', u'{}'.format(val).encode('utf-8'))]
+    return [_single_digest('int', '{}'.format(val).encode('utf-8'))]
 
 
 @_make_hash.register(bool)
@@ -307,5 +307,5 @@ def float_to_text(value, sig):
     :param value: the float value to convert
     :param sig: choose how many digits after the comma should be output
     """
-    fmt = u'{{:.{}g}}'.format(sig)
+    fmt = '{{:.{}g}}'.format(sig)
     return fmt.format(value)

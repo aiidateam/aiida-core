@@ -85,7 +85,7 @@ class TestCodDbImporter(AiidaTestCase):
                     "incorrect value for keyword 'test' -- " + \
                     'only integers and floats are accepted',
                     "invalid literal for int() with base 10: 'text'"]
-        values = [10, 'text', u'text', '10', 1.0 / 3, [1, 2, 3]]
+        values = [10, 'text', 'text', '10', 1.0 / 3, [1, 2, 3]]
         methods = [codi._int_clause,
                    codi._str_exact_clause,
                    codi._formula_clause,

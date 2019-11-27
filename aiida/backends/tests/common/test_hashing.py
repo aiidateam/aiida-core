@@ -64,11 +64,11 @@ class MakeHashTest(unittest.TestCase):
 
     def test_unicode_string(self):
         self.assertEqual(
-            make_hash(u'something still in ASCII'), 'd55e492596cf214d877e165cdc3394f27e82e011838474f5ba5b9824074b9e91'
+            make_hash('something still in ASCII'), 'd55e492596cf214d877e165cdc3394f27e82e011838474f5ba5b9824074b9e91'
         )
 
         self.assertEqual(
-            make_hash(u'öpis mit Umluut wie ä, ö, ü und emene ß'),
+            make_hash('öpis mit Umluut wie ä, ö, ü und emene ß'),
             'c404bf9a62cba3518de5c2bae8c67010aff6e4051cce565fa247a7f1d71f1fc7'
         )
 
@@ -185,13 +185,13 @@ class MakeHashTest(unittest.TestCase):
         with SandboxFolder(sandbox_in_repo=False) as folder:
             folder.open('file1', 'a').close()
             fhandle = folder.open('file2', 'w')
-            fhandle.write(u'hello there!\n')
+            fhandle.write('hello there!\n')
             fhandle.close()
 
             folder_hash = make_hash(folder)
             self.assertEqual(folder_hash, '47d9cdb2247e75eca492035f60f09fdd0daf87bbba40bb658d2d7e84f21f26c5')
 
-            nested_obj = ['1.0.0a2', {u'array|a': [1001]}, folder, None]
+            nested_obj = ['1.0.0a2', {'array|a': [1001]}, folder, None]
             self.assertEqual(make_hash(nested_obj), 'd3e7ff24708bc60b75a01571454ac0a664fa94ff2145848b584fb9ecc7e4fcbe')
 
             with folder.open('file3.npy', 'wb') as fhandle:

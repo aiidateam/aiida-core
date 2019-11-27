@@ -26,8 +26,8 @@ class TestFolderData(AiidaTestCase):
         super(TestFolderData, cls).setUpClass(*args, **kwargs)
         cls.tempdir = tempfile.mkdtemp()
         cls.tree = {
-            'a.txt': u'Content of file A\nWith some newlines',
-            'b.txt': u'Content of file B without newline',
+            'a.txt': 'Content of file A\nWith some newlines',
+            'b.txt': 'Content of file B without newline',
         }
 
         for filename, content in cls.tree.items():

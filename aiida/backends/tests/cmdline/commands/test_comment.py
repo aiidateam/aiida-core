@@ -14,7 +14,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_comment
 from aiida import orm
 
-COMMENT = u'Well I never...'
+COMMENT = 'Well I never...'
 
 
 class TestVerdiUserCommand(AiidaTestCase):

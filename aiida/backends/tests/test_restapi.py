@@ -973,9 +973,9 @@ class RESTApiTestSuite(RESTApiTestCase):
             self.assertNotIn('message', response)
             self.assertEqual(
                 response['data']['derived_properties']['dimensionality'], {
-                    u'dim': 3,
-                    u'value': 8.0,
-                    u'label': u'volume'
+                    'dim': 3,
+                    'value': 8.0,
+                    'label': 'volume'
                 }
             )
             self.assertEqual(response['data']['derived_properties']['formula'], 'Ba')

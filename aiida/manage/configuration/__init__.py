@@ -86,12 +86,15 @@ def load_config(create=False):
     from .config import Config
     from .settings import AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME
 
+    filepath = os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
+
     if IN_RT_DOC_MODE:
         # The following is a dummy config.json configuration that it is used for the
         # proper compilation of the documentation on readthedocs.
         from aiida.manage.external.postgres import DEFAULT_DBINFO
+        import tempfile
         return Config(
-            '/dev/null', {
+            tempfile.mkstemp()[1], {
                 'default_profile': 'default',
                 'profiles': {
                     'default': {
@@ -109,8 +112,6 @@ def load_config(create=False):
                 }
             }
         )
-
-    filepath = os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
 
     if not os.path.isfile(filepath) and not create:
         raise exceptions.MissingConfigurationError('configuration file {} does not exist'.format(filepath))

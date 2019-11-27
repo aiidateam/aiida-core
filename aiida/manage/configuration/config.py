@@ -38,7 +38,9 @@ class Config(object):  # pylint: disable=too-many-public-methods
     def from_file(cls, filepath):
         """Instantiate a configuration object from the contents of a given file.
 
-        .. note:: if the filepath does not exist it will be created with the default configuration.
+        .. note:: if the filepath does not exist an empty file will be created and a `Config` instance with the default
+            configuration will be returned. Note that its contents are *not* yet written to disk but are only kept in
+            memory until `Config.store` is called.
 
         :param filepath: the absolute path to the configuration file
         :return: `Config` instance
@@ -371,8 +373,8 @@ class Config(object):  # pylint: disable=too-many-public-methods
     def store(self):
         """Write the current config to file.
 
-        .. note:: if the configuration file already exists on disk it will only be overwritten if there are changes
-            made to the configuration in memory. In that case, a backup of the original file on disk will be created.
+        .. note:: if the configuration file already exists on disk and its contents differ from those in memory, a
+            backup of the original file on disk will be created before overwriting it.
 
         :return: self
         """
@@ -386,14 +388,15 @@ class Config(object):  # pylint: disable=too-many-public-methods
             return self
 
         # Otherwise, we write the content to a temporary file and compare its md5 checksum with the current config on
-        # disk. Only when the checksums differ do we first create a backup and then overwrite the existing file.
+        # disk. When the checksums differ, we first create a backup and only then overwrite the existing file.
         with tempfile.NamedTemporaryFile() as handle:
             self._write(handle)
             handle.seek(0)
 
             if md5_from_filelike(handle) != md5_file(self.filepath):
                 self._backup(self.filepath)
-                shutil.copy(handle.name, self.filepath)
+
+            shutil.copy(handle.name, self.filepath)
 
         return self
 

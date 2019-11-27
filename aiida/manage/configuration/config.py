@@ -46,29 +46,20 @@ class Config(object):  # pylint: disable=too-many-public-methods
         from aiida.cmdline.utils import echo
         from .migrations import check_and_migrate_config, config_needs_migrating
 
-        created = False
-
         try:
             with io.open(filepath, 'r', encoding='utf8') as handle:
                 config = json.load(handle)
         except (IOError, OSError):
-            # The file does not exist so "touch" it and create an empty configuration
-            with io.open(filepath, 'ab'):
-                pass
-            config = {}
-            created = True
-
-        # If the configuration file needs to be migrated, first create a specific backup so it can easily be reverted
-        if config_needs_migrating(config):
-            echo.echo_warning('current configuration file `{}` is outdated and will be migrated'.format(filepath))
-            filepath_backup = cls._backup(filepath)
-            echo.echo_warning('original backed up to `{}`'.format(filepath_backup))
-
-        config = check_and_migrate_config(config)
-        config = Config(filepath, config)
-
-        if created:
+            config = Config(filepath, check_and_migrate_config({}))
             config.store()
+        else:
+            # If the configuration file needs to be migrated first create a specific backup so it can easily be reverted
+            if config_needs_migrating(config):
+                echo.echo_warning('current configuration file `{}` is outdated and will be migrated'.format(filepath))
+                filepath_backup = cls._backup(filepath)
+                echo.echo_warning('original backed up to `{}`'.format(filepath_backup))
+
+            config = Config(filepath, check_and_migrate_config(config))
 
         return config
 

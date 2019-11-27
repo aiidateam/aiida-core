@@ -22,7 +22,7 @@ class ArithmeticAddCalculation(CalcJob):
 
         # Write the input file based on the inputs that were passed
         with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
-            handle.write(u'{} {}\n'.format(input_x.value, input_y.value))
+            handle.write('{} {}\n'.format(input_x.value, input_y.value))
 
         codeinfo = CodeInfo()
         codeinfo.code_uuid = self.inputs.code.uuid

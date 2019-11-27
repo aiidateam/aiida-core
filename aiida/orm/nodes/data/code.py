@@ -301,7 +301,7 @@ class Code(Data):
         Return the code that will be put in the scheduler script before the
         execution, or an empty string if no pre-exec code was defined.
         """
-        return self.get_attribute('prepend_text', u'')
+        return self.get_attribute('prepend_text', '')
 
     def set_input_plugin_name(self, input_plugin):
         """
@@ -331,7 +331,7 @@ class Code(Data):
         """
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
-        return self.get_attribute('append_text', u'')
+        return self.get_attribute('append_text', '')
 
     def set_local_executable(self, exec_name):
         """
@@ -342,7 +342,7 @@ class Code(Data):
         self.set_attribute('local_executable', exec_name)
 
     def get_local_executable(self):
-        return self.get_attribute('local_executable', u'')
+        return self.get_attribute('local_executable', '')
 
     def set_remote_computer_exec(self, remote_computer_exec):
         """
@@ -443,7 +443,7 @@ class Code(Data):
         For remote codes, it is the absolute path to the executable.
         """
         if self.is_local():
-            return u'./{}'.format(self.get_local_executable())
+            return './{}'.format(self.get_local_executable())
         else:
             return self.get_remote_exec_path()
 

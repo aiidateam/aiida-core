@@ -389,7 +389,7 @@ class TestVerdiDataRemote(AiidaTestCase):
         p = tempfile.mkdtemp()
         self.r.set_remote_path(p)
         with io.open(p + '/file.txt', 'w', encoding='utf8') as fhandle:
-            fhandle.write(u'test string')
+            fhandle.write('test string')
         self.r.computer = comp
         self.r.store()
 
@@ -695,7 +695,7 @@ PRIMVEC
 
 @unittest.skipUnless(has_pycifrw(), 'Unable to import PyCifRW')
 class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
-    valid_sample_cif_str = u'''
+    valid_sample_cif_str = '''
         data_test
         _cell_length_a    10
         _cell_length_b    10
@@ -806,7 +806,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
 
 
 class TestVerdiDataSinglefile(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
-    sample_str = u'''
+    sample_str = '''
         data_test
     '''
 

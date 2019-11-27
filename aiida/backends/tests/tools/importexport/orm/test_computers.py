@@ -317,7 +317,7 @@ class TestComputer(AiidaTestCase):
         """
         # Set the computer name
         comp1_name = 'localhost_1'
-        comp1_metadata = {u'workdir': u'/tmp/aiida'}
+        comp1_metadata = {'workdir': '/tmp/aiida'}
         self.computer.set_name(comp1_name)
         self.computer.set_metadata(comp1_metadata)
 
@@ -360,7 +360,7 @@ class TestComputer(AiidaTestCase):
             import_archive(archive, filepath='export/compare')
 
             # The expected metadata
-            comp1_metadata = {u'workdir': u'/tmp/aiida'}
+            comp1_metadata = {'workdir': '/tmp/aiida'}
 
             # Check that we got the correct metadata
             # Make sure to exclude the default computer

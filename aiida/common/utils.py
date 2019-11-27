@@ -352,10 +352,10 @@ class Prettifier:
 
         label = (
             label
-                .replace(u'GAMMA', u'Γ')
-                .replace(u'DELTA', u'Δ')
-                .replace(u'LAMBDA', u'Λ')
-                .replace(u'SIGMA', u'Σ')
+                .replace('GAMMA', 'Γ')
+                .replace('DELTA', 'Δ')
+                .replace('LAMBDA', 'Λ')
+                .replace('SIGMA', 'Σ')
         )  # yapf:disable
         return re.sub(r'_(.?)', r'_{\1}', label)
 
@@ -370,7 +370,7 @@ class Prettifier:
         """
 
         if label == 'G':
-            return u'Γ'
+            return 'Γ'
 
         return re.sub(r'(\d+)', r'_{\1}', label)
 

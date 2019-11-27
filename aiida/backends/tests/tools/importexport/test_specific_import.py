@@ -91,15 +91,15 @@ class TestSpecificImport(AiidaTestCase):
         test_cell = [[8.34, 0.0, 0.0], [0.298041701839357, 8.53479766274308, 0.0],
                      [0.842650688117053, 0.47118495164127, 10.6965192730702]]
         test_kinds = [{
-            'symbols': [u'Fe'],
+            'symbols': ['Fe'],
             'weights': [1.0],
             'mass': 55.845,
-            'name': u'Fe'
+            'name': 'Fe'
         }, {
-            'symbols': [u'S'],
+            'symbols': ['S'],
             'weights': [1.0],
             'mass': 32.065,
-            'name': u'S'
+            'name': 'S'
         }]
 
         structure = orm.StructureData(cell=test_cell)

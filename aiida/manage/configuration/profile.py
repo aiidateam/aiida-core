@@ -259,7 +259,7 @@ class Profile:  # pylint: disable=too-many-public-methods
         import uritools
         parts = uritools.urisplit(self.repository_uri)
 
-        if parts.scheme != u'file':
+        if parts.scheme != 'file':
             raise exceptions.ConfigurationError('invalid repository protocol, only the local `file://` is supported')
 
         if not os.path.isabs(parts.path):

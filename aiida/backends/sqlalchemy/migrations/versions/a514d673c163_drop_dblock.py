@@ -36,5 +36,5 @@ def downgrade():
     sa.Column('creation', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.Column('timeout', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('owner', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-    sa.PrimaryKeyConstraint('key', name=u'db_dblock_pkey')
+    sa.PrimaryKeyConstraint('key', name='db_dblock_pkey')
     )

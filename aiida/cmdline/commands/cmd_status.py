@@ -29,15 +29,15 @@ class ServiceStatus(IntEnum):
 STATUS_SYMBOLS = {
     ServiceStatus.UP: {
         'color': 'green',
-        'string': u'\u2713',
+        'string': '\u2713',
     },
     ServiceStatus.ERROR: {
         'color': 'red',
-        'string': u'\u2717',
+        'string': '\u2717',
     },
     ServiceStatus.DOWN: {
         'color': 'red',
-        'string': u'\u2717',
+        'string': '\u2717',
     },
 }
 
@@ -129,7 +129,7 @@ def print_status(status, service, msg='', exception=None):
     :param msg:  message string
     """
     symbol = STATUS_SYMBOLS[status]
-    click.secho(u' {} '.format(symbol['string']), fg=symbol['color'], nl=False)
+    click.secho(' {} '.format(symbol['string']), fg=symbol['color'], nl=False)
     click.secho('{:12s} {}'.format(service + ':', msg))
     if exception is not None:
         click.echo(exception, err=True)

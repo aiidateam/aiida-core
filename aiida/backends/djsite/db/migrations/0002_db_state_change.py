@@ -24,9 +24,9 @@ def fix_calc_states(apps, schema_editor):
     # and deal with them if they do
     DbCalcState = apps.get_model('db', 'DbCalcState')
     for calc_state in DbCalcState.objects.filter(
-            state__in=[u'UNDETERMINED', u'NOTFOUND']):
+            state__in=['UNDETERMINED', 'NOTFOUND']):
         old_state = calc_state.state
-        calc_state.state = u'FAILED'
+        calc_state.state = 'FAILED'
         calc_state.save()
         # Now add a note in the log to say what we've done
         calc = load_node(pk=calc_state.dbnode.pk)
@@ -48,13 +48,13 @@ class Migration(migrations.Migration):
             # The UNDETERMINED and NOTFOUND 'states' were removed as these
             # don't make sense
             field=models.CharField(db_index=True, max_length=25,
-                                   choices=[(u'RETRIEVALFAILED', u'RETRIEVALFAILED'), (u'COMPUTED', u'COMPUTED'),
-                                            (u'RETRIEVING', u'RETRIEVING'), (u'WITHSCHEDULER', u'WITHSCHEDULER'),
-                                            (u'SUBMISSIONFAILED', u'SUBMISSIONFAILED'), (u'PARSING', u'PARSING'),
-                                            (u'FAILED', u'FAILED'), (u'FINISHED', u'FINISHED'),
-                                            (u'TOSUBMIT', u'TOSUBMIT'), (u'SUBMITTING', u'SUBMITTING'),
-                                            (u'IMPORTED', u'IMPORTED'), (u'NEW', u'NEW'),
-                                            (u'PARSINGFAILED', u'PARSINGFAILED')]),
+                                   choices=[('RETRIEVALFAILED', 'RETRIEVALFAILED'), ('COMPUTED', 'COMPUTED'),
+                                            ('RETRIEVING', 'RETRIEVING'), ('WITHSCHEDULER', 'WITHSCHEDULER'),
+                                            ('SUBMISSIONFAILED', 'SUBMISSIONFAILED'), ('PARSING', 'PARSING'),
+                                            ('FAILED', 'FAILED'), ('FINISHED', 'FINISHED'),
+                                            ('TOSUBMIT', 'TOSUBMIT'), ('SUBMITTING', 'SUBMITTING'),
+                                            ('IMPORTED', 'IMPORTED'), ('NEW', 'NEW'),
+                                            ('PARSINGFAILED', 'PARSINGFAILED')]),
             preserve_default=True,
         ),
         # Fix up any calculation states that had one of the removed states

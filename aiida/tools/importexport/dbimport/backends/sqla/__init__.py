@@ -232,9 +232,9 @@ def import_data_sqla(
         # to map one id (the pk) to a different one.
         # One of the things to remove for v0.4
         # {
-        # u'Node': {2362: u'82a897b5-fb3a-47d7-8b22-c5fe1b4f2c14',
-        #           2363: u'ef04aa5d-99e7-4bfd-95ef-fe412a6a3524', 2364: u'1dc59576-af21-4d71-81c2-bac1fc82a84a'},
-        # u'User': {1: u'aiida@localhost'}
+        # 'Node': {2362: '82a897b5-fb3a-47d7-8b22-c5fe1b4f2c14',
+        #           2363: 'ef04aa5d-99e7-4bfd-95ef-fe412a6a3524', 2364: '1dc59576-af21-4d71-81c2-bac1fc82a84a'},
+        # 'User': {1: 'aiida@localhost'}
         # }
         import_unique_ids_mappings = {}
         # Export data since v0.3 contains the keys entity_name

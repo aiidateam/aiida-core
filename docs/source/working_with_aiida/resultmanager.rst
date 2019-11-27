@@ -42,7 +42,7 @@ type
 
 you will get something like this::
 
-    [u'rho_cutoff', u'energy', u'energy_units', ...]
+    ['rho_cutoff', 'energy', 'energy_units', ...]
 
 (the list of keys has been cut for clarity: you will get many more
 keys).

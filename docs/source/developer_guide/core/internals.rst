@@ -343,7 +343,7 @@ Navigating inputs and outputs
     '__str__',
     '__subclasshook__',
     '__weakref__',
-    u'remote_folder']
+    'remote_folder']
 
   The ``.inputs`` manager for ``WorkflowNode`` and the ``.outputs`` manager both for ``CalculationNode`` and ``WorkflowNode`` work in the same way (see below).
 

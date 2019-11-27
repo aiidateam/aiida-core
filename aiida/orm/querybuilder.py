@@ -1081,7 +1081,7 @@ class QueryBuilder:
 
             QueryBuilder().append(StructureData,tag='s', project='**').limit(1).dict()[0]['s'].keys()
 
-            # >>> u'user_id, description, ctime, label, extras, mtime, id, attributes, dbcomputer_id, type, uuid'
+            # >>> 'user_id, description, ctime, label, extras, mtime, id, attributes, dbcomputer_id, type, uuid'
 
         Be aware that the result of ``**`` depends on the backend implementation.
 
@@ -2197,11 +2197,11 @@ class QueryBuilder:
 
             qb.iterdict()
             >>> {'descendant': {
-                    'entity_type': u'calculation.job.quantumespresso.pw.PwCalculation.',
+                    'entity_type': 'calculation.job.quantumespresso.pw.PwCalculation.',
                     'id': 7716}
                 }
             >>> {'descendant': {
-                    'entity_type': u'data.remote.RemoteData.',
+                    'entity_type': 'data.remote.RemoteData.',
                     'id': 8510}
                 }
 

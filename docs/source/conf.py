@@ -59,8 +59,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'AiiDA'
-copyright = u'2019, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved'
+project = 'AiiDA'
+copyright = '2019, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -210,7 +210,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'aiida.tex', u'AiiDA documentation',
+  ('index', 'aiida.tex', 'AiiDA documentation',
    author.replace(',',r'\and'), 'manual'),
 ]
 
@@ -319,7 +319,7 @@ def setup(app):
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'aiida', u'AiiDA documentation',
+    ('index', 'aiida', 'AiiDA documentation',
      [author], 1)
 ]
 
@@ -333,7 +333,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'aiida', u'AiiDA documentation',
+  ('index', 'aiida', 'AiiDA documentation',
    author, 'aiida', 'Automated Interactive Infrastructure and Database for Computational Science',
    'Miscellaneous'),
 ]
@@ -351,7 +351,7 @@ texinfo_documents = [
 # -- Options for Epub output ---------------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'AiiDA'
+epub_title = 'AiiDA'
 epub_author = author
 epub_publisher = author
 epub_copyright = copyright

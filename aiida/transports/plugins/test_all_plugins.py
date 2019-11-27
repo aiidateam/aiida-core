@@ -204,7 +204,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             # also tests that it works with a single file
             # create file
             local_file_name = 'file.txt'
-            text = u'Viva Verdi\n'
+            text = 'Viva Verdi\n'
             with io.open(os.path.join(t.getcwd(), local_file_name), 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
             # remove it
@@ -567,7 +567,7 @@ class TestPutGetFile(unittest.TestCase):
             remote_file_name = 'file_remote.txt'
             retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
 
-            text = u'Viva Verdi\n'
+            text = 'Viva Verdi\n'
             with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
@@ -681,7 +681,7 @@ class TestPutGetFile(unittest.TestCase):
             remote_file_name = 'file_remote.txt'
             retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
 
-            text = u'Viva Verdi\n'
+            text = 'Viva Verdi\n'
             with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
@@ -769,7 +769,7 @@ class TestPutGetTree(unittest.TestCase):
 
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
-            text = u'Viva Verdi\n'
+            text = 'Viva Verdi\n'
             with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
@@ -834,7 +834,7 @@ class TestPutGetTree(unittest.TestCase):
 
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
-            text = u'Viva Verdi\n'
+            text = 'Viva Verdi\n'
             with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
@@ -889,7 +889,7 @@ class TestPutGetTree(unittest.TestCase):
             file_1 = os.path.join(local_base_dir, 'a.txt')
             file_2 = os.path.join(local_base_dir, 'b.tmp')
             file_3 = os.path.join(local_base_dir, 'c.txt')
-            text = u'Viva Verdi\n'
+            text = 'Viva Verdi\n'
             for filename in [file_1, file_2, file_3]:
                 with io.open(filename, 'w', encoding='utf8') as fhandle:
                     fhandle.write(text)
@@ -962,7 +962,7 @@ class TestPutGetTree(unittest.TestCase):
             file_1 = os.path.join(local_base_dir, 'a.txt')
             file_2 = os.path.join(local_base_dir, 'b.tmp')
             file_3 = os.path.join(local_base_dir, 'c.txt')
-            text = u'Viva Verdi\n'
+            text = 'Viva Verdi\n'
             for filename in [file_1, file_2, file_3]:
                 with io.open(filename, 'w', encoding='utf8') as fhandle:
                     fhandle.write(text)
@@ -1042,7 +1042,7 @@ class TestPutGetTree(unittest.TestCase):
             file_1 = os.path.join(local_base_dir, 'a.txt')
             file_2 = os.path.join(local_base_dir, 'b.tmp')
             file_3 = os.path.join(local_base_dir, 'c.txt')
-            text = u'Viva Verdi\n'
+            text = 'Viva Verdi\n'
             for filename in [file_1, file_2, file_3]:
                 with io.open(filename, 'w', encoding='utf8') as fhandle:
                     fhandle.write(text)
@@ -1199,7 +1199,7 @@ class TestPutGetTree(unittest.TestCase):
             t.chdir(directory)
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
-            text = u'Viva Verdi\n'
+            text = 'Viva Verdi\n'
             with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
@@ -1301,7 +1301,7 @@ class TestExecuteCommandWait(unittest.TestCase):
 
     @run_for_all_plugins
     def test_exec_with_stdin_unicode(self, custom_transport):
-        test_string = u'some_test String'
+        test_string = 'some_test String'
         with custom_transport as t:
             retcode, stdout, stderr = t.exec_command_wait('cat', stdin=test_string)
             self.assertEquals(retcode, 0)

@@ -787,7 +787,7 @@ class TestAttributes(AiidaTestCase):
         qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'==': '1'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_str.uuid,)))
-        if configuration.PROFILE.database_backend == u'sqlalchemy':
+        if configuration.PROFILE.database_backend == 'sqlalchemy':
             # I can't query the length of an array with Django,
             # so I exclude. Not the nicest way, But I would like to keep this piece
             # of code because of the initialization part, that would need to be
@@ -1354,14 +1354,14 @@ class TestDoubleStar(AiidaTestCase):
         # The expected result
         # pylint: disable=no-member
         expected_dict = {
-            u'description': self.computer.description,
-            u'scheduler_type': self.computer.get_scheduler_type(),
-            u'hostname': self.computer.hostname,
-            u'uuid': self.computer.uuid,
-            u'name': self.computer.name,
-            u'transport_type': self.computer.get_transport_type(),
-            u'id': self.computer.id,
-            u'metadata': self.computer.get_metadata(),
+            'description': self.computer.description,
+            'scheduler_type': self.computer.get_scheduler_type(),
+            'hostname': self.computer.hostname,
+            'uuid': self.computer.uuid,
+            'name': self.computer.name,
+            'transport_type': self.computer.get_transport_type(),
+            'id': self.computer.id,
+            'metadata': self.computer.get_metadata(),
         }
 
         qb = orm.QueryBuilder()

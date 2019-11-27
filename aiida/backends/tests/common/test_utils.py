@@ -184,12 +184,12 @@ class PrettifierTest(unittest.TestCase):
                 'something_2': r'something$_{2}$',
             },
             'gnuplot_simple': {
-                'G': u'Γ',
+                'G': 'Γ',
                 'bla3': r'bla_{3}',
                 'bla33': r'bla_{33}',
             },
             'gnuplot_seekpath': {
-                'SIGMA': u'Σ',
+                'SIGMA': 'Σ',
                 'bla_3': r'bla_{3}',
             },
             'pass': {

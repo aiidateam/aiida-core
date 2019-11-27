@@ -79,7 +79,7 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
     def setUpBeforeMigration(self):
         from aiida.common.utils import get_new_uuid
         self.file_name = 'test.temp'
-        self.file_content = u'#!/bin/bash\n\necho test run\n'
+        self.file_content = '#!/bin/bash\n\necho test run\n'
 
         self.nodes_boolean = []
         self.nodes_integer = []

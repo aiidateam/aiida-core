@@ -28,12 +28,12 @@ class TestRepository(AiidaTestCase):
         self.tree = {
             'subdir': {
                 'nested': {
-                    'deep.txt': u'Content does not matter',
+                    'deep.txt': 'Content does not matter',
                 },
-                'a.txt': u'Content of file A\nWith some newlines',
-                'b.txt': u'Content of file B without newline',
+                'a.txt': 'Content of file A\nWith some newlines',
+                'b.txt': 'Content of file B without newline',
             },
-            'c.txt': u'Content of file C\n',
+            'c.txt': 'Content of file C\n',
         }
 
         self.create_file_tree(self.tempdir, self.tree)

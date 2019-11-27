@@ -15,8 +15,8 @@ from aiida.common.links import LinkType
 
 __all__ = ('draw_children', 'draw_parents', 'format_call_graph')
 
-TREE_LAST_ENTRY = u'\u2514\u2500\u2500 '
-TREE_MIDDLE_ENTRY = u'\u251C\u2500\u2500 '
+TREE_LAST_ENTRY = '\u2514\u2500\u2500 '
+TREE_MIDDLE_ENTRY = '\u251C\u2500\u2500 '
 TREE_FIRST_ENTRY = TREE_MIDDLE_ENTRY
 
 
@@ -182,12 +182,12 @@ def calc_info(node):
     exit_status = node.exit_status
 
     if exit_status is not None:
-        string = u'{}<{}> {} [{}]'.format(process_label, node.pk, process_state, exit_status)
+        string = '{}<{}> {} [{}]'.format(process_label, node.pk, process_state, exit_status)
     else:
-        string = u'{}<{}> {}'.format(process_label, node.pk, process_state)
+        string = '{}<{}> {}'.format(process_label, node.pk, process_state)
 
     if isinstance(node, WorkChainNode) and node.stepper_state_info:
-        string += u' [{}]'.format(node.stepper_state_info)
+        string += ' [{}]'.format(node.stepper_state_info)
 
     return string
 
@@ -215,7 +215,7 @@ def build_call_graph(calc_node, info_fn=calc_info):
     return info_string
 
 
-def format_tree_descending(tree, prefix=u'', pos=-1):
+def format_tree_descending(tree, prefix='', pos=-1):
     """Format a descending tree."""
     # pylint: disable=too-many-branches
     text = []
@@ -226,22 +226,22 @@ def format_tree_descending(tree, prefix=u'', pos=-1):
         info = tree
 
     if pos == -1:
-        pre = u''
+        pre = ''
     elif pos == 0:
-        pre = u'{}{}'.format(prefix, TREE_FIRST_ENTRY)
+        pre = '{}{}'.format(prefix, TREE_FIRST_ENTRY)
     elif pos == 1:
-        pre = u'{}{}'.format(prefix, TREE_MIDDLE_ENTRY)
+        pre = '{}{}'.format(prefix, TREE_MIDDLE_ENTRY)
     else:
-        pre = u'{}{}'.format(prefix, TREE_LAST_ENTRY)
-    text.append(u'{}{}'.format(pre, info))
+        pre = '{}{}'.format(prefix, TREE_LAST_ENTRY)
+    text.append('{}{}'.format(pre, info))
 
     if isinstance(tree, tuple):
         _, value = tree
         num_entries = len(value)
         if pos in [-1, 2]:
-            new_prefix = u'{}    '.format(prefix)
+            new_prefix = '{}    '.format(prefix)
         else:
-            new_prefix = u'{}\u2502   '.format(prefix)
+            new_prefix = '{}\u2502   '.format(prefix)
         for i, entry in enumerate(value):
             if i == num_entries - 1:
                 pos = 2
@@ -251,4 +251,4 @@ def format_tree_descending(tree, prefix=u'', pos=-1):
                 pos = 1
             text.append(format_tree_descending(entry, new_prefix, pos))
 
-    return u'\n'.join(text)
+    return '\n'.join(text)

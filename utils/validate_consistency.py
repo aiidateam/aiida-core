@@ -159,11 +159,11 @@ def validate_verdi_documentation():
     block = []
     for name, command in sorted(verdi.commands.items()):
         short_help = command.help.split('\n')[0]
-        block.append(u'* :ref:`{name:}<verdi_{name:}>`:  {help:}\n'.format(name=name, help=short_help))
+        block.append('* :ref:`{name:}<verdi_{name:}>`:  {help:}\n'.format(name=name, help=short_help))
 
     # New block should start and end with an empty line after and before the literal block marker
-    block.insert(0, u'\n')
-    block.append(u'\n')
+    block.insert(0, '\n')
+    block.append('\n')
 
     replace_block_in_file(filepath_verdi_overview, overview_block_start_marker, overview_block_end_marker, block)
 
@@ -173,31 +173,31 @@ def validate_verdi_documentation():
     commands_block_end_marker = '.. END_OF_VERDI_COMMANDS_MARKER'
 
     # Generate the new block with the command help strings
-    header = u'Commands'
-    message = u'Below is a list with all available subcommands.'
-    block = [u'{}\n{}\n{}\n\n'.format(header, '=' * len(header), message)]
+    header = 'Commands'
+    message = 'Below is a list with all available subcommands.'
+    block = ['{}\n{}\n{}\n\n'.format(header, '=' * len(header), message)]
 
     for name, command in sorted(verdi.commands.items()):
         ctx = click.Context(command)
 
-        header_label = u'.. _verdi_{name:}:'.format(name=name)
-        header_string = u'``verdi {name:}``'.format(name=name)
-        header_underline = u'-' * len(header_string)
+        header_label = '.. _verdi_{name:}:'.format(name=name)
+        header_string = '``verdi {name:}``'.format(name=name)
+        header_underline = '-' * len(header_string)
 
         block.append(header_label + '\n\n')
         block.append(header_string + '\n')
         block.append(header_underline + '\n\n')
-        block.append(u'::\n\n')  # Mark the beginning of a literal block
+        block.append('::\n\n')  # Mark the beginning of a literal block
         for line in ctx.get_help().split('\n'):
             if line:
-                block.append(u'    {}\n'.format(line))
+                block.append('    {}\n'.format(line))
             else:
-                block.append(u'\n')
-        block.append(u'\n\n')
+                block.append('\n')
+        block.append('\n\n')
 
     # New block should start and end with an empty line after and before the literal block marker
-    block.insert(0, u'\n')
-    block.append(u'\n')
+    block.insert(0, '\n')
+    block.append('\n')
 
     replace_block_in_file(filepath_verdi_commands, commands_block_start_marker, commands_block_end_marker, block)
 
@@ -310,7 +310,7 @@ def update_environment_yml():
     environment_filename = 'environment.yml'
     file_path = os.path.join(ROOT_DIR, environment_filename)
     with io.open(file_path, 'w') as env_file:
-        env_file.write(u'# Usage: conda env create -n myenvname -f environment.yml python=3.6\n')
+        env_file.write('# Usage: conda env create -n myenvname -f environment.yml python=3.6\n')
         yaml.safe_dump(
             environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True
         )

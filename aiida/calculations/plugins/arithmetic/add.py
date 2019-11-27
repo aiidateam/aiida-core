@@ -106,4 +106,4 @@ class ArithmeticAddCalculation(CalcJob):
         :param input_y: the numeric node representing the right operand of the summation
         """
         with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
-            handle.write(u'{} {}\n'.format(input_x.value, input_y.value))
+            handle.write('{} {}\n'.format(input_x.value, input_y.value))

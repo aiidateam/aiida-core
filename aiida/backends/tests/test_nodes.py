@@ -479,8 +479,8 @@ class TestNodeBasic(AiidaTestCase):
 
         a = orm.Data()
 
-        file_content = u'some text ABCDE'
-        file_content_different = u'other values 12345'
+        file_content = 'some text ABCDE'
+        file_content_different = 'other values 12345'
 
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write(file_content)
@@ -575,8 +575,8 @@ class TestNodeBasic(AiidaTestCase):
         # create a folder structure to copy around
         tree_1 = os.path.join(directory, 'tree_1')
         os.makedirs(tree_1)
-        file_content = u'some text ABCDE'
-        file_content_different = u'other values 12345'
+        file_content = 'some text ABCDE'
+        file_content_different = 'other values 12345'
         with io.open(os.path.join(tree_1, 'file1.txt'), 'w', encoding='utf8') as fhandle:
             fhandle.write(file_content)
         os.mkdir(os.path.join(tree_1, 'dir1'))

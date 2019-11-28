@@ -192,13 +192,22 @@ class TestVerdiCodeCommands(AiidaTestCase):
         result = self.cli_runner.invoke(relabel, [str(self.code.pk), 'new_code@otherstuff'])
         self.assertIsNotNone(result.exception)
 
-    def test_delete_one(self):
+    def test_code_delete_one(self):
         result = self.cli_runner.invoke(delete, [str(self.code.pk)])
         self.assertIsNone(result.exception, result.output)
 
         with self.assertRaises(NotExistent):
             from aiida.orm import Code
             Code.get_from_string('code')
+
+    def test_code_delete_one_force(self):
+        result = self.cli_runner.invoke(delete, [str(self.code.pk), '--force'])
+        self.assertIsNone(result.exception, result.output)
+
+        with self.assertRaises(NotExistent):
+            from aiida.orm import Code
+            Code.get_from_string('code')
+
 
     def test_code_list(self):
         # set up second code 'code2'

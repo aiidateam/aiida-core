@@ -172,25 +172,25 @@ def show(code, verbose):
 
 @verdi_code.command()
 @arguments.CODES()
+@options.VERBOSE()
+@options.DRY_RUN()
+@options.FORCE()
 @with_dbenv()
-def delete(codes):
+def delete(codes, verbose, dry_run, force):
     """Delete a code.
 
-    Note that it is possible to delete a code only if it has not yet been used
-    as an input of a calculation, i.e., if it does not have outgoing links.
+    Note that codes are part of the data provenance, and deleting a code will delete all calculations using it.
     """
-    from aiida.common.exceptions import InvalidOperation
-    from aiida.orm import Node
+    from aiida.manage.database.delete.nodes import delete_nodes
 
-    for code in codes:
-        try:
-            pk = code.pk
-            full_label = code.full_label
-            Node.objects.delete(pk)  # pylint: disable=no-member
-        except InvalidOperation as exception:
-            echo.echo_error(str(exception))
-        else:
-            echo.echo_success('Code<{}> {} deleted'.format(pk, full_label))
+    verbosity = 1
+    if force:
+        verbosity = 0
+    elif verbose:
+        verbosity = 2
+
+    node_pks_to_delete = [code.pk for code in codes]
+    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force)
 
 
 @verdi_code.command()

@@ -80,18 +80,20 @@ def load_config(create=False):
     :rtype: :class:`~aiida.manage.configuration.config.Config`
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
-    import io
     import os
     from aiida.common import exceptions
     from .config import Config
     from .settings import AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME
 
+    filepath = os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
+
     if IN_RT_DOC_MODE:
         # The following is a dummy config.json configuration that it is used for the
         # proper compilation of the documentation on readthedocs.
         from aiida.manage.external.postgres import DEFAULT_DBINFO
+        import tempfile
         return Config(
-            '/dev/null', {
+            tempfile.mkstemp()[1], {
                 'default_profile': 'default',
                 'profiles': {
                     'default': {
@@ -110,22 +112,13 @@ def load_config(create=False):
             }
         )
 
-    filepath = os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
-
     if not os.path.isfile(filepath) and not create:
         raise exceptions.MissingConfigurationError('configuration file {} does not exist'.format(filepath))
-
-    # If it doesn't exist, just create the file
-    if not os.path.isfile(filepath):
-        from aiida.common import json
-        with io.open(filepath, 'ab') as handle:
-            json.dump({}, handle)
 
     try:
         config = Config.from_file(filepath)
     except ValueError:
         raise exceptions.ConfigurationError('configuration file {} contains invalid JSON'.format(filepath))
-    config.store()
 
     return config
 

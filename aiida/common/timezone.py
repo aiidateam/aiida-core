@@ -22,7 +22,14 @@ def get_current_timezone():
     :return: current timezone
     """
     from tzlocal import get_localzone
-    return get_localzone()
+    local = get_localzone()
+
+    if local.zone == 'local':
+        raise ValueError(
+            "Unable to detect name of local time zone. Please set 'TZ' environment variable, e.g."
+            " to 'Europe/Zurich'"
+        )
+    return local
 
 
 def now():
@@ -70,8 +77,10 @@ def make_aware(value, timezone=None, is_dst=None):
 
     if is_aware(value):
         raise ValueError('make_aware expects a naive datetime, got %s' % value)
+
     # This may be wrong around DST changes!
-    return value.replace(tzinfo=timezone)
+    # See http://pytz.sourceforge.net/#localized-times-and-date-arithmetic
+    return timezone.localize(value)
 
 
 def localtime(value, timezone=None):

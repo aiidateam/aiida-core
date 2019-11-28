@@ -20,7 +20,6 @@ from aiida.common import json
 
 from .options import get_option, parse_option, NO_DEFAULT
 from .profile import Profile
-from .settings import DEFAULT_UMASK, DEFAULT_CONFIG_INDENT_SIZE
 
 __all__ = ('Config',)
 
@@ -39,24 +38,30 @@ class Config(object):  # pylint: disable=too-many-public-methods
     def from_file(cls, filepath):
         """Instantiate a configuration object from the contents of a given file.
 
+        .. note:: if the filepath does not exist an empty file will be created with the default configuration.
+
         :param filepath: the absolute path to the configuration file
         :return: `Config` instance
         """
         from aiida.cmdline.utils import echo
         from .migrations import check_and_migrate_config, config_needs_migrating
 
-        with io.open(filepath, 'r', encoding='utf8') as handle:
-            config = json.load(handle)
+        try:
+            with io.open(filepath, 'r', encoding='utf8') as handle:
+                config = json.load(handle)
+        except (IOError, OSError):
+            config = Config(filepath, check_and_migrate_config({}))
+            config.store()
+        else:
+            # If the configuration file needs to be migrated first create a specific backup so it can easily be reverted
+            if config_needs_migrating(config):
+                echo.echo_warning('current configuration file `{}` is outdated and will be migrated'.format(filepath))
+                filepath_backup = cls._backup(filepath)
+                echo.echo_warning('original backed up to `{}`'.format(filepath_backup))
 
-        # If the configuration file needs to be migrated, first create a specific backup so it can easily be reverted
-        if config_needs_migrating(config):
-            echo.echo_warning('current configuration file `{}` is outdated and will be migrated'.format(filepath))
-            filepath_backup = cls._backup(filepath)
-            echo.echo_warning('original backed up to `{}`'.format(filepath_backup))
+            config = Config(filepath, check_and_migrate_config(config))
 
-        config = check_and_migrate_config(config)
-
-        return Config(filepath, config)
+        return config
 
     @classmethod
     def _backup(cls, filepath):
@@ -73,11 +78,7 @@ class Config(object):  # pylint: disable=too-many-public-methods
         while not filepath_backup or os.path.isfile(filepath_backup):
             filepath_backup = '{}.{}'.format(filepath, timezone.now().strftime('%Y%m%d-%H%M%S.%f'))
 
-        try:
-            umask = os.umask(DEFAULT_UMASK)
-            shutil.copy(filepath, filepath_backup)
-        finally:
-            os.umask(umask)
+        shutil.copy(filepath, filepath_backup)
 
         return filepath_backup
 
@@ -366,16 +367,45 @@ class Config(object):  # pylint: disable=too-many-public-methods
         return value
 
     def store(self):
-        """Write the current config to file."""
-        if os.path.isfile(self.filepath):
-            self._backup(self.filepath)
+        """Write the current config to file.
+
+        .. note:: if the configuration file already exists on disk and its contents differ from those in memory, a
+            backup of the original file on disk will be created before overwriting it.
+
+        :return: self
+        """
+        import tempfile
+        from aiida.common.files import md5_from_filelike, md5_file
+
+        # If the filepath of this configuration does not yet exist, simply write it.
+        if not os.path.isfile(self.filepath):
+            with io.open(self.filepath, 'wb') as handle:
+                self._write(handle)
+            return self
+
+        # Otherwise, we write the content to a temporary file and compare its md5 checksum with the current config on
+        # disk. When the checksums differ, we first create a backup and only then overwrite the existing file.
+        with tempfile.NamedTemporaryFile() as handle:
+            self._write(handle)
+            handle.seek(0)
+
+            if md5_from_filelike(handle) != md5_file(self.filepath):
+                self._backup(self.filepath)
+
+            shutil.copy(handle.name, self.filepath)
+
+        return self
+
+    def _write(self, filelike):
+        """Write the contents of `self.dictionary` to the given file handle.
+
+        :param filelike: the filelike object to write the current configuration to
+        """
+        from .settings import DEFAULT_UMASK, DEFAULT_CONFIG_INDENT_SIZE
 
         umask = os.umask(DEFAULT_UMASK)
 
         try:
-            with io.open(self.filepath, 'wb') as handle:
-                json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
+            json.dump(self.dictionary, filelike, indent=DEFAULT_CONFIG_INDENT_SIZE)
         finally:
             os.umask(umask)
-
-        return self

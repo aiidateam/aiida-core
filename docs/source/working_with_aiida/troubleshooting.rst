@@ -1,12 +1,3 @@
-Some tricks
-===========
-
-.. toctree::
-  :maxdepth: 1
-
-  ../setup/ssh_proxycommand
-
-
 Increasing the debug level
 ==========================
 
@@ -55,33 +46,29 @@ in the ``options`` row.
 
 .. _repo_troubleshooting:
 
-Tips to ease the life of the hard drive (for large databases)
-=============================================================
+AiiDA performance tuning
+========================
 
-Those tips are useful when your database is very large, i.e. several hundreds of
-thousands of nodes or more. With such large databases the hard drive
-may be constantly working and the computer slowed down a lot. Below are some
-solutions to take care of the most typical reasons.
+While AiiDA supports running hundreds of thousands of calculations and graphs with millions of nodes, scaling out may put increased load on your CPU and disk.
+There are a couple of things you can do in order to keep AiiDA running smoothly:
 
-Repository backup
------------------
+ 1. :ref:`Move the Postgresql database<move_postgresql>` to a fast disk (SSD), ideally on a large partition.
 
-The backup of the repository takes an extensively long time if it is done through
-a standard rsync or backup software, since it contains as many folders as the number
-of nodes (and each folder can contain many files!).
-A solution is to use instead the incremental
-backup described in the :ref:`repository backup section<repository_backup>`.
+ 2. Use AiiDA's tools for making :ref:`efficient incremental backups<repository_backup>` of the file repository.
+
+ 3. Your operating system may be indexing the file repository. :ref:`Disable this<disable_repo_indexing>`.
+
+ 4. If ``verdi daemon status`` shows the daemon worker(s) constantly at high CPU usage, use ``verdi daemon incr X`` to add ``X`` daemon workers.
+    Don't use more workers than CPU cores.
 
 
-mlocate cron job
-----------------
+Various tips & tricks
+=====================
 
-Under typical Linux distributions, there is a cron job (called
-``updatedb.mlocate``) running every day to update a database of files and
-folders -- this is to be used by the ``locate`` command. This might become
-problematic since the repository contains many folders and
-will be scanned everyday. The net effect is a hard drive almost constantly
-working.
+.. toctree::
+  :maxdepth: 1
 
-To avoid this issue, edit as root the file ``/etc/updatedb.conf``
-and put in ``PRUNEPATHS`` the name of the repository folder.
+  tips/ssh_proxycommand
+  tips/move_db
+  tips/repo_indexing
+

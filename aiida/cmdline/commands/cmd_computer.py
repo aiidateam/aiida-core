@@ -53,24 +53,19 @@ def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argum
 
 
 def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=unused-argument
-    """
-    Internal test to check if it is possible to check the queue state.
+    """Internal test to check if it is possible to check the queue state.
 
     :param transport: an open transport
     :param scheduler: the corresponding scheduler class
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
-    :return: True if the test succeeds, False if it fails.
+    :return: tuple of boolean indicating success or failure and an optional string message
     """
-    echo.echo('> Getting job list...')
     found_jobs = scheduler.get_jobs(as_dict=True)
-    echo.echo('  [{} jobs found in the queue]'.format(len(found_jobs)))
-    click.secho('  [OK]', fg=echo.COLORS['success'], bold=echo.BOLD)
-    return True
+    return True, '{} jobs found in the queue'.format(len(found_jobs))
 
 
 def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pylint: disable=unused-argument
-    """
-    Test that there is no unexpected output from the connection.
+    """Test that there is no unexpected output from the connection.
 
     This can happen if e.g. there is some spurious command in the
     .bashrc or .bash_profile that is not guarded in case of non-interactive
@@ -79,17 +74,16 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pyli
     :param transport: an open transport
     :param scheduler: the corresponding scheduler class
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
-    :return: True if the test succeeds, False if it fails.
+    :return: tuple of boolean indicating success or failure and an optional string message
     """
     # Execute a command that should not return any error
-    echo.echo('> Checking that no spurious output is present...')
     retval, stdout, stderr = transport.exec_command_wait('echo -n')
     if retval != 0:
-        echo.echo_error("* ERROR! The command 'echo -n' returned a non-zero return code ({})!".format(retval))
-        return False
+        return False, 'The command `echo -n` returned a non-zero return code ({})'.format(retval)
+
     if stdout:
-        echo.echo_error(
-            u"""* ERROR! There is some spurious output in the standard output,
+        return False, u"""
+There is some spurious output in the standard output,
 that we report below between the === signs:
 =========================================================
 {}
@@ -101,11 +95,10 @@ shells, see comments in issue #1980 on GitHub:
 https://github.com/aiidateam/aiida-core/issues/1890
 (and in the AiiDA documentation, linked from that issue)
 """.format(stdout)
-        )
-        return False
+
     if stderr:
-        echo.echo_error(
-            u"""* ERROR! There is some spurious output in the stderr,
+        return u"""
+There is some spurious output in the stderr,
 that we report below between the === signs:
 =========================================================
 {}
@@ -116,12 +109,21 @@ remove the code, but just to disable it for non-interactive
 shells, see comments in issue #1980 on GitHub:
 https://github.com/aiidateam/aiida-core/issues/1890
 (and in the AiiDA documentation, linked from that issue)
-""".format(stderr)
-        )
-        return False
+"""
 
-    click.secho('  [OK]', fg=echo.COLORS['success'], bold=echo.BOLD)
-    return True
+    return True, None
+
+
+def _computer_get_remote_username(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+    """Internal test to check if it is possible to determine the username on the remote.
+
+    :param transport: an open transport
+    :param scheduler: the corresponding scheduler class
+    :param authinfo: the AuthInfo object
+    :return: tuple of boolean indicating success or failure and an optional string message
+    """
+    remote_user = transport.whoami()
+    return True, remote_user
 
 
 def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disable=unused-argument
@@ -134,19 +136,14 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     :param transport: an open transport
     :param scheduler: the corresponding scheduler class
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
-    :return: True if the test succeeds, False if it fails.
+    :return: tuple of boolean indicating success or failure and an optional string message
     """
     import tempfile
     import datetime
     import os
 
     file_content = "Test from 'verdi computer test' on {}".format(datetime.datetime.now().isoformat())
-    echo.echo('> Creating a temporary file in the work directory...')
-    echo.echo('  -> Getting the remote user name...')
-    remote_user = transport.whoami()
-    echo.echo('     [remote username: {}]'.format(remote_user))
-    workdir = authinfo.get_workdir().format(username=remote_user)
-    echo.echo('  -> Checking/creating work directory: {}'.format(workdir))
+    workdir = authinfo.get_workdir().format(username=transport.whoami())
 
     try:
         transport.chdir(workdir)
@@ -156,43 +153,34 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
 
     with tempfile.NamedTemporaryFile(mode='w+') as tempf:
         fname = os.path.split(tempf.name)[1]
-        echo.echo('  -> Creating the file {}...'.format(fname))
         remote_file_path = os.path.join(workdir, fname)
         tempf.write(file_content)
         tempf.flush()
         transport.putfile(tempf.name, remote_file_path)
-    echo.echo('  -> Checking if the file has been created...')
-    if not transport.path_exists(remote_file_path):
-        echo.echo_error('* ERROR! The file was not found!')
-        return False
 
-    echo.echo('     [OK]')
-    echo.echo('  -> Retrieving the file and checking its content...')
+    if not transport.path_exists(remote_file_path):
+        return False, 'failed to create the file `{}` on the remote'.format(remote_file_path)
 
     handle, destfile = tempfile.mkstemp()
     os.close(handle)
+
     try:
         transport.getfile(remote_file_path, destfile)
         with io.open(destfile, encoding='utf8') as dfile:
             read_string = dfile.read()
-        echo.echo('     [Retrieved]')
-        if read_string != file_content:
-            echo.echo_error('* ERROR! The file content is different from what was expected!')
-            echo.echo('** Expected:')
-            echo.echo(file_content)
-            echo.echo('** Found:')
-            echo.echo(read_string)
-            return False
 
-        echo.echo('     [Content OK]')
+        if read_string != file_content:
+            message = 'retrieved file content is different from what was expected'
+            message += '\n  Expected: {}'.format(file_content)
+            message += '\n  Retrieved: {}'.format(read_string)
+            return False, message
+
     finally:
         os.remove(destfile)
 
-    echo.echo('  -> Removing the file...')
     transport.remove(remote_file_path)
-    echo.echo('     [Deleted successfully]')
-    click.secho('  [OK]', fg=echo.COLORS['success'], bold=echo.BOLD)
-    return True
+
+    return True, None
 
 
 def get_parameter_default(parameter, ctx):
@@ -478,8 +466,8 @@ def computer_test(user, print_traceback, computer):
     to perform other tests.
     """
     import traceback
-    from aiida.common.exceptions import NotExistent
     from aiida import orm
+    from aiida.common.exceptions import NotExistent
 
     # Set a user automatically if one is not specified in the command line
     if user is None:
@@ -503,45 +491,70 @@ def computer_test(user, print_traceback, computer):
     num_failures = 0
     num_tests = 0
 
+    tests = {
+        _computer_test_no_unexpected_output: 'Checking for spurious output',
+        _computer_test_get_jobs: 'Getting number of jobs from scheduler',
+        _computer_get_remote_username: 'Determining remote user name',
+        _computer_create_temp_file: 'Creating and deleting temporary file'
+    }
+
     try:
-        echo.echo('> Testing connection')
+        echo.echo('* Opening connection... ', nl=False)
+
         with transport:
-            click.secho('  [OK]', fg=echo.COLORS['success'], bold=echo.BOLD)
             num_tests += 1
 
+            echo.echo_highlight('[OK]', color='success')
+
             scheduler.set_transport(transport)
-            for test in [_computer_test_no_unexpected_output, _computer_test_get_jobs, _computer_create_temp_file]:
+
+            for test, test_label in tests.items():
+
+                echo.echo('* {}... '.format(test_label), nl=False)
                 num_tests += 1
                 try:
-                    succeeded = test(transport=transport, scheduler=scheduler, authinfo=authinfo)
-                # pylint:disable=broad-except
-                except Exception as error:
-                    echo.echo_error('* The test raised an exception!')
-                    if print_traceback:
-                        echo.echo('** Full traceback:')
-                        # Indent
-                        echo.echo('\n'.join(['   {}'.format(l) for l in traceback.format_exc().splitlines()]))
-                    else:
-                        echo.echo('** {}: {}'.format(error.__class__.__name__, error))
-                        echo.echo('** (use the --print-traceback option to see the full traceback)')
-                    succeeded = False
+                    success, message = test(transport=transport, scheduler=scheduler, authinfo=authinfo)
+                except Exception as exception:  # pylint:disable=broad-except
+                    success = False
+                    message = '{}: {}'.format(exception.__class__.__name__, str(exception))
 
-                if not succeeded:
+                    if print_traceback:
+                        message += '\n  Full traceback:\n'
+                        message += '\n'.join(['  {}'.format(l) for l in traceback.format_exc().splitlines()])
+                    else:
+                        message += '\n  Use the `--print-traceback` option to see the full traceback.'
+
+                if not success:
                     num_failures += 1
+                    if message:
+                        echo.echo_highlight('[Failed]: ', color='error', nl=False)
+                        echo.echo(message)
+                    else:
+                        echo.echo_highlight('[Failed]', color='error')
+                else:
+                    if message:
+                        echo.echo_highlight('[OK]: ', color='success', nl=False)
+                        echo.echo(message)
+                    else:
+                        echo.echo_highlight('[OK]', color='success')
 
         if num_failures:
-            echo.echo_warning('Some tests failed! ({} out of {} failed)'.format(num_failures, num_tests))
+            echo.echo_warning('{} out of {} tests failed'.format(num_failures, num_tests))
         else:
-            echo.echo_success('All {} tests succeeded)'.format(num_tests))
-    except Exception as error:  # pylint:disable=broad-except
-        echo.echo_error('** Error while trying to connect to the computer! Cannot perform following tests, stopping.')
+            echo.echo_success('all {} tests succeeded'.format(num_tests))
+
+    except Exception as exception:  # pylint:disable=broad-except
+        echo.echo_highlight('[FAILED]: ', color='error', nl=False)
+        message = 'Error while trying to connect to the computer'
+
         if print_traceback:
-            echo.echo('** Full traceback:')
-            echo.echo('\n'.join(['   {}'.format(l) for l in traceback.format_exc().splitlines()]))
+            message += '\n  Full traceback:\n'
+            message += '\n'.join(['  {}'.format(l) for l in traceback.format_exc().splitlines()])
         else:
-            echo.echo('{}: {}'.format(error.__class__.__name__, error))
-            echo.echo('(use the --print-traceback option to see the full traceback)')
-        succeeded = False
+            message += '\n  Use the `--print-traceback` option to see the full traceback.'
+
+        echo.echo(message)
+        echo.echo_warning('{} out of {} tests failed'.format(1, num_tests))
 
 
 @verdi_computer.command('delete')

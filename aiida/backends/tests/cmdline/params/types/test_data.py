@@ -26,7 +26,7 @@ class TestDataParamType(AiidaTestCase):
         that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
         the rules implemented to solve ambiguities that arise when determing the identifier type
         """
-        super(TestDataParamType, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
         cls.param = DataParamType()
         cls.entity_01 = Data().store()

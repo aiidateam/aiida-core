@@ -196,7 +196,7 @@ class TestVerdiData(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiData, cls).setUpClass()
+        super().setUpClass()
 
     def setUp(self):
         pass
@@ -226,7 +226,7 @@ class TestVerdiDataArray(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiDataArray, cls).setUpClass()
+        super().setUpClass()
 
     def setUp(self):
         self.a = ArrayData()
@@ -312,7 +312,7 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiDataBands, cls).setUpClass()
+        super().setUpClass()
         cls.ids = cls.create_structure_bands()
 
     def setUp(self):
@@ -349,7 +349,7 @@ class TestVerdiDataDict(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiDataDict, cls).setUpClass()
+        super().setUpClass()
 
     def setUp(self):
         self.p = Dict()
@@ -379,7 +379,7 @@ class TestVerdiDataRemote(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiDataRemote, cls).setUpClass()
+        super().setUpClass()
         user = orm.User.objects.get_default()
         orm.AuthInfo(cls.computer, user).store()
 
@@ -498,7 +498,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiDataTrajectory, cls).setUpClass()
+        super().setUpClass()
         orm.Computer(
             name='comp',
             hostname='localhost',
@@ -578,7 +578,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiDataStructure, cls).setUpClass()
+        super().setUpClass()
         orm.Computer(name='comp',
                      hostname='localhost',
                      transport_type='local',
@@ -741,7 +741,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiDataCif, cls).setUpClass()
+        super().setUpClass()
         orm.Computer(
             name='comp',
             hostname='localhost',
@@ -752,7 +752,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
         cls.ids = cls.create_cif_data()
 
     def setUp(self):
-        super(TestVerdiDataCif, self).setUp()
+        super().setUp()
         self.comp = self.computer
         self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
@@ -812,10 +812,10 @@ class TestVerdiDataSinglefile(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiDataSinglefile, cls).setUpClass()
+        super().setUpClass()
 
     def setUp(self):
-        super(TestVerdiDataSinglefile, self).setUp()
+        super().setUp()
         self.comp = self.computer
         self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
@@ -844,7 +844,7 @@ class TestVerdiDataUpf(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestVerdiDataUpf, cls).setUpClass()
+        super().setUpClass()
 
     def setUp(self):
         self.filepath_pseudos = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'fixtures', 'pseudos')

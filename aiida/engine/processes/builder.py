@@ -184,7 +184,7 @@ class ProcessBuilder(ProcessBuilderNamespace):
         """
         self._process_class = process_class
         self._process_spec = self._process_class.spec()
-        super(ProcessBuilder, self).__init__(self._process_spec.inputs)
+        super().__init__(self._process_spec.inputs)
 
     @property
     def process_class(self):

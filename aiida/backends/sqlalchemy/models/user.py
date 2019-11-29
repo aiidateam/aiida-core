@@ -29,7 +29,7 @@ class DbUser(Base):
         self.first_name = first_name
         self.last_name = last_name
         self.institution = institution
-        super(DbUser, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def __str__(self):
         return self.email

@@ -21,7 +21,7 @@ class TestMigrateV02toV03(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestMigrateV02toV03, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
         # Utility helpers
         cls.external_archive = {'filepath': 'archives', 'external_module': 'aiida-export-migration-tests'}

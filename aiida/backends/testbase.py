@@ -205,12 +205,12 @@ class AiidaPostgresTestCase(AiidaTestCase):
         """Setup the PGTest postgres test cluster."""
         from pgtest.pgtest import PGTest
         cls.pg_test = PGTest()
-        super(AiidaPostgresTestCase, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
         """Close the PGTest postgres test cluster."""
-        super(AiidaPostgresTestCase, cls).tearDownClass(*args, **kwargs)
+        super().tearDownClass(*args, **kwargs)
         cls.pg_test.close()
 
 

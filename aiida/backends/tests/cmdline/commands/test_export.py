@@ -45,7 +45,7 @@ class TestVerdiExport(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiExport, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         from aiida import orm
 
         cls.computer = orm.Computer(

@@ -80,7 +80,7 @@ class ConvertIterator(Iterator, Sized):
     """
 
     def __init__(self, backend_iterator):
-        super(ConvertIterator, self).__init__()
+        super().__init__()
         self._backend_iterator = backend_iterator
         self.generator = self._genfunction()
 

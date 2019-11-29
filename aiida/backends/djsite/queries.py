@@ -14,7 +14,7 @@ from aiida.backends.general.abstractqueries import AbstractQueryManager
 class DjangoQueryManager(AbstractQueryManager):
 
     def __init__(self, backend):
-        super(DjangoQueryManager, self).__init__(backend)
+        super().__init__(backend)
 
     def get_creation_statistics(
             self,

@@ -37,7 +37,7 @@ class TestConfigMigration(unittest.TestCase):
             return json.load(handle)
 
     def setUp(self):
-        super(TestConfigMigration, self).setUp()
+        super().setUp()
         self.maxDiff = None  # pylint: disable=invalid-name
 
     def test_check_and_migrate(self):

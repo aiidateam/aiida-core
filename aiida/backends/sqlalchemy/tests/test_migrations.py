@@ -46,7 +46,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         """
         Prepare the test class with the alembivc configuration
         """
-        super(TestMigrationsSQLA, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.manager = manager.SqlaBackendManager()
 
     def setUp(self):
@@ -54,7 +54,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         Go to the migrate_from revision, apply setUpBeforeMigration, then
         run the migration.
         """
-        super(TestMigrationsSQLA, self).setUp()
+        super().setUp()
         from aiida.orm import autogroup
 
         self.current_autogroup = autogroup.current_autogroup
@@ -100,7 +100,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         from aiida.orm import autogroup
         self._reset_database_and_schema()
         autogroup.current_autogroup = self.current_autogroup
-        super(TestMigrationsSQLA, self).tearDown()
+        super().tearDown()
 
     def setUpBeforeMigration(self):  # pylint: disable=invalid-name
         """
@@ -649,7 +649,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
             finally:
                 session.close()
 
-        super(TestDbLogMigrationRecordCleaning, self).tearDown()
+        super().tearDown()
 
     def setUpBeforeMigration(self):
         # pylint: disable=too-many-locals,too-many-statements

@@ -61,7 +61,7 @@ class HTMLGetLinksParser(HTMLParser):
     def __init__(self, filter_extension=None):  # pylint: disable=super-on-old-class
         self.filter_extension = filter_extension
         self.links = []
-        super(HTMLGetLinksParser, self).__init__()
+        super().__init__()
 
     def handle_starttag(self, tag, attrs):
         """

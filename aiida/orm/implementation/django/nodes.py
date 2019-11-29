@@ -58,7 +58,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param mtime: The modification time as datetime object
         """
         # pylint: disable=too-many-arguments
-        super(DjangoNode, self).__init__(backend)
+        super().__init__(backend)
 
         arguments = {
             'user': user.dbmodel,

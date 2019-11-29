@@ -46,7 +46,7 @@ class TestManagerError(Exception):
     """Raised by TestManager in situations that may lead to inconsistent behaviour."""
 
     def __init__(self, msg):
-        super(TestManagerError, self).__init__()
+        super().__init__()
         self.msg = msg
 
     def __str__(self):

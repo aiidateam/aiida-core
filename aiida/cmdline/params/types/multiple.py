@@ -19,7 +19,7 @@ class MultipleValueParamType(click.ParamType):
     """
 
     def __init__(self, param_type):
-        super(MultipleValueParamType, self).__init__()
+        super().__init__()
         self._param_type = param_type
 
         if hasattr(param_type, 'name'):

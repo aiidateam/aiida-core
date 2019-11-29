@@ -20,7 +20,7 @@ class TestVerdiHelpCommand(AiidaTestCase):
     """Tests for `verdi help`."""
 
     def setUp(self):
-        super(TestVerdiHelpCommand, self).setUp()
+        super().setUp()
         self.cli_runner = CliRunner()
 
     @with_temporary_config_instance

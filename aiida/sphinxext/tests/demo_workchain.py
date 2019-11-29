@@ -23,7 +23,7 @@ class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
 
     @classmethod
     def define(cls, spec):
-        super(DemoWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.input('x', valid_type=Float, help='First input argument.')
         spec.input('y.z', valid_type=Int, help='Input in a separate namespace.')

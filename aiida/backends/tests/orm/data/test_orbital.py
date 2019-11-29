@@ -21,7 +21,7 @@ class TestOrbitalData(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestOrbitalData, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
         cls.my_real_hydrogen_dict = {
             'angular_momentum': -3,

@@ -543,7 +543,7 @@ class Capturing:
 
     def __init__(self, capture_stderr=False):
         self.stdout_lines = list()
-        super(Capturing, self).__init__()
+        super().__init__()
 
         self._capture_stderr = capture_stderr
         if self._capture_stderr:

@@ -56,7 +56,7 @@ class ConfigFileOption(OverridableOption):
         :param kwargs: default keyword arguments to be used that can be overridden in the call
         """
         kwargs.update({'provider': yaml_config_file_provider, 'implicit': False})
-        super(ConfigFileOption, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def __call__(self, **kwargs):
         """

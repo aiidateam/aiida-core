@@ -40,7 +40,7 @@ class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment
         :param mtime: The modification time as datetime object
         :return: a Comment object associated to the given node and user
         """
-        super(DjangoComment, self).__init__(backend)
+        super().__init__(backend)
         lang.type_check(user, users.DjangoUser)  # pylint: disable=no-member
 
         arguments = {
@@ -68,7 +68,7 @@ class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment
             raise exceptions.ModificationNotAllowed('The corresponding node and/or user are not stored')
 
         with suppress_auto_now([(models.DbComment, ['mtime'])]) if self.mtime else EmptyContextManager():
-            super(DjangoComment, self).store()
+            super().store()
 
     @property
     def ctime(self):

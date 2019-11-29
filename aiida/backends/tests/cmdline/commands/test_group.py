@@ -21,7 +21,7 @@ class TestVerdiGroup(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiGroup, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         for group in ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4']:
             orm.Group(label=group).store()
 

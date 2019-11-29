@@ -18,7 +18,7 @@ class TestDict(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestDict, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.dictionary = {'value': 1, 'nested': {'dict': 'ionary'}}
         cls.node = Dict(dict=cls.dictionary)
 

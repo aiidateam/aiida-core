@@ -26,7 +26,7 @@ class TestExportFileMigration(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """Add variables (once) to be used by all tests"""
-        super(TestExportFileMigration, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
         # Known export file content used for checks
         cls.node_count = 25
@@ -60,7 +60,7 @@ class TestExportFileMigration(AiidaTestCase):
 
     def setUp(self):
         """Reset database before each test"""
-        super(TestExportFileMigration, self).setUp()
+        super().setUp()
         self.reset_database()
 
     def test_migrate_recursively(self):

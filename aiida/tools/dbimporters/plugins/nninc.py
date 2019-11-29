@@ -120,7 +120,7 @@ class NnincSearchResults(DbSearchResults):
     _base_url = 'http://nninc.cnf.cornell.edu/psp_files/'
 
     def __init__(self, results):
-        super(NnincSearchResults, self).__init__(results)
+        super().__init__(results)
         self._return_class = NnincEntry
 
     def __len__(self):
@@ -155,7 +155,7 @@ class NnincEntry(UpfEntry):
         :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincEntry`, related
         to the supplied URI.
         """
-        super(NnincEntry, self).__init__(db_name='NNIN/C Pseudopotential Virtual Vault',
+        super().__init__(db_name='NNIN/C Pseudopotential Virtual Vault',
                                          db_uri='http://nninc.cnf.cornell.edu',
                                          uri=uri,
                                          **kwargs)

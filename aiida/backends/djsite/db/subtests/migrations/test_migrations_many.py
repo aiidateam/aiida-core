@@ -458,7 +458,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         DbNode.objects.all().delete()  # pylint: disable=no-member
         DbWorkflow.objects.all().delete()  # pylint: disable=no-member
         DbUser.objects.all().delete()  # pylint: disable=no-member
-        super(TestDbLogMigrationRecordCleaning, self).tearDown()
+        super().tearDown()
 
     def test_dblog_calculation_node(self):
         """

@@ -32,7 +32,7 @@ user_2 = {
 class TestVerdiUserCommand(AiidaTestCase):
 
     def setUp(self):
-        super(TestVerdiUserCommand, self).setUp()
+        super().setUp()
 
         created, user = orm.User.objects.get_or_create(email=user_1['email'])
         for key, value in user_1.items():

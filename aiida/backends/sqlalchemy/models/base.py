@@ -47,12 +47,12 @@ class _AiidaQuery(orm.Query):
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
-        super(_AiidaQuery, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def __iter__(self):
         from aiida.orm.implementation.sqlalchemy import convert
 
-        iterator = super(_AiidaQuery, self).__iter__()
+        iterator = super().__iter__()
         for result in iterator:
             # Allow the use of with_entities
             if issubclass(type(result), Model):

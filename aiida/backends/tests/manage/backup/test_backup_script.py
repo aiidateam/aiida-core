@@ -59,11 +59,11 @@ class TestBackupScriptUnit(AiidaTestCase):
         '"backup_dir": "/scratch/./aiida_user////backup//"}'
 
     def setUp(self):
-        super(TestBackupScriptUnit, self).setUp()
+        super().setUp()
         self._backup_setup_inst = Backup('', 2)
 
     def tearDown(self):
-        super(TestBackupScriptUnit, self).tearDown()
+        super().tearDown()
         self._backup_setup_inst = None
 
     def test_loading_basic_params_from_file(self):

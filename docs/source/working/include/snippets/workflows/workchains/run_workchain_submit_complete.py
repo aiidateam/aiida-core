@@ -5,7 +5,7 @@ class SomeWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(SomeWorkChain, cls).define(spec)
+        super().define(spec)
         spec.outline(
             cls.submit_workchain,
             cls.inspect_workchain,

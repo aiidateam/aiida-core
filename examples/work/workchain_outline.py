@@ -21,7 +21,7 @@ class OutlineWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(OutlineWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('a', valid_type=Int)
         spec.outline(
             cls.setup,

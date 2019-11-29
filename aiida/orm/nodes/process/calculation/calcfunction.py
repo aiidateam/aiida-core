@@ -36,7 +36,7 @@ class CalcFunctionNode(FunctionCalculationMixin, CalculationNode):
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        super(CalcFunctionNode, self).validate_outgoing(target, link_type, link_label)
+        super().validate_outgoing(target, link_type, link_label)
         if link_type is LinkType.CREATE and target.is_stored:
             raise ValueError(
                 'trying to return an already stored Data node from a @calcfunction, however, @calcfunctions cannot '

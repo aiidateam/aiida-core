@@ -22,7 +22,7 @@ class TestNode(AiidaTestCase):
     """Tests for generic node functionality."""
 
     def setUp(self):
-        super(TestNode, self).setUp()
+        super().setUp()
         self.user = User.objects.get_default()
 
     def test_repository_garbage_collection(self):
@@ -49,7 +49,7 @@ class TestNodeAttributesExtras(AiidaTestCase):
     """Test for node attributes and extras."""
 
     def setUp(self):
-        super(TestNodeAttributesExtras, self).setUp()
+        super().setUp()
         self.node = Data()
 
     def test_attributes(self):
@@ -366,7 +366,7 @@ class TestNodeLinks(AiidaTestCase):
     """Test for linking from and to Node."""
 
     def setUp(self):
-        super(TestNodeLinks, self).setUp()
+        super().setUp()
         self.node_source = CalculationNode()
         self.node_target = Data()
 

@@ -62,7 +62,7 @@ class TemplatereplacerCalculation(CalcJob):
     @classmethod
     def define(cls, spec):
         # yapf: disable
-        super(TemplatereplacerCalculation, cls).define(spec)
+        super().define(spec)
         spec.input('metadata.options.parser_name', valid_type=str, default='templatereplacer.doubler',
             non_db=True)
         spec.input('template', valid_type=orm.Dict,

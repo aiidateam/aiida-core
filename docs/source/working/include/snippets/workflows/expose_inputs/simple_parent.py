@@ -7,7 +7,7 @@ class SimpleParentWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(SimpleParentWorkChain, cls).define(spec)
+        super().define(spec)
         spec.expose_inputs(ChildWorkChain)
         spec.expose_outputs(ChildWorkChain)
         spec.outline(cls.run_child, cls.finalize)

@@ -24,12 +24,12 @@ class TestBackendNode(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestBackendNode, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.computer = cls.computer.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
         cls.user = cls.backend.users.create(email='tester@localhost').store()
 
     def setUp(self):
-        super(TestBackendNode, self).setUp()
+        super().setUp()
         self.node_type = ''
         self.node_label = 'label'
         self.node_description = 'description'

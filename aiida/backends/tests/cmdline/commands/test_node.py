@@ -30,7 +30,7 @@ class TestVerdiNode(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiNode, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
         node = orm.Data()
 
@@ -193,7 +193,7 @@ class TestVerdiGraph(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiGraph, cls).setUpClass()
+        super().setUpClass()
         from aiida.orm import Data
 
         cls.node = Data().store()
@@ -414,7 +414,7 @@ class TestVerdiRehash(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiRehash, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         from aiida.orm import Data, Bool, Float, Int
 
         cls.node_base = Data().store()

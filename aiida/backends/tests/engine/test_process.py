@@ -28,18 +28,18 @@ class NameSpacedProcess(Process):
 
     @classmethod
     def define(cls, spec):
-        super(NameSpacedProcess, cls).define(spec)
+        super().define(spec)
         spec.input('some.name.space.a', valid_type=orm.Int)
 
 
 class TestProcessNamespace(AiidaTestCase):
 
     def setUp(self):
-        super(TestProcessNamespace, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestProcessNamespace, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_namespaced_process(self):
@@ -75,25 +75,25 @@ class ProcessStackTest(Process):
 
     @override
     def on_create(self):
-        super(ProcessStackTest, self).on_create()
+        super().on_create()
         self._thread_id = threading.current_thread().ident
 
     @override
     def on_stop(self):
         # The therad must match the one used in on_create because process
         # stack is using thread local storage to keep track of who called who
-        super(ProcessStackTest, self).on_stop()
+        super().on_stop()
         assert self._thread_id is threading.current_thread().ident
 
 
 class TestProcess(AiidaTestCase):
 
     def setUp(self):
-        super(TestProcess, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestProcess, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_process_stack(self):
@@ -246,7 +246,7 @@ class TestProcess(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(TestProcess, cls).define(spec)
+                super().define(spec)
                 spec.input_namespace('namespace', valid_type=orm.Int, dynamic=True)
                 spec.output_namespace('namespace', valid_type=orm.Int, dynamic=True)
 
@@ -268,7 +268,7 @@ class TestProcess(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(TestProcess, cls).define(spec)
+                super().define(spec)
                 spec.input('add_outputs', valid_type=orm.Bool, default=orm.Bool(False))
                 spec.output_namespace('integer.namespace', valid_type=orm.Int, dynamic=True)
                 spec.output('required_string', valid_type=orm.Str, required=True)

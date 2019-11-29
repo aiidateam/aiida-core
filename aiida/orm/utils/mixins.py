@@ -137,7 +137,7 @@ class Sealable:
         if self.is_sealed:
             raise exceptions.ModificationNotAllowed('Cannot add a link to a sealed node')
 
-        super(Sealable, self).validate_incoming(source, link_type=link_type, link_label=link_label)
+        super().validate_incoming(source, link_type=link_type, link_label=link_label)
 
     def validate_outgoing(self, target, link_type, link_label):
         """Validate adding a link of the given type from ourself to a given node.
@@ -152,7 +152,7 @@ class Sealable:
         if self.is_sealed:
             raise exceptions.ModificationNotAllowed('Cannot add a link from a sealed node')
 
-        super(Sealable, self).validate_outgoing(target, link_type=link_type, link_label=link_label)
+        super().validate_outgoing(target, link_type=link_type, link_label=link_label)
 
     @property
     def is_sealed(self):

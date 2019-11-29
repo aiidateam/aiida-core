@@ -25,7 +25,7 @@ class Only42IntParamType(IntParamType):
     name = 'only42int'
 
     def convert(self, value, param, ctx):
-        newval = super(Only42IntParamType, self).convert(value, param, ctx)
+        newval = super().convert(value, param, ctx)
         if newval != 42:
             self.fail('Type validation: invalid, should be 42')
         return newval

@@ -26,7 +26,7 @@ class TestExponentialBackoffRetry(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """Set up a simple authinfo and for later use."""
-        super(TestExponentialBackoffRetry, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.authinfo = orm.AuthInfo(computer=cls.computer, user=orm.User.objects.get_default())
         cls.authinfo.store()
 

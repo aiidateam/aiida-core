@@ -27,13 +27,13 @@ class TestConfigDirectory(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """Save the current environment variable settings."""
-        super(TestConfigDirectory, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.aiida_path_original = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
         """Restore the original environment variable settings."""
-        super(TestConfigDirectory, cls).tearDownClass(*args, **kwargs)
+        super().tearDownClass(*args, **kwargs)
         if cls.aiida_path_original is not None:
             os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = cls.aiida_path_original
         else:
@@ -155,7 +155,7 @@ class TestConfig(AiidaTestCase):
 
     def setUp(self):
         """Setup a mock config."""
-        super(TestConfig, self).setUp()
+        super().setUp()
         self.profile_name = 'test_profile'
         self.profile = create_mock_profile(self.profile_name)
         self.config_filebase = tempfile.mkdtemp()
@@ -173,7 +173,7 @@ class TestConfig(AiidaTestCase):
 
     def tearDown(self):
         """Clean the temporary folder."""
-        super(TestConfig, self).tearDown()
+        super().tearDown()
         if self.config_filebase and os.path.isdir(self.config_filebase):
             shutil.rmtree(self.config_filebase)
 

@@ -160,7 +160,7 @@ To implement the ``define`` method, you have to start with the following three l
 
     @classmethod
     def define(cls, spec):
-        super(AddAndMultiplyWorkChain, cls).define(spec)
+        super().define(spec)
 
 where you replace ``AddAndMultiplyWorkChain`` with the actual name of your work chain.
 The ``@classmethod`` decorator indicates that this method is a class method  [#f1]_ and not an instance method.

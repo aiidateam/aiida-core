@@ -25,7 +25,7 @@ class AbsolutePathParamType(click.Path):
 
     def convert(self, value, param, ctx):
         value = os.path.expanduser(value)
-        newval = super(AbsolutePathParamType, self).convert(value, param, ctx)
+        newval = super().convert(value, param, ctx)
         if not os.path.isabs(newval):
             raise click.BadParameter('path must be absolute')
         return newval
@@ -46,7 +46,7 @@ class ImportPath(click.Path):
     # pylint: disable=protected-access
 
     def __init__(self, timeout_seconds=URL_TIMEOUT_SECONDS, **kwargs):
-        super(ImportPath, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.timeout_seconds = timeout_seconds
 
@@ -56,7 +56,7 @@ class ImportPath(click.Path):
         """
         try:
             # Check if `click.Path`-type
-            return super(ImportPath, self).convert(value, param, ctx)
+            return super().convert(value, param, ctx)
         except click.exceptions.BadParameter:
             # Check if URL
             return self.checks_url(value, param, ctx)

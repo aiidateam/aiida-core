@@ -23,7 +23,7 @@ class TestBackendLog(AiidaTestCase):
     """Test the Log entity"""
 
     def setUp(self):
-        super(TestBackendLog, self).setUp()
+        super().setUp()
         self.log_record = {
             'time': now(),
             'loggername': 'loggername',
@@ -39,7 +39,7 @@ class TestBackendLog(AiidaTestCase):
         """
         Delete all the created log entries
         """
-        super(TestBackendLog, self).tearDown()
+        super().tearDown()
         Log.objects.delete_all()
 
     def create_log(self):

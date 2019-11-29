@@ -23,7 +23,7 @@ class TestFolderData(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestFolderData, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.tempdir = tempfile.mkdtemp()
         cls.tree = {
             'a.txt': 'Content of file A\nWith some newlines',

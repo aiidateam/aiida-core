@@ -41,11 +41,11 @@ class ConditionalOption(click.Option):
             # There is a required_fn
             self.required = False  # So it does not show up as 'required'
 
-        super(ConditionalOption, self).__init__(param_decls=param_decls, **kwargs)
+        super().__init__(param_decls=param_decls, **kwargs)
 
     def full_process_value(self, ctx, value):
         try:
-            value = super(ConditionalOption, self).full_process_value(ctx, value)
+            value = super().full_process_value(ctx, value)
             if self.required_fn and self.value_is_missing(value):
                 if self.is_required(ctx):
                     raise click.MissingParameter(ctx=ctx, param=self)

@@ -23,7 +23,7 @@ class TrajectoryData(ArrayData):
     """
 
     def __init__(self, structurelist=None, **kwargs):
-        super(TrajectoryData, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if structurelist is not None:
             self.set_structurelist(structurelist)
 

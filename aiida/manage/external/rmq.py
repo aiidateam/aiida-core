@@ -184,7 +184,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             raise gen.Return(future.result())
 
         try:
-            result = yield super(ProcessLauncher, self)._continue(communicator, pid, nowait, tag)
+            result = yield super()._continue(communicator, pid, nowait, tag)
         except ImportError as exception:
             message = 'the class of the process could not be imported.'
             self.handle_continue_exception(node, exception, message)

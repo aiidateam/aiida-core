@@ -32,7 +32,7 @@ class SinglefileData(Data):
         :param filename: specify filename to use (defaults to name of provided file).
         """
         # pylint: disable=redefined-builtin
-        super(SinglefileData, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # 'filename' argument was added to 'set_file' after 1.0.0.
         if 'filename' not in inspect.getfullargspec(self.set_file)[0]:
@@ -124,7 +124,7 @@ class SinglefileData(Data):
 
     def _validate(self):
         """Ensure that there is one object stored in the repository, whose key matches value set for `filename` attr."""
-        super(SinglefileData, self)._validate()
+        super()._validate()
 
         try:
             filename = self.filename

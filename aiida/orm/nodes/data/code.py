@@ -38,7 +38,7 @@ class Code(Data):
     """
 
     def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
-        super(Code, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if remote_computer_exec and local_executable:
             raise ValueError('cannot set `remote_computer_exec` and `local_executable` at the same time')
@@ -269,7 +269,7 @@ class Code(Data):
             return [c.pk for c in valid_codes]
 
     def _validate(self):
-        super(Code, self)._validate()
+        super()._validate()
 
         if self.is_local() is None:
             raise ValidationError('You did not set whether the code is local or remote')

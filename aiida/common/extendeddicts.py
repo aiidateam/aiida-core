@@ -28,7 +28,7 @@ class AttributeDict(dict):
 
     def __init__(self, dictionary=None):
         """Recursively turn the `dict` and all its nested dictionaries into `AttributeDict` instance."""
-        super(AttributeDict, self).__init__()
+        super().__init__()
         if dictionary is None:
             dictionary = {}
 
@@ -116,7 +116,7 @@ class FixedFieldsAttributeDict(AttributeDict):
             if key not in self._valid_fields:
                 errmsg = "'{}' is not a valid key for object '{}'".format(key, self.__class__.__name__)
                 raise KeyError(errmsg)
-        super(FixedFieldsAttributeDict, self).__init__(init)
+        super().__init__(init)
 
     def __setitem__(self, item, value):
         """
@@ -125,7 +125,7 @@ class FixedFieldsAttributeDict(AttributeDict):
         if item not in self._valid_fields:
             errmsg = "'{}' is not a valid key for object '{}'".format(item, self.__class__.__name__)
             raise KeyError(errmsg)
-        super(FixedFieldsAttributeDict, self).__setitem__(item, value)
+        super().__setitem__(item, value)
 
     def __setattr__(self, attr, value):
         """
@@ -134,7 +134,7 @@ class FixedFieldsAttributeDict(AttributeDict):
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
         else:
-            super(FixedFieldsAttributeDict, self).__setattr__(attr, value)
+            super().__setattr__(attr, value)
 
     @classmethod
     def get_valid_fields(cls):
@@ -226,7 +226,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
         else:
-            super(DefaultFieldsAttributeDict, self).__setattr__(attr, value)
+            super().__setattr__(attr, value)
 
     def __getitem__(self, key):
         """
@@ -234,7 +234,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
         but is in the list of default fields.
         """
         try:
-            return super(DefaultFieldsAttributeDict, self).__getitem__(key)
+            return super().__getitem__(key)
         except KeyError:
             if key in self._default_fields:
                 return None

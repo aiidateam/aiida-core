@@ -436,7 +436,7 @@ class SandboxFolder(Folder):
             abspath = tempfile.mkdtemp(dir=sandbox)
         else:
             abspath = tempfile.mkdtemp()
-        super(SandboxFolder, self).__init__(abspath=abspath)
+        super().__init__(abspath=abspath)
 
     def __enter__(self):
         """
@@ -470,7 +470,7 @@ class SubmitTestFolder(Folder):
 
         :param basepath: name of the base directory that will be created in the current working directory
         """
-        super(SubmitTestFolder, self).__init__(abspath=os.path.abspath(basepath))
+        super().__init__(abspath=os.path.abspath(basepath))
 
         self.create()
 
@@ -544,7 +544,7 @@ class RepositoryFolder(Folder):
         self._subfolder = subfolder
 
         # This will also do checks on the folder limits
-        super(RepositoryFolder, self).__init__(abspath=dest, folder_limit=entity_dir)
+        super().__init__(abspath=dest, folder_limit=entity_dir)
 
     @property
     def section(self):

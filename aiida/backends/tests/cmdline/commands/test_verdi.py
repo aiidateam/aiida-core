@@ -20,7 +20,7 @@ class TestVerdi(AiidaTestCase):
     """Tests for `verdi`."""
 
     def setUp(self):
-        super(TestVerdi, self).setUp()
+        super().setUp()
         self.cli_runner = CliRunner()
 
     def test_verdi_version(self):

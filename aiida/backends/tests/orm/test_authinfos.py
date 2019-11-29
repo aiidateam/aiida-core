@@ -18,7 +18,7 @@ class TestAuthinfo(AiidaTestCase):
     """Unit tests for the AuthInfo ORM class."""
 
     def setUp(self):
-        super(TestAuthinfo, self).setUp()
+        super().setUp()
         for auth_info in authinfos.AuthInfo.objects.all():
             authinfos.AuthInfo.objects.delete(auth_info.pk)
 

@@ -144,4 +144,4 @@ class CalculationProjectionMapper(ProjectionMapper):
                 else:
                     default_formatters[projection] = formatter
 
-        super(CalculationProjectionMapper, self).__init__(default_labels, default_attributes, default_formatters)
+        super().__init__(default_labels, default_attributes, default_formatters)

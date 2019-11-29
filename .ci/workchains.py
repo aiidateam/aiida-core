@@ -19,7 +19,7 @@ class NestedWorkChain(WorkChain):
     """
     @classmethod
     def define(cls, spec):
-        super(NestedWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('inp', valid_type=Int)
         spec.outline(
             cls.do_submit,
@@ -53,7 +53,7 @@ class NestedWorkChain(WorkChain):
 class SerializeWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(SerializeWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.input(
             'test',
@@ -71,7 +71,7 @@ class SerializeWorkChain(WorkChain):
 class NestedInputNamespace(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(NestedInputNamespace, cls).define(spec)
+        super().define(spec)
 
         spec.input('foo.bar.baz', valid_type=Int)
         spec.output('output', valid_type=Int)
@@ -84,7 +84,7 @@ class NestedInputNamespace(WorkChain):
 class ListEcho(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(ListEcho, cls).define(spec)
+        super().define(spec)
 
         spec.input('list', valid_type=List)
         spec.output('output', valid_type=List)
@@ -98,7 +98,7 @@ class ListEcho(WorkChain):
 class DynamicNonDbInput(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(DynamicNonDbInput, cls).define(spec)
+        super().define(spec)
         spec.input_namespace('namespace', dynamic=True)
         spec.output('output', valid_type=List)
         spec.outline(cls.do_test)
@@ -113,7 +113,7 @@ class DynamicNonDbInput(WorkChain):
 class DynamicDbInput(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(DynamicDbInput, cls).define(spec)
+        super().define(spec)
         spec.input_namespace('namespace', dynamic=True)
         spec.output('output', valid_type=Int)
         spec.outline(cls.do_test)
@@ -127,7 +127,7 @@ class DynamicDbInput(WorkChain):
 class DynamicMixedInput(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(DynamicMixedInput, cls).define(spec)
+        super().define(spec)
         spec.input_namespace('namespace', dynamic=True)
         spec.output('output', valid_type=Int)
         spec.outline(cls.do_test)
@@ -147,7 +147,7 @@ class CalcFunctionRunnerWorkChain(WorkChain):
     """
     @classmethod
     def define(cls, spec):
-        super(CalcFunctionRunnerWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.input('input', valid_type=Int)
         spec.output('output', valid_type=Int)
@@ -164,7 +164,7 @@ class WorkFunctionRunnerWorkChain(WorkChain):
     """
     @classmethod
     def define(cls, spec):
-        super(WorkFunctionRunnerWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.input('input', valid_type=Str)
         spec.output('output', valid_type=Str)

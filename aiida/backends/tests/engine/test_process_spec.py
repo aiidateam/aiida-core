@@ -18,14 +18,14 @@ class TestProcessSpec(AiidaTestCase):
     """Tests for the `ProcessSpec` class."""
 
     def setUp(self):
-        super(TestProcessSpec, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
         self.spec = Process.spec()
         self.spec.inputs.valid_type = Data
         self.spec.outputs.valid_type = Data
 
     def tearDown(self):
-        super(TestProcessSpec, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_dynamic_input(self):

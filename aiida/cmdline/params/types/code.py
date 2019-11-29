@@ -26,7 +26,7 @@ class CodeParamType(IdentifierParamType):
         :param sub_classes: specify a tuple of Code sub classes to narrow the query set
         :param entry_point: specify an optional calculation entry point that the Code's input plugin should match
         """
-        super(CodeParamType, self).__init__(sub_classes)
+        super().__init__(sub_classes)
         self._entry_point = entry_point
 
     @property
@@ -41,7 +41,7 @@ class CodeParamType(IdentifierParamType):
         return CodeEntityLoader
 
     def convert(self, value, param, ctx):
-        code = super(CodeParamType, self).convert(value, param, ctx)
+        code = super().convert(value, param, ctx)
 
         if code and self._entry_point is not None:
             entry_point = code.get_input_plugin_name()

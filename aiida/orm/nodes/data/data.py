@@ -369,7 +369,7 @@ class Data(Node):
         """
         # Validation of ``source`` is commented out due to Issue #9
         # (https://bitbucket.org/epfl_theos/aiida_epfl/issues/9/)
-        # super(Data, self)._validate()
+        # super()._validate()
         # if self.source is not None and \
         #    self.source.get('license', None) and \
         #    self.source['license'].startswith('CC-BY') and \

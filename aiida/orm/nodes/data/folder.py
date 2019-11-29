@@ -35,6 +35,6 @@ class FolderData(Data):
         :type tree: str
         """
         tree = kwargs.pop('tree', None)
-        super(FolderData, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if tree:
             self.put_object_from_tree(tree)

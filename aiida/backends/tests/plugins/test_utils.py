@@ -22,7 +22,7 @@ class TestPluginVersionProvider(AiidaTestCase):
     # pylint: disable=no-init,old-style-class,too-few-public-methods,no-member
 
     def setUp(self):
-        super(TestPluginVersionProvider, self).setUp()
+        super().setUp()
         self.provider = PluginVersionProvider()
 
     @staticmethod

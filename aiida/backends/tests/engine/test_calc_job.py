@@ -26,7 +26,7 @@ class TestCalcJob(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestCalcJob, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.remote_code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.local_code = orm.Code(local_executable='true', files=['/bin/true']).store()
         cls.inputs = {
@@ -43,11 +43,11 @@ class TestCalcJob(AiidaTestCase):
         }
 
     def setUp(self):
-        super(TestCalcJob, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestCalcJob, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_run_base_class(self):
@@ -96,7 +96,7 @@ class TestCalcJob(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(SimpleCalcJob, cls).define(spec)
+                super().define(spec)
 
             def prepare_for_submission(self, folder):
                 pass

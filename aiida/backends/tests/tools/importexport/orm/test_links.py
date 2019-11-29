@@ -30,11 +30,11 @@ class TestLinks(AiidaTestCase):
 
     def setUp(self):
         self.reset_database()
-        super(TestLinks, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         self.reset_database()
-        super(TestLinks, self).tearDown()
+        super().tearDown()
 
     @with_temp_dir
     def test_links_to_unknown_nodes(self, temp_dir):

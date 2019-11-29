@@ -64,7 +64,7 @@ class WorkChain(Process):
         if self.__class__ == WorkChain:
             raise exceptions.InvalidOperation('cannot construct or launch a base `WorkChain` class.')
 
-        super(WorkChain, self).__init__(inputs, logger, runner, enable_persistence=enable_persistence)
+        super().__init__(inputs, logger, runner, enable_persistence=enable_persistence)
 
         self._stepper = None
         self._awaitables = []
@@ -88,7 +88,7 @@ class WorkChain(Process):
         :type save_context: :class:`!plumpy.persistence.LoadSaveContext`
 
         """
-        super(WorkChain, self).save_instance_state(out_state, save_context)
+        super().save_instance_state(out_state, save_context)
         # Save the context
         out_state[self._CONTEXT] = self.ctx
 
@@ -98,7 +98,7 @@ class WorkChain(Process):
 
     @override
     def load_instance_state(self, saved_state, load_context):
-        super(WorkChain, self).load_instance_state(saved_state, load_context)
+        super().load_instance_state(saved_state, load_context)
         # Load the context
         self._context = saved_state[self._CONTEXT]
 
@@ -114,7 +114,7 @@ class WorkChain(Process):
             self.action_awaitables()
 
     def on_run(self):
-        super(WorkChain, self).on_run()
+        super().on_run()
         self.node.set_stepper_state_info(str(self._stepper))
 
     def insert_awaitable(self, awaitable):
@@ -219,7 +219,7 @@ class WorkChain(Process):
         After the state is exited the next state will be entered and if persistence is enabled, a checkpoint will
         be saved. If the context contains unstored nodes, the serialization necessary for checkpointing will fail.
         """
-        super(WorkChain, self).on_exiting()
+        super().on_exiting()
         try:
             self._store_nodes(self.ctx)
         except Exception:  # pylint: disable=broad-except
@@ -227,7 +227,7 @@ class WorkChain(Process):
             self.logger.exception('exception in _store_nodes called in on_exiting')
 
     def on_wait(self, awaitables):
-        super(WorkChain, self).on_wait(awaitables)
+        super().on_wait(awaitables)
         if self._awaitables:
             self.action_awaitables()
         else:

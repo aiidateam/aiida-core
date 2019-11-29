@@ -20,7 +20,7 @@ class TestKpoints(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestKpoints, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
         alat = 5.430  # angstrom
         cell = [[

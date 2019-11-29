@@ -37,7 +37,7 @@ SCHEMA_VERSION = migrations.current_schema_version()
 class AiidaQuerySet(QuerySet):
     def iterator(self):
         from aiida.orm.implementation.django import convert
-        for obj in super(AiidaQuerySet, self).iterator():
+        for obj in super().iterator():
             yield convert.get_backend_entity(obj, None)
 
     def __iter__(self):
@@ -46,7 +46,7 @@ class AiidaQuerySet(QuerySet):
         Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
         """
         from aiida.orm.implementation.django import convert
-        return (convert.get_backend_entity(model, None) for model in super(AiidaQuerySet, self).__iter__())
+        return (convert.get_backend_entity(model, None) for model in super().__iter__())
 
     def __getitem__(self, key):
         """Get item for [] operator
@@ -54,7 +54,7 @@ class AiidaQuerySet(QuerySet):
         Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
         """
         from aiida.orm.implementation.django import convert
-        res = super(AiidaQuerySet, self).__getitem__(key)
+        res = super().__getitem__(key)
         return convert.get_backend_entity(res, None)
 
 

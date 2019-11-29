@@ -23,7 +23,7 @@ class TestWorkFunction(AiidaTestCase):
     """
 
     def setUp(self):
-        super(TestWorkFunction, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
         self.default_int = Int(256)
 
@@ -34,7 +34,7 @@ class TestWorkFunction(AiidaTestCase):
         self.test_workfunction = test_workfunction
 
     def tearDown(self):
-        super(TestWorkFunction, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_workfunction_node_type(self):

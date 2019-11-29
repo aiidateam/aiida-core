@@ -31,11 +31,11 @@ def the_hans_klok_comeback(loop):
 class TestWorkchain(AiidaTestCase):
 
     def setUp(self):
-        super(TestWorkchain, self).setUp()
+        super().setUp()
         self.runner = get_manager().get_runner()
 
     def tearDown(self):
-        super(TestWorkchain, self).tearDown()
+        super().tearDown()
 
     def test_call_on_calculation_finish(self):
         loop = self.runner.loop

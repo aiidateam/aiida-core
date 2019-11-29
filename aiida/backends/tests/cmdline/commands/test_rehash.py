@@ -20,7 +20,7 @@ class TestVerdiRehash(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiRehash, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         from aiida.orm import Data, Bool, Float, Int
 
         cls.node_base = Data().store()

@@ -174,7 +174,7 @@ class AiiDADumper(yaml.Dumper):
         if isinstance(data, orm.Group):
             return represent_group(self, data)
 
-        return super(AiiDADumper, self).represent_data(data)
+        return super().represent_data(data)
 
 
 class AiiDALoader(yaml.Loader):

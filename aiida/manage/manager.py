@@ -328,7 +328,7 @@ class Manager:
         self._runner = None
 
     def __init__(self):
-        super(Manager, self).__init__()
+        super().__init__()
         self._backend = None  # type: aiida.orm.implementation.Backend
         self._backend_manager = None  # type: aiida.backend.manager.BackendManager
         self._config = None  # type: aiida.manage.configuration.config.Config

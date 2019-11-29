@@ -33,7 +33,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     def __init__(self, backend, label, user, description='', type_string=''):
         """Construct a new Django group"""
         type_check(user, users.DjangoUser)
-        super(DjangoGroup, self).__init__(backend)
+        super().__init__(backend)
 
         self._dbmodel = utils.ModelWrapper(
             models.DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string)
@@ -120,7 +120,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
             """The nodes iterator"""
 
             def __init__(self, dbnodes, backend):
-                super(NodesIterator, self).__init__()
+                super().__init__()
                 self._backend = backend
                 self._dbnodes = dbnodes
                 self.generator = self._genfunction()
@@ -151,7 +151,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     def add_nodes(self, nodes, **kwargs):
         from .nodes import DjangoNode
 
-        super(DjangoGroup, self).add_nodes(nodes)
+        super().add_nodes(nodes)
 
         node_pks = []
 
@@ -170,7 +170,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     def remove_nodes(self, nodes):
         from .nodes import DjangoNode
 
-        super(DjangoGroup, self).remove_nodes(nodes)
+        super().remove_nodes(nodes)
 
         node_pks = []
 

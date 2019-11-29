@@ -105,7 +105,7 @@ class NodeNumberJobResource(JobResource):
         """
         Return a list of valid keys to be passed to the __init__
         """
-        return super(NodeNumberJobResource, cls).get_valid_keys() + ['tot_num_mpiprocs', 'default_mpiprocs_per_machine']
+        return super().get_valid_keys() + ['tot_num_mpiprocs', 'default_mpiprocs_per_machine']
 
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
@@ -122,7 +122,7 @@ class NodeNumberJobResource(JobResource):
 
         Should raise only ValueError or TypeError on invalid parameters.
         """
-        super(NodeNumberJobResource, self).__init__()
+        super().__init__()
 
         try:
             num_machines = int(kwargs.pop('num_machines'))
@@ -248,7 +248,7 @@ class ParEnvJobResource(JobResource):
             computer, since ParEnvJobResource cannot accept this parameter.
         """
         from aiida.common.exceptions import ConfigurationError
-        super(ParEnvJobResource, self).__init__()
+        super().__init__()
 
         try:
             self.parallel_env = str(kwargs.pop('parallel_env'))

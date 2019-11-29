@@ -732,7 +732,7 @@ class StructureData(Data):
             if args[left] is not None and args[right] is not None:
                 raise ValueError('cannot pass {} and {} at the same time'.format(left, right))
 
-        super(StructureData, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if any([ext is not None for ext in [ase, pymatgen, pymatgen_structure, pymatgen_molecule]]):
 
@@ -926,7 +926,7 @@ class StructureData(Data):
 
         from aiida.common.exceptions import ValidationError
 
-        super(StructureData, self)._validate()
+        super()._validate()
 
         try:
             _get_valid_cell(self.cell)

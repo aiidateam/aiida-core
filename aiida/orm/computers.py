@@ -83,7 +83,7 @@ class Computer(entities.Entity):
             transport_type=transport_type,
             scheduler_type=scheduler_type
         )
-        super(Computer, self).__init__(model)
+        super().__init__(model)
         if workdir is not None:
             self.set_workdir(workdir)
 
@@ -294,7 +294,7 @@ class Computer(entities.Entity):
         are to be changed (e.g. a new mpirun command, etc.)
         """
         self.validate()
-        return super(Computer, self).store()
+        return super().store()
 
     @property
     def name(self):

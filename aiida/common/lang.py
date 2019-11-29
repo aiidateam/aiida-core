@@ -91,7 +91,7 @@ def override_decorator(check=False):
             @functools.wraps(func)
             def wrapped_fn(self, *args, **kwargs):  # pylint: disable=missing-docstring
                 try:
-                    getattr(super(self.__class__, self), func.__name__)
+                    getattr(super(), func.__name__)
                 except AttributeError:
                     raise RuntimeError('Function {} does not override a superclass method'.format(func))
 
@@ -134,7 +134,7 @@ class abstractclassmethod(classmethod):  # pylint: disable=too-few-public-method
 
     def __init__(self, callable):  # pylint: disable=redefined-builtin
         callable.__isabstractmethod__ = True
-        super(abstractclassmethod, self).__init__(callable)
+        super().__init__(callable)
 
 
 class abstractstaticmethod(staticmethod):  # pylint: disable=too-few-public-methods, invalid-name
@@ -149,7 +149,7 @@ class abstractstaticmethod(staticmethod):  # pylint: disable=too-few-public-meth
 
     def __init__(self, callable):  # pylint: disable=redefined-builtin
         callable.__isabstractmethod__ = True  # pylint: disable=redefined-builtin
-        super(abstractstaticmethod, self).__init__(callable)
+        super().__init__(callable)
 
 
 class combomethod:  # pylint: disable=invalid-name,too-few-public-methods

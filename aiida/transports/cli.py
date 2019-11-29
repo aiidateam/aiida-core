@@ -111,10 +111,14 @@ def create_option(name, spec):
     if spec.pop('switch', False):
         option_name = '--{name}/--no-{name}'.format(name=name_dashed)
     kwargs = {}
-    if 'default' not in spec:
+
+    if 'default' in spec:
+        kwargs['show_default'] = True
+    else:
         kwargs['contextual_default'] = interactive_default(
             'ssh', name, also_noninteractive=spec.pop('non_interactive_default', False)
         )
+
     kwargs['cls'] = InteractiveOption
     kwargs.update(spec)
     if existing_option:

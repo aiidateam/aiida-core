@@ -26,6 +26,31 @@ from aiida.orm import Data, Node, CalculationNode, WorkflowNode
 class TestVerdiDatabasaIntegrity(AiidaTestCase):
     """Tests for `verdi database integrity`."""
 
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """Create a basic valid graph that should help detect false positives."""
+        super(TestVerdiDatabasaIntegrity, cls).setUpClass(*args, **kwargs)
+        data_input = Data().store()
+        data_output = Data().store()
+        calculation = CalculationNode()
+        workflow_parent = WorkflowNode()
+        workflow_child = WorkflowNode()
+
+        workflow_parent.add_incoming(data_input, link_label='input', link_type=LinkType.INPUT_WORK)
+        workflow_parent.store()
+
+        workflow_child.add_incoming(data_input, link_label='input', link_type=LinkType.INPUT_WORK)
+        workflow_child.add_incoming(workflow_parent, link_label='call', link_type=LinkType.CALL_WORK)
+        workflow_child.store()
+
+        calculation.add_incoming(data_input, link_label='input', link_type=LinkType.INPUT_CALC)
+        calculation.add_incoming(workflow_child, link_label='input', link_type=LinkType.CALL_CALC)
+        calculation.store()
+
+        data_output.add_incoming(calculation, link_label='output', link_type=LinkType.CREATE)
+        data_output.add_incoming(workflow_child, link_label='output', link_type=LinkType.RETURN)
+        data_output.add_incoming(workflow_parent, link_label='output', link_type=LinkType.RETURN)
+
     def setUp(self):
         self.cli_runner = CliRunner()
 

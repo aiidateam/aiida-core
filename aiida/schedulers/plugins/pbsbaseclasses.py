@@ -360,6 +360,8 @@ class PbsBaseClass(Scheduler):
             will not appear here.
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+        _LOGGER.debug('Results of `_parse_joblist_output`:\nretval: {}\nstderr: {}\nstdout:\n{}'.format(retval, stderr, stdout))
+
         # I don't raise because if I pass a list of jobs, I get a non-zero status
         # if one of the job is not in the list anymore
 

@@ -488,6 +488,8 @@ class SlurmScheduler(Scheduler):
             will not appear here.
         """
         # pylint: disable=too-many-branches,too-many-statements
+        self.logger.debug('Results of `_parse_joblist_output`:\nretval: {}\nstderr: {}\nstdout:\n{}'.format(retval, stderr, stdout))
+
         num_fields = len(self.fields)
 
         # I don't raise because if I pass a list of jobs,
@@ -498,7 +500,6 @@ class SlurmScheduler(Scheduler):
         # self.logger.warning("Error in _parse_joblist_output: retval={}; "
         #    "stdout={}; stderr={}".format(retval, stdout, stderr))
 
-        self.logger.debug('Results of `_get_joblist_command`:\nretval: {}\nstderr: {}\nstdout:\n{}'.format(retval, stderr, stdout))
         # issue a warning if there is any stderr output and
         # there is no line containing "Invalid job id specified", that happens
         # when I ask for specific calculations, and they are all finished

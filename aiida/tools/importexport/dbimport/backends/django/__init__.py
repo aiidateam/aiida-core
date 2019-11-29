@@ -686,8 +686,6 @@ def import_data_dj(
                 print('NO NODES TO IMPORT, SO NO GROUP CREATED, IF IT DID NOT ALREADY EXIST')
 
     if not silent:
-        print('*** WARNING: MISSING EXISTING UUID CHECKS!!')
-        print('*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)')
         print('DONE.')
 
     return ret_dict

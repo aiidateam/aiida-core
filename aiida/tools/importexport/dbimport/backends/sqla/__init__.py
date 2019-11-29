@@ -697,8 +697,6 @@ def import_data_sqla(
             raise
 
     if not silent:
-        print('*** WARNING: MISSING EXISTING UUID CHECKS!!')
-        print('*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)')
         print('DONE.')
 
     return ret_dict

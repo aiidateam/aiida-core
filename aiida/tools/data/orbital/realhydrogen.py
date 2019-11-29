@@ -318,7 +318,7 @@ class RealhydrogenOrbital(Orbital):
         :param input_dict: the dictionary of keys to be validated
         :return validated_dict: a validated dictionary
         """
-        validated_dict = super(RealhydrogenOrbital, self)._validate_keys(input_dict)
+        validated_dict = super()._validate_keys(input_dict)
 
         # Validate m knowing the value of l
         angular_momentum = validated_dict['angular_momentum']  # l quantum number, must be there

@@ -13,7 +13,7 @@ class AddAndMultiplyWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(AddAndMultiplyWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('x')
         spec.input('y')
         spec.input('z')

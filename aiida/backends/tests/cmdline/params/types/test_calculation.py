@@ -26,7 +26,7 @@ class TestCalculationParamType(AiidaTestCase):
         that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
         the rules implemented to solve ambiguities that arise when determing the identifier type
         """
-        super(TestCalculationParamType, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
         cls.param = CalculationParamType()
         cls.entity_01 = CalculationNode().store()

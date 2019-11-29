@@ -28,7 +28,7 @@ class TestCodeParamType(AiidaTestCase):
         that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
         the rules implemented to solve ambiguities that arise when determing the identifier type
         """
-        super(TestCodeParamType, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
         cls.param_base = CodeParamType()
         cls.param_entry_point = CodeParamType(entry_point='arithmetic.add')

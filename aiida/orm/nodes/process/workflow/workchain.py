@@ -26,7 +26,7 @@ class WorkChainNode(WorkflowNode):
     @classproperty
     def _updatable_attributes(cls):
         # pylint: disable=no-self-argument
-        return super(WorkChainNode, cls)._updatable_attributes + (cls.STEPPER_STATE_INFO_KEY,)
+        return super()._updatable_attributes + (cls.STEPPER_STATE_INFO_KEY,)
 
     @property
     def stepper_state_info(self):

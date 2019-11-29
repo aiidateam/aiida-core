@@ -417,7 +417,7 @@ class BackupError(Exception):
     """General backup error"""
 
     def __init__(self, value, *args, **kwargs):
-        super(BackupError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._value = value
 
     def __str__(self):

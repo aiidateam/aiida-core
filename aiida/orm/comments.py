@@ -75,7 +75,7 @@ class Comment(entities.Entity):
         """
         backend = backend or get_manager().get_backend()
         model = backend.comments.create(node=node.backend_entity, user=user.backend_entity, content=content)
-        super(Comment, self).__init__(model)
+        super().__init__(model)
 
     def __str__(self):
         arguments = [self.uuid, self.node.pk, self.user.email, self.content]

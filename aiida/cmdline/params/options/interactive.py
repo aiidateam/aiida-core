@@ -64,7 +64,7 @@ class InteractiveOption(ConditionalOption):
         self._prompt = kwargs.pop('prompt', None)
 
         # call super class here, after removing `prompt` from the kwargs.
-        super(InteractiveOption, self).__init__(param_decls=param_decls, **kwargs)
+        super().__init__(param_decls=param_decls, **kwargs)
 
         self.prompt_fn = prompt_fn
 
@@ -110,7 +110,7 @@ class InteractiveOption(ConditionalOption):
         if self._contextual_default is not None:
             default = self._contextual_default(ctx)
         else:
-            default = super(InteractiveOption, self).get_default(ctx)
+            default = super().get_default(ctx)
 
         try:
             default = self.type.deconvert_default(default)
@@ -171,7 +171,7 @@ class InteractiveOption(ConditionalOption):
         the callback
         """
         try:
-            value = super(InteractiveOption, self).full_process_value(ctx, value)
+            value = super().full_process_value(ctx, value)
         except click.MissingParameter:
             pass
         return value

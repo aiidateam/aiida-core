@@ -152,7 +152,7 @@ class ComputerBuilder:
     def __setattr__(self, key, value):
         if not key.startswith('_'):
             self._set_computer_attr(key, value)
-        super(ComputerBuilder, self).__setattr__(key, value)
+        super().__setattr__(key, value)
 
     def _set_computer_attr(self, key, value):
         """Set a computer attribute if it passes validation."""
@@ -172,7 +172,7 @@ class ComputerBuilder:
         """
 
         def __init__(self, msg):
-            super(ComputerBuilder.ComputerValidationError, self).__init__()
+            super().__init__()
             self.msg = msg
 
         def __str__(self):

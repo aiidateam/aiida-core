@@ -19,7 +19,7 @@ class ArithmeticAddCalculation(CalcJob):
 
     @classmethod
     def define(cls, spec):
-        super(ArithmeticAddCalculation, cls).define(spec)
+        super().define(spec)
         spec.input('metadata.options.input_filename', valid_type=str, default='aiida.in', non_db=True)
         spec.input('metadata.options.output_filename', valid_type=str, default='aiida.out', non_db=True)
         spec.input('metadata.options.parser_name', valid_type=str, default='arithmetic.add', non_db=True)

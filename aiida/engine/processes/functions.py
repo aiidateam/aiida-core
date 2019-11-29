@@ -237,9 +237,9 @@ class FunctionProcess(Process):
         if varargs is not None:
             raise ValueError('variadic arguments are not supported')
 
-        def _define(cls, spec):
+        def _define(cls, spec):  # pylint: disable=unused-argument
             """Define the spec dynamically"""
-            super(FunctionProcess, cls).define(spec)
+            super().define(spec)
 
             for i, arg in enumerate(args):
                 default = ()
@@ -339,7 +339,7 @@ class FunctionProcess(Process):
     def __init__(self, *args, **kwargs):
         if kwargs.get('enable_persistence', False):
             raise RuntimeError('Cannot persist a function process')
-        super(FunctionProcess, self).__init__(enable_persistence=False, *args, **kwargs)
+        super().__init__(enable_persistence=False, *args, **kwargs)
 
     @property
     def process_class(self):
@@ -357,7 +357,7 @@ class FunctionProcess(Process):
 
     def execute(self):
         """Execute the process."""
-        result = super(FunctionProcess, self).execute()
+        result = super().execute()
 
         # FunctionProcesses can return a single value as output, and not a dictionary, so we should also return that
         if len(result) == 1 and self.SINGLE_OUTPUT_LINKNAME in result:
@@ -368,7 +368,7 @@ class FunctionProcess(Process):
     @override
     def _setup_db_record(self):
         """Set up the database record for the process."""
-        super(FunctionProcess, self)._setup_db_record()
+        super()._setup_db_record()
         self.node.store_source_info(self._func)
 
     @override

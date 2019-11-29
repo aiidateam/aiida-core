@@ -32,7 +32,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
     MODEL_CLASS = DbComputer
 
     def __init__(self, backend, **kwargs):
-        super(SqlaComputer, self).__init__(backend)
+        super().__init__(backend)
         self._dbmodel = utils.ModelWrapper(DbComputer(**kwargs))
 
     @property

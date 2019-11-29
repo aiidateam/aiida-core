@@ -119,7 +119,7 @@ class Group(entities.Entity):
         model = backend.groups.create(
             label=label, user=user.backend_entity, description=description, type_string=type_string
         )
-        super(Group, self).__init__(model)
+        super().__init__(model)
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))

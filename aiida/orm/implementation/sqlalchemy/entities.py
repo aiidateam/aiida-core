@@ -63,7 +63,7 @@ class SqlaModelEntity(typing.Generic[ModelType]):
         raise ValueError("Unknown attribute '{}'".format(attr_name))
 
     def __init__(self, *args, **kwargs):
-        super(SqlaModelEntity, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._class_check()
 
     @property

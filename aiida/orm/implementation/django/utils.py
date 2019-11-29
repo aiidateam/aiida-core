@@ -37,7 +37,7 @@ class ModelWrapper:
         :param auto_flush: an optional tuple of database model fields that are always to be flushed, in addition to
             the field that corresponds to the attribute being set through `__setattr__`.
         """
-        super(ModelWrapper, self).__init__()
+        super().__init__()
         # Have to do it this way because we overwrite __setattr__
         object.__setattr__(self, '_model', model)
         object.__setattr__(self, '_auto_flush', auto_flush)

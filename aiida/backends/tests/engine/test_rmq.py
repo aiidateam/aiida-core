@@ -27,7 +27,7 @@ class TestProcessControl(AiidaTestCase):
     TIMEOUT = 2.
 
     def setUp(self):
-        super(TestProcessControl, self).setUp()
+        super().setUp()
 
         # These two need to share a common event loop otherwise the first will never send
         # the message while the daemon is running listening to intercept
@@ -37,7 +37,7 @@ class TestProcessControl(AiidaTestCase):
 
     def tearDown(self):
         self.daemon_runner.close()
-        super(TestProcessControl, self).tearDown()
+        super().tearDown()
 
     def test_submit_simple(self):
         # Launch the process

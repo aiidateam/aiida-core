@@ -35,7 +35,7 @@ class App(Flask):
             pass
 
         # Basic initialization
-        super(App, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Error handler
         from aiida.restapi.common.exceptions import RestInputValidationError, \
@@ -100,7 +100,7 @@ class AiidaApi(Api):
 
         self.app = app
 
-        super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'], catch_all_404s=True)
+        super().__init__(app=app, prefix=kwargs['PREFIX'], catch_all_404s=True)
 
         self.add_resource(
             ServerInfo,

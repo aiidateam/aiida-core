@@ -52,7 +52,7 @@ class NodeTranslator(BaseTranslator):
         """
 
         # basic initialization
-        super(NodeTranslator, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self._default_projections = ['id', 'label', 'node_type', 'process_type', 'ctime', 'mtime', 'uuid', 'user_id']
 
@@ -204,7 +204,7 @@ class NodeTranslator(BaseTranslator):
             full_type_filter = get_full_type_filters(full_type)
             filters.update(full_type_filter)
 
-        super(NodeTranslator, self).set_query(
+        super().set_query(
             filters=filters,
             orders=orders,
             projections=projections,
@@ -550,7 +550,7 @@ class NodeTranslator(BaseTranslator):
         if self._content_type is not None:
             return self._get_content()
 
-        return super(NodeTranslator, self).get_results()
+        return super().get_results()
 
     def get_formatted_result(self, label):
         """
@@ -562,7 +562,7 @@ class NodeTranslator(BaseTranslator):
         :return: a list of the query results
         """
 
-        results = super(NodeTranslator, self).get_formatted_result(label)
+        results = super().get_formatted_result(label)
 
         if self._result_type == 'with_outgoing':
             result_name = 'incoming'

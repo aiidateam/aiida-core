@@ -85,7 +85,7 @@ class TestCommonUtilities(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(TestProcessWithoutDocstring, cls).define(spec)
+                super().define(spec)
                 spec.input('some_input')
 
         class TestProcessWithDocstring(Process):
@@ -93,7 +93,7 @@ class TestCommonUtilities(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(TestProcessWithDocstring, cls).define(spec)
+                super().define(spec)
                 spec.input('some_input')
 
         # We are just checking that the command does not except

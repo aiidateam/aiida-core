@@ -38,7 +38,7 @@ class DbComputer(Base):
         if 'metadata' in kwargs.keys():
             kwargs['_metadata'] = kwargs.pop('metadata')
 
-        super(DbComputer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @property
     def pk(self):

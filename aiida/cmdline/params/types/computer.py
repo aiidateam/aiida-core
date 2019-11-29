@@ -51,7 +51,7 @@ class ShebangParamType(StringParamType):
     name = 'shebangline'
 
     def convert(self, value, param, ctx):
-        newval = super(ShebangParamType, self).convert(value, param, ctx)
+        newval = super().convert(value, param, ctx)
         if newval is None:
             return None
         if not newval.startswith('#!'):
@@ -80,7 +80,7 @@ class MpirunCommandParamType(StringParamType):
         return 'MPIRUNCOMMANDSTRING'
 
     def convert(self, value, param, ctx):
-        newval = super(MpirunCommandParamType, self).convert(value, param, ctx)
+        newval = super().convert(value, param, ctx)
 
         scheduler_ep = ctx.params['scheduler']
         if scheduler_ep is not None:

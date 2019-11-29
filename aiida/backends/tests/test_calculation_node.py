@@ -46,7 +46,7 @@ class TestProcessNode(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestProcessNode, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.computer.configure()  # pylint: disable=no-member
         cls.construction_options = {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}
 

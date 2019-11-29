@@ -30,7 +30,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiCalculation, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         from aiida.common.links import LinkType
         from aiida.engine import ProcessState
 

@@ -22,7 +22,7 @@ class TestComments(AiidaTestCase):
     """Test ex-/import cases related to Comments"""
 
     def setUp(self):
-        super(TestComments, self).setUp()
+        super().setUp()
         self.reset_database()
         self.comments = [
             "We're no strangers to love", 'You know the rules and so do I', "A full commitment's what I'm thinking of",
@@ -30,7 +30,7 @@ class TestComments(AiidaTestCase):
         ]
 
     def tearDown(self):
-        super(TestComments, self).tearDown()
+        super().tearDown()
         self.reset_database()
 
     @with_temp_dir

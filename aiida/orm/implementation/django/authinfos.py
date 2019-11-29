@@ -32,7 +32,7 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
         """
         from . import computers
         from . import users
-        super(DjangoAuthInfo, self).__init__(backend)
+        super().__init__(backend)
         type_check(user, users.DjangoUser)
         type_check(computer, computers.DjangoComputer)
         self._dbmodel = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbmodel, aiidauser=user.dbmodel))

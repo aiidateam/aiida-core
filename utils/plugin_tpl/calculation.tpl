@@ -10,7 +10,7 @@ class {{classname}}(JobCalculation):
 
     def _init_internal_params(self):
         """Initialize internal parameters"""
-        super({{classname}}, self)._init_internal_params()
+        super()._init_internal_params()
 
         self._INPUT_FILE_NAME = '{{ifilename}}'
         self._OUTPUT_FILE_NAME = '{{ofilename}}'
@@ -38,7 +38,7 @@ class {{classname}}(JobCalculation):
                 'docstring': <A description of the input>
             }
         '''
-        retdict = super({{classname}}, self)._use_methods
+        retdict = super()._use_methods
         retdict.update({
             {% for item in inputs %}
             '{{item.name}}: {

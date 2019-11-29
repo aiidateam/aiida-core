@@ -50,7 +50,7 @@ class LocalTransport(Transport):
     _DEFAULT_SAFE_OPEN_INTERVAL = 0.0
 
     def __init__(self, *args, **kwargs):
-        super(LocalTransport, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # The `_internal_dir` will emulate the concept of working directory, as the real current working directory is
         # not to be changed to prevent bug-prone situations
         self._internal_dir = None

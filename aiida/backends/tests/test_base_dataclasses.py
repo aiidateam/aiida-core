@@ -99,7 +99,7 @@ class TestList(AiidaTestCase):
 class TestFloat(AiidaTestCase):
 
     def setUp(self):
-        super(TestFloat, self).setUp()
+        super().setUp()
         self.value = Float()
         self.all_types = [Int, Float, Bool, Str]
 

@@ -102,7 +102,7 @@ class OqmdSearchResults(DbSearchResults):
     _base_url = 'http://oqmd.org/materials/export/conventional/cif/'
 
     def __init__(self, results):
-        super(OqmdSearchResults, self).__init__(results)
+        super().__init__(results)
         self._return_class = OqmdEntry
 
     def __len__(self):
@@ -137,7 +137,7 @@ class OqmdEntry(CifEntry):
         :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdEntry`, related
         to the supplied URI.
         """
-        super(OqmdEntry, self).__init__(db_name='Open Quantum Materials Database',
+        super().__init__(db_name='Open Quantum Materials Database',
                                         db_uri='http://oqmd.org',
                                         uri=uri,
                                         **kwargs)

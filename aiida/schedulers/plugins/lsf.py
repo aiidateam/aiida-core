@@ -116,7 +116,7 @@ class LsfJobResource(JobResource):
             computer, since LsfJobResource cannot accept this parameter.
         """
         from aiida.common.exceptions import ConfigurationError
-        super(LsfJobResource, self).__init__()
+        super().__init__()
 
         try:
             self.parallel_env = str(kwargs.pop('parallel_env', ''))

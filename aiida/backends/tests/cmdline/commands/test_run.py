@@ -18,7 +18,7 @@ class TestVerdiRun(AiidaTestCase):
     """Tests for `verdi run`."""
 
     def setUp(self):
-        super(TestVerdiRun, self).setUp()
+        super().setUp()
         self.cli_runner = CliRunner()
 
     def test_run_workfunction(self):

@@ -21,7 +21,7 @@ class TestVerdiDaemon(AiidaTestCase):
     """Tests for `verdi daemon` commands."""
 
     def setUp(self):
-        super(TestVerdiDaemon, self).setUp()
+        super().setUp()
         self.daemon_client = DaemonClient(get_config().current_profile)
         self.cli_runner = CliRunner()
 

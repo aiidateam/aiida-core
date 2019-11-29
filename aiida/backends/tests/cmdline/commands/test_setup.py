@@ -29,7 +29,7 @@ class TestVerdiSetup(AiidaPostgresTestCase):
 
     def setUp(self):
         """Create a CLI runner to invoke the CLI commands."""
-        super(TestVerdiSetup, self).setUp()
+        super().setUp()
         self.backend = configuration.PROFILE.database_backend
         self.cli_runner = CliRunner()
 

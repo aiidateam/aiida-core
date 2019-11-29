@@ -39,7 +39,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
     TEST_TIMEOUT = 5.
 
     def setUp(self):
-        super(TestVerdiProcessDaemon, self).setUp()
+        super().setUp()
         from aiida.manage.configuration import get_config
         from aiida.engine.daemon.client import DaemonClient
 
@@ -56,7 +56,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         import signal
 
         os.kill(self.daemon_pid, signal.SIGTERM)
-        super(TestVerdiProcessDaemon, self).tearDown()
+        super().tearDown()
 
     def test_pause_play_kill(self):
         """
@@ -126,7 +126,7 @@ class TestVerdiProcess(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiProcess, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         from aiida.engine import ProcessState
         from aiida.orm.groups import Group
 
@@ -163,7 +163,7 @@ class TestVerdiProcess(AiidaTestCase):
         cls.group.add_nodes(cls.calcs[0])
 
     def setUp(self):
-        super(TestVerdiProcess, self).setUp()
+        super().setUp()
         self.cli_runner = CliRunner()
 
     def test_list(self):
@@ -373,7 +373,7 @@ class TestVerdiProcessListWarning(AiidaTestCase):
     """Tests for the `verdi process list` active slots warning."""
 
     def setUp(self):
-        super(TestVerdiProcessListWarning, self).setUp()
+        super().setUp()
         self.cli_runner = CliRunner()
         # Override the call to the circus client to retrieve the number of workers
         # As we don't have a running circus client, this will normally fail, so here we simulate the
@@ -386,7 +386,7 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         # Reset the redifined function
         import aiida.cmdline.utils.common
         aiida.cmdline.utils.common.get_num_workers = self.real_get_num_workers
-        super(TestVerdiProcessListWarning, self).tearDown()
+        super().tearDown()
 
     def test_list_worker_slot_warning(self):
         """
@@ -428,7 +428,7 @@ class TestVerdiProcessCallRoot(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiProcessCallRoot, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.node_root = WorkflowNode()
         cls.node_middle = WorkflowNode()
         cls.node_terminal = WorkflowNode()
@@ -442,7 +442,7 @@ class TestVerdiProcessCallRoot(AiidaTestCase):
         cls.node_terminal.store()
 
     def setUp(self):
-        super(TestVerdiProcessCallRoot, self).setUp()
+        super().setUp()
         self.cli_runner = CliRunner()
 
     def test_no_caller(self):

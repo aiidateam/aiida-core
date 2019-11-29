@@ -492,7 +492,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         """Create a new computer> I create a new one because I want to configure it and I don't want to
         interfere with other tests"""
-        super(TestVerdiComputerCommands, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.computer_name = 'comp_cli_test_computer'
         cls.comp = orm.Computer(
             name=cls.computer_name,

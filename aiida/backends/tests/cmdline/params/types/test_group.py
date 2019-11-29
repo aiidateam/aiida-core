@@ -25,7 +25,7 @@ class TestGroupParamType(AiidaTestCase):
         that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
         the rules implemented to solve ambiguities that arise when determing the identifier type
         """
-        super(TestGroupParamType, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
         cls.param = GroupParamType()
         cls.entity_01 = Group(label='group_01').store()

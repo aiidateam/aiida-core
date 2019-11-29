@@ -18,11 +18,11 @@ from aiida.plugins import CalculationFactory
 class TestCalcJob(AiidaTestCase):
 
     def setUp(self):
-        super(TestCalcJob, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestCalcJob, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_class_loader(self):

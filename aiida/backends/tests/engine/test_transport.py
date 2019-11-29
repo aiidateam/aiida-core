@@ -20,12 +20,12 @@ class TestTransportQueue(AiidaTestCase):
 
     def setUp(self, *args, **kwargs):
         """ Set up a simple authinfo and for later use """
-        super(TestTransportQueue, self).setUp(*args, **kwargs)
+        super().setUp(*args, **kwargs)
         self.authinfo = orm.AuthInfo(computer=self.computer, user=orm.User.objects.get_default()).store()
 
     def tearDown(self, *args, **kwargs):
         orm.AuthInfo.objects.delete(self.authinfo.id)
-        super(TestTransportQueue, self).tearDown(*args, **kwargs)
+        super().tearDown(*args, **kwargs)
 
     def test_simple_request(self):
         """ Test a simple transport request """

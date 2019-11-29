@@ -22,7 +22,7 @@ class List(Data, MutableSequence):
 
     def __init__(self, **kwargs):
         data = kwargs.pop('list', list())
-        super(List, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.set_list(data)
 
     def __getitem__(self, item):
@@ -44,7 +44,7 @@ class List(Data, MutableSequence):
         return len(self.get_list())
 
     def __str__(self):
-        return super(List, self).__str__() + ' value: {}'.format(self.get_list())
+        return super().__str__() + ' value: {}'.format(self.get_list())
 
     def __eq__(self, other):
         try:

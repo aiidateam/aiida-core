@@ -23,14 +23,14 @@ class TestLogs(AiidaTestCase):
 
     def setUp(self):
         """Reset database prior to all tests"""
-        super(TestLogs, self).setUp()
+        super().setUp()
         self.reset_database()
 
     def tearDown(self):
         """
         Delete all the created log entries
         """
-        super(TestLogs, self).tearDown()
+        super().tearDown()
         orm.Log.objects.delete_all()
 
     @with_temp_dir

@@ -258,7 +258,7 @@ class SshTransport(Transport):
         accepted paramiko.SSHClient.connect() params.
         """
         import paramiko
-        super(SshTransport, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self._sftp = None
         self._proxy = None

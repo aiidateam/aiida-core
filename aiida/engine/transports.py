@@ -22,7 +22,7 @@ class TransportRequest:
 
     # pylint: disable=too-few-public-methods
     def __init__(self):
-        super(TransportRequest, self).__init__()
+        super().__init__()
         self.future = concurrent.Future()
         self.count = 0
 

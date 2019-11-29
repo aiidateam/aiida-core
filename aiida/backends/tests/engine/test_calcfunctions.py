@@ -27,7 +27,7 @@ class TestCalcFunction(AiidaTestCase):
     """
 
     def setUp(self):
-        super(TestCalcFunction, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
         self.default_int = Int(256)
 
@@ -38,7 +38,7 @@ class TestCalcFunction(AiidaTestCase):
         self.test_calcfunction = test_calcfunction
 
     def tearDown(self):
-        super(TestCalcFunction, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_calcfunction_node_type(self):

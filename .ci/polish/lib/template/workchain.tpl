@@ -6,7 +6,7 @@ class ${class_name}(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(${class_name}, cls).define(spec)
+        super().define(spec)
         spec.input('code', valid_type=Code, required=False)
         spec.input('operands', valid_type=Str)
         spec.input('modulo', valid_type=Int)

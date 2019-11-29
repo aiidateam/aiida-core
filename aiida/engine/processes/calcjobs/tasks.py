@@ -293,12 +293,12 @@ class Waiting(plumpy.Waiting):
     """The waiting state for the `CalcJob` process."""
 
     def __init__(self, process, done_callback, msg=None, data=None):
-        super(Waiting, self).__init__(process, done_callback, msg, data)
+        super().__init__(process, done_callback, msg, data)
         self._task = None
         self._killing = None
 
     def load_instance_state(self, saved_state, load_context):
-        super(Waiting, self).load_instance_state(saved_state, load_context)
+        super().load_instance_state(saved_state, load_context)
         self._task = None
         self._killing = None
 

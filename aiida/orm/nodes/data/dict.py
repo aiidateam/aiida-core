@@ -32,7 +32,7 @@ class Dict(Data):
         :param dict: the dictionary to set
         """
         dictionary = kwargs.pop('dict', None)
-        super(Dict, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if dictionary:
             self.set_dict(dictionary)
 

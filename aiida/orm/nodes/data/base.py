@@ -30,7 +30,7 @@ class BaseType(Data):
         except AttributeError:
             raise RuntimeError('Derived class must define the `_type` class member')
 
-        super(BaseType, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         try:
             value = args[0]
@@ -48,7 +48,7 @@ class BaseType(Data):
         self.set_attribute('value', self._type(value))  # pylint: disable=no-member
 
     def __str__(self):
-        return super(BaseType, self).__str__() + ' value: {}'.format(self.value)
+        return super().__str__() + ' value: {}'.format(self.value)
 
     def __eq__(self, other):
         if isinstance(other, BaseType):

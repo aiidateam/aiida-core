@@ -19,14 +19,14 @@ class TestComment(AiidaTestCase):
     """Unit tests for the Comment ORM class."""
 
     def setUp(self):
-        super(TestComment, self).setUp()
+        super().setUp()
         self.node = orm.Data().store()
         self.user = orm.User.objects.get_default()
         self.content = 'Sometimes when I am freestyling, I lose confidence'
         self.comment = Comment(self.node, self.user, self.content).store()
 
     def tearDown(self):
-        super(TestComment, self).tearDown()
+        super().tearDown()
         Comment.objects.delete_all()
 
     def test_comment_content(self):

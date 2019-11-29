@@ -25,7 +25,7 @@ class TestExtras(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """Only run to prepare an export file"""
-        super(TestExtras, cls).setUpClass()
+        super().setUpClass()
 
         data = orm.Data()
         data.label = 'my_test_data_node'
@@ -38,7 +38,7 @@ class TestExtras(AiidaTestCase):
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
         """Remove tmp_folder"""
-        super(TestExtras, cls).tearDownClass()
+        super().tearDownClass()
 
         shutil.rmtree(cls.tmp_folder, ignore_errors=True)
 

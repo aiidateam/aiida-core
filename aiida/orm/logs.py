@@ -175,7 +175,7 @@ class Log(entities.Entity):
             message=message,
             metadata=metadata
         )
-        super(Log, self).__init__(model)
+        super().__init__(model)
         self.store()  # Logs are immutable and automatically stored
 
     @property

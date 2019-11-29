@@ -87,7 +87,7 @@ class PbsJobResource(NodeNumberJobResource):
            num_cores_per_machine
         3. If only num_cores_per_machine is passed, use it
         """
-        super(PbsJobResource, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         value_error = ('num_cores_per_machine must be equal to '
                        'num_cores_per_mpiproc * num_mpiprocs_per_machine, '

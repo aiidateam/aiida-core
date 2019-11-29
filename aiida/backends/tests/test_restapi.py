@@ -35,7 +35,7 @@ class RESTApiTestCase(AiidaTestCase):
         database to be able to explore different requests/filters/orderings etc.
         """
         # call parent setUpClass method
-        super(RESTApiTestCase, cls).setUpClass()
+        super().setUpClass()
 
         # connect the app and the api
         # Init the api by connecting it the the app (N.B. respect the following

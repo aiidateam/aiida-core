@@ -30,7 +30,7 @@ class TestSpecificImport(AiidaTestCase):
     """Test specific ex-/import cases"""
 
     def setUp(self):
-        super(TestSpecificImport, self).setUp()
+        super().setUp()
         self.reset_database()
 
     def tearDown(self):

@@ -23,7 +23,7 @@ class TestJobManager(AiidaTestCase):
     """Test the `aiida.engine.processes.calcjobs.manager.JobManager` class."""
 
     def setUp(self):
-        super(TestJobManager, self).setUp()
+        super().setUp()
         self.loop = tornado.ioloop.IOLoop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.objects.get_default()
@@ -31,7 +31,7 @@ class TestJobManager(AiidaTestCase):
         self.manager = JobManager(self.transport_queue)
 
     def tearDown(self):
-        super(TestJobManager, self).tearDown()
+        super().tearDown()
         AuthInfo.objects.delete(self.auth_info.pk)
 
     def test_get_jobs_list(self):
@@ -52,7 +52,7 @@ class TestJobsList(AiidaTestCase):
     """Test the `aiida.engine.processes.calcjobs.manager.JobsList` class."""
 
     def setUp(self):
-        super(TestJobsList, self).setUp()
+        super().setUp()
         self.loop = tornado.ioloop.IOLoop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.objects.get_default()
@@ -60,7 +60,7 @@ class TestJobsList(AiidaTestCase):
         self.jobs_list = JobsList(self.auth_info, self.transport_queue)
 
     def tearDown(self):
-        super(TestJobsList, self).tearDown()
+        super().tearDown()
         AuthInfo.objects.delete(self.auth_info.pk)
 
     def test_get_minimum_update_interval(self):

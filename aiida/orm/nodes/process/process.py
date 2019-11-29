@@ -52,7 +52,7 @@ class ProcessNode(Sealable, Node):
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
     def __str__(self):
-        base = super(ProcessNode, self).__str__()
+        base = super().__str__()
         if self.process_type:
             return '{} ({})'.format(base, self.process_type)
 
@@ -61,7 +61,7 @@ class ProcessNode(Sealable, Node):
     @classproperty
     def _updatable_attributes(cls):
         # pylint: disable=no-self-argument
-        return super(ProcessNode, cls)._updatable_attributes + (
+        return super()._updatable_attributes + (
             cls.PROCESS_PAUSED_KEY,
             cls.CHECKPOINT_KEY,
             cls.EXCEPTION_KEY,
@@ -468,7 +468,7 @@ class ProcessNode(Sealable, Node):
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        super(ProcessNode, self).validate_incoming(source, link_type, link_label)
+        super().validate_incoming(source, link_type, link_label)
         if self.is_stored:
             raise ValueError('attempted to add an input link after the process node was already stored.')
 
@@ -479,13 +479,13 @@ class ProcessNode(Sealable, Node):
 
         :returns: True if this process node is valid to be used for caching, False otherwise
         """
-        return super(ProcessNode, self).is_valid_cache and self.is_finished
+        return super().is_valid_cache and self.is_finished
 
     def _get_objects_to_hash(self):
         """
         Return a list of objects which should be included in the hash.
         """
-        res = super(ProcessNode, self)._get_objects_to_hash()
+        res = super()._get_objects_to_hash()
         res.append({
             entry.link_label: entry.node.get_hash()
             for entry in self.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))

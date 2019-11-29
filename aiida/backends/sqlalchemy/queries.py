@@ -17,7 +17,7 @@ class SqlaQueryManager(AbstractQueryManager):
     """
 
     def __init__(self, backend):
-        super(SqlaQueryManager, self).__init__(backend)
+        super().__init__(backend)
 
     def get_creation_statistics(
             self,

@@ -25,7 +25,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiCodeSetup, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         orm.Computer(
             name='comp',
             hostname='localhost',
@@ -134,7 +134,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         from aiida import orm
 
-        super(TestVerdiCodeCommands, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         orm.Computer(
             name='comp',
             hostname='localhost',

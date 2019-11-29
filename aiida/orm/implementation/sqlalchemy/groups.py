@@ -45,7 +45,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         :param type_string: an optional type for the group to contain
         """
         type_check(user, users.SqlaUser)
-        super(SqlaGroup, self).__init__(backend)
+        super().__init__(backend)
 
         dbgroup = DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string)
         self._dbmodel = utils.ModelWrapper(dbgroup)
@@ -188,7 +188,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.backends.sqlalchemy.models.base import Base
 
-        super(SqlaGroup, self).add_nodes(nodes)
+        super().add_nodes(nodes)
         skip_orm = kwargs.get('skip_orm', False)
 
         def check_node(given_node):
@@ -238,7 +238,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         """
         from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
-        super(SqlaGroup, self).remove_nodes(nodes)
+        super().remove_nodes(nodes)
 
         # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
         dbnodes = self._dbmodel.dbnodes

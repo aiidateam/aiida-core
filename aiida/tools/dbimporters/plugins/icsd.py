@@ -650,7 +650,7 @@ class IcsdEntry(CifEntry):
         """
         Create an instance of IcsdEntry, related to the supplied URI.
         """
-        super(IcsdEntry, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.source = {
             'db_name': kwargs.get('db_name','Icsd'),
             'db_uri': None,

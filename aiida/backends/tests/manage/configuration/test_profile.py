@@ -23,7 +23,7 @@ class TestProfile(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """Setup a mock profile."""
-        super(TestProfile, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.profile_name = 'test_profile'
         cls.profile_dictionary = {
             'default_user': 'dummy@localhost',

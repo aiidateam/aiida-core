@@ -152,7 +152,7 @@ class MaterialsProjectCifEntry(CifEntry):  # pylint: disable=abstract-method
         """
         cif = kwargs.pop('cif', None)
         kwargs['uri'] = url
-        super(MaterialsProjectCifEntry, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if cif is not None:
             self.cif = cif
@@ -173,7 +173,7 @@ class MaterialsProjectSearchResults(DbSearchResults):  # pylint: disable=abstrac
 
     def __init__(self, results, return_class):
         self._return_class = return_class
-        super(MaterialsProjectSearchResults, self).__init__(results)
+        super().__init__(results)
 
     def _get_source_dict(self, result_dict):
         """

@@ -21,7 +21,7 @@ class SumWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(SumWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('a', valid_type=NumericType)
         spec.input('b', valid_type=NumericType)
         spec.outline(
@@ -37,7 +37,7 @@ class ProductWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(ProductWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('a', valid_type=NumericType)
         spec.input('b', valid_type=NumericType)
         spec.outline(
@@ -53,7 +53,7 @@ class SumProductWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(SumProductWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('a', valid_type=NumericType)
         spec.input('b', valid_type=NumericType)
         spec.input('c', valid_type=NumericType)

@@ -72,7 +72,7 @@ class PluginParamType(click.ParamType):
         self._init_entry_points()
         self.load = load
 
-        super(PluginParamType, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def _init_entry_points(self):
         """

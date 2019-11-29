@@ -23,7 +23,7 @@ class TestRemoteData(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestRemoteData, cls).setUpClass()
+        super().setUpClass()
         user = User.objects.get_default()
         authinfo = AuthInfo(cls.computer, user)
         authinfo.store()

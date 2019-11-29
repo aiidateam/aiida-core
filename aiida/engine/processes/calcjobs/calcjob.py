@@ -104,12 +104,12 @@ class CalcJob(Process):
         if self.__class__ == CalcJob:
             raise exceptions.InvalidOperation('cannot construct or launch a base `CalcJob` class.')
 
-        super(CalcJob, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def define(cls, spec):
         # yapf: disable
-        super(CalcJob, cls).define(spec)
+        super().define(spec)
         spec.inputs.validator = validate_calc_job
         spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
         spec.input('metadata.dry_run', valid_type=bool, default=False,
@@ -194,7 +194,7 @@ class CalcJob(Process):
     @classmethod
     def get_state_classes(cls):
         # Overwrite the waiting state
-        states_map = super(CalcJob, cls).get_state_classes()
+        states_map = super().get_state_classes()
         states_map[ProcessState.WAITING] = Waiting
         return states_map
 
@@ -205,7 +205,7 @@ class CalcJob(Process):
         .. note:: This has to be done before calling the super because that will seal the node after we cannot change it
         """
         self.node.delete_state()
-        super(CalcJob, self).on_terminated()
+        super().on_terminated()
 
     @override
     def run(self):

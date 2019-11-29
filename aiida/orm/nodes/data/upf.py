@@ -273,7 +273,7 @@ class UpfData(SinglefileData):
           :param source: Dictionary with information on source of the potential (see ".source" property).
           """
         # pylint: disable=redefined-builtin
-        super(UpfData, self).__init__(file, filename=filename, **kwargs)
+        super().__init__(file, filename=filename, **kwargs)
         if source is not None:
             self.set_source(source)
 
@@ -343,7 +343,7 @@ class UpfData(SinglefileData):
         self.set_attribute('element', str(element))
         self.set_attribute('md5', md5)
 
-        return super(UpfData, self).store(*args, **kwargs)
+        return super().store(*args, **kwargs)
 
     @classmethod
     def from_md5(cls, md5):
@@ -382,7 +382,7 @@ class UpfData(SinglefileData):
         except KeyError:
             raise ParsingError("No 'element' parsed in the UPF file {}; unable to store".format(self.filename))
 
-        super(UpfData, self).set_file(file, filename=filename)
+        super().set_file(file, filename=filename)
 
         self.set_attribute('element', str(element))
         self.set_attribute('md5', md5sum)
@@ -418,7 +418,7 @@ class UpfData(SinglefileData):
         from aiida.common.exceptions import ValidationError
         from aiida.common.files import md5_from_filelike
 
-        super(UpfData, self)._validate()
+        super()._validate()
 
         with self.open(mode='r') as handle:
             parsed_data = parse_upf(handle)

@@ -123,7 +123,7 @@ class SlurmJobResource(NodeNumberJobResource):
            num_cores_per_mpiproc which should always be an integer value
         3. If only num_cores_per_mpiproc is passed, use it
         """
-        super(SlurmJobResource, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         value_error = ('num_cores_per_machine must be equal to '
                        'num_cores_per_mpiproc * num_mpiprocs_per_machine, '

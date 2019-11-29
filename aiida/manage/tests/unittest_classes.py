@@ -89,4 +89,4 @@ class TestRunner(unittest.runner.TextTestRunner):
         with test_manager(
             backend=backend or get_test_backend_name(), profile_name=profile_name or get_test_profile_name()
         ):
-            return super(TestRunner, self).run(suite)
+            return super().run(suite)

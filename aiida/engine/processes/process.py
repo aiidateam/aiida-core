@@ -58,7 +58,7 @@ class Process(plumpy.Process):
     @classmethod
     def define(cls, spec):
         # yapf: disable
-        super(Process, cls).define(spec)
+        super().define(spec)
         spec.input_namespace(spec.metadata_key, required=False, non_db=True)
         spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True,
             help='If set to `False` provenance will not be stored in the database.')
@@ -109,7 +109,7 @@ class Process(plumpy.Process):
 
         self._runner = runner if runner is not None else manager.get_manager().get_runner()
 
-        super(Process, self).__init__(
+        super().__init__(
             inputs=self.spec().inputs.serialize(inputs),
             logger=logger,
             loop=self._runner.loop,
@@ -123,7 +123,7 @@ class Process(plumpy.Process):
             self._enable_persistence = False
 
     def init(self):
-        super(Process, self).init()
+        super().init()
         if self._logger is None:
             self.set_logger(self.node.logger)
 
@@ -207,7 +207,7 @@ class Process(plumpy.Process):
 
         See documentation of :meth:`!plumpy.processes.Process.save_instance_state`.
         """
-        super(Process, self).save_instance_state(out_state, save_context)
+        super().save_instance_state(out_state, save_context)
 
         if self.metadata.store_provenance:
             assert self.node.is_stored
@@ -238,7 +238,7 @@ class Process(plumpy.Process):
             self._runner = manager.get_manager().get_runner()
 
         load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
-        super(Process, self).load_instance_state(saved_state, load_context)
+        super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
             self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])
@@ -261,7 +261,7 @@ class Process(plumpy.Process):
 
         had_been_terminated = self.has_terminated()
 
-        result = super(Process, self).kill(msg)
+        result = super().kill(msg)
 
         # Only kill children if we could be killed ourselves
         if result is not False and not had_been_terminated:
@@ -302,7 +302,7 @@ class Process(plumpy.Process):
             value = output_port
             output_port = self.SINGLE_OUTPUT_LINKNAME
 
-        return super(Process, self).out(output_port, value)
+        return super().out(output_port, value)
 
     def out_many(self, out_dict):
         """Attach outputs to multiple output ports.
@@ -317,7 +317,7 @@ class Process(plumpy.Process):
 
     def on_create(self):
         """Called when a Process is created."""
-        super(Process, self).on_create()
+        super().on_create()
         # If parent PID hasn't been supplied try to get it from the stack
         if self._parent_pid is None and Process.current():
             current = Process.current()
@@ -327,7 +327,7 @@ class Process(plumpy.Process):
 
     @override
     def on_entering(self, state):
-        super(Process, self).on_entering(state)
+        super().on_entering(state)
         # Update the node attributes every time we enter a new state
 
     def on_entered(self, from_state):
@@ -337,12 +337,12 @@ class Process(plumpy.Process):
         self._save_checkpoint()
         # Update the latest process state change timestamp
         set_process_state_change_timestamp(self)
-        super(Process, self).on_entered(from_state)
+        super().on_entered(from_state)
 
     @override
     def on_terminated(self):
         """Called when a Process enters a terminal state."""
-        super(Process, self).on_terminated()
+        super().on_terminated()
         if self._enable_persistence:
             try:
                 self.runner.persister.delete_checkpoint(self.pid)
@@ -362,7 +362,7 @@ class Process(plumpy.Process):
 
         :param exc_info: the sys.exc_info() object (type, value, traceback)
         """
-        super(Process, self).on_except(exc_info)
+        super().on_except(exc_info)
         self.node.set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)))
         self.report(''.join(traceback.format_exception(*exc_info)))
 
@@ -376,7 +376,7 @@ class Process(plumpy.Process):
         :param successful: whether execution was successful
         :type successful: bool
         """
-        super(Process, self).on_finish(result, successful)
+        super().on_finish(result, successful)
 
         if result is None:
             if not successful:
@@ -401,7 +401,7 @@ class Process(plumpy.Process):
         :param msg: message
         :type msg: str
         """
-        super(Process, self).on_paused(msg)
+        super().on_paused(msg)
         self._save_checkpoint()
         self.node.pause()
 
@@ -410,7 +410,7 @@ class Process(plumpy.Process):
         """
         The Process was unpaused so remove the paused attribute on the process node
         """
-        super(Process, self).on_playing()
+        super().on_playing()
         self.node.unpause()
 
     @override
@@ -423,7 +423,7 @@ class Process(plumpy.Process):
 
         :param value: The value emitted
         """
-        super(Process, self).on_output_emitting(output_port, value)
+        super().on_output_emitting(output_port, value)
 
         # Note that `PortNamespaces` should be able to receive non `Data` types such as a normal dictionary
         if isinstance(output_port, OutputPort) and not isinstance(value, orm.Data):
@@ -436,7 +436,7 @@ class Process(plumpy.Process):
         :param status: the status message
         :type status: str
         """
-        super(Process, self).set_status(status)
+        super().set_status(status)
         self.node.set_process_status(status)
 
     def submit(self, process, *args, **kwargs):

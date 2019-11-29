@@ -86,7 +86,7 @@ class Wf(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(Wf, cls).define(spec)
+        super().define(spec)
         spec.input('value', default=Str('A'))
         spec.input('n', default=Int(3))
         spec.outputs.dynamic = True
@@ -98,7 +98,7 @@ class Wf(WorkChain):
         )
 
     def on_create(self):
-        super(Wf, self).on_create()
+        super().on_create()
         # Reset the finished step
         self.finished_steps = {
             k: False for k in [
@@ -153,7 +153,7 @@ class PotentialFailureWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(PotentialFailureWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('success', valid_type=Bool)
         spec.input('through_return', valid_type=Bool, default=Bool(False))
         spec.input('through_exit_code', valid_type=Bool, default=Bool(False))
@@ -241,11 +241,11 @@ class IfTest(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(IfTest, cls).define(spec)
+        super().define(spec)
         spec.outline(if_(cls.condition)(cls.step1, cls.step2))
 
     def on_create(self, *args, **kwargs):
-        super(IfTest, self).on_create(*args, **kwargs)
+        super().on_create(*args, **kwargs)
         self.ctx.s1 = False
         self.ctx.s2 = False
 
@@ -284,11 +284,11 @@ class TestContext(AiidaTestCase):
 class TestWorkchain(AiidaTestCase):
 
     def setUp(self):
-        super(TestWorkchain, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestWorkchain, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_run_base_class(self):
@@ -341,7 +341,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(Wf, cls).define(spec)
+                super().define(spec)
                 # Try defining an invalid outline
                 spec.outline(5)
 
@@ -370,7 +370,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(IllegalWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.illegal)
                 spec.outputs.dynamic = True
 
@@ -386,7 +386,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(Wf, cls).define(spec)
+                super().define(spec)
                 spec.input('a', valid_type=Int)
                 spec.input('b', valid_type=Int)
                 # Try defining an invalid outline
@@ -409,7 +409,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(ReturnA, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.result)
                 spec.outputs.dynamic = True
 
@@ -420,7 +420,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(ReturnB, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.result)
                 spec.outputs.dynamic = True
 
@@ -431,7 +431,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(Wf, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.s1, cls.s2, cls.s3)
 
             def s1(self):
@@ -456,7 +456,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(TestWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.setup_context, cls.read_context)
 
             def setup_context(self):
@@ -519,7 +519,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(WcWithReturn, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.s1, if_(cls.isA)(return_), cls.after)
 
             def s1(self):
@@ -547,7 +547,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(MainWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.launch)
 
             def launch(self):
@@ -578,7 +578,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(MainWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.do_run, cls.check)
                 spec.outputs.dynamic = True
 
@@ -592,7 +592,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(SubWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.do_run)
                 spec.outputs.dynamic = True
 
@@ -609,7 +609,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(MainWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.do_run, cls.check)
                 spec.outputs.dynamic = True
 
@@ -623,7 +623,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(SubWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.do_run)
                 spec.outputs.dynamic = True
 
@@ -639,7 +639,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(MainWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.do_run)
 
             def do_run(self):
@@ -657,7 +657,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(SubWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.do_run)
 
             def do_run(self):
@@ -711,7 +711,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(TestWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.run, cls.check)
                 spec.outputs.dynamic = True
 
@@ -735,7 +735,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(SimpleWc, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.result)
                 spec.outputs.dynamic = True
 
@@ -746,7 +746,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(Workchain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.begin, cls.result)
 
             def begin(self):
@@ -775,7 +775,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(TestWorkChain, cls).define(spec)
+                super().define(spec)
 
                 spec.input('namespace.sub', non_db=True)
                 spec.outline(cls.check_input)
@@ -795,7 +795,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(TestWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.input_namespace('namespace', dynamic=True)
                 spec.outline(cls.check_input)
 
@@ -813,7 +813,7 @@ class TestWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(ExitCodeWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.outline(cls.run)
                 spec.exit_code(status, label, message)
 
@@ -852,18 +852,18 @@ class TestWorkChainAbort(AiidaTestCase):
     """
 
     def setUp(self):
-        super(TestWorkChainAbort, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestWorkChainAbort, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     class AbortableWorkChain(WorkChain):
 
         @classmethod
         def define(cls, spec):
-            super(TestWorkChainAbort.AbortableWorkChain, cls).define(spec)
+            super().define(spec)
             spec.outline(cls.begin, cls.check)
 
         def begin(self):
@@ -931,18 +931,18 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     """
 
     def setUp(self):
-        super(TestWorkChainAbortChildren, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestWorkChainAbortChildren, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     class SubWorkChain(WorkChain):
 
         @classmethod
         def define(cls, spec):
-            super(TestWorkChainAbortChildren.SubWorkChain, cls).define(spec)
+            super().define(spec)
             spec.input('kill', default=Bool(False))
             spec.outline(cls.begin, cls.check)
 
@@ -960,7 +960,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
 
         @classmethod
         def define(cls, spec):
-            super(TestWorkChainAbortChildren.MainWorkChain, cls).define(spec)
+            super().define(spec)
             spec.input('kill', default=Bool(False))
             spec.outline(cls.submit_child, cls.check)
 
@@ -1021,11 +1021,11 @@ class TestImmutableInputWorkchain(AiidaTestCase):
     """
 
     def setUp(self):
-        super(TestImmutableInputWorkchain, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestImmutableInputWorkchain, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_immutable_input(self):
@@ -1038,7 +1038,7 @@ class TestImmutableInputWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(Wf, cls).define(spec)
+                super().define(spec)
                 spec.input('a', valid_type=Int)
                 spec.input('b', valid_type=Int)
                 spec.outline(
@@ -1074,7 +1074,7 @@ class TestImmutableInputWorkchain(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(Wf, cls).define(spec)
+                super().define(spec)
                 spec.input_namespace('subspace', dynamic=True)
                 spec.outline(
                     cls.step_one,
@@ -1104,7 +1104,7 @@ class SerializeWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(SerializeWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.input(
             'test',
@@ -1126,11 +1126,11 @@ class TestSerializeWorkChain(AiidaTestCase):
     """
 
     def setUp(self):
-        super(TestSerializeWorkChain, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestSerializeWorkChain, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_serialize(self):
@@ -1153,7 +1153,7 @@ class GrandParentExposeWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(GrandParentExposeWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.expose_inputs(ParentExposeWorkChain, namespace='sub.sub')
         spec.expose_outputs(ParentExposeWorkChain, namespace='sub.sub')
@@ -1172,7 +1172,7 @@ class ParentExposeWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(ParentExposeWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.expose_inputs(ChildExposeWorkChain, include=['a'])
         spec.expose_inputs(
@@ -1220,7 +1220,7 @@ class ChildExposeWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(ChildExposeWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.input('a', valid_type=Int)
         spec.input('b', valid_type=Float)
@@ -1321,7 +1321,7 @@ class TestWorkChainExpose(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(Parent, cls).define(spec)
+                super().define(spec)
                 spec.input('a', default=stored_a)
                 spec.outline(cls.step1)
 
@@ -1332,7 +1332,7 @@ class TestWorkChainExpose(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(Child, cls).define(spec)
+                super().define(spec)
                 spec.expose_inputs(Parent)
                 spec.outline(cls.step1)
 
@@ -1348,7 +1348,7 @@ class TestWorkChainMisc(AiidaTestCase):
 
         @classmethod
         def define(cls, spec):
-            super(TestWorkChainMisc.PointlessWorkChain, cls).define(spec)
+            super().define(spec)
             spec.outline(cls.return_dict)
 
         def return_dict(self):
@@ -1359,7 +1359,7 @@ class TestWorkChainMisc(AiidaTestCase):
 
         @classmethod
         def define(cls, spec):
-            super(TestWorkChainMisc.IllegalSubmitWorkChain, cls).define(spec)
+            super().define(spec)
             spec.outline(cls.illegal_submit)
 
         def illegal_submit(self):
@@ -1384,7 +1384,7 @@ class TestDefaultUniqueness(AiidaTestCase):
 
         @classmethod
         def define(cls, spec):
-            super(TestDefaultUniqueness.Parent, cls).define(spec)
+            super().define(spec)
             spec.expose_inputs(TestDefaultUniqueness.Child, namespace='child_one')
             spec.expose_inputs(TestDefaultUniqueness.Child, namespace='child_two')
             spec.outline(cls.do_run)
@@ -1400,7 +1400,7 @@ class TestDefaultUniqueness(AiidaTestCase):
 
         @classmethod
         def define(cls, spec):
-            super(TestDefaultUniqueness.Child, cls).define(spec)
+            super().define(spec)
             spec.input('a', valid_type=Bool, default=Bool(True))
 
         def run(self):

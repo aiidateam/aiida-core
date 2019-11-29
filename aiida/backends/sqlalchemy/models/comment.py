@@ -55,7 +55,7 @@ class DbComment(Base):
         )
 
     def __init__(self, *args, **kwargs):
-        super(DbComment, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # The behavior of an unstored Comment instance should be that all its attributes should be initialized in
         # accordance with the defaults specified on the collums, i.e. if a default is specified for the `uuid` column,
         # then an unstored `DbComment` instance should have a default value for the `uuid` attribute. The exception here

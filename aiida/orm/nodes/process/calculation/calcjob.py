@@ -76,7 +76,7 @@ class CalcJobNode(CalculationNode):
 
     @classproperty
     def _updatable_attributes(cls):  # pylint: disable=no-self-argument
-        return super(CalcJobNode, cls)._updatable_attributes + (
+        return super()._updatable_attributes + (
             cls.CALC_JOB_STATE_KEY,
             cls.REMOTE_WORKDIR_KEY,
             cls.RETRIEVE_LIST_KEY,
@@ -90,7 +90,7 @@ class CalcJobNode(CalculationNode):
 
     @classproperty
     def _hash_ignored_attributes(cls):  # pylint: disable=no-self-argument
-        return super(CalcJobNode, cls)._hash_ignored_attributes + (
+        return super()._hash_ignored_attributes + (
             'queue_name',
             'account',
             'qos',
@@ -137,7 +137,7 @@ class CalcJobNode(CalculationNode):
 
         :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
         """
-        builder = super(CalcJobNode, self).get_builder_restart()
+        builder = super().get_builder_restart()
         builder.metadata.options = self.get_options()
 
         return builder

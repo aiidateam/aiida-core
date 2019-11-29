@@ -21,7 +21,7 @@ class NonEmptyStringParamType(StringParamType):
     name = 'nonemptystring'
 
     def convert(self, value, param, ctx):
-        newval = super(NonEmptyStringParamType, self).convert(value, param, ctx)
+        newval = super().convert(value, param, ctx)
         if not newval:  # None or empty string
             self.fail('Empty string is not valid!')
 

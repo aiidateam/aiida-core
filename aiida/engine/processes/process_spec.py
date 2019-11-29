@@ -28,7 +28,7 @@ class ProcessSpec(plumpy.ProcessSpec):
     PORT_NAMESPACE_TYPE = PortNamespace
 
     def __init__(self):
-        super(ProcessSpec, self).__init__()
+        super().__init__()
         self._exit_codes = ExitCodesNamespace()
 
     @property
@@ -77,7 +77,7 @@ class CalcJobProcessSpec(ProcessSpec):
     OUTPUT_PORT_TYPE = CalcJobOutputPort
 
     def __init__(self):
-        super(CalcJobProcessSpec, self).__init__()
+        super().__init__()
         self._default_output_node = None
 
     @property

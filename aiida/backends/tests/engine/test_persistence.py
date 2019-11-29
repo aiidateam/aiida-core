@@ -20,11 +20,11 @@ class TestProcess(AiidaTestCase):
     """Test the basic saving and loading of process states."""
 
     def setUp(self):
-        super(TestProcess, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestProcess, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_save_load(self):
@@ -43,7 +43,7 @@ class TestAiiDAPersister(AiidaTestCase):
     maxDiff = 1024
 
     def setUp(self):
-        super(TestAiiDAPersister, self).setUp()
+        super().setUp()
         self.persister = AiiDAPersister()
 
     def test_save_load_checkpoint(self):

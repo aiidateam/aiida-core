@@ -20,7 +20,7 @@ from aiida.manage import configuration
 class TestQueryBuilder(AiidaTestCase):
 
     def setUp(self):
-        super(TestQueryBuilder, self).setUp()
+        super().setUp()
         self.clean_db()
         self.insert_data()
 
@@ -119,7 +119,7 @@ class TestQueryBuilder(AiidaTestCase):
 
             @classmethod
             def define(cls, spec):
-                super(PotentialFailureWorkChain, cls).define(spec)
+                super().define(spec)
                 spec.input('success', valid_type=orm.Bool)
                 spec.input('through_return', valid_type=orm.Bool, default=orm.Bool(False))
                 spec.input('through_exit_code', valid_type=orm.Bool, default=orm.Bool(False))

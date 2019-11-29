@@ -10,7 +10,7 @@ class SerializeWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(SerializeWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.input('a', serializer=to_aiida_type)
         spec.input('b', serializer=to_aiida_type)

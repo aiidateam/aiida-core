@@ -23,7 +23,7 @@ class TestWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(TestWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input_namespace('dynamic.namespace', dynamic=True)
         spec.input('values', valid_type=orm.Int, help='Port name that overlaps with method of mutable mapping')
         spec.input('name.spaced', valid_type=orm.Int, help='Namespaced port')
@@ -37,7 +37,7 @@ class TestLazyProcessNamespace(Process):
 
     @classmethod
     def define(cls, spec):
-        super(TestLazyProcessNamespace, cls).define(spec)
+        super().define(spec)
         spec.input_namespace('namespace')
         spec.input_namespace('namespace.nested')
         spec.input('namespace.nested.bird')
@@ -49,7 +49,7 @@ class MappingData(Mapping, orm.Data):
     """Data sub class that is also a `Mapping`."""
 
     def __init__(self, data=None):
-        super(MappingData, self).__init__()
+        super().__init__()
         if data is None:
             data = {}
         self._data = data
@@ -67,7 +67,7 @@ class MappingData(Mapping, orm.Data):
 class TestProcessBuilder(AiidaTestCase):
 
     def setUp(self):
-        super(TestProcessBuilder, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
         self.process_class = CalculationFactory('templatereplacer')
         self.builder = self.process_class.get_builder()
@@ -87,7 +87,7 @@ class TestProcessBuilder(AiidaTestCase):
         }
 
     def tearDown(self):
-        super(TestProcessBuilder, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_builder_inputs(self):

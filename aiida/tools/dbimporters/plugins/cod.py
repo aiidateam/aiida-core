@@ -287,7 +287,7 @@ class CodSearchResults(DbSearchResults):
     _base_url = 'http://www.crystallography.net/cod/'
 
     def __init__(self, results):
-        super(CodSearchResults, self).__init__(results)
+        super().__init__(results)
         self._return_class = CodEntry
 
     def __len__(self):
@@ -333,5 +333,5 @@ class CodEntry(CifEntry):
         :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`, related
         to the supplied URI.
         """
-        super(CodEntry, self).__init__(db_name=db_name, db_uri=db_uri,
+        super().__init__(db_name=db_name, db_uri=db_uri,
                                        uri=uri, **kwargs)

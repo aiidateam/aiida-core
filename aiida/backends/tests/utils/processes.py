@@ -22,7 +22,7 @@ class DummyProcess(Process):
 
     @classmethod
     def define(cls, spec):
-        super(DummyProcess, cls).define(spec)
+        super().define(spec)
         spec.inputs.valid_type = Data
         spec.outputs.valid_type = Data
 
@@ -37,7 +37,7 @@ class AddProcess(Process):
 
     @classmethod
     def define(cls, spec):
-        super(AddProcess, cls).define(spec)
+        super().define(spec)
         spec.input('a', required=True)
         spec.input('b', required=True)
         spec.output('result', required=True)
@@ -54,7 +54,7 @@ class BadOutput(Process):
 
     @classmethod
     def define(cls, spec):
-        super(BadOutput, cls).define(spec)
+        super().define(spec)
         spec.outputs.valid_type = Data
 
     def run(self):

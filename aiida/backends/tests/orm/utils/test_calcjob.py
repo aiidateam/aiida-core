@@ -27,7 +27,7 @@ class TestCalcJobResultManager(AiidaTestCase):
         We emulate a node for the `TemplateReplacer` calculation job class. To do this we have to make sure the
         process type is set correctly and an output parameter node is created.
         """
-        super(TestCalcJobResultManager, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
         cls.process_class = CalculationFactory('templatereplacer')
         cls.process_type = get_entry_point_string_from_class(cls.process_class.__module__, cls.process_class.__name__)
         cls.node = CalcJobNode(computer=cls.computer, process_type=cls.process_type)

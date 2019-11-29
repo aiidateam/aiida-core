@@ -148,7 +148,7 @@ class CodeBuilder:
     def __setattr__(self, key, value):
         if not key.startswith('_'):
             self._set_code_attr(key, value)
-        super(CodeBuilder, self).__setattr__(key, value)
+        super().__setattr__(key, value)
 
     def _set_code_attr(self, key, value):
         """Set a code attribute, if it passes validation.
@@ -204,7 +204,7 @@ class CodeBuilder:
         """
 
         def __init__(self, msg):
-            super(CodeBuilder.CodeValidationError, self).__init__()
+            super().__init__()
             self.msg = msg
 
         def __str__(self):

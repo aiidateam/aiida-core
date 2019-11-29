@@ -244,7 +244,7 @@ class TestSettingsToJSONMigration(TestMigrations):
         """
         db_setting_model = self.apps.get_model('db', 'DbSetting')
         db_setting_model.objects.filter(key__in=self.settings_info.keys()).delete()
-        super(TestSettingsToJSONMigration, self).tearDown()
+        super().tearDown()
 
 
 # pylint: disable=no-init, old-style-class, too-few-public-methods, dangerous-default-value, too-many-statements

@@ -19,7 +19,7 @@ class TestVerdiRestapiCommand(AiidaTestCase):
     """tests for verdi restapi command"""
 
     def setUp(self):
-        super(TestVerdiRestapiCommand, self).setUp()
+        super().setUp()
         self.cli_runner = CliRunner()
 
     def test_run_restapi(self):

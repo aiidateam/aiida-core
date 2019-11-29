@@ -40,7 +40,7 @@ class TestVerdiGraph(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiGraph, cls).setUpClass()
+        super().setUpClass()
         from aiida.orm import Data
 
         cls.node = Data().store()

@@ -36,7 +36,7 @@ class TestProcessFunction(AiidaTestCase):
     # pylint: disable=too-many-public-methods,too-many-instance-attributes
 
     def setUp(self):
-        super(TestProcessFunction, self).setUp()
+        super().setUp()
         self.assertIsNone(Process.current())
 
         @workfunction
@@ -115,7 +115,7 @@ class TestProcessFunction(AiidaTestCase):
         self.function_out_unstored = function_out_unstored
 
     def tearDown(self):
-        super(TestProcessFunction, self).tearDown()
+        super().tearDown()
         self.assertIsNone(Process.current())
 
     def test_properties(self):

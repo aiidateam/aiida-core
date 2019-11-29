@@ -24,7 +24,7 @@ class TestVerdiImport(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiImport, cls).setUpClass(*args, **kwargs)
+        super().setUpClass(*args, **kwargs)
 
         # Helper variables
         cls.url_path = 'https://raw.githubusercontent.com/aiidateam/aiida-core/' \

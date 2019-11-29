@@ -284,7 +284,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         Overrides original method from DirectScheduler in order to list
         missing processes as DONE.
         """
-        job_stats = super(DirectScheduler, self).get_jobs(jobs=jobs, user=user, as_dict=as_dict)
+        job_stats = super().get_jobs(jobs=jobs, user=user, as_dict=as_dict)
 
         found_jobs = []
         # Get the list of known jobs

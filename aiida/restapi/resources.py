@@ -213,7 +213,7 @@ class Node(BaseResource):
     _parse_pk_uuid = 'uuid'  # Parse a uuid pattern in the URL path (not a pk)
 
     def __init__(self, **kwargs):
-        super(Node, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         from aiida.orm import Node as tNode
         self.tclass = tNode
 

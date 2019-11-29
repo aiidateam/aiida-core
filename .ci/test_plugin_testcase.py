@@ -34,7 +34,7 @@ class PluginTestCase1(PluginTestCase):
         self.computer = self.get_computer(temp_dir=self.temp_dir)
 
     def tearDown(self):
-        super(PluginTestCase1, self).tearDown()
+        super().tearDown()
         shutil.rmtree(self.temp_dir)
 
     @staticmethod
@@ -88,7 +88,7 @@ class PluginTestCase1(PluginTestCase):
         are not there anymore.
         """
         from aiida.orm import load_node
-        super(PluginTestCase1, self).tearDown()  # reset DB
+        super().tearDown()  # reset DB
         with self.assertRaises(Exception):
             load_node(self.data_pk)
 
@@ -105,7 +105,7 @@ class PluginTestCase2(PluginTestCase):
         Just making sure that setup/teardown is safe for
         multiple testcase classes (this was broken in #1425).
         """
-        super(PluginTestCase2, self).tearDown()
+        super().tearDown()
 
 
 if __name__ == '__main__':

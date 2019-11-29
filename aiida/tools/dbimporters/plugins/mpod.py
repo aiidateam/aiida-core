@@ -131,7 +131,7 @@ class MpodSearchResults(DbSearchResults):
     _base_url = 'http://mpod.cimav.edu.mx/datafiles/'
 
     def __init__(self, results):
-        super(MpodSearchResults, self).__init__(results)
+        super().__init__(results)
         self._return_class = MpodEntry
 
     def __len__(self):
@@ -166,7 +166,7 @@ class MpodEntry(CifEntry):
         :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodEntry`, related
         to the supplied URI.
         """
-        super(MpodEntry, self).__init__(db_name='Material Properties Open Database',
+        super().__init__(db_name='Material Properties Open Database',
                                         db_uri='http://mpod.cimav.edu.mx',
                                         uri=uri,
                                         **kwargs)

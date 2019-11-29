@@ -46,7 +46,7 @@ class AuthInfo(entities.Entity):
         """
         backend = backend or get_manager().get_backend()
         model = backend.authinfos.create(computer=computer.backend_entity, user=user.backend_entity)
-        super(AuthInfo, self).__init__(model)
+        super().__init__(model)
 
     def __str__(self):
         if self.enabled:

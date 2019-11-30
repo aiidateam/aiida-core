@@ -1190,10 +1190,10 @@ class SshTransport(Transport):
         if 'username' in self._connect_args:
             further_params.append('-l {}'.format(escape_for_bash(self._connect_args['username'])))
 
-        if 'port' in self._connect_args:
+        if 'port' in self._connect_args and self._connect_args['port']:
             further_params.append('-p {}'.format(self._connect_args['port']))
 
-        if 'key_filename' in self._connect_args:
+        if 'key_filename' in self._connect_args and self._connect_args['key_filename']:
             further_params.append('-i {}'.format(escape_for_bash(self._connect_args['key_filename'])))
 
         further_params_str = ' '.join(further_params)

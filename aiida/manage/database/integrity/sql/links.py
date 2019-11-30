@@ -23,7 +23,7 @@ SELECT_CALCULATIONS_WITH_OUTGOING_CALL = """
     JOIN db_dblink AS link ON node_in.id = link.input_id
     JOIN db_dbnode AS node_out ON node_out.id = link.output_id
     WHERE node_in.node_type LIKE 'process.calculation%'
-    AND link.type = 'call_calc' OR link.type = 'call_work';
+    AND (link.type = 'call_calc' OR link.type = 'call_work');
     """
 
 SELECT_CALCULATIONS_WITH_OUTGOING_RETURN = """

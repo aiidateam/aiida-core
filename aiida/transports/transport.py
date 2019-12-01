@@ -49,6 +49,8 @@ class Transport(object):
     """
     # pylint: disable=too-many-public-methods
 
+    _DEFAULT_SAFE_OPEN_INTERVAL = DEFAULT_TRANSPORT_INTERVAL
+
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
     _valid_auth_params = None
@@ -68,12 +70,11 @@ class Transport(object):
         __init__ method of the Transport base class.
         """
         from aiida.common import AIIDA_LOGGER
-
+        self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
         self._logger = AIIDA_LOGGER.getChild('transport').getChild(self.__class__.__name__)
         self._logger_extra = None
         self._is_open = False
         self._enters = 0
-        self._safe_open_interval = DEFAULT_TRANSPORT_INTERVAL
 
     def __enter__(self):
         """
@@ -186,6 +187,16 @@ class Transport(object):
 
     @classproperty
     def auth_options(cls):  # pylint: disable=no-self-argument
+        """Return the authentication options to be used for building the CLI.
+
+        :return: `OrderedDict` of tuples, with first element option name and second dictionary of kwargs
+        """
+        # The common auth options are currently defined as class members, but the default for `safe_interval` is sub
+        # class specific. With the current design the default cannot already be specified directly but has to be added
+        # manually here.
+        for option in cls._common_auth_options:
+            if option[0] == 'safe_interval':
+                option[1]['default'] = cls._DEFAULT_SAFE_OPEN_INTERVAL
         return OrderedDict(cls._valid_auth_options + cls._common_auth_options)
 
     @classmethod

@@ -11,8 +11,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from contextlib import contextmanager
-
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 

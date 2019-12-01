@@ -93,10 +93,6 @@ class SshTransport(Transport):
         ('key_policy', {'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']), 'prompt': 'Key policy', 'help': 'SSH key policy', 'non_interactive_default': True})
     ]
 
-    # I set the (default) value here to 5 secs between consecutive SSH checks.
-    # This should be incremented to 30, probably.
-    _DEFAULT_SAFE_OPEN_INTERVAL = 5
-
     @classmethod
     def _get_username_suggestion_string(cls, computer):
         """
@@ -252,7 +248,7 @@ class SshTransport(Transport):
     def _get_safe_interval_suggestion_string(cls, computer):
         return cls._DEFAULT_SAFE_OPEN_INTERVAL
 
-    def __init__(self, machine, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Initialize the SshTransport class.
 
@@ -268,20 +264,17 @@ class SshTransport(Transport):
         accepted paramiko.SSHClient.connect() params.
         """
         import paramiko
-        super(SshTransport, self).__init__()
+        super(SshTransport, self).__init__(*args, **kwargs)
 
-        self._is_open = False
         self._sftp = None
         self._proxy = None
 
-        self._machine = machine
+        self._machine = kwargs.pop('machine')
 
         self._client = paramiko.SSHClient()
         self._load_system_host_keys = kwargs.pop('load_system_host_keys', False)
         if self._load_system_host_keys:
             self._client.load_system_host_keys()
-
-        self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
 
         self._missing_key_policy = kwargs.pop('key_policy', 'RejectPolicy')  # This is paramiko default
         if self._missing_key_policy == 'RejectPolicy':
@@ -300,10 +293,6 @@ class SshTransport(Transport):
                 self._connect_args[k] = kwargs.pop(k)
             except KeyError:
                 pass
-
-        if kwargs:
-            raise ValueError('The following parameters were not accepted by '
-                             'the transport: {}'.format(','.join(str(k) for k in kwargs)))
 
     def open(self):
         """

@@ -292,8 +292,18 @@ class DbMultipleValueAttributeBaseClass():
         :return: None if the key is valid
         :raise aiida.common.ValidationError: if the key is not valid
         """
-        from aiida.backends.utils import validate_attribute_key
-        return validate_attribute_key(key)
+        from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
+        from aiida.common.exceptions import ValidationError
+
+        if not isinstance(key, six.string_types):
+            raise ValidationError('The key must be a string.')
+        if not key:
+            raise ValidationError('The key cannot be an empty string.')
+        if AIIDA_ATTRIBUTE_SEP in key:
+            raise ValidationError(
+                "The separator symbol '{}' cannot be present "
+                'in the key of attributes, extras, etc.'.format(AIIDA_ATTRIBUTE_SEP)
+            )
 
     @classmethod
     def set_value(

@@ -43,10 +43,6 @@ class TestBasicConnection(unittest.TestCase):
             t = LocalTransport()
             t.listdir()
 
-    def test_invalid_param(self):
-        with self.assertRaises(ValueError):
-            LocalTransport(unrequired_var='something')
-
     def test_basic(self):
         with LocalTransport():
             pass

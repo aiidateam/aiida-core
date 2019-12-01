@@ -41,10 +41,6 @@ class TestBasicConnection(unittest.TestCase):
             t = SshTransport(machine='localhost')
             t.listdir()
 
-    def test_invalid_param(self):
-        with self.assertRaises(ValueError):
-            SshTransport(machine='localhost', invalid_param=True)
-
     def test_auto_add_policy(self):
         with SshTransport(machine='localhost', timeout=30, load_system_host_keys=True, key_policy='AutoAddPolicy'):
             pass

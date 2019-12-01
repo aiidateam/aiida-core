@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=import-error,no-name-in-module,global-statement
+"""Module with implementation of the database backend using SqlAlchemy."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -34,7 +36,7 @@ def get_scoped_session():
     return SCOPED_SESSION_CLASS()
 
 
-def recreate_after_fork(engine):
+def recreate_after_fork(engine):  # pylint: disable=unused-argument
     """Callback called after a fork.
 
     Not only disposes the engine, but also recreates a new scoped session to use independent sessions in the fork.
@@ -72,7 +74,8 @@ def reset_session(profile=None):
         password=profile.database_password,
         hostname=profile.database_hostname,
         port=profile.database_port,
-        name=profile.database_name)
+        name=profile.database_name
+    )
 
     ENGINE = create_engine(engine_url, json_serializer=json.dumps, json_deserializer=json.loads, encoding='utf-8')
     SCOPED_SESSION_CLASS = scoped_session(sessionmaker(bind=ENGINE, expire_on_commit=True))

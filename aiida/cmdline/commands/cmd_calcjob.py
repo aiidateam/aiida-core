@@ -41,7 +41,7 @@ def calcjob_gotocomputer(calcjob):
     try:
         transport = calcjob.get_transport()
     except NotExistent as exception:
-        echo.echo_critical(exception)
+        echo.echo_critical(repr(exception))
 
     remote_workdir = calcjob.get_remote_workdir()
 

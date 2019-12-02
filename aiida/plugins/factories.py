@@ -7,12 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,inconsistent-return-statements
+# pylint: disable=invalid-name,inconsistent-return-statements,cyclic-import
 """Definition of factories to load classes from the various plugin groups."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from inspect import isclass
 from aiida.common.exceptions import InvalidEntryPointTypeError
 
 __all__ = (
@@ -62,7 +63,7 @@ def CalculationFactory(entry_point_name):
     entry_point = BaseFactory(entry_point_group, entry_point_name)
     valid_classes = (CalcJob, calcfunction)
 
-    if issubclass(entry_point, CalcJob):
+    if isclass(entry_point) and issubclass(entry_point, CalcJob):
         return entry_point
 
     if is_process_function(entry_point) and entry_point.node_class is CalcFunctionNode:
@@ -84,7 +85,7 @@ def DataFactory(entry_point_name):
     entry_point = BaseFactory(entry_point_group, entry_point_name)
     valid_classes = (Data,)
 
-    if issubclass(entry_point, Data):
+    if isclass(entry_point) and issubclass(entry_point, Data):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -103,7 +104,7 @@ def DbImporterFactory(entry_point_name):
     entry_point = BaseFactory(entry_point_group, entry_point_name)
     valid_classes = (DbImporter,)
 
-    if issubclass(entry_point, DbImporter):
+    if isclass(entry_point) and issubclass(entry_point, DbImporter):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -122,7 +123,7 @@ def OrbitalFactory(entry_point_name):
     entry_point = BaseFactory(entry_point_group, entry_point_name)
     valid_classes = (Orbital,)
 
-    if issubclass(entry_point, Orbital):
+    if isclass(entry_point) and issubclass(entry_point, Orbital):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -141,7 +142,7 @@ def ParserFactory(entry_point_name):
     entry_point = BaseFactory(entry_point_group, entry_point_name)
     valid_classes = (Parser,)
 
-    if issubclass(entry_point, Parser):
+    if isclass(entry_point) and issubclass(entry_point, Parser):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -160,7 +161,7 @@ def SchedulerFactory(entry_point_name):
     entry_point = BaseFactory(entry_point_group, entry_point_name)
     valid_classes = (Scheduler,)
 
-    if issubclass(entry_point, Scheduler):
+    if isclass(entry_point) and issubclass(entry_point, Scheduler):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -179,7 +180,7 @@ def TransportFactory(entry_point_name):
     entry_point = BaseFactory(entry_point_group, entry_point_name)
     valid_classes = (Transport,)
 
-    if issubclass(entry_point, Transport):
+    if isclass(entry_point) and issubclass(entry_point, Transport):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -199,7 +200,7 @@ def WorkflowFactory(entry_point_name):
     entry_point = BaseFactory(entry_point_group, entry_point_name)
     valid_classes = (WorkChain, workfunction)
 
-    if issubclass(entry_point, WorkChain):
+    if isclass(entry_point) and issubclass(entry_point, WorkChain):
         return entry_point
 
     if is_process_function(entry_point) and entry_point.node_class is WorkFunctionNode:

@@ -16,14 +16,15 @@ import six
 from django.core.exceptions import ObjectDoesNotExist
 from aiida.common.exceptions import AiidaException, DbContentError
 from six.moves import range
-from aiida.backends.djsite.utils import SCHEMA_VERSION_DB_KEY, SCHEMA_VERSION_DB_DESCRIPTION
+
+from aiida.backends.manager import SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION, SCHEMA_GENERATION_KEY, SCHEMA_GENERATION_DESCRIPTION
 
 
 class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0042_prepare_schema_reset'
+LATEST_MIGRATION = '0043_default_link_label'
 
 
 def _update_schema_version(version, apps, schema_editor):
@@ -33,22 +34,39 @@ def _update_schema_version(version, apps, schema_editor):
     settings table to JSONB)
     """
     db_setting_model = apps.get_model('db', 'DbSetting')
-    res = db_setting_model.objects.filter(key=SCHEMA_VERSION_DB_KEY).first()
+    result = db_setting_model.objects.filter(key=SCHEMA_VERSION_KEY).first()
     # If there is no schema record, create ones
-    if res is None:
-        res = db_setting_model()
-        res.key = SCHEMA_VERSION_DB_KEY
-        res.description = SCHEMA_VERSION_DB_DESCRIPTION
+    if result is None:
+        result = db_setting_model()
+        result.key = SCHEMA_VERSION_KEY
+        result.description = SCHEMA_VERSION_DESCRIPTION
 
     # If it stores the values in an EAV format, add the value in the tval field
-    if hasattr(res, 'tval'):
-        res.tval = str(version)
+    if hasattr(result, 'tval'):
+        result.tval = str(version)
     # Otherwise add it to the val (JSON) fiels
     else:
-        res.val = str(version)
+        result.val = str(version)
 
-    # Store the final result
-    res.save()
+    result.save()
+
+
+def _upgrade_schema_generation(version, apps, schema_editor):
+    """
+    The update schema uses the current models (and checks if the value is stored in EAV mode or JSONB)
+    to avoid to use the DbSettings schema that may change (as it changed with the migration of the
+    settings table to JSONB)
+    """
+    db_setting_model = apps.get_model('db', 'DbSetting')
+    result = db_setting_model.objects.filter(key=SCHEMA_GENERATION_KEY).first()
+    # If there is no schema record, create ones
+    if result is None:
+        result = db_setting_model()
+        result.key = SCHEMA_GENERATION_KEY
+        result.description = SCHEMA_GENERATION_DESCRIPTION
+
+    result.val = str(version)
+    result.save()
 
 
 def upgrade_schema_version(up_revision, down_revision):
@@ -385,8 +403,18 @@ class ModelModifierV0025(object):
         :return: None if the key is valid
         :raise aiida.common.ValidationError: if the key is not valid
         """
-        from aiida.backends.utils import validate_attribute_key
-        return validate_attribute_key(key)
+        from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
+        from aiida.common.exceptions import ValidationError
+
+        if not isinstance(key, six.string_types):
+            raise ValidationError('The key must be a string.')
+        if not key:
+            raise ValidationError('The key cannot be an empty string.')
+        if AIIDA_ATTRIBUTE_SEP in key:
+            raise ValidationError(
+                "The separator symbol '{}' cannot be present "
+                'in the key of attributes, extras, etc.'.format(AIIDA_ATTRIBUTE_SEP)
+            )
 
     def get_value_for_node(self, dbnode, key):
         """

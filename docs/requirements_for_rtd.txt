@@ -1,6 +1,6 @@
 PyCifRW==4.2.1; python_version < '3'
 PyCifRW==4.4.1; python_version >= '3'
-aiida-export-migration-tests==0.7.0
+aiida-export-migration-tests==0.8.0
 aldjemy==0.9.1
 alembic==1.2.1
 ase==3.17.0

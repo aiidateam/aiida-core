@@ -8,29 +8,27 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=import-error,no-name-in-module,unused-argument
+"""Simple wrapper around Django's `manage.py` CLI script."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
 import click
 
-from aiida.cmdline.params import options
+from aiida.cmdline.params import options, types
 
 
 @click.command()
-@options.PROFILE(required=True)
+@options.PROFILE(required=True, type=types.ProfileParamType(load_profile=True))
 @click.argument('command', nargs=-1)
 def main(profile, command):
     """Simple wrapper around the Django command line tool that first loads an AiiDA profile."""
     from django.core.management import execute_from_command_line
-
-    # Load the general load_dbenv.
-    from aiida.manage.configuration import load_profile
     from aiida.manage.manager import get_manager
 
-    load_profile(profile=profile.name)
     manager = get_manager()
-    manager._load_backend(schema_check=False)
+    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
 
     # The `execute_from_command` expects a list of command line arguments where the first is the program name that one
     # would normally call directly. Since this is now replaced by our `click` command we just spoof a random name.
@@ -39,4 +37,4 @@ def main(profile, command):
 
 
 if __name__ == '__main__':
-    main()
+    main()  # pylint: disable=no-value-for-parameter

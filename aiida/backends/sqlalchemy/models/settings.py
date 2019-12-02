@@ -15,12 +15,12 @@ from pytz import UTC
 
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.types import Integer, String, DateTime
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.common import timezone
 
 

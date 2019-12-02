@@ -258,7 +258,7 @@ class CalcJob(Process):
                 from aiida.transports.plugins.local import LocalTransport
                 with LocalTransport() as transport:
                     transport.chdir(folder.abspath)
-                    upload_calculation(self.node, transport, calc_info, script_filename, dry_run=True)
+                    upload_calculation(self.node, transport, calc_info, script_filename, self.inputs, dry_run=True)
                     self.node.dry_run_info = {
                         'folder': folder.abspath,
                         'script_filename': script_filename

@@ -876,6 +876,76 @@ class RESTApiTestSuite(RESTApiTestCase):
             response = json.loads(rv_obj.data)
             self.assertEqual(response['data']['nodes'][0]['attributes']['cell'], cell)
 
+    ############### node attributes_filter with pagination #############
+    def test_node_attributes_filter_pagination(self):
+        """
+        Check that node attributes specified in attributes_filter are
+        returned as a dictionary when pagination is set
+        """
+        expected_attributes = ['resources', 'cell']
+        url = self.get_url_prefix() + '/nodes/page/1?perpage=10&attributes=true&attributes_filter=resources,cell'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+            self.assertNotEqual(len(response['data']['nodes']), 0)
+            for node in response['data']['nodes']:
+                self.assertIn('attributes', node)
+                self.assertNotIn('attributes.resources', node)
+                self.assertNotIn('attributes.cell', node)
+                self.assertEqual(len(node['attributes']), len(expected_attributes))
+                for attr in expected_attributes:
+                    self.assertIn(attr, node['attributes'])
+
+    ############### node get one attributes_filter with pagination #############
+    def test_node_single_attributes_filter(self):
+        """
+        Check that when only one node attribute is specified in attributes_filter
+        only this attribute is returned as a dictionary when pagination is set
+        """
+        expected_attribute = ['resources']
+        url = self.get_url_prefix() + '/nodes/page/1?perpage=10&attributes=true&attributes_filter=resources'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+            self.assertNotEqual(len(response['data']['nodes']), 0)
+            for node in response['data']['nodes']:
+                self.assertEqual(list(node['attributes'].keys()), expected_attribute)
+
+    ############### node extras_filter with pagination #############
+    def test_node_extras_filter_pagination(self):
+        """
+        Check that node extras specified in extras_filter are
+        returned as a dictionary when pagination is set
+        """
+        expected_extras = ['extra1', 'extra2']
+        url = self.get_url_prefix() + '/nodes/page/1?perpage=10&extras=true&extras_filter=extra1,extra2'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+            self.assertNotEqual(len(response['data']['nodes']), 0)
+            for node in response['data']['nodes']:
+                self.assertIn('extras', node)
+                self.assertNotIn('extras.extra1', node)
+                self.assertNotIn('extras.extra2', node)
+                self.assertEqual(len(node['extras']), len(expected_extras))
+                for extra in expected_extras:
+                    self.assertIn(extra, node['extras'])
+
+    ############### node get one extras_filter with pagination #############
+    def test_node_single_extras_filter(self):
+        """
+        Check that when only one node extra is specified in extras_filter
+        only this extra is returned as a dictionary when pagination is set
+        """
+        expected_extra = ['extra2']
+        url = self.get_url_prefix() + '/nodes/page/1?perpage=10&extras=true&extras_filter=extra2'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+            self.assertNotEqual(len(response['data']['nodes']), 0)
+            for node in response['data']['nodes']:
+                self.assertEqual(list(node['extras'].keys()), expected_extra)
+
     ############### node full_type filter #############
     def test_nodes_full_type_filter(self):
         """

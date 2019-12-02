@@ -19,7 +19,10 @@ import yaml
 
 import click
 
-__all__ = ('echo', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
+__all__ = (
+    'echo', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_highlight',
+    'echo_dictionary'
+)
 
 
 # pylint: disable=too-few-public-methods
@@ -29,6 +32,18 @@ class ExitCode(IntEnum):
     DEPRECATED = 80
     UNKNOWN = 99
     SUCCESS = 0
+
+
+COLORS = {
+    'success': 'green',
+    'highlight': 'green',
+    'info': 'blue',
+    'warning': 'bright_yellow',
+    'error': 'red',
+    'critical': 'red',
+    'deprecated': 'red',
+}
+BOLD = True  # whether colors are used together with 'bold'
 
 
 # pylint: disable=invalid-name
@@ -53,7 +68,7 @@ def echo_info(message, bold=False, nl=True, err=False):
     :param nl: whether to print a newline at the end of the message
     :param err: whether to print to stderr
     """
-    click.secho('Info: ', fg='blue', bold=True, nl=False, err=err)
+    click.secho('Info: ', fg=COLORS['info'], bold=True, nl=False, err=err)
     click.secho(message, bold=bold, nl=nl, err=err)
 
 
@@ -67,7 +82,7 @@ def echo_success(message, bold=False, nl=True, err=False):
     :param nl: whether to print a newline at the end of the message
     :param err: whether to print to stderr
     """
-    click.secho('Success: ', fg='green', bold=True, nl=False, err=err)
+    click.secho('Success: ', fg=COLORS['success'], bold=True, nl=False, err=err)
     click.secho(message, bold=bold, nl=nl, err=err)
 
 
@@ -80,7 +95,7 @@ def echo_warning(message, bold=False, nl=True, err=False):
     :param nl: whether to print a newline at the end of the message
     :param err: whether to print to stderr
     """
-    click.secho('Warning: ', fg='bright_yellow', bold=True, nl=False, err=err)
+    click.secho('Warning: ', fg=COLORS['warning'], bold=True, nl=False, err=err)
     click.secho(message, bold=bold, nl=nl, err=err)
 
 
@@ -93,7 +108,7 @@ def echo_error(message, bold=False, nl=True, err=True):
     :param nl: whether to print a newline at the end of the message
     :param err: whether to print to stderr
     """
-    click.secho('Error: ', fg='red', bold=True, nl=False, err=err)
+    click.secho('Error: ', fg=COLORS['error'], bold=True, nl=False, err=err)
     click.secho(message, bold=bold, nl=nl, err=err)
 
 
@@ -111,9 +126,21 @@ def echo_critical(message, bold=False, nl=True, err=True):
     :param nl: whether to print a newline at the end of the message
     :param err: whether to print to stderr
     """
-    click.secho('Critical: ', fg='red', bold=True, nl=False, err=err)
+    click.secho('Critical: ', fg=COLORS['critical'], bold=True, nl=False, err=err)
     click.secho(message, bold=bold, nl=nl, err=err)
     sys.exit(ExitCode.CRITICAL)
+
+
+def echo_highlight(message, nl=True, bold=True, color='highlight'):
+    """
+    Print a highlighted message to stdout
+
+    :param message: the string representing the message to print
+    :param bold: whether to print the message in bold
+    :param nl: whether to print a newline at the end of the message
+    :param color: a color from COLORS
+    """
+    click.secho(message, bold=bold, nl=nl, fg=COLORS[color])
 
 
 # pylint: disable=redefined-builtin
@@ -130,7 +157,7 @@ def echo_deprecated(message, bold=False, nl=True, err=True, exit=False):
     :param err: whether to print to stderr
     :param exit: whether to exit after printing the message
     """
-    click.secho('Deprecated: ', fg='red', bold=True, nl=False, err=err)
+    click.secho('Deprecated: ', fg=COLORS['deprecated'], bold=True, nl=False, err=err)
     click.secho(message, bold=bold, nl=nl, err=err)
 
     if exit:
@@ -159,7 +186,7 @@ def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=
 
         values = [getattr(entry, attribute) for attribute in attributes]
         if highlight and highlight(entry):
-            click.secho(template.format(symbol='*', *values), fg='green')
+            click.secho(template.format(symbol='*', *values), fg=COLORS['highlight'])
         else:
             click.secho(template.format(symbol=' ', *values))
 

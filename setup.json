@@ -1,11 +1,12 @@
 {
   "name": "aiida-core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "url": "http://www.aiida.net/",
   "license": "MIT License",
   "author": "The AiiDA team",
   "author_email": "developers@aiida.net",
   "include_package_data": true,
+  "python_requires": ">=2.7,!=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*",
   "classifiers": [
     "Framework :: AiiDA",
     "License :: OSI Approved :: MIT License",
@@ -105,7 +106,7 @@
       "notebook<6"
     ],
     "testing": [
-      "aiida-export-migration-tests==0.7.0",
+      "aiida-export-migration-tests==0.8.0",
       "codecov==2.0.15",
       "coverage==4.5.4",
       "futures==3.3.0; python_version=='2.7'",
@@ -152,6 +153,7 @@
       "cif = aiida.cmdline.commands.cmd_data.cmd_cif:cif",
       "dict = aiida.cmdline.commands.cmd_data.cmd_dict:dictionary",
       "remote = aiida.cmdline.commands.cmd_data.cmd_remote:remote",
+      "singlefile = aiida.cmdline.commands.cmd_data.cmd_singlefile:singlefile",
       "structure = aiida.cmdline.commands.cmd_data.cmd_structure:structure",
       "trajectory = aiida.cmdline.commands.cmd_data.cmd_trajectory:trajectory",
       "upf = aiida.cmdline.commands.cmd_data.cmd_upf:upf"

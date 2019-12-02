@@ -27,6 +27,7 @@ DB_TEST_LIST = {
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0038_data_migration_legacy_job_calculations',
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0040_data_migration_legacy_process_attributes',
             'aiida.backends.djsite.db.subtests.migrations.test_migrations_0041_seal_unsealed_processes',
+            'aiida.backends.djsite.db.subtests.migrations.test_migrations_0043_default_link_label',
         ],
     },
     BACKEND_SQLA: {
@@ -147,7 +148,6 @@ DB_TEST_LIST = {
         'plugins.entry_point': ['aiida.backends.tests.plugins.test_entry_point'],
         'plugins.factories': ['aiida.backends.tests.plugins.test_factories'],
         'plugins.utils': ['aiida.backends.tests.plugins.test_utils'],
-        'query': ['aiida.backends.tests.test_query'],
         'restapi.identifiers': ['aiida.backends.tests.restapi.test_identifiers'],
         'restapi': ['aiida.backends.tests.test_restapi'],
         'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals'],
@@ -163,6 +163,7 @@ DB_TEST_LIST = {
         'tools.importexport.migration.v04_to_v05': ['aiida.backends.tests.tools.importexport.migration.test_v04_to_v05'],
         'tools.importexport.migration.v05_to_v06': ['aiida.backends.tests.tools.importexport.migration.test_v05_to_v06'],
         'tools.importexport.migration.v06_to_v07': ['aiida.backends.tests.tools.importexport.migration.test_v06_to_v07'],
+        'tools.importexport.migration.v07_to_v08': ['aiida.backends.tests.tools.importexport.migration.test_v07_to_v08'],
         'tools.importexport.orm.attributes': ['aiida.backends.tests.tools.importexport.orm.test_attributes'],
         'tools.importexport.orm.calculations': ['aiida.backends.tests.tools.importexport.orm.test_calculations'],
         'tools.importexport.orm.codes': ['aiida.backends.tests.tools.importexport.orm.test_codes'],

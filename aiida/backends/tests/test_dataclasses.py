@@ -2206,9 +2206,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
 
         struct = StructureData(pymatgen_structure=pymatgen_struct)
 
-        # Testing pymatgen Structure -> StructureData -> pymatgen Structure
-        # roundtrip.
-
+        # Testing pymatgen Structure -> StructureData -> pymatgen Structure roundtrip.
         pymatgen_struct_roundtrip = struct.get_pymatgen_structure()
         dict1 = pymatgen_struct.as_dict()
         dict2 = pymatgen_struct_roundtrip.as_dict()
@@ -2218,7 +2216,22 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         for i in dict2['sites']:
             i['abc'] = [round(j, 2) for j in i['abc']]
 
-        self.assertEquals(dict1, dict2)
+        def recursively_compare_values(left, right):
+            from collections.abc import Mapping
+            from numpy import testing
+
+            if isinstance(left, Mapping):
+                for key, value in left.items():
+                    recursively_compare_values(value, right[key])
+            elif isinstance(left, (list, tuple)):
+                for val1, val2 in zip(left, right):
+                    recursively_compare_values(val1, val2)
+            elif isinstance(left, float):
+                testing.assert_almost_equal(left, right)
+            else:
+                assert left == right, '{} is not {}'.format(value, right)
+
+        recursively_compare_values(dict1, dict2)
 
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
     def test_2(self):
@@ -2257,13 +2270,13 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         """
         import pymatgen
 
-        Fe_spin_up = pymatgen.structure.Specie('Fe', 0, properties={'spin': 1})
-        Mn_spin_up = pymatgen.structure.Specie('Mn', 0, properties={'spin': 1})
-        Fe_spin_down = pymatgen.structure.Specie('Fe', 0, properties={'spin': -1})
-        Mn_spin_down = pymatgen.structure.Specie('Mn', 0, properties={'spin': -1})
+        Fe_spin_up = pymatgen.Specie('Fe', 0, properties={'spin': 1})
+        Mn_spin_up = pymatgen.Specie('Mn', 0, properties={'spin': 1})
+        Fe_spin_down = pymatgen.Specie('Fe', 0, properties={'spin': -1})
+        Mn_spin_down = pymatgen.Specie('Mn', 0, properties={'spin': -1})
         FeMn1 = pymatgen.Composition({Fe_spin_up: 0.5, Mn_spin_up: 0.5})
         FeMn2 = pymatgen.Composition({Fe_spin_down: 0.5, Mn_spin_down: 0.5})
-        a = pymatgen.structure.Structure(
+        a = pymatgen.Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[FeMn1, FeMn2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]])
 
         with self.assertRaises(ValueError):
@@ -2272,7 +2285,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         # same, with vacancies
         Fe1 = pymatgen.Composition({Fe_spin_up: 0.5})
         Fe2 = pymatgen.Composition({Fe_spin_down: 0.5})
-        a = pymatgen.structure.Structure(
+        a = pymatgen.Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[Fe1, Fe2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]])
 
         with self.assertRaises(ValueError):
@@ -2286,10 +2299,10 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         """
         import pymatgen
 
-        Mg1 = pymatgen.structure.Composition({'Mg': 0.50})
-        Mg2 = pymatgen.structure.Composition({'Mg': 0.25})
+        Mg1 = pymatgen.Composition({'Mg': 0.50})
+        Mg2 = pymatgen.Composition({'Mg': 0.25})
 
-        a = pymatgen.structure.Structure(
+        a = pymatgen.Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[Mg1, Mg2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]])
 
         structure = StructureData(pymatgen=a)
@@ -2302,10 +2315,10 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         """
         import pymatgen
 
-        alloy_one = pymatgen.structure.Composition({'Mg': 0.25, 'Al': 0.75})
-        alloy_two = pymatgen.structure.Composition({'Mg': 0.45, 'Al': 0.55})
+        alloy_one = pymatgen.Composition({'Mg': 0.25, 'Al': 0.75})
+        alloy_two = pymatgen.Composition({'Mg': 0.45, 'Al': 0.55})
 
-        a = pymatgen.structure.Structure(
+        a = pymatgen.Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]],
             species=[alloy_one, alloy_two],
             coords=[[0, 0, 0], [0.5, 0.5, 0.5]])
@@ -2467,6 +2480,8 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         Tests roundtrip StructureData -> pymatgen -> StructureData
         (with partial occupancies).
         """
+        from numpy import testing
+
         a = StructureData(cell=[[4.0, 0.0, 0.0], [-2., 3.5, 0.0], [0.0, 0.0, 16.]])
         a.append_atom(position=(0.0, 0.0, 13.5), symbols='Mn')
         a.append_atom(position=(0.0, 0.0, 2.6), symbols='Mn')
@@ -2522,10 +2537,13 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         self.assertEquals(c.get_site_kindnames(),
                           ['Mn', 'Mn', 'Mn', 'Mn', 'MnX', 'MnX', 'Si', 'Si', 'N', 'N', 'N', 'N'])
         self.assertEquals(c.get_formula(), 'Mn4N4Si2{Mn0.80X0.20}2')
-        self.assertEquals([s.position for s in c.sites],
-                          [(0.0, 0.0, 13.5), (0.0, 0.0, 2.6), (0.0, 0.0, 5.5), (0.0, 0.0, 11.), (2., 1., 12.),
-                           (0.0, 2.2, 4.), (0.0, 2.2, 12.), (2., 1., 4.), (2., 1., 15.), (0.0, 2.2, 1.5),
-                           (0.0, 2.2, 7.), (2., 1., 9.5)])
+        testing.assert_allclose(
+            [s.position for s in c.sites],
+            [
+                (0.0, 0.0, 13.5), (0.0, 0.0, 2.6), (0.0, 0.0, 5.5), (0.0, 0.0, 11.), (2., 1., 12.), (0.0, 2.2, 4.),
+                (0.0, 2.2, 12.), (2., 1., 4.), (2., 1., 15.), (0.0, 2.2, 1.5), (0.0, 2.2, 7.), (2., 1., 9.5)
+            ]
+        )
 
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
     def test_partial_occ_and_spin(self):

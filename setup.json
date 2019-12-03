@@ -32,7 +32,6 @@
     "ipython>=4.0,<6.0",
     "jinja2~=2.10",
     "kiwipy[rmq]~=0.5.1",
-    "mock~=3.0",
     "numpy~=1.17",
     "paramiko~=2.6",
     "passlib~=1.7",

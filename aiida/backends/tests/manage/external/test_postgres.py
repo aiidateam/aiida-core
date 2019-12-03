@@ -8,9 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for postgres database maintenance functionality"""
-
-import unittest
-import mock
+from unittest import TestCase
+from unittest.mock import patch
 
 from aiida.manage.external.postgres import Postgres
 
@@ -20,7 +19,7 @@ def _try_connect_always_fail(**kwargs):  # pylint: disable=unused-argument
     return False
 
 
-class PostgresTest(unittest.TestCase):
+class PostgresTest(TestCase):
     """Test the public API provided by the `Postgres` class"""
 
     def setUp(self):
@@ -57,8 +56,8 @@ class PostgresTest(unittest.TestCase):
         setup_success = postgres.determine_setup()
         self.assertTrue(setup_success)
 
-    @mock.patch('aiida.manage.external.pgsu._try_connect_psycopg', new=_try_connect_always_fail)
-    @mock.patch('aiida.manage.external.pgsu._try_subcmd')
+    @patch('aiida.manage.external.pgsu._try_connect_psycopg', new=_try_connect_always_fail)
+    @patch('aiida.manage.external.pgsu._try_subcmd')
     def test_fallback_on_subcmd(self, try_subcmd):
         """Ensure that accessing postgres via subcommand is tried if psycopg does not work."""
         self._setup_postgres()

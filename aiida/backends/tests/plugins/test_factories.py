@@ -8,11 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :py:mod:`~aiida.plugins.factories` module."""
-
-try:
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch
+from unittest.mock import patch
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import InvalidEntryPointTypeError

@@ -8,16 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the configuration migration functionality."""
-
 import io
 import os
 import uuid
-import unittest
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import TestCase
+from unittest.mock import patch
 
 from aiida.common import json
 
@@ -25,7 +20,7 @@ from aiida.manage.configuration.migrations.utils import check_and_migrate_config
 from aiida.manage.configuration.migrations.migrations import _MIGRATION_LOOKUP
 
 
-class TestConfigMigration(unittest.TestCase):
+class TestConfigMigration(TestCase):
     """Tests for the configuration migration functionality."""
 
     @staticmethod
@@ -43,7 +38,7 @@ class TestConfigMigration(unittest.TestCase):
     def test_check_and_migrate(self):
         """Test the full config migration."""
         config_initial = self.load_config_sample('input/0.json')
-        with mock.patch.object(uuid, 'uuid4', return_value=uuid.UUID(hex='0' * 32)):
+        with patch.object(uuid, 'uuid4', return_value=uuid.UUID(hex='0' * 32)):
             config_migrated = check_and_migrate_config(config_initial)
         config_reference = self.load_config_sample('reference/final.json')
         self.assertEqual(config_migrated, config_reference)
@@ -59,7 +54,7 @@ class TestConfigMigration(unittest.TestCase):
         """Test the step between config versions 1 and 2."""
         config_initial = self.load_config_sample('input/1.json')
         config_reference = self.load_config_sample('reference/2.json')
-        with mock.patch.object(uuid, 'uuid4', return_value=uuid.UUID(hex='0' * 32)):
+        with patch.object(uuid, 'uuid4', return_value=uuid.UUID(hex='0' * 32)):
             config_migrated = _MIGRATION_LOOKUP[1].apply(config_initial)
         self.assertEqual(config_migrated, config_reference)
 

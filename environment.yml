@@ -21,7 +21,6 @@ dependencies:
 - kiwipy[rmq]~=0.5.1
 - numpy~=1.17
 - paramiko~=2.6
-- passlib~=1.7
 - pika~=1.1
 - plumpy~=0.14.3
 - psutil~=5.6

@@ -217,6 +217,8 @@ Windows Subsystem for Linux (Ubuntu)
 
 The guide for Ubuntu above can generally be followed, but there are a few things to note:
 
+#. It may be neccessary to install and start the `Windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_.
+
 #. Linux services under WSL are not started automatically.
    To start the PostgreSQL and RabbitMQ-server services, type the command below in the terminal::
 
@@ -257,9 +259,7 @@ It may be worth considering adding some of these commands to your ``~/.bashrc`` 
 
 .. hint::
 
-    The Windows Subsystem for Linux (WSL) 2 is recommended.
-    It is available from Windows 10 builds 18917 or higher.
-    For more information, see `the WSL documentation <https://docs.microsoft.com/en-us/windows/wsl/wsl2-install>`_.
+    Installing `Ubuntu <https://www.microsoft.com/en-gb/p/ubuntu/9nblggh4msv6?source=lp&activetab=pivot:overviewtab>`_ instead of the version specific applications, will let you have the latest LTS version.
 
 .. note::
 
@@ -274,6 +274,10 @@ It may be worth considering adding some of these commands to your ``~/.bashrc`` 
     The problem arises due to the ``/mnt/c/`` paths in the $PATH environment variable, so these should be temporarily removed.
 
     Some transport tests may not run properly using this setup.
+
+    For speed considerations, WSL 2 is recommended.
+    Note, however that it is *only* available through the Windows Insider Program, using Windows 10 builds 18917 and higher.
+    For more information, see `the WSL documentation <https://docs.microsoft.com/en-us/windows/wsl/wsl2-install>`_.
 
     .. tip::
 

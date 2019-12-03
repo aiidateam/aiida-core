@@ -8,22 +8,24 @@ AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operati
 
 * `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or
   `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ (The shell)
-* `python`_ 2.7 or >= 3.6 (The programming language used by AiiDA)
-* `python-pip`_ (Python package manager)
+* `python`_ >= 3.6 (The programming language used by AiiDA)
+* `python3-pip`_ (Python 3 package manager)
 * `postgresql`_ (Database software, version 9.4 or higher)
 * `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)
 
 Depending on your set up, there are a few optional dependencies:
 
 * `virtualenv`_ (Software to create a virtual python environment to install AiiDA in)
+* `virtualenvwrapper`_ (Wrapper for ``virtualenv`` to easily handle virtual environments)
 * `graphviz`_ (For plotting AiiDA provenance graphs)
 * `git`_ (Version control system used for AiiDA development)
 
 .. _graphviz: https://www.graphviz.org/download
 .. _git: https://git-scm.com/downloads
 .. _python: https://www.python.org/downloads
-.. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
-.. _virtualenv: https://packages.ubuntu.com/xenial/virtualenv
+.. _python3-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
+.. _virtualenv: https://packages.ubuntu.com/bionic/virtualenv
+.. _virtualenvwrapper: https://packages.ubuntu.com/bionic/virtualenvwrapper
 .. _postgresql: https://www.postgresql.org/downloads
 .. _RabbitMQ: https://www.rabbitmq.com/
 
@@ -33,7 +35,7 @@ Supported operating systems
 
 AiiDA has been tested on the following platforms:
 
-* Ubuntu 14.04, 16.04
+* Ubuntu 14.04, 16.04, 18.04
 * Mac OS X
 
 We expect AiiDA to also run on:
@@ -54,7 +56,7 @@ The following will install the basic ``python`` requirements and the ``git`` sou
 
 .. code-block:: bash
 
-    sudo apt-get install git python2.7-dev python3-dev python-pip virtualenv
+    sudo apt-get install git python3-dev python3-pip virtualenv
 
 To install the requirements for the ``postgres`` database run the following:
 
@@ -63,20 +65,21 @@ To install the requirements for the ``postgres`` database run the following:
     sudo apt-get install postgresql postgresql-server-dev-all postgresql-client
 
 For a more detailed description of database requirements and usage see the :ref:`database<database>` section.
+
 Finally, install the RabbitMQ message broker:
 
 .. code-block:: bash
 
     sudo apt-get install rabbitmq-server
 
-This adds RabbitMQ as a system service. To check whether it is running:
+This installs and adds RabbitMQ as a system service. To check whether it is running:
 
 .. code-block:: bash
 
     sudo rabbitmqctl status
 
 If it is not running already, it should after a reboot.
-For problems with installing RabbitMQ, refer to the detailed instructions  provided on the `website of RabbitMQ itself for Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
+For problems with installing RabbitMQ, refer to the detailed instructions provided on the `RabbitMQ website for Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
 
 
 .. _details_brew:
@@ -126,6 +129,7 @@ You can check whether it is running by checking the status through the command:
     /usr/local/sbin/rabbitmqctl status
 
 If you encounter problems installing RabbitMQ, please refer to the detailed instructions provided on the `website of RabbitMQ itself for Homebrew <https://www.rabbitmq.com/install-homebrew.html>`_.
+
 
 .. _details_macports:
 
@@ -205,34 +209,25 @@ Make sure that RabbitMQ is running with:
     Remove the mentioned option from the file ``/usr/libexec/rabbitmq/rabbitmq-env`` and restart the server.
     If you still have trouble getting RabbitMQ to run, please refer to the detailed instructions provided on the `website of RabbitMQ itself for generic Unix systems <https://www.rabbitmq.com/install-generic-unix.html>`_.
 
+
 .. _details_wsl:
 
 Windows Subsystem for Linux (Ubuntu)
 ====================================
 
-The Windows Subsystem for Linux (WSL) 2 is recommended.
-It is available from Windows 10 builds 18917 or higher.
-For more information, see `here <https://docs.microsoft.com/en-us/windows/wsl/wsl2-install>`_.
-
-The guide for Ubuntu above can be followed but there are a few things to note:
-
-#. The `windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_
-   should be installed and started,
-   since the version in WSL Ubuntu 18.04 does not work properly.
-
-   .. note:: For WSL 2 it should be enough to install and start the service in the Ubuntu system.
+The guide for Ubuntu above can generally be followed, but there are a few things to note:
 
 #. Linux services under WSL are not started automatically.
-   To start the PostgreSQL and RabbitMQ-server service, type the command below in the terminal::
+   To start the PostgreSQL and RabbitMQ-server services, type the command below in the terminal::
 
      sudo service postgresql start
      sudo service rabbitmq-server start
 
    .. tip::
 
-       These lines may be added to a ``.sh`` file and run at startup without using a password in the follwing way:
+       These services may be run at startup *without* passing a password in the following way:
 
-       Create a file with the lines above, but *without* the ``sudo``.
+       Create a ``.sh`` file with the lines above, but *without* ``sudo``.
        Make the file executeable, i.e., type::
 
          chmod +x /path/to/file.sh
@@ -246,10 +241,9 @@ The guide for Ubuntu above can be followed but there are a few things to note:
          <username> ALL=(root) NOPASSWD: /path/to/file.sh
 
        Replacing ``<username>`` with your Ubuntu username.
-       This will make you able to run the ``.sh`` file with ``root`` access, but without lowering security on your system.
+       This will make you able to run *only* this specific ``.sh`` file with ``root`` access, i.e., not passing a password, without lowering security on your system.
 
-#. There is a `known issue <https://github.com/Microsoft/WSL/issues/856>`_ in WSL Ubuntu 18.04 where the timezone is not
-   configured correctly out-of-the-box, which may cause problem for the database.
+#. There is a `known issue <https://github.com/Microsoft/WSL/issues/856>`_ in WSL Ubuntu 18.04 where the timezone is not configured correctly out-of-the-box, which may cause problem for the database.
    The following command can be used to re-configure the time zone::
 
      sudo dpkg-reconfigure tzdata
@@ -263,6 +257,12 @@ It may be worth considering adding some of these commands to your ``~/.bashrc`` 
 
 .. note::
 
+    The Windows Subsystem for Linux (WSL) 2 is recommended.
+    It is available from Windows 10 builds 18917 or higher.
+    For more information, see `the Microsoft WSL documentation <https://docs.microsoft.com/en-us/windows/wsl/wsl2-install>`_.
+
+.. note::
+
     **For developers**: To get ``pre-commit`` to run, you should install ruby via::
 
         sudo apt-get install ruby-full
@@ -273,7 +273,9 @@ It may be worth considering adding some of these commands to your ``~/.bashrc`` 
     This, however, is only necessary if you run into problems and Ruby refuses to run due to wrong access rights.
     The problem arises due to the ``/mnt/c/`` paths in the $PATH environment variable, so these should be temporarily removed.
 
+    Some transport tests may not run properly using this setup.
+
     .. tip::
 
         Consider using VS Code with the Remote WSL extension for a full IDE experience, if you're not using in-terminal IDEs.
-        See `here <https://code.visualstudio.com/docs/remote/wsl>`_.
+        See `the VS Code WSL documentation <https://code.visualstudio.com/docs/remote/wsl>`_.

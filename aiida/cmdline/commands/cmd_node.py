@@ -224,64 +224,17 @@ def extras(nodes, keys, fmt, identifier, raw):
 @arguments.NODES()
 @click.option('-d', '--depth', 'depth', default=1, help='Show children of nodes up to given depth')
 @with_dbenv()
+@decorators.deprecated_command('This command will be removed in `aiida-core==2.0.0`.')
 def tree(nodes, depth):
     """Show a tree of nodes starting from a given node."""
     from aiida.common import LinkType
+    from aiida.cmdline.utils.ascii_vis import NodeTreePrinter
 
     for node in nodes:
         NodeTreePrinter.print_node_tree(node, depth, tuple(LinkType.__members__.values()))
 
         if len(nodes) > 1:
             echo.echo('')
-
-
-class NodeTreePrinter:
-    """Utility functions for printing node trees."""
-
-    @classmethod
-    def print_node_tree(cls, node, max_depth, follow_links=()):
-        """Top-level function for printing node tree."""
-        from ete3 import Tree
-        from aiida.cmdline.utils.common import get_node_summary
-
-        echo.echo(get_node_summary(node))
-
-        tree_string = '({});'.format(cls._build_tree(node, max_depth=max_depth, follow_links=follow_links))
-        tmp = Tree(tree_string, format=1)
-        echo.echo(tmp.get_ascii(show_internal=True))
-
-    @staticmethod
-    def _ctime(link_triple):
-        return link_triple.node.ctime
-
-    @classmethod
-    def _build_tree(cls, node, show_pk=True, max_depth=None, follow_links=(), depth=0):
-        """Return string with tree."""
-        if max_depth is not None and depth > max_depth:
-            return None
-
-        children = []
-        for entry in sorted(node.get_outgoing(link_type=follow_links).all(), key=cls._ctime):
-            child_str = cls._build_tree(
-                entry.node, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1
-            )
-            if child_str:
-                children.append(child_str)
-
-        out_values = []
-        if children:
-            out_values.append('(')
-            out_values.append(', '.join(children))
-            out_values.append(')')
-
-        lab = node.__class__.__name__
-
-        if show_pk:
-            lab += ' [{}]'.format(node.pk)
-
-        out_values.append(lab)
-
-        return ''.join(out_values)
 
 
 @verdi_node.command('delete')

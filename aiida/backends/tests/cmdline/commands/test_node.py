@@ -63,7 +63,7 @@ class TestVerdiNode(AiidaTestCase):
 
     def test_node_tree_printer(self):
         """Test the `NodeTreePrinter` utility."""
-        from aiida.cmdline.commands.cmd_node import NodeTreePrinter
+        from aiida.cmdline.utils.ascii_vis import NodeTreePrinter
 
         with Capturing():
             NodeTreePrinter.print_node_tree(self.node, max_depth=1)

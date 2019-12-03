@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to draw ASCII diagrams to the command line."""
-
-from ete3 import Tree
-
 from aiida.common.links import LinkType
 
 __all__ = ('draw_children', 'draw_parents', 'format_call_graph')
@@ -20,9 +17,71 @@ TREE_MIDDLE_ENTRY = '\u251C\u2500\u2500 '
 TREE_FIRST_ENTRY = TREE_MIDDLE_ENTRY
 
 
+class NodeTreePrinter:
+    """Utility functions for printing node trees.
+
+    .. deprecated:: 1.1.0
+        Will be removed in `v2.0.0`.
+    """
+
+    # Note: when removing this code, also remove the `ete3` as a dependency as it will no longer be used.
+
+    @classmethod
+    def print_node_tree(cls, node, max_depth, follow_links=()):
+        """Top-level function for printing node tree."""
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning
+        warnings.warn('class is deprecated and will be removed in `aiida-core==2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
+        from ete3 import Tree
+        from aiida.cmdline.utils.common import get_node_summary
+        from aiida.cmdline.utils import echo
+
+        echo.echo(get_node_summary(node))
+
+        tree_string = '({});'.format(cls._build_tree(node, max_depth=max_depth, follow_links=follow_links))
+        tmp = Tree(tree_string, format=1)
+        echo.echo(tmp.get_ascii(show_internal=True))
+
+    @staticmethod
+    def _ctime(link_triple):
+        return link_triple.node.ctime
+
+    @classmethod
+    def _build_tree(cls, node, show_pk=True, max_depth=None, follow_links=(), depth=0):
+        """Return string with tree."""
+        if max_depth is not None and depth > max_depth:
+            return None
+
+        children = []
+        for entry in sorted(node.get_outgoing(link_type=follow_links).all(), key=cls._ctime):
+            child_str = cls._build_tree(
+                entry.node, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1
+            )
+            if child_str:
+                children.append(child_str)
+
+        out_values = []
+        if children:
+            out_values.append('(')
+            out_values.append(', '.join(children))
+            out_values.append(')')
+
+        lab = node.__class__.__name__
+
+        if show_pk:
+            lab += ' [{}]'.format(node.pk)
+
+        out_values.append(lab)
+
+        return ''.join(out_values)
+
+
 def draw_parents(node, node_label=None, show_pk=True, dist=2, follow_links_of_type=None):
     """
     Print an ASCII tree of the parents of the given node.
+
+    .. deprecated:: 1.1.0
+        Will be removed in `v2.0.0`.
 
     :param node: The node to draw for
     :type node: :class:`aiida.orm.nodes.data.Data`
@@ -36,6 +95,9 @@ def draw_parents(node, node_label=None, show_pk=True, dist=2, follow_links_of_ty
         if None then it will follow CREATE and INPUT links
     :type follow_links_of_type: str
     """
+    import warnings
+    from aiida.common.warnings import AiidaDeprecationWarning
+    warnings.warn('function is deprecated and will be removed in `aiida-core==2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
     return get_ascii_tree(node, node_label, show_pk, dist, follow_links_of_type, False)
 
 
@@ -43,6 +105,9 @@ def draw_children(node, node_label=None, show_pk=True, dist=2, follow_links_of_t
     """
     Print an ASCII tree of the parents of the given node.
 
+    .. deprecated:: 1.1.0
+        Will be removed in `v2.0.0`.
+
     :param node: The node to draw for
     :type node: :class:`aiida.orm.nodes.data.Data`
     :param node_label: The label to use for the nodes
@@ -55,12 +120,18 @@ def draw_children(node, node_label=None, show_pk=True, dist=2, follow_links_of_t
         if None then it will follow CREATE and INPUT links
     :type follow_links_of_type: str
     """
+    import warnings
+    from aiida.common.warnings import AiidaDeprecationWarning
+    warnings.warn('function is deprecated and will be removed in `aiida-core==2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
     return get_ascii_tree(node, node_label, show_pk, dist, follow_links_of_type, True)
 
 
 def get_ascii_tree(node, node_label=None, show_pk=True, max_depth=1, follow_links_of_type=None, descend=True):
     """
     Get a string representing an ASCII tree for the given node.
+
+    .. deprecated:: 1.1.0
+        Will be removed in `v2.0.0`.
 
     :param node: The node to get the tree for
     :type node: :class:`aiida.orm.nodes.node.Node`
@@ -78,6 +149,10 @@ def get_ascii_tree(node, node_label=None, show_pk=True, max_depth=1, follow_link
     :return: The string giving an ASCII representation of the tree from the node
     :rtype: str
     """
+    import warnings
+    from aiida.common.warnings import AiidaDeprecationWarning
+    warnings.warn('function is deprecated and will be removed in `aiida-core==2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
+    from ete3 import Tree
     tree_string = build_tree(node, node_label, show_pk, max_depth, follow_links_of_type, descend)
     tree = Tree('({});'.format(tree_string), format=1)
     return tree.get_ascii(show_internal=True)
@@ -86,6 +161,9 @@ def get_ascii_tree(node, node_label=None, show_pk=True, max_depth=1, follow_link
 def build_tree(node, node_label=None, show_pk=True, max_depth=1, follow_links_of_type=None, descend=True, depth=0):
     """
     Recursively build an ASCII string representation of the node tree
+
+    .. deprecated:: 1.1.0
+        Will be removed in `v2.0.0`.
 
     :param node: The node to get the tree for
     :type node: :class:`aiida.orm.nodes.node.Node`
@@ -106,6 +184,9 @@ def build_tree(node, node_label=None, show_pk=True, max_depth=1, follow_links_of
     :rtype: str
     """
     # pylint: disable=too-many-arguments
+    import warnings
+    from aiida.common.warnings import AiidaDeprecationWarning
+    warnings.warn('function is deprecated and will be removed in `aiida-core==2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
     out_values = []
 
     if depth < max_depth:
@@ -136,6 +217,9 @@ def _generate_node_label(node, node_attr, show_pk):
     """
     Generate a label for the node.
 
+    .. deprecated:: 1.1.0
+        Will be removed in `v2.0.0`.
+
     :param node: The node to generate the label for
     :type node: :class:`aiida.orm.nodes.node.Node`
     :param node_attr: The attribute to use as the label, can be None
@@ -145,6 +229,9 @@ def _generate_node_label(node, node_attr, show_pk):
     :return: The generated label
     :rtype: str
     """
+    import warnings
+    from aiida.common.warnings import AiidaDeprecationWarning
+    warnings.warn('function is deprecated and will be removed in `aiida-core==2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
     label = None
     if node_attr is None:
         try:

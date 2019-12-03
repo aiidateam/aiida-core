@@ -251,15 +251,15 @@ The guide for Ubuntu above can generally be followed, but there are a few things
 #. The file open limit may need to be raised using ``ulimit -n 2048`` (default is 1024), when running tests.
    You can check the limit by using ``ulimit -n``.
 
-   .. note:: This may need to be run every time the system starts up.
+   .. hint:: This may need to be run every time the system starts up.
 
 It may be worth considering adding some of these commands to your ``~/.bashrc`` file, since some of these settings may reset upon reboot.
 
-.. note::
+.. hint::
 
     The Windows Subsystem for Linux (WSL) 2 is recommended.
     It is available from Windows 10 builds 18917 or higher.
-    For more information, see `the Microsoft WSL documentation <https://docs.microsoft.com/en-us/windows/wsl/wsl2-install>`_.
+    For more information, see `the WSL documentation <https://docs.microsoft.com/en-us/windows/wsl/wsl2-install>`_.
 
 .. note::
 

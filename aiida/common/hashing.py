@@ -7,36 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Common password and hash generation functions.
-"""
-
+"""Common password and hash generation functions."""
 import hashlib
-try:  # Python3
+try:  # Python > 3.5
     from hashlib import blake2b
-except ImportError:  # Python2
+except ImportError:  # Python 3.5
     from pyblake2 import blake2b
 import numbers
 import random
 import time
 import uuid
+from collections import abc, OrderedDict
 from datetime import datetime
-from operator import itemgetter
+from functools import singledispatch
 from itertools import chain
+from operator import itemgetter
 
-from passlib.context import CryptContext
 import pytz
 
-try:  # Python3
-    from functools import singledispatch
-    from collections import abc, OrderedDict
-except ImportError:  # Python2
-    from singledispatch import singledispatch
-    import collections as abc
-    from collections import OrderedDict
-
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
-
 from .folders import Folder
 
 # The prefix of the hashed using pbkdf2_sha256 algorithm in Django
@@ -53,16 +42,6 @@ HASHING_KEY = 'HashingKey'
 
 # The key that is used to store the hash in the node extras
 _HASH_EXTRA_KEY = '_aiida_hash'
-
-pwd_context = CryptContext(  # pylint: disable=invalid-name
-    # The list of hashes that we support
-    schemes=['argon2', 'pbkdf2_sha256', 'des_crypt'],
-    # The default hashing mechanism
-    default='pbkdf2_sha256',
-
-    # We set the number of rounds that should be used...
-    pbkdf2_sha256__default_rounds=8000,
-)
 
 ###################################################################
 # THE FOLLOWING WAS TAKEN FROM DJANGO BUT IT CAN BE EASILY REPLACED

@@ -256,8 +256,9 @@ class Profile:  # pylint: disable=too-many-public-methods
 
         :return: a tuple (protocol, address).
         """
-        import uritools
-        parts = uritools.urisplit(self.repository_uri)
+        from urllib.parse import urlparse
+
+        parts = urlparse(self.repository_uri)
 
         if parts.scheme != 'file':
             raise exceptions.ConfigurationError('invalid repository protocol, only the local `file://` is supported')

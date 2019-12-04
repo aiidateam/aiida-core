@@ -9,12 +9,8 @@
 ###########################################################################
 """AGE rules"""
 
-from __future__ import absolute_import
-from __future__ import print_function
-
 from abc import ABCMeta, abstractmethod
 from enum import Enum
-import six
 import numpy as np
 
 from aiida.common.exceptions import InputValidationError
@@ -32,8 +28,7 @@ def check_if_basket(entity_set):
         raise TypeError('You need to set the walkers with an AiidaEntitySet')
 
 
-@six.add_metaclass(ABCMeta)
-class Operation(object):
+class Operation(metaclass=ABCMeta):
     """Operation metaclass"""
 
     def __init__(self, mode, max_iterations, track_edges, track_visits):
@@ -171,7 +166,7 @@ class UpdateRule(Operation):
 
         self._entity_from = get_spec_from_path(queryhelp, 0)
         self._entity_to = get_spec_from_path(queryhelp, -1)
-        super(UpdateRule, self).__init__(mode, max_iterations, track_edges=track_edges, track_visits=track_visits)
+        super().__init__(mode, max_iterations, track_edges=track_edges, track_visits=track_visits)
 
     def _init_run(self, entity_set):
         # pylint: disable=protected-access
@@ -231,7 +226,7 @@ class RuleSaveWalkers(Operation):
 
     def __init__(self, stash):
         self._stash = stash
-        super(RuleSaveWalkers, self).__init__(mode=MODES.REPLACE, max_iterations=1, track_edges=True, track_visits=True)
+        super().__init__(mode=MODES.REPLACE, max_iterations=1, track_edges=True, track_visits=True)
 
     def _load_results(self, target_set, operational_set):
         self._stash += self._walkers
@@ -242,7 +237,7 @@ class RuleSetWalkers(Operation):
 
     def __init__(self, stash):
         self._stash = stash
-        super(RuleSetWalkers, self).__init__(mode=MODES.REPLACE, max_iterations=1, track_edges=True, track_visits=True)
+        super().__init__(mode=MODES.REPLACE, max_iterations=1, track_edges=True, track_visits=True)
 
     def _load_results(self, target_set, operational_set):
         self._walkers.empty()
@@ -258,7 +253,7 @@ class RuleSequence(Operation):
                 print(rule)
                 raise TypeError('rule has to be an instance of Operation-subclass')
         self._rules = rules
-        super(RuleSequence, self).__init__(mode, max_iterations, track_edges=track_edges, track_visits=track_visits)
+        super().__init__(mode, max_iterations, track_edges=track_edges, track_visits=track_visits)
 
     def _load_results(self, target_set, operational_set):  #ex: active_walkers as last arg
         target_set.empty()

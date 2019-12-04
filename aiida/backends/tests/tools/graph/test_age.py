@@ -10,11 +10,7 @@
 # pylint: disable=too-many-locals
 """AGE tests"""
 
-from __future__ import absolute_import
-from __future__ import print_function
 import numpy as np
-from six.moves import range
-from six.moves import zip
 
 from aiida.tools.graph.age_entities import get_basket
 from aiida.tools.graph.age_rules import (UpdateRule, RuleSequence, MODES, RuleSaveWalkers, RuleSetWalkers)
@@ -116,6 +112,11 @@ class TestNodes(AiidaTestCase):
     # i.e. the number of children per parent Node.
     DEPTH = 4
     NUMBER_OF_CHILDREN = 2
+
+    def setUp(self):
+        super().setUp()
+        self.reset_database()
+        print('AMMA RUN THIS THING!')
 
     def test_data_provenance(self):
         """
@@ -328,12 +329,15 @@ class TestNodes(AiidaTestCase):
         Testing whether groups and nodes can be traversed with the Graph explorer:
         """
         total_groups = 10
+        self.reset_database()
+        print('\n\n\n####################')
 
         # I create a certain number of groups and save them in this list:
         groups = []
         for idx in range(total_groups):
             new_group = Group(label='group-{}'.format(idx))
             new_group.store()
+            print('Group {}: ID is {}'.format(idx, new_group.id))
             groups.append(new_group)
 
         # Same with nodes: Create 1 node less than I have groups, each node will
@@ -387,7 +391,13 @@ class TestNodes(AiidaTestCase):
         seq = RuleSequence((rule1, rule2), max_iterations=np.inf)
         res = seq.run(basket_inp.copy())
         for should_set, is_set in ((nodes_set.copy(), res['nodes'].get_keys()), (groups_set, res['groups'].get_keys())):
+            print(is_set)
+            print(should_set)
             self.assertEqual(is_set, should_set)
+
+        print('####################\n\n\n')
+
+        #print('-------\n\n')
 
     def test_edges(self):
         """

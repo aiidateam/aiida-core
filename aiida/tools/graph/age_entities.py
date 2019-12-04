@@ -9,21 +9,15 @@
 ###########################################################################
 # pylint: disable=unnecessary-pass
 """AGE entities"""
-from __future__ import absolute_import
+
 from abc import ABCMeta, abstractmethod
-
-import six
-from six.moves import map
-from six.moves import zip
-
 from aiida.orm import Node, Group
 from aiida.orm.querybuilder import QueryBuilder
 
 VALID_ENTITY_CLASSES = (Node, Group)
 
 
-@six.add_metaclass(ABCMeta)
-class AbstractSetContainer(set):
+class AbstractSetContainer(set, metaclass=ABCMeta):
     """Abstract Set Container"""
 
     @abstractmethod
@@ -50,7 +44,7 @@ class AbstractSetContainer(set):
         pass
 
     def __init__(self):
-        super(AbstractSetContainer, self).__init__()
+        super().__init__()
         self._set = None
         self._additional_identifiers = ()
 
@@ -155,7 +149,7 @@ class AiidaEntitySet(AbstractSetContainer):
         """
         :param aiida_cls: A valid AiiDA ORM class, i.e. Node, Group, Computer
         """
-        super(AiidaEntitySet, self).__init__()
+        super().__init__()
         if not aiida_cls in VALID_ENTITY_CLASSES:
             raise TypeError('aiida_cls has to be among:{}'.format(VALID_ENTITY_CLASSES))
         # Done with checks, saving to attributes:
@@ -258,7 +252,7 @@ class DirectedEdgeSet(AbstractSetContainer):
         """
         :param aiida_cls: A valid AiiDA ORM class, i.e. Node, Group, Computer
         """
-        super(DirectedEdgeSet, self).__init__()
+        super().__init__()
         for aiida_cls in (aiida_cls_to, aiida_cls_from):
             if not aiida_cls in VALID_ENTITY_CLASSES:
                 raise TypeError('aiida_cls has to be among:{}'.format(VALID_ENTITY_CLASSES))

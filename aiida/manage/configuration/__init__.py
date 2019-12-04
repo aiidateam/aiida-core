@@ -49,7 +49,9 @@ def load_profile(profile=None):
     if PROFILE and (profile is None or PROFILE.name is profile):
         return PROFILE
 
-    profile = get_config().get_profile(profile)
+    config = get_config()
+
+    profile = config.get_profile(profile)
 
     if BACKEND_UUID is not None and BACKEND_UUID != profile.uuid:
         # Once the switching of profiles with different backends becomes possible, the backend has to be reset properly
@@ -62,13 +64,22 @@ def load_profile(profile=None):
     # Reconfigure the logging to make sure that profile specific logging configuration options are taken into account.
     # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded. This should
     # instead be done lazily in `Manager._load_backend`.
+
     configure_logging()
+
+    if IN_RT_DOC_MODE:
+        # on readthedocs, already load backend  (no schema check since no DB)
+        from aiida.manage.manager import get_manager
+        get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
 
     return PROFILE
 
 
 def load_config(create=False):
-    """Instantiate the Config object representing the configuration file of the current AiiDA instance.
+    """Instantiate Config object representing an AiiDA configuration file.
+
+    Warning: Contrary to :py:func:`~aiida.manage.configuration.get_config`, this function is uncached and will always
+    create a new Config object. You may want to call :py:func:`~aiida.manage.configuration.get_config` instead.
 
     :param create: if True, will create the configuration file if it does not already exist
     :type create: bool
@@ -83,31 +94,6 @@ def load_config(create=False):
     from .settings import AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME
 
     filepath = os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
-
-    if IN_RT_DOC_MODE:
-        # The following is a dummy config.json configuration that it is used for the
-        # proper compilation of the documentation on readthedocs.
-        from aiida.manage.external.postgres import DEFAULT_DBINFO
-        import tempfile
-        return Config(
-            tempfile.mkstemp()[1], {
-                'default_profile': 'default',
-                'profiles': {
-                    'default': {
-                        'AIIDADB_ENGINE': 'postgresql_psycopg2',
-                        'AIIDADB_BACKEND': 'django',
-                        'AIIDADB_HOST': DEFAULT_DBINFO['host'],
-                        'AIIDADB_PORT': DEFAULT_DBINFO['port'],
-                        'AIIDADB_NAME': 'aiidadb',
-                        'AIIDADB_PASS': '123',
-                        'default_user_email': 'aiida@epfl.ch',
-                        'TIMEZONE': 'Europe/Zurich',
-                        'AIIDADB_REPOSITORY_URI': 'file:///tmp/repository',
-                        'AIIDADB_USER': 'aiida'
-                    }
-                }
-            }
-        )
 
     if not os.path.isfile(filepath) and not create:
         raise exceptions.MissingConfigurationError('configuration file {} does not exist'.format(filepath))
@@ -155,10 +141,13 @@ def reset_config():
 def get_config(create=False):
     """Return the current configuration.
 
-    If the configuration has not been loaded yet, it will be loaded first and then returned.
+    If the configuration has not been loaded yet
+     * the configuration is loaded using :py:func:`load_config`
+     * the global `CONFIG` variable is set
+     * the configuration object is returned
 
-    Note: this function should only be called by parts of the code that expect that a complete AiiDA instance exists,
-    i.e. an AiiDA folder exists and contains a valid configuration file.
+    Note: This function will except if no configuration file can be found. Only call this function, if you need
+    information from the configuration file.
 
     :param create: if True, will create the configuration file if it does not already exist
     :type create: bool
@@ -170,7 +159,42 @@ def get_config(create=False):
     global CONFIG
 
     if not CONFIG:
-        CONFIG = load_config(create=create)
+        if IN_RT_DOC_MODE:
+            # The following is a dummy config.json configuration that it is used for the
+            # proper compilation of the documentation on readthedocs.
+            from aiida.manage.external.postgres import DEFAULT_DBINFO
+            import tempfile
+            CONFIG = Config(
+                tempfile.mkstemp()[1], {
+                    'default_profile': 'default',
+                    'profiles': {
+                        'default': {
+                            'AIIDADB_ENGINE': 'postgresql_psycopg2',
+                            'AIIDADB_BACKEND': 'django',
+                            'AIIDADB_HOST': DEFAULT_DBINFO['host'],
+                            'AIIDADB_PORT': DEFAULT_DBINFO['port'],
+                            'AIIDADB_NAME': 'aiidadb',
+                            'AIIDADB_PASS': '123',
+                            'default_user_email': 'aiida@epfl.ch',
+                            'AIIDADB_REPOSITORY_URI': 'file:///tmp/repository',
+                            'AIIDADB_USER': 'aiida'
+                        }
+                    }
+                }
+            )
+        else:
+            CONFIG = load_config(create=create)
+
+    import warnings
+    from aiida.common.warnings import AiidaDeprecationWarning
+    if CONFIG.get_option('warnings.showdeprecations'):
+        # If the user does not want to get AiiDA deprecation warnings, we disable them - this can be achieved with::
+        #   verdi config warnings.showdeprecations False
+        # Note that the AiidaDeprecationWarning does NOT inherit from DeprecationWarning
+        warnings.simplefilter('default', AiidaDeprecationWarning)  # pylint: disable=no-member
+        # This should default to 'once', i.e. once per different message
+    else:
+        warnings.simplefilter('ignore', AiidaDeprecationWarning)  # pylint: disable=no-member
 
     return CONFIG
 

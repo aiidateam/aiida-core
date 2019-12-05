@@ -10,6 +10,8 @@
 # pylint: disable=undefined-variable,wildcard-import,global-statement,redefined-outer-name,cyclic-import
 """Modules related to the configuration of an AiiDA instance."""
 
+import warnings
+from aiida.common.warnings import AiidaDeprecationWarning
 from .config import *
 from .options import *
 from .profile import *
@@ -49,9 +51,7 @@ def load_profile(profile=None):
     if PROFILE and (profile is None or PROFILE.name is profile):
         return PROFILE
 
-    config = get_config()
-
-    profile = config.get_profile(profile)
+    profile = get_config().get_profile(profile)
 
     if BACKEND_UUID is not None and BACKEND_UUID != profile.uuid:
         # Once the switching of profiles with different backends becomes possible, the backend has to be reset properly
@@ -78,8 +78,8 @@ def load_profile(profile=None):
 def load_config(create=False):
     """Instantiate Config object representing an AiiDA configuration file.
 
-    Warning: Contrary to :py:func:`~aiida.manage.configuration.get_config`, this function is uncached and will always
-    create a new Config object. You may want to call :py:func:`~aiida.manage.configuration.get_config` instead.
+    Warning: Contrary to :func:`~aiida.manage.configuration.get_config`, this function is uncached and will always
+    create a new Config object. You may want to call :func:`~aiida.manage.configuration.get_config` instead.
 
     :param create: if True, will create the configuration file if it does not already exist
     :type create: bool
@@ -142,7 +142,7 @@ def get_config(create=False):
     """Return the current configuration.
 
     If the configuration has not been loaded yet
-     * the configuration is loaded using :py:func:`~aiida.manage.configuration.load_config`
+     * the configuration is loaded using ``load_config``
      * the global `CONFIG` variable is set
      * the configuration object is returned
 
@@ -185,16 +185,14 @@ def get_config(create=False):
         else:
             CONFIG = load_config(create=create)
 
-    import warnings
-    from aiida.common.warnings import AiidaDeprecationWarning
-    if CONFIG.get_option('warnings.showdeprecations'):
-        # If the user does not want to get AiiDA deprecation warnings, we disable them - this can be achieved with::
-        #   verdi config warnings.showdeprecations False
-        # Note that the AiidaDeprecationWarning does NOT inherit from DeprecationWarning
-        warnings.simplefilter('default', AiidaDeprecationWarning)  # pylint: disable=no-member
-        # This should default to 'once', i.e. once per different message
-    else:
-        warnings.simplefilter('ignore', AiidaDeprecationWarning)  # pylint: disable=no-member
+        if CONFIG.get_option('warnings.showdeprecations'):
+            # If the user does not want to get AiiDA deprecation warnings, we disable them - this can be achieved with::
+            #   verdi config warnings.showdeprecations False
+            # Note that the AiidaDeprecationWarning does NOT inherit from DeprecationWarning
+            warnings.simplefilter('default', AiidaDeprecationWarning)  # pylint: disable=no-member
+            # This should default to 'once', i.e. once per different message
+        else:
+            warnings.simplefilter('ignore', AiidaDeprecationWarning)  # pylint: disable=no-member
 
     return CONFIG
 

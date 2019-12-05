@@ -4,7 +4,7 @@
 
 ### Improvements
 - Improve the backup mechanism of the configuration file: unique backup written at each update [[#3581]](https://github.com/aiidateam/aiida-core/pull/3581)
-- Add `--force` option to `verdi code delete` [[#3546]](https://github.com/aiidateam/aiida-core/pull/3546)
+- Forward `verdi code delete` to `verdi node delete` [[#3546]](https://github.com/aiidateam/aiida-core/pull/3546)
 - Homogenize and improve output of `verdi computer test` [[#3544]](https://github.com/aiidateam/aiida-core/pull/3544)
 - Scheduler SLURM: support `UNLIMITED` and `NOT_SET` as values for requested walltimes [[#3586]](https://github.com/aiidateam/aiida-core/pull/3586)
 - Set default for the `safe_interval` option of `verdi computer configure` [[#3590]](https://github.com/aiidateam/aiida-core/pull/3590)
@@ -13,14 +13,14 @@
 - Remove unused QB methods/functions [[#3526]](https://github.com/aiidateam/aiida-core/pull/3526)
 - Move `pgtest` argument of `TemporaryProfileManager` to constructor [[#3486]](https://github.com/aiidateam/aiida-core/pull/3486)
 - Add `filename` argument to `SinglefileData` constructor [[#3517]](https://github.com/aiidateam/aiida-core/pull/3517)
-- Add machine to SSH connection exception message [[#3536]](https://github.com/aiidateam/aiida-core/pull/3536)
-- Docs: Expand on QB order_by information [[#3548]](https://github.com/aiidateam/aiida-core/pull/3548)
+- Mention machine in SSH connection exception message [[#3536]](https://github.com/aiidateam/aiida-core/pull/3536)
+- Docs: Expand on QB `order_by` information [[#3548]](https://github.com/aiidateam/aiida-core/pull/3548)
 - Replace deprecated pymatgen `site.species_and_occu` with `site.species`  [[#3480]](https://github.com/aiidateam/aiida-core/pull/3480)
 - `QueryBuilder`: add deepcopy implementation and `queryhelp` property [[#3524]](https://github.com/aiidateam/aiida-core/pull/3524)
 
 ### Bug fixes
-- Fix `verdi calcj`ob gotocomputer` when `key_filename` is missing [[#3593]](https://github.com/aiidateam/aiida-core/pull/3593)
-- Fix bug in datab`ase migrations where schema generation determination excepts for old databases [[#3582]](https://github.com/aiidateam/aiida-core/pull/3582)
+- Fix `verdi calcjob gotocomputer` when `key_filename` is missing [[#3593]](https://github.com/aiidateam/aiida-core/pull/3593)
+- Fix bug in database migrations where schema generation determination excepts for old databases [[#3582]](https://github.com/aiidateam/aiida-core/pull/3582)
 - Fix false positive for `verdi database integrity detect-invalid-links` [[#3591]](https://github.com/aiidateam/aiida-core/pull/3591)
 - Config migration: handle edge case where `daemon` key is missing from `daemon_profiles` [[#3585]](https://github.com/aiidateam/aiida-core/pull/3585)
 - Raise when unable to detect name of local timezone [[#3576]](https://github.com/aiidateam/aiida-core/pull/3576)

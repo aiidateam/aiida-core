@@ -43,7 +43,7 @@ def get_repository_folder(subfolder=None):
         repository_path = get_profile().repository_path
 
         if not os.path.isdir(repository_path):
-            raise ImportError
+            raise NotADirectoryError(repository_path)
         if subfolder is None:
             retval = os.path.abspath(repository_path)
         elif subfolder == 'sandbox':

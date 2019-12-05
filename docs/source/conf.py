@@ -24,8 +24,6 @@ import sys
 
 # Following 3 lines avoid the need of importing load_dbenv() for compiling the documentation -> works also without verdi install
 sys.path.append(os.path.join(os.path.split(__file__)[0], os.pardir, os.pardir))
-sys.path.append(os.path.join(os.path.split(__file__)[0], os.pardir))
-os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
 
 import aiida
 

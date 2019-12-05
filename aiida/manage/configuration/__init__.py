@@ -142,7 +142,7 @@ def get_config(create=False):
     """Return the current configuration.
 
     If the configuration has not been loaded yet
-     * the configuration is loaded using :py:func:`load_config`
+     * the configuration is loaded using :py:func:`~aiida.manage.configuration.load_config`
      * the global `CONFIG` variable is set
      * the configuration object is returned
 

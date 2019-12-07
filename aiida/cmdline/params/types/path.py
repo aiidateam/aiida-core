@@ -9,7 +9,7 @@
 ###########################################################################
 """Click parameter types for paths."""
 import os
-import urllib
+import requests
 
 import click
 
@@ -68,8 +68,8 @@ class ImportPath(click.Path):
         url = value
 
         try:
-            urllib.request.urlopen(url, data=None, timeout=self.timeout_seconds)
-        except (urllib.error.URLError, urllib.error.HTTPError, timeout):
+            requests.get(url, timeout=self.timeout_seconds)
+        except (requests.exceptions.InvalidURL, requests.exceptions.HTTPError, timeout):
             self.fail(
                 '{0} "{1}" could not be reached within {2} s.\n'
                 'It may be neither a valid {3} nor a valid URL.'.format(

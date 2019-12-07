@@ -37,6 +37,7 @@ python-memcached~=1.59
 pytz~=2019.3
 pyyaml~=3.13
 reentry~=1.3
+requests~=2.21
 seekpath~=1.9,>=1.9.3
 simplejson~=3.16
 spglib~=1.14

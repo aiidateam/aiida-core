@@ -40,7 +40,8 @@ jobs:
         sudo apt install texlive-base texlive-generic-recommended texlive-fonts-recommended texlive-latex-base texlive-latex-recommended texlive-latex-extra dvipng dvidvi
 
     - name: Install python dependencies
-      run:
+      run: |
+        pip install numpy==1.17.4
         pip install -e .[docs,testing]
 
     - name: Build documentation
@@ -67,7 +68,8 @@ jobs:
         sudo apt install libkrb5-dev ruby ruby-dev
 
     - name: Install python dependencies
-      run:
+      run: |
+        pip install numpy==1.17.4
         pip install -e .[all]
 
     - name: Run pre-commit
@@ -110,6 +112,7 @@ jobs:
     - name: Install python dependencies
       run: |
         pip install --upgrade pip
+        pip install numpy==1.17.4
         pip install -e .[atomic_tools,docs,notebook,rest,testing]
         reentry scan
 
@@ -138,7 +141,8 @@ jobs:
         python-version: 3.7
 
     - name: Install python dependencies
-      run:
+      run: |
+        pip install numpy==1.17.4
         pip install -e .
 
     - name: Run verdi

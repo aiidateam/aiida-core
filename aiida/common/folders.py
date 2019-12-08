@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to operate on filesystem folders."""
-
 import errno
 import fnmatch
 import io
@@ -16,8 +15,8 @@ import os
 import shutil
 import tempfile
 
+from aiida.manage.configuration import get_profile
 from . import timezone
-from .utils import get_repository_folder
 
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.
@@ -430,7 +429,7 @@ class SandboxFolder(Folder):
         """
         # First check if the sandbox folder already exists
         if sandbox_in_repo:
-            sandbox = get_repository_folder('sandbox')
+            sandbox = os.path.join(get_profile().repository_path, 'sandbox')
             if not os.path.exists(sandbox):
                 os.makedirs(sandbox)
             abspath = tempfile.mkdtemp(dir=sandbox)
@@ -533,7 +532,7 @@ class RepositoryFolder(Folder):
         # normpath, that may be slow): this is done abywat by the super
         # class.
         entity_dir = os.path.join(
-            get_repository_folder('repository'), str(section),
+            get_profile().repository_path, 'repository', str(section),
             str(uuid)[:2],
             str(uuid)[2:4],
             str(uuid)[4:]

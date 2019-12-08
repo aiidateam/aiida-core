@@ -69,11 +69,11 @@ def get_node_repository_sub_folder(uuid):
     :param uuid: UUID of the node
     :return: absolute path to node repository folder, i.e `/some/path/repository/node/12/ab/c123134-a123/path`
     """
-    from aiida.common.utils import get_repository_folder
+    from aiida.manage.configuration import get_profile
 
     uuid = str(uuid)
 
-    repo_dirpath = get_repository_folder('repository')
+    repo_dirpath = os.path.join(get_profile().repository_path, 'repository')
     node_dirpath = os.path.join(repo_dirpath, 'node', uuid[:2], uuid[2:4], uuid[4:], 'path')
 
     return node_dirpath

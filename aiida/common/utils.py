@@ -28,34 +28,6 @@ def get_new_uuid():
     return str(uuid.uuid4())
 
 
-# To speed up the process (os.path.abspath calls are slow)
-_repository_folder_cache = {}  # pylint: disable=invalid-name
-
-
-def get_repository_folder(subfolder=None):
-    """
-    Return the top folder of the local repository.
-    """
-    try:
-        return _repository_folder_cache[subfolder]
-    except KeyError:
-        from aiida.manage.configuration import get_profile
-        repository_path = get_profile().repository_path
-
-        if not os.path.isdir(repository_path):
-            raise ImportError
-        if subfolder is None:
-            retval = os.path.abspath(repository_path)
-        elif subfolder == 'sandbox':
-            retval = os.path.abspath(os.path.join(repository_path, 'sandbox'))
-        elif subfolder == 'repository':
-            retval = os.path.abspath(os.path.join(repository_path, 'repository'))
-        else:
-            raise ValueError("Invalid 'subfolder' passed to get_repository_folder: {}".format(subfolder))
-        _repository_folder_cache[subfolder] = retval
-        return retval
-
-
 def validate_list_of_string_tuples(val, tuple_length):
     """
     Check that:

@@ -8,10 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi status` command."""
-
 import sys
 
-from enum import IntEnum
+import enum
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -19,7 +18,7 @@ from aiida.common.log import override_log_level
 from ..utils.echo import ExitCode
 
 
-class ServiceStatus(IntEnum):
+class ServiceStatus(enum.IntEnum):
     """Describe status of services for 'verdi status' command."""
     UP = 0  # pylint: disable=invalid-name
     ERROR = 1
@@ -47,7 +46,7 @@ def verdi_status():
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
-    from aiida.common.utils import Capturing, get_repository_folder
+    from aiida.common.utils import Capturing
     from aiida.manage.external.rmq import get_rmq_url
     from aiida.manage.manager import get_manager
 
@@ -67,7 +66,7 @@ def verdi_status():
     # getting the repository
     repo_folder = 'undefined'
     try:
-        repo_folder = get_repository_folder()
+        repo_folder = profile.repository_path
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'repository', 'Error with repo folder', exception=exc)
         exit_code = ExitCode.CRITICAL

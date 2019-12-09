@@ -19,7 +19,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.common import exceptions
 
-IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid'}
+IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type'}
 
 
 class ModelWrapper:

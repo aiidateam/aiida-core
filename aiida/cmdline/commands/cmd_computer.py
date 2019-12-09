@@ -138,7 +138,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     import os
 
     file_content = "Test from 'verdi computer test' on {}".format(datetime.datetime.now().isoformat())
-    workdir = authinfo.get_workdir().format(username=transport.whoami())
+    workdir = authinfo.get_property('work_dir').format(username=transport.whoami())
 
     try:
         transport.chdir(workdir)
@@ -246,8 +246,8 @@ def computer_setup(ctx, non_interactive, **kwargs):
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
 
-    kwargs['transport'] = kwargs['transport'].name
-    kwargs['scheduler'] = kwargs['scheduler'].name
+    kwargs['transport'] = kwargs.pop('transport').name
+    kwargs['scheduler'] = kwargs.pop('scheduler').name
 
     computer_builder = ComputerBuilder(**kwargs)
     try:
@@ -260,10 +260,10 @@ def computer_setup(ctx, non_interactive, **kwargs):
     except ValidationError as err:
         echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
     else:
-        echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.name))
+        echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.label))
 
     echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-    echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
+    echo.echo_info('  verdi computer configure {} {}'.format(computer.transport_type, computer.label))
 
 
 @verdi_computer.command('duplicate')
@@ -299,8 +299,8 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
 
-    kwargs['transport'] = kwargs['transport'].name
-    kwargs['scheduler'] = kwargs['scheduler'].name
+    kwargs['transport'] = kwargs.pop('transport').name
+    kwargs['scheduler'] = kwargs.pop('scheduler').name
 
     computer_builder = ctx.computer_builder
     for key, value in kwargs.items():
@@ -312,20 +312,20 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     except (ComputerBuilder.ComputerValidationError, ValidationError) as e:
         echo.echo_critical('{}: {}'.format(type(e).__name__, e))
     else:
-        echo.echo_success('stored computer {}<{}>'.format(computer.name, computer.pk))
+        echo.echo_success('stored computer {}<{}>'.format(computer.label, computer.pk))
 
     try:
         computer.store()
     except ValidationError as err:
         echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
     else:
-        echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.name))
+        echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.label))
 
     is_configured = computer.is_user_configured(orm.User.objects.get_default())
 
     if not is_configured:
         echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-        echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
+        echo.echo_info('  verdi computer configure {} {}'.format(computer.transport_type, computer.label))
 
 
 @verdi_computer.command('enable')
@@ -340,15 +340,15 @@ def computer_enable(computer, user):
         authinfo = computer.get_authinfo(user)
     except NotExistent:
         echo.echo_critical(
-            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.name)
+            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.label)
         )
 
     if not authinfo.enabled:
         authinfo.enabled = True
-        echo.echo_info("Computer '{}' enabled for user {}.".format(computer.name, user.get_full_name()))
+        echo.echo_info("Computer '{}' enabled for user {}.".format(computer.label, user.get_full_name()))
     else:
         echo.echo_info(
-            "Computer '{}' was already enabled for user {} {}.".format(computer.name, user.first_name, user.last_name)
+            "Computer '{}' was already enabled for user {} {}.".format(computer.label, user.first_name, user.last_name)
         )
 
 
@@ -366,15 +366,17 @@ def computer_disable(computer, user):
         authinfo = computer.get_authinfo(user)
     except NotExistent:
         echo.echo_critical(
-            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.name)
+            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.label)
         )
 
     if authinfo.enabled:
         authinfo.enabled = False
-        echo.echo_info("Computer '{}' disabled for user {}.".format(computer.name, user.get_full_name()))
+        echo.echo_info("Computer '{}' disabled for user {}.".format(computer.label, user.get_full_name()))
     else:
         echo.echo_info(
-            "Computer '{}' was already disabled for user {} {}.".format(computer.name, user.first_name, user.last_name)
+            "Computer '{}' was already disabled for user {} {}.".format(
+                computer.label, user.first_name, user.last_name
+            )
         )
 
 
@@ -396,10 +398,10 @@ def computer_list(all_entries, raw):
     if not computers:
         echo.echo_info("No computers configured yet. Use 'verdi computer setup'")
 
-    sort = lambda computer: computer.name
+    sort = lambda computer: computer.label
     highlight = lambda comp: comp.is_user_configured(user) and comp.is_user_enabled(user)
     hide = lambda comp: not (comp.is_user_configured(user) and comp.is_user_enabled(user)) and not all_entries
-    echo.echo_formatted_list(computers, ['name'], sort=sort, highlight=highlight, hide=hide)
+    echo.echo_formatted_list(computers, ['label'], sort=sort, highlight=highlight, hide=hide)
 
 
 @verdi_computer.command('show')
@@ -416,25 +418,15 @@ def computer_show(computer):
 @with_dbenv()
 def computer_rename(computer, new_name):
     """Rename a computer."""
-    from aiida.common.exceptions import UniquenessError
-
-    old_name = computer.get_name()
+    old_name = computer.label
 
     if old_name == new_name:
         echo.echo_critical('The old and new names are the same.')
 
     try:
-        computer.set_name(new_name)
-        computer.store()
+        computer.label = new_name
     except ValidationError as error:
         echo.echo_critical('Invalid input! {}'.format(error))
-    except UniquenessError as error:
-        echo.echo_critical(
-            'Uniqueness error encountered! Probably a '
-            "computer with name '{}' already exists"
-            ''.format(new_name)
-        )
-        echo.echo_critical('(Message was: {})'.format(error))
 
     echo.echo_success("Computer '{}' renamed to '{}'".format(old_name, new_name))
 
@@ -468,15 +460,15 @@ def computer_test(user, print_traceback, computer):
     if user is None:
         user = orm.User.objects.get_default()
 
-    echo.echo_info('Testing computer<{}> for user<{}>...'.format(computer.name, user.email))
+    echo.echo_info('Testing computer<{}> for user<{}>...'.format(computer.label, user.email))
 
     try:
         authinfo = computer.get_authinfo(user)
     except NotExistent:
-        echo.echo_critical('Computer<{}> is not yet configured for user<{}>'.format(computer.name, user.email))
+        echo.echo_critical('Computer<{}> is not yet configured for user<{}>'.format(computer.label, user.email))
 
     if not authinfo.enabled:
-        echo.echo_warning('Computer<{}> is disabled for user<{}>'.format(computer.name, user.email))
+        echo.echo_warning('Computer<{}> is disabled for user<{}>'.format(computer.label, user.email))
         click.confirm('Do you really want to test it?', abort=True)
 
     scheduler = authinfo.computer.get_scheduler()
@@ -564,7 +556,7 @@ def computer_delete(computer):
     from aiida.common.exceptions import InvalidOperation
     from aiida import orm
 
-    compname = computer.name
+    compname = computer.label
 
     try:
         orm.Computer.objects.delete(computer.id)
@@ -595,7 +587,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
 
     transport_cls = computer.get_transport_class()
     option_list = [
-        param for param in transport_cli.create_configure_cmd(computer.get_transport_type()).params
+        param for param in transport_cli.create_configure_cmd(computer.transport_type).params
         if isinstance(param, click.core.Option)
     ]
     option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]

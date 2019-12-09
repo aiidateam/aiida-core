@@ -73,9 +73,8 @@ class TestSerialize(AiidaTestCase):
         computer = self.computer
         deserialized = serialize.deserialize(serialize.serialize(computer))
 
-        # pylint: disable=no-member
-        self.assertEqual(computer.uuid, deserialized.uuid)
-        self.assertEqual(computer.name, deserialized.name)
+        self.assertEqual(computer.uuid, deserialized.uuid)  # pylint: disable=no-member
+        self.assertEqual(computer.label, deserialized.label)  # pylint: disable=no-member
 
     def test_serialize_unstored_node(self):
         """Test that you can't serialize an unstored node"""

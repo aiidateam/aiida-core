@@ -39,15 +39,15 @@ class ComputerBuilder:
         spec = {}
         spec['label'] = computer.label
         spec['description'] = computer.description
-        spec['hostname'] = computer.get_hostname()
-        spec['scheduler'] = computer.get_scheduler_type()
-        spec['transport'] = computer.get_transport_type()
-        spec['prepend_text'] = computer.get_prepend_text()
-        spec['append_text'] = computer.get_append_text()
-        spec['work_dir'] = computer.get_workdir()
-        spec['shebang'] = computer.get_shebang()
-        spec['mpirun_command'] = ' '.join(computer.get_mpirun_command())
-        spec['mpiprocs_per_machine'] = computer.get_default_mpiprocs_per_machine()
+        spec['hostname'] = computer.hostname
+        spec['scheduler'] = computer.scheduler_type
+        spec['transport'] = computer.transport_type
+        spec['prepend_text'] = computer.get_property('prepend_text')
+        spec['append_text'] = computer.get_property('append_text')
+        spec['work_dir'] = computer.get_property('work_dir')
+        spec['shebang'] = computer.get_property('shebang')
+        spec['mpirun_command'] = ' '.join(computer.get_property('mpirun_command'))
+        spec['mpiprocs_per_machine'] = computer.get_property('default_mpiprocs_per_machine')
 
         return spec
 
@@ -77,13 +77,13 @@ class ComputerBuilder:
 
         computer = Computer(name=self._get_and_count('label', used), hostname=self._get_and_count('hostname', used))
 
-        computer.set_description(self._get_and_count('description', used))
-        computer.set_scheduler_type(self._get_and_count('scheduler', used))
-        computer.set_transport_type(self._get_and_count('transport', used))
-        computer.set_prepend_text(self._get_and_count('prepend_text', used))
-        computer.set_append_text(self._get_and_count('append_text', used))
-        computer.set_workdir(self._get_and_count('work_dir', used))
-        computer.set_shebang(self._get_and_count('shebang', used))
+        computer.description = self._get_and_count('description', used)
+        computer.scheduler_type = self._get_and_count('scheduler', used)
+        computer.transport_type = self._get_and_count('transport', used)
+        computer.set_property('prepend_text', self._get_and_count('prepend_text', used))
+        computer.set_property('append_text', self._get_and_count('append_text', used))
+        computer.set_property('work_dir', self._get_and_count('work_dir', used))
+        computer.set_property('shebang', self._get_and_count('shebang', used))
 
         mpiprocs_per_machine = self._get_and_count('mpiprocs_per_machine', used)
         # In the command line, 0 means unspecified
@@ -102,13 +102,12 @@ class ComputerBuilder:
                     'Invalid value provided for mpiprocs_per_machine, '
                     'must be positive'
                 )
-            computer.set_default_mpiprocs_per_machine(mpiprocs_per_machine)
+            computer.set_property('default_mpiprocs_per_machine', mpiprocs_per_machine)
 
         mpirun_command_internal = self._get_and_count('mpirun_command', used).strip().split(' ')
         if mpirun_command_internal == ['']:
             mpirun_command_internal = []
-        computer._mpirun_command_validator(mpirun_command_internal)  # pylint: disable=protected-access
-        computer.set_mpirun_command(mpirun_command_internal)
+        computer.set_property('mpirun_command', mpirun_command_internal)
 
         # Complain if there are keys that are passed but not used
         if passed_keys - used:

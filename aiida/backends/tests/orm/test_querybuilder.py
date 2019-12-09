@@ -1355,11 +1355,11 @@ class TestDoubleStar(AiidaTestCase):
         # pylint: disable=no-member
         expected_dict = {
             'description': self.computer.description,
-            'scheduler_type': self.computer.get_scheduler_type(),
+            'scheduler_type': self.computer.scheduler_type,
             'hostname': self.computer.hostname,
             'uuid': self.computer.uuid,
-            'name': self.computer.name,
-            'transport_type': self.computer.get_transport_type(),
+            'name': self.computer.label,
+            'transport_type': self.computer.transport_type,
             'id': self.computer.id,
             'metadata': self.computer.get_metadata(),
         }

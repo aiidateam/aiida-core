@@ -53,10 +53,10 @@ class TestVerdiCodeSetup(AiidaTestCase):
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'interactive_remote'
         user_input = '\n'.join(
-            [label, 'description', 'arithmetic.add', 'yes', self.comp.name, '/remote/abs/path'])
+            [label, 'description', 'arithmetic.add', 'yes', self.comp.label, '/remote/abs/path'])
         result = self.cli_runner.invoke(setup_code, input=user_input)
         self.assertClickResultNoException(result)
-        self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
+        self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.label)), Code)
 
     def test_interactive_upload(self):
         from aiida.orm import Code
@@ -74,12 +74,12 @@ class TestVerdiCodeSetup(AiidaTestCase):
         label = 'noninteractive_remote'
         options = [
             '--non-interactive', '--label={}'.format(label), '--description=description',
-            '--input-plugin=arithmetic.add', '--on-computer', '--computer={}'.format(self.comp.name),
+            '--input-plugin=arithmetic.add', '--on-computer', '--computer={}'.format(self.comp.label),
             '--remote-abs-path=/remote/abs/path'
         ]
         result = self.cli_runner.invoke(setup_code, options)
         self.assertClickResultNoException(result)
-        self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
+        self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.label)), Code)
 
     def test_noninteractive_upload(self):
         from aiida.orm import Code
@@ -107,7 +107,7 @@ label: {l}
 input_plugin: arithmetic.add
 computer: {c}
 remote_abs_path: /remote/abs/path
-""".format(l=label, c=self.comp.name))
+""".format(l=label, c=self.comp.label))
             handle.flush()
             result = self.cli_runner.invoke(setup_code, ['--non-interactive', '--config', os.path.realpath(handle.name)])
 
@@ -118,10 +118,10 @@ remote_abs_path: /remote/abs/path
         from aiida.orm import Code
         label = 'mixed_remote'
         options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/abs/path']
-        user_input = '\n'.join([label, 'arithmetic.add', self.comp.name])
+        user_input = '\n'.join([label, 'arithmetic.add', self.comp.label])
         result = self.cli_runner.invoke(setup_code, options, input=user_input)
         self.assertClickResultNoException(result)
-        self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
+        self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.label)), Code)
 
 
 class TestVerdiCodeCommands(AiidaTestCase):
@@ -220,7 +220,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code.store()
 
         options = [
-            '-A', '-a', '-o', '--input-plugin=arithmetic.add', '--computer={}'.format(self.comp.name)
+            '-A', '-a', '-o', '--input-plugin=arithmetic.add', '--computer={}'.format(self.comp.label)
         ]
         result = self.cli_runner.invoke(code_list, options)
         self.assertIsNone(result.exception, result.output)

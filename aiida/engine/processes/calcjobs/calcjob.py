@@ -74,7 +74,7 @@ def validate_calc_job(inputs):
             raise exceptions.InputValidationError('invalid parser specified: {}'.format(exception))
 
     scheduler = computer.get_scheduler()  # pylint: disable=no-member
-    def_cpus_machine = computer.get_default_mpiprocs_per_machine()  # pylint: disable=no-member
+    def_cpus_machine = computer.get_property('default_mpiprocs_per_machine')  # pylint: disable=no-member
 
     if def_cpus_machine is not None:
         resources['default_mpiprocs_per_machine'] = def_cpus_machine
@@ -244,7 +244,7 @@ class CalcJob(Process):
                 if not code.can_run_on(computer):
                     raise InputValidationError(
                         'The selected code {} for calculation {} cannot run on computer {}'.format(
-                            code.pk, self.node.pk, computer.name))
+                            code.pk, self.node.pk, computer.label))
 
             # After this call, no modifications to the folder should be done
             self.node.put_object_from_tree(folder.abspath, force=True)
@@ -328,7 +328,7 @@ class CalcJob(Process):
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
-        job_tmpl.shebang = computer.get_shebang()
+        job_tmpl.shebang = computer.get_property('shebang')
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = False
         job_tmpl.job_environment = {}
@@ -373,19 +373,19 @@ class CalcJob(Process):
         # - most importantly, skips the cases in which one of the methods
         #   would return None, in which case the join method would raise
         #   an exception
-        prepend_texts = [computer.get_prepend_text()] + \
+        prepend_texts = [computer.get_property('prepend_text')] + \
             [code.get_prepend_text() for code in codes] + \
             [calcinfo.prepend_text, self.node.get_option('prepend_text')]
         job_tmpl.prepend_text = '\n\n'.join(prepend_text for prepend_text in prepend_texts if prepend_text)
 
         append_texts = [self.node.get_option('append_text'), calcinfo.append_text] + \
             [code.get_append_text() for code in codes] + \
-            [computer.get_append_text()]
+            [computer.get_property('append_text')]
         job_tmpl.append_text = '\n\n'.join(append_text for append_text in append_texts if append_text)
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.node.get_option('resources')
-        def_cpus_machine = computer.get_default_mpiprocs_per_machine()
+        def_cpus_machine = computer.get_property('default_mpiprocs_per_machine')
         if def_cpus_machine is not None:
             resources['default_mpiprocs_per_machine'] = def_cpus_machine
         job_tmpl.job_resource = scheduler.create_job_resource(**resources)
@@ -394,7 +394,7 @@ class CalcJob(Process):
 
         for key, value in job_tmpl.job_resource.items():
             subst_dict[key] = value
-        mpi_args = [arg.format(**subst_dict) for arg in computer.get_mpirun_command()]
+        mpi_args = [arg.format(**subst_dict) for arg in computer.get_property('mpirun_command')]
         extra_mpirun_params = self.node.get_option('mpirun_extra_params')  # same for all codes in the same calc
 
         # set the codes_info

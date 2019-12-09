@@ -152,11 +152,11 @@ class DjangoAuthInfoCollection(BackendAuthInfoCollection):
             authinfo = DbAuthInfo.objects.get(dbcomputer=computer.id, aiidauser=user.id)
         except ObjectDoesNotExist:
             raise exceptions.NotExistent(
-                'User<{}> has no configuration for Computer<{}>'.format(user.email, computer.name)
+                'User<{}> has no configuration for Computer<{}>'.format(user.email, computer.label)
             )
         except MultipleObjectsReturned:
             raise exceptions.MultipleObjectsError(
-                'User<{}> has multiple configurations for Computer<{}>'.format(user.email, computer.name)
+                'User<{}> has multiple configurations for Computer<{}>'.format(user.email, computer.label)
             )
         else:
             return self.from_dbmodel(authinfo)

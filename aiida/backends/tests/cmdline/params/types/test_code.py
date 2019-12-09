@@ -70,7 +70,7 @@ class TestCodeParamType(AiidaTestCase):
         """
         Verify that using the LABEL@machinename will retrieve the correct entity
         """
-        identifier = '{}@{}'.format(self.entity_01.label, self.computer.name)  # pylint: disable=no-member
+        identifier = '{}@{}'.format(self.entity_01.label, self.computer.label)  # pylint: disable=no-member
         result = self.param_base.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_01.uuid)
 

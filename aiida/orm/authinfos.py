@@ -9,8 +9,6 @@
 ###########################################################################
 """Module for the `AuthInfo` ORM class."""
 
-from aiida.common import exceptions
-from aiida.plugins import TransportFactory
 from aiida.manage.manager import get_manager
 from . import entities
 from . import users
@@ -50,9 +48,9 @@ class AuthInfo(entities.Entity):
 
     def __str__(self):
         if self.enabled:
-            return 'AuthInfo for {} on {}'.format(self.user.email, self.computer.name)
+            return 'AuthInfo for {} on {}'.format(self.user.email, self.computer.label)
 
-        return 'AuthInfo for {} on {} [DISABLED]'.format(self.user.email, self.computer.name)
+        return 'AuthInfo for {} on {} [DISABLED]'.format(self.user.email, self.computer.label)
 
     @property
     def enabled(self):
@@ -130,7 +128,7 @@ class AuthInfo(entities.Entity):
         try:
             return self.get_metadata()[self.PROPERTY_WORKDIR]
         except KeyError:
-            return self.computer.get_workdir()
+            return self.computer.get_property('work_dir')
 
     def get_transport(self):
         """Return a fully configured transport that can be used to connect to the computer set for this instance.
@@ -138,13 +136,5 @@ class AuthInfo(entities.Entity):
         :rtype: :class:`aiida.transports.Transport`
         """
         computer = self.computer
-        transport_type = computer.get_transport_type()
-
-        try:
-            transport_class = TransportFactory(transport_type)
-        except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(
-                'transport type `{}` could not be loaded: {}'.format(transport_type, exception)
-            )
-
+        transport_class = computer.get_transport_class()
         return transport_class(machine=computer.hostname, **self.get_auth_params())

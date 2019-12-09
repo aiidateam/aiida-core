@@ -74,11 +74,11 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
         remote_user = transport.whoami()
         # TODO Doc: {username} field
         # TODO: if something is changed here, fix also 'verdi computer test'
-        remote_working_directory = computer.get_workdir().format(username=remote_user)
+        remote_working_directory = computer.get_property('work_dir').format(username=remote_user)
         if not remote_working_directory.strip():
             raise exceptions.ConfigurationError(
                 "[submission of calculation {}] No remote_working_directory configured for computer '{}'".format(
-                    node.pk, computer.name))
+                    node.pk, computer.label))
 
         # If it already exists, no exception is raised
         try:
@@ -95,7 +95,7 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
                     '[submission of calculation {}] '
                     'Unable to create the remote directory {} on '
                     "computer '{}': {}".format(
-                        node.pk, remote_working_directory, computer.name, exc))
+                        node.pk, remote_working_directory, computer.label, exc))
         # Store remotely with sharding (here is where we choose
         # the folder structure of remote jobs; then I store this
         # in the calculation properties using _set_remote_dir
@@ -202,20 +202,20 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
             with open(os.path.join(workdir, '_aiida_remote_copy_list.txt'), 'w') as handle:
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write('would have copied {} to {} in working directory on remote {}'.format(
-                        remote_abs_path, dest_rel_path, computer.name))
+                        remote_abs_path, dest_rel_path, computer.label))
 
         if remote_symlink_list:
             with open(os.path.join(workdir, '_aiida_remote_symlink_list.txt'), 'w') as handle:
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write('would have created symlinks from {} to {} in working directory on remote {}'.format(
-                        remote_abs_path, dest_rel_path, computer.name))
+                        remote_abs_path, dest_rel_path, computer.label))
 
     else:
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
             if remote_computer_uuid == computer.uuid:
                 logger.debug('[submission of calculation {}] copying {} remotely, directly on the machine {}'.format(
-                    node.pk, dest_rel_path, computer.name))
+                    node.pk, dest_rel_path, computer.label))
                 try:
                     transport.copy(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
@@ -230,7 +230,7 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_symlink_list:
             if remote_computer_uuid == computer.uuid:
                 logger.debug('[submission of calculation {}] copying {} remotely, directly on the machine {}'.format(
-                    node.pk, dest_rel_path, computer.name))
+                    node.pk, dest_rel_path, computer.label))
                 try:
                     transport.symlink(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):

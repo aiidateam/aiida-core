@@ -21,7 +21,7 @@ class TestCommonUtilities(AiidaTestCase):
         """Test the `get_node_summary` utility."""
         from aiida.cmdline.utils.common import get_node_summary
 
-        computer_label = self.computer.name  # pylint: disable=no-member
+        computer_label = self.computer.label  # pylint: disable=no-member
 
         code = orm.Code(
             input_plugin_name='arithmetic.add',

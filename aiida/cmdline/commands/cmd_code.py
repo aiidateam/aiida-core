@@ -245,7 +245,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
 
     qb_computer_filters = dict()
     if computer is not None:
-        qb_computer_filters['name'] = computer.name
+        qb_computer_filters['name'] = computer.lbael
 
     qb_code_filters = dict()
     if input_plugin is not None:

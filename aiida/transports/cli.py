@@ -26,10 +26,10 @@ TRANSPORT_PARAMS = []
 # pylint: disable=unused-argument
 def match_comp_transport(ctx, param, computer, transport_type):
     """Check the computer argument against the transport type."""
-    if computer.get_transport_type() != transport_type:
+    if computer.transport_type != transport_type:
         echo.echo_critical(
             'Computer {} has transport of type "{}", not {}!'.format(
-                computer.name, computer.get_transport_type(), transport_type
+                computer.label, computer.transport_type, transport_type
             )
         )
     return computer
@@ -42,12 +42,12 @@ def configure_computer_main(computer, user, **kwargs):
 
     user = user or orm.User.objects.get_default()
 
-    echo.echo_info('Configuring computer {} for user {}.'.format(computer.name, user.email))
+    echo.echo_info('Configuring computer {} for user {}.'.format(computer.label, user.email))
     if user.email != get_manager().get_profile().default_user:
         echo.echo_info('Configuring different user, defaults may not be appropriate.')
 
     computer.configure(user=user, **kwargs)
-    echo.echo_success('{} successfully configured for {}'.format(computer.name, user.email))
+    echo.echo_success('{} successfully configured for {}'.format(computer.label, user.email))
 
 
 def common_params(command_func):

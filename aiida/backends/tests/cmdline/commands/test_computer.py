@@ -17,7 +17,7 @@ from click.testing import CliRunner
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_computer import computer_disable, computer_enable, computer_setup
+from aiida.cmdline.commands.cmd_computer import computer_setup
 from aiida.cmdline.commands.cmd_computer import computer_show, computer_list, computer_rename, computer_delete
 from aiida.cmdline.commands.cmd_computer import computer_test, computer_configure, computer_duplicate
 
@@ -132,15 +132,15 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
         self.assertEqual(new_computer.description, options_dict['description'])
         self.assertEqual(new_computer.hostname, options_dict['hostname'])
-        self.assertEqual(new_computer.get_transport_type(), options_dict['transport'])
-        self.assertEqual(new_computer.get_scheduler_type(), options_dict['scheduler'])
-        self.assertEqual(new_computer.get_mpirun_command(), options_dict['mpirun-command'].split())
-        self.assertEqual(new_computer.get_shebang(), options_dict['shebang'])
-        self.assertEqual(new_computer.get_workdir(), options_dict['work-dir'])
-        self.assertEqual(new_computer.get_default_mpiprocs_per_machine(), int(options_dict['mpiprocs-per-machine']))
+        self.assertEqual(new_computer.transport_type, options_dict['transport'])
+        self.assertEqual(new_computer.scheduler_type, options_dict['scheduler'])
+        self.assertEqual(new_computer.get_property('mpirun_command'), options_dict['mpirun-command'].split())
+        self.assertEqual(new_computer.get_property('shebang'), options_dict['shebang'])
+        self.assertEqual(new_computer.get_property('work_dir'), options_dict['work-dir'])
+        self.assertEqual(new_computer.get_property('default_mpiprocs_per_machine'), int(options_dict['mpiprocs-per-machine']))
         # For now I'm not writing anything in them
-        self.assertEqual(new_computer.get_prepend_text(), '')
-        self.assertEqual(new_computer.get_append_text(), '')
+        self.assertEqual(new_computer.get_property('prepend_text'), '')
+        self.assertEqual(new_computer.get_property('append_text'), '')
 
     def test_mixed(self):
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
@@ -170,16 +170,16 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
         self.assertEqual(new_computer.description, options_dict_full['description'])
         self.assertEqual(new_computer.hostname, options_dict_full['hostname'])
-        self.assertEqual(new_computer.get_transport_type(), options_dict_full['transport'])
-        self.assertEqual(new_computer.get_scheduler_type(), options_dict_full['scheduler'])
-        self.assertEqual(new_computer.get_mpirun_command(), options_dict_full['mpirun-command'].split())
-        self.assertEqual(new_computer.get_shebang(), options_dict_full['shebang'])
-        self.assertEqual(new_computer.get_workdir(), options_dict_full['work-dir'])
-        self.assertEqual(new_computer.get_default_mpiprocs_per_machine(),
+        self.assertEqual(new_computer.transport_type, options_dict_full['transport'])
+        self.assertEqual(new_computer.scheduler_type, options_dict_full['scheduler'])
+        self.assertEqual(new_computer.get_property('mpirun_command'), options_dict_full['mpirun-command'].split())
+        self.assertEqual(new_computer.get_property('shebang'), options_dict_full['shebang'])
+        self.assertEqual(new_computer.get_property('work_dir'), options_dict_full['work-dir'])
+        self.assertEqual(new_computer.get_property('default_mpiprocs_per_machine'),
                          int(options_dict_full['mpiprocs-per-machine']))
         # For now I'm not writing anything in them
-        self.assertEqual(new_computer.get_prepend_text(), options_dict_full['prepend-text'])
-        self.assertEqual(new_computer.get_append_text(), options_dict_full['append-text'])
+        self.assertEqual(new_computer.get_property('prepend_text'), options_dict_full['prepend-text'])
+        self.assertEqual(new_computer.get_property('append_text'), options_dict_full['append-text'])
 
     def test_noninteractive(self):
         """
@@ -196,14 +196,14 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
         self.assertEqual(new_computer.description, options_dict['description'])
         self.assertEqual(new_computer.hostname, options_dict['hostname'])
-        self.assertEqual(new_computer.get_transport_type(), options_dict['transport'])
-        self.assertEqual(new_computer.get_scheduler_type(), options_dict['scheduler'])
-        self.assertEqual(new_computer.get_mpirun_command(), options_dict['mpirun-command'].split())
-        self.assertEqual(new_computer.get_shebang(), options_dict['shebang'])
-        self.assertEqual(new_computer.get_workdir(), options_dict['work-dir'])
-        self.assertEqual(new_computer.get_default_mpiprocs_per_machine(), int(options_dict['mpiprocs-per-machine']))
-        self.assertEqual(new_computer.get_prepend_text(), options_dict['prepend-text'])
-        self.assertEqual(new_computer.get_append_text(), options_dict['append-text'])
+        self.assertEqual(new_computer.transport_type, options_dict['transport'])
+        self.assertEqual(new_computer.scheduler_type, options_dict['scheduler'])
+        self.assertEqual(new_computer.get_property('mpirun_command'), options_dict['mpirun-command'].split())
+        self.assertEqual(new_computer.get_property('shebang'), options_dict['shebang'])
+        self.assertEqual(new_computer.get_property('work_dir'), options_dict['work-dir'])
+        self.assertEqual(new_computer.get_property('default_mpiprocs_per_machine'), int(options_dict['mpiprocs-per-machine']))
+        self.assertEqual(new_computer.get_property('prepend_text'), options_dict['prepend-text'])
+        self.assertEqual(new_computer.get_property('append_text'), options_dict['append-text'])
 
         # Test that I cannot generate twice a computer with the same label
         result = self.cli_runner.invoke(computer_setup, options)
@@ -223,7 +223,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
         new_computer = orm.Computer.objects.get(name=options_dict['label'])
         self.assertIsInstance(new_computer, orm.Computer)
-        self.assertIsNone(new_computer.get_default_mpiprocs_per_machine())
+        self.assertIsNone(new_computer.get_property('default_mpiprocs_per_machine'))
 
     def test_noninteractive_optional_default_mpiprocs_2(self):
         """
@@ -238,7 +238,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
         new_computer = orm.Computer.objects.get(name=options_dict['label'])
         self.assertIsInstance(new_computer, orm.Computer)
-        self.assertIsNone(new_computer.get_default_mpiprocs_per_machine())
+        self.assertIsNone(new_computer.get_property('default_mpiprocs_per_machine'))
 
     def test_noninteractive_optional_default_mpiprocs_3(self):
         """
@@ -500,7 +500,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
             transport_type='local',
             scheduler_type='direct',
             workdir='/tmp/aiida')
-        cls.comp.set_default_mpiprocs_per_machine(1)
+        cls.comp.set_property('default_mpiprocs_per_machine', 1)
         cls.comp.store()
 
     def setUp(self):
@@ -656,15 +656,15 @@ class TestVerdiComputerCommands(AiidaTestCase):
 
         new_computer = orm.Computer.objects.get(name=label)
         self.assertEqual(self.comp.description, new_computer.description)
-        self.assertEqual(self.comp.get_hostname(), new_computer.get_hostname())
-        self.assertEqual(self.comp.get_transport_type(), new_computer.get_transport_type())
-        self.assertEqual(self.comp.get_scheduler_type(), new_computer.get_scheduler_type())
-        self.assertEqual(self.comp.get_shebang(), new_computer.get_shebang())
-        self.assertEqual(self.comp.get_workdir(), new_computer.get_workdir())
-        self.assertEqual(self.comp.get_mpirun_command(), new_computer.get_mpirun_command())
-        self.assertEqual(self.comp.get_default_mpiprocs_per_machine(), new_computer.get_default_mpiprocs_per_machine())
-        self.assertEqual(self.comp.get_prepend_text(), new_computer.get_prepend_text())
-        self.assertEqual(self.comp.get_append_text(), new_computer.get_append_text())
+        self.assertEqual(self.comp.hostname, new_computer.hostname)
+        self.assertEqual(self.comp.transport_type, new_computer.transport_type)
+        self.assertEqual(self.comp.scheduler_type, new_computer.scheduler_type)
+        self.assertEqual(self.comp.get_property('shebang'), new_computer.get_property('shebang'))
+        self.assertEqual(self.comp.get_property('work_dir'), new_computer.get_property('work_dir'))
+        self.assertEqual(self.comp.get_property('mpirun_command'), new_computer.get_property('mpirun_command'))
+        self.assertEqual(self.comp.get_property('default_mpiprocs_per_machine'), new_computer.get_property('default_mpiprocs_per_machine'))
+        self.assertEqual(self.comp.get_property('prepend_text'), new_computer.get_property('prepend_text'))
+        self.assertEqual(self.comp.get_property('append_text'), new_computer.get_property('append_text'))
 
     def test_computer_duplicate_non_interactive(self):
         label = 'computer_duplicate_noninteractive'
@@ -674,12 +674,12 @@ class TestVerdiComputerCommands(AiidaTestCase):
 
         new_computer = orm.Computer.objects.get(name=label)
         self.assertEqual(self.comp.description, new_computer.description)
-        self.assertEqual(self.comp.get_hostname(), new_computer.get_hostname())
-        self.assertEqual(self.comp.get_transport_type(), new_computer.get_transport_type())
-        self.assertEqual(self.comp.get_scheduler_type(), new_computer.get_scheduler_type())
-        self.assertEqual(self.comp.get_shebang(), new_computer.get_shebang())
-        self.assertEqual(self.comp.get_workdir(), new_computer.get_workdir())
-        self.assertEqual(self.comp.get_mpirun_command(), new_computer.get_mpirun_command())
-        self.assertEqual(self.comp.get_default_mpiprocs_per_machine(), new_computer.get_default_mpiprocs_per_machine())
-        self.assertEqual(self.comp.get_prepend_text(), new_computer.get_prepend_text())
-        self.assertEqual(self.comp.get_append_text(), new_computer.get_append_text())
+        self.assertEqual(self.comp.hostname, new_computer.hostname)
+        self.assertEqual(self.comp.transport_type, new_computer.transport_type)
+        self.assertEqual(self.comp.scheduler_type, new_computer.scheduler_type)
+        self.assertEqual(self.comp.get_property('shebang'), new_computer.get_property('shebang'))
+        self.assertEqual(self.comp.get_property('work_dir'), new_computer.get_property('work_dir'))
+        self.assertEqual(self.comp.get_property('mpirun_command'), new_computer.get_property('mpirun_command'))
+        self.assertEqual(self.comp.get_property('default_mpiprocs_per_machine'), new_computer.get_property('default_mpiprocs_per_machine'))
+        self.assertEqual(self.comp.get_property('prepend_text'), new_computer.get_property('prepend_text'))
+        self.assertEqual(self.comp.get_property('append_text'), new_computer.get_property('append_text'))

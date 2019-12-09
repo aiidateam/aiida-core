@@ -151,11 +151,11 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
             authinfo = session.query(DbAuthInfo).filter_by(dbcomputer_id=computer.id, aiidauser_id=user.id).one()
         except NoResultFound:
             raise exceptions.NotExistent(
-                'User<{}> has no configuration for Computer<{}>'.format(user.email, computer.name)
+                'User<{}> has no configuration for Computer<{}>'.format(user.email, computer.label)
             )
         except MultipleResultsFound:
             raise exceptions.MultipleObjectsError(
-                'User<{}> has multiple configurations for Computer<{}>'.format(user.email, computer.name)
+                'User<{}> has multiple configurations for Computer<{}>'.format(user.email, computer.label)
             )
         else:
             return self.from_dbmodel(authinfo)

@@ -1034,7 +1034,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
 
         # Test that the code2 can be loaded correctly with its label
-        q_code_2 = orm.Code.get_from_string(code2.label + '@' + self.computer.get_name())
+        q_code_2 = orm.Code.get_from_string(code2.label + '@' + self.computer.label)
         self.assertEquals(q_code_2.id, code2.id)
         self.assertEquals(q_code_2.label, code2.label)
         self.assertEquals(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
@@ -1087,7 +1087,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
 
         # Test that the code2 can be loaded correctly with its label and computername
-        q_code_2 = orm.Code.get(label=code2.label, machinename=self.computer.get_name())
+        q_code_2 = orm.Code.get(label=code2.label, machinename=self.computer.label)
         self.assertEquals(q_code_2.id, code2.id)
         self.assertEquals(q_code_2.label, code2.label)
         self.assertEquals(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())

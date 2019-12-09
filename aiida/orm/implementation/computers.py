@@ -62,13 +62,7 @@ class BackendComputer(backends.BackendEntity):
 
     @abc.abstractmethod
     def set_metadata(self, metadata):
-        """
-        Set the metadata.
-
-        .. note: You still need to call the .store() method to actually save
-           data to the database! (The store method can be called multiple
-           times, differently from AiiDA Node objects).
-        """
+        """Set the metadata."""
 
     @abc.abstractmethod
     def get_name(self):

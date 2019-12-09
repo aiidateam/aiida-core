@@ -106,7 +106,7 @@ class Code(Data):
             computer_str = 'repository'
         else:
             if self.computer is not None:
-                computer_str = self.computer.name
+                computer_str = self.computer.label
             else:
                 computer_str = '[unknown]'
 
@@ -502,16 +502,16 @@ class Code(Data):
             result.append(['Remote machine', self.get_remote_computer().name])
             result.append(['Remote absolute path', self.get_remote_exec_path()])
 
-        if self.get_prepend_text().strip():
+        if self.get_property('prepend_text').strip():
             result.append(['Prepend text', ''])
-            for line in self.get_prepend_text().split('\n'):
+            for line in self.get_property('prepend_text').split('\n'):
                 result.append(['', line])
         else:
             result.append(['Prepend text', 'No prepend text'])
 
-        if self.get_append_text().strip():
+        if self.get_property('append_text').strip():
             result.append(['Append text', ''])
-            for line in self.get_append_text().split('\n'):
+            for line in self.get_property('append_text').split('\n'):
                 result.append(['', line])
         else:
             result.append(['Append text', 'No append text'])

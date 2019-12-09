@@ -138,6 +138,15 @@ jobs:
       run:
         .github/workflows/tests.sh
 
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v1.0.5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: aiida-unittests-${{ matrix.backend }}
+        flags: ${{ matrix.backend }}
+        file: ./coverage.xml
+        fail_ci_if_error: true
+
   verdi:
 
     runs-on: ubuntu-latest

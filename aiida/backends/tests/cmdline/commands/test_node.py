@@ -10,6 +10,7 @@
 """Tests for verdi node"""
 
 import os
+import io
 import errno
 import tempfile
 
@@ -51,6 +52,17 @@ class TestVerdiNode(AiidaTestCase):
         node.store()
 
         cls.node = node
+
+        # Set up a FolderData for the node repo cp tests.
+        folder_node = orm.FolderData()
+        cls.content_file1 = 'nobody expects'
+        cls.content_file2 = 'the minister of silly walks'
+        cls.filename_1 = 'test.txt'
+        cls.filename_2 = 'else.txt'
+        folder_node.put_object_from_filelike(io.StringIO(cls.content_file1), key=cls.filename_1)
+        folder_node.put_object_from_filelike(io.StringIO(cls.content_file2), key=cls.filename_2)
+        folder_node.store()
+        cls.folder_node = folder_node
 
     def setUp(self):
         self.cli_runner = CliRunner()
@@ -170,6 +182,108 @@ class TestVerdiNode(AiidaTestCase):
                 options = [flag, fmt, str(self.node.uuid)]
                 result = self.cli_runner.invoke(cmd_node.extras, options)
                 self.assertIsNone(result.exception, result.output)
+
+    def test_node_repo_cp(self):
+        """Test 'verdi node repo cp' command."""
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            options = [str(self.folder_node.uuid), tmp_dir]
+            self.cli_runner.invoke(cmd_node.repo_cp, options)
+
+            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
+            self.assertEqual(sorted(os.listdir(out_dir)), sorted([self.filename_1, self.filename_2]))
+            with open(os.path.join(out_dir, self.filename_1), 'r') as file_1:
+                self.assertEqual(file_1.read(), self.content_file1)
+            with open(os.path.join(out_dir, self.filename_2), 'r') as file_2:
+                self.assertEqual(file_2.read(), self.content_file2)
+
+    def test_node_repo_cp_no_uuid(self):
+        """Test 'verdi node repo cp' command with '--no-uuid' option."""
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            options = [str(self.folder_node.uuid), '--no-uuid', tmp_dir]
+            self.cli_runner.invoke(cmd_node.repo_cp, options)
+
+            self.assertEqual(sorted(os.listdir(tmp_dir)), sorted([self.filename_1, self.filename_2]))
+            with open(os.path.join(tmp_dir, self.filename_1), 'r') as file_1:
+                self.assertEqual(file_1.read(), self.content_file1)
+            with open(os.path.join(tmp_dir, self.filename_2), 'r') as file_2:
+                self.assertEqual(file_2.read(), self.content_file2)
+
+    def test_node_repo_cp_one_file(self):
+        """Test 'verdi node repo cp' command with explicitly specified file name."""
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            options = [str(self.folder_node.uuid), self.filename_1, tmp_dir]
+            self.cli_runner.invoke(cmd_node.repo_cp, options)
+
+            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
+            self.assertEqual(os.listdir(out_dir), [self.filename_1])
+            with open(os.path.join(out_dir, self.filename_1), 'r') as file_1:
+                self.assertEqual(file_1.read(), self.content_file1)
+
+    def test_node_repo_cp_two_files_explicit(self):
+        """Test 'verdi node repo cp' command with two explicitly specified file names."""
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            options = [str(self.folder_node.uuid), self.filename_2, self.filename_1, tmp_dir]
+            self.cli_runner.invoke(cmd_node.repo_cp, options)
+
+            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
+            self.assertEqual(sorted(os.listdir(out_dir)), sorted([self.filename_1, self.filename_2]))
+            with open(os.path.join(out_dir, self.filename_1), 'r') as file_1:
+                self.assertEqual(file_1.read(), self.content_file1)
+            with open(os.path.join(out_dir, self.filename_2), 'r') as file_2:
+                self.assertEqual(file_2.read(), self.content_file2)
+
+    def test_node_repo_inexistent(self):
+        """Test 'verdi node repo cp' command with an inexistent file name."""
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            options = [str(self.folder_node.uuid), 'inexistent_filename', tmp_dir]
+            result = self.cli_runner.invoke(cmd_node.repo_cp, options)
+
+            self.assertIn('Warning', result.output)
+
+            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
+            self.assertEqual(os.listdir(out_dir), [])
+
+    def test_node_repo_existing_file(self):
+        """Test 'verdi node repo cp' command with an existing file name."""
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            file_content = 'some content'
+            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
+            os.makedirs(out_dir)
+            with open(os.path.join(out_dir, self.filename_1), 'w') as file:
+                file.write(file_content)
+            options = [str(self.folder_node.uuid), tmp_dir]
+            result = self.cli_runner.invoke(cmd_node.repo_cp, options)
+
+            self.assertIn('Warning', result.output)
+            self.assertEqual(sorted(os.listdir(out_dir)), sorted([self.filename_1, self.filename_2]))
+            with open(os.path.join(out_dir, self.filename_1), 'r') as file_1:
+                self.assertEqual(file_1.read(), file_content)
+            with open(os.path.join(out_dir, self.filename_2), 'r') as file_2:
+                self.assertEqual(file_2.read(), self.content_file2)
+
+    def test_node_repo_existing_file_force(self):
+        """Test 'verdi node repo cp' command with an existing file name, forcing the overwrite."""
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            file_content = 'some content'
+            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
+            os.makedirs(out_dir)
+            with open(os.path.join(out_dir, self.filename_1), 'w') as file:
+                file.write(file_content)
+            options = ['--force', str(self.folder_node.uuid), tmp_dir]
+            self.cli_runner.invoke(cmd_node.repo_cp, options)
+
+            self.assertEqual(sorted(os.listdir(out_dir)), sorted([self.filename_1, self.filename_2]))
+            with open(os.path.join(out_dir, self.filename_1), 'r') as file_1:
+                self.assertEqual(file_1.read(), self.content_file1)
+            with open(os.path.join(out_dir, self.filename_2), 'r') as file_2:
+                self.assertEqual(file_2.read(), self.content_file2)
 
 
 def delete_temporary_file(filepath):

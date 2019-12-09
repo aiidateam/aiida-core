@@ -15,13 +15,13 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_user
 from aiida import orm
 
-user_1 = {
+user_1 = {  # pylint: disable=invalid-name
     'email': 'testuser1@localhost',
     'first_name': 'Max',
     'last_name': 'Mueller',
     'institution': 'Testing Instiute'
 }
-user_2 = {
+user_2 = {  # pylint: disable=invalid-name
     'email': 'testuser2@localhost',
     'first_name': 'Sabine',
     'last_name': 'Garching',
@@ -30,12 +30,13 @@ user_2 = {
 
 
 class TestVerdiUserCommand(AiidaTestCase):
+    """Test verdi user."""
 
     def setUp(self):
         super().setUp()
 
         created, user = orm.User.objects.get_or_create(email=user_1['email'])
-        for key, value in user_1.items():
+        for key, _ in user_1.items():
             if key != 'email':
                 setattr(user, key, user_1[key])
         if created:
@@ -52,10 +53,14 @@ class TestVerdiUserCommand(AiidaTestCase):
     def test_user_create(self):
         """Create a new user with `verdi user configure`."""
         cli_options = [
-            '--email', user_2['email'],
-            '--first-name', user_2['first_name'],
-            '--last-name', user_2['last_name'],
-            '--institution', user_2['institution'],
+            '--email',
+            user_2['email'],
+            '--first-name',
+            user_2['first_name'],
+            '--last-name',
+            user_2['last_name'],
+            '--institution',
+            user_2['institution'],
         ]
 
         result = self.cli_runner.invoke(cmd_user.user_configure, cli_options, catch_exceptions=False)
@@ -72,10 +77,14 @@ class TestVerdiUserCommand(AiidaTestCase):
         email = user_1['email']
 
         cli_options = [
-            '--email', user_1['email'],
-            '--first-name', user_2['first_name'],
-            '--last-name', user_2['last_name'],
-            '--institution', user_2['institution'],
+            '--email',
+            user_1['email'],
+            '--first-name',
+            user_2['first_name'],
+            '--last-name',
+            user_2['last_name'],
+            '--institution',
+            user_2['institution'],
         ]
 
         result = self.cli_runner.invoke(cmd_user.user_configure, cli_options, catch_exceptions=False)
@@ -84,6 +93,6 @@ class TestVerdiUserCommand(AiidaTestCase):
         self.assertTrue('created' not in result.output)
 
         # Check it's all been changed to user2's attributes except the email
-        for key, value in user_2.items():
+        for key, _ in user_2.items():
             if key != 'email':
                 setattr(cmd_user, key, user_1[key])

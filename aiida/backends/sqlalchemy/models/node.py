@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=import-error,no-name-in-module
+"""Module to manage nodes for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
@@ -23,13 +25,17 @@ from aiida.common.utils import get_new_uuid
 
 
 class DbNode(Base):
+    """Class to store nodes using SQLA backend."""
+
     __tablename__ = 'db_dbnode'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
     node_type = Column(String(255), index=True)
     process_type = Column(String(255), index=True)
-    label = Column(String(255), index=True, nullable=True, default='')  # Does it make sense to be nullable and have a default?
+    label = Column(
+        String(255), index=True, nullable=True, default=''
+    )  # Does it make sense to be nullable and have a default?
     description = Column(Text(), nullable=True, default='')
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
@@ -44,11 +50,7 @@ class DbNode(Base):
 
     # This should have the same ondelete behaviour as db_computer_id, right?
     user_id = Column(
-        Integer,
-        ForeignKey(
-            'db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'
-        ),
-        nullable=False
+        Integer, ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'), nullable=False
     )
 
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
@@ -57,20 +59,19 @@ class DbNode(Base):
     # this is probably a ON DELETE inside the DB. On removing node with id=x,
     # we would remove all link with x as an output.
 
-    dbcomputer = relationship(
-        'DbComputer',
-        backref=backref('dbnodes', passive_deletes='all', cascade='merge')
-    )
+    dbcomputer = relationship('DbComputer', backref=backref('dbnodes', passive_deletes='all', cascade='merge'))
 
     # User
-    user = relationship(
-        'DbUser',
-        backref=backref('dbnodes', passive_deletes='all', cascade='merge', )
-    )
+    user = relationship('DbUser', backref=backref(
+        'dbnodes',
+        passive_deletes='all',
+        cascade='merge',
+    ))
 
     # outputs via db_dblink table
     outputs_q = relationship(
-        'DbNode', secondary='db_dblink',
+        'DbNode',
+        secondary='db_dblink',
         primaryjoin='DbNode.id == DbLink.input_id',
         secondaryjoin='DbNode.id == DbLink.output_id',
         backref=backref('inputs_q', passive_deletes=True, lazy='dynamic'),
@@ -79,6 +80,7 @@ class DbNode(Base):
     )
 
     def __init__(self, *args, **kwargs):
+        """Add three additional attributes to the base class: mtime, attributes and extras."""
         super().__init__(*args, **kwargs)
         # The behavior of an unstored Node instance should be that all its attributes should be initialized in
         # accordance with the defaults specified on the colums, i.e. if a default is specified for the `uuid` column,
@@ -125,41 +127,31 @@ class DbNode(Base):
             thistype = 'node.Node.'
         if not thistype.endswith('.'):
             return invalid_result
-        else:
-            thistype = thistype[:-1]  # Strip final dot
-            return thistype.rpartition('.')[2]
+        thistype = thistype[:-1]  # Strip final dot
+        return thistype.rpartition('.')[2]
 
     @property
     def pk(self):
         return self.id
 
     def __str__(self):
+        """Get string object out of DbNode object."""
         simplename = self.get_simple_name(invalid_result='Unknown')
         # node pk + type
         if self.label:
             return '{} node [{}]: {}'.format(simplename, self.pk, self.label)
-        else:
-            return '{} node [{}]'.format(simplename, self.pk)
+        return '{} node [{}]'.format(simplename, self.pk)
 
 
 class DbLink(Base):
+    """Class to store links between nodes using SQLA backend."""
+
     __tablename__ = 'db_dblink'
 
-    id = Column(Integer, primary_key=True)
-    input_id = Column(
-        Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'),
-        index=True
-    )
+    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    input_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'), index=True)
     output_id = Column(
-        Integer,
-        ForeignKey(
-            'db_dbnode.id',
-            ondelete='CASCADE',
-            deferrable=True,
-            initially='DEFERRED'
-        ),
-        index=True
+        Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), index=True
     )
 
     input = relationship('DbNode', primaryjoin='DbLink.input_id == DbNode.id')
@@ -181,8 +173,6 @@ class DbLink(Base):
 
     def __str__(self):
         return '{} ({}) --> {} ({})'.format(
-            self.input.get_simple_name(invalid_result='Unknown node'),
-            self.input.pk,
-            self.output.get_simple_name(invalid_result='Unknown node'),
-            self.output.pk
+            self.input.get_simple_name(invalid_result='Unknown node'), self.input.pk,
+            self.output.get_simple_name(invalid_result='Unknown node'), self.output.pk
         )

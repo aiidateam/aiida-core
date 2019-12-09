@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Module to test processess launch."""
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
@@ -15,11 +15,12 @@ from aiida.engine import launch, Process, CalcJob, WorkChain, calcfunction
 
 
 @calcfunction
-def add(a, b):
-    return a + b
+def add(term_a, term_b):
+    return term_a + term_b
 
 
 class FileCalcJob(CalcJob):
+    """Calculation that takes single file as input."""
 
     @classmethod
     def define(cls, spec):
@@ -45,26 +46,28 @@ class FileCalcJob(CalcJob):
 
 
 class AddWorkChain(WorkChain):
+    """Workchain that adds two nubers and returns the sum."""
 
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('a', valid_type=orm.Int)
-        spec.input('b', valid_type=orm.Int)
+        spec.input('term_a', valid_type=orm.Int)
+        spec.input('term_b', valid_type=orm.Int)
         spec.outline(cls.add)
         spec.output('result', valid_type=orm.Int)
 
     def add(self):
-        self.out('result', orm.Int(self.inputs.a + self.inputs.b).store())
+        self.out('result', orm.Int(self.inputs.term_a + self.inputs.term_b).store())
 
 
 class TestLaunchers(AiidaTestCase):
+    """Class to test process launchers."""
 
     def setUp(self):
         super().setUp()
         self.assertIsNone(Process.current())
-        self.a = orm.Int(1)
-        self.b = orm.Int(2)
+        self.term_a = orm.Int(1)
+        self.term_b = orm.Int(2)
         self.result = 3
 
     def tearDown(self):
@@ -72,60 +75,69 @@ class TestLaunchers(AiidaTestCase):
         self.assertIsNone(Process.current())
 
     def test_calcfunction_run(self):
-        result = launch.run(add, a=self.a, b=self.b)
-        self.assertEquals(result, self.result)
+        """Test calcfunction run."""
+        result = launch.run(add, term_a=self.term_a, term_b=self.term_b)
+        self.assertEqual(result, self.result)
 
     def test_calcfunction_run_get_node(self):
-        result, node = launch.run_get_node(add, a=self.a, b=self.b)
-        self.assertEquals(result, self.result)
+        """Test calcfunction run by run_get_node."""
+        result, node = launch.run_get_node(add, term_a=self.term_a, term_b=self.term_b)
+        self.assertEqual(result, self.result)
         self.assertTrue(isinstance(node, orm.CalcFunctionNode))
 
     def test_calcfunction_run_get_pk(self):
-        result, pk = launch.run_get_pk(add, a=self.a, b=self.b)
-        self.assertEquals(result, self.result)
+        """Test calcfunction run by run_get_pk."""
+        result, pk = launch.run_get_pk(add, term_a=self.term_a, term_b=self.term_b)
+        self.assertEqual(result, self.result)
         self.assertTrue(isinstance(pk, int))
 
     def test_workchain_run(self):
-        result = launch.run(AddWorkChain, a=self.a, b=self.b)
-        self.assertEquals(result['result'], self.result)
+        """Test workchain run."""
+        result = launch.run(AddWorkChain, term_a=self.term_a, term_b=self.term_b)
+        self.assertEqual(result['result'], self.result)
 
     def test_workchain_run_get_node(self):
-        result, node = launch.run_get_node(AddWorkChain, a=self.a, b=self.b)
-        self.assertEquals(result['result'], self.result)
+        """Test workchain run by run_get_node."""
+        result, node = launch.run_get_node(AddWorkChain, term_a=self.term_a, term_b=self.term_b)
+        self.assertEqual(result['result'], self.result)
         self.assertTrue(isinstance(node, orm.WorkChainNode))
 
     def test_workchain_run_get_pk(self):
-        result, pk = launch.run_get_pk(AddWorkChain, a=self.a, b=self.b)
-        self.assertEquals(result['result'], self.result)
+        """Test workchain run by run_get_pk."""
+        result, pk = launch.run_get_pk(AddWorkChain, term_a=self.term_a, term_b=self.term_b)
+        self.assertEqual(result['result'], self.result)
         self.assertTrue(isinstance(pk, int))
 
     def test_workchain_builder_run(self):
+        """Test workchain builder run."""
         builder = AddWorkChain.get_builder()
-        builder.a = self.a
-        builder.b = self.b
+        builder.term_a = self.term_a
+        builder.term_b = self.term_b
         result = launch.run(builder)
-        self.assertEquals(result['result'], self.result)
+        self.assertEqual(result['result'], self.result)
 
     def test_workchain_builder_run_get_node(self):
+        """Test workchain builder that run by run_get_node."""
         builder = AddWorkChain.get_builder()
-        builder.a = self.a
-        builder.b = self.b
+        builder.term_a = self.term_a
+        builder.term_b = self.term_b
         result, node = launch.run_get_node(builder)
-        self.assertEquals(result['result'], self.result)
+        self.assertEqual(result['result'], self.result)
         self.assertTrue(isinstance(node, orm.WorkChainNode))
 
     def test_workchain_builder_run_get_pk(self):
+        """Test workchain builder that run by run_get_pk."""
         builder = AddWorkChain.get_builder()
-        builder.a = self.a
-        builder.b = self.b
+        builder.term_a = self.term_a
+        builder.term_b = self.term_b
         result, pk = launch.run_get_pk(builder)
-        self.assertEquals(result['result'], self.result)
+        self.assertEqual(result['result'], self.result)
         self.assertTrue(isinstance(pk, int))
 
     def test_submit_store_provenance_false(self):
         """Verify that submitting with `store_provenance=False` raises."""
         with self.assertRaises(exceptions.InvalidOperation):
-            launch.submit(AddWorkChain, a=self.a, b=self.b, metadata={'store_provenance': False})
+            launch.submit(AddWorkChain, term_a=self.term_a, term_b=self.term_b, metadata={'store_provenance': False})
 
 
 class TestLaunchersDryRun(AiidaTestCase):
@@ -154,11 +166,9 @@ class TestLaunchersDryRun(AiidaTestCase):
         """All launchers should work with `dry_run=True`, even `submit` which forwards to `run`."""
         from aiida.plugins import CalculationFactory
 
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(
-            input_plugin_name='arithmetic.add',
-            remote_computer_exec=[self.computer, '/bin/true']).store()
+        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
 
         inputs = {
             'code': code,
@@ -167,7 +177,10 @@ class TestLaunchersDryRun(AiidaTestCase):
             'metadata': {
                 'dry_run': True,
                 'options': {
-                    'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    }
                 }
             }
         }
@@ -193,11 +206,9 @@ class TestLaunchersDryRun(AiidaTestCase):
         """Test the launchers in `dry_run` mode with `store_provenance=False`."""
         from aiida.plugins import CalculationFactory
 
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(
-            input_plugin_name='arithmetic.add',
-            remote_computer_exec=[self.computer, '/bin/true']).store()
+        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
 
         inputs = {
             'code': code,
@@ -207,7 +218,10 @@ class TestLaunchersDryRun(AiidaTestCase):
                 'dry_run': True,
                 'store_provenance': False,
                 'options': {
-                    'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    }
                 }
             }
         }
@@ -242,9 +256,7 @@ class TestLaunchersDryRun(AiidaTestCase):
         import os
         import tempfile
 
-        code = orm.Code(
-            input_plugin_name='arithmetic.add',
-            remote_computer_exec=[self.computer, '/bin/true']).store()
+        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
 
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')
@@ -264,12 +276,15 @@ class TestLaunchersDryRun(AiidaTestCase):
                 'dry_run': True,
                 'store_provenance': False,
                 'options': {
-                    'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    }
                 }
             }
         }
 
-        result, node = launch.run_get_node(FileCalcJob, **inputs)
+        _, node = launch.run_get_node(FileCalcJob, **inputs)
         self.assertIn('folder', node.dry_run_info)
         for filename in ['single_file', 'file_one', 'file_two']:
             self.assertIn(filename, os.listdir(node.dry_run_info['folder']))

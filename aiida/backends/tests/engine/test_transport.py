@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Module to test transport."""
 from tornado.gen import coroutine, Return
 
 from aiida.backends.testbase import AiidaTestCase
@@ -16,14 +16,14 @@ from aiida import orm
 
 
 class TestTransportQueue(AiidaTestCase):
-    """ Tests for the transport queue """
+    """Tests for the transport queue."""
 
-    def setUp(self, *args, **kwargs):
+    def setUp(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """ Set up a simple authinfo and for later use """
         super().setUp(*args, **kwargs)
         self.authinfo = orm.AuthInfo(computer=self.computer, user=orm.User.objects.get_default()).store()
 
-    def tearDown(self, *args, **kwargs):
+    def tearDown(self, *args, **kwargs):  # pylint: disable=arguments-differ
         orm.AuthInfo.objects.delete(self.authinfo.id)
         super().tearDown(*args, **kwargs)
 
@@ -40,10 +40,10 @@ class TestTransportQueue(AiidaTestCase):
                 self.assertTrue(trans.is_open)
             self.assertFalse(trans.is_open)
 
-        loop.run_sync(lambda: test())
+        loop.run_sync(lambda: test())  # pylint: disable=unnecessary-lambda
 
     def test_get_transport_nested(self):
-        """ Test nesting calls to get the same transport """
+        """Test nesting calls to get the same transport."""
         transport_queue = TransportQueue()
         loop = transport_queue.loop()
 
@@ -60,7 +60,7 @@ class TestTransportQueue(AiidaTestCase):
         loop.run_sync(lambda: nested(transport_queue, self.authinfo))
 
     def test_get_transport_interleaved(self):
-        """ Test interleaved calls to get the same transport """
+        """Test interleaved calls to get the same transport."""
         transport_queue = TransportQueue()
         loop = transport_queue.loop()
 
@@ -72,7 +72,7 @@ class TestTransportQueue(AiidaTestCase):
         loop.run_sync(lambda: [interleaved(self.authinfo), interleaved(self.authinfo)])
 
     def test_return_from_context(self):
-        """ Test raising a Return from coroutine context """
+        """Test raising a Return from coroutine context."""
         queue = TransportQueue()
         loop = queue.loop()
 
@@ -82,11 +82,11 @@ class TestTransportQueue(AiidaTestCase):
                 trans = yield request
                 raise Return(trans.is_open)
 
-        retval = loop.run_sync(lambda: test())
+        retval = loop.run_sync(lambda: test())  # pylint: disable=unnecessary-lambda
         self.assertTrue(retval)
 
     def test_open_fail(self):
-        """ Test that if opening fails  """
+        """Test that if opening fails."""
         queue = TransportQueue()
         loop = queue.loop()
 
@@ -104,7 +104,7 @@ class TestTransportQueue(AiidaTestCase):
             original = self.authinfo.get_transport().__class__.open
             self.authinfo.get_transport().__class__.open = broken_open
             with self.assertRaises(RuntimeError):
-                loop.run_sync(lambda: test())
+                loop.run_sync(lambda: test())  # pylint: disable=unnecessary-lambda
         finally:
             self.authinfo.get_transport().__class__.open = original
 
@@ -113,10 +113,10 @@ class TestTransportQueue(AiidaTestCase):
 
         # Temporarily set the safe open interval for the default transport to a finite value
         transport_class = self.authinfo.get_transport().__class__
-        original_interval = transport_class._DEFAULT_SAFE_OPEN_INTERVAL
+        original_interval = transport_class._DEFAULT_SAFE_OPEN_INTERVAL  # pylint: disable=protected-access
 
         try:
-            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = 0.25
+            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = 0.25  # pylint: disable=protected-access
 
             import time
             queue = TransportQueue()
@@ -135,7 +135,7 @@ class TestTransportQueue(AiidaTestCase):
                     self.assertTrue(time_elapsed > time_minimum, 'transport safe interval was violated')
 
             for i in range(5):
-                loop.run_sync(lambda: test(i))
+                loop.run_sync(lambda iteration=i: test(iteration))
 
         finally:
-            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval
+            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval  # pylint: disable=protected-access

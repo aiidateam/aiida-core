@@ -7,45 +7,43 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Tests for subclasses of DbImporter, DbSearchResults and DbEntry
-"""
+"""Tests for subclasses of DbImporter, DbSearchResults and DbEntry"""
 import unittest
-
 
 from aiida.backends.testbase import AiidaTestCase
 
 
 class TestCodDbImporter(AiidaTestCase):
-    """
-    Test the CodDbImporter class.
-    """
+    """Test the CodDbImporter class."""
     from aiida.orm.nodes.data.cif import has_pycifrw
 
     def test_query_construction_1(self):
+        """Test query construction."""
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
         import re
 
         codi = CodDbImporter()
-        q = codi.query_sql(id=['1000000', 3000000],
-                           element=['C', 'H', 'Cl'],
-                           number_of_elements=5,
-                           chemical_name=['caffeine', 'serotonine'],
-                           formula=['C6 H6'],
-                           volume=[100, 120.005],
-                           spacegroup='P -1',
-                           a=[10.0 / 3, 1],
-                           alpha=[10.0 / 6, 0],
-                           measurement_temp=[0, 10.5],
-                           measurement_pressure=[1000, 1001],
-                           determination_method=['single crystal', None])
+        q_sql = codi.query_sql(
+            id=['1000000', 3000000],
+            element=['C', 'H', 'Cl'],
+            number_of_elements=5,
+            chemical_name=['caffeine', 'serotonine'],
+            formula=['C6 H6'],
+            volume=[100, 120.005],
+            spacegroup='P -1',
+            a=[10.0 / 3, 1],
+            alpha=[10.0 / 6, 0],
+            measurement_temp=[0, 10.5],
+            measurement_pressure=[1000, 1001],
+            determination_method=['single crystal', None]
+        )
 
         # Rounding errors occur in Python 3 thus they are averted using
         # the following precision stripping regular expressions.
-        q = re.sub(r'(\d\.\d{6})\d+', r'\1', q)
-        q = re.sub(r'(120.00)39+', r'\g<1>4', q)
+        q_sql = re.sub(r'(\d\.\d{6})\d+', r'\1', q_sql)
+        q_sql = re.sub(r'(120.00)39+', r'\g<1>4', q_sql)
 
-        self.assertEquals(q, \
+        self.assertEqual(q_sql, \
                           'SELECT file, svnrevision FROM data WHERE '
                           "(status IS NULL OR status != 'retracted') AND "
                           '(a BETWEEN 3.332333 AND 3.334333 OR '
@@ -69,10 +67,8 @@ class TestCodDbImporter(AiidaTestCase):
                           'vol BETWEEN 120.004 AND 120.006)')
 
     def test_datatype_checks(self):
-        """
-        Rather complicated, but wide-coverage test for data types, accepted
-        and rejected by CodDbImporter._*_clause methods.
-        """
+        """Rather complicated, but wide-coverage test for data types, accepted
+        and rejected by CodDbImporter._*_clause methods."""
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
         codi = CodDbImporter()
@@ -85,59 +81,63 @@ class TestCodDbImporter(AiidaTestCase):
                     'only integers and floats are accepted',
                     "invalid literal for int() with base 10: 'text'"]
         values = [10, 'text', 'text', '10', 1.0 / 3, [1, 2, 3]]
-        methods = [codi._int_clause,
-                   codi._str_exact_clause,
-                   codi._formula_clause,
-                   codi._str_fuzzy_clause,
-                   codi._composition_clause,
-                   codi._volume_clause]
-        results = [[0, 4, 4, 0, 1, 1],
-                   [0, 0, 0, 0, 1, 1],
-                   [2, 0, 0, 0, 2, 2],
-                   [0, 0, 0, 0, 1, 1],
-                   [2, 0, 0, 0, 2, 2],
+        methods = [
+            # pylint: disable=protected-access
+            codi._int_clause,
+            codi._str_exact_clause,
+            codi._formula_clause,
+            codi._str_fuzzy_clause,
+            codi._composition_clause,
+            codi._volume_clause
+        ]
+        results = [[0, 4, 4, 0, 1, 1], [0, 0, 0, 0, 1, 1], [2, 0, 0, 0, 2, 2], [0, 0, 0, 0, 1, 1], [2, 0, 0, 0, 2, 2],
                    [0, 3, 3, 3, 0, 3]]
 
-        for i in range(len(methods)):
-            for j in range(len(values)):
+        for i, _ in enumerate(methods):
+            for j, _ in enumerate(values):
                 message = messages[0]
                 try:
                     methods[i]('test', 'test', [values[j]])
                 except ValueError as exc:
                     message = str(exc)
-                self.assertEquals(message, messages[results[i][j]])
+                self.assertEqual(message, messages[results[i][j]])
 
     def test_dbentry_creation(self):
-        """
-        Tests the creation of CodEntry from CodSearchResults.
-        """
+        """Tests the creation of CodEntry from CodSearchResults."""
         from aiida.tools.dbimporters.plugins.cod \
             import CodSearchResults
 
-        results = CodSearchResults([{'id': '1000000', 'svnrevision': None},
-                                    {'id': '1000001', 'svnrevision': '1234'},
-                                    {'id': '2000000', 'svnrevision': '1234'}])
-        self.assertEquals(len(results), 3)
-        self.assertEquals(results.at(1).source, {
-            'db_name': 'Crystallography Open Database',
-            'db_uri': 'http://www.crystallography.net/cod',
-            'extras': {},
+        results = CodSearchResults([{
+            'id': '1000000',
+            'svnrevision': None
+        }, {
             'id': '1000001',
-            'license': 'CC0',
-            'source_md5': None,
-            'uri': 'http://www.crystallography.net/cod/1000001.cif@1234',
-            'version': '1234',
-        })
-        self.assertEquals([x.source['uri'] for x in results],
-                          ['http://www.crystallography.net/cod/1000000.cif',
-                           'http://www.crystallography.net/cod/1000001.cif@1234',
-                           'http://www.crystallography.net/cod/2000000.cif@1234'])
+            'svnrevision': '1234'
+        }, {
+            'id': '2000000',
+            'svnrevision': '1234'
+        }])
+        self.assertEqual(len(results), 3)
+        self.assertEqual(
+            results.at(1).source, {
+                'db_name': 'Crystallography Open Database',
+                'db_uri': 'http://www.crystallography.net/cod',
+                'extras': {},
+                'id': '1000001',
+                'license': 'CC0',
+                'source_md5': None,
+                'uri': 'http://www.crystallography.net/cod/1000001.cif@1234',
+                'version': '1234',
+            }
+        )
+        self.assertEqual([x.source['uri'] for x in results], [
+            'http://www.crystallography.net/cod/1000000.cif', 'http://www.crystallography.net/cod/1000001.cif@1234',
+            'http://www.crystallography.net/cod/2000000.cif@1234'
+        ])
 
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_dbentry_to_cif_node(self):
-        """
-        Tests the creation of CifData node from CodEntry.
-        """
+        """Tests the creation of CifData node from CodEntry."""
         from aiida.orm import CifData
         from aiida.tools.dbimporters.plugins.cod import CodEntry
 
@@ -145,111 +145,109 @@ class TestCodDbImporter(AiidaTestCase):
         entry.cif = "data_test _publ_section_title 'Test structure'"
 
         cif = entry.get_cif_node()
-        self.assertEquals(isinstance(cif, CifData), True)
-        self.assertEquals(cif.get_attribute('md5'),
-                          '070711e8e99108aade31d20cd5c94c48')
-        self.assertEquals(cif.source, {
-            'db_name': 'Crystallography Open Database',
-            'db_uri': 'http://www.crystallography.net/cod',
-            'id': None,
-            'version': None,
-            'extras': {},
-            'source_md5': '070711e8e99108aade31d20cd5c94c48',
-            'uri': 'http://www.crystallography.net/cod/1000000.cif',
-            'license': 'CC0',
-        })
+        self.assertEqual(isinstance(cif, CifData), True)
+        self.assertEqual(cif.get_attribute('md5'), '070711e8e99108aade31d20cd5c94c48')
+        self.assertEqual(
+            cif.source, {
+                'db_name': 'Crystallography Open Database',
+                'db_uri': 'http://www.crystallography.net/cod',
+                'id': None,
+                'version': None,
+                'extras': {},
+                'source_md5': '070711e8e99108aade31d20cd5c94c48',
+                'uri': 'http://www.crystallography.net/cod/1000000.cif',
+                'license': 'CC0',
+            }
+        )
 
 
 class TestTcodDbImporter(AiidaTestCase):
-    """
-    Test the TcodDbImporter class.
-    """
+    """Test the TcodDbImporter class."""
 
     def test_dbentry_creation(self):
-        """
-        Tests the creation of TcodEntry from TcodSearchResults.
-        """
+        """Tests the creation of TcodEntry from TcodSearchResults."""
         from aiida.tools.dbimporters.plugins.tcod import TcodSearchResults
 
-        results = TcodSearchResults([{'id': '10000000', 'svnrevision': None},
-                                     {'id': '10000001', 'svnrevision': '1234'},
-                                     {'id': '20000000', 'svnrevision': '1234'}])
-        self.assertEquals(len(results), 3)
-        self.assertEquals(results.at(1).source, {
-            'db_name': 'Theoretical Crystallography Open Database',
-            'db_uri': 'http://www.crystallography.net/tcod',
-            'extras': {},
+        results = TcodSearchResults([{
+            'id': '10000000',
+            'svnrevision': None
+        }, {
             'id': '10000001',
-            'license': 'CC0',
-            'source_md5': None,
-            'uri': 'http://www.crystallography.net/tcod/10000001.cif@1234',
-            'version': '1234',
-        })
-        self.assertEquals([x.source['uri'] for x in results],
-                          ['http://www.crystallography.net/tcod/10000000.cif',
-                           'http://www.crystallography.net/tcod/10000001.cif@1234',
-                           'http://www.crystallography.net/tcod/20000000.cif@1234'])
+            'svnrevision': '1234'
+        }, {
+            'id': '20000000',
+            'svnrevision': '1234'
+        }])
+        self.assertEqual(len(results), 3)
+        self.assertEqual(
+            results.at(1).source, {
+                'db_name': 'Theoretical Crystallography Open Database',
+                'db_uri': 'http://www.crystallography.net/tcod',
+                'extras': {},
+                'id': '10000001',
+                'license': 'CC0',
+                'source_md5': None,
+                'uri': 'http://www.crystallography.net/tcod/10000001.cif@1234',
+                'version': '1234',
+            }
+        )
+        self.assertEqual([x.source['uri'] for x in results], [
+            'http://www.crystallography.net/tcod/10000000.cif', 'http://www.crystallography.net/tcod/10000001.cif@1234',
+            'http://www.crystallography.net/tcod/20000000.cif@1234'
+        ])
 
 
 class TestPcodDbImporter(AiidaTestCase):
-    """
-    Test the PcodDbImporter class.
-    """
+    """Test the PcodDbImporter class."""
 
     def test_dbentry_creation(self):
-        """
-        Tests the creation of PcodEntry from PcodSearchResults.
-        """
+        """Tests the creation of PcodEntry from PcodSearchResults."""
         from aiida.tools.dbimporters.plugins.pcod import PcodSearchResults
 
         results = PcodSearchResults([{'id': '12345678'}])
-        self.assertEquals(len(results), 1)
-        self.assertEquals(results.at(0).source, {
-            'db_name': 'Predicted Crystallography Open Database',
-            'db_uri': 'http://www.crystallography.net/pcod',
-            'extras': {},
-            'id': '12345678',
-            'license': 'CC0',
-            'source_md5': None,
-            'uri': 'http://www.crystallography.net/pcod/cif/1/123/12345678.cif',
-            'version': None,
-        })
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results.at(0).source, {
+                'db_name': 'Predicted Crystallography Open Database',
+                'db_uri': 'http://www.crystallography.net/pcod',
+                'extras': {},
+                'id': '12345678',
+                'license': 'CC0',
+                'source_md5': None,
+                'uri': 'http://www.crystallography.net/pcod/cif/1/123/12345678.cif',
+                'version': None,
+            }
+        )
 
 
 class TestMpodDbImporter(AiidaTestCase):
-    """
-    Test the MpodDbImporter class.
-    """
+    """Test the MpodDbImporter class."""
 
     def test_dbentry_creation(self):
-        """
-        Tests the creation of MpodEntry from MpodSearchResults.
-        """
+        """Tests the creation of MpodEntry from MpodSearchResults."""
         from aiida.tools.dbimporters.plugins.mpod import MpodSearchResults
 
         results = MpodSearchResults([{'id': '1234567'}])
-        self.assertEquals(len(results), 1)
-        self.assertEquals(results.at(0).source, {
-            'db_name': 'Material Properties Open Database',
-            'db_uri': 'http://mpod.cimav.edu.mx',
-            'extras': {},
-            'id': '1234567',
-            'license': None,
-            'source_md5': None,
-            'uri': 'http://mpod.cimav.edu.mx/datafiles/1234567.mpod',
-            'version': None,
-        })
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results.at(0).source, {
+                'db_name': 'Material Properties Open Database',
+                'db_uri': 'http://mpod.cimav.edu.mx',
+                'extras': {},
+                'id': '1234567',
+                'license': None,
+                'source_md5': None,
+                'uri': 'http://mpod.cimav.edu.mx/datafiles/1234567.mpod',
+                'version': None,
+            }
+        )
 
 
 class TestNnincDbImporter(AiidaTestCase):
-    """
-    Test the UpfEntry class.
-    """
+    """Test the UpfEntry class."""
 
     def test_upfentry_creation(self):
-        """
-        Tests the creation of NnincEntry from NnincSearchResults.
-        """
+        """Tests the creation of NnincEntry from NnincSearchResults."""
         import os
 
         from aiida.tools.dbimporters.plugins.nninc import NnincSearchResults
@@ -263,11 +261,11 @@ class TestNnincDbImporter(AiidaTestCase):
 
         path_root = os.path.split(aiida.__file__)[0]
         path_pseudos = os.path.join(path_root, 'backends', 'tests', 'fixtures', 'pseudos')
-        with open(os.path.join(path_pseudos, '{}.UPF'.format(upf)), 'r', encoding='utf8') as f:
-            entry._contents = f.read()
+        with open(os.path.join(path_pseudos, '{}.UPF'.format(upf)), 'r', encoding='utf8') as fpntr:
+            entry._contents = fpntr.read()  # pylint: disable=protected-access
 
         upfnode = entry.get_upf_node()
-        self.assertEquals(upfnode.element, 'Ba')
+        self.assertEqual(upfnode.element, 'Ba')
 
         entry.source = {'id': 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF'}
 

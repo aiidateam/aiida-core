@@ -220,7 +220,7 @@ The guide for Ubuntu above can generally be followed, but there are a few things
 #. It may be neccessary to install and start the `Windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_.
 
 #. Linux services under WSL are not started automatically.
-   To start the PostgreSQL and RabbitMQ-server services, type the command below in the terminal::
+   To start the PostgreSQL and RabbitMQ-server services, type the commands below in the terminal::
 
      sudo service postgresql start
      sudo service rabbitmq-server start
@@ -243,7 +243,7 @@ The guide for Ubuntu above can generally be followed, but there are a few things
          <username> ALL=(root) NOPASSWD: /path/to/file.sh
 
        Replacing ``<username>`` with your Ubuntu username.
-       This will make you able to run *only* this specific ``.sh`` file with ``root`` access, i.e., not passing a password, without lowering security on your system.
+       This will allow you to run *only* this specific ``.sh`` file with ``root`` access (without password), without lowering security on the rest of your system.
 
 #. There is a `known issue <https://github.com/Microsoft/WSL/issues/856>`_ in WSL Ubuntu 18.04 where the timezone is not configured correctly out-of-the-box, which may cause problem for the database.
    The following command can be used to re-configure the time zone::

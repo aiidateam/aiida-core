@@ -262,17 +262,4 @@ The guide for Ubuntu above can generally be followed, but there are a few things
 
 It may be worth considering adding some of these commands to your ``~/.bashrc`` file, since some of these settings may reset upon reboot.
 
-.. note::
-
-    **For developers using WSL**: For speed considerations WSL 2 is recommended.
-
-    WSL 2 introduces a full-blown VM for your Linux distributions, meaning faster I/O-operations and no need for Windows "support" services (like RabbitMQ).
-    In other words, WSL 2 should provide a more self-contained installation and running experience.
-
-    Note, however that it is *only* available through the Windows Insider Program, using Windows 10 builds 18917 and higher.
-    For more information, see `the WSL documentation <https://docs.microsoft.com/en-us/windows/wsl/wsl2-install>`_.
-
-    .. tip::
-
-        Consider using Visual Studio Code with the Remote WSL extension for a full IDE experience, if you're not using in-terminal IDEs.
-        See `the VS Code WSL documentation <https://code.visualstudio.com/docs/remote/wsl>`_ for more information.
+.. hint:: For using WSL as a developer, please see the considerations made in our `wiki-page for developers <https://github.com/aiidateam/aiida-core/wiki/Development-environment#using-windows-subsystem-for-linux-wsl>`_.

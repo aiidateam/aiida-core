@@ -264,9 +264,10 @@ It may be worth considering adding some of these commands to your ``~/.bashrc`` 
 
 .. note::
 
-    **For developers using WSL**: For speed and self-consistency considerations, WSL 2 is recommended.
+    **For developers using WSL**: For speed considerations WSL 2 is recommended.
 
     WSL 2 introduces a full-blown VM for your Linux distributions, meaning faster I/O-operations and no need for Windows "support" services (like RabbitMQ).
+    In other words, WSL 2 should provide a more self-contained installation and running experience.
 
     Note, however that it is *only* available through the Windows Insider Program, using Windows 10 builds 18917 and higher.
     For more information, see `the WSL documentation <https://docs.microsoft.com/en-us/windows/wsl/wsl2-install>`_.

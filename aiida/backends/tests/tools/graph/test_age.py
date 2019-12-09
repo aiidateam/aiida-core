@@ -391,6 +391,7 @@ class TestNodes(AiidaTestCase):
         seq = RuleSequence((rule1, rule2), max_iterations=np.inf)
         res = seq.run(basket_inp.copy())
         for should_set, is_set in ((nodes_set.copy(), res['nodes'].get_keys()), (groups_set, res['groups'].get_keys())):
+            print(QueryBuilder().append(Group, filters={'id': {'in': is_set}}).all())
             print(is_set)
             print(should_set)
             self.assertEqual(is_set, should_set)

@@ -17,7 +17,7 @@ from aiida.orm.querybuilder import QueryBuilder
 VALID_ENTITY_CLASSES = (Node, Group)
 
 
-class AbstractSetContainer(set, metaclass=ABCMeta):
+class AbstractSetContainer(metaclass=ABCMeta):
     """Abstract Set Container"""
 
     @abstractmethod

@@ -358,9 +358,9 @@ class TestNodes(AiidaTestCase):
         qb0 = QueryBuilder()
         qb0.append(Data, tag='d')
         #qb0.append(Group, with_node='d', tag='g', filters={'type_string':''} )
-        qb0.append(Group, with_node='d', tag='g')
-        # The filter here is there for avoiding problems with autogrouping.
-        # Depending how the test exactly is run, nodes can be put into autogroups.
+        qb0.append(Group, with_node='d', tag='g', filters={'type_string': 'user'})  # The filter here is
+        # there for avoiding problems with autogrouping. Depending how the test
+        # exactly is run, nodes can be put into autogroups.
         qb0.append(Data, with_group='g')
 
         initial_node = nodes[-1]
@@ -391,7 +391,6 @@ class TestNodes(AiidaTestCase):
         seq = RuleSequence((rule1, rule2), max_iterations=np.inf)
         res = seq.run(basket_inp.copy())
         for should_set, is_set in ((nodes_set.copy(), res['nodes'].get_keys()), (groups_set, res['groups'].get_keys())):
-            print(QueryBuilder().append(Group, filters={'id': {'in': is_set}}).all())
             print(is_set)
             print(should_set)
             self.assertEqual(is_set, should_set)

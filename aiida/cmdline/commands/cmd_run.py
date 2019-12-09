@@ -96,7 +96,7 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
     handle = None
 
     try:
-        # Here we use a standard open and not io.open, as exec will later fail if passed a unicode type string.
+        # Here we use a standard open and not open, as exec will later fail if passed a unicode type string.
         handle = open(scriptname, 'r')
     except IOError:
         echo.echo_critical("Unable to load file '{}'".format(scriptname))

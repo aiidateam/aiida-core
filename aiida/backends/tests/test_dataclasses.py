@@ -3112,7 +3112,7 @@ class TestTrajectoryData(AiidaTestCase):
             files_created = []  # In case there is an exception
             try:
                 files_created = n.export(filename, fileformat=format)
-                with io.open(filename, encoding='utf8') as fhandle:
+                with open(filename, encoding='utf8') as fhandle:
                     filedata = fhandle.read()
             finally:
                 for file in files_created:
@@ -3703,7 +3703,7 @@ class TestBandsData(AiidaTestCase):
             files_created = []  # In case there is an exception
             try:
                 files_created = b.export(filename, fileformat=format)
-                with io.open(filename, encoding='utf8') as fhandle:
+                with open(filename, encoding='utf8') as fhandle:
                     filedata = fhandle.read()
             finally:
                 for file in files_created:

@@ -28,7 +28,7 @@ def parse_sshconfig(computername):
     import paramiko
     config = paramiko.SSHConfig()
     try:
-        config.parse(io.open(os.path.expanduser('~/.ssh/config'), encoding='utf8'))
+        config.parse(open(os.path.expanduser('~/.ssh/config'), encoding='utf8'))
     except IOError:
         # No file found, so empty configuration
         pass

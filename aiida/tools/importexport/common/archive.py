@@ -9,7 +9,6 @@
 ###########################################################################
 """Utility functions and classes to interact with AiiDA export archives."""
 
-import io
 import os
 import sys
 import tarfile
@@ -215,7 +214,7 @@ class Archive:
         :param filename: the filename relative to the sandbox folder
         :return: a dictionary with the loaded JSON content
         """
-        with io.open(self.folder.get_abs_path(filename), 'r', encoding='utf8') as fhandle:
+        with open(self.folder.get_abs_path(filename), 'r', encoding='utf8') as fhandle:
             return json.load(fhandle)
 
 

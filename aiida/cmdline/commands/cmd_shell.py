@@ -9,7 +9,6 @@
 ###########################################################################
 """The verdi shell command"""
 
-import io
 import os
 import click
 
@@ -74,7 +73,7 @@ def shell(plain, no_startup, interface):
                 if not os.path.isfile(pythonrc):
                     continue
                 try:
-                    with io.open(pythonrc, encoding='utf8') as handle:
+                    with open(pythonrc, encoding='utf8') as handle:
                         exec(compile(handle.read(), pythonrc, 'exec'), imported_objects)  # pylint: disable=exec-used
                 except NameError:
                     pass

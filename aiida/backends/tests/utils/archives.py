@@ -10,7 +10,6 @@
 """Test utility to import, inspect, or migrate AiiDA export archives."""
 
 import os
-import io
 import tarfile
 import zipfile
 
@@ -104,9 +103,9 @@ def get_json_files(archive, silent=True, filepath=None, external_module=None):
             raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
 
         try:
-            with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+            with open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
                 data = json.load(fhandle)
-            with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
+            with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
         except IOError:
             raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
@@ -135,9 +134,9 @@ def migrate_archive(input_file, output_file, silent=True):
             raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
 
         try:
-            with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+            with open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
                 data = json.load(fhandle)
-            with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
+            with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
         except IOError:
             raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
@@ -146,10 +145,10 @@ def migrate_archive(input_file, output_file, silent=True):
         migrate_recursively(metadata, data, folder)
 
         # Write json files
-        with io.open(folder.get_abs_path('data.json'), 'wb') as fhandle:
+        with open(folder.get_abs_path('data.json'), 'wb') as fhandle:
             json.dump(data, fhandle, indent=4)
 
-        with io.open(folder.get_abs_path('metadata.json'), 'wb') as fhandle:
+        with open(folder.get_abs_path('metadata.json'), 'wb') as fhandle:
             json.dump(metadata, fhandle, indent=4)
 
         # Pack archive

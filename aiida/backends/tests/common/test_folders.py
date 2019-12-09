@@ -37,9 +37,9 @@ class FoldersTest(unittest.TestCase):
         """Check that there are no exceptions raised when using unicode folders."""
         tmpsource = tempfile.mkdtemp()
         tmpdest = tempfile.mkdtemp()
-        with io.open(os.path.join(tmpsource, 'sąžininga'), 'w', encoding='utf8') as fhandle:
+        with open(os.path.join(tmpsource, 'sąžininga'), 'w', encoding='utf8') as fhandle:
             fhandle.write('test')
-        with io.open(os.path.join(tmpsource, 'žąsis'), 'w', encoding='utf8') as fhandle:
+        with open(os.path.join(tmpsource, 'žąsis'), 'w', encoding='utf8') as fhandle:
             fhandle.write('test')
         folder = Folder(tmpdest)
         folder.insert_path(tmpsource, 'destination')

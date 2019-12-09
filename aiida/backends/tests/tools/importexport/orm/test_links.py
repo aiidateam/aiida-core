@@ -9,7 +9,6 @@
 ###########################################################################
 """orm links tests for the export and import routines"""
 
-import io
 import os
 import tarfile
 
@@ -52,7 +51,7 @@ class TestLinks(AiidaTestCase):
         with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
             tar.extractall(unpack.abspath)
 
-        with io.open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+        with open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
             data = json.load(fhandle)
         data['links_uuid'].append({
             'output': struct.uuid,
@@ -62,7 +61,7 @@ class TestLinks(AiidaTestCase):
             'type': LinkType.CREATE.value
         })
 
-        with io.open(unpack.get_abs_path('data.json'), 'wb') as fhandle:
+        with open(unpack.get_abs_path('data.json'), 'wb') as fhandle:
             json.dump(data, fhandle)
 
         with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT) as tar:
@@ -634,7 +633,7 @@ class TestLinks(AiidaTestCase):
         with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
             tar.extractall(unpack.abspath)
 
-        with io.open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+        with open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
             data = json.load(fhandle)
         data['links_uuid'].append({
             'output': calc.uuid,
@@ -643,7 +642,7 @@ class TestLinks(AiidaTestCase):
             'type': LinkType.INPUT_CALC.value
         })
 
-        with io.open(unpack.get_abs_path('data.json'), 'wb') as fhandle:
+        with open(unpack.get_abs_path('data.json'), 'wb') as fhandle:
             json.dump(data, fhandle)
 
         with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT) as tar:

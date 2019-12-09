@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the configuration migration functionality."""
-import io
 import os
 import uuid
 from unittest import TestCase
@@ -28,7 +27,7 @@ class TestConfigMigration(TestCase):
         """Load a configuration file from a fixture."""
         currdir = os.path.dirname(os.path.abspath(__file__))
         filepath = os.path.join(currdir, 'test_samples', filename)
-        with io.open(filepath, 'r', encoding='utf8') as handle:
+        with open(filepath, 'r', encoding='utf8') as handle:
             return json.load(handle)
 
     def setUp(self):

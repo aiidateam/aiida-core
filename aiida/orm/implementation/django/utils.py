@@ -15,7 +15,7 @@ from django.db.models.fields import FieldDoesNotExist
 
 from aiida.common import exceptions
 
-IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid'}
+IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type'}
 
 
 class ModelWrapper:

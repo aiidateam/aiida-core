@@ -70,7 +70,13 @@ class AiidaProcessDirective(Directive):
         self.module_name = self.options['module']
         self.process_name = self.module_name + '.' + self.class_name
         self.process = get_object_from_string(self.process_name)
-        self.process_spec = self.process.spec()
+
+        try:
+            self.process_spec = self.process.spec()
+        except Exception as exc:
+            raise RuntimeError(
+                "Error while building the spec for process '{}': '{!r}.'".format(self.process_name, exc)
+            ) from exc
 
     def build_node_tree(self):
         """Returns the docutils node tree."""

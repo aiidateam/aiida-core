@@ -44,13 +44,15 @@ def build_sphinx(build_dir):  # pylint: disable=redefined-outer-name
         doctree_dir = os.path.join(build_dir, 'doctrees')
         out_dir = os.path.join(build_dir, builder)
 
-        subprocess.check_call(
+        completed_proc = subprocess.run(
             [sys.executable, '-m', 'sphinx', '-b', builder, '-d', doctree_dir, source_dir, out_dir],
             # add demo_workchain.py to the PYTHONPATH
-            cwd=os.path.join(source_dir, os.pardir)
+            cwd=os.path.join(source_dir, os.pardir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
 
-        return out_dir
+        return out_dir, completed_proc
 
     return inner
 

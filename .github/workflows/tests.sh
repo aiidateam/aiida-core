@@ -16,7 +16,7 @@ verdi daemon stop
 #   the numbers/ranges of lines which are not covered,
 # - coverage results of multiple tests are collected,
 # - the base directory for files to consider is aiida/
-export PYTEST_ADDOPTS="--cov-config=.coveragerc --cov-report xml --cov-report term-missing --cov-append --cov=aiida"
+export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --cov-config=.coveragerc --cov-report xml --cov-report term-missing --cov-append --cov=aiida"
 
 AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest tests
 AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest .ci/pytest

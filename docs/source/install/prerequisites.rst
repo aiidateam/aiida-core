@@ -217,7 +217,12 @@ Windows Subsystem for Linux (Ubuntu)
 
 The guide for Ubuntu above can generally be followed, but there are a few things to note:
 
-#. It may be neccessary to install and start the `Windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_.
+.. hint::
+
+    Installing `Ubuntu <https://www.microsoft.com/en-gb/p/ubuntu/9nblggh4msv6?source=lp&activetab=pivot:overviewtab>`_ instead of the version specific applications, will let you have the latest LTS version.
+
+#. The `Windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_ should be installed and started.
+   (For WSL 2, this should not be necessary.)
 
 #. Linux services under WSL are not started automatically.
    To start the PostgreSQL and RabbitMQ-server services, type the commands below in the terminal::
@@ -257,29 +262,16 @@ The guide for Ubuntu above can generally be followed, but there are a few things
 
 It may be worth considering adding some of these commands to your ``~/.bashrc`` file, since some of these settings may reset upon reboot.
 
-.. hint::
-
-    Installing `Ubuntu <https://www.microsoft.com/en-gb/p/ubuntu/9nblggh4msv6?source=lp&activetab=pivot:overviewtab>`_ instead of the version specific applications, will let you have the latest LTS version.
-
 .. note::
 
-    **For developers**: To get ``pre-commit`` to run, you should install ruby via::
+    **For developers using WSL**: For speed and self-consistency considerations, WSL 2 is recommended.
 
-        sudo apt-get install ruby-full
+    WSL 2 introduces a full-blown VM for your Linux distributions, meaning faster I/O-operations and no need for Windows "support" services (like RabbitMQ).
 
-    Since the ``.travis.yml`` check runs with ruby.
-
-    You may also have to introduce a new $PATH, prior to running the check, restoring the original $PATH afterwards.
-    This, however, is only necessary if you run into problems and Ruby refuses to run due to wrong access rights.
-    The problem arises due to the ``/mnt/c/`` paths in the $PATH environment variable, so these should be temporarily removed.
-
-    Some transport tests may not run properly using this setup.
-
-    For speed considerations, WSL 2 is recommended.
     Note, however that it is *only* available through the Windows Insider Program, using Windows 10 builds 18917 and higher.
     For more information, see `the WSL documentation <https://docs.microsoft.com/en-us/windows/wsl/wsl2-install>`_.
 
     .. tip::
 
-        Consider using VS Code with the Remote WSL extension for a full IDE experience, if you're not using in-terminal IDEs.
-        See `the VS Code WSL documentation <https://code.visualstudio.com/docs/remote/wsl>`_.
+        Consider using Visual Studio Code with the Remote WSL extension for a full IDE experience, if you're not using in-terminal IDEs.
+        See `the VS Code WSL documentation <https://code.visualstudio.com/docs/remote/wsl>`_ for more information.

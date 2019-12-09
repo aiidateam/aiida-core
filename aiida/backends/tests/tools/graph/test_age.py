@@ -395,7 +395,6 @@ class TestNodes(AiidaTestCase):
             print(is_set)
             print(should_set)
             self.assertEqual(is_set, should_set)
-
         print('####################\n\n\n')
 
         #print('-------\n\n')

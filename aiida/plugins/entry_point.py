@@ -10,6 +10,7 @@
 
 import enum
 import traceback
+import functools
 
 try:
     from reentry.default_manager import PluginManager
@@ -185,7 +186,6 @@ def load_entry_point_from_string(entry_point_string):
     group, name = parse_entry_point_string(entry_point_string)
     return load_entry_point(group, name)
 
-
 def load_entry_point(group, name):
     """
     Load the class registered under the entry point for a given name and group
@@ -234,6 +234,7 @@ def get_entry_point_names(group, sort=True):
     return entry_point_names
 
 
+@functools.lru_cache(maxsize=None)
 def get_entry_points(group):
     """
     Return a list of all the entry points within a specific group
@@ -243,7 +244,7 @@ def get_entry_points(group):
     """
     return [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group=group)]
 
-
+@functools.lru_cache(maxsize=None)
 def get_entry_point(group, name):
     """
     Return an entry point with a given name within a specific group

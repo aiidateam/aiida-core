@@ -9,6 +9,8 @@
 ###########################################################################
 """`verdi node` command."""
 
+import pathlib
+
 import click
 import tabulate
 
@@ -59,6 +61,40 @@ def repo_ls(node, relative_path, color):
         list_repository_contents(node, relative_path, color)
     except ValueError as exception:
         echo.echo_critical(exception)
+
+
+@verdi_node_repo.command('cp')
+@arguments.NODE()
+@click.argument('src_files', type=str, nargs=-1)
+@click.argument(
+    'output_directory',
+    type=click.Path(exists=True, file_okay=False, writable=True),
+    required=True,
+)
+@click.option('--no-uuid', flag_value=True, help='Do not prefix the output paths with the node uuid.')
+@options.FORCE()
+@with_dbenv()
+def repo_cp(node, output_directory, src_files, no_uuid, force):
+    """Copy the repository files of a node to an output directory."""
+    output_directory = pathlib.Path(output_directory)
+    if not no_uuid:
+        output_directory /= node.uuid
+
+    output_directory.mkdir(exist_ok=True)
+    if not src_files:
+        src_files = node.list_object_names()
+    for file_path in src_files:
+        if file_path not in node.list_object_names():
+            echo.echo_warning("No object named '{}' in node repository.".format(file_path))
+            continue
+        output_file_path = output_directory / file_path
+        if not force and output_file_path.exists():
+            echo.echo_warning("Not copying '{}': File exists. Use '--force' option to override.".format(file_path))
+            continue
+        with output_file_path.open(mode='wb') as out_f:
+            with node.open(file_path, 'rb') as in_f:
+                out_f.write(in_f.read())
+    echo.echo("Outputs written to '{}'.".format(output_directory))
 
 
 @verdi_node.command('label')

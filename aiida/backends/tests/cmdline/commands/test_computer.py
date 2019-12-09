@@ -318,6 +318,25 @@ scheduler: direct
         self.assertClickResultNoException(result)
         self.assertIsInstance(orm.Computer.objects.get(name=label), orm.Computer)
 
+    def test_show_yaml(self):
+        """Test round-trip of `verdi computer show --format yaml` with `verdi computer setup`."""
+        self.computer.set_property('default_mpiprocs_per_machine', 1)
+        options = ['--format', 'yaml', '--', self.computer.pk]
+        result = self.cli_runner.invoke(computer_show, options)
+        self.assertClickResultNoException(result)
+
+        # Rename the existing computer otherwise the setup command will fail
+        self.computer.label = self.computer.label + '_backup'
+
+        # Create a temporary file with the yaml formatted output and use it to setup a computer
+        yaml_config = result.stdout_bytes
+        with tempfile.NamedTemporaryFile() as handle:
+            handle.write(yaml_config)
+            handle.flush()
+            handle.seek(0)
+            result = self.cli_runner.invoke(computer_setup, ['--non-interactive', '--config', handle.name])
+            self.assertClickResultNoException(result)
+
 
 class TestVerdiComputerConfigure(AiidaTestCase):
 

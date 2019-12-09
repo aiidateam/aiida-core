@@ -406,10 +406,21 @@ def computer_list(all_entries, raw):
 
 @verdi_computer.command('show')
 @arguments.COMPUTER()
+@options.FORMAT(type=click.Choice(['table', 'yaml']), default='table', help='Format of the output.')
 @with_dbenv()
-def computer_show(computer):
+def computer_show(computer, fmt):
     """Show detailed information for a computer."""
-    echo.echo(computer.full_text_info)
+    import tabulate
+    import yaml
+
+    if fmt == 'yaml':
+        echo.echo(yaml.dump(computer.get_properties()))
+    else:
+        properties = computer.get_properties()
+        properties['pk'] = computer.pk
+        properties['uuid'] = computer.uuid
+        data = sorted([(k.lower(), v) for k, v in properties.items()])
+        echo.echo(tabulate.tabulate(data))
 
 
 @verdi_computer.command('rename')

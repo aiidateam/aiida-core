@@ -31,6 +31,7 @@ pygments~=2.5
 pymatgen>=2019.7.2
 pymysql~=0.9.3
 pyparsing~=2.4
+pytest-cov~=2.7
 pytest-timeout~=1.3
 pytest~=5.3
 python-dateutil~=2.8

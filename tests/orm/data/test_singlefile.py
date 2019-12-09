@@ -11,6 +11,7 @@
 
 import os
 import tempfile
+import pathlib
 import io
 
 from aiida.backends.testbase import AiidaTestCase
@@ -104,6 +105,31 @@ class TestSinglefileData(AiidaTestCase):
 
         self.assertEqual(content_stored, content_original)
         self.assertEqual(node.list_object_names(), [SinglefileData.DEFAULT_FILENAME])
+
+    def test_construct_with_path(self):
+        """Test constructing an instance from a pathlib.Path."""
+        content_original = 'please report to the ministry of silly walks'
+
+        with tempfile.NamedTemporaryFile(mode='w+') as handle:
+            filepath = pathlib.Path(handle.name).resolve()
+            filename = filepath.name
+            handle.write(content_original)
+            handle.flush()
+            node = SinglefileData(file=filepath)
+
+        with node.open() as handle:
+            content_written = handle.read()
+
+        self.assertEqual(node.list_object_names(), [filename])
+        self.assertEqual(content_written, content_original)
+
+        node.store()
+
+        with node.open() as handle:
+            content_stored = handle.read()
+
+        self.assertEqual(content_stored, content_original)
+        self.assertEqual(node.list_object_names(), [filename])
 
     def test_construct_with_filename(self):
         """Test constructing an instance, providing a filename."""

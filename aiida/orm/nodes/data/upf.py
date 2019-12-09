@@ -9,7 +9,6 @@
 ###########################################################################
 """Module of `Data` sub class to represent a pseudopotential single file in UPF format and related utilities."""
 
-import io
 import json
 import re
 
@@ -210,7 +209,7 @@ def parse_upf(fname, check_filename=True):
         upf_contents = fname.read()
         fname = fname.name
     except AttributeError:
-        with io.open(fname, encoding='utf8') as handle:
+        with open(fname, encoding='utf8') as handle:
             upf_contents = handle.read()
 
     match = REGEX_UPF_VERSION.search(upf_contents)

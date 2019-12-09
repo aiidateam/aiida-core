@@ -9,8 +9,6 @@
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
 
-import io
-
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.lang import override
@@ -220,10 +218,10 @@ class Data(Node):
 
         for additional_fname, additional_fcontent in extra_files.items():
             retlist.append(additional_fname)
-            with io.open(additional_fname, 'wb', encoding=None) as fhandle:
+            with open(additional_fname, 'wb', encoding=None) as fhandle:
                 fhandle.write(additional_fcontent)  # This is up to each specific plugin
         retlist.append(path)
-        with io.open(path, 'wb', encoding=None) as fhandle:
+        with open(path, 'wb', encoding=None) as fhandle:
             fhandle.write(filetext)
 
         return retlist
@@ -293,7 +291,7 @@ class Data(Node):
         """
         if fileformat is None:
             fileformat = fname.split('.')[-1]
-        with io.open(fname, 'r', encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
+        with open(fname, 'r', encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
             self.importstring(fhandle.read(), fileformat)
 
     def _get_importers(self):

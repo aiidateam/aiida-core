@@ -18,7 +18,6 @@ Validates consistency of setup.json and
 
 """
 
-import io
 import os
 import sys
 import json
@@ -36,7 +35,7 @@ FILEPATH_TOML = os.path.join(ROOT_DIR, FILENAME_TOML)
 
 def get_setup_json():
     """Return the `setup.json` as a python dictionary """
-    with io.open(FILEPATH_SETUP_JSON, 'r') as fil:
+    with open(FILEPATH_SETUP_JSON, 'r') as fil:
         return json.load(fil, object_pairs_hook=OrderedDict)
 
 
@@ -63,7 +62,7 @@ def dump_setup_json(data):
 
     :param data: the dictionary to write to the `setup.json`
     """
-    with io.open(FILEPATH_SETUP_JSON, 'w') as handle:
+    with open(FILEPATH_SETUP_JSON, 'w') as handle:
         # Write with indentation of two spaces and explicitly define separators to not have spaces at end of lines
         return json.dump(data, handle, indent=2, separators=(',', ': '))
 
@@ -119,7 +118,7 @@ def replace_block_in_file(filepath, block_start_marker, block_end_marker, block)
     :param block_end_marker: string marking the end of the block
     :param block: list of lines representing the new block that should be inserted after old block is removed
     """
-    with io.open(filepath) as handle:
+    with open(filepath) as handle:
         lines = handle.readlines()
 
     try:
@@ -129,7 +128,7 @@ def replace_block_in_file(filepath, block_start_marker, block_end_marker, block)
 
     lines = replace_line_block(lines, block, index_start, index_end)
 
-    with io.open(filepath, 'w') as handle:
+    with open(filepath, 'w') as handle:
         for line in lines:
             handle.write(line)
 
@@ -244,7 +243,7 @@ def validate_pyproject():
         sys.exit(1)
 
     try:
-        with io.open(FILEPATH_TOML, 'r') as handle:
+        with open(FILEPATH_TOML, 'r') as handle:
             toml_string = handle.read()
     except IOError as exception:
         click.echo('Could not read the required file: {}'.format(FILEPATH_TOML), err=True)
@@ -309,7 +308,7 @@ def update_environment_yml():
 
     environment_filename = 'environment.yml'
     file_path = os.path.join(ROOT_DIR, environment_filename)
-    with io.open(file_path, 'w') as env_file:
+    with open(file_path, 'w') as env_file:
         env_file.write('# Usage: conda env create -n myenvname -f environment.yml python=3.6\n')
         yaml.safe_dump(
             environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True

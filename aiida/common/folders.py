@@ -10,7 +10,6 @@
 """Utility functions to operate on filesystem folders."""
 import errno
 import fnmatch
-import io
 import os
 import shutil
 import tempfile
@@ -229,7 +228,7 @@ class Folder:
         if 'b' in mode:
             encoding = None
 
-        with io.open(filepath, mode=mode, encoding=encoding) as handle:
+        with open(filepath, mode=mode, encoding=encoding) as handle:
             shutil.copyfileobj(filelike, handle)
 
         os.chmod(filepath, self.mode_file)
@@ -289,7 +288,7 @@ class Folder:
         if 'b' in mode:
             encoding = None
 
-        return io.open(self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding)
+        return open(self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding)
 
     @property
     def abspath(self):

@@ -9,7 +9,6 @@
 ###########################################################################
 """Test export file migration from export version 0.4 to 0.5"""
 
-import io
 import tarfile
 import zipfile
 
@@ -56,9 +55,9 @@ class TestMigrateV04toV05(AiidaTestCase):
                 raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
 
             try:
-                with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+                with open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
                     data_v4 = jsonload(fhandle)
-                with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
+                with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                     metadata_v4 = jsonload(fhandle)
             except IOError:
                 raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))

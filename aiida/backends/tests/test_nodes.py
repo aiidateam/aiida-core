@@ -577,11 +577,11 @@ class TestNodeBasic(AiidaTestCase):
         os.makedirs(tree_1)
         file_content = 'some text ABCDE'
         file_content_different = 'other values 12345'
-        with io.open(os.path.join(tree_1, 'file1.txt'), 'w', encoding='utf8') as fhandle:
+        with open(os.path.join(tree_1, 'file1.txt'), 'w', encoding='utf8') as fhandle:
             fhandle.write(file_content)
         os.mkdir(os.path.join(tree_1, 'dir1'))
         os.mkdir(os.path.join(tree_1, 'dir1', 'dir2'))
-        with io.open(os.path.join(tree_1, 'dir1', 'file2.txt'), 'w', encoding='utf8') as fhandle:
+        with open(os.path.join(tree_1, 'dir1', 'file2.txt'), 'w', encoding='utf8') as fhandle:
             fhandle.write(file_content)
         os.mkdir(os.path.join(tree_1, 'dir1', 'dir2', 'dir3'))
 
@@ -2085,4 +2085,3 @@ class TestNodeDeletion(AiidaTestCase):
         with Capturing():
             delete_nodes((node_list[3].pk,), force=True, create_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
-

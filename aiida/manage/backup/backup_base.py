@@ -9,7 +9,6 @@
 ###########################################################################
 """Base abstract Backup class for all backends."""
 import datetime
-import io
 import os
 import logging
 import shutil
@@ -88,7 +87,7 @@ class AbstractBackup(ABC):
         """
         backup_variables = None
 
-        with io.open(backup_info_file_name, 'r', encoding='utf8') as backup_info_file:
+        with open(backup_info_file_name, 'r', encoding='utf8') as backup_info_file:
             try:
                 backup_variables = json.load(backup_info_file)
             except ValueError:
@@ -223,7 +222,7 @@ class AbstractBackup(ABC):
         given filename.
         """
         backup_variables = self._dictionarize_backup_info()
-        with io.open(backup_info_file_name, 'wb') as backup_info_file:
+        with open(backup_info_file_name, 'wb') as backup_info_file:
             json.dump(backup_variables, backup_info_file)
 
     def _find_files_to_backup(self):

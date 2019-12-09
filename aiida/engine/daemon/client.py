@@ -12,7 +12,6 @@ Controls the daemon
 """
 
 import enum
-import io
 import os
 import shutil
 import socket
@@ -149,13 +148,13 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         """
         if self.is_daemon_running:
             try:
-                with io.open(self.circus_port_file, 'r', encoding='utf8') as fhandle:
+                with open(self.circus_port_file, 'r', encoding='utf8') as fhandle:
                     return int(fhandle.read().strip())
             except (ValueError, IOError):
                 raise RuntimeError('daemon is running so port file should have been there but could not read it')
         else:
             port = self.get_available_port()
-            with io.open(self.circus_port_file, 'w', encoding='utf8') as fhandle:
+            with open(self.circus_port_file, 'w', encoding='utf8') as fhandle:
                 fhandle.write(str(port))
 
             return port
@@ -178,7 +177,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         """
         if self.is_daemon_running:
             try:
-                return io.open(self.circus_socket_file, 'r', encoding='utf8').read().strip()
+                return open(self.circus_socket_file, 'r', encoding='utf8').read().strip()
             except (ValueError, IOError):
                 raise RuntimeError('daemon is running so sockets file should have been there but could not read it')
         else:
@@ -188,7 +187,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
                 return self._SOCKET_DIRECTORY
 
             socket_dir_path = tempfile.mkdtemp()
-            with io.open(self.circus_socket_file, 'w', encoding='utf8') as fhandle:
+            with open(self.circus_socket_file, 'w', encoding='utf8') as fhandle:
                 fhandle.write(str(socket_dir_path))
 
             self._SOCKET_DIRECTORY = socket_dir_path
@@ -202,7 +201,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         """
         if os.path.isfile(self.circus_pid_file):
             try:
-                return int(io.open(self.circus_pid_file, 'r', encoding='utf8').read().strip())
+                return int(open(self.circus_pid_file, 'r', encoding='utf8').read().strip())
             except (ValueError, IOError):
                 return None
         else:

@@ -9,7 +9,6 @@
 ###########################################################################
 """Simple tests for the export and import routines"""
 
-import io
 import os
 import shutil
 import tarfile
@@ -111,11 +110,11 @@ class TestSimple(AiidaTestCase):
             with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack_tmp_folder)
 
-            with io.open(os.path.join(unpack_tmp_folder, 'metadata.json'), 'r', encoding='utf8') as fhandle:
+            with open(os.path.join(unpack_tmp_folder, 'metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
             metadata['export_version'] = 0.0
 
-            with io.open(os.path.join(unpack_tmp_folder, 'metadata.json'), 'wb') as fhandle:
+            with open(os.path.join(unpack_tmp_folder, 'metadata.json'), 'wb') as fhandle:
                 json.dump(metadata, fhandle)
 
             with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT) as tar:

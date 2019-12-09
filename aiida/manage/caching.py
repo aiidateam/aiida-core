@@ -9,7 +9,6 @@
 ###########################################################################
 """Definition of caching mechanism and configuration for calculations."""
 
-import io
 import os
 import copy
 import warnings
@@ -55,7 +54,7 @@ def _get_config(config_file):
         exceptions.ConfigurationError('no profile has been loaded')
 
     try:
-        with io.open(config_file, 'r', encoding='utf8') as handle:
+        with open(config_file, 'r', encoding='utf8') as handle:
             config = yaml.load(handle)[profile.name]
     except (OSError, IOError, KeyError):
         # No config file, or no config for this profile

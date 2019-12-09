@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import io
 import os
 
 from aiida.common.exceptions import ValidationError, EntryPointError, InputValidationError
@@ -92,7 +91,7 @@ class Code(Data):
 
         for filename in files:
             if os.path.isfile(filename):
-                with io.open(filename, 'rb') as handle:
+                with open(filename, 'rb') as handle:
                     self.put_object_from_filelike(handle, os.path.split(filename)[1], 'wb', encoding=None)
 
     def __str__(self):

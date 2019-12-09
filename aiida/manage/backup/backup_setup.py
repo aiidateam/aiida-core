@@ -10,7 +10,6 @@
 """Class to backup an AiiDA instance profile."""
 
 import datetime
-import io
 import logging
 import os
 import shutil
@@ -201,7 +200,7 @@ class BackupSetup:
             # Ask questions to properly setup the backup variables
             backup_variables = self.construct_backup_variables(file_backup_folder_abs)
 
-            with io.open(final_conf_filepath, 'wb') as backup_info_file:
+            with open(final_conf_filepath, 'wb') as backup_info_file:
                 json.dump(backup_variables, backup_info_file)
         # If the backup parameters are configured manually
         else:
@@ -239,7 +238,7 @@ backup_inst.run()
         script_path = os.path.join(conf_backup_folder_abs, self._script_filename)
 
         # Write the contents to the script
-        with io.open(script_path, 'w', encoding='utf8') as script_file:
+        with open(script_path, 'w', encoding='utf8') as script_file:
             script_file.write(script_content)
 
         # Set the right permissions

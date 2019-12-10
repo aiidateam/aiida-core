@@ -66,10 +66,7 @@ def repo_ls(node, relative_path, color):
 
 @verdi_node_repo.command('dump')
 @click.option(
-    '-f',
-    '--force',
-    help='Overwrite existing directories and files without prompting for confirmation.',
-    flag_value=True
+    '-f', '--force', help='Replace existing directories and files without prompting for confirmation.', flag_value=True
 )
 @arguments.NODE()
 @click.argument(
@@ -96,20 +93,20 @@ def repo_dump(node, output_directory, force):
                 new_out_dir = output_dir / file.name
                 if new_out_dir.exists():
                     if force:
-                        prompt_res = 'o'
+                        prompt_res = 'r'
                     else:
                         prompt_res = click.prompt(
-                            "Directory '{}' exists. Do you wish to abort [a], "
-                            'skip this directory [s], merge directory contents [m], '
-                            'or overwrite the directory (delete current contents) [o]?'.format(new_out_dir),
+                            "Directory '{}' exists. Abort [a], "
+                            'skip [s], merge contents [m], '
+                            'or replace [r]?'.format(new_out_dir),
                             default='a',
-                            type=click.Choice(['a', 's', 'm', 'o'])
+                            type=click.Choice(['a', 's', 'm', 'r'])
                         )
                     if prompt_res == 'a':
                         raise click.Abort
                     elif prompt_res == 's':
                         continue
-                    elif prompt_res == 'o':
+                    elif prompt_res == 'r':
                         shutil.rmtree(new_out_dir)
                         new_out_dir.mkdir()
                     else:
@@ -125,10 +122,9 @@ def repo_dump(node, output_directory, force):
                         prompt_res = 'o'
                     else:
                         prompt_res = click.prompt(
-                            'File {} exists. Do you wish to abort [a], skip this file [s], or overwrite the file [o]?'.
-                            format(out_file_path),
+                            "File '{}' exists. Abort [a], skip [s], or replace [r]?".format(out_file_path),
                             default='a',
-                            type=click.Choice(['a', 's', 'o'])
+                            type=click.Choice(['a', 's', 'r'])
                         )
 
                     if prompt_res == 'a':
@@ -136,7 +132,7 @@ def repo_dump(node, output_directory, force):
                     elif prompt_res == 's':
                         continue
                     else:
-                        assert prompt_res == 'o'
+                        assert prompt_res == 'r'
                         out_file_path.unlink()
                 with node.open(file_path, 'rb') as in_file:
                     with out_file_path.open('wb') as out_file:

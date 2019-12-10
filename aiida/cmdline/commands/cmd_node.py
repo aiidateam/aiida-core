@@ -9,6 +9,7 @@
 ###########################################################################
 """`verdi node` command."""
 
+import shutil
 import pathlib
 
 import click
@@ -63,38 +64,85 @@ def repo_ls(node, relative_path, color):
         echo.echo_critical(exception)
 
 
-@verdi_node_repo.command('cp')
+@verdi_node_repo.command('dump')
+@click.option(
+    '-f',
+    '--force',
+    help='Overwrite existing directories and files without prompting for confirmation.',
+    flag_value=True
+)
 @arguments.NODE()
-@click.argument('src_files', type=str, nargs=-1)
 @click.argument(
     'output_directory',
     type=click.Path(exists=True, file_okay=False, writable=True),
     required=True,
 )
-@click.option('--no-uuid', flag_value=True, help='Do not prefix the output paths with the node uuid.')
-@options.FORCE()
 @with_dbenv()
-def repo_cp(node, output_directory, src_files, no_uuid, force):
+def repo_dump(node, output_directory, force):
     """Copy the repository files of a node to an output directory."""
+    from aiida.orm.utils.repository import FileType
+
     output_directory = pathlib.Path(output_directory)
-    if not no_uuid:
-        output_directory /= node.uuid
 
     output_directory.mkdir(exist_ok=True)
-    if not src_files:
-        src_files = node.list_object_names()
-    for file_path in src_files:
-        if file_path not in node.list_object_names():
-            echo.echo_warning("No object named '{}' in node repository.".format(file_path))
-            continue
-        output_file_path = output_directory / file_path
-        if not force and output_file_path.exists():
-            echo.echo_warning("Not copying '{}': File exists. Use '--force' option to override.".format(file_path))
-            continue
-        with output_file_path.open(mode='wb') as out_f:
-            with node.open(file_path, 'rb') as in_f:
-                out_f.write(in_f.read())
-    echo.echo("Outputs written to '{}'.".format(output_directory))
+
+    def _copy_tree(key, output_dir):  # pylint: disable=too-many-branches
+        for file in node.list_objects(key=key):
+            if not key:
+                file_path = file.name
+            else:
+                file_path = key + '/' + file.name
+            if file.type == FileType.DIRECTORY:
+                new_out_dir = output_dir / file.name
+                if new_out_dir.exists():
+                    if force:
+                        prompt_res = 'o'
+                    else:
+                        prompt_res = click.prompt(
+                            "Directory '{}' exists. Do you wish to abort [a], "
+                            'skip this directory [s], merge directory contents [m], '
+                            'or overwrite the directory (delete current contents) [o]?'.format(new_out_dir),
+                            default='a',
+                            type=click.Choice(['a', 's', 'm', 'o'])
+                        )
+                    if prompt_res == 'a':
+                        raise click.Abort
+                    elif prompt_res == 's':
+                        continue
+                    elif prompt_res == 'o':
+                        shutil.rmtree(new_out_dir)
+                        new_out_dir.mkdir()
+                    else:
+                        assert prompt_res == 'm'
+                else:
+                    new_out_dir.mkdir()
+
+                _copy_tree(key=file_path, output_dir=new_out_dir)
+            else:
+                out_file_path = (output_dir / file.name)
+                if out_file_path.exists():
+                    if force:
+                        prompt_res = 'o'
+                    else:
+                        prompt_res = click.prompt(
+                            'File {} exists. Do you wish to abort [a], skip this file [s], or overwrite the file [o]?'.
+                            format(out_file_path),
+                            default='a',
+                            type=click.Choice(['a', 's', 'o'])
+                        )
+
+                    if prompt_res == 'a':
+                        raise click.Abort
+                    elif prompt_res == 's':
+                        continue
+                    else:
+                        assert prompt_res == 'o'
+                        out_file_path.unlink()
+                with node.open(file_path, 'rb') as in_file:
+                    with out_file_path.open('wb') as out_file:
+                        out_file.write(in_file.read())
+
+    _copy_tree(key='', output_dir=output_directory)
 
 
 @verdi_node.command('label')

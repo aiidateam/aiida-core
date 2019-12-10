@@ -34,6 +34,22 @@ class AbsolutePathParamType(click.Path):
         return 'ABSOLUTEPATH'
 
 
+class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
+    """
+    The ParamType for identifying absolute Paths, accepting also empty paths.
+    """
+
+    name = 'AbsolutePathEmpty'
+
+    def convert(self, value, param, ctx):
+        if not value:
+            return value
+        return super().convert(value, param, ctx)
+
+    def __repr__(self):
+        return 'ABSOLUTEPATHEMPTY'
+
+
 class ImportPath(click.Path):
     """AiiDA extension of Click's Path-type to include URLs
     An ImportPath can either be a `click.Path`-type or a URL.

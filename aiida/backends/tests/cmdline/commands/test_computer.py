@@ -389,6 +389,44 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         result = self.cli_runner.invoke(computer_configure, ['local', comp.label], input='\n', catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
 
+    def test_ssh_interactive(self):
+        """
+        Check that the interactive prompt is accepting the correct values.
+
+        Actually, even passing a shorter set of options should work:
+        ``verdi computer configure ssh`` is able to provide sensible default
+        parameters reading from the ssh config file.
+        We are here therefore only checking some of them.
+        """
+        self.comp_builder.label = 'test_ssh_interactive'
+        self.comp_builder.transport = 'ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        remote_username = 'some_remote_user'
+        port = 345
+        look_for_keys = False
+        key_filename = ''
+
+        # I just pass the first four arguments:
+        # the username, the port, look_for_keys, and the key_filename
+        # This testing also checks that an empty key_filename is ok
+        command_input = (
+            '{remote_username}\n{port}\n{look_for_keys}\n{key_filename}\n'
+        ).format(
+            remote_username=remote_username, port=port,
+            look_for_keys='yes' if look_for_keys else 'no',
+            key_filename=key_filename
+        )
+
+        result = self.cli_runner.invoke(computer_configure, ['ssh', comp.label], input=command_input, catch_exceptions=False)
+        self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
+        new_auth_params = comp.get_authinfo(self.user).get_auth_params()
+        self.assertEqual(new_auth_params['username'], remote_username)
+        self.assertEqual(new_auth_params['port'], port)
+        self.assertEqual(new_auth_params['look_for_keys'], look_for_keys)
+        self.assertEqual(new_auth_params['key_filename'], key_filename)
+
     def test_local_from_config(self):
         """Test configuring a computer from a config file"""
         label = 'test_local_from_config'
@@ -425,7 +463,7 @@ safe_interval: {interval}
         comp = self.comp_builder.new()
         comp.store()
 
-        options = ['ssh', comp.label, '--non-interactive', '--safe-interval',  '1']
+        options = ['ssh', comp.label, '--non-interactive', '--safe-interval', '1']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
 

@@ -13,10 +13,8 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 """
 import re
 
-
-import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
-from aiida.schedulers import SchedulerError
+from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
 
 # This maps SLURM state codes to our own status list
@@ -146,16 +144,25 @@ class SlurmJobResource(NodeNumberJobResource):
                 raise ValueError(value_error)
 
 
-class SlurmScheduler(aiida.schedulers.Scheduler):
+class SlurmScheduler(Scheduler):
     """
     Support for the SLURM scheduler (http://slurm.schedmd.com/).
     """
-    _logger = aiida.schedulers.Scheduler._logger.getChild('slurm')
+    _logger = Scheduler._logger.getChild('slurm')
 
     # Query only by list of jobs and not by user
     _features = {
         'can_query_by_user': False,
     }
+
+    _detailed_job_info_fields = [
+        'AllocCPUS', 'Account', 'AssocID', 'AveCPU', 'AvePages', 'AveRSS', 'AveVMSize', 'Cluster', 'Comment', 'CPUTime',
+        'CPUTimeRAW', 'DerivedExitCode', 'Elapsed', 'Eligible', 'End', 'ExitCode', 'GID', 'Group', 'JobID', 'JobName',
+        'MaxRSS', 'MaxRSSNode', 'MaxRSSTask', 'MaxVMSize', 'MaxVMSizeNode', 'MaxVMSizeTask', 'MinCPU', 'MinCPUNode',
+        'MinCPUTask', 'NCPUS', 'NNodes', 'NodeList', 'NTasks', 'Priority', 'Partition', 'QOSRAW', 'ReqCPUS', 'Reserved',
+        'ResvCPU', 'ResvCPURAW', 'Start', 'State', 'Submit', 'Suspended', 'SystemCPU', 'Timelimit', 'TotalCPU', 'UID',
+        'User', 'UserCPU'
+    ]
 
     # The class to be used for the job resource.
     _job_resource_class = SlurmJobResource
@@ -217,7 +224,7 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         self.logger.debug('squeue command: {}'.format(comm))
         return comm
 
-    def _get_detailed_jobinfo_command(self, jobid):
+    def _get_detailed_job_info_command(self, job_id):
         """
         Return the command to run to get the detailed information on a job,
         even after the job has finished.
@@ -226,13 +233,8 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         --parsable split the fields with a pipe (|), adding a pipe also at
         the end.
         """
-        return 'sacct --format=AllocCPUS,Account,AssocID,AveCPU,AvePages,' \
-               'AveRSS,AveVMSize,Cluster,Comment,CPUTime,CPUTimeRAW,DerivedExitCode,' \
-               'Elapsed,Eligible,End,ExitCode,GID,Group,JobID,JobName,MaxRSS,MaxRSSNode,' \
-               'MaxRSSTask,MaxVMSize,MaxVMSizeNode,MaxVMSizeTask,MinCPU,MinCPUNode,' \
-               'MinCPUTask,NCPUS,NNodes,NodeList,NTasks,Priority,Partition,QOSRAW,ReqCPUS,' \
-               'Reserved,ResvCPU,ResvCPURAW,Start,State,Submit,Suspended,SystemCPU,Timelimit,' \
-               'TotalCPU,UID,User,UserCPU --parsable --jobs={}'.format(jobid)
+        fields = ','.join(self._detailed_job_info_fields)
+        return 'sacct --format={} --parsable --jobs={}'.format(fields, job_id)
 
     def _get_submit_script_header(self, job_tmpl):
         """

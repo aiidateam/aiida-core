@@ -132,8 +132,8 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         return command
         # raise NotImplementedError
 
-    def _get_detailed_jobinfo_command(self, jobid):
-        command = 'qacct -j {}'.format(escape_for_bash(jobid))
+    def _get_detailed_job_info_command(self, job_id):
+        command = 'qacct -j {}'.format(escape_for_bash(job_id))
         return command
 
     def _get_submit_script_header(self, job_tmpl):

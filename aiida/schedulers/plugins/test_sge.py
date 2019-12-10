@@ -196,7 +196,7 @@ class TestCommand(unittest.TestCase):
     def test_detailed_jobinfo_command(self):
         sge = SgeScheduler()
 
-        sge_get_djobinfo_command = sge._get_detailed_jobinfo_command('123456')
+        sge_get_djobinfo_command = sge._get_detailed_job_info_command('123456')
 
         self.assertTrue('123456' in sge_get_djobinfo_command)
         self.assertTrue('qacct' in sge_get_djobinfo_command)

@@ -100,6 +100,8 @@ class Computer(entities.Entity):
 
         :rtype: str
         """
+        from aiida.common.exceptions import NotExistent
+
         ret_lines = []
         ret_lines.append('Computer name:     {}'.format(self.name))
         ret_lines.append(' * PK:             {}'.format(self.pk))
@@ -130,6 +132,18 @@ class Computer(entities.Entity):
                 ret_lines.append('   {}'.format(line))
         else:
             ret_lines.append('   # No append text.')
+
+        ret_lines += [' * Configured users:']
+        all_users = users.User.objects.all()
+        for user in all_users:
+            try:
+                authinfo = self.get_authinfo(user)
+            except NotExistent:
+                ret_lines += ['   ✗ {}'.format(user.email)]
+            else:
+                ret_lines += ['   {} {}'.format('✓' if authinfo.enabled else '🚫', user.email)]
+        if not all_users:
+            ret_lines += ['   # no users found']
 
         return '\n'.join(ret_lines)
 

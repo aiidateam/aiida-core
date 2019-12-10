@@ -14,8 +14,7 @@ import time
 
 from tornado import concurrent, gen
 
-from aiida import schedulers
-from aiida.common import exceptions, lang
+from aiida.common import lang
 
 __all__ = ('JobsList', 'JobManager')
 
@@ -112,15 +111,6 @@ class JobsList:
             self.logger.info('AuthInfo<{}>: successfully retrieved status of active jobs'.format(self._authinfo.pk))
 
             for job_id, job_info in scheduler_response.items():
-                # If the job is done then get detailed job information
-                detailed_job_info = None
-                if job_info.job_state == schedulers.JobState.DONE:
-                    try:
-                        detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
-                    except exceptions.FeatureNotAvailable:
-                        detailed_job_info = 'This scheduler does not implement get_detailed_jobinfo'
-
-                job_info.detailedJobinfo = detailed_job_info
                 jobs_cache[job_id] = job_info
 
             raise gen.Return(jobs_cache)

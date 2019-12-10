@@ -806,9 +806,7 @@ class LocalTransport(Transport):
         script = ' ; '.join([
             'if [ -d {escaped_remotedir} ]', 'then cd {escaped_remotedir}', 'bash', "else echo ' ** The directory'",
             "echo ' ** {remotedir}'", "echo ' ** seems to have been deleted, I logout...'", 'fi'
-        ]).format(
-            escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir
-        )
+        ]).format(escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
         cmd = 'bash -c "{}"'.format(script)
         return cmd
 

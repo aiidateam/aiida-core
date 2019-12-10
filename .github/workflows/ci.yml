@@ -1,10 +1,6 @@
 name: aiida-core
 
-on:
-  pull_request:
-  push:
-  - master
-  - develop
+on: [push, pull_request]
 
 jobs:
 

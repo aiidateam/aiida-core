@@ -47,7 +47,12 @@ class AiidaProcessDirective(Directive):
     final_argument_whitespace = True
 
     HIDE_UNSTORED_INPUTS_FLAG = 'hide-nondb-inputs'
-    option_spec = {'module': directives.unchanged, HIDE_UNSTORED_INPUTS_FLAG: directives.flag}
+    EXPAND_NAMESPACES_FLAG = 'expand-namespaces'
+    option_spec = {
+        'module': directives.unchanged,
+        HIDE_UNSTORED_INPUTS_FLAG: directives.flag,
+        EXPAND_NAMESPACES_FLAG: directives.flag
+    }
     signature = 'Process'
     annotation = 'process'
 
@@ -139,14 +144,10 @@ class AiidaProcessDirective(Directive):
                     item.extend(publish_doctree(port.help)[0].children)
                 sub_doctree = self.build_portnamespace_doctree(port)
                 if sub_doctree:
-                    # This is a workaround because this extension doesn't work with Python2.
-                    try:
-                        from sphinxcontrib.details.directive import details, summary
-                        sub_item = details()
-                        sub_item += summary(text='Namespace Ports')
-                        sub_item += sub_doctree
-                    except ImportError:
-                        sub_item = sub_doctree
+                    from sphinxcontrib.details.directive import details, summary
+                    sub_item = details(opened=self.EXPAND_NAMESPACES_FLAG in self.options)
+                    sub_item += summary(text='Namespace Ports')
+                    sub_item += sub_doctree
                     item += sub_item
             else:
                 raise NotImplementedError

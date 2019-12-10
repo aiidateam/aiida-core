@@ -15,7 +15,7 @@ from stat import S_ISDIR, S_ISREG
 import click
 
 from aiida.cmdline.params import options
-from aiida.cmdline.params.types.path import AbsolutePathParamType
+from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
 from ..transport import Transport, TransportInternalError
 
@@ -58,7 +58,7 @@ class SshTransport(Transport):
         ('username', {'prompt': 'User name', 'help': 'user name for the computer', 'non_interactive_default': True}),
         ('port', {'option': options.PORT, 'prompt': 'port Nr', 'non_interactive_default': True}),
         ('look_for_keys', {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True}),
-        ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file if default path is not set in ssh config', 'non_interactive_default': True}),
+        ('key_filename', {'type': AbsolutePathOrEmptyParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file if default path is not set in ssh config', 'non_interactive_default': True}),
         ('timeout', {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True}),
         ('allow_agent', {'switch': True, 'prompt': 'Allow ssh agent', 'help': 'switch to allow or disallow ssh agent', 'non_interactive_default': True}),
         ('proxy_command', {'prompt': 'SSH proxy command', 'help': 'SSH proxy command', 'non_interactive_default': True}),  # Managed 'manually' in connect
@@ -238,9 +238,6 @@ class SshTransport(Transport):
         config = parse_sshconfig(computer.hostname)
         return str(config.get('gssapihostname', computer.hostname))
 
-    @classmethod
-    def _get_safe_interval_suggestion_string(cls, computer):
-        return cls._DEFAULT_SAFE_OPEN_INTERVAL
 
     def __init__(self, *args, **kwargs):
         """

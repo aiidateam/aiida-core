@@ -12,6 +12,7 @@
 import os
 import io
 import errno
+import pathlib
 import tempfile
 
 from click.testing import CliRunner
@@ -57,10 +58,10 @@ class TestVerdiNode(AiidaTestCase):
         folder_node = orm.FolderData()
         cls.content_file1 = 'nobody expects'
         cls.content_file2 = 'the minister of silly walks'
-        cls.filename_1 = 'test.txt'
-        cls.filename_2 = 'else.txt'
-        folder_node.put_object_from_filelike(io.StringIO(cls.content_file1), key=cls.filename_1)
-        folder_node.put_object_from_filelike(io.StringIO(cls.content_file2), key=cls.filename_2)
+        cls.key_file1 = 'some/nested/folder/filename.txt'
+        cls.key_file2 = 'some_other_file.txt'
+        folder_node.put_object_from_filelike(io.StringIO(cls.content_file1), key=cls.key_file1)
+        folder_node.put_object_from_filelike(io.StringIO(cls.content_file2), key=cls.key_file2)
         folder_node.store()
         cls.folder_node = folder_node
 
@@ -183,107 +184,206 @@ class TestVerdiNode(AiidaTestCase):
                 result = self.cli_runner.invoke(cmd_node.extras, options)
                 self.assertIsNone(result.exception, result.output)
 
-    def test_node_repo_cp(self):
-        """Test 'verdi node repo cp' command."""
+    def test_node_repo_dump(self):
+        """Test 'verdi node repo dump' command."""
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             options = [str(self.folder_node.uuid), tmp_dir]
-            self.cli_runner.invoke(cmd_node.repo_cp, options)
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options)
+            self.assertFalse(res.stdout)
 
-            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
-            self.assertEqual(sorted(os.listdir(out_dir)), sorted([self.filename_1, self.filename_2]))
-            with open(os.path.join(out_dir, self.filename_1), 'r') as file_1:
-                self.assertEqual(file_1.read(), self.content_file1)
-            with open(os.path.join(out_dir, self.filename_2), 'r') as file_2:
-                self.assertEqual(file_2.read(), self.content_file2)
+            for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
+                curr_path = pathlib.Path(tmp_dir)
+                for key_part in file_key.split('/'):
+                    curr_path /= key_part
+                    self.assertTrue(curr_path.exists())
+                with curr_path.open('r') as res_file:
+                    self.assertEqual(res_file.read(), content)
 
-    def test_node_repo_cp_no_uuid(self):
-        """Test 'verdi node repo cp' command with '--no-uuid' option."""
+    def test_node_repo_dump_with_force(self):
+        """Test 'verdi node repo dump' command with --force option.
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            options = [str(self.folder_node.uuid), '--no-uuid', tmp_dir]
-            self.cli_runner.invoke(cmd_node.repo_cp, options)
-
-            self.assertEqual(sorted(os.listdir(tmp_dir)), sorted([self.filename_1, self.filename_2]))
-            with open(os.path.join(tmp_dir, self.filename_1), 'r') as file_1:
-                self.assertEqual(file_1.read(), self.content_file1)
-            with open(os.path.join(tmp_dir, self.filename_2), 'r') as file_2:
-                self.assertEqual(file_2.read(), self.content_file2)
-
-    def test_node_repo_cp_one_file(self):
-        """Test 'verdi node repo cp' command with explicitly specified file name."""
+        This test first creates some other (clashing) content in the output
+        directory, but this should be replaced because of the '--force' option.
+        """
 
         with tempfile.TemporaryDirectory() as tmp_dir:
-            options = [str(self.folder_node.uuid), self.filename_1, tmp_dir]
-            self.cli_runner.invoke(cmd_node.repo_cp, options)
+            # First, create some other contents
+            sub_dir = pathlib.Path(tmp_dir) / self.key_file1.split('/')[0]
+            sub_dir.mkdir()
+            file_to_replace = (sub_dir / 'other_file')
+            with file_to_replace.open('w') as out_f:
+                out_f.write('ni!')
 
-            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
-            self.assertEqual(os.listdir(out_dir), [self.filename_1])
-            with open(os.path.join(out_dir, self.filename_1), 'r') as file_1:
-                self.assertEqual(file_1.read(), self.content_file1)
-
-    def test_node_repo_cp_two_files_explicit(self):
-        """Test 'verdi node repo cp' command with two explicitly specified file names."""
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            options = [str(self.folder_node.uuid), self.filename_2, self.filename_1, tmp_dir]
-            self.cli_runner.invoke(cmd_node.repo_cp, options)
-
-            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
-            self.assertEqual(sorted(os.listdir(out_dir)), sorted([self.filename_1, self.filename_2]))
-            with open(os.path.join(out_dir, self.filename_1), 'r') as file_1:
-                self.assertEqual(file_1.read(), self.content_file1)
-            with open(os.path.join(out_dir, self.filename_2), 'r') as file_2:
-                self.assertEqual(file_2.read(), self.content_file2)
-
-    def test_node_repo_inexistent(self):
-        """Test 'verdi node repo cp' command with an inexistent file name."""
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            options = [str(self.folder_node.uuid), 'inexistent_filename', tmp_dir]
-            result = self.cli_runner.invoke(cmd_node.repo_cp, options)
-
-            self.assertIn('Warning', result.output)
-
-            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
-            self.assertEqual(os.listdir(out_dir), [])
-
-    def test_node_repo_existing_file(self):
-        """Test 'verdi node repo cp' command with an existing file name."""
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            file_content = 'some content'
-            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
-            os.makedirs(out_dir)
-            with open(os.path.join(out_dir, self.filename_1), 'w') as file:
-                file.write(file_content)
-            options = [str(self.folder_node.uuid), tmp_dir]
-            result = self.cli_runner.invoke(cmd_node.repo_cp, options)
-
-            self.assertIn('Warning', result.output)
-            self.assertEqual(sorted(os.listdir(out_dir)), sorted([self.filename_1, self.filename_2]))
-            with open(os.path.join(out_dir, self.filename_1), 'r') as file_1:
-                self.assertEqual(file_1.read(), file_content)
-            with open(os.path.join(out_dir, self.filename_2), 'r') as file_2:
-                self.assertEqual(file_2.read(), self.content_file2)
-
-    def test_node_repo_existing_file_force(self):
-        """Test 'verdi node repo cp' command with an existing file name, forcing the overwrite."""
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            file_content = 'some content'
-            out_dir = os.path.join(tmp_dir, str(self.folder_node.uuid))
-            os.makedirs(out_dir)
-            with open(os.path.join(out_dir, self.filename_1), 'w') as file:
-                file.write(file_content)
             options = ['--force', str(self.folder_node.uuid), tmp_dir]
-            self.cli_runner.invoke(cmd_node.repo_cp, options)
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options)
+            self.assertFalse(res.stdout)
 
-            self.assertEqual(sorted(os.listdir(out_dir)), sorted([self.filename_1, self.filename_2]))
-            with open(os.path.join(out_dir, self.filename_1), 'r') as file_1:
-                self.assertEqual(file_1.read(), self.content_file1)
-            with open(os.path.join(out_dir, self.filename_2), 'r') as file_2:
-                self.assertEqual(file_2.read(), self.content_file2)
+            for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
+                curr_path = pathlib.Path(tmp_dir)
+                for key_part in file_key.split('/'):
+                    curr_path /= key_part
+                    self.assertTrue(curr_path.exists())
+                with curr_path.open('r') as res_file:
+                    self.assertEqual(res_file.read(), content)
+
+            self.assertFalse(file_to_replace.exists())
+
+    def test_node_repo_dump_with_replace(self):
+        """Test 'verdi node repo dump' command with 'replace' prompt option.
+
+        This test first creates some other (clashing) content in the output
+        directory, but this should be replaced because of the 'replace' option.
+        """
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # First, create some other contents
+            sub_dir = pathlib.Path(tmp_dir) / self.key_file1.split('/')[0]
+            sub_dir.mkdir()
+            file_to_replace = (sub_dir / 'other_file')
+            with file_to_replace.open('w') as out_f:
+                out_f.write('ni!')
+
+            options = [str(self.folder_node.uuid), tmp_dir]
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='r\n')
+            self.assertIn('Directory', res.stdout)
+            self.assertIn('exists', res.stdout)
+
+            for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
+                curr_path = pathlib.Path(tmp_dir)
+                for key_part in file_key.split('/'):
+                    curr_path /= key_part
+                    self.assertTrue(curr_path.exists())
+                with curr_path.open('r') as res_file:
+                    self.assertEqual(res_file.read(), content)
+
+            self.assertFalse(file_to_replace.exists())
+
+    def test_node_repo_dump_with_replace_file(self):
+        """Test 'verdi node repo dump' command with 'replace' prompt option on a file.
+
+        This test first creates some other (clashing) content in the output
+        directory, but this should be replaced because of the 'replace' option. In contrast
+        to the other test, here the 'replace' called at the level where the files clash,
+        not the directories.
+        """
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # First, create some other contents
+            file_to_replace = pathlib.Path(tmp_dir) / self.key_file2
+            with file_to_replace.open('w') as out_f:
+                out_f.write('ni!')
+
+            options = [str(self.folder_node.uuid), tmp_dir]
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='r\n')
+            self.assertIn('File', res.stdout)
+            self.assertIn('exists', res.stdout)
+
+            for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
+                curr_path = pathlib.Path(tmp_dir)
+                for key_part in file_key.split('/'):
+                    curr_path /= key_part
+                    self.assertTrue(curr_path.exists())
+                with curr_path.open('r') as res_file:
+                    self.assertEqual(res_file.read(), content)
+
+    def test_node_repo_dump_with_abort(self):
+        """Test 'verdi node repo dump' command with the 'abort' prompt option.
+
+        This test first sets up another file with the same directory as where
+        'file1' should be placed. Because 'abort' is selected, it should
+        create neither of the two files, and the directory should be left
+        as is.
+        """
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # First, create some other contents
+            sub_dir = pathlib.Path(tmp_dir) / self.key_file1.split('/')[0]
+            sub_dir.mkdir()
+            file_not_to_replace = (sub_dir / 'other_file')
+            with file_not_to_replace.open('w') as out_f:
+                out_f.write('ni!')
+
+            options = [str(self.folder_node.uuid), tmp_dir]
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='a\n')
+            self.assertIn('Directory', res.stdout)
+            self.assertIn('exists', res.stdout)
+            self.assertIn('Aborted!', res.stdout)
+
+            for file_key in [self.key_file1, self.key_file2]:
+                curr_path = pathlib.Path(tmp_dir)
+
+                for key_part in file_key.split('/'):
+                    curr_path /= key_part
+                    if curr_path not in [sub_dir, file_not_to_replace]:
+                        self.assertFalse(curr_path.exists())
+
+            self.assertTrue(file_not_to_replace.exists())
+
+    def test_node_repo_dump_with_skip(self):
+        """Test 'verdi node repo dump' command with the 'skip' prompt option."""
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # First, create some other contents
+            sub_dir = pathlib.Path(tmp_dir) / self.key_file1.split('/')[0]
+            sub_dir.mkdir()
+            file_not_to_replace = (sub_dir / 'other_file')
+            with file_not_to_replace.open('w') as out_f:
+                out_f.write('ni!')
+
+            options = [str(self.folder_node.uuid), tmp_dir]
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='s\n')
+            self.assertIn('Directory', res.stdout)
+            self.assertIn('exists', res.stdout)
+
+            for file_key in [self.key_file1]:
+                curr_path = pathlib.Path(tmp_dir)
+
+                for key_part in file_key.split('/'):
+                    curr_path /= key_part
+                    if curr_path not in [sub_dir, file_not_to_replace]:
+                        self.assertFalse(curr_path.exists())
+
+            for file_key, content in [(self.key_file2, self.content_file2)]:
+                curr_path = pathlib.Path(tmp_dir)
+                for key_part in file_key.split('/'):
+                    curr_path /= key_part
+                    self.assertTrue(curr_path.exists())
+                with curr_path.open('r') as res_file:
+                    self.assertEqual(res_file.read(), content)
+
+            self.assertTrue(file_not_to_replace.exists())
+
+    def test_node_repo_dump_with_merge(self):
+        """Test 'verdi node repo dump' command with the 'merge' prompt option.
+
+        This test creates another file in the same (top-level) directory as
+        'file1', and they should both exist in the end due to the 'merge'
+        prompt option.
+        """
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # First, create some other contents
+            sub_dir = pathlib.Path(tmp_dir) / self.key_file1.split('/')[0]
+            sub_dir.mkdir()
+            file_not_to_replace = (sub_dir / 'other_file')
+            with file_not_to_replace.open('w') as out_f:
+                out_f.write('ni!')
+
+            options = [str(self.folder_node.uuid), tmp_dir]
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='m\n')
+            self.assertIn('Directory', res.stdout)
+            self.assertIn('exists', res.stdout)
+
+            for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
+                curr_path = pathlib.Path(tmp_dir)
+                for key_part in file_key.split('/'):
+                    curr_path /= key_part
+                    self.assertTrue(curr_path.exists())
+                with curr_path.open('r') as res_file:
+                    self.assertEqual(res_file.read(), content)
+
+            self.assertTrue(file_not_to_replace.exists())
 
 
 def delete_temporary_file(filepath):

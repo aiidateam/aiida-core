@@ -146,13 +146,17 @@ class TestVerdiImport(AiidaTestCase):
 
     def test_comment_mode(self):
         """Test toggling comment mode flag"""
+        import re
         archives = [get_archive_file(self.newest_archive, filepath=self.archive_path)]
 
-        for mode in {'newest', 'overwrite'}:
+        for mode in ['newest', 'overwrite']:
             options = ['--comment-mode', mode] + archives
             result = self.cli_runner.invoke(cmd_import.cmd_import, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertIn('Comment mode: {}'.format(mode), result.output)
+            self.assertTrue(
+                any([re.fullmatch(r'Comment mode[\s]*{}'.format(mode), line) for line in result.output.split('\n')]),
+                msg='Mode: {}. Output: {}'.format(mode, result.output)
+            )
             self.assertEqual(result.exit_code, 0, result.output)
 
     def test_import_old_local_archives(self):

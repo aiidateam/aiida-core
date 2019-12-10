@@ -11,6 +11,8 @@
 # pylint: disable=inconsistent-return-statements,too-many-branches
 import click
 
+from tabulate import tabulate
+
 from aiida.orm import QueryBuilder, Comment
 from aiida.common.utils import get_new_uuid
 from aiida.tools.importexport.common import exceptions
@@ -243,87 +245,37 @@ def deserialize_field(key, value, fields_info, import_unique_ids_mappings, forei
     return ('{}_id'.format(key), None)
 
 
-def _term_width():
-    """Return terminal window width"""
-    # import os
-    # return int(os.popen('stty size', 'r').read().split()[-1])
-    from aiida.tools.importexport.common.config import HEADER_PARAMETER_WIDTH
-    return HEADER_PARAMETER_WIDTH * 2
-
-
-def _print_header_parameters(parameters):
-    """Print a header import parameter - a single line in the header
-
-    :param parameters: Parameters to be printed in import header.
-    :type parameters: dict
-    """
-    from aiida.cmdline.utils import echo
-    from aiida.tools.importexport.common.config import HEADER_PARAMETER_WIDTH
-
-    width = _term_width()
-
-    for parameter, value in parameters.items():
-        if not isinstance(value, str):
-            raise exceptions.ImportValidationError('header parameters must be strings')
-
-        output = '{}: '.format(parameter).rjust(HEADER_PARAMETER_WIDTH) + value
-        echo.echo('# {} #'.format(output.ljust(width - 4)))
-
-
-def _introduce_header_section(title):
-    """Create sub-section header in import header"""
-    from aiida.cmdline.utils import echo
-
-    width = _term_width()
-
-    echo.echo('#{}#'.format(''.center(width - 2)))
-    echo.echo('#{}#'.format(title.upper().center(width - 2)))
-
-
-def _print_parameter(parameter, value):
-    """Print single parameter"""
-    if not isinstance(parameter, str):
-        raise exceptions.ImportValidationError('header parameters must be strings')
-
-    _print_header_parameters({parameter: value})
-
-
 def start_header(archive, comment_mode, extras_mode_new, extras_mode_existing, debug):
     """Print header for import"""
     import os
     from aiida.cmdline.utils import echo
 
     archive = os.path.basename(archive)
+    title = 'IMPORT - !!! DEBUG MODE !!!' if debug else 'IMPORT'
+    result = '\n{}'.format(tabulate([['Archive', archive]], headers=[title, '']))
 
-    width = _term_width()
+    parameters = [
+        ['Comment mode', comment_mode],
+        ['New Node Extras mode', extras_mode_new],
+        ['Existing Node Extras mode', extras_mode_existing],
+    ]
+    result += '\n\n{}'.format(tabulate(parameters, headers=['Parameters', '']))
 
-    title = ' Import - !!! DEBUG MODE !!! ' if debug else ' Import '
-    echo.echo('#{}#'.format(title.center(width - 2, '=')))
-    echo.echo('#{}#'.format(''.center(width - 2)))
-
-    _print_parameter('Archive name', archive)
-
-    _introduce_header_section('parameters')
-
-    parameters = {
-        'Comment mode': comment_mode,
-        'New Node Extras mode': extras_mode_new,
-        'Existing Node Extras mode': extras_mode_existing
-    }
-    _print_header_parameters(parameters)
+    echo.echo(result)
 
 
 def finish_header(results, import_group_label):
     """Summarize import results in header"""
     from aiida.cmdline.utils import echo
 
-    if results or import_group_label:
-        _introduce_header_section('summary')
+    title = None
 
-    width = _term_width()
+    if results or import_group_label:
+        parameters = []
+        title = 'Summary'
 
     if import_group_label:
-        _print_parameter('Auto-import Group label', import_group_label)
+        parameters.append(['Auto-import Group label', import_group_label])
 
     for model in results:
         value = []
@@ -332,7 +284,7 @@ def finish_header(results, import_group_label):
         if results[model].get('existing', None):
             value.append('{} existing'.format(len(results[model]['existing'])))
 
-        _print_parameter('{}(s)'.format(model), ', '.join(value))
+        parameters.extend([[param, val] for param, val in zip(['{}(s)'.format(model)], value)])
 
-    echo.echo('#{}#'.format(''.center(width - 2)))
-    echo.echo('#{}#'.format('=' * (width - 2)))
+    if title:
+        echo.echo('\n{}\n'.format(tabulate(parameters, headers=[title, ''])))

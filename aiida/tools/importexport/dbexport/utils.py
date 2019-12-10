@@ -274,8 +274,14 @@ def check_process_nodes_sealed(nodes):
 
 def print_header(file_format, outfile, debug, **kwargs):
     """Print header for export"""
-    from aiida.cmdline.utils import echo, templates
-    from aiida.tools.importexport.common.config import EXPORT_VERSION, HEADER_PARAMETER_WIDTH
+    from tabulate import tabulate
+    from aiida.cmdline.utils import echo
+    from aiida.tools.importexport.common.config import EXPORT_VERSION
+
+    title = 'EXPORT - !!! DEBUG MODE !!!' if debug else 'EXPORT'
+    parameters = [['Archive', outfile], ['Format', file_format], ['Export version', EXPORT_VERSION]]
+
+    result = '\n{}'.format(tabulate(parameters, headers=[title, '']))
 
     include_comments = kwargs.get('include_comments', True)
     include_logs = kwargs.get('include_logs', True)
@@ -284,19 +290,13 @@ def print_header(file_format, outfile, debug, **kwargs):
     return_reversed = kwargs.get('return_reversed', False)
     call_reversed = kwargs.get('call_reversed', False)
 
-    template = templates.env.get_template('export.tpl')
-    width = HEADER_PARAMETER_WIDTH * 2
-    param_width = HEADER_PARAMETER_WIDTH
-    header = {
-        'Export': [
-            'Archive name: '.rjust(param_width) + outfile, 'Format: '.rjust(param_width) + file_format, '',
-            'Export version: '.rjust(param_width) + EXPORT_VERSION, '', 'PARAMETERS'.center(width - 4),
-            'Include Comments: '.rjust(param_width) + str(include_comments),
-            'Include Logs: '.rjust(param_width) + str(include_logs),
-            'Follow INPUT Links forwards: '.rjust(param_width) + str(input_forward),
-            'Follow CREATE Links backwards: '.rjust(param_width) + str(create_reversed),
-            'Follow RETURN Links backwards: '.rjust(param_width) + str(return_reversed),
-            'Follow CALL Links backwards: '.rjust(param_width) + str(call_reversed)
-        ]
-    }
-    echo.echo(template.render(header=header, width=int(width), debug=debug))
+    inclusions = [['Include Comments', include_comments], ['Include Logs', include_logs]]
+    result += '\n\n{}'.format(tabulate(inclusions, headers=['Included', '']))
+
+    traversal_rules = [['Follow INPUT Links forwards',
+                        input_forward], ['Follow CREATE Links backwards', create_reversed],
+                       ['Follow RETURN Links backwards', return_reversed],
+                       ['Follow CALL Links backwards', call_reversed]]
+    result += '\n\n{}\n'.format(tabulate(traversal_rules, headers=['Traversal rules', '']))
+
+    echo.echo(result)

@@ -124,6 +124,8 @@ def datetime_to_isoformat(value):
 
     :param value: a datetime object
     """
+    if value is None:
+        return None
     return value.isoformat()
 
 
@@ -132,4 +134,6 @@ def isoformat_to_datetime(value):
 
     :param value: a ISO format string representation of a datetime object
     """
+    if value is None:
+        return None
     return dateutil.parser.parse(value)

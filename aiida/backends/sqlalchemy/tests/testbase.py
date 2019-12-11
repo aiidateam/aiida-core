@@ -28,12 +28,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
     def tearDownClass_method(self):
         """Backend-specific tasks for tearing down the test environment."""
 
-    def setUp_method(self):
-        pass
-
-    def tearDown_method(self):
-        pass
-
     @property
     def backend(self):
         if self._backend is None:

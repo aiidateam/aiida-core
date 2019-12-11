@@ -46,12 +46,6 @@ class AiidaTestImplementation(ABC):
         AiidaTestImplemention docstring.
         """
 
-    def setUp_method(self):
-        pass
-
-    def tearDown_method(self):
-        pass
-
     @abstractmethod
     def tearDownClass_method(self):
         """

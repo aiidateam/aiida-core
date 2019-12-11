@@ -8,10 +8,9 @@ verdi daemon start 4
 verdi -p test_${AIIDA_TEST_BACKEND} run .ci/test_daemon.py
 verdi daemon stop
 
-verdi -p test_$AIIDA_TEST_BACKEND devel tests
-pytest aiida/sphinxext/tests
-pytest .ci/test_test_manager.py
-pytest .ci/test_profile_manager.py
-python .ci/test_plugin_testcase.py
-pytest .ci/pytest
+AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest
 AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest .ci/pytest
+pytest --noconftest .ci/test_test_manager.py
+pytest --noconftest .ci/test_profile_manager.py
+
+python .ci/test_plugin_testcase.py

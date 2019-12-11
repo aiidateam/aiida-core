@@ -9,7 +9,6 @@
 ###########################################################################
 """Tests for the backup setup script."""
 
-import io
 import os
 import shutil
 import tempfile
@@ -117,7 +116,7 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
             )
 
             # Check the content of the main backup configuration file
-            with io.open(os.path.join(temp_aiida_folder, 'backup_info.json'), encoding='utf8') as conf_jfile:
+            with open(os.path.join(temp_aiida_folder, 'backup_info.json'), encoding='utf8') as conf_jfile:
                 conf_cont = json.load(conf_jfile)
                 self.assertEqual(conf_cont[AbstractBackup.OLDEST_OBJECT_BK_KEY], '2014-07-18 13:54:53.688484+00:00')
                 self.assertEqual(conf_cont[AbstractBackup.DAYS_TO_BACKUP_KEY], None)

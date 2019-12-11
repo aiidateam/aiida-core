@@ -10,7 +10,6 @@
 """
 Tests for subclasses of DbImporter, DbSearchResults and DbEntry
 """
-import io
 import unittest
 
 
@@ -264,7 +263,7 @@ class TestNnincDbImporter(AiidaTestCase):
 
         path_root = os.path.split(aiida.__file__)[0]
         path_pseudos = os.path.join(path_root, 'backends', 'tests', 'fixtures', 'pseudos')
-        with io.open(os.path.join(path_pseudos, '{}.UPF'.format(upf)), 'r', encoding='utf8') as f:
+        with open(os.path.join(path_pseudos, '{}.UPF'.format(upf)), 'r', encoding='utf8') as f:
             entry._contents = f.read()
 
         upfnode = entry.get_upf_node()

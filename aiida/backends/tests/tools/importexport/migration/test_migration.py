@@ -65,7 +65,6 @@ class TestExportFileMigration(AiidaTestCase):
 
     def test_migrate_recursively(self):
         """Test function 'migrate_recursively'"""
-        import io
         import tarfile
         import zipfile
 
@@ -88,9 +87,9 @@ class TestExportFileMigration(AiidaTestCase):
                 raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
 
             try:
-                with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+                with open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
                     data = jsonload(fhandle)
-                with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
+                with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                     metadata = jsonload(fhandle)
             except IOError:
                 raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))

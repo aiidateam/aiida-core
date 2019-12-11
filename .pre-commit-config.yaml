@@ -215,13 +215,6 @@
       )$
     pass_filenames: false
 
-  - id: travis-linter
-    name: travis
-    entry: travis lint
-    files: .travis.yml
-    language: ruby
-    additional_dependencies: ['travis']
-
   - id: version-number
     name: Check version numbers
     entry: python ./utils/validate_consistency.py version

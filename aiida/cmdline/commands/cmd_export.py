@@ -10,7 +10,6 @@
 # pylint: disable=too-many-arguments,import-error,too-many-locals
 """`verdi export` command."""
 
-import io
 import os
 
 import click
@@ -171,9 +170,9 @@ def migrate(input_file, output_file, force, silent, archive_format):
             echo.echo_critical('invalid file format, expected either a zip archive or gzipped tarball')
 
         try:
-            with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+            with open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
                 data = json.load(fhandle)
-            with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
+            with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
         except IOError:
             echo.echo_critical('export archive does not contain the required file {}'.format(fhandle.filename))
@@ -181,10 +180,10 @@ def migrate(input_file, output_file, force, silent, archive_format):
         old_version = migration.verify_metadata_version(metadata)
         new_version = migration.migrate_recursively(metadata, data, folder)
 
-        with io.open(folder.get_abs_path('data.json'), 'wb') as fhandle:
+        with open(folder.get_abs_path('data.json'), 'wb') as fhandle:
             json.dump(data, fhandle, indent=4)
 
-        with io.open(folder.get_abs_path('metadata.json'), 'wb') as fhandle:
+        with open(folder.get_abs_path('metadata.json'), 'wb') as fhandle:
             json.dump(metadata, fhandle)
 
         if archive_format in ['zip', 'zip-uncompressed']:

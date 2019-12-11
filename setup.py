@@ -10,7 +10,6 @@
 # pylint: disable=wrong-import-order
 """Setup script for aiida-core package."""
 import json
-import io
 import os
 
 from utils import fastentrypoints  # pylint: disable=unused-import
@@ -19,7 +18,7 @@ from setuptools import setup, find_packages
 if __name__ == '__main__':
     THIS_FOLDER = os.path.split(os.path.abspath(__file__))[0]
 
-    with io.open(os.path.join(THIS_FOLDER, 'setup.json'), 'r') as info:
+    with open(os.path.join(THIS_FOLDER, 'setup.json'), 'r') as info:
         SETUP_JSON = json.load(info)
 
     SETUP_JSON['extras_require']['testing'] = set(
@@ -38,7 +37,7 @@ if __name__ == '__main__':
 
     setup(
         packages=find_packages(),
-        long_description=io.open(os.path.join(THIS_FOLDER, 'README.md')).read(),
+        long_description=open(os.path.join(THIS_FOLDER, 'README.md')).read(),
         long_description_content_type='text/markdown',
         **SETUP_JSON
     )

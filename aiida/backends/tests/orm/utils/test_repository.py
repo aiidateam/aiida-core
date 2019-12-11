@@ -9,7 +9,6 @@
 ###########################################################################
 """Tests for the `Repository` utility class."""
 
-import io
 import os
 import shutil
 import tempfile
@@ -53,7 +52,7 @@ class TestRepository(AiidaTestCase):
                 os.makedirs(subdir)
                 self.create_file_tree(subdir, value)
             else:
-                with io.open(os.path.join(directory, key), 'w', encoding='utf8') as handle:
+                with open(os.path.join(directory, key), 'w', encoding='utf8') as handle:
                     handle.write(value)
 
     def get_file_content(self, key):
@@ -99,7 +98,7 @@ class TestRepository(AiidaTestCase):
         filepath = os.path.join(self.tempdir, key)
         content = self.get_file_content(key)
 
-        with io.open(filepath, 'r') as handle:
+        with open(filepath, 'r') as handle:
             node = Node()
             node.put_object_from_filelike(handle, key)
             self.assertEqual(node.get_object_content(key), content)
@@ -108,7 +107,7 @@ class TestRepository(AiidaTestCase):
         filepath = os.path.join(self.tempdir, key)
         content = self.get_file_content(key)
 
-        with io.open(filepath, 'r') as handle:
+        with open(filepath, 'r') as handle:
             node = Node()
             node.put_object_from_filelike(handle, key)
             self.assertEqual(node.get_object_content(key), content)

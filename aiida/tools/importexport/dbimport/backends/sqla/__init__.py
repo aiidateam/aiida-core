@@ -11,7 +11,6 @@
 """ SQLAlchemy-specific import of AiiDA entities """
 
 from distutils.version import StrictVersion
-import io
 import os
 import tarfile
 import zipfile
@@ -141,10 +140,10 @@ def import_data_sqla(
         if not folder.get_content_list():
             raise exceptions.CorruptArchive('The provided file/folder ({}) is empty'.format(in_path))
         try:
-            with io.open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
+            with open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
 
-            with io.open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
+            with open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
                 data = json.load(fhandle)
         except IOError as error:
             raise exceptions.CorruptArchive(

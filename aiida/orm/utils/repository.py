@@ -11,7 +11,6 @@
 
 import collections
 import enum
-import io
 import os
 
 from aiida.common import exceptions
@@ -98,7 +97,7 @@ class Repository:
         :param key: fully qualified identifier for the object within the repository
         :param mode: the mode under which to open the handle
         """
-        return io.open(self._get_base_folder().get_abs_path(key), mode=mode)
+        return open(self._get_base_folder().get_abs_path(key), mode=mode)
 
     def get_object(self, key):
         """Return the object identified by key.
@@ -205,7 +204,7 @@ class Repository:
 
         self.validate_object_key(key)
 
-        with io.open(path, mode='rb') as handle:
+        with open(path, mode='rb') as handle:
             self.put_object_from_filelike(handle, key, mode='wb', encoding=None)
 
     def put_object_from_filelike(self, handle, key, mode='w', encoding='utf8', force=False):

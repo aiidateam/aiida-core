@@ -11,7 +11,7 @@
 Abstracts JSON usage to ensure compatibility with Python2 and Python3.
 
 Use this module prefentially over standard json to ensure compatibility.
-Also note the conventions for using io.open for dump and dumps.
+
 """
 
 import simplejson
@@ -20,7 +20,7 @@ import simplejson
 def dump(data, fhandle, **kwargs):
     """
     Write JSON encoded 'data' to a file-like object, fhandle
-    In Py2/3, use io.open(filename, 'wb') to write.
+    Use open(filename, 'wb') to write.
     The utf8write object is used to ensure that the resulting serialised data is
     encoding as UTF8.
     Any strings with non-ASCII characters need to be unicode strings.
@@ -39,7 +39,7 @@ def dumps(data, **kwargs):
     unlike the standard library json, rather than being dependant on the input.
     We use also ensure_ascii=False to write unicode characters specifically
     as this improves the readability of the json and reduces the file size.
-    When writing to file, use io.open(filename, 'w', encoding='utf8')
+    When writing to file, use open(filename, 'w', encoding='utf8')
     """
     return simplejson.dumps(data, ensure_ascii=False, encoding='utf8', **kwargs)
 
@@ -48,7 +48,7 @@ def load(fhandle, **kwargs):
     """
     Deserialise a JSON file.
 
-    For Py2/Py3 compatibility, io.open(filename, 'r', encoding='utf8') should be used.
+    For encoding consistency, open(filename, 'r', encoding='utf8') should be used.
 
     :raises ValueError: if no valid JSON object could be decoded
     """

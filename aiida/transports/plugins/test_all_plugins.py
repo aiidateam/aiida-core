@@ -205,7 +205,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             # create file
             local_file_name = 'file.txt'
             text = 'Viva Verdi\n'
-            with io.open(os.path.join(t.getcwd(), local_file_name), 'w', encoding='utf8') as fhandle:
+            with open(os.path.join(t.getcwd(), local_file_name), 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
             # remove it
             t.rmtree(local_file_name)
@@ -568,7 +568,7 @@ class TestPutGetFile(unittest.TestCase):
             retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
 
             text = 'Viva Verdi\n'
-            with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
+            with open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
             # here use full path in src and dst
@@ -618,7 +618,7 @@ class TestPutGetFile(unittest.TestCase):
             remote_file_name = 'file_remote.txt'
             retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
 
-            fhandle = io.open(local_file_name, 'w', encoding='utf8')
+            fhandle = open(local_file_name, 'w', encoding='utf8')
             fhandle.close()
 
             # partial_file_name is not an abs path
@@ -682,7 +682,7 @@ class TestPutGetFile(unittest.TestCase):
             retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
 
             text = 'Viva Verdi\n'
-            with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
+            with open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
             # localpath is an empty string
@@ -770,7 +770,7 @@ class TestPutGetTree(unittest.TestCase):
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
             text = 'Viva Verdi\n'
-            with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
+            with open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
             # here use full path in src and dst
@@ -835,7 +835,7 @@ class TestPutGetTree(unittest.TestCase):
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
             text = 'Viva Verdi\n'
-            with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
+            with open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
             t.put(local_subfolder, remote_subfolder)
@@ -891,7 +891,7 @@ class TestPutGetTree(unittest.TestCase):
             file_3 = os.path.join(local_base_dir, 'c.txt')
             text = 'Viva Verdi\n'
             for filename in [file_1, file_2, file_3]:
-                with io.open(filename, 'w', encoding='utf8') as fhandle:
+                with open(filename, 'w', encoding='utf8') as fhandle:
                     fhandle.write(text)
 
             # first test the copy. Copy of two files matching patterns, into a folder
@@ -964,7 +964,7 @@ class TestPutGetTree(unittest.TestCase):
             file_3 = os.path.join(local_base_dir, 'c.txt')
             text = 'Viva Verdi\n'
             for filename in [file_1, file_2, file_3]:
-                with io.open(filename, 'w', encoding='utf8') as fhandle:
+                with open(filename, 'w', encoding='utf8') as fhandle:
                     fhandle.write(text)
 
             # first test put. Copy of two files matching patterns, into a folder
@@ -993,7 +993,7 @@ class TestPutGetTree(unittest.TestCase):
             with self.assertRaises(OSError):
                 t.put(os.path.join(local_base_dir, '*.txt'), 'prova')
             # copy of folder into file
-            with io.open(os.path.join(local_dir, directory, 'existing.txt'), 'w', encoding='utf8') as fhandle:
+            with open(os.path.join(local_dir, directory, 'existing.txt'), 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
             with self.assertRaises(OSError):
                 t.put(os.path.join(local_base_dir), 'existing.txt')
@@ -1044,7 +1044,7 @@ class TestPutGetTree(unittest.TestCase):
             file_3 = os.path.join(local_base_dir, 'c.txt')
             text = 'Viva Verdi\n'
             for filename in [file_1, file_2, file_3]:
-                with io.open(filename, 'w', encoding='utf8') as fhandle:
+                with open(filename, 'w', encoding='utf8') as fhandle:
                     fhandle.write(text)
 
             # first test put. Copy of two files matching patterns, into a folder
@@ -1075,7 +1075,7 @@ class TestPutGetTree(unittest.TestCase):
             with self.assertRaises(OSError):
                 t.get(os.path.join('local', '*.txt'), os.path.join(local_destination, 'prova'))
             # copy of folder into file
-            with io.open(os.path.join(local_destination, 'existing.txt'), 'w', encoding='utf8') as fhandle:
+            with open(os.path.join(local_destination, 'existing.txt'), 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
             with self.assertRaises(OSError):
                 t.get('local', os.path.join(local_destination, 'existing.txt'))
@@ -1124,7 +1124,7 @@ class TestPutGetTree(unittest.TestCase):
             t.chdir(directory)
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
-            fhandle = io.open(local_file_name, 'w', encoding='utf8')
+            fhandle = open(local_file_name, 'w', encoding='utf8')
             fhandle.close()
 
             # 'tmp1' is not an abs path
@@ -1200,7 +1200,7 @@ class TestPutGetTree(unittest.TestCase):
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
             text = 'Viva Verdi\n'
-            with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
+            with open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
             # localpath is an empty string

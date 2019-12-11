@@ -12,7 +12,6 @@ This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
 
-import io
 from string import Template
 
 import numpy
@@ -1009,7 +1008,7 @@ class BandsData(KpointsData):
         if not os.path.exists(filename):
             raise RuntimeError('Unable to generate the PDF...')
 
-        with io.open(filename, 'rb', encoding=None) as f:
+        with open(filename, 'rb', encoding=None) as f:
             imgdata = f.read()
         os.remove(filename)
 
@@ -1059,7 +1058,7 @@ class BandsData(KpointsData):
         if not os.path.exists(filename):
             raise RuntimeError('Unable to generate the PNG...')
 
-        with io.open(filename, 'rb', encoding=None) as f:
+        with open(filename, 'rb', encoding=None) as f:
             imgdata = f.read()
         os.remove(filename)
 
@@ -1643,7 +1642,7 @@ print_comment = False
 matplotlib_import_data_inline_template = Template('''all_data_str = r"""$all_data_json"""
 ''')
 
-matplotlib_import_data_fromfile_template = Template('''with io.open("$json_fname", encoding='utf8') as f:
+matplotlib_import_data_fromfile_template = Template('''with open("$json_fname", encoding='utf8') as f:
     all_data_str = f.read()
 ''')
 

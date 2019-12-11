@@ -9,8 +9,6 @@
 ###########################################################################
 """`verdi data structure` command."""
 
-import io
-
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
@@ -193,7 +191,7 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, dry_run):
     """
     from aiida.orm import StructureData
 
-    with io.open(filename, encoding='utf8') as fobj:
+    with open(filename, encoding='utf8') as fobj:
         xyz_txt = fobj.read()
     new_structure = StructureData()
 

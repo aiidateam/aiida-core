@@ -1,14 +1,18 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 MAINTAINER AiiDA Team <info@aiida.net>
+
+# This is necessary such that the setup of `tzlocal` is non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
 
 ARG uid=1000
 ARG gid=1000
 
-## Set correct locale
-## For something more complex, as reported by https://hub.docker.com/_/ubuntu/
-## and taken from postgres:
+# Set correct locale
+# For something more complex, as reported by https://hub.docker.com/_/ubuntu/
+# and taken from postgres:
 # make the "en_US.UTF-8" locale so postgres will be utf-8 enabled by default
-RUN apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
+# The `software-properties-common` is necessary to get the command `add-apt-repository`
+RUN apt-get update && apt-get install -y locales software-properties-common && rm -rf /var/lib/apt/lists/* \
     && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 ENV LANG en_US.utf8
 
@@ -22,21 +26,21 @@ RUN update-locale LANG=en_US.utf8
 # jenkins will replace it with 'cat')
 #CMD ["/bin/true"]
 
+RUN add-apt-repository ppa:deadsnakes/ppa
+
 # install required software
 RUN apt-get update \
     && apt-get -y install \
     git \
     vim \
     openssh-client \
-    postgresql-client-9.5 \
-    postgresql-9.5 \
-    postgresql-server-dev-9.5 \
-    python2.7 \
+    postgresql-client-10 \
+    postgresql-10 \
+    postgresql-server-dev-10 \
     && apt-get -y install \
-    python-pip \
+    python3.7 python3.7-dev \
+    python3-pip \
     ipython \
-    python2.7-dev \
-    && apt-get -y install \
     texlive-base \
     texlive-generic-recommended \
     texlive-fonts-recommended \
@@ -53,8 +57,8 @@ RUN apt-get update \
 
 # Disable password requests for requests coming from localhost
 # Of course insecure, but ok for testing
-RUN cp /etc/postgresql/9.5/main/pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf~ && \
-    perl -npe 's/^([^#]*)md5$/$1trust/' /etc/postgresql/9.5/main/pg_hba.conf~ > /etc/postgresql/9.5/main/pg_hba.conf
+RUN cp /etc/postgresql/10/main/pg_hba.conf /etc/postgresql/10/main/pg_hba.conf~ && \
+    perl -npe 's/^([^#]*)md5$/$1trust/' /etc/postgresql/10/main/pg_hba.conf~ > /etc/postgresql/10/main/pg_hba.conf
 
 # install sudo otherwise tests for quicksetup fail,
 # see #1382. I think this part should be removed in the
@@ -80,7 +84,7 @@ RUN updatedb
 
 # update pip and setuptools to get a relatively-recent version
 # This can be updated in the future
-RUN pip install pip==18.1 setuptools==40.6.2
+RUN pip3 install pip==19.2.3 setuptools==42.0.2
 
 # Put the doubler script
 COPY doubler.sh /usr/local/bin/

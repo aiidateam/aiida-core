@@ -9,7 +9,6 @@
 ###########################################################################
 """Utility functions to operate on filesystem files."""
 import hashlib
-import io
 
 
 def md5_from_filelike(filelike, block_size_factor=128):
@@ -40,7 +39,7 @@ def md5_file(filepath, block_size_factor=128):
     :raises: No checks are done on the file, so if it doesn't exists it may
         raise IOError.
     """
-    with io.open(filepath, 'rb', encoding=None) as handle:
+    with open(filepath, 'rb', encoding=None) as handle:
         return md5_from_filelike(handle, block_size_factor=block_size_factor)
 
 
@@ -60,7 +59,7 @@ def sha1_file(filename, block_size_factor=128):
         raise IOError.
     """
     sha1 = hashlib.sha1()
-    with io.open(filename, 'rb', encoding=None) as fhandle:
+    with open(filename, 'rb', encoding=None) as fhandle:
         # I read 128 bytes at a time until it returns the empty string b''
         for chunk in iter(lambda: fhandle.read(block_size_factor * sha1.block_size), b''):
             sha1.update(chunk)

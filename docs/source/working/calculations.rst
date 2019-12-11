@@ -323,6 +323,7 @@ The full list of available options are documented below as part of the ``CalcJob
 
 .. aiida-calcjob:: CalcJob
     :module: aiida.engine.processes.calcjobs
+    :expand-namespaces:
 
 
 .. _working_calcjobs_launch:

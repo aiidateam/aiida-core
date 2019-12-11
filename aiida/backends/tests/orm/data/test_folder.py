@@ -9,7 +9,6 @@
 ###########################################################################
 """Tests for the `FolderData` class."""
 
-import io
 import os
 import shutil
 import tempfile
@@ -31,7 +30,7 @@ class TestFolderData(AiidaTestCase):
         }
 
         for filename, content in cls.tree.items():
-            with io.open(os.path.join(cls.tempdir, filename), 'w', encoding='utf8') as handle:
+            with open(os.path.join(cls.tempdir, filename), 'w', encoding='utf8') as handle:
                 handle.write(content)
 
     @classmethod

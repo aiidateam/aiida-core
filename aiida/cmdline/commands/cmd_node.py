@@ -107,7 +107,11 @@ def repo_dump(node, output_directory, force):
                     elif prompt_res == 's':
                         continue
                     elif prompt_res == 'r':
-                        shutil.rmtree(new_out_dir)
+                        # Explicit 'str' cast is needed only in python <=3.5,
+                        # because 'shutil' does not understand pathlib
+                        # objects. This can be removed when Python3.5
+                        # support is dropped.
+                        shutil.rmtree(str(new_out_dir))
                         new_out_dir.mkdir()
                     else:
                         assert prompt_res == 'm'

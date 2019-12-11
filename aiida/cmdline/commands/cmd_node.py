@@ -84,6 +84,8 @@ def repo_dump(node, output_directory, force):
     output_directory.mkdir(exist_ok=True)
 
     def _copy_tree(key, output_dir):  # pylint: disable=too-many-branches
+        if force:
+            prompt_res = 'r'
         for file in node.list_objects(key=key):
             if not key:
                 file_path = file.name
@@ -92,9 +94,7 @@ def repo_dump(node, output_directory, force):
             if file.type == FileType.DIRECTORY:
                 new_out_dir = output_dir / file.name
                 if new_out_dir.exists():
-                    if force:
-                        prompt_res = 'r'
-                    else:
+                    if not force:
                         prompt_res = click.prompt(
                             "Directory '{}' exists. Abort [a], "
                             'skip [s], merge contents [m], '
@@ -116,11 +116,10 @@ def repo_dump(node, output_directory, force):
 
                 _copy_tree(key=file_path, output_dir=new_out_dir)
             else:
+                assert file.type == FileType.FILE
                 out_file_path = (output_dir / file.name)
                 if out_file_path.exists():
-                    if force:
-                        prompt_res = 'o'
-                    else:
+                    if not force:
                         prompt_res = click.prompt(
                             "File '{}' exists. Abort [a], skip [s], or replace [r]?".format(out_file_path),
                             default='a',

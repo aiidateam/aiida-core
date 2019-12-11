@@ -81,19 +81,19 @@ class AiidaTestCase(unittest.TestCase):
         cls.__backend_instance = cls.get_backend_class()()
         cls.__backend_instance.setUpClass_method(*args, **kwargs)
         cls.backend = cls.__backend_instance.backend
-        cls.insert_data()
 
         cls._class_was_setup = True
+
+        cls.clean_db()
+        cls.insert_data()
 
     def setUp(self):
         # Install a new IOLoop so that any messing up of the state of the loop is not propagated
         # to subsequent tests.
         # This call should come before the backend instance setup call just in case it uses the loop
         ioloop.IOLoop().make_current()
-        self.__backend_instance.setUp_method()
 
     def tearDown(self):
-        self.__backend_instance.tearDown_method()
         # Clean up the loop we created in set up.
         # Call this after the instance tear down just in case it uses the loop
         reset_manager()

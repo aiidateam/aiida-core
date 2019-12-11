@@ -14,6 +14,7 @@ import io
 import errno
 import pathlib
 import tempfile
+import contextlib
 
 from click.testing import CliRunner
 
@@ -189,8 +190,11 @@ class TestVerdiNode(AiidaTestCase):
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             options = [str(self.folder_node.uuid), tmp_dir]
-            res = self.cli_runner.invoke(cmd_node.repo_dump, options)
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options, mix_stderr=False)
             self.assertFalse(res.stdout)
+            # If there was no stderr, accessing the attribute raises ValueError.
+            with contextlib.suppress(ValueError):
+                self.assertFalse(res.stderr)
 
             for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
                 curr_path = pathlib.Path(tmp_dir)
@@ -216,8 +220,11 @@ class TestVerdiNode(AiidaTestCase):
                 out_f.write('ni!')
 
             options = ['--force', str(self.folder_node.uuid), tmp_dir]
-            res = self.cli_runner.invoke(cmd_node.repo_dump, options)
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options, mix_stderr=False)
             self.assertFalse(res.stdout)
+            # If there was no stderr, accessing the attribute raises ValueError.
+            with contextlib.suppress(ValueError):
+                self.assertFalse(res.stderr)
 
             for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
                 curr_path = pathlib.Path(tmp_dir)
@@ -245,7 +252,10 @@ class TestVerdiNode(AiidaTestCase):
                 out_f.write('ni!')
 
             options = [str(self.folder_node.uuid), tmp_dir]
-            res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='r\n')
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='r\n', mix_stderr=False)
+            # If there was no stderr, accessing the attribute raises ValueError.
+            with contextlib.suppress(ValueError):
+                self.assertFalse(res.stderr)
             self.assertIn('Directory', res.stdout)
             self.assertIn('exists', res.stdout)
 
@@ -275,7 +285,10 @@ class TestVerdiNode(AiidaTestCase):
                 out_f.write('ni!')
 
             options = [str(self.folder_node.uuid), tmp_dir]
-            res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='r\n')
+            res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='r\n', mix_stderr=False)
+            # If there was no stderr, accessing the attribute raises ValueError.
+            with contextlib.suppress(ValueError):
+                self.assertFalse(res.stderr)
             self.assertIn('File', res.stdout)
             self.assertIn('exists', res.stdout)
 
@@ -306,6 +319,9 @@ class TestVerdiNode(AiidaTestCase):
 
             options = [str(self.folder_node.uuid), tmp_dir]
             res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='a\n')
+            # If there was no stderr, accessing the attribute raises ValueError.
+            with contextlib.suppress(ValueError):
+                self.assertFalse(res.stderr)
             self.assertIn('Directory', res.stdout)
             self.assertIn('exists', res.stdout)
             self.assertIn('Aborted!', res.stdout)
@@ -333,6 +349,9 @@ class TestVerdiNode(AiidaTestCase):
 
             options = [str(self.folder_node.uuid), tmp_dir]
             res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='s\n')
+            # If there was no stderr, accessing the attribute raises ValueError.
+            with contextlib.suppress(ValueError):
+                self.assertFalse(res.stderr)
             self.assertIn('Directory', res.stdout)
             self.assertIn('exists', res.stdout)
 
@@ -372,6 +391,9 @@ class TestVerdiNode(AiidaTestCase):
 
             options = [str(self.folder_node.uuid), tmp_dir]
             res = self.cli_runner.invoke(cmd_node.repo_dump, options, input='m\n')
+            # If there was no stderr, accessing the attribute raises ValueError.
+            with contextlib.suppress(ValueError):
+                self.assertFalse(res.stderr)
             self.assertIn('Directory', res.stdout)
             self.assertIn('exists', res.stdout)
 

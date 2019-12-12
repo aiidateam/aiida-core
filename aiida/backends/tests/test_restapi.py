@@ -344,164 +344,73 @@ class RESTApiTestSuite(RESTApiTestCase):
     """
     Define unittests for rest api
     """
-    import unittest
 
-    #@unittest.skip('')
-    def test_spyros_sync(self):
-        node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
+    def test_async_query_rest(self):
+        """
+        This test checks that REST API can be called in an asynchronous manner using
+        threads. At the end of every call the associated session (and subsequently the
+        connection) with the QueryBuilder should be closed.
 
-        for _ in range(100):
-            RESTApiTestCase.process_test(
-                self, 'computers', '/computers?limit=2&offset=2&orderby=+id', expected_range=[2, 4]
-            )
-
-            self.process_test(
-                'nodes',
-                '/nodes/' + str(node_uuid) + '/links/incoming?node_type="data.dict.Dict."',
-                expected_list_ids=[3],
-                uuid=node_uuid,
-                result_node_type='data',
-                result_name='incoming'
-            )
-
-    # #@unittest.skip("")
-    def test_spyros_async_rest(self):
+        Since the session is explicitly closed by QueryBuilder at the end of the
+        query, then other queries are issued by the initial process to verify that other
+        sessions and previously created objects (i.e. the users, computers etc constructed
+        at the initialization of the tests) are not affected by the thread actions.
+        """
         import threading
-        from colored import fg, bg, attr
-        my_range = 20
+        iterations = 20
 
-        def my_func(self):
+        def rest_call_func(self):
             node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
             url = self._url_prefix + '/nodes/' + str(node_uuid) + '/links/incoming?node_type="data.dict.Dict."'
 
             with self.app.test_client() as client:
-                rv_response = client.get(url)
-                response = json.loads(rv_response.data)
-                # print(
-                #     '%sThread {}: Response: {} %s'.format(threading.get_ident(), response) %
-                #     (fg(threading.get_ident() % 240 + 1), attr(0))
-                # )
+                client.get(url)
 
         threads = []
-        for _ in range(my_range):
-            threads.append(threading.Thread(target=my_func, args=[self], kwargs={}))
-        for i in range(my_range):
-            # print(
-            #     '%sThread {}: Starting thread {}%s'.format(threading.get_ident(), i) %
-            #     (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
+        for _ in range(iterations):
+            threads.append(threading.Thread(target=rest_call_func, args=[self], kwargs={}))
+        for i in range(iterations):
             threads[i].start()
 
-        for i in range(my_range):
-            # print(
-            #     '%sThread {}: Joining thread {}%s'.format(threading.get_ident(), i) %
-            #     (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
+        for i in range(iterations):
             threads[i].join()
 
-        # threads = []
-        # for _ in range(my_range):
-        #     threads.append(threading.Thread(target=my_func, args=[self], kwargs={}))
-        # for i in range(my_range):
-        #     print("Starting & joining thread {}".format(i))
-        #     threads[i].start()
-        #     threads[i].join()
+        for i in range(iterations):
+            rest_call_func(self)
 
-        # for i in range(my_range):
-        #     thr = threading.Thread(target=my_func, args=[self], kwargs={})
-        #     print("Starting & joining thread {}".format(i))
-        #     thr.start()
-        #     thr.join()
+    @staticmethod
+    def test_async_qb():
+        """
+        This test checks that QueryBuilder can be called in an asynchronous manner using
+        threads. At the end of every call the associated session (and subsequently the
+        connection) with the QueryBuilder should be closed.
 
-        for i in range(my_range):
-            # print(
-            #     '%sThread {}: Calling {} times the REST service in blocking manner%s'.
-            #     format(threading.get_ident(), my_range) % (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
-            my_func(self)
-
-    #@unittest.skip('')
-    def test_spyros_async2(self):
+        Since the session is explicitly closed by QueryBuilder at the end of the
+        query, then other queries are issued by the initial process to verify that other
+        sessions and previously created objects (i.e. the users, computers etc constructed
+        at the initialization of the tests) are not affected by the thread actions.
+        """
         import threading
-        from colored import fg, bg, attr
         from aiida.orm import QueryBuilder, Node
-        my_range = 20
+        iterations = 20
 
-        def my_func(self):
-            qb = QueryBuilder(given_close_session_on_exit=True)
-            qb.append(Node)
-            # print(
-            #     '%sThread {}: qb.all() {} %s'.format(threading.get_ident(), qb.all()) %
-            #     (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
-            # print(
-            #     '%sThread {}: qb.get_query()._connection_from_session() {} %s'.
-            #     format(threading.get_ident(),
-            #            qb.get_query()._connection_from_session()) % (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
-            # print(
-            #     '%sThread {}: qb.get_query().session {} %s'.format(threading.get_ident(), str(qb.get_query().session)) %
-            #     (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
-            # qb.get_query().session.close()
+        def qb_call_func():
+            qbuilder = QueryBuilder(given_close_session_on_exit=True)
+            qbuilder.append(Node)
+            qbuilder.all()
 
         threads = []
-        for _ in range(my_range):
-            threads.append(threading.Thread(target=my_func, args=[self], kwargs={}))
-        for i in range(my_range):
-            # print(
-            #     '%sThread {}: Starting thread {}%s'.format(threading.get_ident(), i) %
-            #     (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
+        for _ in range(iterations):
+            threads.append(threading.Thread(target=qb_call_func, args=[], kwargs={}))
+        for i in range(iterations):
             threads[i].start()
 
-        for i in range(my_range):
-            # print(
-            #     '%sThread {}: Joining thread {}%s'.format(threading.get_ident(), i) %
-            #     (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
+        for i in range(iterations):
             threads[i].join()
 
-        # print(
-        #     '%sThread {}: Hello world%s'.format(threading.get_ident()) % (fg(threading.get_ident() % 240 + 1), attr(0))
-        # )
+        for i in range(iterations):
+            qb_call_func()
 
-    #@unittest.skip('')
-    def test_spyros_sync2(self):
-        import threading
-        from colored import fg, bg, attr
-        from aiida.orm import QueryBuilder, Node
-        my_range = 20
-
-        def my_func(self):
-            qb = QueryBuilder(given_close_session_on_exit=True)
-            qb.append(Node)
-            # print(
-            #     '%sThread {}: qb.all() {} %s'.format(threading.get_ident(), qb.all()) %
-            #     (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
-            # print(
-            #     '%sThread {}: qb.get_query()._connection_from_session() {} %s'.
-            #     format(threading.get_ident(),
-            #            qb.get_query()._connection_from_session()) % (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
-            # print(
-            #     '%sThread {}: qb.get_query().session {} %s'.format(threading.get_ident(), str(qb.get_query().session)) %
-            #     (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
-
-        for i in range(my_range):
-            # print(
-            #     '%sThread {}: Running in blocking manner connections {}%s'.format(threading.get_ident(), i) %
-            #     (fg(threading.get_ident() % 240 + 1), attr(0))
-            # )
-            my_func(self)
-
-        # print(
-        #     '%sThread {}: Hello world%s'.format(threading.get_ident()) % (fg(threading.get_ident() % 240 + 1), attr(0))
-        # )
-
-    #@unittest.skip('')
     def test_computers_details(self):
         """
         Requests the details of single computer
@@ -511,14 +420,12 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers/' + str(node_uuid), expected_list_ids=[1], uuid=node_uuid
         )
 
-    #@unittest.skip('')
     def test_computers_list(self):
         """
         Get the full list of computers from database
         """
         RESTApiTestCase.process_test(self, 'computers', '/computers?orderby=+id', full_list=True)
 
-    #@unittest.skip('')
     def test_computers_list_limit_offset(self):
         """
         Get the list of computers from database using limit
@@ -530,7 +437,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers?limit=2&offset=2&orderby=+id', expected_range=[2, 4]
         )
 
-    #@unittest.skip('')
     def test_computers_list_limit_only(self):
         """
         Get the list of computers from database using limit
@@ -540,7 +446,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         RESTApiTestCase.process_test(self, 'computers', '/computers?limit=2&orderby=+id', expected_range=[None, 2])
 
-    #@unittest.skip('')
     def test_computers_list_offset_only(self):
         """
         Get the list of computers from database using offset
@@ -550,7 +455,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         RESTApiTestCase.process_test(self, 'computers', '/computers?offset=2&orderby=+id', expected_range=[2, None])
 
-    #@unittest.skip('')
     def test_computers_list_limit_offset_perpage(self):
         """
         If we pass the limit, offset and perpage at same time, it
@@ -561,7 +465,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers?offset=2&limit=1&perpage=2&orderby=+id', expected_errormsg=expected_error
         )
 
-    #@unittest.skip('')
     def test_computers_list_page_limit_offset(self):
         """
         If we use the page, limit and offset at same time, it
@@ -573,7 +476,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers/page/2?offset=2&limit=1&orderby=+id', expected_errormsg=expected_error
         )
 
-    #@unittest.skip('')
     def test_complist_pagelimitoffset_perpage(self):
         """
         If we use the page, limit, offset and perpage at same time, it
@@ -587,7 +489,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             expected_errormsg=expected_error
         )
 
-    #@unittest.skip('')
     def test_computers_list_page_default(self):
         """
         it returns the no. of rows defined as default perpage option
@@ -599,7 +500,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         RESTApiTestCase.process_test(self, 'computers', '/computers/page?orderby=+id', full_list=True)
 
-    #@unittest.skip('')
     def test_computers_list_page_perpage(self):
         """
         no.of pages = total no. of computers in database / perpage
@@ -609,7 +509,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers/page/1?perpage=2&orderby=+id', expected_range=[None, 2]
         )
 
-    #@unittest.skip('')
     def test_computers_list_page_perpage_exceed(self):
         """
         no.of pages = total no. of computers in database / perpage
@@ -624,7 +523,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         )
 
     ############### list filters ########################
-    #@unittest.skip('')
     def test_computers_filter_id1(self):
         """
         Add filter on the id of computer and get the filtered computer
@@ -634,7 +532,6 @@ class RESTApiTestSuite(RESTApiTestCase):
 
         RESTApiTestCase.process_test(self, 'computers', '/computers?id=' + str(node_pk), expected_list_ids=[1])
 
-    #@unittest.skip('')
     def test_computers_filter_id2(self):
         """
         Add filter on the id of computer and get the filtered computer
@@ -645,7 +542,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers?id>' + str(node_pk) + '&orderby=+id', expected_range=[2, None]
         )
 
-    #@unittest.skip('')
     def test_computers_filter_pk(self):
         """
         Add filter on the id of computer and get the filtered computer
@@ -654,7 +550,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_pk = self.get_dummy_data()['computers'][1]['id']
         RESTApiTestCase.process_test(self, 'computers', '/computers?pk=' + str(node_pk), expected_list_ids=[1])
 
-    #@unittest.skip('')
     def test_computers_filter_name(self):
         """
         Add filter for the name of computer and get the filtered computer
@@ -662,7 +557,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         RESTApiTestCase.process_test(self, 'computers', '/computers?name="test1"', expected_list_ids=[1])
 
-    #@unittest.skip('')
     def test_computers_filter_hostname(self):
         """
         Add filter for the hostname of computer and get the filtered computer
@@ -670,7 +564,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         RESTApiTestCase.process_test(self, 'computers', '/computers?hostname="test1.epfl.ch"', expected_list_ids=[1])
 
-    #@unittest.skip('')
     def test_computers_filter_transport_type(self):
         """
         Add filter for the transport_type of computer and get the filtered
@@ -682,7 +575,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         )
 
     ############### list orderby ########################
-    #@unittest.skip('')
     def test_computers_orderby_id_asc(self):
         """
         Returns the computers list ordered by "id" in ascending
@@ -690,7 +582,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         RESTApiTestCase.process_test(self, 'computers', '/computers?orderby=id', full_list=True)
 
-    #@unittest.skip('')
     def test_computers_orderby_id_asc_sign(self):
         """
         Returns the computers list ordered by "+id" in ascending
@@ -698,7 +589,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         RESTApiTestCase.process_test(self, 'computers', '/computers?orderby=+id', full_list=True)
 
-    #@unittest.skip('')
     def test_computers_orderby_id_desc(self):
         """
         Returns the computers list ordered by "id" in descending
@@ -706,7 +596,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         RESTApiTestCase.process_test(self, 'computers', '/computers?orderby=-id', expected_list_ids=[4, 3, 2, 1, 0])
 
-    #@unittest.skip('')
     def test_computers_orderby_name_asc(self):
         """
         Returns the computers list ordered by "name" in ascending
@@ -717,7 +606,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers?pk>' + str(node_pk) + '&orderby=name', expected_list_ids=[1, 2, 3, 4]
         )
 
-    #@unittest.skip('')
     def test_computers_orderby_name_asc_sign(self):
         """
         Returns the computers list ordered by "+name" in ascending
@@ -728,7 +616,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers?pk>' + str(node_pk) + '&orderby=+name', expected_list_ids=[1, 2, 3, 4]
         )
 
-    #@unittest.skip('')
     def test_computers_orderby_name_desc(self):
         """
         Returns the computers list ordered by "name" in descending
@@ -739,7 +626,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers?pk>' + str(node_pk) + '&orderby=-name', expected_list_ids=[4, 3, 2, 1]
         )
 
-    #@unittest.skip('')
     def test_computers_orderby_scheduler_type_asc(self):
         """
         Returns the computers list ordered by "scheduler_type" in ascending
@@ -753,7 +639,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             expected_list_ids=[1, 4, 2]
         )
 
-    #@unittest.skip('')
     def test_comp_orderby_scheduler_ascsign(self):
         """
         Returns the computers list ordered by "+scheduler_type" in ascending
@@ -767,7 +652,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             expected_list_ids=[1, 4, 2]
         )
 
-    #@unittest.skip('')
     def test_computers_orderby_schedulertype_desc(self):
         """
         Returns the computers list ordered by "scheduler_type" in descending
@@ -782,7 +666,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         )
 
     ############### list orderby combinations #######################
-    #@unittest.skip('')
     def test_computers_orderby_mixed1(self):
         """
         Returns the computers list first order by "transport_type" in
@@ -797,7 +680,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             expected_list_ids=[3, 1, 2, 4]
         )
 
-    #@unittest.skip('')
     def test_computers_orderby_mixed2(self):
         """
         Returns the computers list first order by "scheduler_type" in
@@ -812,7 +694,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             expected_list_ids=[2, 3, 4, 1]
         )
 
-    #@unittest.skip('')
     def test_computers_orderby_mixed3(self):
         """
         Returns the computers list first order by "scheduler_type" in
@@ -842,7 +723,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
 
     ############### list filter combinations #######################
-    #@unittest.skip('')
     def test_computers_filter_mixed1(self):
         """
         Add filter for the hostname and id of computer and get the
@@ -853,7 +733,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers?id>' + str(node_pk) + '&hostname="test1.epfl.ch"', expected_list_ids=[1]
         )
 
-    #@unittest.skip('')
     def test_computers_filter_mixed2(self):
         """
         Add filter for the id, hostname and transport_type of the computer
@@ -868,7 +747,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         )
 
     ############### list all parameter combinations #######################
-    #@unittest.skip('')
     def test_computers_mixed1(self):
         """
         url parameters: id, limit and offset
@@ -878,7 +756,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self, 'computers', '/computers?id>' + str(node_pk) + '&limit=2&offset=3&orderby=+id', expected_list_ids=[4]
         )
 
-    #@unittest.skip('')
     def test_computers_mixed2(self):
         """
         url parameters: id, page, perpage
@@ -904,7 +781,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         )
 
     ########## pass unknown url parameter ###########
-    #@unittest.skip('')
     def test_computers_unknown_param(self):
         """
         url parameters: id, limit and offset
@@ -914,7 +790,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
 
     ############### calculation retrieved_inputs and retrieved_outputs  #############
-    #@unittest.skip('')
     def test_calculation_retrieved_inputs(self):
         """
         Get the list of given calculation retrieved_inputs
@@ -926,7 +801,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             response = json.loads(response_value.data)
             self.assertEqual(response['data'], [{'name': 'calcjob_inputs', 'type': 'DIRECTORY'}])
 
-    #@unittest.skip('')
     def test_calculation_retrieved_outputs(self):
         """
         Get the list of given calculation retrieved_outputs
@@ -939,7 +813,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self.assertEqual(response['data'], [{'name': 'calcjob_outputs', 'type': 'DIRECTORY'}])
 
     ############### calculation incoming  #############
-    #@unittest.skip('')
     def test_calculation_inputs(self):
         """
         Get the list of give calculation incoming
@@ -954,7 +827,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             result_name='incoming'
         )
 
-    #@unittest.skip('')
     def test_calculation_input_filters(self):
         """
         Get filtered incoming list for given calculations
@@ -969,7 +841,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             result_name='incoming'
         )
 
-    #@unittest.skip('')
     def test_calculation_iotree(self):
         """
         Get filtered incoming list for given calculations
@@ -992,7 +863,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
 
     ############### calculation attributes #############
-    #@unittest.skip('')
     def test_calculation_attributes(self):
         """
         Get list of calculation attributes
@@ -1014,7 +884,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self.assertEqual(response['data']['attributes'], attributes)
             RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
 
-    #@unittest.skip('')
     def test_contents_attributes_filter(self):
         """
         Get list of calculation attributes with filter attributes_filter
@@ -1029,7 +898,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
 
     ############### calculation node attributes filter  #############
-    #@unittest.skip('')
     def test_calculation_attributes_filter(self):
         """
         Get the list of given calculation attributes filtered
@@ -1050,7 +918,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self.assertEqual(response['data']['nodes'][0]['attributes'], attributes)
 
     ############### calculation node extras_filter  #############
-    #@unittest.skip('')
     def test_calculation_extras_filter(self):
         """
         Get the list of given calculation extras filtered
@@ -1065,7 +932,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self.assertEqual(response['data']['nodes'][0]['extras']['extra2'], extras['extra2'])
 
     ############### structure node attributes filter #############
-    #@unittest.skip('')
     def test_structure_attributes_filter(self):
         """
         Get the list of given calculation attributes filtered
@@ -1079,7 +945,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self.assertEqual(response['data']['nodes'][0]['attributes']['cell'], cell)
 
     ############### node attributes_filter with pagination #############
-    #@unittest.skip('')
     def test_node_attributes_filter_pagination(self):
         """
         Check that node attributes specified in attributes_filter are
@@ -1100,7 +965,6 @@ class RESTApiTestSuite(RESTApiTestCase):
                     self.assertIn(attr, node['attributes'])
 
     ############### node get one attributes_filter with pagination #############
-    #@unittest.skip('')
     def test_node_single_attributes_filter(self):
         """
         Check that when only one node attribute is specified in attributes_filter
@@ -1116,7 +980,6 @@ class RESTApiTestSuite(RESTApiTestCase):
                 self.assertEqual(list(node['attributes'].keys()), expected_attribute)
 
     ############### node extras_filter with pagination #############
-    #@unittest.skip('')
     def test_node_extras_filter_pagination(self):
         """
         Check that node extras specified in extras_filter are
@@ -1137,7 +1000,6 @@ class RESTApiTestSuite(RESTApiTestCase):
                     self.assertIn(extra, node['extras'])
 
     ############### node get one extras_filter with pagination #############
-    #@unittest.skip('')
     def test_node_single_extras_filter(self):
         """
         Check that when only one node extra is specified in extras_filter
@@ -1153,7 +1015,6 @@ class RESTApiTestSuite(RESTApiTestCase):
                 self.assertEqual(list(node['extras'].keys()), expected_extra)
 
     ############### node full_type filter #############
-    #@unittest.skip('')
     def test_nodes_full_type_filter(self):
         """
         Get the list of nodes filtered by full_type
@@ -1171,7 +1032,6 @@ class RESTApiTestSuite(RESTApiTestCase):
                 self.assertIn(node['uuid'], expected_node_uuids)
 
     ############### Structure visualization and download #############
-    #@unittest.skip('')
     def test_structure_derived_properties(self):
         """
         Get the list of give calculation incoming
@@ -1192,7 +1052,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             self.assertEqual(response['data']['derived_properties']['formula'], 'Ba')
             RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
 
-    #@unittest.skip('')
     def test_structure_download(self):
         """
         Test download of structure file
@@ -1206,7 +1065,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         structure_data = load_node(node_uuid)._exportcontent('xsf')[0]  # pylint: disable=protected-access
         self.assertEqual(rv_obj.data, structure_data)
 
-    #@unittest.skip('')
     def test_cif(self):
         """
         Test download of cif file
@@ -1245,7 +1103,6 @@ class RESTApiTestSuite(RESTApiTestCase):
                 for prop in response['data']['ordering']:
                     self.assertIn(prop, available_properties)
 
-    #@unittest.skip('')
     def test_node_namespace(self):
         """
         Test the rest api call to get list of available node namespace
@@ -1260,7 +1117,6 @@ class RESTApiTestSuite(RESTApiTestCase):
                 self.assertIn(dkay, response_keys)
             RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response)
 
-    #@unittest.skip('')
     def test_comments(self):
         """
         Get the node comments
@@ -1275,7 +1131,6 @@ class RESTApiTestSuite(RESTApiTestCase):
                 all_comments.append(comment['message'])
             self.assertEqual(sorted(all_comments), sorted(['This is test comment.', 'Add another comment.']))
 
-    #@unittest.skip('')
     def test_repo(self):
         """
         Test to get repo list or repo file contents for given node
@@ -1295,7 +1150,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             input_file = load_node(node_uuid).get_object_content('calcjob_inputs/aiida.in', mode='rb')
             self.assertEqual(response_obj.data, input_file)
 
-    #@unittest.skip('')
     def test_process_report(self):
         """
         Test process report
@@ -1314,7 +1168,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             for key in ['time', 'loggername', 'levelname', 'dbnode_id', 'message']:
                 self.assertIn(key, expected_log_keys)
 
-    #@unittest.skip('')
     def test_download_formats(self):
         """
         test for download format endpoint

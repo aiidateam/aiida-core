@@ -13,7 +13,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
 
 
-class ComputerBuilder:
+class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
     """Build a computer with validation of attribute combinations"""
 
     @staticmethod

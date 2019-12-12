@@ -98,7 +98,7 @@ class BaseTranslator:
         Initialize query builder object by means of _query_help
         """
         self.qbobj.__init__(**self._query_help)
-        self.qbobj.__init__(given_close_session_on_exit=True, **self._query_help)
+        self.qbobj.__init__(close_session_on_exit=True, **self._query_help)
         self._is_qb_initialized = True
 
     def count(self):

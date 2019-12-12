@@ -208,6 +208,7 @@ def get_type_filter(classifiers, subclassing):
 
     return filter
 
+
 def get_process_type_filter(classifiers, subclassing):
     """
     Return filter dictionaries given a set of classifiers.
@@ -260,7 +261,6 @@ def get_process_type_filter(classifiers, subclassing):
                 {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},
             ]}
 
-
     return filter
 
 
@@ -285,12 +285,15 @@ class QueryBuilder:
     _VALID_PROJECTION_KEYS = ('func', 'cast')
     close_session_on_exit = False
 
-    def __init__(self, backend=None, given_close_session_on_exit=False, **kwargs):
+    def __init__(self, backend=None, close_session_on_exit=False, **kwargs):
         """
         Instantiates a QueryBuilder instance.
 
         Which backend is used decided here based on backend-settings (taken from the user profile).
-        This cannot be overriden so far by the user.
+        This cannot be overridden so far by the user.
+
+        If close_session_on_exit is set to True, then QueryBuilder will close the obtained session
+        and subsequently the connection, when all results are retrieved.
 
         :param bool debug:
             Turn on debug mode. This feature prints information on the screen about the stages
@@ -318,11 +321,7 @@ class QueryBuilder:
         """
         backend = backend or get_manager().get_backend()
         self._impl = backend.query()
-        self.close_session_on_exit = given_close_session_on_exit
-        # from colored import fg, bg, attr
-        # import threading
-        # print('%sThread {}: Close_session_on_exit is {}%s'.format(threading.get_ident(), self.close_session_on_exit) % (
-        #     fg(threading.get_ident() % 240 + 1), attr(0)))
+        self.close_session_on_exit = close_session_on_exit
 
         # A list storing the path being traversed by the query
         self._path = []
@@ -2122,16 +2121,10 @@ class QueryBuilder:
 
             yield item
 
-        # from colored import fg, bg, attr
-        # import threading
+        # If instructed so, QueryBuilder will close the session (and subsequently
+        # the connection) on exit.
         if self.close_session_on_exit:
-        #     print('%sThread {}: Closing session because close_session_on_exit is True%s'.format(threading.get_ident()) % (
-        #         fg(threading.get_ident() % 240 + 1), attr(0)))
             self.get_query().session.close()
-        # # self.get_query()._connection_from_session().close()
-        # # self.get_query().session.close()
-        # print('%sThread {}: OOOOOOOOOOOOO%s'.format(threading.get_ident()) % (
-        # fg(threading.get_ident() % 240 + 1), attr(0)))
 
     def iterdict(self, batch_size=100):
         """
@@ -2155,16 +2148,10 @@ class QueryBuilder:
 
             yield item
 
-        # from colored import fg, bg, attr
-        # import threading
+        # If instructed so, QueryBuilder will close the session (and subsequently
+        # the connection) on exit.
         if self.close_session_on_exit:
-        #     print('%sThread {}: Clossing session because close_session_on_exit is True%s'.format(threading.get_ident()) % (
-        #         fg(threading.get_ident() % 240 + 1), attr(0)))
             self.get_query().session.close()
-        # # self.get_query()._connection_from_session().close()
-        # # self.get_query().session.close()
-        #
-        # print('%sThread {}: AAAAAAAAAAAA%s'.format(threading.get_ident()) % (fg(threading.get_ident() % 240 + 1), attr(0)))
 
     def all(self, batch_size=None):
         """

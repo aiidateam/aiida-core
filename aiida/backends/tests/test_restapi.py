@@ -395,7 +395,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         iterations = 20
 
         def qb_call_func():
-            qbuilder = QueryBuilder(given_close_session_on_exit=True)
+            qbuilder = QueryBuilder(close_session_on_exit=True)
             qbuilder.append(Node)
             qbuilder.all()
 

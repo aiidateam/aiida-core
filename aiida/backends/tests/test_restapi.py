@@ -419,8 +419,8 @@ class RESTApiTestSuite(RESTApiTestCase):
 
         for i in range(my_range):
             print(
-                '%sThread {}: Calling {} times the REST service in blocking manner%s'.format(threading.get_ident(), my_range) %
-                (fg(threading.get_ident() % 240 + 1), attr(0))
+                '%sThread {}: Calling {} times the REST service in blocking manner%s'.
+                format(threading.get_ident(), my_range) % (fg(threading.get_ident() % 240 + 1), attr(0))
             )
             my_func(self)
 

@@ -85,18 +85,18 @@ def reset_session(profile=None):
     SCOPED_SESSION_CLASS = scoped_session(sessionmaker(bind=ENGINE, expire_on_commit=True))
     # SCOPED_SESSION_CLASS = sessionmaker(bind=ENGINE, expire_on_commit=True)
     register_after_fork(ENGINE, recreate_after_fork)
-    event.listen(ENGINE, 'checkout', my_on_checkout)
-    event.listen(ENGINE, 'checkin', my_on_checkin)
+    # event.listen(ENGINE, 'checkout', my_on_checkout)
+    # event.listen(ENGINE, 'checkin', my_on_checkin)
 
 
-from sqlalchemy import event
-import threading
-from colored import fg, bg, attr
-
-
-def my_on_checkout(dbapi_conn, connection_rec, connection_proxy):
-    print('%sThread {}: Checking out %s'.format(threading.get_ident()) % (fg(threading.get_ident() % 240 + 1), attr(0)))
-
-
-def my_on_checkin(dbapi_conn, connection_rec):
-    print('%sThread {}: Checking in %s'.format(threading.get_ident()) % (fg(threading.get_ident() % 240 + 1), attr(0)))
+# from sqlalchemy import event
+# import threading
+# from colored import fg, bg, attr
+#
+#
+# def my_on_checkout(dbapi_conn, connection_rec, connection_proxy):
+#     print('%sThread {}: Checking out %s'.format(threading.get_ident()) % (fg(threading.get_ident() % 240 + 1), attr(0)))
+#
+#
+# def my_on_checkin(dbapi_conn, connection_rec):
+#     print('%sThread {}: Checking in %s'.format(threading.get_ident()) % (fg(threading.get_ident() % 240 + 1), attr(0)))

@@ -18,8 +18,6 @@ from collections import OrderedDict
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 
-DEFAULT_TRANSPORT_INTERVAL = 30.
-
 __all__ = ('Transport',)
 
 
@@ -40,7 +38,9 @@ class Transport(abc.ABC):
     """Abstract class for a generic transport (ssh, local, ...) ontains the set of minimal methods."""
     # pylint: disable=too-many-public-methods
 
-    _DEFAULT_SAFE_OPEN_INTERVAL = DEFAULT_TRANSPORT_INTERVAL
+    # This is used as a global default in case subclasses don't redefine this,
+    # but this should  be redefined in plugins where appropriate
+    _DEFAULT_SAFE_OPEN_INTERVAL = 30.
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
@@ -182,27 +182,16 @@ class Transport(abc.ABC):
 
         :return: `OrderedDict` of tuples, with first element option name and second dictionary of kwargs
         """
-        # The common auth options are currently defined as class members, but the default for `safe_interval` is sub
-        # class specific. With the current design the default cannot already be specified directly but has to be added
-        # manually here.
-        for option in cls._common_auth_options:
-            if option[0] == 'safe_interval':
-                option[1]['default'] = cls._DEFAULT_SAFE_OPEN_INTERVAL
         return OrderedDict(cls._valid_auth_options + cls._common_auth_options)
 
     @classmethod
     def _get_safe_interval_suggestion_string(cls, computer):  # pylint: disable=unused-argument
         """
-        Default time in seconds between consecutive checks.
+        Return as a suggestion the default safe interval of this Transport class.
 
-        Set to a non-zero value to be safe e.g. in the case of transports with a connection limit,
-        to avoid overloading the server (and being banned). Should be overriden
-        in plugins. This is anyway just a default, as the value can be changed
-        by the user in the Computer properties, for instance.
-        Currently both the local and the ssh transport override this value, so this is not used,
-        but it will be the default for possible new plugins.
+        This is used to provide a default in ``verdi computer configure``.
         """
-        return DEFAULT_TRANSPORT_INTERVAL
+        return cls._DEFAULT_SAFE_OPEN_INTERVAL
 
     @property
     def logger(self):

@@ -17,12 +17,12 @@ from click.testing import CliRunner
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_computer import computer_disable, computer_enable, computer_setup
+from aiida.cmdline.commands.cmd_computer import computer_setup
 from aiida.cmdline.commands.cmd_computer import computer_show, computer_list, computer_rename, computer_delete
 from aiida.cmdline.commands.cmd_computer import computer_test, computer_configure, computer_duplicate
 
 
-def generate_setup_options_dict(replace_args={}, non_interactive=True):
+def generate_setup_options_dict(replace_args=None, non_interactive=True):
     """
     Return a OrderedDict with the key-value pairs for the command line.
 
@@ -53,8 +53,9 @@ def generate_setup_options_dict(replace_args={}, non_interactive=True):
     valid_noninteractive_options['append-text'] = "env\necho '444'\necho 'third line'"
 
     # I replace kwargs here, so that if they are known, they go at the right order
-    for k in replace_args:
-        valid_noninteractive_options[k] = replace_args[k]
+    if replace_args is not None:
+        for k in replace_args:
+            valid_noninteractive_options[k] = replace_args[k]
 
     return valid_noninteractive_options
 
@@ -79,7 +80,7 @@ def generate_setup_options(ordereddict):
     return options
 
 
-def generate_setup_options_interactive(ordereddict):
+def generate_setup_options_interactive(ordereddict):  # pylint: disable=invalid-name
     """
     Given an (ordered) dict, returns a list of options
 
@@ -91,7 +92,7 @@ def generate_setup_options_interactive(ordereddict):
     :return: a list to be passed as command-line arguments.
     """
     options = []
-    for key, value in ordereddict.items():
+    for value in ordereddict.values():
         if value is None:
             options.append(True)
         else:
@@ -103,17 +104,21 @@ class TestVerdiComputerSetup(AiidaTestCase):
     """Tests for the 'verdi computer setup' command."""
 
     def setUp(self):
+        """Setup the class with a CliRunner."""
         self.cli_runner = CliRunner()
 
     def test_help(self):
+        """Test the help of verdi computer setup."""
         self.cli_runner.invoke(computer_setup, ['--help'], catch_exceptions=False)
 
     def test_reachable(self):
+        """Test if the verdi computer setup is reachable."""
         import subprocess as sp
         output = sp.check_output(['verdi', 'computer', 'setup', '--help'])
         self.assertIn(b'Usage:', output)
 
     def test_interactive(self):
+        """Test verdi computer setup in interactive mode."""
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'interactive_computer'
@@ -143,6 +148,11 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertEqual(new_computer.get_append_text(), '')
 
     def test_mixed(self):
+        """
+        Test verdi computer setup in mixed mode.
+
+        Some parts are given interactively and some non-interactively.
+        """
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'mixed_computer'
@@ -175,8 +185,9 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertEqual(new_computer.get_mpirun_command(), options_dict_full['mpirun-command'].split())
         self.assertEqual(new_computer.get_shebang(), options_dict_full['shebang'])
         self.assertEqual(new_computer.get_workdir(), options_dict_full['work-dir'])
-        self.assertEqual(new_computer.get_default_mpiprocs_per_machine(),
-                         int(options_dict_full['mpiprocs-per-machine']))
+        self.assertEqual(
+            new_computer.get_default_mpiprocs_per_machine(), int(options_dict_full['mpiprocs-per-machine'])
+        )
         # For now I'm not writing anything in them
         self.assertEqual(new_computer.get_prepend_text(), options_dict_full['prepend-text'])
         self.assertEqual(new_computer.get_append_text(), options_dict_full['append-text'])
@@ -210,7 +221,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertIsInstance(result.exception, SystemExit)
         self.assertIn('already exists', result.output)
 
-    def test_noninteractive_optional_default_mpiprocs(self):
+    def test_noninteractive_optional_default_mpiprocs(self):  # pylint: disable=invalid-name
         """
         Check that if is ok not to specify mpiprocs-per-machine
         """
@@ -225,7 +236,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertIsInstance(new_computer, orm.Computer)
         self.assertIsNone(new_computer.get_default_mpiprocs_per_machine())
 
-    def test_noninteractive_optional_default_mpiprocs_2(self):
+    def test_noninteractive_optional_default_mpiprocs_2(self):  # pylint: disable=invalid-name
         """
         Check that if is the specified value is zero, it means unspecified
         """
@@ -240,7 +251,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertIsInstance(new_computer, orm.Computer)
         self.assertIsNone(new_computer.get_default_mpiprocs_per_machine())
 
-    def test_noninteractive_optional_default_mpiprocs_3(self):
+    def test_noninteractive_optional_default_mpiprocs_3(self):  # pylint: disable=invalid-name
         """
         Check that it fails for a negative number of mpiprocs
         """
@@ -320,6 +331,7 @@ scheduler: direct
 
 
 class TestVerdiComputerConfigure(AiidaTestCase):
+    """Test the ``verdi computer configure`` command."""
 
     def setUp(self):
         """Prepare computer builder with common properties."""
@@ -343,10 +355,10 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         self.assertIn('ssh', result.output)
         self.assertIn('local', result.output)
 
-    def test_reachable(self):
+    def test_reachable(self):  # pylint: disable=no-self-use
         """Test reachability of top level and sub commands."""
         import subprocess as sp
-        output = sp.check_output(['verdi', 'computer', 'configure', '--help'])
+        sp.check_output(['verdi', 'computer', 'configure', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'local', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'ssh', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'show', '--help'])
@@ -381,6 +393,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         self.assertIn('local', result.output)
 
     def test_local_interactive(self):
+        """Test computer configuration for local transports."""
         self.comp_builder.label = 'test_local_interactive'
         self.comp_builder.transport = 'local'
         comp = self.comp_builder.new()
@@ -388,6 +401,45 @@ class TestVerdiComputerConfigure(AiidaTestCase):
 
         result = self.cli_runner.invoke(computer_configure, ['local', comp.label], input='\n', catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
+
+    def test_ssh_interactive(self):
+        """
+        Check that the interactive prompt is accepting the correct values.
+
+        Actually, even passing a shorter set of options should work:
+        ``verdi computer configure ssh`` is able to provide sensible default
+        parameters reading from the ssh config file.
+        We are here therefore only checking some of them.
+        """
+        self.comp_builder.label = 'test_ssh_interactive'
+        self.comp_builder.transport = 'ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        remote_username = 'some_remote_user'
+        port = 345
+        look_for_keys = False
+        key_filename = ''
+
+        # I just pass the first four arguments:
+        # the username, the port, look_for_keys, and the key_filename
+        # This testing also checks that an empty key_filename is ok
+        command_input = ('{remote_username}\n{port}\n{look_for_keys}\n{key_filename}\n').format(
+            remote_username=remote_username,
+            port=port,
+            look_for_keys='yes' if look_for_keys else 'no',
+            key_filename=key_filename
+        )
+
+        result = self.cli_runner.invoke(
+            computer_configure, ['ssh', comp.label], input=command_input, catch_exceptions=False
+        )
+        self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
+        new_auth_params = comp.get_authinfo(self.user).get_auth_params()
+        self.assertEqual(new_auth_params['username'], remote_username)
+        self.assertEqual(new_auth_params['port'], port)
+        self.assertEqual(new_auth_params['look_for_keys'], look_for_keys)
+        self.assertEqual(new_auth_params['key_filename'], key_filename)
 
     def test_local_from_config(self):
         """Test configuring a computer from a config file"""
@@ -425,7 +477,7 @@ safe_interval: {interval}
         comp = self.comp_builder.new()
         comp.store()
 
-        options = ['ssh', comp.label, '--non-interactive', '--safe-interval',  '1']
+        options = ['ssh', comp.label, '--non-interactive', '--safe-interval', '1']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
 
@@ -451,9 +503,10 @@ safe_interval: {interval}
         options = ['ssh', comp.label, '--non-interactive', '--username={}'.format(username), '--safe-interval', '1']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
-        self.assertEqual(orm.AuthInfo.objects.get(
-            dbcomputer_id=comp.id, aiidauser_id=self.user.id).get_auth_params()['username'],
-                         username)
+        self.assertEqual(
+            orm.AuthInfo.objects.get(dbcomputer_id=comp.id, aiidauser_id=self.user.id).get_auth_params()['username'],
+            username
+        )
 
     def test_show(self):
         """Test verdi computer configure show <comp>."""
@@ -467,8 +520,9 @@ safe_interval: {interval}
         result = self.cli_runner.invoke(computer_configure, ['show', comp.label, '--defaults'], catch_exceptions=False)
         self.assertIn('* username', result.output)
 
-        result = self.cli_runner.invoke(computer_configure, ['show', comp.label, '--defaults', '--as-option-string'],
-                                        catch_exceptions=False)
+        result = self.cli_runner.invoke(
+            computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], catch_exceptions=False
+        )
         self.assertIn('--username=', result.output)
 
         config_cmd = ['ssh', comp.label, '--non-interactive']
@@ -476,8 +530,9 @@ safe_interval: {interval}
         result_config = self.cli_runner.invoke(computer_configure, config_cmd, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result_config.output)
 
-        result_cur = self.cli_runner.invoke(computer_configure, ['show', comp.label, '--as-option-string'],
-                                            catch_exceptions=False)
+        result_cur = self.cli_runner.invoke(
+            computer_configure, ['show', comp.label, '--as-option-string'], catch_exceptions=False
+        )
         self.assertIn('--username=', result.output)
         self.assertEqual(result_cur.output, result.output)
 
@@ -499,7 +554,8 @@ class TestVerdiComputerCommands(AiidaTestCase):
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
-            workdir='/tmp/aiida')
+            workdir='/tmp/aiida'
+        )
         cls.comp.set_default_mpiprocs_per_machine(1)
         cls.comp.store()
 
@@ -555,8 +611,6 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """
         Test if 'verdi computer show' command works
         """
-        import traceback
-
         # See if we can display info about the test computer.
         result = self.cli_runner.invoke(computer_show, ['comp_cli_test_computer'])
 
@@ -627,8 +681,13 @@ class TestVerdiComputerCommands(AiidaTestCase):
         from aiida.common.exceptions import NotExistent
 
         # Setup a computer to delete during the test
-        comp = orm.Computer(name='computer_for_test_delete', hostname='localhost',
-                            transport_type='local', scheduler_type='direct', workdir='/tmp/aiida').store()
+        orm.Computer(
+            name='computer_for_test_delete',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida'
+        ).store()
 
         # See if the command complains about not getting an invalid computer
         options = ['non_existent_computer_name']
@@ -646,12 +705,14 @@ class TestVerdiComputerCommands(AiidaTestCase):
             orm.Computer.objects.get(name='computer_for_test_delete')
 
     def test_computer_duplicate_interactive(self):
+        """Test 'verdi computer duplicate' in interactive mode."""
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'computer_duplicate_interactive'
         user_input = label + '\n\n\n\n\n\n\n\n\nN'
-        result = self.cli_runner.invoke(computer_duplicate, [str(self.comp.pk)], input=user_input,
-                                        catch_exceptions=False)
+        result = self.cli_runner.invoke(
+            computer_duplicate, [str(self.comp.pk)], input=user_input, catch_exceptions=False
+        )
         self.assertIsNone(result.exception, result.output)
 
         new_computer = orm.Computer.objects.get(name=label)
@@ -667,9 +728,12 @@ class TestVerdiComputerCommands(AiidaTestCase):
         self.assertEqual(self.comp.get_append_text(), new_computer.get_append_text())
 
     def test_computer_duplicate_non_interactive(self):
+        """Test if 'verdi computer duplicate' in non-interactive mode."""
         label = 'computer_duplicate_noninteractive'
-        result = self.cli_runner.invoke(computer_duplicate,
-                                        ['--non-interactive', '--label=' + label, str(self.comp.pk)])
+        result = self.cli_runner.invoke(
+            computer_duplicate,
+            ['--non-interactive', '--label=' + label, str(self.comp.pk)]
+        )
         self.assertIsNone(result.exception, result.output)
 
         new_computer = orm.Computer.objects.get(name=label)

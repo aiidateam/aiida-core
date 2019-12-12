@@ -53,7 +53,6 @@
         aiida/common/datastructures.py|
         aiida/engine/daemon/execmanager.py|
         aiida/engine/processes/calcjobs/tasks.py|
-        aiida/orm/autogroup.py|
         aiida/orm/querybuilder.py|
         aiida/orm/nodes/data/array/bands.py|
         aiida/orm/nodes/data/array/projection.py|
@@ -66,7 +65,6 @@
         aiida/parsers/plugins/arithmetic/add.py|
         aiida/parsers/plugins/templatereplacer/doubler.py|
         aiida/parsers/plugins/templatereplacer/__init__.py|
-        aiida/plugins/entry_point.py|
         aiida/plugins/entry.py|
         aiida/plugins/info.py|
         aiida/plugins/registry.py|

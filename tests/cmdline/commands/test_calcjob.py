@@ -98,6 +98,7 @@ class TestVerdiCalculation(AiidaTestCase):
         cls.arithmetic_job = calculations[0]
 
     def setUp(self):
+        super().setUp()
         self.cli_runner = CliRunner()
 
     def test_calcjob_res(self):

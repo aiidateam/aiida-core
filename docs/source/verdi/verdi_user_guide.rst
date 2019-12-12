@@ -702,14 +702,20 @@ Below is a list with all available subcommands.
       Execute scripts with preloaded AiiDA environment.
 
     Options:
-      -g, --group                   Enables the autogrouping  [default: True]
+      --group / --no-group          Enables the autogrouping  [default: True]
+      -l, --group-label TEXT        Specify the label of the auto group
       -n, --group-name TEXT         Specify the name of the auto group
-      -e, --exclude TEXT            Exclude these classes from auto grouping
-      -i, --include TEXT            Include these classes from auto grouping
+                                    [DEPRECATED, USE --group-label instead]
+      -e, --exclude TEXT            Exclude these classes from auto grouping (use
+                                    full entrypoint strings)
+      -i, --include TEXT            Include these classes from auto grouping  (use
+                                    full entrypoint strings or "all")
       -E, --excludesubclasses TEXT  Exclude these classes and their sub classes
-                                    from auto grouping
+                                    from auto grouping (use full entrypoint
+                                    strings)
       -I, --includesubclasses TEXT  Include these classes and their sub classes
-                                    from auto grouping
+                                    from auto grouping (use full entrypoint
+                                    strings)
       --help                        Show this message and exit.
 
 

@@ -7,23 +7,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Module to manage the autogrouping functionality by ``verdi run``."""
+import warnings
 
 from aiida.common import exceptions, timezone
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import GroupTypeString
+from aiida.plugins import load_entry_point_from_string
 
-
-current_autogroup = None
+CURRENT_AUTOGROUP = None
 
 VERDIAUTOGROUP_TYPE = GroupTypeString.VERDIAUTOGROUP_TYPE.value
 
-# TODO: make the Autogroup usable to the user, and not only to the verdi run
 
 class Autogroup:
     """
     An object used for the autogrouping of objects.
     The autogrouping is checked by the Node.store() method.
-    In the store(), the Node will check if current_autogroup is != None.
+    In the store(), the Node will check if CURRENT_AUTOGROUP is != None.
     If so, it will call Autogroup.is_to_be_grouped, and decide whether to put it in a group.
     Such autogroups are going to be of the VERDIAUTOGROUP_TYPE.
 
@@ -32,127 +33,124 @@ class Autogroup:
     i.e.: a string identifying the base class, than the path to the class as in Calculation/Data -Factories
     """
 
-    def _validate(self, param, is_exact=True):
+    def __init__(self):
+        """Initialize with defaults."""
+        self.exclude = []
+        self.exclude_with_subclasses = []
+        self.include = ['all']
+        self.include_with_subclasses = []
+
+        now = timezone.now()
+        gname = 'Verdi autogroup on ' + now.strftime('%Y-%m-%d %H:%M:%S')
+        self.group_label = gname
+
+    @staticmethod
+    def validate(param, allow_all=True):
         """
         Used internally to verify the sanity of exclude, include lists
+
+        :param param: should be a list of valid entrypoint strings
         """
-        from aiida.plugins import CalculationFactory, DataFactory
-
-        for i in param:
-            if not any([i.startswith('calculation'),
-                        i.startswith('code'),
-                        i.startswith('data'),
-                        i == 'all',
-            ]):
-                raise exceptions.ValidationError('Module not recognized, allow prefixes '
-                                      ' are: calculation, code or data')
-        the_param = [i + '.' for i in param]
-
-        factorydict = {'calculation': locals()['CalculationFactory'],
-                       'data': locals()['DataFactory']}
-
-        for i in the_param:
-            base, module = i.split('.', 1)
-            if base == 'code':
-                if module:
-                    raise exceptions.ValidationError('Cannot have subclasses for codes')
-            elif base == 'all':
+        for string in param:
+            if allow_all and string == 'all':
                 continue
-            else:
-                if is_exact:
-                    try:
-                        factorydict[base](module.rstrip('.'))
-                    except exceptions.EntryPointError:
-                        raise exceptions.ValidationError('Cannot find the class to be excluded')
-        return the_param
+            load_entry_point_from_string(string)  # This will raise a MissingEntryPointError if invalid
 
     def get_exclude(self):
         """Return the list of classes to exclude from autogrouping."""
-        try:
-            return self.exclude
-        except AttributeError:
-            return []
+        return self.exclude
 
     def get_exclude_with_subclasses(self):
         """
         Return the list of classes to exclude from autogrouping.
         Will also exclude their derived subclasses
         """
-        try:
-            return self.exclude_with_subclasses
-        except AttributeError:
-            return []
+        return self.exclude_with_subclasses
 
     def get_include(self):
         """Return the list of classes to include in the autogrouping."""
-        try:
-            return self.include
-        except AttributeError:
-            return []
+        return self.include
 
     def get_include_with_subclasses(self):
         """Return the list of classes to include in the autogrouping.
         Will also include their derived subclasses."""
-        try:
-            return self.include_with_subclasses
-        except AttributeError:
-            return []
+        return self.include_with_subclasses
 
-    def get_group_name(self):
+    def get_group_label(self):
         """Get the name of the group.
         If no group name was set, it will set a default one by itself."""
-        try:
-            return self.group_name
-        except AttributeError:
-            now = timezone.now()
-            gname = 'Verdi autogroup on ' + now.strftime('%Y-%m-%d %H:%M:%S')
-            self.set_group_name(gname)
-            return self.group_name
+        return self.group_label
+
+    def get_group_name(self):
+        """Get the label of the group.
+        If no group label was set, it will set a default one by itself.
+
+        .. deprecated:: 1.1.0
+            Will be removed in `v2.0.0`, use :py:meth:`.get_group_label` instead.
+        """
+        warnings.warn('function is deprecated, use `get_group_label` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+        return self.get_group_label()
 
     def set_exclude(self, exclude):
-        """Return the list of classes to exclude from autogrouping."""
-        the_exclude_classes = self._validate(exclude)
-        if self.get_include() is not None:
-            if 'all.' in self.get_include():
-                if 'all.' in the_exclude_classes:
-                    raise exceptions.ValidationError('Cannot exclude and include all classes')
-        self.exclude = the_exclude_classes
+        """Return the list of classes to exclude from autogrouping.
+
+        :param exclude: a list of valid entry point strings (one of which could be the string 'all')
+        """
+        self.validate(exclude)
+        if 'all' in self.get_include():
+            if 'all' in exclude:
+                raise exceptions.ValidationError('Cannot exclude and include all classes')
+        self.exclude = exclude
 
     def set_exclude_with_subclasses(self, exclude):
         """
         Set the list of classes to exclude from autogrouping.
         Will also exclude their derived subclasses
+
+        :param exclude: a list of valid entry point strings (one of which could be the string 'all')
         """
-        the_exclude_classes = self._validate(exclude, is_exact=False)
-        self.exclude_with_subclasses = the_exclude_classes
+        self.validate(exclude)
+        self.exclude_with_subclasses = exclude
 
     def set_include(self, include):
         """
         Set the list of classes to include in the autogrouping.
-        """
-        the_include_classes = self._validate(include)
-        if self.get_exclude() is not None:
-            if 'all.' in self.get_exclude():
-                if 'all.' in the_include_classes:
-                    raise exceptions.ValidationError('Cannot exclude and include all classes')
 
-        self.include = the_include_classes
+        :param include: a list of valid entry point strings (one of which could be the string 'all')
+        """
+        self.validate(include)
+        if 'all' in self.get_exclude():
+            if 'all' in include:
+                raise exceptions.ValidationError('Cannot exclude and include all classes')
+
+        self.include = include
 
     def set_include_with_subclasses(self, include):
         """
         Set the list of classes to include in the autogrouping.
         Will also include their derived subclasses.
+
+        :param include: a list of valid entry point strings (one of which could be the string 'all')
         """
-        the_include_classes = self._validate(include, is_exact=False)
-        self.include_with_subclasses = the_include_classes
+        self.validate(include)
+        self.include_with_subclasses = include
+
+    def set_group_label(self, label):
+        """
+        Set the label of the group to be created
+        """
+        if not isinstance(label, str):
+            raise exceptions.ValidationError('group label must be a string')
+        self.group_label = label
 
     def set_group_name(self, gname):
+        """Set the name of the group.
+
+        .. deprecated:: 1.1.0
+            Will be removed in `v2.0.0`, use :py:meth:`.set_group_label` instead.
         """
-        Set the name of the group to be created
-        """
-        if not isinstance(gname, str):
-            raise exceptions.ValidationError('group name must be a string')
-        self.group_name = gname
+        warnings.warn('function is deprecated, use `set_group_label` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+        return self.set_group_label(label=gname)
 
     def is_to_be_grouped(self, the_class):
         """
@@ -160,20 +158,39 @@ class Autogroup:
 
         :return (bool): True if the_class is to be included in the autogroup
         """
-        include = self.get_include()
-        include_ws = self.get_include_with_subclasses()
-        if (('all.' in include) or
-                (the_class._plugin_type_string in include) or
-                any([the_class._plugin_type_string.startswith(i) for i in include_ws])
+        # strings, including possibly 'all'
+        include_exact = self.get_include()
+        include_with_subclasses = self.get_include_with_subclasses()
+
+        # actual classes, with 'all' stripped out
+        include_exact_classes = tuple(
+            load_entry_point_from_string(ep_string) for ep_string in include_exact if ep_string != 'all'
+        )
+        include_with_subclasses_classes = tuple(
+            load_entry_point_from_string(ep_string) for ep_string in include_with_subclasses if ep_string != 'all'
+        )
+
+        if (
+            'all' in include_exact or the_class in include_exact_classes or
+            issubclass(the_class, include_with_subclasses_classes)
         ):
-            exclude = self.get_exclude()
-            exclude_ws = self.get_exclude_with_subclasses()
-            if ((not 'all.' in exclude) or
-                    (the_class._plugin_type_string in exclude) or
-                    any([the_class._plugin_type_string.startswith(i) for i in exclude_ws])
-            ):
+            # According to the include, this class should be included
+            # strings, including possibly 'all'
+            exclude_exact = self.get_exclude()
+            exclude_with_subclasses = self.get_exclude_with_subclasses()
+
+            # actual classes, with 'all' stripped out
+            exclude_exact_classes = tuple(
+                load_entry_point_from_string(ep_string) for ep_string in exclude_exact if ep_string != 'all'
+            )
+            exclude_with_subclasses_classes = tuple(
+                load_entry_point_from_string(ep_string) for ep_string in exclude_with_subclasses if ep_string != 'all'
+            )
+
+            if (the_class not in exclude_exact_classes and not issubclass(the_class, exclude_with_subclasses_classes)):
+                # If we are here, it's not excluded
                 return True
-            else:
-                return False
-        else:
+            # If we're here, it's both in the include and in the exclude - exclude it
             return False
+        # If we're here, the class is not in the include - return False
+        return False

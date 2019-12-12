@@ -82,13 +82,13 @@ def get_type_string_from_class(class_module, class_name):
     :param class_module: module of the class
     :param class_name: name of the class
     """
-    from aiida.plugins.entry_point import get_entry_point_from_class, entry_point_group_to_module_path_map
+    from aiida.plugins.entry_point import get_entry_point_from_class, ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
 
     group, entry_point = get_entry_point_from_class(class_module, class_name)
 
     # If we can reverse engineer an entry point group and name, we're dealing with an external class
     if group and entry_point:
-        module_base_path = entry_point_group_to_module_path_map[group]
+        module_base_path = ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP[group]
         type_string = '{}.{}.{}.'.format(module_base_path, entry_point.name, class_name)
 
     # Otherwise we are dealing with an internal class

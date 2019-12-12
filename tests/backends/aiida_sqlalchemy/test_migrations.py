@@ -57,8 +57,8 @@ class TestMigrationsSQLA(AiidaTestCase):
         super().setUp()
         from aiida.orm import autogroup
 
-        self.current_autogroup = autogroup.current_autogroup
-        autogroup.current_autogroup = None
+        self.current_autogroup = autogroup.CURRENT_AUTOGROUP
+        autogroup.CURRENT_AUTOGROUP = None
         assert self.migrate_from and self.migrate_to, \
             "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
 
@@ -99,7 +99,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         """
         from aiida.orm import autogroup
         self._reset_database_and_schema()
-        autogroup.current_autogroup = self.current_autogroup
+        autogroup.CURRENT_AUTOGROUP = self.current_autogroup
         super().tearDown()
 
     def setUpBeforeMigration(self):  # pylint: disable=invalid-name
@@ -218,8 +218,8 @@ class TestBackwardMigrationsSQLA(TestMigrationsSQLA):
         AiidaTestCase.setUp(self)  # pylint: disable=bad-super-call
         from aiida.orm import autogroup
 
-        self.current_autogroup = autogroup.current_autogroup
-        autogroup.current_autogroup = None
+        self.current_autogroup = autogroup.CURRENT_AUTOGROUP
+        autogroup.CURRENT_AUTOGROUP = None
         assert self.migrate_from and self.migrate_to, \
             "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
 
@@ -233,6 +233,11 @@ class TestBackwardMigrationsSQLA(TestMigrationsSQLA):
             # Bring back the DB to the correct state if this setup part fails
             self._reset_database_and_schema()
             raise
+
+    def tearDown(self):
+        """Put back the correct autogroup."""
+        from aiida.orm import autogroup
+        autogroup.CURRENT_AUTOGROUP = self.current_autogroup
 
 
 class TestMigrationEngine(TestMigrationsSQLA):

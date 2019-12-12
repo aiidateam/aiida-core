@@ -81,16 +81,17 @@ def repo_dump(node, output_directory, force):
 
     output_directory = pathlib.Path(output_directory)
 
-    output_directory.mkdir(exist_ok=True)
-
     def _copy_tree(key, output_dir):  # pylint: disable=too-many-branches
+        """
+        Recursively copy the content at the ``key`` path in the given node to
+        the ``output_dir``. Uses prompts in case of existing files or directories.
+        """
         if force:
             prompt_res = 'r'
         for file in node.list_objects(key=key):
-            if not key:
-                file_path = file.name
-            else:
-                file_path = key + '/' + file.name
+            # Not using os.path.join here, because this is the "path"
+            # in the AiiDA node, not an actual OS - level path.
+            file_key = file.name if not key else key + '/' + file.name
             if file.type == FileType.DIRECTORY:
                 new_out_dir = output_dir / file.name
                 if new_out_dir.exists():
@@ -118,10 +119,10 @@ def repo_dump(node, output_directory, force):
                 else:
                     new_out_dir.mkdir()
 
-                _copy_tree(key=file_path, output_dir=new_out_dir)
+                _copy_tree(key=file_key, output_dir=new_out_dir)
             else:
                 assert file.type == FileType.FILE
-                out_file_path = (output_dir / file.name)
+                out_file_path = output_dir / file.name
                 if out_file_path.exists():
                     if not force:
                         prompt_res = click.prompt(
@@ -137,9 +138,9 @@ def repo_dump(node, output_directory, force):
                     else:
                         assert prompt_res == 'r'
                         out_file_path.unlink()
-                with node.open(file_path, 'rb') as in_file:
+                with node.open(file_key, 'rb') as in_file:
                     with out_file_path.open('wb') as out_file:
-                        out_file.write(in_file.read())
+                        shutil.copyfileobj(in_file, out_file)
 
     _copy_tree(key='', output_dir=output_directory)
 

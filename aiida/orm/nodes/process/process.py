@@ -479,7 +479,23 @@ class ProcessNode(Sealable, Node):
 
         :returns: True if this process node is valid to be used for caching, False otherwise
         """
-        return super().is_valid_cache and self.is_finished
+        if not (super().is_valid_cache and self.is_finished):
+            return False
+        try:
+            process_class = self.process_class
+        except Exception as exc:  # pylint: disable=broad-except
+            self.logger.warning(
+                "Not considering {} for caching, '{!r}' when accessing its process class.".format(self, exc)
+            )
+            return False
+        # If the process class does not have an 'is_valid_cache'
+        # method, we do not need to perform this check.
+        try:
+            is_valid_cache_func = process_class.is_valid_cache
+        except AttributeError:
+            return True
+
+        return is_valid_cache_func(self)
 
     def _get_objects_to_hash(self):
         """

@@ -8,10 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to test processess launch."""
+
+from tornado import gen
+
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.engine import launch, Process, CalcJob, WorkChain, calcfunction
+from aiida.manage.manager import get_manager
 
 
 @calcfunction
@@ -288,3 +292,60 @@ class TestLaunchersDryRun(AiidaTestCase):
         self.assertIn('folder', node.dry_run_info)
         for filename in ['single_file', 'file_one', 'file_two']:
             self.assertIn(filename, os.listdir(node.dry_run_info['folder']))
+
+
+class TestLauncherDisabledComputer(AiidaTestCase):
+    """Test the launcher when computer is disabled."""
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """Set up a simple authinfo and for later use."""
+        super().setUpClass(*args, **kwargs)
+        cls.authinfo = orm.AuthInfo(computer=cls.computer, user=orm.User.objects.get_default())
+        cls.authinfo.store()
+
+    def setUp(self):
+        super().setUp()
+        self.assertIsNone(Process.current())
+        self.authinfo.enabled = False  # disable the computer
+
+    def tearDown(self):
+        super().tearDown()
+        self.assertIsNone(Process.current())
+        self.authinfo.enabled = True  # re-enable again
+
+    def test_calcjob_disabled_computer(self):
+        """Test that running a calcjob on a disabled computer will set the job to pause.
+
+        """
+        from aiida.plugins import CalculationFactory
+
+        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+
+        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
+
+        inputs = {
+            'code': code,
+            'x': orm.Int(1),
+            'y': orm.Int(1),
+            'metadata': {
+                'options': {
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    }
+                }
+            }
+        }
+
+        timeout = 1  # Give the runner sometime to pause the calculation after submission
+        runner = get_manager().get_runner()
+
+        @gen.coroutine
+        def run_with_disabled():
+            calc_node = runner.submit(ArithmeticAddCalculation, **inputs)
+            self.assertFalse(calc_node.paused)
+            yield gen.sleep(timeout)
+            self.assertTrue(calc_node.paused)
+
+        runner.loop.run_sync(run_with_disabled)

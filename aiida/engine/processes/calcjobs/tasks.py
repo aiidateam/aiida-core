@@ -12,6 +12,7 @@ import logging
 import tempfile
 
 from tornado.gen import coroutine, Return
+from wrapt import decorator
 
 import plumpy
 
@@ -36,7 +37,27 @@ TRANSPORT_TASK_MAXIMUM_ATTEMTPS = 5
 logger = logging.getLogger(__name__)
 
 
+@decorator
+def pause_task_for_disabled_computer(wrapped, _, args, kwargs):
+    node = args[0]
+    try:
+        # we might have gotten a Process object instead of the CalcJobNode
+        node = node.node  # recover the CalcJobNode
+    except:
+        pass
+    authinfo = node.computer.get_authinfo(node.user)
+
+    if not authinfo.enabled:  # the target computer is disabled for this user
+        raise plumpy.PauseInterruption(
+            'Paused because Computer<{node.computer.name}>'
+            ' is disabled for User<{node.user.email}>'.format(node=node)
+        )
+
+    return wrapped(*args, **kwargs)
+
+
 @coroutine
+@pause_task_for_disabled_computer
 def task_upload_job(process, transport_queue, cancellable):
     """Transport task that will attempt to upload the files of a job calculation to the remote.
 
@@ -45,7 +66,7 @@ def task_upload_job(process, transport_queue, cancellable):
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
 
-    :param node: the node that represents the job calculation
+    :param process: the process for/from which to upload the files
     :param transport_queue: the TransportQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
@@ -88,6 +109,7 @@ def task_upload_job(process, transport_queue, cancellable):
 
 
 @coroutine
+@pause_task_for_disabled_computer
 def task_submit_job(node, transport_queue, calc_info, script_filename, cancellable):
     """Transport task that will attempt to submit a job calculation.
 
@@ -137,6 +159,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
 
 
 @coroutine
+@pause_task_for_disabled_computer
 def task_update_job(node, job_manager, cancellable):
     """Transport task that will attempt to update the scheduler status of the job calculation.
 
@@ -198,6 +221,7 @@ def task_update_job(node, job_manager, cancellable):
 
 
 @coroutine
+@pause_task_for_disabled_computer
 def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancellable):
     """Transport task that will attempt to retrieve all files of a completed job calculation.
 
@@ -259,6 +283,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
 
 
 @coroutine
+@pause_task_for_disabled_computer
 def task_kill_job(node, transport_queue, cancellable):
     """Transport task that will attempt to kill a job calculation.
 

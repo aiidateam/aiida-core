@@ -78,9 +78,9 @@ def reset_session(profile=None):
         engine_url,
         json_serializer=json.dumps,
         json_deserializer=json.loads,
-        encoding='utf-8',
-        pool_size=2,
-        max_overflow=1
+        encoding='utf-8'
+        # pool_size=2,
+        # max_overflow=1
     )
     SCOPED_SESSION_CLASS = scoped_session(sessionmaker(bind=ENGINE, expire_on_commit=True))
     # SCOPED_SESSION_CLASS = sessionmaker(bind=ENGINE, expire_on_commit=True)

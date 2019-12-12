@@ -11,7 +11,7 @@
 
 import plumpy
 
-from aiida.orm import Data, WorkflowNode
+from aiida.orm import Data, WorkflowNode, CalcJobNode, Bool
 from aiida.engine import Process
 
 
@@ -80,3 +80,39 @@ class WaitProcess(Process):
 
     def next_step(self):
         pass
+
+
+class InvalidateCaching(Process):
+    """A process which invalidates cache for some exit codes."""
+
+    _node_class = CalcJobNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('return_exit_code', valid_type=Bool)
+        spec.exit_code(
+            123, 'GENERIC_EXIT_CODE', message='This process should not be used as cache.', invalidates_cache=True
+        )
+
+    def run(self):  # pylint: disable=inconsistent-return-statements
+        if self.inputs.return_exit_code:
+            return self.exit_codes.GENERIC_EXIT_CODE  # pylint: disable=no-member
+
+
+class IsValidCacheHook(Process):
+    """A process which overrides the hook for checking if it is valid cache."""
+
+    _node_class = CalcJobNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('not_valid_cache', valid_type=Bool, default=lambda: Bool(False))
+
+    def run(self):
+        pass
+
+    @classmethod
+    def is_valid_cache(cls, node):
+        return super().is_valid_cache(node) and not node.inputs.not_valid_cache.value

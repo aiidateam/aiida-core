@@ -7,7 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=line-too-long
-"""
-Tests that require access to a (temporary) database
-"""
+"""Configuration file for pytest tests."""
+
+from aiida.backends import BACKEND_SQLA
+from aiida.manage.tests import get_test_backend_name
+
+if get_test_backend_name() != BACKEND_SQLA:
+    collect_ignore_glob = ['*']  # pylint: disable=invalid-name

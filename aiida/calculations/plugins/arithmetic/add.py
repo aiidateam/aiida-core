@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of CalcJobNode to add two numbers for testing and demonstration purposes."""
-
 from aiida import orm
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.engine import CalcJob
@@ -20,19 +19,19 @@ class ArithmeticAddCalculation(CalcJob):
     @classmethod
     def define(cls, spec):
         super().define(spec)
+        # yapf: disable
         spec.inputs['metadata']['options']['parser_name'].default = 'arithmetic.add'
         spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
         spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
         spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
-        spec.exit_code(
-            100, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved folder data node could not be accessed.'
-        )
-        spec.exit_code(
-            110, 'ERROR_READING_OUTPUT_FILE', message='The output file could not be read from the retrieved folder.'
-        )
-        spec.exit_code(120, 'ERROR_INVALID_OUTPUT', message='The output file contains invalid output.')
+        spec.exit_code(300, 'ERROR_NO_RETRIEVED_FOLDER',
+            message='The retrieved folder data node could not be accessed.')
+        spec.exit_code(310, 'ERROR_READING_OUTPUT_FILE',
+            message='The output file could not be read from the retrieved folder.')
+        spec.exit_code(320, 'ERROR_INVALID_OUTPUT',
+            message='The output file contains invalid output.')
 
     def prepare_for_submission(self, folder):
         """

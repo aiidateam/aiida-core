@@ -50,7 +50,6 @@
         aiida/backends/sqlalchemy/models/computer.py|
         aiida/backends/sqlalchemy/models/settings.py|
         aiida/backends/sqlalchemy/models/node.py|
-        aiida/backends/tests/cmdline/commands/test_computer.py|
         aiida/backends/tests/engine/test_work_chain.py|
         aiida/backends/tests/test_dataclasses.py|
         aiida/backends/tests/test_nodes.py|

@@ -37,8 +37,8 @@ class Operation(metaclass=ABCMeta):
         self.set_max_iterations(max_iterations)
         self._track_edges = track_edges  # Logical
         self._track_visits = track_visits  # Logical
-        self._walkers = None
-        self._visits = None
+        # ~ self._walkers = None
+        # ~ self._visits = None
         self._iterations_done = None
 
     def _init_run(self, entity_set):
@@ -52,79 +52,26 @@ class Operation(metaclass=ABCMeta):
             raise TypeError('max iterations has to be an integer')
         self._maxiter = max_iterations
 
-    def set_walkers(self, walkers):
-        check_if_basket(walkers)
-        self._walkers = walkers
+    # ~ def set_walkers(self, walkers):
+    # ~ check_if_basket(walkers)
+    # ~ self._walkers = walkers
 
     def get_iterations_done(self):
         return self._iterations_done
 
-    def get_walkers(self):
-        return self._walkers  #.copy(with_data=True)
+    # ~ def get_walkers(self):
+    # ~ return self._walkers  #.copy(with_data=True)
 
-    def set_visits(self, entity_set):
-        check_if_basket(entity_set)
-        self._visits = entity_set
+    # ~ def set_visits(self, entity_set):
+    # ~ check_if_basket(entity_set)
+    # ~ self._visits = entity_set
 
-    def get_visits(self):
-        return self._visits
+    # ~ def get_visits(self):
+    # ~ return self._visits
 
     @abstractmethod
-    def _load_results(self, target_set, operational_set):
+    def run(self, operational_set):
         pass
-
-    def run(self, walkers=None, visits=None, iterations=None):
-        """run method"""
-
-        if walkers is not None:
-            self.set_walkers(walkers)
-        else:
-            if self._walkers is None:
-                raise RuntimeError('Walkers have not been set for this instance')
-
-        if visits is not None:
-            self.set_visits(visits)
-
-        if self._track_visits and self._visits is None:
-            #raise RuntimeError("Supposed to track visits, but visits have not been "
-            #        "set for this instance")
-            # If nothing is set, I do it here!
-            self.set_visits(self._walkers.copy())
-
-        if iterations is not None:
-            self.set_max_iterations(iterations)
-
-        self._init_run(self._walkers)
-        # The active walkers are all workers where this rule-instance have
-        # not been applied, yet
-        active_walkers = self._walkers.copy()
-        # The new_set is where I can put the results of the query
-        # It starts empty.
-        new_results = self._walkers.copy(with_data=False)
-        # I also need somewhere to store everything I've walked to
-        # with_data is set to True, since the active walkers are of course being visited
-        # even before we start the iterations!
-        visited_this_rule = self._walkers.copy(with_data=True)  # w
-        iterations = 0
-        while (active_walkers and iterations < self._maxiter):
-            iterations += 1
-            # loading results into new_results set:
-            self._load_results(new_results, active_walkers)
-            # It depends on the mode, how I update the walkers
-            # I set the active walkers to all results that have not been visited yet.
-            active_walkers = new_results - visited_this_rule
-            # The visited is augmented:
-            visited_this_rule += active_walkers
-
-        self._iterations_done = iterations
-        if self._mode == MODES.APPEND:
-            self._walkers += visited_this_rule
-        elif self._mode == MODES.REPLACE:
-            self._walkers = active_walkers
-
-        if self._track_visits:
-            self._visits += visited_this_rule
-        return self._walkers
 
 
 class UpdateRule(Operation):
@@ -166,6 +113,7 @@ class UpdateRule(Operation):
 
         self._entity_from = get_spec_from_path(queryhelp, 0)
         self._entity_to = get_spec_from_path(queryhelp, -1)
+        self._accumulator_set = None
         super().__init__(mode, max_iterations, track_edges=track_edges, track_visits=track_visits)
 
     def _init_run(self, entity_set):
@@ -203,6 +151,7 @@ class UpdateRule(Operation):
         primkeys = operational_set[self._entity_from].get_keys()
         # Empty the target set, so that only these results are inside
         target_set.empty()
+        #print("Primkeys", primkeys)
         if primkeys:
             self._querybuilder.add_filter(
                 self._first_tag, {operational_set[self._entity_from].identifier: {
@@ -214,11 +163,49 @@ class UpdateRule(Operation):
             target_set[self._entity_to].add_entities([
                 item[self._last_tag][self._entity_to_identifier] for item in qres
             ])
+            #print("results", [item[self._last_tag][self._entity_to_identifier] for item in qres])
+
             if self._track_edges:
                 target_set['{}_{}'.format(self._entity_to, self._entity_to)].add_entities([
                     tuple(item[key1][key2] for (key1, key2) in self._edge_keys) for item in qres
                 ])
         # Everything is changed in place, no need to return anything
+
+    def set_accumulator(self, accumulator_set):
+        self._accumulator_set = accumulator_set
+
+    def empty_accumulator(self):
+        if self._accumulator_set is not None:
+            self._accumulator_set.empty()
+
+    def run(self, operational_set):
+        """run method"""
+        check_if_basket(operational_set)
+
+        if self._accumulator_set is not None:
+            check_if_basket(self._accumulator_set)
+            self._accumulator_set.empty()
+            self._accumulator_set += operational_set
+            # TO-DO: check basket compatibility here, it might crash later!
+        else:
+            self._accumulator_set = operational_set.copy(with_data=True)
+
+        self._init_run(operational_set)
+        # The new_results is where I can put the results of the query
+        # It starts empty.
+        new_results = operational_set.copy(with_data=False)
+        self._iterations_done = 0
+        while (operational_set and self._iterations_done < self._maxiter):
+            self._iterations_done += 1
+            # loading results into new_results set:
+            self._load_results(new_results, operational_set)
+            # I set the active walkers to all results that have not been visited yet.
+            operational_set = new_results - self._accumulator_set
+            # The accumulator set is augmented:
+            self._accumulator_set += new_results
+        # I return a copy of the accumulator set, to ensure that changes made after do not
+        # affect this attribute of self:
+        return self._accumulator_set.copy()
 
 
 class RuleSaveWalkers(Operation):
@@ -228,8 +215,10 @@ class RuleSaveWalkers(Operation):
         self._stash = stash
         super().__init__(mode=MODES.REPLACE, max_iterations=1, track_edges=True, track_visits=True)
 
-    def _load_results(self, target_set, operational_set):
-        self._stash += self._walkers
+    def run(self, operational_set):
+        self._stash.empty()
+        self._stash += operational_set
+        return operational_set
 
 
 class RuleSetWalkers(Operation):
@@ -239,9 +228,10 @@ class RuleSetWalkers(Operation):
         self._stash = stash
         super().__init__(mode=MODES.REPLACE, max_iterations=1, track_edges=True, track_visits=True)
 
-    def _load_results(self, target_set, operational_set):
-        self._walkers.empty()
-        self._walkers += self._stash
+    def run(self, operational_set):
+        operational_set.empty()
+        operational_set += self._stash
+        return operational_set
 
 
 class RuleSequence(Operation):
@@ -250,16 +240,61 @@ class RuleSequence(Operation):
     def __init__(self, rules, mode=MODES.APPEND, max_iterations=1, track_edges=False, track_visits=True):
         for rule in rules:
             if not isinstance(rule, Operation):
-                print(rule)
                 raise TypeError('rule has to be an instance of Operation-subclass')
         self._rules = rules
+        self._accumulator_set = None
+        self._visits_set = None
         super().__init__(mode, max_iterations, track_edges=track_edges, track_visits=track_visits)
 
-    def _load_results(self, target_set, operational_set):  #ex: active_walkers as last arg
-        target_set.empty()
-        for _, rule in enumerate(self._rules):
-            # I iterate the operational_set through all the rules:
-            #rule.set_walkers(active_walkers)
-            rule.set_visits(self._visits)
-            rule.set_walkers(self._walkers)
-            target_set += rule.run()
+    def set_accumulator(self, accumulator_set):
+        self._accumulator_set = accumulator_set
+
+    def empty_accumulator(self):
+        if self._accumulator_set is not None:
+            self._accumulator_set.empty()
+
+    def set_visits(self, visits_set):
+        self._visits_set = visits_set
+
+    def empty_visits(self):
+        if self._visits_set is not None:
+            self._visits_set.empty()
+
+    def run(self, operational_set):
+        """run method"""
+        check_if_basket(operational_set)
+
+        if self._accumulator_set is not None:
+            check_if_basket(self._accumulator_set)
+            self._accumulator_set.empty()
+            self._accumulator_set += operational_set
+            # TO-DO: check basket compatibility here, it might crash later!
+        else:
+            self._accumulator_set = operational_set.copy(with_data=True)
+        if self._visits_set is not None:
+            check_if_basket(self._visits_set)
+            self._visits_set.empty()
+            self._visits_set += operational_set
+            # TO-DO: check basket compatibility here, it might crash later!
+        else:
+            self._visits_set = operational_set.copy(with_data=True)
+
+        new_results = operational_set.copy(with_data=False)
+        self._iterations_done = 0
+        while (operational_set and self._iterations_done < self._maxiter):
+            self._iterations_done += 1
+            new_results.empty()
+            for _, rule in enumerate(self._rules):
+                # I iterate the operational_set through all the rules:
+                #print('rs-bef', _, operational_set.nodes.get_keys(), new_results.nodes.get_keys())
+                #print(0, self._iterations_done, _, operational_set.nodes)
+                operational_set = rule.run(operational_set)
+                #print(1, self._iterations_done, _, operational_set.nodes)
+                new_results += operational_set
+                self._visits_set += operational_set
+                #print('rs-aft', _, operational_set.nodes.get_keys(), new_results.nodes.get_keys())
+            # I set the operational set to all results that have not been visited yet.
+            operational_set = new_results - self._accumulator_set
+            # The accumulator set is augmented:
+            self._accumulator_set += new_results
+        return self._visits_set.copy()

@@ -10,6 +10,7 @@
 """Module for functions to traverse AiiDA graphs."""
 
 from __future__ import absolute_import
+from numpy import inf
 
 
 def exhaustive_traverser(starting_pks, **kwargs):
@@ -24,8 +25,11 @@ def exhaustive_traverser(starting_pks, **kwargs):
         A dictionary asigning a boolean value to each of the graph traversal
         rules.
     """
+    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     from aiida.orm import Node
     from aiida.orm.querybuilder import QueryBuilder
+    from aiida.tools.graph.age_entities import get_basket
+    from age_rules import UpdateRule, RuleSequence, RuleSaveWalkers, RuleSetWalkers, MODES
     from aiida.common import exceptions
     from aiida.common.links import GraphTraversalRules
 
@@ -71,23 +75,53 @@ def exhaustive_traverser(starting_pks, **kwargs):
             'The following pks are not in the database and must be pruned before this call: {}'.format(missing_pks)
         )
 
-    accumulator_set = operational_set.copy()
-    while operational_set:
-        new_pks_set = set()
+    basket = get_basket(node_ids=operational_set)
+    rules = []
+    if follow_forwards and follow_backwards:
+        stash = basket.copy(with_data=False)
+        rules += [RuleSaveWalkers(stash)]
+    if follow_forwards:
+        query_outgoing = QueryBuilder()
+        query_outgoing.append(Node, tag='sources')
+        query_outgoing.append(Node, edge_filters=links_forwards, with_incoming='sources')
+        rule_outgoing = UpdateRule(query_outgoing, mode=MODES.APPEND, max_iterations=1, track_edges=False)
+        rules += [rule_outgoing]
+    if follow_forwards and follow_backwards:
+        rules += [RuleSetWalkers(stash)]
+    if follow_backwards:
+        query_incomong = QueryBuilder()
+        query_incomong.append(Node, tag='sources')
+        query_incomong.append(Node, edge_filters=links_backwards, with_outgoing='sources')
+        rule_incoming = UpdateRule(query_incomong, mode=MODES.APPEND, max_iterations=1, track_edges=False)
+        rules += [rule_incoming]
+    rulesequence = RuleSequence(rules, max_iterations=inf)
+    results = rulesequence.run(basket)
+    # ~ accumulator_set = operational_set.copy()
+    # ~ while operational_set:
+    # ~ new_pks_set = set()
 
-        if follow_forwards:
-            query_nodes = QueryBuilder()
-            query_nodes.append(Node, filters={'id': {'in': operational_set}}, tag='sources')
-            query_nodes.append(Node, edge_filters=links_forwards, with_incoming='sources', project='id')
-            new_pks_set = new_pks_set.union(set(pk for pk, in query_nodes.iterall()))
+    # ~ if follow_forwards:
+    # ~ query_nodes = QueryBuilder()
+    # ~ query_nodes.append(Node, filters={'id': {'in': operational_set}}, tag='sources')
+    # ~ query_nodes.append(Node, edge_filters=links_forwards, with_incoming='sources', project='id')
+    # ~ new_pks_set = new_pks_set.union(set(pk for pk, in query_nodes.iterall()))
 
-        if follow_backwards:
-            query_nodes = QueryBuilder()
-            query_nodes.append(Node, filters={'id': {'in': operational_set}}, tag='sources')
-            query_nodes.append(Node, edge_filters=links_backwards, with_outgoing='sources', project='id')
-            new_pks_set = new_pks_set.union(set(pk for pk, in query_nodes.iterall()))
+    # ~ if follow_backwards:
+    # ~ query_nodes = QueryBuilder()
+    # ~ query_nodes.append(Node, filters={'id': {'in': operational_set}}, tag='sources')
+    # ~ query_nodes.append(Node, edge_filters=links_backwards, with_outgoing='sources', project='id')
+    # ~ new_pks_set = new_pks_set.union(set(pk for pk, in query_nodes.iterall()))
 
-        operational_set = new_pks_set.difference(accumulator_set)
-        accumulator_set = new_pks_set.union(accumulator_set)
+    # ~ operational_set = new_pks_set.difference(accumulator_set)
+    # ~ accumulator_set = new_pks_set.union(accumulator_set)
 
-    return accumulator_set
+    # ~ if accumulator_set == results.nodes.get_keys():
+    # ~ pass
+    # ~ else:
+    # ~ print(1, accumulator_set)
+    # ~ print(2, results.nodes.get_keys())
+    # ~ print('forwards', links_forwards)
+    # ~ print('backward', links_backwards)
+    # ~ print('origin', starting_pks)
+    # ~ input()
+    return results.nodes.get_keys()

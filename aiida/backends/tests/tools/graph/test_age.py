@@ -116,7 +116,6 @@ class TestNodes(AiidaTestCase):
     def setUp(self):
         super().setUp()
         self.reset_database()
-        print('AMMA RUN THIS THING!')
 
     def test_data_provenance(self):
         """
@@ -135,14 +134,6 @@ class TestNodes(AiidaTestCase):
         queryb0 = QueryBuilder().append(Node).append(Node)
 
         for depth in range(0, self.DEPTH):
-            #print('At depth {}'.format(depth))
-
-            rule = UpdateRule(queryb0, mode=MODES.REPLACE, max_iterations=depth)
-            res = rule.run(basket0.copy())['nodes'].get_keys()
-            #print('   Replace-mode results: {}'.format(', '.join(map(str, sorted(res)))))
-            should_set = desc_dict[depth]
-            self.assertTrue(not (res.difference(should_set) or should_set.difference(res)))
-
             rule = UpdateRule(queryb0, mode=MODES.APPEND, max_iterations=depth)
             res = rule.run(basket0.copy())['nodes'].get_keys()
             #print('   Append-mode  results: {}'.format(', '.join(map(str, sorted(res)))))
@@ -150,7 +141,6 @@ class TestNodes(AiidaTestCase):
             for this_depth in range(depth + 1):
                 for node_id in desc_dict[this_depth]:
                     should_set.add(node_id)
-
             self.assertTrue(not (res.difference(should_set) or should_set.difference(res)))
 
     def test_cycle(self):
@@ -230,8 +220,13 @@ class TestNodes(AiidaTestCase):
         # I first apply the rule to get outputs, than the rule to get inputs
         rs1 = RuleSequence((rule_out, rule_in))
         is_set = rs1.run(basket0.copy())['nodes'].get_keys()
-
         # I expect the union of inputs, outputs, and the calculation:
+        #print(is_set, douts.union(dins).union({calc_ca.id}), calc_cb.id)
+        #print("STASH", stash.nodes)
+
+        #print('INC',[_.id for _ in calc_ca.get_incoming().all_nodes()])
+        #print('OUT',[_.id for _ in calc_ca.get_outgoing().all_nodes()])
+        #input()
         self.assertEqual(is_set, douts.union(dins).union({calc_ca.id}))
 
         # If the order of the rules is exchanged, I end up of also attaching c2 to the results.
@@ -245,8 +240,8 @@ class TestNodes(AiidaTestCase):
         rsave = RuleSaveWalkers(stash)
 
         # Checking whether Rule does the right thing i.e If I stash the result,
-        # the active walkers should be an empty set:
-        self.assertEqual(rsave.run(basket0.copy()), basket0.copy(with_data=False))
+        # the operational sets should be the original set:
+        self.assertEqual(rsave.run(basket0.copy()), basket0.copy(with_data=True))
 
         # Whereas the stash contains the same data as the starting point:
         self.assertEqual(stash, basket0)
@@ -255,6 +250,8 @@ class TestNodes(AiidaTestCase):
 
         # NOw I test whether the stash does the right thing,
         # namely not including c2 in the results:
+        #print(is_set, douts.union(dins).union({calc_ca.id}), calc_cb.id)
+        #print("STASH", stash.nodes)
         self.assertEqual(is_set, douts.union(dins).union({calc_ca.id}))
 
     def test_returns_calls(self):
@@ -330,14 +327,13 @@ class TestNodes(AiidaTestCase):
         """
         total_groups = 10
         self.reset_database()
-        print('\n\n\n####################')
 
         # I create a certain number of groups and save them in this list:
         groups = []
         for idx in range(total_groups):
             new_group = Group(label='group-{}'.format(idx))
             new_group.store()
-            print('Group {}: ID is {}'.format(idx, new_group.id))
+            # print('Group {}: ID is {}'.format(idx, new_group.id))
             groups.append(new_group)
 
         # Same with nodes: Create 1 node less than I have groups, each node will
@@ -373,9 +369,6 @@ class TestNodes(AiidaTestCase):
         # checking whether this updateRule above really visits all the nodes I created:
         self.assertEqual(expecting_set, resulting_set)
 
-        # The visits:
-        self.assertEqual(tested_rule.get_visits()['nodes'].get_keys(), resulting_set)
-
         # I can do the same with 2 rules chained into a RuleSequence:
         qb1 = QueryBuilder()
         qb1.append(Node, tag='n')
@@ -391,19 +384,13 @@ class TestNodes(AiidaTestCase):
         seq = RuleSequence((rule1, rule2), max_iterations=np.inf)
         res = seq.run(basket_inp.copy())
         for should_set, is_set in ((nodes_set.copy(), res['nodes'].get_keys()), (groups_set, res['groups'].get_keys())):
-            print(is_set)
-            print(should_set)
             self.assertEqual(is_set, should_set)
-        print('####################\n\n\n')
-
-        #print('-------\n\n')
 
     def test_edges(self):
         """
         Testing whether nodes (and nodes) can be traversed with the Graph explorer,
         with the links being stored
         """
-
         # I create a certain number of groups and save them in this list:
         # (draw was true but changed it until the function is re-stablished)
         created_dict = create_tree(self.DEPTH, self.NUMBER_OF_CHILDREN, draw=False)
@@ -434,6 +421,7 @@ class TestNodes(AiidaTestCase):
 
         self.assertEqual(touples_are, touples_should)
 
+        # return  # This is REPLACE mode
         rule = UpdateRule(queryb0, mode=MODES.REPLACE, max_iterations=self.DEPTH - 1, track_edges=True)
         res = rule.run(basket0.copy())
 

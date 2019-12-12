@@ -159,7 +159,7 @@ class SlurmScheduler(Scheduler):
         'AllocCPUS', 'Account', 'AssocID', 'AveCPU', 'AvePages', 'AveRSS', 'AveVMSize', 'Cluster', 'Comment', 'CPUTime',
         'CPUTimeRAW', 'DerivedExitCode', 'Elapsed', 'Eligible', 'End', 'ExitCode', 'GID', 'Group', 'JobID', 'JobName',
         'MaxRSS', 'MaxRSSNode', 'MaxRSSTask', 'MaxVMSize', 'MaxVMSizeNode', 'MaxVMSizeTask', 'MinCPU', 'MinCPUNode',
-        'MinCPUTask', 'NCPUS', 'NNodes', 'NodeList', 'NTasks', 'Priority', 'Partition', 'QOSRAW', 'ReqCPUS', 'Reserved',
+        'MinCPUTask', 'NCPUS', 'NNodes', 'NodeList', 'NTasks', 'Priority', 'Partition', 'QOSRAW', 'Reason', 'ReqCPUS', 'Reserved',
         'ResvCPU', 'ResvCPURAW', 'Start', 'State', 'Submit', 'Suspended', 'SystemCPU', 'Timelimit', 'TotalCPU', 'UID',
         'User', 'UserCPU'
     ]
@@ -235,6 +235,65 @@ class SlurmScheduler(Scheduler):
         """
         fields = ','.join(self._detailed_job_info_fields)
         return 'sacct --format={} --parsable --jobs={}'.format(fields, job_id)
+
+    def parse(self, node):
+        """
+        Parse information that is related to scheduler. First, we parse the
+        detailed job info in order to get access to the state and reason which is
+        further analyzed to set the exit status and message.
+        """
+        # Check the detailed job information and parse that
+        detailed_job_info = node.get_detailed_job_info()
+        exit_codes = node.process_class.exit_codes
+        if detailed_job_info is not None:
+            exit_code_info = self._parse_detailed_job_info(detailed_job_info['stdout'], exit_codes)
+        # Locate scheduler files and parse those
+        scheduler_stdout = node.get_scheduler_stdout()
+        scheduler_stderr = node.get_scheduler_stderr()
+        exit_code_file = self._parse_scheduler_files(scheduler_stdout, scheduler_stderr, exit_codes)
+        # For now we check which has the highest exit_status, assuming the higher the number, the
+        # more serious the error
+        if exit_code_file[0] > exit_code_info[0]:
+            return exit_code_file
+        return exit_code_info
+
+    def _parse_detailed_job_info(self, detailed_job_info, exit_codes):
+        """
+        Parse the detailed job info and extract the state and reason.
+
+        Set any detected exit status and message.
+        """
+        # First entry contains the formatting tags, so we skip this
+        details = detailed_job_info.split('\n')[1:]
+        # When using --parsable with saact we get a string which is divided by |,
+        # however, on multinode runs we get multiple entries, typically:
+        # jobid - contains information about the job for all the nodes
+        # jobid.batch - contains information from the master node
+        # jobid.0 - contains information from the master cpu
+        # We only fetch information from the first entry at this point
+        if details:
+            info = details[0].split('|')
+        else:
+            raise ValueError('The supplied job id for the saact command does not return '
+                             'any valid entries.')
+
+        # Compose detailed job info dictionary
+        detailed_info = dict(zip(self._detailed_job_info_fields, info))
+        exit_status = int(detailed_info['ExitCode'].split(':')[0])
+        state = detailed_info['State']
+        reason = detailed_info['Reason']
+        exit_code = exit_codes.NO_ERROR
+        if 'OUT_OF_MEMORY' in state:
+            exit_code = exit_codes.OUT_OF_MEMORY
+        return exit_code
+
+    def _parse_scheduler_files(self, scheduler_stdout, scheduler_stderr, exit_codes):
+        """
+        Parse the scheduler stdout and stderr files.
+
+        Set any detected exit status and message.
+        """
+        return exit_codes.NO_ERROR
 
     def _get_submit_script_header(self, job_tmpl):
         """

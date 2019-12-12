@@ -14,6 +14,7 @@ import uuid
 import datetime
 
 from aiida.schedulers.plugins.slurm import SlurmScheduler, JobState
+from aiida.backends.testbase import AiidaTestCase
 
 # pylint: disable=line-too-long
 # job_id, state_raw, annotation, executing_host, username, number_nodes, number_cpus, allocated_machines, partition, time_limit, time_used, dispatch_time, job_name, submission_time
@@ -27,11 +28,43 @@ TEXT_SQUEUE_TO_TEST = """862540^^^PD^^^Dependency^^^n/a^^^user1^^^20^^^640^^^(De
 863553^^^R^^^None^^^rosa1^^^user5^^^1^^^32^^^nid00471^^^normal^^^30:00^^^29:29^^^2013-05-23T11:44:11^^^bash^^^2013-05-23T10:42:11
 863554^^^R^^^None^^^rosa1^^^user5^^^1^^^32^^^nid00471^^^normal^^^NOT_SET^^^29:29^^^2013-05-23T11:44:11^^^bash^^^2013-05-23T10:42:11
 """
+DICT_DETAILED_JOB_INFO = {
+    'retval':
+    0,
+    'stderr':
+    '',
+    'stdout':
+    'AllocCPUS|Account|AssocID|AveCPU|AvePages|AveRSS|AveVMSize|Cluster|Comment|CPUTime|CPUTimeRAW|DerivedExitCode|Elapsed|Eligible|End|ExitCode|GID|Group|JobID|JobName|MaxRSS|MaxRSSNode|MaxRSSTask|MaxVMSize|MaxVMSizeNode|MaxVMSizeTask|MinCPU|MinCPUNode|MinCPUTask|NCPUS|NNodes|NodeList|NTasks|Priority|Partition|QOSRAW|Reason|ReqCPUS|Reserved|ResvCPU|ResvCPURAW|Start|State|Submit|Suspended|SystemCPU|Timelimit|TotalCPU|UID|User|UserCPU|\n1|nn9995k|350|||||saga||00:00:07|7|0:125|00:00:07|2019-12-12T14:56:37|2019-12-12T14:56:59|0:125|50475|espenfl|161524|aiida-717||||||||||1|1|c5-44||20000|normal|21|None|1|00:00:15|00:00:15|15|2019-12-12T14:56:52|OUT_OF_MEMORY|2019-12-12T14:56:37|00:00:00|00:00.744|00:17:00|00:01.300|50475|espenfl|00:00.556|\n1|nn9995k|350|00:00:00|0|0|275992K|saga||00:00:07|7||00:00:07|2019-12-12T14:56:52|2019-12-12T14:56:59|0:125|||161524.batch|batch|0|c5-44|0|275992K|c5-44|0|00:00:00|c5-44|0|1|1|c5-44|1|||||1||||2019-12-12T14:56:52|OUT_OF_MEMORY|2019-12-12T14:56:52|00:00:00|00:00.321||00:00.606|||00:00.284|\n1|nn9995k|350|00:00:00|0|0|107952K|saga||00:00:07|7||00:00:07|2019-12-12T14:56:52|2019-12-12T14:56:59|0:0|||161524.extern|extern|0|c5-44|0|107952K|c5-44|0|00:00:00|c5-44|0|1|1|c5-44|1|||||1||||2019-12-12T14:56:52|COMPLETED|2019-12-12T14:56:52|00:00:00|00:00:00||00:00:00|||00:00:00|\n1|nn9995k|350|00:00:00|0|0|411308K|saga||00:00:03|3||00:00:03|2019-12-12T14:56:56|2019-12-12T14:56:59|0:125|||161524.0|pmi_proxy|0|c5-44|0|411308K|c5-44|0|00:00:00|c5-44|0|1|1|c5-44|1|||||1||||2019-12-12T14:56:56|OUT_OF_MEMORY|2019-12-12T14:56:56|00:00:00|00:00.422||00:00.693|||00:00.271|\n'
+}
 JOBS_ON_CLUSTER = 8
 JOBS_HELD = 2
 JOBS_QUEUED = 2
 USERS_RUNNING = ['user5', 'user6']
 JOBS_RUNNING = ['862538', '861352', '863553', '863554']
+
+
+class TestParserJobInfoAndFiles(AiidaTestCase):
+    """
+    Tests to verify that the parsing of the detailed job info and parsing
+    of the scheduler standard output and error files works.
+    """
+
+    def test_detailed_job_info_parsing(self):
+        """
+        Test parsing of the detailed job info and that it returns
+        the correct exit code instance
+        """
+        from aiida.orm import CalcJobNode
+        process_type = 'aiida.calculations:{}'.format('templatereplacer')
+        node = CalcJobNode(process_type=process_type)
+        node.computer = self.computer
+        node.set_detailed_job_info(DICT_DETAILED_JOB_INFO)
+        node.store()
+        node.seal()
+        scheduler = SlurmScheduler()
+        exit_code = scheduler.parse(node)
+        self.assertEqual(exit_code.status, 50)
+        self.assertEqual(exit_code.message, 'scheduler reports out of memory')
 
 
 class TestParserSqueue(unittest.TestCase):

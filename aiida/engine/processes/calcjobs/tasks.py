@@ -217,18 +217,15 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     authinfo = node.computer.get_authinfo(node.user)
-
+    scheduler = node.computer.get_scheduler()
     @coroutine
     def do_retrieve():
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
-
+            scheduler.set_transport(transport)
             # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
             # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
             # accounting was called but could not be set.
-            scheduler = node.computer.get_scheduler()
-            scheduler.set_transport(transport)
-
             try:
                 detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
             except FeatureNotAvailable:
@@ -251,6 +248,10 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     else:
         node.set_state(CalcJobState.PARSING)
         logger.info('retrieving CalcJob<{}> successful'.format(node.pk))
+        # Parse the detailed job info, possibly also stdout/stderrfiles,
+        # dependent on scheduler functionality and return an exit status and a message
+        exit_code = scheduler.parse(node)
+        node.set_exit_code(exit_code)
         raise Return(result)
 
 

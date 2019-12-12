@@ -169,6 +169,8 @@ class CalcJob(Process):
         spec.output(cls.link_label_retrieved, valid_type=orm.FolderData, pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
                  'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
+        spec.exit_code(0, 'NO_ERROR', message='no errors')
+        spec.exit_code(50, 'OUT_OF_MEMORY', message='scheduler reports out of memory')
 
     @classproperty
     def spec_options(cls):  # pylint: disable=no-self-argument

@@ -15,8 +15,8 @@ from aiida.common.extendeddicts import AttributeDict
 
 __all__ = ('ExitCode', 'ExitCodesNamespace')
 
-ExitCode = namedtuple('ExitCode', 'status message')
-ExitCode.__new__.__defaults__ = (0, None)
+ExitCode = namedtuple('ExitCode', ['status', 'message', 'invalidates_cache'])
+ExitCode.__new__.__defaults__ = (0, None, False)
 """
 A namedtuple to define an exit code for a :class:`~aiida.engine.processes.process.Process`.
 
@@ -29,6 +29,9 @@ corresponding attributes of the node.
 
 :param message: optional message with more details about the failure mode
 :type message: str
+
+:param invalidates_cache: optional flag, indicating that a process should not be used in caching
+:type invalidates_cache: bool
 """
 
 

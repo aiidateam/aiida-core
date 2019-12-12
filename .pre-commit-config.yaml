@@ -77,7 +77,6 @@
         aiida/backends/tests/test_base_dataclasses.py|
         aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/commands/test_comment.py|
-        aiida/backends/tests/cmdline/commands/test_computer.py|
         aiida/backends/tests/cmdline/commands/test_data.py|
         aiida/backends/tests/cmdline/commands/test_export.py|
         aiida/backends/tests/cmdline/commands/test_group.py|
@@ -152,7 +151,6 @@
         aiida/tools/dbimporters/plugins/nninc.py|
         aiida/tools/dbimporters/plugins/oqmd.py|
         aiida/tools/dbimporters/plugins/pcod.py|
-        aiida/transports/plugins/ssh.py|
         aiida/transports/plugins/test_all_plugins.py|
         aiida/transports/plugins/test_local.py|
         aiida/transports/plugins/test_ssh.py|

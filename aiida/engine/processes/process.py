@@ -894,6 +894,22 @@ class Process(plumpy.Process):
             namespace_list.extend(['.'.join(split_ns[:i]) for i in range(1, len(split_ns) + 1)])
         return namespace_list
 
+    @classmethod
+    def is_valid_cache(cls, node):
+        """Check if the given node can be cached from.
+
+        .. warning :: When overriding this method, make sure to call
+            super().is_valid_cache(node) and respect its output. Otherwise,
+            the 'invalidates_cache' keyword on exit codes will not work.
+
+        This method allows extending the behavior of `ProcessNode.is_valid_cache`
+        from `Process` sub-classes, for example in plug-ins.
+        """
+        try:
+            return not cls.spec().exit_codes(node.exit_status).invalidates_cache
+        except ValueError:
+            return True
+
 
 def get_query_string_from_process_type_string(process_type_string):  # pylint: disable=invalid-name
     """

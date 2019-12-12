@@ -865,9 +865,5 @@ class LocalTransport(Transport):
         """
         return os.path.exists(os.path.join(self.curdir, path))
 
-    @classmethod
-    def _get_safe_interval_suggestion_string(cls, computer):
-        return cls._DEFAULT_SAFE_OPEN_INTERVAL
-
 
 CONFIGURE_LOCAL_CMD = transport_cli.create_configure_cmd('local')

@@ -97,7 +97,7 @@ class BaseTranslator:
         """
         Initialize query builder object by means of _query_help
         """
-        self.qbobj.__init__(**self._query_help)
+        self.qbobj.__init__(given_close_session_on_exit=True, **self._query_help)
         self._is_qb_initialized = True
 
     def count(self):
@@ -451,6 +451,10 @@ class BaseTranslator:
 
         ## Retrieve data
         data = self.get_formatted_result(self._result_type)
+
+        # self.qbobj.get_query()._connection_from_session().close()
+        # self.qbobj.get_query().session.close()
+
         return data
 
     def _check_id_validity(self, node_id):

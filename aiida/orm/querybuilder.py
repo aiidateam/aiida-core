@@ -283,8 +283,9 @@ class QueryBuilder:
     # namely tag of first entity + _EDGE_TAG_DELIM + tag of second entity
     _EDGE_TAG_DELIM = '--'
     _VALID_PROJECTION_KEYS = ('func', 'cast')
+    close_session_on_exit = False
 
-    def __init__(self, backend=None, **kwargs):
+    def __init__(self, backend=None, given_close_session_on_exit=False, **kwargs):
         """
         Instantiates a QueryBuilder instance.
 
@@ -317,6 +318,11 @@ class QueryBuilder:
         """
         backend = backend or get_manager().get_backend()
         self._impl = backend.query()
+        self.close_session_on_exit = given_close_session_on_exit
+        from colored import fg, bg, attr
+        import threading
+        print('%sThread {}: Close_session_on_exit is {}%s'.format(threading.get_ident(), self.close_session_on_exit) % (
+            fg(threading.get_ident() % 240 + 1), attr(0)))
 
         # A list storing the path being traversed by the query
         self._path = []
@@ -2116,6 +2122,17 @@ class QueryBuilder:
 
             yield item
 
+        from colored import fg, bg, attr
+        import threading
+        if self.close_session_on_exit:
+            print('%sThread {}: Closing session because close_session_on_exit is True%s'.format(threading.get_ident()) % (
+                fg(threading.get_ident() % 240 + 1), attr(0)))
+            self.get_query().session.close()
+        # self.get_query()._connection_from_session().close()
+        # self.get_query().session.close()
+        print('%sThread {}: OOOOOOOOOOOOO%s'.format(threading.get_ident()) % (
+        fg(threading.get_ident() % 240 + 1), attr(0)))
+
     def iterdict(self, batch_size=100):
         """
         Same as :meth:`.dict`, but returns a generator.
@@ -2137,6 +2154,17 @@ class QueryBuilder:
                 item[key] = self.get_aiida_entity_res(value)
 
             yield item
+
+        from colored import fg, bg, attr
+        import threading
+        if self.close_session_on_exit:
+            print('%sThread {}: Clossing session because close_session_on_exit is True%s'.format(threading.get_ident()) % (
+                fg(threading.get_ident() % 240 + 1), attr(0)))
+            self.get_query().session.close()
+        # self.get_query()._connection_from_session().close()
+        # self.get_query().session.close()
+
+        print('%sThread {}: AAAAAAAAAAAA%s'.format(threading.get_ident()) % (fg(threading.get_ident() % 240 + 1), attr(0)))
 
     def all(self, batch_size=None):
         """

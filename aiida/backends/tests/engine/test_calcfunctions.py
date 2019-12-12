@@ -20,6 +20,23 @@ from aiida.orm import Int, CalcFunctionNode
 EXECUTION_COUNTER = 0
 
 
+@calcfunction
+def add_calcfunction(data):
+    return Int(data.value + 1)
+
+
+@calcfunction
+def return_stored_calcfunction():
+    return Int(2).store()
+
+
+@calcfunction
+def execution_counter_calcfunction(data):
+    global EXECUTION_COUNTER  # pylint: disable=global-statement
+    EXECUTION_COUNTER += 1
+    return Int(data.value + 1)
+
+
 class TestCalcFunction(AiidaTestCase):
     """Tests for calcfunctions.
 
@@ -31,11 +48,7 @@ class TestCalcFunction(AiidaTestCase):
         self.assertIsNone(Process.current())
         self.default_int = Int(256)
 
-        @calcfunction
-        def test_calcfunction(data):
-            return Int(data.value + 1)
-
-        self.test_calcfunction = test_calcfunction
+        self.test_calcfunction = add_calcfunction
 
     def tearDown(self):
         super().tearDown()
@@ -56,12 +69,8 @@ class TestCalcFunction(AiidaTestCase):
     def test_calcfunction_return_stored(self):
         """Verify that a calcfunction will raise when a stored node is returned."""
 
-        @calcfunction
-        def test_calcfunction():
-            return Int(2).store()
-
         with self.assertRaises(ValueError):
-            test_calcfunction.run_get_node()
+            return_stored_calcfunction.run_get_node()
 
     def test_calcfunction_default_linkname(self):
         """Verify that a calcfunction that returns a single Data node gets a default link label."""
@@ -74,20 +83,14 @@ class TestCalcFunction(AiidaTestCase):
     def test_calcfunction_caching(self):
         """Verify that a calcfunction can be cached."""
 
-        @calcfunction
-        def test_calcfunction(data):
-            global EXECUTION_COUNTER  # pylint: disable=global-statement
-            EXECUTION_COUNTER += 1
-            return Int(data.value + 1)
-
         self.assertEqual(EXECUTION_COUNTER, 0)
-        _, original = test_calcfunction.run_get_node(Int(5))
+        _, original = execution_counter_calcfunction.run_get_node(Int(5))
         self.assertEqual(EXECUTION_COUNTER, 1)
 
         # Caching a CalcFunctionNode should be possible
         with enable_caching(CalcFunctionNode):
             input_node = Int(5)
-            result, cached = test_calcfunction.run_get_node(input_node)
+            result, cached = execution_counter_calcfunction.run_get_node(input_node)
 
             self.assertEqual(EXECUTION_COUNTER, 1)  # Calculation function body should not have been executed
             self.assertTrue(result.is_stored)
@@ -99,16 +102,21 @@ class TestCalcFunction(AiidaTestCase):
         """Verify that changing the source codde of a calcfunction invalidates any existing cached nodes."""
         result_original = self.test_calcfunction(self.default_int)
 
+        # Intentionally using the same name, to check that caching anyway
+        # distinguishes between the calcfunctions.
+        @calcfunction
+        def add_calcfunction(data):  # pylint: disable=redefined-outer-name
+            """This calcfunction has a different source code from the one created at the module level."""
+            return Int(data.value + 2)
+
         with enable_caching(CalcFunctionNode):
-
-            @calcfunction
-            def test_calcfunction(data):
-                """This calcfunction has a different source code from the one setup in the setUp method."""
-                return Int(data.value + 2)
-
-            result_cached, cached = test_calcfunction.run_get_node(self.default_int)
+            result_cached, cached = add_calcfunction.run_get_node(self.default_int)
             self.assertNotEqual(result_original, result_cached)
             self.assertFalse(cached.is_created_from_cache)
+            # Test that the locally-created calcfunction can be cached in principle
+            result2_cached, cached2 = add_calcfunction.run_get_node(self.default_int)
+            self.assertNotEqual(result_original, result2_cached)
+            self.assertTrue(cached2.is_created_from_cache)
 
     def test_calcfunction_do_not_store_provenance(self):
         """Run the function without storing the provenance."""

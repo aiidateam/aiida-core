@@ -9,6 +9,8 @@
 ###########################################################################
 """Module that contains the class definitions necessary to offer support for queries to Materials Project."""
 
+import pytest
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.plugins import DbImporterFactory
 
@@ -25,15 +27,14 @@ class TestMaterialsProject(AiidaTestCase):
     functions.
     """
 
-    import unittest
-
-    @unittest.skipIf(not run_materialsproject_api_tests(), 'MaterialsProject API tests not enabled')
     def test_invalid_api_key(self):  # pylint: disable=no-self-use
         """
         Test if Materials Project rejects an invalid API key and that we catch the error.
         Please enable the test in the profile configurator.
         """
-        import pytest
+
+        if not run_materialsproject_api_tests():
+            pytest.skip('MaterialsProject API tests not enabled')
 
         importer_class = DbImporterFactory('materialsproject')
         importer_parameters = {'api_key': 'thisisawrongkey'}

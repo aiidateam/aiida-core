@@ -15,7 +15,6 @@ import traceback
 
 from tornado import ioloop
 
-from aiida.backends.tests import get_db_test_list
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
 from aiida.common.lang import classproperty
 from aiida.manage import configuration
@@ -81,19 +80,19 @@ class AiidaTestCase(unittest.TestCase):
         cls.__backend_instance = cls.get_backend_class()()
         cls.__backend_instance.setUpClass_method(*args, **kwargs)
         cls.backend = cls.__backend_instance.backend
-        cls.insert_data()
 
         cls._class_was_setup = True
+
+        cls.clean_db()
+        cls.insert_data()
 
     def setUp(self):
         # Install a new IOLoop so that any messing up of the state of the loop is not propagated
         # to subsequent tests.
         # This call should come before the backend instance setup call just in case it uses the loop
         ioloop.IOLoop().make_current()
-        self.__backend_instance.setUp_method()
 
     def tearDown(self):
-        self.__backend_instance.tearDown_method()
         # Clean up the loop we created in set up.
         # Call this after the instance tear down just in case it uses the loop
         reset_manager()
@@ -212,57 +211,3 @@ class AiidaPostgresTestCase(AiidaTestCase):
         """Close the PGTest postgres test cluster."""
         super().tearDownClass(*args, **kwargs)
         cls.pg_test.close()
-
-
-def run_aiida_db_tests(tests_to_run, verbose=False):
-    """
-    Run all tests specified in tests_to_run.
-    Return the list of test results.
-    """
-    # Empty test suite that will be populated
-    test_suite = unittest.TestSuite()
-
-    actually_run_tests = []
-    num_tests_expected = 0
-
-    # To avoid adding more than once the same test
-    # (e.g. if you type both db and db.xxx)
-    found_modulenames = set()
-
-    for test in set(tests_to_run):
-        try:
-            modulenames = get_db_test_list()[test]
-        except KeyError:
-            if verbose:
-                print('Unknown DB test {}... skipping'
-                      .format(test), file=sys.stderr)
-            continue
-        actually_run_tests.append(test)
-
-        for modulename in modulenames:
-            if modulename not in found_modulenames:
-                try:
-                    test_suite.addTest(unittest.defaultTestLoader.loadTestsFromName(modulename))
-                except AttributeError as exception:
-                    try:
-                        import importlib
-                        importlib.import_module(modulename)
-                    except ImportError as exception:
-                        print("[CRITICAL] The module '{}' has an import error and the tests cannot be run:\n{}"
-                              .format(modulename, traceback.format_exc(exception)), file=sys.stderr)
-                        sys.exit(1)
-                found_modulenames.add(modulename)
-
-        num_tests_expected = test_suite.countTestCases()
-
-    if verbose:
-        print('DB tests that will be run: {} (expecting {} tests)'
-              .format(','.join(actually_run_tests), num_tests_expected), file=sys.stderr)
-        results = unittest.TextTestRunner(failfast=False, verbosity=2).run(test_suite)
-    else:
-        results = unittest.TextTestRunner(failfast=False).run(test_suite)
-
-    if verbose:
-        print('Run tests: {}'.format(results.testsRun))
-
-    return results

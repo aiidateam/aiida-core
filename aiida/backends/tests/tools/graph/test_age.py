@@ -236,12 +236,12 @@ class TestNodes(AiidaTestCase):
         self.assertEqual(is_set, douts.union(dins).union({calc_ca.id, calc_cb.id}))
 
         # Testing similar rule, but with the possibility to stash the results:
-        stash = basket0.copy(with_data=False)
+        stash = basket0.get_template()
         rsave = RuleSaveWalkers(stash)
 
         # Checking whether Rule does the right thing i.e If I stash the result,
         # the operational sets should be the original set:
-        self.assertEqual(rsave.run(basket0.copy()), basket0.copy(with_data=True))
+        self.assertEqual(rsave.run(basket0.copy()), basket0.copy())
 
         # Whereas the stash contains the same data as the starting point:
         self.assertEqual(stash, basket0)
@@ -451,3 +451,40 @@ class TestNodes(AiidaTestCase):
             touples_are.add((data_touple[0], data_touple[1]))
 
         self.assertEqual(touples_are, touples_should)
+
+# class TestAiidaEntitySet(AiidaTestCase):
+#     """Tests for AiidaEntitySets"""
+
+#     def setUp(self):
+#         super().setUp()
+#         self.reset_database()
+
+#     def test_class_mismatch(self):
+#         """
+#         Test the case that an AiidaEntitySet is trying to be used in an operation with another class
+#             (e.g. DirectedEdgeSet)
+#         """
+#         pass
+
+#     def test_identifier_mismatch(self):
+#         """
+#         Test the case that the identifier key (e.g. 'id') is different between to AiidaEntitySets
+#         """
+#         pass
+
+#     def test_identifier_type_mismatch(self):
+#         """
+#         Test the case that the variable type of the identifier (e.g. int) is different between AiidaEntitySets
+#         """
+#         pass
+
+#     def test_input_for_set_identifier_mismatch(self):
+#         pass
+
+#     def test_input_for_set_identifier_type_mismatch(self):
+#         pass
+
+#     def test_copy_with_data(self):
+#         pass
+
+

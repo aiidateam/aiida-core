@@ -60,7 +60,7 @@ class Operation(metaclass=ABCMeta):
         return self._iterations_done
 
     # ~ def get_walkers(self):
-    # ~ return self._walkers  #.copy(with_data=True)
+    # ~ return self._walkers  #.copy()
 
     # ~ def set_visits(self, entity_set):
     # ~ check_if_basket(entity_set)
@@ -188,12 +188,12 @@ class UpdateRule(Operation):
             self._accumulator_set += operational_set
             # TO-DO: check basket compatibility here, it might crash later!
         else:
-            self._accumulator_set = operational_set.copy(with_data=True)
+            self._accumulator_set = operational_set.copy()
 
         self._init_run(operational_set)
         # The new_results is where I can put the results of the query
         # It starts empty.
-        new_results = operational_set.copy(with_data=False)
+        new_results = operational_set.get_template()
         self._iterations_done = 0
         while (operational_set and self._iterations_done < self._maxiter):
             self._iterations_done += 1
@@ -270,16 +270,16 @@ class RuleSequence(Operation):
             self._accumulator_set += operational_set
             # TO-DO: check basket compatibility here, it might crash later!
         else:
-            self._accumulator_set = operational_set.copy(with_data=True)
+            self._accumulator_set = operational_set.copy()
         if self._visits_set is not None:
             check_if_basket(self._visits_set)
             self._visits_set.empty()
             self._visits_set += operational_set
             # TO-DO: check basket compatibility here, it might crash later!
         else:
-            self._visits_set = operational_set.copy(with_data=True)
+            self._visits_set = operational_set.copy()
 
-        new_results = operational_set.copy(with_data=False)
+        new_results = operational_set.get_template
         self._iterations_done = 0
         while (operational_set and self._iterations_done < self._maxiter):
             self._iterations_done += 1

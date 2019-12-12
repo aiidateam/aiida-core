@@ -37,9 +37,16 @@ class AbstractSetContainer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def copy(self, with_data=False):
+    def copy(self):
         """
-        Copy
+        Copy with data
+        """
+        pass
+
+    @abstractmethod
+    def get_template(self):
+        """
+        Get an empty copy with same parameters
         """
         pass
 
@@ -60,7 +67,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
             c = a+b # new set that contains everything in a and b
         """
         self._check_self_and_other(other)
-        new = self.copy(with_data=False)  # , identifier=self.identifier)
+        new = self.get_template() # , identifier=self.identifier)
         new.set_key_set_nocheck(self._set.union(other.get_keys()))
         return new
 
@@ -81,7 +88,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
         Subtraction, defined as the set-difference between two entities
         """
         self._check_self_and_other(other)
-        new = self.copy(with_data=False)  #, identifier=self.identifier)
+        new = self.get_template()  #, identifier=self.identifier)
         new.set_key_set_nocheck(self._set.difference(other.get_keys()))
         return new
 
@@ -207,15 +214,19 @@ class AiidaEntitySet(AbstractSetContainer):
             'matches the identifier you defined ({})'.format(input_for_set, self._identifier_type)
         )
 
-    def copy(self, with_data=True):
+    def get_template(self):
         """
-        Create a new instance, with the attributes defining being the same.
-        :param bool with_data: Whether to copy also the data.
+        Create a new instance with identical parameters (aiida_cls, identity, identity_type, etc.)
         """
-        new = AiidaEntitySet(aiida_cls=self.aiida_cls)  #
-        #  , identifier=self.identifier, identifier_type=self._identifier_type)
-        if with_data:
-            new.set_key_set_nocheck(self._set.copy())
+        new = AiidaEntitySet(aiida_cls=self.aiida_cls)
+        return new
+
+    def copy(self):
+        """
+        Create a new instance, copying all data
+        """
+        new = self.get_template()
+        new.set_key_set_nocheck(self._set.copy())
         return new
 
     def get_entities(self):
@@ -307,19 +318,24 @@ class DirectedEdgeSet(AbstractSetContainer):
 
         raise TypeError('{} is not a valid input\n' 'It has to be a tuple'.format(input_for_set))
 
-    def copy(self, with_data=True):
+    def get_template(self):
         """
-        Create a new instance, with the attributes defining being the same.
-        :param bool with_data: Whether to copy also the data.
+        Create a new instance with identical parameters (aiida_cls_to, etc.)
         """
         new = DirectedEdgeSet(
             aiida_cls_to=self.aiida_cls_to,
             aiida_cls_from=self.aiida_cls_from,
             additional_identifiers=self._additional_identifiers
-        )  #
-        #  , identifier=self.identifier, identifier_type=self._identifier_type)
-        if with_data:
-            new.set_key_set_nocheck(self._set.copy())
+        ) #  , identifier_to=self.identifier_to, identifier_type_to=self._identifier_type_to
+          #  , identifier_from=self.identifier_from, identifier_type_from=self._identifier_type_from)
+        return new
+
+    def copy(self):
+        """
+        Create a new instance, copying all data
+        """
+        new = self.get_template()
+        new.set_key_set_nocheck(self._set.copy())
         return new
 
 
@@ -460,10 +476,16 @@ class Basket():
         for set_ in self._dict.values():
             set_.empty()
 
-    def copy(self, with_data=True):
+    def get_template(self):
         new_dict = dict()
         for key, val in self._dict.items():
-            new_dict[key] = val.copy(with_data=with_data)
+            new_dict[key] = val.get_template()
+        return Basket(**new_dict)
+
+    def copy(self):
+        new_dict = dict()
+        for key, val in self._dict.items():
+            new_dict[key] = val.copy()
         return Basket(**new_dict)
 
 

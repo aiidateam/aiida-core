@@ -78,7 +78,7 @@ def exhaustive_traverser(starting_pks, **kwargs):
     basket = get_basket(node_ids=operational_set)
     rules = []
     if follow_forwards and follow_backwards:
-        stash = basket.copy(with_data=False)
+        stash = basket.get_template()
         rules += [RuleSaveWalkers(stash)]
     if follow_forwards:
         query_outgoing = QueryBuilder()

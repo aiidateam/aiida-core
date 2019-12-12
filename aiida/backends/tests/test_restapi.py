@@ -372,7 +372,7 @@ class RESTApiTestSuite(RESTApiTestCase):
     def test_spyros_async_rest(self):
         import threading
         from colored import fg, bg, attr
-        my_range = 3
+        my_range = 20
 
         def my_func(self):
             node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
@@ -417,9 +417,12 @@ class RESTApiTestSuite(RESTApiTestCase):
         #     thr.start()
         #     thr.join()
 
-        # for i in range(my_range):
-        #     print("Running in blocking manner connections {}".format(i))
-        #     my_func(self)
+        for i in range(my_range):
+            print(
+                '%sThread {}: Calling {} times the REST service in blocking manner%s'.format(threading.get_ident(), my_range) %
+                (fg(threading.get_ident() % 240 + 1), attr(0))
+            )
+            my_func(self)
 
         print('Spyros async end')
 

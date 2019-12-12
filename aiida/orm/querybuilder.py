@@ -319,10 +319,10 @@ class QueryBuilder:
         backend = backend or get_manager().get_backend()
         self._impl = backend.query()
         self.close_session_on_exit = given_close_session_on_exit
-        from colored import fg, bg, attr
-        import threading
-        print('%sThread {}: Close_session_on_exit is {}%s'.format(threading.get_ident(), self.close_session_on_exit) % (
-            fg(threading.get_ident() % 240 + 1), attr(0)))
+        # from colored import fg, bg, attr
+        # import threading
+        # print('%sThread {}: Close_session_on_exit is {}%s'.format(threading.get_ident(), self.close_session_on_exit) % (
+        #     fg(threading.get_ident() % 240 + 1), attr(0)))
 
         # A list storing the path being traversed by the query
         self._path = []
@@ -2122,16 +2122,16 @@ class QueryBuilder:
 
             yield item
 
-        from colored import fg, bg, attr
-        import threading
+        # from colored import fg, bg, attr
+        # import threading
         if self.close_session_on_exit:
-            print('%sThread {}: Closing session because close_session_on_exit is True%s'.format(threading.get_ident()) % (
-                fg(threading.get_ident() % 240 + 1), attr(0)))
+        #     print('%sThread {}: Closing session because close_session_on_exit is True%s'.format(threading.get_ident()) % (
+        #         fg(threading.get_ident() % 240 + 1), attr(0)))
             self.get_query().session.close()
-        # self.get_query()._connection_from_session().close()
-        # self.get_query().session.close()
-        print('%sThread {}: OOOOOOOOOOOOO%s'.format(threading.get_ident()) % (
-        fg(threading.get_ident() % 240 + 1), attr(0)))
+        # # self.get_query()._connection_from_session().close()
+        # # self.get_query().session.close()
+        # print('%sThread {}: OOOOOOOOOOOOO%s'.format(threading.get_ident()) % (
+        # fg(threading.get_ident() % 240 + 1), attr(0)))
 
     def iterdict(self, batch_size=100):
         """
@@ -2155,16 +2155,16 @@ class QueryBuilder:
 
             yield item
 
-        from colored import fg, bg, attr
-        import threading
+        # from colored import fg, bg, attr
+        # import threading
         if self.close_session_on_exit:
-            print('%sThread {}: Clossing session because close_session_on_exit is True%s'.format(threading.get_ident()) % (
-                fg(threading.get_ident() % 240 + 1), attr(0)))
+        #     print('%sThread {}: Clossing session because close_session_on_exit is True%s'.format(threading.get_ident()) % (
+        #         fg(threading.get_ident() % 240 + 1), attr(0)))
             self.get_query().session.close()
-        # self.get_query()._connection_from_session().close()
-        # self.get_query().session.close()
-
-        print('%sThread {}: AAAAAAAAAAAA%s'.format(threading.get_ident()) % (fg(threading.get_ident() % 240 + 1), attr(0)))
+        # # self.get_query()._connection_from_session().close()
+        # # self.get_query().session.close()
+        #
+        # print('%sThread {}: AAAAAAAAAAAA%s'.format(threading.get_ident()) % (fg(threading.get_ident() % 240 + 1), attr(0)))
 
     def all(self, batch_size=None):
         """

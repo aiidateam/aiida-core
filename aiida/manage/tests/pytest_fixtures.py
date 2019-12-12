@@ -94,6 +94,7 @@ def aiida_localhost(temp_dir):  # pylint: disable=redefined-outer-name
             scheduler_type='direct'
         )
         computer.store()
+        computer.set_minimum_job_poll_interval(0.)
         computer.configure()
 
     return computer

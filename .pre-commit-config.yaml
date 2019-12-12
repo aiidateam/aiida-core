@@ -136,6 +136,7 @@
         aiida/schedulers/plugins/test_sge.py|
         aiida/schedulers/plugins/test_torque.py|
         aiida/sphinxext/tests/workchain_source/conf.py|
+        aiida/sphinxext/tests/workchain_source_broken/conf.py|
         aiida/tools/data/array/kpoints/legacy.py|
         aiida/tools/data/array/kpoints/seekpath.py|
         aiida/tools/data/__init__.py|

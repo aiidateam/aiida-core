@@ -453,9 +453,6 @@ class BaseTranslator:
         ## Retrieve data
         data = self.get_formatted_result(self._result_type)
 
-        # self.qbobj.get_query()._connection_from_session().close()
-        # self.qbobj.get_query().session.close()
-
         return data
 
     def _check_id_validity(self, node_id):

@@ -9,6 +9,7 @@
 ###########################################################################
 """Implementation of `Scheduler` base class."""
 from abc import abstractmethod
+from enum import Enum
 
 import aiida.common
 from aiida.common.lang import classproperty
@@ -25,6 +26,12 @@ class SchedulerError(AiidaException):
 
 class SchedulerParsingError(SchedulerError):
     pass
+
+
+# Enumerator to host the exit code
+class SchedulerExitCodes(Enum):
+    NO_ERROR = 0
+    OUT_OF_MEMORY = 101
 
 
 class Scheduler:
@@ -286,15 +293,17 @@ class Scheduler:
         # pylint: disable=no-self-use,not-callable,unused-argument
         raise FeatureNotAvailable('Cannot get detailed job info')
 
-    def parse(self, node):  # pylint: disable=no-self-use
+    def parse(self, detailed_job_info, scheduler_stdout, scheduler_stderr):  # pylint: disable=no-self-use, unused-argument
         """
         Handles scheduler related parsing. Details need to be implemented
         on the scheduler level. In case a parse function is not present for each
         respective scheduler, we set the exit status and message to zero and empty.
 
-        :param node: the node that the scheduler is associated with
+        :param detailed_job_info: any string containing relevant detailed job information to be parsed
+        :param scheduler_stdout: the scheduler stdout file as a string
+        :param scheduler_stderr: the scheduler stderr file as a string
         """
-        return node.process_class.exit_codes.NO_ERROR
+        return (0, {'exit_message': '', 'logger_message': ''})
 
     def get_detailed_job_info(self, job_id):
         """Return the detailed job info.

@@ -16,6 +16,7 @@ import re
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
+from aiida.schedulers.scheduler import SchedulerExitCodes
 
 # This maps SLURM state codes to our own status list
 
@@ -236,33 +237,36 @@ class SlurmScheduler(Scheduler):
         fields = ','.join(self._detailed_job_info_fields)
         return 'sacct --format={} --parsable --jobs={}'.format(fields, job_id)
 
-    def parse(self, node):
+    def parse(self, detailed_job_info, scheduler_stdout, scheduler_stderr):
         """
         Parse information that is related to scheduler. First, we parse the
         detailed job info in order to get access to the state and reason which is
         further analyzed to set the exit status and message.
+
+        :param detailed_job_info: the string from sacct associated with `get_detailed_job_info`
+        :param scheduler_stdout: the Slurm scheduler stdout file as a string
+        :param scheduler_stderr: the Slurm scheduler stderr file as a string
         """
         # Check the detailed job information and parse that
-        detailed_job_info = node.get_detailed_job_info()
-        exit_codes = node.process_class.exit_codes
         if detailed_job_info is not None:
-            exit_code_info = self._parse_detailed_job_info(detailed_job_info['stdout'], exit_codes)
-        # Locate scheduler files and parse those
-        scheduler_stdout = node.get_scheduler_stdout()
-        scheduler_stderr = node.get_scheduler_stderr()
-        exit_code_file = self._parse_scheduler_files(scheduler_stdout, scheduler_stderr, exit_codes)
+            exit_code_info = self._parse_detailed_job_info(detailed_job_info)
+        exit_code_file = self._parse_scheduler_files(scheduler_stdout, scheduler_stderr)
         # For now we check which has the highest exit_status, assuming the higher the number, the
-        # more serious the error
-        if exit_code_file[0] > exit_code_info[0]:
+        # more serious the error. Over time we need to establish a feel for how to prioritize these
+        # errors.
+        if exit_code_file[0].value > exit_code_info[0].value:
             return exit_code_file
         return exit_code_info
 
-    def _parse_detailed_job_info(self, detailed_job_info, exit_codes):
+    def _parse_detailed_job_info(self, detailed_job_info):
         """
         Parse the detailed job info and extract the state and reason.
 
         Set any detected exit status and message.
+
+        :param detailed_job_info: the string returned from sacct
         """
+
         # First entry contains the formatting tags, so we skip this
         details = detailed_job_info.split('\n')[1:]
         # When using --parsable with saact we get a string which is divided by |,
@@ -279,21 +283,29 @@ class SlurmScheduler(Scheduler):
 
         # Compose detailed job info dictionary
         detailed_info = dict(zip(self._detailed_job_info_fields, info))
-        exit_status = int(detailed_info['ExitCode'].split(':')[0])
+        # exit_status = int(detailed_info['ExitCode'].split(':')[0])
+        # reason = detailed_info['Reason']
         state = detailed_info['State']
-        reason = detailed_info['Reason']
-        exit_code = exit_codes.NO_ERROR
+        exit_code = (SchedulerExitCodes.NO_ERROR, {'exit_message': '',
+                                                   'logger_message': ''})
         if 'OUT_OF_MEMORY' in state:
-            exit_code = exit_codes.OUT_OF_MEMORY
+            exit_code = (SchedulerExitCodes.OUT_OF_MEMORY,
+                         {'exit_message': 'Scheduler reported out of memory.',
+                          'logger_message': 'Your job used more memory than you specified, or was available on your '
+                          'hardware configuration.'})
         return exit_code
 
-    def _parse_scheduler_files(self, scheduler_stdout, scheduler_stderr, exit_codes):
+    def _parse_scheduler_files(self, scheduler_stdout, scheduler_stderr):
         """
         Parse the scheduler stdout and stderr files.
 
         Set any detected exit status and message.
+
+        :param scheduler_stdout: the Slurm scheduler stdout file as a string
+        :param scheduler_stderr: the Slurm scheduler stderr file as a string
         """
-        return exit_codes.NO_ERROR
+        return (SchedulerExitCodes.NO_ERROR, {'exit_message': '',
+                                              'logger_message': ''})
 
     def _get_submit_script_header(self, job_tmpl):
         """

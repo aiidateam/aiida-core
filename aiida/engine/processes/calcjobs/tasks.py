@@ -250,8 +250,14 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
         logger.info('retrieving CalcJob<{}> successful'.format(node.pk))
         # Parse the detailed job info, possibly also stdout/stderrfiles,
         # dependent on scheduler functionality and return an exit status and a message
-        exit_code = scheduler.parse(node)
-        node.set_exit_code(exit_code)
+        detailed_job_info = node.get_detailed_job_info()
+        if detailed_job_info is not None:
+            detailed_job_info = detailed_job_info['stdout']
+        scheduler_stdout = node.get_scheduler_stdout()
+        scheduler_stderr = node.get_scheduler_stderr()
+        exit_code = scheduler.parse(detailed_job_info, scheduler_stdout, scheduler_stdout)
+        node.set_exit_status(exit_code[0])
+        node.set_exit_message(exit_code[1]['exit_message'])
         raise Return(result)
 
 

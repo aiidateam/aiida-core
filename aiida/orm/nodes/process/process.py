@@ -296,19 +296,6 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.EXIT_STATUS_KEY, None)
 
-    def set_exit_code(self, exit_code):
-        """
-        Set the exit status and message via the exit code framework.
-
-        :param exit_code: a valid tuple set from an ExitCode instance
-        """
-
-        if isinstance(exit_code, tuple):
-            self.set_exit_status(exit_code[0])
-            self.set_exit_message(exit_code[1])
-        else:
-            raise ValueError('exit code is not a tuple set with ExitCode')
-
     def set_exit_status(self, status):
         """
         Set the exit status of the process

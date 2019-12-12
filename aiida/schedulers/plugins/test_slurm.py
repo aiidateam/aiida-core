@@ -54,17 +54,11 @@ class TestParserJobInfoAndFiles(AiidaTestCase):
         Test parsing of the detailed job info and that it returns
         the correct exit code instance
         """
-        from aiida.orm import CalcJobNode
-        process_type = 'aiida.calculations:{}'.format('templatereplacer')
-        node = CalcJobNode(process_type=process_type)
-        node.computer = self.computer
-        node.set_detailed_job_info(DICT_DETAILED_JOB_INFO)
-        node.store()
-        node.seal()
+        detailed_job_info = DICT_DETAILED_JOB_INFO['stdout']
         scheduler = SlurmScheduler()
-        exit_code = scheduler.parse(node)
-        self.assertEqual(exit_code.status, 50)
-        self.assertEqual(exit_code.message, 'scheduler reports out of memory')
+        exit_code = scheduler.parse(detailed_job_info, '', '')
+        self.assertEqual(exit_code[0].value, 101)
+        self.assertEqual(exit_code[1]['exit_message'], 'Scheduler reported out of memory.')
 
 
 class TestParserSqueue(unittest.TestCase):

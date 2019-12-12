@@ -48,13 +48,15 @@ class ProcessSpec(plumpy.ProcessSpec):
         """
         return self._exit_codes
 
-    def exit_code(self, status, label, message):
+    def exit_code(self, status, label, message, invalidates_cache=False):
         """
         Add an exit code to the ProcessSpec
 
         :param status: the exit status integer
         :param label: a label by which the exit code can be addressed
         :param message: a more detailed description of the exit code
+        :param invalidates_cache: when set to `True`, a process exiting
+            with this exit code will not be considered for caching
         """
         if not isinstance(status, int):
             raise TypeError('status should be of integer type and not of {}'.format(type(status)))
@@ -68,7 +70,10 @@ class ProcessSpec(plumpy.ProcessSpec):
         if not isinstance(message, str):
             raise TypeError('message should be of basestring type and not of {}'.format(type(message)))
 
-        self._exit_codes[label] = ExitCode(status, message)
+        if not isinstance(invalidates_cache, bool):
+            raise TypeError('invalidates_cache should be of type bool and not of {}'.format(type(invalidates_cache)))
+
+        self._exit_codes[label] = ExitCode(status, message, invalidates_cache=invalidates_cache)
 
 
 class CalcJobProcessSpec(ProcessSpec):

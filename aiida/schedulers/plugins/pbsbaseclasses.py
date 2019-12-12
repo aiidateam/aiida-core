@@ -175,14 +175,14 @@ class PbsBaseClass(Scheduler):
         _LOGGER.debug('qstat command: {}'.format(comm))
         return comm
 
-    def _get_detailed_jobinfo_command(self, jobid):
+    def _get_detailed_job_info_command(self, job_id):
         """
         Return the command to run to get the detailed information on a job,
         even after the job has finished.
 
         The output text is just retrieved, and returned for logging purposes.
         """
-        return 'tracejob -v {}'.format(escape_for_bash(jobid))
+        return 'tracejob -v {}'.format(escape_for_bash(job_id))
 
     def _get_submit_script_header(self, job_tmpl):
         """

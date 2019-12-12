@@ -272,7 +272,7 @@ class Scheduler:
         """
         raise NotImplementedError
 
-    def _get_detailed_jobinfo_command(self, jobid):
+    def _get_detailed_job_info_command(self, job_id):
         """
         Return the command to run to get the detailed information on a job.
         This is typically called after the job has finished, to retrieve
@@ -283,20 +283,47 @@ class Scheduler:
 
         :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
         """
-        # pylint: disable=no-self-use, not-callable, unused-argument
+        # pylint: disable=no-self-use,not-callable,unused-argument
         raise FeatureNotAvailable('Cannot get detailed job info')
+
+    def get_detailed_job_info(self, job_id):
+        """Return the detailed job info.
+
+        This will be a dictionary with the return value, stderr and stdout content returned by calling the command that
+        is returned by `_get_detailed_job_info_command`.
+
+        :param job_id: the job identifier
+        :return: dictionary with `retval`, `stdout` and `stderr`.
+        """
+        command = self._get_detailed_job_info_command(job_id)  # pylint: disable=assignment-from-no-return
+        with self.transport:
+            retval, stdout, stderr = self.transport.exec_command_wait(command)
+
+        detailed_job_info = {
+            'retval': retval,
+            'stdout': stdout,
+            'stderr': stderr,
+        }
+
+        return detailed_job_info
 
     def get_detailed_jobinfo(self, jobid):
         """
         Return a string with the output of the detailed_jobinfo command.
+
+        .. deprecated:: 1.1.0
+            Will be removed in `v2.0.0`, use :meth:`aiida.schedulers.scheduler.Scheduler.get_detailed_job_info` instead.
 
         At the moment, the output text is just retrieved
         and stored for logging purposes, but no parsing is performed.
 
         :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
         """
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning
+        warnings.warn('function is deprecated, use `get_detailed_job_info` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
 
-        command = self._get_detailed_jobinfo_command(jobid=jobid)  # pylint: disable=assignment-from-no-return
+        command = self._get_detailed_job_info_command(job_id=jobid)  # pylint: disable=assignment-from-no-return
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(command)
 

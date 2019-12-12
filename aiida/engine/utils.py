@@ -294,7 +294,9 @@ def get_process_state_change_timestamp(process_type=None):
     for process_type_key in process_types:
         key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)
         try:
-            timestamps.append(timezone.isoformat_to_datetime(manager.get(key).value))
+            time_stamp = timezone.isoformat_to_datetime(manager.get(key).value)
+            if time_stamp is not None:
+                timestamps.append(time_stamp)
         except NotExistent:
             continue
 

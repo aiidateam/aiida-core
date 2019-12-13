@@ -24,7 +24,7 @@ from aiida.common import timezone
 
 
 class DbSetting(Base):
-    """Class to store nodes' settings using SQLA backend."""
+    """Class to store node settings using the SQLA backend."""
     __tablename__ = 'db_dbsetting'
     __table_args__ = (UniqueConstraint('key'),)
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name

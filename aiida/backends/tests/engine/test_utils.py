@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=global-statement
-"""Module to test engine utils."""
+"""Test engine utilities such as the exponential backoff mechanism."""
 from tornado.ioloop import IOLoop
 from tornado.gen import coroutine
 

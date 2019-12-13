@@ -9,8 +9,8 @@
 ###########################################################################
 # pylint: disable=undefined-variable,wildcard-import,global-statement,redefined-outer-name,cyclic-import
 """Modules related to the configuration of an AiiDA instance."""
-
 import warnings
+
 from aiida.common.warnings import AiidaDeprecationWarning
 from .config import *
 from .options import *
@@ -19,9 +19,6 @@ from .profile import *
 CONFIG = None
 PROFILE = None
 BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as its corresponding backend is loaded
-
-# This is used (and should be set to true) for the correct compilation of the documentation on readthedocs
-IN_RT_DOC_MODE = False
 
 __all__ = (
     config.__all__ + options.__all__ + profile.__all__ +
@@ -64,13 +61,7 @@ def load_profile(profile=None):
     # Reconfigure the logging to make sure that profile specific logging configuration options are taken into account.
     # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded. This should
     # instead be done lazily in `Manager._load_backend`.
-
     configure_logging()
-
-    if IN_RT_DOC_MODE:
-        # on readthedocs, already load backend  (no schema check since no DB)
-        from aiida.manage.manager import get_manager
-        get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
 
     return PROFILE
 
@@ -159,31 +150,7 @@ def get_config(create=False):
     global CONFIG
 
     if not CONFIG:
-        if IN_RT_DOC_MODE:
-            # The following is a dummy config.json configuration that it is used for the
-            # proper compilation of the documentation on readthedocs.
-            from aiida.manage.external.postgres import DEFAULT_DBINFO
-            import tempfile
-            CONFIG = Config(
-                tempfile.mkstemp()[1], {
-                    'default_profile': 'default',
-                    'profiles': {
-                        'default': {
-                            'AIIDADB_ENGINE': 'postgresql_psycopg2',
-                            'AIIDADB_BACKEND': 'django',
-                            'AIIDADB_HOST': DEFAULT_DBINFO['host'],
-                            'AIIDADB_PORT': DEFAULT_DBINFO['port'],
-                            'AIIDADB_NAME': 'aiidadb',
-                            'AIIDADB_PASS': '123',
-                            'default_user_email': 'aiida@epfl.ch',
-                            'AIIDADB_REPOSITORY_URI': 'file:///tmp/repository',
-                            'AIIDADB_USER': 'aiida'
-                        }
-                    }
-                }
-            )
-        else:
-            CONFIG = load_config(create=create)
+        CONFIG = load_config(create=create)
 
         if CONFIG.get_option('warnings.showdeprecations'):
             # If the user does not want to get AiiDA deprecation warnings, we disable them - this can be achieved with::
@@ -230,3 +197,38 @@ def get_config_option(option_name):
         value = value_profile if value_profile else config.get_option(option_name)
 
     return value
+
+
+def load_documentation_profile():
+    """Load a dummy profile just for the purposes of being able to build the documentation.
+
+    The building of the documentation will require importing the `aiida` package and some code will try to access the
+    loaded configuration and profile, which if not done will except. On top of that, Django will raise an exception if
+    the database models are loaded before its settings are loaded. This also is taken care of by loading a Django
+    profile and loading the corresponding backend. Calling this function will perform all these requirements allowing
+    the documentation to be built without having to install and configure AiiDA nor having an actual database present.
+    """
+    import tempfile
+    from aiida.manage.manager import get_manager
+    from .config import Config
+    from .profile import Profile
+
+    global PROFILE
+    global CONFIG
+
+    with tempfile.NamedTemporaryFile() as handle:
+        profile_name = 'readthedocs'
+        profile = {
+            'AIIDADB_ENGINE': 'postgresql_psycopg2',
+            'AIIDADB_BACKEND': 'django',
+            'AIIDADB_PORT': 5432,
+            'AIIDADB_HOST': 'localhost',
+            'AIIDADB_NAME': 'aiidadb',
+            'AIIDADB_PASS': 'aiidadb',
+            'AIIDADB_USER': 'aiida',
+            'AIIDADB_REPOSITORY_URI': 'file:///dev/null',
+        }
+        config = {'default_profile': profile_name, 'profiles': {profile_name: profile}}
+        PROFILE = Profile(profile_name, profile, from_config=True)
+        CONFIG = Config(handle.name, config)
+        get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access

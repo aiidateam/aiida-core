@@ -335,6 +335,8 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
 def computer_enable(computer, user):
     """Enable the computer for the given user."""
     from aiida.common.exceptions import NotExistent
+    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm import CalcJobNode, Computer
 
     try:
         authinfo = computer.get_authinfo(user)
@@ -346,6 +348,17 @@ def computer_enable(computer, user):
     if not authinfo.enabled:
         authinfo.enabled = True
         echo.echo_info("Computer '{}' enabled for user {}.".format(computer.name, user.get_full_name()))
+
+        qb = QueryBuilder()
+        qb.append(CalcJobNode, filters={'attributes.paused': True}, tag='proc')
+        qb.append(Computer, with_node='proc', filters={'id': {'==': computer.id}})
+
+        if qb.first():
+            echo.echo_info(
+                'Found paused processes for Computer<{}>'
+                ', use `verdi process play` to resume them'.format(computer.name)
+            )
+
     else:
         echo.echo_info(
             "Computer '{}' was already enabled for user {} {}.".format(computer.name, user.first_name, user.last_name)

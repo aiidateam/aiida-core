@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=no-member
-"""Module to test processes."""
+"""Module to test AiiDA processes."""
 import threading
 
 import plumpy

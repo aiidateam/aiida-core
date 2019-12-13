@@ -17,6 +17,7 @@ import plumpy
 
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
+from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.engine.utils import exponential_backoff_retry, interruptable_task
 from aiida.schedulers.datastructures import JobState
@@ -36,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 @coroutine
-def task_upload_job(node, transport_queue, calc_info, script_filename, cancellable):
+def task_upload_job(process, transport_queue, cancellable):
     """Transport task that will attempt to upload the files of a job calculation to the remote.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -46,13 +47,13 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
 
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
-    :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
-    :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
+    node = process.node
+
     if node.get_state() == CalcJobState.SUBMITTING:
         logger.warning('CalcJob<{}> already marked as SUBMITTING, skipping task_update_job'.format(node.pk))
         raise Return(True)
@@ -66,7 +67,10 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
     def do_upload():
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
-            raise Return(execmanager.upload_calculation(node, transport, calc_info, script_filename))
+            with SandboxFolder() as folder:
+                calc_info, script_filename = process.presubmit(folder)
+                execmanager.upload_calculation(node, transport, calc_info, folder)
+            raise Return((calc_info, script_filename))
 
     try:
         logger.info('scheduled request to upload CalcJob<{}>'.format(node.pk))
@@ -330,7 +334,7 @@ class Waiting(plumpy.Waiting):
 
             if command == UPLOAD_COMMAND:
                 node.set_process_status(process_status)
-                calc_info, script_filename = yield self._launch_task(task_upload_job, node, transport_queue, *args)
+                calc_info, script_filename = yield self._launch_task(task_upload_job, self.process, transport_queue)
                 raise Return(self.submit(calc_info, script_filename))
 
             elif command == SUBMIT_COMMAND:
@@ -390,7 +394,7 @@ class Waiting(plumpy.Waiting):
     def upload(self, calc_info, script_filename):
         """Return the `Waiting` state that will `upload` the `CalcJob`."""
         msg = 'Waiting for calculation folder upload'
-        return self.create_state(ProcessState.WAITING, None, msg=msg, data=(UPLOAD_COMMAND, calc_info, script_filename))
+        return self.create_state(ProcessState.WAITING, None, msg=msg, data=UPLOAD_COMMAND)
 
     def submit(self, calc_info, script_filename):
         """Return the `Waiting` state that will `submit` the `CalcJob`."""

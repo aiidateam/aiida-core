@@ -13,9 +13,7 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
-
 import os
-
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcJobState
@@ -31,14 +29,13 @@ REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 execlogger = AIIDA_LOGGER.getChild('execmanager')
 
 
-def upload_calculation(node, transport, calc_info, script_filename, inputs=None, dry_run=False):
+def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=False):
     """Upload a `CalcJob` instance
 
     :param node: the `CalcJobNode`.
     :param transport: an already opened transport to use to submit the calculation.
-    :param calc_info: the calculation info datastructure returned by `CalcJobNode.presubmit`
-    :param script_filename: the job launch script returned by `CalcJobNode.presubmit`
-    :return: tuple of ``calc_info`` and ``script_filename``
+    :param calc_info: the calculation info datastructure returned by `CalcJob.presubmit`
+    :param folder: temporary local file system folder containing the inputs written by `CalcJob.prepare_for_submission`
     """
     from logging import LoggerAdapter
     from tempfile import NamedTemporaryFile
@@ -65,7 +62,8 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
         raise ValueError('Cannot submit calculation {} because it has cached input links! If you just want to test the '
                          'submission, set `metadata.dry_run` to True in the inputs.'.format(node.pk))
 
-    folder = node._raw_input_folder
+    # After this call, no modifications to the folder should be done
+    node.put_object_from_tree(folder.abspath, force=True)
 
     # If we are performing a dry-run, the working directory should actually be a local folder that should already exist
     if dry_run:
@@ -250,8 +248,6 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
         remotedata = RemoteData(computer=computer, remote_path=workdir)
         remotedata.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
         remotedata.store()
-
-    return calc_info, script_filename
 
 
 def submit_calculation(calculation, transport, calc_info, script_filename):

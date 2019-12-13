@@ -48,7 +48,7 @@ class TestComputer(AiidaTestCase):
 
 
 class TestGroupsSqla(AiidaTestCase):
-    """Characterized functions."""
+    """Test group queries for sqlalchemy backend."""
 
     def setUp(self):
         from aiida.orm.implementation import sqlalchemy as sqla

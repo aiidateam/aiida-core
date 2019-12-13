@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module to test orm utils"""
+"""Module to test orm utilities to load nodes, codes etc."""
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import NotExistent
 from aiida.orm import Node, Group, Data

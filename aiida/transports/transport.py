@@ -21,19 +21,6 @@ from aiida.common.lang import classproperty
 __all__ = ('Transport',)
 
 
-def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argument
-    """Validate that the number passed to this parameter is a positive number.
-
-    :param ctx: the `click.Context`
-    :param param: the parameter
-    :param value: the value passed for the parameter
-    :raises `click.BadParameter`: if the value is not a positive number
-    """
-    if not isinstance(value, (int, float)) or value < 0:
-        from click import BadParameter
-        raise BadParameter('{} is not a valid positive number'.format(value))
-
-
 class Transport(abc.ABC):
     """Abstract class for a generic transport (ssh, local, ...) ontains the set of minimal methods."""
     # pylint: disable=too-many-public-methods
@@ -47,21 +34,12 @@ class Transport(abc.ABC):
     _valid_auth_params = None
     _MAGIC_CHECK = re.compile('[*?[]')
     _valid_auth_options = []
-    _common_auth_options = [(
-        'safe_interval', {
-            'type': float,
-            'prompt': 'Connection cooldown time (s)',
-            'help': 'Minimum time interval in seconds between consecutive connection openings',
-            'callback': validate_positive_number
-        }
-    )]
 
     def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
         """
         __init__ method of the Transport base class.
         """
         from aiida.common import AIIDA_LOGGER
-        self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
         self._logger = AIIDA_LOGGER.getChild('transport').getChild(self.__class__.__name__)
         self._logger_extra = None
         self._is_open = False
@@ -182,14 +160,14 @@ class Transport(abc.ABC):
 
         :return: `OrderedDict` of tuples, with first element option name and second dictionary of kwargs
         """
-        return OrderedDict(cls._valid_auth_options + cls._common_auth_options)
+        return OrderedDict(cls._valid_auth_options)
 
     @classmethod
-    def _get_safe_interval_suggestion_string(cls, computer):  # pylint: disable=unused-argument
+    def get_safe_open_interval_default(cls):
         """
-        Return as a suggestion the default safe interval of this Transport class.
+        Return the default safe interval of this Transport class.
 
-        This is used to provide a default in ``verdi computer configure``.
+        This is used to get the class default by the AuthInfo.
         """
         return cls._DEFAULT_SAFE_OPEN_INTERVAL
 
@@ -209,24 +187,6 @@ class Transport(abc.ABC):
             return self._logger
         except AttributeError:
             raise InternalError('No self._logger configured for {}!')
-
-    def get_safe_open_interval(self):
-        """
-        Get an interval (in seconds) that suggests how long the user should wait
-        between consecutive calls to open the transport.  This can be used as
-        a way to get the user to not swamp a limited number of connections, etc.
-        However it is just advisory.
-
-        If returns 0, it is taken that there are no reasons to limit the
-        frequency of open calls.
-
-        In the main class, it returns a default value (>0 for safety), set in
-        the _DEFAULT_SAFE_OPEN_INTERVAL attribute of the class. Plugins should override it.
-
-        :return: The safe interval between calling open, in seconds
-        :rtype: float
-        """
-        return self._safe_open_interval
 
     def chdir(self, path):
         """

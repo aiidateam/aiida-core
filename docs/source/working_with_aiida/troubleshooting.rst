@@ -100,18 +100,14 @@ Here are a few things you can do in order to keep AiiDA running smoothly:
        ``verdi computer configure ssh <COMPUTER_NAME>`` and changing the value
        of the *Connection cooldown time* or, alternatively, by running::
 
-         verdi computer configure ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
+         verdi computer configure ssh --non-interactive --safe-open-interval <SECONDS> <COMPUTER_NAME>
      - In addition to the connection cooldown time described above, AiiDA also
        avoids running too often the command to get the list of jobs in the queue
        (``squeue``, ``qstat``, ...), as this can also impact the
        performance of the scheduler. For a given computer, you can increase
-       how many seconds must pass between requests. First load the
-       computer in a shell with ``computer = load_computer(<COMPUTER_NAME>)``.
-       You can check the current value in seconds (by default, 10) with
-       ``computer.get_minimum_job_poll_interval()``.
-       You can then set it to a higher value using::
-
-         computer.set_minimum_job_poll_interval(<NEW_VALUE_SECONDS>)
+       how many seconds must pass between requests. You can change the current value
+       in seconds (by default, 10) similarly as above, via
+       ``verdi computer configure ssh <COMPUTER_NAME>``.
 
 Various tips & tricks
 =====================

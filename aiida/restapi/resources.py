@@ -133,7 +133,6 @@ class BaseResource(Resource):
         :param page: page no, used for pagination
         :return: http response
         """
-
         ## Decode url parts
         path = unquote(request.path)
         query_string = unquote(request.query_string.decode('utf-8'))

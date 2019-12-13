@@ -9,20 +9,92 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` command."""
-
+from collections import namedtuple
 from functools import partial
 
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
-from aiida.common.exceptions import ValidationError, InputValidationError
-from aiida.plugins.entry_point import get_entry_points
+from aiida.common.exceptions import ValidationError, InputValidationError, NotExistent
+from aiida.plugins.entry_point import get_entry_points, load_entry_point
 from aiida.transports import cli as transport_cli
+
+VALID_OPTION_ORIGINS = namedtuple('ValidOptionOrigins', ['TRANSPORT', 'AUTHINFO'])
+
+CONFIGURE_ENTRYPOINT_GROUP = 'aiida.cmdline.computer.configure'
+
+
+def create_option(name, spec, originates_from):
+    """Create a click option from a name and partial specs.
+
+    This is used in transport auth_options and in the common_authinfo options.
+    :param spec: a dictionary of valid click specifiers
+    :param originates_from: a valid origin of this option (tranport, authinfo, ...).
+        It must be a value in the VALID_OPTION_ORIGINS NamedTuple.
+    """
+    from copy import deepcopy
+    spec = deepcopy(spec)
+    name_dashed = name.replace('_', '-')
+    option_name = '--{}'.format(name_dashed)
+    existing_option = spec.pop('option', None)
+    if spec.pop('switch', False):
+        option_name = '--{name}/--no-{name}'.format(name=name_dashed)
+    kwargs = {}
+
+    if 'default' in spec:
+        kwargs['show_default'] = True
+    else:
+        kwargs['contextual_default'] = interactive_default(
+            name, also_noninteractive=spec.pop('non_interactive_default', False), originates_from=originates_from
+        )
+
+    kwargs['cls'] = InteractiveOption
+    kwargs.update(spec)
+    if existing_option:
+        return existing_option(**kwargs)
+    return click.option(option_name, **kwargs)
+
+
+def interactive_default(key, also_noninteractive, originates_from):
+    """Create a contextual_default value callback for an auth_param key.
+
+    :param key: the key
+    :param also_noninteractive: whether this
+    :param originates_from: a valid origin of this option (tranport, authinfo, ...).
+        It must be a value in the VALID_OPTION_ORIGINS NamedTuple.
+    """
+
+    @with_dbenv()
+    def get_default(ctx):
+        """Determine the default value from the context."""
+        from aiida import orm
+
+        user = ctx.params['user'] or orm.User.objects.get_default()
+        computer = ctx.params['computer']
+        try:
+            authinfo = orm.AuthInfo.objects.get(dbcomputer_id=computer.id, aiidauser_id=user.id)
+        except NotExistent:
+            authinfo = orm.AuthInfo(computer=computer, user=user)
+        non_interactive = ctx.params['non_interactive']
+        if not also_noninteractive and non_interactive:
+            raise click.MissingParameter()
+
+        if originates_from == VALID_OPTION_ORIGINS.TRANSPORT:
+            old_authparams = authinfo.get_auth_params()
+            suggestion = old_authparams.get(key)
+            suggestion = suggestion or transport_cli.transport_option_default(key, computer)
+            return suggestion
+        if originates_from == VALID_OPTION_ORIGINS.AUTHINFO:
+            return authinfo.get_metadata_field(key, authinfo.get_default_for_metadata_field(key))
+        raise ValueError('unknown value of `originates_from`: {}'.format(originates_from.value))
+
+    return get_default
 
 
 @verdi.group('computer')
@@ -334,7 +406,6 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
 @with_dbenv()
 def computer_enable(computer, user):
     """Enable the computer for the given user."""
-    from aiida.common.exceptions import NotExistent
 
     try:
         authinfo = computer.get_authinfo(user)
@@ -360,7 +431,6 @@ def computer_disable(computer, user):
     """Disable the computer for the given user.
 
     Thi can be useful, for example, when a computer is under maintenance."""
-    from aiida.common.exceptions import NotExistent
 
     try:
         authinfo = computer.get_authinfo(user)
@@ -462,7 +532,6 @@ def computer_test(user, print_traceback, computer):
     """
     import traceback
     from aiida import orm
-    from aiida.common.exceptions import NotExistent
 
     # Set a user automatically if one is not specified in the command line
     if user is None:
@@ -588,40 +657,98 @@ def computer_configure():
     help='Email address of the AiiDA user for whom to configure this computer (if different from default user).'
 )
 @arguments.COMPUTER()
-def computer_config_show(computer, user, defaults, as_option_string):
+def computer_config_show(computer, user, defaults, as_option_string): # pylint: disable=too-many-locals
     """Show the current configuration for a computer."""
     import tabulate
+    from aiida import orm
     from aiida.common.escaping import escape_for_bash
 
+    if user is None:
+        user = orm.User.objects.get_default()
+    try:
+        authinfo = computer.get_authinfo(user)
+    except NotExistent:
+        echo.echo_critical('Computer<{}> is not yet configured for user<{}>'.format(computer.name, user.email))
+
+    # Dynamically get transport options
     transport_cls = computer.get_transport_class()
-    option_list = [
-        param for param in transport_cli.create_configure_cmd(computer.get_transport_type()).params
-        if isinstance(param, click.core.Option)
+    transport_option_list = [
+        param for param in transport_cli.create_configure_cmd_transport_only(computer.get_transport_type()).params
+        if isinstance(param, click.core.Option) and param.name in transport_cls.get_valid_auth_params()
     ]
-    option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
+
+    # Dynamically get authinfo options
+    authinfo_decorator_list = [
+        create_option(key, options, originates_from=VALID_OPTION_ORIGINS.AUTHINFO)
+        for key, options in authinfo.COMMON_AUTHINFO_OPTIONS
+    ]
+
+    # Previous ones are the decorators, now I have to apply them to a 'pass' function,
+    # create a fake command of it, and then extract the parameters
+    # This is the same that is does in the `create_configure_cmd_transport_only` above
+    authinfo_decorator_list.reverse()
+    fake_command = lambda: None
+    for decorator_option in authinfo_decorator_list:
+        fake_command = decorator_option(fake_command)
+    authinfo_option_list = [param for param in click.command()(fake_command).params]
+
+    # Create the full list of options
+    option_list = transport_option_list + authinfo_option_list
+
+    origin_mapping = {}
+    for t_option in transport_option_list:
+        origin_mapping[t_option.name] = VALID_OPTION_ORIGINS.TRANSPORT
+    for a_option in authinfo_option_list:
+        if a_option.name in origin_mapping:
+            raise RuntimeError('The transport plugin is redefining the command "{}"'.format(a_option.name))
+        origin_mapping[a_option.name] = VALID_OPTION_ORIGINS.AUTHINFO
 
     if defaults:
-        config = {option.name: transport_cli.transport_option_default(option.name, computer) for option in option_list}
+        config = {}
+        for option in option_list:
+            if origin_mapping[option.name] == VALID_OPTION_ORIGINS.TRANSPORT:
+                config[option.name] = transport_cli.transport_option_default(option.name, computer)
+            elif origin_mapping[option.name] == VALID_OPTION_ORIGINS.AUTHINFO:
+                config[option.name] = authinfo.get_default_for_metadata_field(option.name)
     else:
-        config = computer.get_configuration(user)
+        config = authinfo.get_auth_params()
+        for option_name, _ in authinfo.COMMON_AUTHINFO_OPTIONS:
+            try:
+                config[option_name] = authinfo.get_metadata_field(option_name)
+            except KeyError:
+                pass
 
     option_items = []
     if as_option_string:
         for option in option_list:
-            t_opt = transport_cls.auth_options[option.name]
-            if config.get(option.name) or config.get(option.name) is False:
-                if t_opt.get('switch'):
+            if origin_mapping[option.name] == VALID_OPTION_ORIGINS.TRANSPORT:
+                option_data = transport_cls.auth_options[option.name]
+            elif origin_mapping[option.name] == VALID_OPTION_ORIGINS.AUTHINFO:
+                option_data = dict(authinfo.COMMON_AUTHINFO_OPTIONS)[option.name]
+            else:
+                raise RuntimeError('Unknwon type "{}"'.format(option.name))
+            if config.get(option.name) is not None:
+                if option_data.get('switch'):
                     option_value = option.opts[-1] if config.get(option.name
                                                                 ) else '--no-{}'.format(option.name.replace('_', '-'))
-                elif t_opt.get('is_flag'):
-                    is_default = config.get(option.name
-                                           ) == transport_cli.transport_option_default(option.name, computer)
+                elif option_data.get('is_flag'):
+                    is_default = False
+                    if origin_mapping[option.name] == VALID_OPTION_ORIGINS.TRANSPORT:
+                        is_default = config.get(option.name
+                                               ) == transport_cli.transport_option_default(option.name, computer)
+                    elif origin_mapping[option.name] == VALID_OPTION_ORIGINS.AUTHINFO:
+                        is_default = config.get(option.name) == authinfo.get_default_for_metadata_field(option.name)
+                    else:
+                        raise RuntimeError('Unknwon type "{}"'.format(option.name))
+
                     option_value = option.opts[-1] if is_default else ''
                 else:
-                    option_value = '{}={}'.format(option.opts[-1], option.type(config[option.name]))
+                    option_value = '{}={}'.format(
+                        option.opts[-1], escape_for_bash(str(option.type(config[option.name])))
+                    )
                 option_items.append(option_value)
         opt_string = ' '.join(option_items)
-        echo.echo(escape_for_bash(opt_string))
+        echo.echo(opt_string)
     else:
         table = []
         for name in transport_cls.get_valid_auth_params():
@@ -629,8 +756,28 @@ def computer_config_show(computer, user, defaults, as_option_string):
                 table.append(('* ' + name, config[name]))
             else:
                 table.append(('* ' + name, '-'))
+
+        for name, _ in authinfo.COMMON_AUTHINFO_OPTIONS:
+            if name in config:
+                table.append(('* ' + name, config[name]))
+            else:
+                table.append(('* ' + name, '-'))
         echo.echo(tabulate.tabulate(table, tablefmt='plain'))
 
 
-for ep in get_entry_points('aiida.transports'):
-    computer_configure.add_command(transport_cli.create_configure_cmd(ep.name))
+for ep in get_entry_points(CONFIGURE_ENTRYPOINT_GROUP):
+    from aiida.transports.common import COMMON_AUTHINFO_OPTIONS as _COMMON_AUTHINFO_OPTIONS
+
+    _transport_command = load_entry_point(CONFIGURE_ENTRYPOINT_GROUP, ep.name)
+
+    # Dynamically get authinfo options
+    _authinfo_decorator_list = [
+        create_option(key, options, originates_from=VALID_OPTION_ORIGINS.AUTHINFO)
+        for key, options in _COMMON_AUTHINFO_OPTIONS
+    ]
+    _authinfo_decorator_list.reverse()
+
+    for _decorator_option in _authinfo_decorator_list:
+        _transport_command = _decorator_option(_transport_command)
+
+    computer_configure.add_command(_transport_command)

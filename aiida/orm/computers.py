@@ -43,8 +43,6 @@ class Computer(entities.Entity):
 
     _logger = logging.getLogger(__name__)
 
-    PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL = 'minimum_scheduler_poll_interval'  # pylint: disable=invalid-name
-    PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT = 10.  # pylint: disable=invalid-name
     PROPERTY_WORKDIR = 'workdir'
     PROPERTY_SHEBANG = 'shebang'
 
@@ -440,28 +438,6 @@ class Computer(entities.Entity):
                 raise TypeError('def_cpus_per_machine must be an integer (or None)')
         self.set_property('default_mpiprocs_per_machine', def_cpus_per_machine)
 
-    def get_minimum_job_poll_interval(self):
-        """
-        Get the minimum interval between subsequent requests to update the list
-        of jobs currently running on this computer.
-
-        :return: The minimum interval (in seconds)
-        :rtype: float
-        """
-        return self.get_property(
-            self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
-        )
-
-    def set_minimum_job_poll_interval(self, interval):
-        """
-        Set the minimum interval between subsequent requests to update the list
-        of jobs currently running on this computer.
-
-        :param interval: The minimum interval in seconds
-        :type interval: float
-        """
-        self.set_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, interval)
-
     def get_transport(self, user=None):
         """
         Return a Transport class, configured with all correct parameters.
@@ -563,6 +539,9 @@ class Computer(entities.Entity):
             user.
         """
         from . import authinfos
+
+        if user is None:
+            raise ValueError('You need to specify a user that is not None')
 
         return authinfos.AuthInfo.objects(self.backend).get(dbcomputer_id=self.id, aiidauser_id=user.id)
 
@@ -676,13 +655,15 @@ class Computer(entities.Entity):
 
         transport_cls = self.get_transport_class()
         user = user or users.User.objects(self.backend).get_default()
-        valid_keys = set(transport_cls.get_valid_auth_params())
+        valid_transport_keys = set(transport_cls.get_valid_auth_params())
 
-        if not set(kwargs.keys()).issubset(valid_keys):
-            invalid_keys = [key for key in kwargs if key not in valid_keys]
+        valid_authinfo_keys = set(kwargs.keys()).difference(valid_transport_keys)
+        remaining_keys = valid_authinfo_keys.difference([_[0] for _ in authinfos.AuthInfo.COMMON_AUTHINFO_OPTIONS])
+
+        if remaining_keys:
             raise ValueError(
-                '{transport}: received invalid authentication parameter(s) "{invalid}"'.format(
-                    transport=transport_cls, invalid=invalid_keys
+                '{transport}: received invalid authentication parameter(s): {invalid}'.format(
+                    transport=transport_cls.__name__, invalid=', '.join(remaining_keys)
                 )
             )
 
@@ -692,11 +673,15 @@ class Computer(entities.Entity):
             authinfo = authinfos.AuthInfo(self, user)
 
         auth_params = authinfo.get_auth_params()
+        auth_metadata = authinfo.get_metadata()
 
-        if valid_keys:
-            auth_params.update(kwargs)
-            authinfo.set_auth_params(auth_params)
-            authinfo.store()
+        for key in valid_transport_keys:
+            auth_params[key] = kwargs[key]
+        authinfo.set_auth_params(auth_params)
+        for key in valid_authinfo_keys:
+            auth_metadata[key] = kwargs[key]
+        authinfo.set_metadata(auth_metadata)
+        authinfo.store()
 
         return authinfo
 

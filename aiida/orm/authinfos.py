@@ -12,14 +12,39 @@
 from aiida.common import exceptions
 from aiida.plugins import TransportFactory
 from aiida.manage.manager import get_manager
+from aiida.transports.common import (
+    COMMON_AUTHINFO_OPTIONS, PROPERTY_SAFE_OPEN_INTERVAL, PROPERTY_SCHEDULER_POLL_INTERVAL
+)
 from . import entities
 from . import users
 
 __all__ = ('AuthInfo',)
 
+_NO_DEFAULT = tuple()
+
 
 class AuthInfo(entities.Entity):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
+
+    PROPERTY_WORKDIR = 'workdir'
+
+    PROPERTY_SCHEDULER_POLL_INTERVAL = PROPERTY_SCHEDULER_POLL_INTERVAL  # pylint: disable=invalid-name
+    PROPERTY_SCHEDULER_POLL_INTERVAL__DEFAULT = 10.  # pylint: disable=invalid-name
+    PROPERTY_SAFE_OPEN_INTERVAL = PROPERTY_SAFE_OPEN_INTERVAL  # pylint: disable=invalid-name
+    # PROPERTY_SAFE_OPEN_INTERVAL must be obtained from the Transport class, see get_safe_open_interval()
+
+    # These are defined here because often the content is obtained through
+    # an authinfo instance. However, these are defined in another module so that
+    # the command line can load these without having to load 'aiida.orm'
+    COMMON_AUTHINFO_OPTIONS = COMMON_AUTHINFO_OPTIONS
+
+    def get_default_for_metadata_field(self, key):
+        """Return the default for a given metadata field."""
+        if key == self.PROPERTY_SCHEDULER_POLL_INTERVAL:
+            return self.PROPERTY_SCHEDULER_POLL_INTERVAL__DEFAULT
+        if key == self.PROPERTY_SAFE_OPEN_INTERVAL:
+            return self.get_transport().get_safe_open_interval_default()
+        raise ValueError("Unknown field name '{}'".format(key))
 
     class Collection(entities.Collection):
         """The collection of `AuthInfo` entries."""
@@ -30,8 +55,6 @@ class AuthInfo(entities.Entity):
             :param pk: the pk of the entry to delete
             """
             self._backend.authinfos.delete(pk)
-
-    PROPERTY_WORKDIR = 'workdir'
 
     def __init__(self, computer, user, backend=None):
         """Create an `AuthInfo` instance for the given computer and user.
@@ -119,6 +142,25 @@ class AuthInfo(entities.Entity):
         """
         self._backend_entity.set_metadata(metadata)
 
+    def get_metadata_field(self, name, default=_NO_DEFAULT):
+        """Get a single metadata option
+
+        :param name: the name of the option to get from the metadata
+        """
+        if default == _NO_DEFAULT:
+            return self.get_metadata()[name]
+        return self.get_metadata().get(name, default)
+
+    def set_metadata_field(self, name, value):
+        """Set a single metadata option
+
+        :param name: the name of the option to set in the metadata
+        :param value: the value of the option to set in the metadata
+        """
+        metadata = self.get_metadata()
+        metadata[name] = value
+        self.set_metadata(metadata)
+
     def get_workdir(self):
         """Return the working directory.
 
@@ -148,3 +190,54 @@ class AuthInfo(entities.Entity):
             )
 
         return transport_class(machine=computer.hostname, **self.get_auth_params())
+
+    def get_minimum_job_poll_interval(self):
+        """
+        Get the minimum interval between subsequent requests to update the list
+        of jobs currently running on this computer.
+
+        :return: The minimum interval (in seconds)
+        :rtype: float
+        """
+        return self.get_metadata_field(
+            self.PROPERTY_SCHEDULER_POLL_INTERVAL,
+            self.get_default_for_metadata_field(self.PROPERTY_SCHEDULER_OPEN_INTERVAL)
+        )
+
+    def set_minimum_job_poll_interval(self, interval):
+        """
+        Set the minimum interval between subsequent requests to update the list
+        of jobs currently running on this computer.
+
+        :param interval: The minimum interval in seconds
+        :type interval: float
+        """
+        self.set_metadata_field(self.PROPERTY_SCHEDULER_POLL_INTERVAL, interval)
+
+    def get_safe_open_interval(self):
+        """
+        Get an interval (in seconds) that suggests how long the user should wait
+        between consecutive calls to open the transport.  This can be used as
+        a way to get the user to not swamp a limited number of connections, etc.
+        However it is just advisory.
+
+        If returns 0, it is taken that there are no reasons to limit the
+        frequency of open calls.
+
+        In the main class, it returns a default value (>0 for safety), set in
+        the _DEFAULT_SAFE_OPEN_INTERVAL attribute of the class. Plugins should override it.
+
+        :return: The safe interval between calling open, in seconds
+        :rtype: float
+        """
+        return self.get_metadata_field(
+            self.PROPERTY_SAFE_OPEN_INTERVAL, self.get_default_for_metadata_field(self.PROPERTY_SAFE_OPEN_INTERVAL)
+        )
+
+    def set_safe_open_interval(self, interval):
+        """
+        Set an interval (in seconds) that suggests how long the user should wait
+        between consecutive calls to open the transport. See longer description
+        in the ``get_safe_open_interval`` method.
+        """
+        self.set_metadata_field(self.PROPERTY_SAFE_OPEN_INTERVAL, interval)

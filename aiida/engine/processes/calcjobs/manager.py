@@ -72,7 +72,7 @@ class JobsList:
         :return: the minimum interval
         :rtype: float
         """
-        return self._authinfo.computer.get_minimum_job_poll_interval()
+        return self._authinfo.get_minimum_job_poll_interval()
 
     @property
     def last_updated(self):

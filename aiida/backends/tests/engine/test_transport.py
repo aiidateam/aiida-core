@@ -108,7 +108,7 @@ class TestTransportQueue(AiidaTestCase):
         finally:
             self.authinfo.get_transport().__class__.open = original
 
-    def test_safe_interval(self):
+    def test_safe_open_interval(self):
         """Verify that the safe interval for a given in transport is respected by the transport queue."""
 
         # Temporarily set the safe open interval for the default transport to a finite value
@@ -131,7 +131,7 @@ class TestTransportQueue(AiidaTestCase):
                     trans = yield request
                     time_current = time.time()
                     time_elapsed = time_current - time_start
-                    time_minimum = trans.get_safe_open_interval() * (iteration + 1)
+                    time_minimum = self.authinfo.get_safe_open_interval() * (iteration + 1)
                     self.assertTrue(time_elapsed > time_minimum, 'transport safe interval was violated')
 
             for i in range(5):

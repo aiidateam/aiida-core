@@ -77,7 +77,7 @@ class TransportQueue:
             self._transport_requests[authinfo.id] = transport_request
 
             transport = authinfo.get_transport()
-            safe_open_interval = transport.get_safe_open_interval()
+            safe_open_interval = authinfo.get_safe_open_interval()
 
             def do_open():
                 """ Actually open the transport """

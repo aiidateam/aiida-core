@@ -19,6 +19,8 @@ import click
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
+from aiida.transports import cli as transport_cli
+
 from ..transport import Transport, TransportInternalError
 
 __all__ = ('parse_sshconfig', 'convert_to_bool', 'SshTransport')
@@ -1333,3 +1335,6 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             raise
         else:
             return True
+
+
+CONFIGURE_SSH_CMD = transport_cli.create_configure_cmd_transport_only('ssh')

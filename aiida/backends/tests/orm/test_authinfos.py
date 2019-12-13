@@ -26,7 +26,7 @@ class TestAuthinfo(AiidaTestCase):
 
     def test_set_auth_params(self):
         """Test the auth_params setter."""
-        auth_params = {'safe_interval': 100}
+        auth_params = {'safe_open_interval': 100}
 
         self.auth_info.set_auth_params(auth_params)
         self.assertEqual(self.auth_info.get_auth_params(), auth_params)

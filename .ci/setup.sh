@@ -26,7 +26,7 @@ verdi -p $AIIDA_TEST_BACKEND daemon incr 4
 
 verdi -p $AIIDA_TEST_BACKEND computer setup --non-interactive --label=localhost --hostname=localhost --transport=local \
     --scheduler=direct --mpiprocs-per-machine=1 --prepend-text="" --append-text=""
-verdi -p $AIIDA_TEST_BACKEND computer configure local localhost --non-interactive --safe-interval=0
+verdi -p $AIIDA_TEST_BACKEND computer configure local localhost --non-interactive --safe-open-interval=0
 
 # Configure the 'add' code inside localhost
 verdi -p $AIIDA_TEST_BACKEND code setup -n -L add \

@@ -377,7 +377,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         comp = self.comp_builder.new()
         comp.store()
 
-        options = ['local', comp.label, '--non-interactive', '--safe-interval', '0']
+        options = ['local', comp.label, '--non-interactive', '--safe-open-interval', '0']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
 
@@ -453,7 +453,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
 
         with tempfile.NamedTemporaryFile('w') as handle:
             handle.write("""---
-safe_interval: {interval}
+safe_open_interval: {interval}
 """.format(interval=interval))
             handle.flush()
 
@@ -461,7 +461,7 @@ safe_interval: {interval}
             result = self.cli_runner.invoke(computer_configure, options)
 
         self.assertClickResultNoException(result)
-        self.assertEqual(computer.get_configuration()['safe_interval'], interval)
+        self.assertEqual(computer.get_configuration()['safe_open_interval'], interval)
 
     def test_ssh_ni_empty(self):
         """
@@ -477,7 +477,7 @@ safe_interval: {interval}
         comp = self.comp_builder.new()
         comp.store()
 
-        options = ['ssh', comp.label, '--non-interactive', '--safe-interval', '1']
+        options = ['ssh', comp.label, '--non-interactive', '--safe-open-interval', '1']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
 
@@ -500,7 +500,9 @@ safe_interval: {interval}
         comp.store()
 
         username = 'TEST'
-        options = ['ssh', comp.label, '--non-interactive', '--username={}'.format(username), '--safe-interval', '1']
+        options = [
+            'ssh', comp.label, '--non-interactive', '--username={}'.format(username), '--safe-open-interval', '1'
+        ]
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
         self.assertEqual(

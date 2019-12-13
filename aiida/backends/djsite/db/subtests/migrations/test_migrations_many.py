@@ -770,8 +770,8 @@ class TestTextFieldToJSONFieldMigration(TestMigrations):  # pylint: disable=too-
         self.computer = self.DbComputer(**self.computer_kwargs)
         self.computer.save()
 
-        self.auth_info_auth_params = {'safe_interval': 2}
-        self.auth_info_metadata = {'safe_interval': 2}
+        self.auth_info_auth_params = {'safe_open_interval': 2}
+        self.auth_info_metadata = {'safe_open_interval': 2}
         self.auth_info_kwargs = {
             'aiidauser_id': self.default_user.pk,
             'dbcomputer': self.computer,

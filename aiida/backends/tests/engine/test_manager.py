@@ -65,7 +65,7 @@ class TestJobsList(AiidaTestCase):
 
     def test_get_minimum_update_interval(self):
         """Test the `JobsList.get_minimum_update_interval` method."""
-        minimum_poll_interval = self.auth_info.computer.get_minimum_job_poll_interval()
+        minimum_poll_interval = self.auth_info.get_minimum_job_poll_interval()
         self.assertEqual(self.jobs_list.get_minimum_update_interval(), minimum_poll_interval)
 
     def test_last_updated(self):

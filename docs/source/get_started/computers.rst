@@ -382,16 +382,11 @@ on a remote machine until the job poll interval has elapsed since the last updat
 Because of this the maximum possible time before a job update could be the sum of
 the two intervals, however this is unlikely to happen in practice.
 
-The transport open interval is currently hardcoded by the transport plugin;
-typically for SSH it's longer than for local transport.
+Both the transport open interval and the minimum job poll interval are stored
+in the ``AuthInfo`` object and can be set when running ``verdi computer configure``.
 
-The job poll interval can be set programmatically on the corresponding ``Computer``
-object in verdi shell::
-
-    load_computer('localhost').set_minimum_job_poll_interval(30.0)
-
-
-would set the transport interval on a computer called 'localhost' to 30 seconds.
+If you want to change these parameters, run ``verdi computer configure`` again
+on your computer.
 
 .. note:: All of these intervals apply *per worker*, meaning that a daemon with
    multiple workers will not necessarily, overall, respect these limits.

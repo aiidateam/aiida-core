@@ -30,7 +30,7 @@ def the_hans_klok_comeback(loop):
 
 
 class TestWorkchain(AiidaTestCase):
-    """Test work chain."""
+    """Test running work chains."""
 
     def setUp(self):
         super().setUp()

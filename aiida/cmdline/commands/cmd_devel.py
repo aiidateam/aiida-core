@@ -74,13 +74,13 @@ def devel_validate_plugins():
 @verdi_devel.command('tests')
 @click.argument('paths', nargs=-1, type=TestModuleParamType(), required=False)
 @options.VERBOSE(help='Print the class and function name for each test.')
-@decorators.deprecated_command("This command will be removed in aiida-core v2.0.0. Please run 'pytest' instead.")
+@decorators.deprecated_command("This command has been removed in aiida-core v1.1.0. Please run 'pytest' instead.")
 @decorators.with_dbenv()
 def devel_tests(paths, verbose):  # pylint: disable=unused-argument
     """Run the unittest suite or parts of it.
 
     .. deprecated:: 1.1.0
-        Will be removed in `v2.0.0`.
+        Entry point will be completely removed in `v2.0.0`.
     """
 
 

@@ -24,12 +24,6 @@ class TestVerdiCommentCommand(AiidaTestCase):
         self.cli_runner = CliRunner()
         self.node = orm.Data().store()
 
-    def test_comment_show_simple(self):
-        """Test simply calling the show command (without data to show)."""
-        result = self.cli_runner.invoke(cmd_comment.show, [], catch_exceptions=False)
-        self.assertEqual(result.output, '')
-        self.assertEqual(result.exit_code, 0)
-
     def test_comment_show(self):
         """Test showing an existing comment."""
         self.node.add_comment(COMMENT)

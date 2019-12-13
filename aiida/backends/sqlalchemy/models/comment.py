@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=import-error,no-name-in-module
+"""Module to manage comments for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
@@ -20,29 +22,18 @@ from aiida.common.utils import get_new_uuid
 
 
 class DbComment(Base):
+    """Class to store comments using SQLA backend."""
     __tablename__ = 'db_dbcomment'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    dbnode_id = Column(
-        Integer,
-        ForeignKey(
-            'db_dbnode.id', ondelete='CASCADE',
-            deferrable=True, initially='DEFERRED'
-        )
-    )
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
 
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
 
-    user_id = Column(
-        Integer,
-        ForeignKey(
-            'db_dbuser.id', ondelete='CASCADE',
-            deferrable=True, initially='DEFERRED'
-        )
-    )
+    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
     content = Column(Text, nullable=True)
 
     dbnode = relationship('DbNode', backref='dbcomments')
@@ -50,11 +41,12 @@ class DbComment(Base):
 
     def __str__(self):
         return 'DbComment for [{} {}] on {}'.format(
-            self.dbnode.get_simple_name(),
-            self.dbnode.id, timezone.localtime(self.ctime).strftime('%Y-%m-%d')
+            self.dbnode.get_simple_name(), self.dbnode.id,
+            timezone.localtime(self.ctime).strftime('%Y-%m-%d')
         )
 
     def __init__(self, *args, **kwargs):
+        """Adding mtime attribute if not present."""
         super().__init__(*args, **kwargs)
         # The behavior of an unstored Comment instance should be that all its attributes should be initialized in
         # accordance with the defaults specified on the collums, i.e. if a default is specified for the `uuid` column,

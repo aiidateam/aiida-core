@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module to test RabbitMQ."""
 import datetime
 
 import plumpy
@@ -20,9 +21,7 @@ from aiida.orm import Int
 
 
 class TestProcessControl(AiidaTestCase):
-    """
-    Test AiiDA's RabbitMQ functionalities.
-    """
+    """Test AiiDA's RabbitMQ functionalities."""
 
     TIMEOUT = 2.
 
@@ -40,7 +39,8 @@ class TestProcessControl(AiidaTestCase):
         super().tearDown()
 
     def test_submit_simple(self):
-        # Launch the process
+        """"Launch the process."""
+
         @gen.coroutine
         def do_submit():
             calc_node = submit(test_processes.DummyProcess)
@@ -52,13 +52,14 @@ class TestProcessControl(AiidaTestCase):
         self.runner.loop.run_sync(do_submit)
 
     def test_launch_with_inputs(self):
+        """Test launch with inputs."""
 
         @gen.coroutine
         def do_launch():
-            a = Int(5)
-            b = Int(10)
+            term_a = Int(5)
+            term_b = Int(10)
 
-            calc_node = submit(test_processes.AddProcess, a=a, b=b)
+            calc_node = submit(test_processes.AddProcess, a=term_a, b=term_b)
             yield self.wait_for_calc(calc_node)
             self.assertTrue(calc_node.is_finished_ok)
             self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
@@ -70,6 +71,7 @@ class TestProcessControl(AiidaTestCase):
             submit(test_processes.AddProcess, a=Int(5))
 
     def test_exception_process(self):
+        """Test process excpetion."""
 
         @gen.coroutine
         def do_exception():
@@ -155,8 +157,9 @@ class TestProcessControl(AiidaTestCase):
         future = self.runner.get_calculation_future(calc_node.pk)
         raise gen.Return((yield with_timeout(future, timeout)))
 
+    @staticmethod
     @gen.coroutine
-    def wait_future(self, future, timeout=2.):
+    def wait_future(future, timeout=2.):
         raise gen.Return((yield with_timeout(future, timeout)))
 
 

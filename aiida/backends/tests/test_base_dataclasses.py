@@ -7,9 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Tests for AiiDA base data classes."""
 import operator
-
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
@@ -18,14 +17,17 @@ from aiida.orm.nodes.data.bool import get_true_node, get_false_node
 
 
 class TestList(AiidaTestCase):
+    """Test AiiDA List class."""
 
     def test_creation(self):
         node = List()
         self.assertEqual(len(node), 0)
         with self.assertRaises(IndexError):
-            node[0]
+            node[0]  # pylint: disable=pointless-statement
 
     def test_append(self):
+        """Test append() member function."""
+
         def do_checks(node):
             self.assertEqual(len(node), 1)
             self.assertEqual(node[0], 4)
@@ -41,13 +43,14 @@ class TestList(AiidaTestCase):
         do_checks(node)
 
     def test_extend(self):
+        """Test extend() member function."""
         lst = [1, 2, 3]
 
         def do_checks(node):
             self.assertEqual(len(node), len(lst))
             # Do an element wise comparison
-            for x, y in zip(lst, node):
-                self.assertEqual(x, y)
+            for lst_, node_ in zip(lst, node):
+                self.assertEqual(lst_, node_)
 
         node = List()
         node.extend(lst)
@@ -57,7 +60,7 @@ class TestList(AiidaTestCase):
         self.assertEqual(len(node), len(lst) * 2)
 
         # Do an element wise comparison
-        for i in range(len(lst)):
+        for i, _ in enumerate(lst):
             self.assertEqual(lst[i], node[i])
             self.assertEqual(lst[i], node[i % len(lst)])
 
@@ -68,6 +71,7 @@ class TestList(AiidaTestCase):
         do_checks(node)
 
     def test_mutability(self):
+        """Test list's mutability before and after storage."""
         node = List()
         node.append(5)
         node.store()
@@ -88,7 +92,9 @@ class TestList(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             node.reverse()
 
-    def test_store_load(self):
+    @staticmethod
+    def test_store_load():
+        """Test load_node on just stored object."""
         node = List(list=[1, 2, 3])
         node.store()
 
@@ -97,6 +103,7 @@ class TestList(AiidaTestCase):
 
 
 class TestFloat(AiidaTestCase):
+    """Test Float class."""
 
     def setUp(self):
         super().setUp()
@@ -104,167 +111,180 @@ class TestFloat(AiidaTestCase):
         self.all_types = [Int, Float, Bool, Str]
 
     def test_create(self):
-        a = Float()
+        """Creating basic data objects."""
+        term_a = Float()
         # Check that initial value is zero
-        self.assertAlmostEqual(a.value, 0.0)
+        self.assertAlmostEqual(term_a.value, 0.0)
 
-        f = Float(6.0)
-        self.assertAlmostEqual(f.value, 6.)
-        self.assertAlmostEqual(f, Float(6.0))
+        float_ = Float(6.0)
+        self.assertAlmostEqual(float_.value, 6.)
+        self.assertAlmostEqual(float_, Float(6.0))
 
-        i = Int()
-        self.assertAlmostEqual(i.value, 0)
-        i = Int(6)
-        self.assertAlmostEqual(i.value, 6)
-        self.assertAlmostEqual(f, i)
+        int_ = Int()
+        self.assertAlmostEqual(int_.value, 0)
+        int_ = Int(6)
+        self.assertAlmostEqual(int_.value, 6)
+        self.assertAlmostEqual(float_, int_)
 
-        b = Bool()
-        self.assertAlmostEqual(b.value, False)
-        b = Bool(False)
-        self.assertAlmostEqual(b.value, False)
-        self.assertAlmostEqual(b.value, get_false_node())
-        b = Bool(True)
-        self.assertAlmostEqual(b.value, True)
-        self.assertAlmostEqual(b.value, get_true_node())
+        bool_ = Bool()
+        self.assertAlmostEqual(bool_.value, False)
+        bool_ = Bool(False)
+        self.assertAlmostEqual(bool_.value, False)
+        self.assertAlmostEqual(bool_.value, get_false_node())
+        bool_ = Bool(True)
+        self.assertAlmostEqual(bool_.value, True)
+        self.assertAlmostEqual(bool_.value, get_true_node())
 
-        s = Str()
-        self.assertAlmostEqual(s.value, '')
-        s = Str('Hello')
-        self.assertAlmostEqual(s.value, 'Hello')
+        str_ = Str()
+        self.assertAlmostEqual(str_.value, '')
+        str_ = Str('Hello')
+        self.assertAlmostEqual(str_.value, 'Hello')
 
     def test_load(self):
-        for t in self.all_types:
-            node = t()
+        """Test object loading."""
+        for typ in self.all_types:
+            node = typ()
             node.store()
             loaded = load_node(node.pk)
             self.assertAlmostEqual(node, loaded)
 
     def test_add(self):
-        a = Float(4)
-        b = Float(5)
+        """Test addition."""
+        term_a = Float(4)
+        term_b = Float(5)
         # Check adding two db Floats
-        res = a + b
+        res = term_a + term_b
         self.assertIsInstance(res, NumericType)
         self.assertAlmostEqual(res, 9.0)
 
         # Check adding db Float and native (both ways)
-        res = a + 5.0
+        res = term_a + 5.0
         self.assertIsInstance(res, NumericType)
         self.assertAlmostEqual(res, 9.0)
 
-        res = 5.0 + a
+        res = 5.0 + term_a
         self.assertIsInstance(res, NumericType)
         self.assertAlmostEqual(res, 9.0)
 
         # Inplace
-        a = Float(4)
-        a += b
-        self.assertAlmostEqual(a, 9.0)
+        term_a = Float(4)
+        term_a += term_b
+        self.assertAlmostEqual(term_a, 9.0)
 
-        a = Float(4)
-        a += 5
-        self.assertAlmostEqual(a, 9.0)
+        term_a = Float(4)
+        term_a += 5
+        self.assertAlmostEqual(term_a, 9.0)
 
     def test_mul(self):
-        a = Float(4)
-        b = Float(5)
+        """Test floats multiplication."""
+        term_a = Float(4)
+        term_b = Float(5)
         # Check adding two db Floats
-        res = a * b
+        res = term_a * term_b
         self.assertIsInstance(res, NumericType)
         self.assertAlmostEqual(res, 20.0)
 
         # Check adding db Float and native (both ways)
-        res = a * 5.0
+        res = term_a * 5.0
         self.assertIsInstance(res, NumericType)
         self.assertAlmostEqual(res, 20)
 
-        res = 5.0 * a
+        res = 5.0 * term_a
         self.assertIsInstance(res, NumericType)
         self.assertAlmostEqual(res, 20.0)
 
         # Inplace
-        a = Float(4)
-        a *= b
-        self.assertAlmostEqual(a, 20)
+        term_a = Float(4)
+        term_a *= term_b
+        self.assertAlmostEqual(term_a, 20)
 
-        a = Float(4)
-        a *= 5
-        self.assertAlmostEqual(a, 20)
+        term_a = Float(4)
+        term_a *= 5
+        self.assertAlmostEqual(term_a, 20)
 
     def test_power(self):
-        a = Float(4)
-        b = Float(2)
+        """Test power operator."""
+        term_a = Float(4)
+        term_b = Float(2)
 
-        res = a ** b
+        res = term_a**term_b
         self.assertAlmostEqual(res.value, 16.)
 
     def test_division(self):
         """Test the normal division operator."""
-        a = Float(3)
-        b = Float(2)
+        term_a = Float(3)
+        term_b = Float(2)
 
-        self.assertAlmostEqual(a / b, 1.5)
-        self.assertIsInstance(a / b, Float)
+        self.assertAlmostEqual(term_a / term_b, 1.5)
+        self.assertIsInstance(term_a / term_b, Float)
 
     def test_division_integer(self):
         """Test the integer division operator."""
-        a = Float(3)
-        b = Float(2)
+        term_a = Float(3)
+        term_b = Float(2)
 
-        self.assertAlmostEqual(a // b, 1.0)
-        self.assertIsInstance(a // b, Float)
+        self.assertAlmostEqual(term_a // term_b, 1.0)
+        self.assertIsInstance(term_a // term_b, Float)
 
-    def test_modulo(self):
-        a = Float(12.0)
-        b = Float(10.0)
+    def test_modulus(self):
+        """Test modulus operator."""
+        term_a = Float(12.0)
+        term_b = Float(10.0)
 
-        self.assertAlmostEqual(a % b, 2.0)
-        self.assertIsInstance(a % b, NumericType)
-        self.assertAlmostEqual(a % 10.0, 2.0)
-        self.assertIsInstance(a % 10.0, NumericType)
-        self.assertAlmostEqual(12.0 % b, 2.0)
-        self.assertIsInstance(12.0 % b, NumericType)
+        self.assertAlmostEqual(term_a % term_b, 2.0)
+        self.assertIsInstance(term_a % term_b, NumericType)
+        self.assertAlmostEqual(term_a % 10.0, 2.0)
+        self.assertIsInstance(term_a % 10.0, NumericType)
+        self.assertAlmostEqual(12.0 % term_b, 2.0)
+        self.assertIsInstance(12.0 % term_b, NumericType)
 
 
 class TestFloatIntMix(AiidaTestCase):
+    """Test operations between Int and Float objects."""
 
     def test_operator(self):
-        a = Float(2.2)
-        b = Int(3)
+        """Test all binary operators."""
+        term_a = Float(2.2)
+        term_b = Int(3)
 
-        for op in [operator.add, operator.mul, operator.pow, operator.lt, operator.le, operator.gt, operator.ge, operator.iadd, operator.imul]:
-            for x, y in [(a, b), (b, a)]:
-                c = op(x, y)
-                c_val = op(x.value, y.value)
-                self.assertEqual(c._type, type(c_val))
-                self.assertEqual(c, op(x.value, y.value))
+        for oper in [
+            operator.add, operator.mul, operator.pow, operator.lt, operator.le, operator.gt, operator.ge, operator.iadd,
+            operator.imul
+        ]:
+            for term_x, term_y in [(term_a, term_b), (term_b, term_a)]:
+                res = oper(term_x, term_y)
+                c_val = oper(term_x.value, term_y.value)
+                self.assertEqual(res._type, type(c_val))  # pylint: disable=protected-access
+                self.assertEqual(res, oper(term_x.value, term_y.value))
 
 
 class TestInt(AiidaTestCase):
+    """Test Int class."""
 
     def test_division(self):
         """Test the normal division operator."""
-        a = Int(3)
-        b = Int(2)
+        term_a = Int(3)
+        term_b = Int(2)
 
-        self.assertAlmostEqual(a / b, 1.5)
-        self.assertIsInstance(a / b, Float)
+        self.assertAlmostEqual(term_a / term_b, 1.5)
+        self.assertIsInstance(term_a / term_b, Float)
 
     def test_division_integer(self):
         """Test the integer division operator."""
-        a = Int(3)
-        b = Int(2)
+        term_a = Int(3)
+        term_b = Int(2)
 
-        self.assertAlmostEqual(a // b, 1)
-        self.assertIsInstance(a // b, Int)
+        self.assertAlmostEqual(term_a // term_b, 1)
+        self.assertIsInstance(term_a // term_b, Int)
 
     def test_modulo(self):
-        a = Int(12)
-        b = Int(10)
+        """Test modulus operation."""
+        term_a = Int(12)
+        term_b = Int(10)
 
-        self.assertEqual(a % b, 2)
-        self.assertIsInstance(a % b, NumericType)
-        self.assertEqual(a % 10, 2)
-        self.assertIsInstance(a % 10, NumericType)
-        self.assertEqual(12 % b, 2)
-        self.assertIsInstance(12 % b, NumericType)
+        self.assertEqual(term_a % term_b, 2)
+        self.assertIsInstance(term_a % term_b, NumericType)
+        self.assertEqual(term_a % 10, 2)
+        self.assertIsInstance(term_a % 10, NumericType)
+        self.assertEqual(12 % term_b, 2)
+        self.assertIsInstance(12 % term_b, NumericType)

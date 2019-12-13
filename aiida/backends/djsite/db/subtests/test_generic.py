@@ -17,19 +17,22 @@ from aiida.orm import Data
 
 
 class TestComputer(AiidaTestCase):
-    """
-    Test the Computer class.
-    """
+    """Test the Computer class."""
 
     def test_deletion(self):
-        from aiida.orm import CalcJobNode
+        """Test computer deletion."""
+        from aiida.orm import CalcJobNode, Computer
         from aiida.common.exceptions import InvalidOperation
 
-        newcomputer = orm.Computer(name='testdeletioncomputer', hostname='localhost',
-                                   transport_type='local', scheduler_type='pbspro',
-                                   workdir='/tmp/aiida').store()
+        newcomputer = Computer(
+            name='testdeletioncomputer',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='pbspro',
+            workdir='/tmp/aiida'
+        ).store()
 
-        # # This should be possible, because nothing is using this computer
+        # This should be possible, because nothing is using this computer
         orm.Computer.objects.delete(newcomputer.id)
 
         calc = CalcJobNode(computer=self.computer)
@@ -39,13 +42,11 @@ class TestComputer(AiidaTestCase):
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
         with self.assertRaises(InvalidOperation):
-            orm.Computer.objects.delete(self.computer.id)
+            orm.Computer.objects.delete(self.computer.id)  # pylint: disable=no-member
 
 
 class TestGroupsDjango(AiidaTestCase):
-    """
-    Test groups.
-    """
+    """Test groups."""
 
     # Tests that are specific to the Django backend
     def test_query(self):
@@ -58,75 +59,76 @@ class TestGroupsDjango(AiidaTestCase):
 
         default_user = backend.users.create('{}@aiida.net'.format(self.id())).store()
 
-        g1 = backend.groups.create(label='testquery1', user=default_user).store()
-        self.addCleanup(lambda: backend.groups.delete(g1.id))
-        g2 = backend.groups.create(label='testquery2', user=default_user).store()
-        self.addCleanup(lambda: backend.groups.delete(g2.id))
+        g_1 = backend.groups.create(label='testquery1', user=default_user).store()
+        self.addCleanup(lambda: backend.groups.delete(g_1.id))
+        g_2 = backend.groups.create(label='testquery2', user=default_user).store()
+        self.addCleanup(lambda: backend.groups.delete(g_2.id))
 
-        n1 = Data().store().backend_entity
-        n2 = Data().store().backend_entity
-        n3 = Data().store().backend_entity
-        n4 = Data().store().backend_entity
+        n_1 = Data().store().backend_entity
+        n_2 = Data().store().backend_entity
+        n_3 = Data().store().backend_entity
+        n_4 = Data().store().backend_entity
 
-        g1.add_nodes([n1, n2])
-        g2.add_nodes([n1, n3])
+        g_1.add_nodes([n_1, n_2])
+        g_2.add_nodes([n_1, n_3])
 
         newuser = backend.users.create(email='test@email.xx')
-        g3 = backend.groups.create(label='testquery3', user=newuser).store()
-        self.addCleanup(lambda: backend.groups.delete(g3.id))
+        g_3 = backend.groups.create(label='testquery3', user=newuser).store()
+        self.addCleanup(lambda: backend.groups.delete(g_3.id))
 
         # I should find it
-        g1copy = backend.groups.get(uuid=g1.uuid)
-        self.assertEquals(g1.pk, g1copy.pk)
+        g_1copy = backend.groups.get(uuid=g_1.uuid)
+        self.assertEqual(g_1.pk, g_1copy.pk)
 
         # NOTE: Here we pass type_string='' to all query and get calls in the groups collection because
         # otherwise run the risk that we will pick up autogroups as well when really we're just interested
         # the the ones that we created in this test
         # Try queries
-        res = backend.groups.query(nodes=n4, type_string='')
+        res = backend.groups.query(nodes=n_4, type_string='')
         self.assertListEqual([_.pk for _ in res], [])
 
-        res = backend.groups.query(nodes=n1, type_string='')
-        self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1, g2]])
+        res = backend.groups.query(nodes=n_1, type_string='')
+        self.assertEqual([_.pk for _ in res], [_.pk for _ in [g_1, g_2]])
 
-        res = backend.groups.query(nodes=n2, type_string='')
-        self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1]])
+        res = backend.groups.query(nodes=n_2, type_string='')
+        self.assertEqual([_.pk for _ in res], [_.pk for _ in [g_1]])
 
         # I try to use 'get' with zero or multiple results
         with self.assertRaises(NotExistent):
-            backend.groups.get(nodes=n4, type_string='')
+            backend.groups.get(nodes=n_4, type_string='')
         with self.assertRaises(MultipleObjectsError):
-            backend.groups.get(nodes=n1, type_string='')
+            backend.groups.get(nodes=n_1, type_string='')
 
-        self.assertEquals(backend.groups.get(nodes=n2, type_string='').pk, g1.pk)
+        self.assertEqual(backend.groups.get(nodes=n_2, type_string='').pk, g_1.pk)
 
         # Query by user
         res = backend.groups.query(user=newuser, type_string='')
-        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
+        self.assertEqual(set(_.pk for _ in res), set(_.pk for _ in [g_3]))
 
         # Same query, but using a string (the username=email) instead of
         # a DbUser object
         res = backend.groups.query(user=newuser.email, type_string='')
-        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
+        self.assertEqual(set(_.pk for _ in res), set(_.pk for _ in [g_3]))
 
         res = backend.groups.query(user=default_user, type_string='')
-        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
+        self.assertEqual(set(_.pk for _ in res), set(_.pk for _ in [g_1, g_2]))
 
     def test_creation_from_dbgroup(self):
+        """Test creation of a group from another group."""
         backend = self.backend
 
-        n = Data().store()
+        node = Data().store()
 
         default_user = backend.users.create('{}@aiida.net'.format(self.id())).store()
 
-        g = backend.groups.create(label='testgroup_from_dbgroup', user=default_user).store()
-        self.addCleanup(lambda: backend.groups.delete(g.id))
+        grp = backend.groups.create(label='testgroup_from_dbgroup', user=default_user).store()
+        self.addCleanup(lambda: backend.groups.delete(grp.id))
 
-        g.store()
-        g.add_nodes([n.backend_entity])
+        grp.store()
+        grp.add_nodes([node.backend_entity])
 
-        dbgroup = g.dbmodel
+        dbgroup = grp.dbmodel
         gcopy = backend.groups.from_dbmodel(dbgroup)
 
-        self.assertEquals(g.pk, gcopy.pk)
-        self.assertEquals(g.uuid, gcopy.uuid)
+        self.assertEqual(grp.pk, gcopy.pk)
+        self.assertEqual(grp.uuid, gcopy.uuid)

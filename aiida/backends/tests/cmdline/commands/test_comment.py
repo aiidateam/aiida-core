@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Test verdi comment command."""
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -17,7 +17,8 @@ from aiida import orm
 COMMENT = 'Well I never...'
 
 
-class TestVerdiUserCommand(AiidaTestCase):
+class TestVerdiCommentCommand(AiidaTestCase):
+    """AiiDA test class to test comments."""
 
     def setUp(self):
         self.cli_runner = CliRunner()

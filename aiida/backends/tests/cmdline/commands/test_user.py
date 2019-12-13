@@ -15,13 +15,13 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_user
 from aiida import orm
 
-user_1 = {
+USER_1 = {  # pylint: disable=invalid-name
     'email': 'testuser1@localhost',
     'first_name': 'Max',
     'last_name': 'Mueller',
     'institution': 'Testing Instiute'
 }
-user_2 = {
+USER_2 = {  # pylint: disable=invalid-name
     'email': 'testuser2@localhost',
     'first_name': 'Sabine',
     'last_name': 'Garching',
@@ -30,16 +30,17 @@ user_2 = {
 
 
 class TestVerdiUserCommand(AiidaTestCase):
+    """Test verdi user."""
 
     def setUp(self):
         super().setUp()
 
-        created, user = orm.User.objects.get_or_create(email=user_1['email'])
-        for key, value in user_1.items():
+        created, user = orm.User.objects.get_or_create(email=USER_1['email'])
+        for key, _ in USER_1.items():
             if key != 'email':
-                setattr(user, key, user_1[key])
+                setattr(user, key, USER_1[key])
         if created:
-            orm.User(**user_1).store()
+            orm.User(**USER_1).store()
         self.cli_runner = CliRunner()
 
     def test_user_list(self):
@@ -47,35 +48,43 @@ class TestVerdiUserCommand(AiidaTestCase):
         from aiida.cmdline.commands.cmd_user import user_list as list_user
 
         result = self.cli_runner.invoke(list_user, [], catch_exceptions=False)
-        self.assertTrue(user_1['email'] in result.output)
+        self.assertTrue(USER_1['email'] in result.output)
 
     def test_user_create(self):
         """Create a new user with `verdi user configure`."""
         cli_options = [
-            '--email', user_2['email'],
-            '--first-name', user_2['first_name'],
-            '--last-name', user_2['last_name'],
-            '--institution', user_2['institution'],
+            '--email',
+            USER_2['email'],
+            '--first-name',
+            USER_2['first_name'],
+            '--last-name',
+            USER_2['last_name'],
+            '--institution',
+            USER_2['institution'],
         ]
 
         result = self.cli_runner.invoke(cmd_user.user_configure, cli_options, catch_exceptions=False)
-        self.assertTrue(user_2['email'] in result.output)
+        self.assertTrue(USER_2['email'] in result.output)
         self.assertTrue('created' in result.output)
         self.assertTrue('updated' not in result.output)
 
-        user_obj = orm.User.objects.get(email=user_2['email'])
-        for key, val in user_2.items():
+        user_obj = orm.User.objects.get(email=USER_2['email'])
+        for key, val in USER_2.items():
             self.assertEqual(val, getattr(user_obj, key))
 
     def test_user_update(self):
         """Reconfigure an existing user with `verdi user configure`."""
-        email = user_1['email']
+        email = USER_1['email']
 
         cli_options = [
-            '--email', user_1['email'],
-            '--first-name', user_2['first_name'],
-            '--last-name', user_2['last_name'],
-            '--institution', user_2['institution'],
+            '--email',
+            USER_1['email'],
+            '--first-name',
+            USER_2['first_name'],
+            '--last-name',
+            USER_2['last_name'],
+            '--institution',
+            USER_2['institution'],
         ]
 
         result = self.cli_runner.invoke(cmd_user.user_configure, cli_options, catch_exceptions=False)
@@ -84,6 +93,6 @@ class TestVerdiUserCommand(AiidaTestCase):
         self.assertTrue('created' not in result.output)
 
         # Check it's all been changed to user2's attributes except the email
-        for key, value in user_2.items():
+        for key, _ in USER_2.items():
             if key != 'email':
-                setattr(cmd_user, key, user_1[key])
+                setattr(cmd_user, key, USER_1[key])

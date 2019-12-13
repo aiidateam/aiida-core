@@ -17,7 +17,7 @@ class TestComputer(AiidaTestCase):
     """Test the Computer class."""
 
     def test_deletion(self):
-        """Test comptuer deletion."""
+        """Test computer deletion."""
         from aiida.orm import CalcJobNode
         from aiida.common.exceptions import InvalidOperation
         import aiida.backends.sqlalchemy

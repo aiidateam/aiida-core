@@ -232,7 +232,7 @@ class AbstractQueryManager(abc.ABC):
         :return: a list of aiida objects with all the parents of the nodes"""
         from aiida.orm import Node, QueryBuilder
 
-        q_bld = QueryBuilder()
-        q_bld.append(Node, tag='low_node', filters={'id': {'in': node_pks}})
-        q_bld.append(Node, with_descendants='low_node', project=return_values)
-        return q_bld.all()
+        q_build = QueryBuilder()
+        q_build.append(Node, tag='low_node', filters={'id': {'in': node_pks}})
+        q_build.append(Node, with_descendants='low_node', project=return_values)
+        return q_build.all()

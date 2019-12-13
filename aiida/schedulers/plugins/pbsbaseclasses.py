@@ -517,10 +517,10 @@ class PbsBaseClass(Scheduler):
                         node.name, data = exec_host.split('/')
                         data = data.split('*')
                         if len(data) == 1:
-                            node.jobIndex = int(data[0])
+                            node.jobIndex = int(data[0])  # pylint: disable=invalid-name
                             node.num_cpus = 1
                         elif len(data) == 2:
-                            node.jobIndex = int(data[0])
+                            node.jobIndex = int(data[0])  # pylint: disable=invalid-name
                             node.num_cpus = int(data[1])
                         else:
                             raise ValueError('Wrong number of pieces: {} '
@@ -581,7 +581,7 @@ class PbsBaseClass(Scheduler):
                 _LOGGER.debug("No 'queue' field for job id {}".format(this_job.job_id))
 
             try:
-                this_job.RequestedWallclockTime = (self._convert_time(raw_data['resource_list.walltime']))
+                this_job.RequestedWallclockTime = (self._convert_time(raw_data['resource_list.walltime']))  # pylint: disable=invalid-name
             except KeyError:
                 _LOGGER.debug("No 'resource_list.walltime' field for job id {}".format(this_job.job_id))
             except ValueError:

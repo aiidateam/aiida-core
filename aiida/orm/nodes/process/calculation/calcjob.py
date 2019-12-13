@@ -35,7 +35,7 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_JOB_ID_KEY = 'job_id'
     SCHEDULER_STATE_KEY = 'scheduler_state'
     SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
-    SCHEDULER_LAST_JOB_INFO_KEY = 'last_jobinfo'
+    SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
 
     # Base path within the repository where to put objects by default
@@ -436,7 +436,7 @@ class CalcJobNode(CalculationNode):
 
         :param last_job_info: a `JobInfo` object
         """
-        self.set_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, last_job_info.serialize())
+        self.set_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, last_job_info.get_dict())
 
     def get_last_job_info(self):
         """Return the last information asked to the scheduler about the status of the job.
@@ -445,11 +445,10 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.schedulers.datastructures import JobInfo
 
-        last_job_info_serialized = self.get_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, None)
+        last_job_info_dictserialized = self.get_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, None)
 
-        if last_job_info_serialized is not None:
-            job_info = JobInfo()
-            job_info.load_from_serialized(last_job_info_serialized)
+        if last_job_info_dictserialized is not None:
+            job_info = JobInfo.load_from_dict(last_job_info_dictserialized)
         else:
             job_info = None
 

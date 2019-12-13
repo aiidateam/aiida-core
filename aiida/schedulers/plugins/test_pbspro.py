@@ -773,32 +773,32 @@ class TestParserQstat(unittest.TestCase):
         # The parameters are hard coded in the text to parse
         job_on_cluster = 6
         job_parsed = len(job_list)
-        self.assertEquals(job_parsed, job_on_cluster)
+        self.assertEqual(job_parsed, job_on_cluster)
 
         job_running = 2
         job_running_parsed = len([j for j in job_list if j.job_state \
                                   and j.job_state == JobState.RUNNING])
-        self.assertEquals(job_running, job_running_parsed)
+        self.assertEqual(job_running, job_running_parsed)
 
         job_held = 2
         job_held_parsed = len([j for j in job_list if j.job_state \
                                and j.job_state == JobState.QUEUED_HELD])
-        self.assertEquals(job_held, job_held_parsed)
+        self.assertEqual(job_held, job_held_parsed)
 
         job_queued = 2
         job_queued_parsed = len([j for j in job_list if j.job_state \
                                  and j.job_state == JobState.QUEUED])
-        self.assertEquals(job_queued, job_queued_parsed)
+        self.assertEqual(job_queued, job_queued_parsed)
 
         running_users = ['user02', 'user3']
         parsed_running_users = [j.job_owner for j in job_list if j.job_state \
                                 and j.job_state == JobState.RUNNING]
-        self.assertEquals(set(running_users), set(parsed_running_users))
+        self.assertEqual(set(running_users), set(parsed_running_users))
 
         running_jobs = ['69301.mycluster', '74164.mycluster']
         parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
                                and j.job_state == JobState.RUNNING]
-        self.assertEquals(set(running_jobs), set(parsed_running_jobs))
+        self.assertEqual(set(running_jobs), set(parsed_running_jobs))
 
         for j in job_list:
             if j.allocated_machines:
@@ -828,32 +828,32 @@ class TestParserQstat(unittest.TestCase):
         # The parameters are hard coded in the text to parse
         job_on_cluster = 10
         job_parsed = len(job_list)
-        self.assertEquals(job_parsed, job_on_cluster)
+        self.assertEqual(job_parsed, job_on_cluster)
 
         job_running = 2
         job_running_parsed = len([j for j in job_list if j.job_state \
                                   and j.job_state == JobState.RUNNING])
-        self.assertEquals(job_running, job_running_parsed)
+        self.assertEqual(job_running, job_running_parsed)
 
         job_held = 1
         job_held_parsed = len([j for j in job_list if j.job_state \
                                and j.job_state == JobState.QUEUED_HELD])
-        self.assertEquals(job_held, job_held_parsed)
+        self.assertEqual(job_held, job_held_parsed)
 
         job_queued = 5
         job_queued_parsed = len([j for j in job_list if j.job_state \
                                  and j.job_state == JobState.QUEUED])
-        self.assertEquals(job_queued, job_queued_parsed)
+        self.assertEqual(job_queued, job_queued_parsed)
 
         running_users = ['somebody', 'user_556491']
         parsed_running_users = [j.job_owner for j in job_list if j.job_state \
                                 and j.job_state == JobState.RUNNING]
-        self.assertEquals(set(running_users), set(parsed_running_users))
+        self.assertEqual(set(running_users), set(parsed_running_users))
 
         running_jobs = ['555716', '556491']
         parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
                                and j.job_state == JobState.RUNNING]
-        self.assertEquals(set(running_jobs), set(parsed_running_jobs))
+        self.assertEqual(set(running_jobs), set(parsed_running_jobs))
 
         for j in job_list:
             if j.allocated_machines:
@@ -953,7 +953,7 @@ class TestSubmitScript(unittest.TestCase):
             submit_script_text = scheduler.get_submit_script(job_tmpl)
 
             # This tests if the implementation correctly chooses the default:
-            self.assertEquals(submit_script_text.split('\n')[0], expected_first_line)
+            self.assertEqual(submit_script_text.split('\n')[0], expected_first_line)
 
     def test_submit_script_with_num_cores_per_machine(self):
         """

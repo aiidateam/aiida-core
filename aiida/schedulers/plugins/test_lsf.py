@@ -59,14 +59,14 @@ class TestParserBjobs(unittest.TestCase):
         # The parameters are hard coded in the text to parse
         job_on_cluster = 7
         job_parsed = len(job_list)
-        self.assertEquals(job_parsed, job_on_cluster)
+        self.assertEqual(job_parsed, job_on_cluster)
 
         job_queued = 2
         job_queue_name = ['8nm', 'test']
         job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
         job_queue_name_parsed = [j.queue_name for j in job_list if j.job_state and j.job_state == JobState.QUEUED]
-        self.assertEquals(job_queued, job_queued_parsed)
-        self.assertEquals(job_queue_name, job_queue_name_parsed)
+        self.assertEqual(job_queued, job_queued_parsed)
+        self.assertEqual(job_queue_name, job_queue_name_parsed)
 
         job_done = 2
         job_done_title = ['aiida-1033269', 'test']
@@ -74,18 +74,18 @@ class TestParserBjobs(unittest.TestCase):
         job_done_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.DONE])
         job_done_title_parsed = [j.title for j in job_list if j.job_state and j.job_state == JobState.DONE]
         job_done_annotation_parsed = [j.annotation for j in job_list if j.job_state and j.job_state == JobState.DONE]
-        self.assertEquals(job_done, job_done_parsed)
-        self.assertEquals(job_done_title, job_done_title_parsed)
-        self.assertEquals(job_done_annotation, job_done_annotation_parsed)
+        self.assertEqual(job_done, job_done_parsed)
+        self.assertEqual(job_done_title, job_done_title_parsed)
+        self.assertEqual(job_done_annotation, job_done_annotation_parsed)
 
         job_running = 3
         job_running_parsed = len([j for j in job_list if j.job_state \
                                   and j.job_state == JobState.RUNNING])
-        self.assertEquals(job_running, job_running_parsed)
+        self.assertEqual(job_running, job_running_parsed)
 
         running_users = ['inewton', 'inewton', 'dbowie']
         parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
-        self.assertEquals(running_users, parsed_running_users)
+        self.assertEqual(running_users, parsed_running_users)
 
         running_jobs = ['764254593', '764255172', '764245175']
         num_machines = [1, 1, 1]
@@ -95,15 +95,15 @@ class TestParserBjobs(unittest.TestCase):
         parsed_allocated_machines = [
             j.allocated_machines_raw for j in job_list if j.job_state and j.job_state == JobState.RUNNING
         ]
-        self.assertEquals(running_jobs, parsed_running_jobs)
-        self.assertEquals(num_machines, parsed_num_machines)
-        self.assertEquals(allocated_machines, parsed_allocated_machines)
+        self.assertEqual(running_jobs, parsed_running_jobs)
+        self.assertEqual(num_machines, parsed_num_machines)
+        self.assertEqual(allocated_machines, parsed_allocated_machines)
 
-        self.assertEquals([j.requested_wallclock_time_seconds for j in job_list if j.job_id == '764254593'][0], 60)
-        self.assertEquals([j.wallclock_time_seconds for j in job_list if j.job_id == '764255172'][0], 9)
-        self.assertEquals([j.wallclock_time_seconds for j in job_list if j.job_id == '764245175'][0], 4785)
+        self.assertEqual([j.requested_wallclock_time_seconds for j in job_list if j.job_id == '764254593'][0], 60)
+        self.assertEqual([j.wallclock_time_seconds for j in job_list if j.job_id == '764255172'][0], 9)
+        self.assertEqual([j.wallclock_time_seconds for j in job_list if j.job_id == '764245175'][0], 4785)
         current_year = datetime.datetime.now().year
-        self.assertEquals([j.submission_time for j in job_list if j.job_id == '764245175'][0],
+        self.assertEqual([j.submission_time for j in job_list if j.job_id == '764245175'][0],
                           datetime.datetime(current_year, 12, 31, 23, 40))
 
         # Important to enable again logs!
@@ -170,7 +170,7 @@ class TestParserSubmit(unittest.TestCase):
         stdout = SUBMIT_STDOUT_TO_TEST
         stderr = ''
 
-        self.assertEquals(scheduler._parse_submit_output(retval, stdout, stderr), '764254593')
+        self.assertEqual(scheduler._parse_submit_output(retval, stdout, stderr), '764254593')
 
 
 class TestParserBkill(unittest.TestCase):

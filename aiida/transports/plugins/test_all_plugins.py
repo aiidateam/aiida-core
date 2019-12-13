@@ -142,7 +142,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             directory = 'temp_dir_test'
             t.chdir(location)
 
-            self.assertEquals(location, t.getcwd())
+            self.assertEqual(location, t.getcwd())
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
@@ -185,7 +185,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             directory = 'temp_dir_test'
             t.chdir(location)
 
-            self.assertEquals(location, t.getcwd())
+            self.assertEqual(location, t.getcwd())
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
@@ -232,7 +232,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             directory = 'temp_dir_test'
             trans.chdir(location)
 
-            self.assertEquals(location, trans.getcwd())
+            self.assertEqual(location, trans.getcwd())
             while trans.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
@@ -291,7 +291,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             directory = 'temp_dir_test'
             trans.chdir(location)
 
-            self.assertEquals(location, trans.getcwd())
+            self.assertEqual(location, trans.getcwd())
             while trans.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
@@ -342,7 +342,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             directory = 'temp_dir_test'
             t.chdir(location)
 
-            self.assertEquals(location, t.getcwd())
+            self.assertEqual(location, t.getcwd())
             while t.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
@@ -416,13 +416,13 @@ class TestDirectoryManipulation(unittest.TestCase):
             t.chmod(directory, 0o777)
 
             # test if the security bits have changed
-            self.assertEquals(t.get_mode(directory), 0o777)
+            self.assertEqual(t.get_mode(directory), 0o777)
 
             # change permissions
             t.chmod(directory, 0o511)
 
             # test if the security bits have changed
-            self.assertEquals(t.get_mode(directory), 0o511)
+            self.assertEqual(t.get_mode(directory), 0o511)
 
             # TODO : bug in paramiko. When changing the directory to very low \
             # I cannot set it back to higher permissions
@@ -473,7 +473,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             t.chmod(directory, 0)
 
             # test if the security bits have changed
-            self.assertEquals(t.get_mode(directory), 0)
+            self.assertEqual(t.get_mode(directory), 0)
 
             old_cwd = t.getcwd()
 
@@ -482,7 +482,7 @@ class TestDirectoryManipulation(unittest.TestCase):
 
             new_cwd = t.getcwd()
 
-            self.assertEquals(old_cwd, new_cwd)
+            self.assertEqual(old_cwd, new_cwd)
 
             # TODO : the test leaves a directory even if it is successful
             #        The bug is in paramiko. After lowering the permissions,
@@ -533,7 +533,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             new_dir = t.normalize(os.path.join('/', 'tmp'))
             t.chdir(new_dir)
             t.chdir('')
-            self.assertEquals(new_dir, t.getcwd())
+            self.assertEqual(new_dir, t.getcwd())
 
 
 class TestPutGetFile(unittest.TestCase):
@@ -896,17 +896,17 @@ class TestPutGetTree(unittest.TestCase):
 
             # first test the copy. Copy of two files matching patterns, into a folder
             t.copy(os.path.join('local', '*.txt'), '.')
-            self.assertEquals(set(['a.txt', 'c.txt', 'local']), set(t.listdir('.')))
+            self.assertEqual(set(['a.txt', 'c.txt', 'local']), set(t.listdir('.')))
             t.remove('a.txt')
             t.remove('c.txt')
             # second test copy. Copy of two folders
             t.copy('local', 'prova')
-            self.assertEquals(set(['prova', 'local']), set(t.listdir('.')))
-            self.assertEquals(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir('prova')))
+            self.assertEqual(set(['prova', 'local']), set(t.listdir('.')))
+            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir('prova')))
             t.rmtree('prova')
             # third test copy. Can copy one file into a new file
             t.copy(os.path.join('local', '*.tmp'), 'prova')
-            self.assertEquals(set(['prova', 'local']), set(t.listdir('.')))
+            self.assertEqual(set(['prova', 'local']), set(t.listdir('.')))
             t.remove('prova')
             # fourth test copy: can't copy more than one file on the same file,
             # i.e., the destination should be a folder
@@ -915,7 +915,7 @@ class TestPutGetTree(unittest.TestCase):
             # fifth test, copying one file into a folder
             t.mkdir('prova')
             t.copy(os.path.join('local', 'a.txt'), 'prova')
-            self.assertEquals(set(t.listdir('prova')), set(['a.txt']))
+            self.assertEqual(set(t.listdir('prova')), set(['a.txt']))
             t.rmtree('prova')
             # sixth test, copying one file into a file
             t.copy(os.path.join('local', 'a.txt'), 'prova')
@@ -926,8 +926,8 @@ class TestPutGetTree(unittest.TestCase):
             #tests performed locally on a Mac may result in a failure.
             t.mkdir('prova')
             t.copy('local', 'prova')
-            self.assertEquals(set(['local']), set(t.listdir('prova')))
-            self.assertEquals(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir(os.path.join('prova', 'local'))))
+            self.assertEqual(set(['local']), set(t.listdir('prova')))
+            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir(os.path.join('prova', 'local'))))
             t.rmtree('prova')
             # exit
             t.chdir('..')
@@ -969,24 +969,24 @@ class TestPutGetTree(unittest.TestCase):
 
             # first test put. Copy of two files matching patterns, into a folder
             t.put(os.path.join(local_base_dir, '*.txt'), '.')
-            self.assertEquals(set(['a.txt', 'c.txt', 'local']), set(t.listdir('.')))
+            self.assertEqual(set(['a.txt', 'c.txt', 'local']), set(t.listdir('.')))
             t.remove('a.txt')
             t.remove('c.txt')
             # second. Copy of folder into a non existing folder
             t.put(local_base_dir, 'prova')
-            self.assertEquals(set(['prova', 'local']), set(t.listdir('.')))
-            self.assertEquals(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir('prova')))
+            self.assertEqual(set(['prova', 'local']), set(t.listdir('.')))
+            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir('prova')))
             t.rmtree('prova')
             # third. copy of folder into an existing folder
             t.mkdir('prova')
             t.put(local_base_dir, 'prova')
-            self.assertEquals(set(['prova', 'local']), set(t.listdir('.')))
-            self.assertEquals(set(['local']), set(t.listdir('prova')))
-            self.assertEquals(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir(os.path.join('prova', 'local'))))
+            self.assertEqual(set(['prova', 'local']), set(t.listdir('.')))
+            self.assertEqual(set(['local']), set(t.listdir('prova')))
+            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir(os.path.join('prova', 'local'))))
             t.rmtree('prova')
             # third test copy. Can copy one file into a new file
             t.put(os.path.join(local_base_dir, '*.tmp'), 'prova')
-            self.assertEquals(set(['prova', 'local']), set(t.listdir('.')))
+            self.assertEqual(set(['prova', 'local']), set(t.listdir('.')))
             t.remove('prova')
             # fourth test copy: can't copy more than one file on the same file,
             # i.e., the destination should be a folder
@@ -1001,7 +1001,7 @@ class TestPutGetTree(unittest.TestCase):
             # fifth test, copying one file into a folder
             t.mkdir('prova')
             t.put(os.path.join(local_base_dir, 'a.txt'), 'prova')
-            self.assertEquals(set(t.listdir('prova')), set(['a.txt']))
+            self.assertEqual(set(t.listdir('prova')), set(['a.txt']))
             t.rmtree('prova')
             # sixth test, copying one file into a file
             t.put(os.path.join(local_base_dir, 'a.txt'), 'prova')
@@ -1049,26 +1049,26 @@ class TestPutGetTree(unittest.TestCase):
 
             # first test put. Copy of two files matching patterns, into a folder
             t.get(os.path.join('local', '*.txt'), local_destination)
-            self.assertEquals(set(['a.txt', 'c.txt', 'local']), set(os.listdir(local_destination)))
+            self.assertEqual(set(['a.txt', 'c.txt', 'local']), set(os.listdir(local_destination)))
             os.remove(os.path.join(local_destination, 'a.txt'))
             os.remove(os.path.join(local_destination, 'c.txt'))
             # second. Copy of folder into a non existing folder
             t.get('local', os.path.join(local_destination, 'prova'))
-            self.assertEquals(set(['prova', 'local']), set(os.listdir(local_destination)))
-            self.assertEquals(
+            self.assertEqual(set(['prova', 'local']), set(os.listdir(local_destination)))
+            self.assertEqual(
                 set(['a.txt', 'b.tmp', 'c.txt']), set(os.listdir(os.path.join(local_destination, 'prova'))))
             shutil.rmtree(os.path.join(local_destination, 'prova'))
             # third. copy of folder into an existing folder
             os.mkdir(os.path.join(local_destination, 'prova'))
             t.get('local', os.path.join(local_destination, 'prova'))
-            self.assertEquals(set(['prova', 'local']), set(os.listdir(local_destination)))
-            self.assertEquals(set(['local']), set(os.listdir(os.path.join(local_destination, 'prova'))))
-            self.assertEquals(
+            self.assertEqual(set(['prova', 'local']), set(os.listdir(local_destination)))
+            self.assertEqual(set(['local']), set(os.listdir(os.path.join(local_destination, 'prova'))))
+            self.assertEqual(
                 set(['a.txt', 'b.tmp', 'c.txt']), set(os.listdir(os.path.join(local_destination, 'prova', 'local'))))
             shutil.rmtree(os.path.join(local_destination, 'prova'))
             # third test copy. Can copy one file into a new file
             t.get(os.path.join('local', '*.tmp'), os.path.join(local_destination, 'prova'))
-            self.assertEquals(set(['prova', 'local']), set(os.listdir(local_destination)))
+            self.assertEqual(set(['prova', 'local']), set(os.listdir(local_destination)))
             os.remove(os.path.join(local_destination, 'prova'))
             # fourth test copy: can't copy more than one file on the same file,
             # i.e., the destination should be a folder
@@ -1083,7 +1083,7 @@ class TestPutGetTree(unittest.TestCase):
             # fifth test, copying one file into a folder
             os.mkdir(os.path.join(local_destination, 'prova'))
             t.get(os.path.join('local', 'a.txt'), os.path.join(local_destination, 'prova'))
-            self.assertEquals(set(os.listdir(os.path.join(local_destination, 'prova'))), set(['a.txt']))
+            self.assertEqual(set(os.listdir(os.path.join(local_destination, 'prova'))), set(['a.txt']))
             shutil.rmtree(os.path.join(local_destination, 'prova'))
             # sixth test, copying one file into a file
             t.get(os.path.join('local', 'a.txt'), os.path.join(local_destination, 'prova'))
@@ -1279,12 +1279,12 @@ class TestExecuteCommandWait(unittest.TestCase):
             self.assertTrue(t.isdir(subfolder))
             t.chdir(subfolder)
 
-            self.assertEquals(subfolder_fullpath, t.getcwd())
+            self.assertEqual(subfolder_fullpath, t.getcwd())
             retcode, stdout, stderr = t.exec_command_wait('pwd')
-            self.assertEquals(retcode, 0)
+            self.assertEqual(retcode, 0)
             # I have to strip it because 'pwd' returns a trailing \n
-            self.assertEquals(stdout.strip(), subfolder_fullpath)
-            self.assertEquals(stderr, '')
+            self.assertEqual(stdout.strip(), subfolder_fullpath)
+            self.assertEqual(stderr, '')
 
             if delete_at_end:
                 t.chdir(location)
@@ -1295,18 +1295,18 @@ class TestExecuteCommandWait(unittest.TestCase):
         test_string = str('some_test String')
         with custom_transport as t:
             retcode, stdout, stderr = t.exec_command_wait('cat', stdin=test_string)
-            self.assertEquals(retcode, 0)
-            self.assertEquals(stdout, test_string)
-            self.assertEquals(stderr, '')
+            self.assertEqual(retcode, 0)
+            self.assertEqual(stdout, test_string)
+            self.assertEqual(stderr, '')
 
     @run_for_all_plugins
     def test_exec_with_stdin_unicode(self, custom_transport):
         test_string = 'some_test String'
         with custom_transport as t:
             retcode, stdout, stderr = t.exec_command_wait('cat', stdin=test_string)
-            self.assertEquals(retcode, 0)
-            self.assertEquals(stdout, test_string)
-            self.assertEquals(stderr, '')
+            self.assertEqual(retcode, 0)
+            self.assertEqual(stdout, test_string)
+            self.assertEqual(stderr, '')
 
     @run_for_all_plugins
     def test_exec_with_stdin_filelike(self, custom_transport):
@@ -1315,9 +1315,9 @@ class TestExecuteCommandWait(unittest.TestCase):
         stdin = io.StringIO(test_string)
         with custom_transport as t:
             retcode, stdout, stderr = t.exec_command_wait('cat', stdin=stdin)
-            self.assertEquals(retcode, 0)
-            self.assertEquals(stdout, test_string)
-            self.assertEquals(stderr, '')
+            self.assertEqual(retcode, 0)
+            self.assertEqual(stdout, test_string)
+            self.assertEqual(stderr, '')
 
     @run_for_all_plugins
     def test_exec_with_wrong_stdin(self, custom_transport):

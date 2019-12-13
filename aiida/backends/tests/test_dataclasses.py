@@ -3250,7 +3250,6 @@ class TestKpointsData(AiidaTestCase):
         self.assertIsInstance(result['parameters'], Dict)
 
         point_coords = result['parameters'].dict.point_coords
-        # path = result['parameters'].dict.path
 
         self.assertAlmostEqual(point_coords['Z'][2], numpy.pi / alat)
         self.assertAlmostEqual(point_coords['Z'][0], 0.)

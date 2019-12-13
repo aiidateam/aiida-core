@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
-"""Module to users for the SQLA backend."""
+"""Module to manage users for the SQLA backend."""
 
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String

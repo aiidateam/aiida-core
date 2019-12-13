@@ -18,7 +18,7 @@ from aiida.orm.utils.loaders import NodeEntityLoader
 class TestOrmUtils(AiidaTestCase):
     """Test orm utils."""
 
-    def test_load_entiy(self):
+    def test_load_entity(self):
         """Test the functionality of load_entity which is the base function for the other loader functions."""
         entity_loader = NodeEntityLoader
 

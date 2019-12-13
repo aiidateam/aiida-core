@@ -14,7 +14,6 @@ import contextlib
 from django.contrib.postgres.fields import JSONField
 from django.db import models as m
 from django.db.models.query import QuerySet
-from django.utils.encoding import python_2_unicode_compatible
 from pytz import UTC
 
 import aiida.backends.djsite.db.migrations as migrations
@@ -80,7 +79,6 @@ class DbUser(m.Model):  # pylint: disable=too-few-public-methods
     institution = m.CharField(max_length=254, blank=True)
 
 
-@python_2_unicode_compatible
 class DbNode(m.Model):
     """Generic node: data or calculation or code.
 
@@ -160,7 +158,6 @@ class DbNode(m.Model):
         return '{} node [{}]'.format(simplename, self.pk)
 
 
-@python_2_unicode_compatible
 class DbLink(m.Model):
     """Direct connection between two dbnodes. The label is identifying thelink type."""
 
@@ -183,7 +180,6 @@ class DbLink(m.Model):
         )
 
 
-@python_2_unicode_compatible
 class DbSetting(m.Model):
     """This will store generic settings that should be database-wide."""
     key = m.CharField(max_length=1024, db_index=True, blank=False, unique=True)
@@ -237,7 +233,6 @@ class DbSetting(m.Model):
             raise KeyError()
 
 
-@python_2_unicode_compatible
 class DbGroup(m.Model):
     """
     A group of nodes.
@@ -269,7 +264,6 @@ class DbGroup(m.Model):
         return '<DbGroup [type_string: {}] "{}">'.format(self.type_string, self.label)
 
 
-@python_2_unicode_compatible
 class DbComputer(m.Model):
     """
     Table of computers or clusters.
@@ -315,7 +309,6 @@ class DbComputer(m.Model):
         return '{} ({})'.format(self.name, self.hostname)
 
 
-@python_2_unicode_compatible
 class DbAuthInfo(m.Model):
     """
     Table that pairs aiida users and computers, with all required authentication
@@ -342,7 +335,6 @@ class DbAuthInfo(m.Model):
         return 'DB authorization info for {} on {} [DISABLED]'.format(self.aiidauser.email, self.dbcomputer.name)
 
 
-@python_2_unicode_compatible
 class DbComment(m.Model):
     """Class to store comments. """
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
@@ -361,7 +353,6 @@ class DbComment(m.Model):
         )
 
 
-@python_2_unicode_compatible
 class DbLog(m.Model):
     """Class to store logs."""
     uuid = m.UUIDField(default=get_new_uuid, unique=True)

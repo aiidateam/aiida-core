@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
-"""Module to manage nodes' settings for the SQLA backend."""
+"""Module to manage node settings for the SQLA backend."""
 
 from pytz import UTC
 

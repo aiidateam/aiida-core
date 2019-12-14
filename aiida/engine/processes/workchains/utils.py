@@ -8,6 +8,7 @@ from ..exit_code import ExitCode
 __all__ = ('ProcessHandler', 'ProcessHandlerReport', 'register_process_handler')
 
 ProcessHandler = namedtuple('ProcessHandler', 'method priority')
+ProcessHandler.__new__.__defaults__ = (None, 0)
 """A namedtuple to define a process handler for a :class:`aiida.engine.BaseRestartWorkChain`.
 
 The `method` element refers to a function decorated by the `register_process_handler` that has turned it into a bound
@@ -38,7 +39,7 @@ returning a non-zero exit code from any work chain step will instruct the engine
 """
 
 
-def register_process_handler(cls, priority):
+def register_process_handler(cls, *, priority=None):
     """Decorator to register a function as a handler for a :class:`~aiida.engine.BaseRestartWorkChain`.
 
     The function expects two arguments, a work chain class and a priortity. The decorator will add the function as a
@@ -65,6 +66,11 @@ def register_process_handler(cls, priority):
     :param priority: optional integer that defines the order in which registered handlers will be called during the
         handling of a finished process. Higher priorities will be handled first.
     """
+    if priority is None:
+        priority = 0
+
+    if not isinstance(priority, int):
+        raise TypeError('the `priority` should be an integer.')
 
     def process_handler_decorator(handler):
         """Decorate a function to dynamically register a handler to a `WorkChain` class."""

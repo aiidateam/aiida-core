@@ -214,9 +214,21 @@ class CalcJob(Process):
         This means invoking the `presubmit` and storing the temporary folder in the node's repository. Then we move the
         process in the `Wait` state, waiting for the `UPLOAD` transport task to be started.
         """
-        from aiida.orm import Code, load_node
-        from aiida.common.folders import SandboxFolder, SubmitTestFolder
-        from aiida.common.exceptions import InputValidationError
+        if self.inputs.metadata.dry_run:
+            from aiida.common.folders import SubmitTestFolder
+            from aiida.engine.daemon.execmanager import upload_calculation
+            from aiida.transports.plugins.local import LocalTransport
+
+            with LocalTransport() as transport:
+                with SubmitTestFolder() as folder:
+                    calc_info, script_filename = self.presubmit(folder)
+                    transport.chdir(folder.abspath)
+                    upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
+                    self.node.dry_run_info = {
+                        'folder': folder.abspath,
+                        'script_filename': script_filename
+                    }
+            return plumpy.Stop(None, True)
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
         # state of `Finished` the cached process will still enter the running state. The process state will have then
@@ -225,44 +237,8 @@ class CalcJob(Process):
         if self.node.exit_status is not None:
             return self.node.exit_status
 
-        if self.inputs.metadata.dry_run:
-            folder_class = SubmitTestFolder
-        else:
-            folder_class = SandboxFolder
-
-        with folder_class() as folder:
-            computer = self.node.computer
-
-            if not self.inputs.metadata.dry_run and self.node.has_cached_links():
-                raise exceptions.InvalidOperation('calculation node has unstored links in cache')
-
-            calc_info, script_filename = self.presubmit(folder)
-            calc_info.uuid = str(self.uuid)
-            input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in calc_info.codes_info]
-
-            for code in input_codes:
-                if not code.can_run_on(computer):
-                    raise InputValidationError(
-                        'The selected code {} for calculation {} cannot run on computer {}'.format(
-                            code.pk, self.node.pk, computer.name))
-
-            # After this call, no modifications to the folder should be done
-            self.node.put_object_from_tree(folder.abspath, force=True)
-
-            if self.inputs.metadata.dry_run:
-                from aiida.engine.daemon.execmanager import upload_calculation
-                from aiida.transports.plugins.local import LocalTransport
-                with LocalTransport() as transport:
-                    transport.chdir(folder.abspath)
-                    upload_calculation(self.node, transport, calc_info, script_filename, self.inputs, dry_run=True)
-                    self.node.dry_run_info = {
-                        'folder': folder.abspath,
-                        'script_filename': script_filename
-                    }
-                return plumpy.Stop(None, True)
-
         # Launch the upload operation
-        return plumpy.Wait(msg='Waiting to upload', data=(UPLOAD_COMMAND, calc_info, script_filename))
+        return plumpy.Wait(msg='Waiting to upload', data=UPLOAD_COMMAND)
 
     def prepare_for_submission(self, folder):
         """Prepare files for submission of calculation."""
@@ -304,7 +280,7 @@ class CalcJob(Process):
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         import os
 
-        from aiida.common.exceptions import PluginInternalError, ValidationError
+        from aiida.common.exceptions import PluginInternalError, ValidationError, InvalidOperation, InputValidationError
         from aiida.common import json
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.datastructures import CodeInfo, CodeRunMode
@@ -315,16 +291,23 @@ class CalcJob(Process):
         computer = self.node.computer
         inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)
 
+        if not self.inputs.metadata.dry_run and self.node.has_cached_links():
+            raise InvalidOperation('calculation node has unstored links in cache')
+
         codes = [_ for _ in inputs.all_nodes() if isinstance(_, Code)]
 
-        calcinfo = self.prepare_for_submission(folder)
-        scheduler = computer.get_scheduler()
-
         for code in codes:
-            if code.is_local():
-                if code.get_local_executable() in folder.get_content_list():
-                    raise PluginInternalError('The plugin created a file {} that is also '
-                                              'the executable name!'.format(code.get_local_executable()))
+            if not code.can_run_on(computer):
+                raise InputValidationError('The selected code {} for calculation {} cannot run on computer {}'.format(
+                    code.pk, self.node.pk, computer.name))
+
+            if code.is_local() and code.get_local_executable() in folder.get_content_list():
+                raise PluginInternalError('The plugin created a file {} that is also the executable name!'.format(
+                    code.get_local_executable()))
+
+        calc_info = self.prepare_for_submission(folder)
+        calc_info.uuid = str(self.node.uuid)
+        scheduler = computer.get_scheduler()
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
@@ -342,7 +325,7 @@ class CalcJob(Process):
             job_tmpl.sched_join_files = False
 
         # Set retrieve path, add also scheduler STDOUT and STDERR
-        retrieve_list = (calcinfo.retrieve_list if calcinfo.retrieve_list is not None else [])
+        retrieve_list = (calc_info.retrieve_list if calc_info.retrieve_list is not None else [])
         if (job_tmpl.sched_output_path is not None and job_tmpl.sched_output_path not in retrieve_list):
             retrieve_list.append(job_tmpl.sched_output_path)
         if not job_tmpl.sched_join_files:
@@ -350,8 +333,8 @@ class CalcJob(Process):
                 retrieve_list.append(job_tmpl.sched_error_path)
         self.node.set_retrieve_list(retrieve_list)
 
-        retrieve_singlefile_list = (calcinfo.retrieve_singlefile_list
-                                    if calcinfo.retrieve_singlefile_list is not None else [])
+        retrieve_singlefile_list = (calc_info.retrieve_singlefile_list
+                                    if calc_info.retrieve_singlefile_list is not None else [])
         # a validation on the subclasses of retrieve_singlefile_list
         for _, subclassname, _ in retrieve_singlefile_list:
             file_sub_class = DataFactory(subclassname)
@@ -363,8 +346,8 @@ class CalcJob(Process):
             self.node.set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # Handle the retrieve_temporary_list
-        retrieve_temporary_list = (calcinfo.retrieve_temporary_list
-                                   if calcinfo.retrieve_temporary_list is not None else [])
+        retrieve_temporary_list = (calc_info.retrieve_temporary_list
+                                   if calc_info.retrieve_temporary_list is not None else [])
         self.node.set_retrieve_temporary_list(retrieve_temporary_list)
 
         # the if is done so that if the method returns None, this is
@@ -375,10 +358,10 @@ class CalcJob(Process):
         #   an exception
         prepend_texts = [computer.get_prepend_text()] + \
             [code.get_prepend_text() for code in codes] + \
-            [calcinfo.prepend_text, self.node.get_option('prepend_text')]
+            [calc_info.prepend_text, self.node.get_option('prepend_text')]
         job_tmpl.prepend_text = '\n\n'.join(prepend_text for prepend_text in prepend_texts if prepend_text)
 
-        append_texts = [self.node.get_option('append_text'), calcinfo.append_text] + \
+        append_texts = [self.node.get_option('append_text'), calc_info.append_text] + \
             [code.get_append_text() for code in codes] + \
             [computer.get_append_text()]
         job_tmpl.append_text = '\n\n'.join(append_text for append_text in append_texts if append_text)
@@ -398,11 +381,11 @@ class CalcJob(Process):
         extra_mpirun_params = self.node.get_option('mpirun_extra_params')  # same for all codes in the same calc
 
         # set the codes_info
-        if not isinstance(calcinfo.codes_info, (list, tuple)):
+        if not isinstance(calc_info.codes_info, (list, tuple)):
             raise PluginInternalError('codes_info passed to CalcInfo must be a list of CalcInfo objects')
 
         codes_info = []
-        for code_info in calcinfo.codes_info:
+        for code_info in calc_info.codes_info:
 
             if not isinstance(code_info, CodeInfo):
                 raise PluginInternalError('Invalid codes_info, must be a list of CodeInfo objects')
@@ -415,7 +398,7 @@ class CalcJob(Process):
 
             this_withmpi = code_info.withmpi  # to decide better how to set the default
             if this_withmpi is None:
-                if len(calcinfo.codes_info) > 1:
+                if len(calc_info.codes_info) > 1:
                     raise PluginInternalError('For more than one code, it is '
                                               'necessary to set withmpi in '
                                               'codes_info')
@@ -439,7 +422,7 @@ class CalcJob(Process):
 
         if len(codes) > 1:
             try:
-                job_tmpl.codes_run_mode = calcinfo.codes_run_mode
+                job_tmpl.codes_run_mode = calc_info.codes_run_mode
             except KeyError:
                 raise PluginInternalError('Need to set the order of the code execution (parallel or serial?)')
         else:
@@ -482,24 +465,24 @@ class CalcJob(Process):
 
         subfolder = folder.get_subfolder('.aiida', create=True)
         subfolder.create_file_from_filelike(io.StringIO(json.dumps(job_tmpl)), 'job_tmpl.json', 'w', encoding='utf8')
-        subfolder.create_file_from_filelike(io.StringIO(json.dumps(calcinfo)), 'calcinfo.json', 'w', encoding='utf8')
+        subfolder.create_file_from_filelike(io.StringIO(json.dumps(calc_info)), 'calcinfo.json', 'w', encoding='utf8')
 
-        if calcinfo.local_copy_list is None:
-            calcinfo.local_copy_list = []
+        if calc_info.local_copy_list is None:
+            calc_info.local_copy_list = []
 
-        if calcinfo.remote_copy_list is None:
-            calcinfo.remote_copy_list = []
+        if calc_info.remote_copy_list is None:
+            calc_info.remote_copy_list = []
 
         # Some validation
         this_pk = self.node.pk if self.node.pk is not None else '[UNSTORED]'
-        local_copy_list = calcinfo.local_copy_list
+        local_copy_list = calc_info.local_copy_list
         try:
             validate_list_of_string_tuples(local_copy_list, tuple_length=3)
         except ValidationError as exc:
             raise PluginInternalError('[presubmission of calc {}] '
                                       'local_copy_list format problem: {}'.format(this_pk, exc))
 
-        remote_copy_list = calcinfo.remote_copy_list
+        remote_copy_list = calc_info.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list, tuple_length=3)
         except ValidationError as exc:
@@ -519,4 +502,4 @@ class CalcJob(Process):
                                           'The destination path of the remote copy '
                                           'is absolute! ({})'.format(this_pk, dest_rel_path))
 
-        return calcinfo, script_filename
+        return calc_info, script_filename

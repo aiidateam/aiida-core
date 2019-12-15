@@ -1,5 +1,6 @@
 # Makefile for Sphinx documentation
 #
+export PYTHONPATH=.:$PYTHONPATH
 
 SPHINXBUILD  = sphinx-build
 BUILDDIR     = build

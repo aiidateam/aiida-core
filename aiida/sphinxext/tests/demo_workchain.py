@@ -12,7 +12,7 @@
 # This import is here to test an error which is triggered if
 # can_document_member raises an exception.
 
-from aiida.engine import WorkChain
+from aiida.engine import WorkChain, if_, while_
 from aiida.orm import Bool, Float, Int
 
 
@@ -32,6 +32,34 @@ class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
         spec.input_namespace('nsp', help='A separate namespace, ``nsp``.')
         spec.input_namespace('nsp2',)
         spec.output('z', valid_type=Bool, help='Output of the demoworkchain.')
+
+        spec.outline(  # yapf: disable
+            cls.start,
+            while_(cls.some_check)(
+                cls.do_something,
+                if_(cls.another_check)(
+                    cls.do_something_else
+                )),
+            cls.finalize
+        )
+
+    def start(self):
+        pass
+
+    def some_check(self):
+        pass
+
+    def another_check(self):
+        pass
+
+    def do_something(self):
+        pass
+
+    def do_something_else(self):
+        pass
+
+    def finalize(self):
+        pass
 
 
 class NormalClass:  # pylint: disable=too-few-public-methods

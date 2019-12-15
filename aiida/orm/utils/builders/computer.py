@@ -13,15 +13,14 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
 
 
-class ComputerBuilder:
+class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
     """Build a computer with validation of attribute combinations"""
 
     @staticmethod
     def from_computer(computer):
         """Create ComputerBuilder from existing computer instance.
 
-        See also :py:func:`~ComputerBuilder.get_computer_spec`
-        """
+        See also :py:func:`~ComputerBuilder.get_computer_spec`"""
         spec = ComputerBuilder.get_computer_spec(computer)
         return ComputerBuilder(**spec)
 
@@ -33,9 +32,7 @@ class ComputerBuilder:
 
             spec = ComputerBuilder.get_computer_spec(old_computer)
             builder = ComputerBuilder(**spec)
-            new_computer = builder.new()
-
-        """
+            new_computer = builder.new()"""
         spec = {}
         spec['label'] = computer.label
         spec['description'] = computer.description
@@ -59,9 +56,7 @@ class ComputerBuilder:
             self.__setattr__(key, value)
 
     def validate(self, raise_error=True):
-        """
-        Validate the computer options
-        """
+        """Validate the computer options."""
         return self._err_acc.result(raise_error=self.ComputerValidationError if raise_error else False)
 
     @with_dbenv()
@@ -131,8 +126,7 @@ class ComputerBuilder:
         """
         Return a spec, or None if not defined
 
-        :param key: name of a computer spec
-        """
+        :param key: name of a computer spec"""
         return self._computer_spec.get(key)
 
     def _get_and_count(self, key, used):
@@ -168,8 +162,7 @@ class ComputerBuilder:
         A ComputerBuilder instance may raise this
 
          * when asked to instanciate a code with missing or invalid computer attributes
-         * when asked for a computer attibute that has not been set yet
-        """
+         * when asked for a computer attibute that has not been set yet."""
 
         def __init__(self, msg):
             super().__init__()

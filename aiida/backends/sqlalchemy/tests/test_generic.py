@@ -7,30 +7,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Generic tests that need the be specific to sqlalchemy
-"""
-
+"""Generic tests that need the be specific to sqlalchemy."""
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Data
 
 
 class TestComputer(AiidaTestCase):
-    """
-    Test the Computer class.
-    """
+    """Test the Computer class."""
 
     def test_deletion(self):
+        """Test computer deletion."""
         from aiida.orm import CalcJobNode
         from aiida.common.exceptions import InvalidOperation
         import aiida.backends.sqlalchemy
 
         newcomputer = self.backend.computers.create(
-            name='testdeletioncomputer',
-            hostname='localhost',
-            transport_type='local',
-            scheduler_type='pbspro')
+            name='testdeletioncomputer', hostname='localhost', transport_type='local', scheduler_type='pbspro'
+        )
         newcomputer.store()
 
         # This should be possible, because nothing is using this computer
@@ -48,15 +42,13 @@ class TestComputer(AiidaTestCase):
         try:
             session.begin_nested()
             with self.assertRaises(InvalidOperation):
-                self.backend.computers.delete(self.computer.id)
+                self.backend.computers.delete(self.computer.id)  # pylint: disable=no-member
         finally:
             session.rollback()
 
 
 class TestGroupsSqla(AiidaTestCase):
-    """
-     Characterized functions
-     """
+    """Test group queries for sqlalchemy backend."""
 
     def setUp(self):
         from aiida.orm.implementation import sqlalchemy as sqla
@@ -64,79 +56,73 @@ class TestGroupsSqla(AiidaTestCase):
         self.assertIsInstance(self.backend, sqla.backend.SqlaBackend)
 
     def test_query(self):
-        """
-        Test if queries are working
-        """
+        """Test if queries are working."""
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
 
         backend = self.backend
 
         simple_user = backend.users.create('simple@ton.com')
 
-        g1 = backend.groups.create(label='testquery1', user=simple_user).store()
-        self.addCleanup(lambda: backend.groups.delete(g1.id))
-        g2 = backend.groups.create(label='testquery2', user=simple_user).store()
-        self.addCleanup(lambda: backend.groups.delete(g2.id))
+        g_1 = backend.groups.create(label='testquery1', user=simple_user).store()
+        self.addCleanup(lambda: backend.groups.delete(g_1.id))
+        g_2 = backend.groups.create(label='testquery2', user=simple_user).store()
+        self.addCleanup(lambda: backend.groups.delete(g_2.id))
 
-        n1 = Data().store().backend_entity
-        n2 = Data().store().backend_entity
-        n3 = Data().store().backend_entity
-        n4 = Data().store().backend_entity
+        n_1 = Data().store().backend_entity
+        n_2 = Data().store().backend_entity
+        n_3 = Data().store().backend_entity
+        n_4 = Data().store().backend_entity
 
-        g1.add_nodes([n1, n2])
-        g2.add_nodes([n1, n3])
+        g_1.add_nodes([n_1, n_2])
+        g_2.add_nodes([n_1, n_3])
 
         # NOTE: Here we pass type_string to query and get calls so that these calls don't
         # find the autogroups (otherwise the assertions will fail)
         newuser = backend.users.create(email='test@email.xx')
-        g3 = backend.groups.create(label='testquery3', user=newuser).store()
+        g_3 = backend.groups.create(label='testquery3', user=newuser).store()
 
         # I should find it
-        g1copy = backend.groups.get(uuid=g1.uuid)
-        self.assertEquals(g1.pk, g1copy.pk)
+        g_1copy = backend.groups.get(uuid=g_1.uuid)
+        self.assertEqual(g_1.pk, g_1copy.pk)
 
         # Try queries
-        res = backend.groups.query(nodes=n4, type_string='')
-        self.assertEquals([_.pk for _ in res], [])
+        res = backend.groups.query(nodes=n_4, type_string='')
+        self.assertEqual([_.pk for _ in res], [])
 
-        res = backend.groups.query(nodes=n1, type_string='')
-        self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1, g2]])
+        res = backend.groups.query(nodes=n_1, type_string='')
+        self.assertEqual([_.pk for _ in res], [_.pk for _ in [g_1, g_2]])
 
-        res = backend.groups.query(nodes=n2, type_string='')
-        self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1]])
+        res = backend.groups.query(nodes=n_2, type_string='')
+        self.assertEqual([_.pk for _ in res], [_.pk for _ in [g_1]])
 
         # I try to use 'get' with zero or multiple results
         with self.assertRaises(NotExistent):
-            backend.groups.get(nodes=n4, type_string='')
+            backend.groups.get(nodes=n_4, type_string='')
         with self.assertRaises(MultipleObjectsError):
-            backend.groups.get(nodes=n1, type_string='')
+            backend.groups.get(nodes=n_1, type_string='')
 
-        self.assertEquals(backend.groups.get(nodes=n2, type_string='').pk, g1.pk)
+        self.assertEqual(backend.groups.get(nodes=n_2, type_string='').pk, g_1.pk)
 
         # Query by user
         res = backend.groups.query(user=newuser, type_string='')
-        self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g3]))
+        self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g_3]))
 
         # Same query, but using a string (the username=email) instead of
         # a DbUser object
         res = backend.groups.query(user=newuser, type_string='')
-        self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g3]))
+        self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g_3]))
 
         res = backend.groups.query(user=simple_user, type_string='')
 
-        self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
+        self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g_1, g_2]))
 
 
 class TestGroupNoOrmSQLA(AiidaTestCase):
-    """
-    These tests check that the group node addition works ok when the skip_orm=True flag is used
-    """
+    """These tests check that the group node addition works ok when the skip_orm=True flag is used."""
 
     def test_group_general(self):
-        """
-        General tests to verify that the group addition with the skip_orm=True flag
-        work properly
-        """
+        """General tests to verify that the group addition with the skip_orm=True flag
+        work properly."""
         backend = self.backend
 
         node_01 = Data().store().backend_entity
@@ -163,9 +149,7 @@ class TestGroupNoOrmSQLA(AiidaTestCase):
         self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
 
     def test_group_batch_size(self):
-        """
-        Test that the group addition in batches works as expected.
-        """
+        """Test that the group addition in batches works as expected."""
         from aiida.orm.groups import Group
 
         # Create 100 nodes

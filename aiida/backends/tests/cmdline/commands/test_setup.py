@@ -10,9 +10,8 @@
 """Tests for `verdi profile`."""
 
 import traceback
-import unittest
-
 from click.testing import CliRunner
+import pytest
 
 from aiida import orm
 from aiida.backends import BACKEND_DJANGO
@@ -23,12 +22,13 @@ from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
 
 
-@unittest.skipIf(configuration.PROFILE.database_backend == BACKEND_DJANGO, 'Reenable when #2813 is addressed')
 class TestVerdiSetup(AiidaPostgresTestCase):
     """Tests for `verdi setup` and `verdi quicksetup`."""
 
     def setUp(self):
         """Create a CLI runner to invoke the CLI commands."""
+        if configuration.PROFILE.database_backend == BACKEND_DJANGO:
+            pytest.skip('Reenable when #2813 is addressed')
         super().setUp()
         self.backend = configuration.PROFILE.database_backend
         self.cli_runner = CliRunner()

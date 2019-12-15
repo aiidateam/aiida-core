@@ -16,7 +16,6 @@ Migration 0037_attributes_extras_settings_json
 import copy
 
 from django.db import transaction
-from django.utils.encoding import python_2_unicode_compatible
 
 from aiida.backends.djsite.db.subtests.migrations.test_migrations_common import TestMigrations
 
@@ -554,7 +553,6 @@ class DbMultipleValueAttributeBaseClass():
         return list_to_return
 
 
-@python_2_unicode_compatible  # pylint: disable=no-init
 class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     """
     Abstract base class for tables storing element-attribute-value data.

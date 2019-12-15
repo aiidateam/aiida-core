@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Implementation-dependednt base tests"""
 from abc import ABC, abstractmethod
 
 from aiida import orm
@@ -14,8 +15,7 @@ from aiida.common import exceptions
 
 
 class AiidaTestImplementation(ABC):
-    """
-    For each implementation, define what to do at setUp and tearDown.
+    """For each implementation, define what to do at setUp and tearDown.
 
     Each subclass must reimplement two *standard* methods (i.e., *not* classmethods), called
     respectively ``setUpClass_method`` and ``tearDownClass_method``.
@@ -29,9 +29,7 @@ class AiidaTestImplementation(ABC):
     - ``self.user_email`` that must be a string
 
     These two are then exposed by the ``self.get_computer()`` and ``self.get_user_email()``
-    methods.
-    """
-
+    methods."""
     # This should be set by the implementing class in setUpClass_method()
     backend = None  # type: aiida.orm.implementation.Backend
     computer = None  # type: aiida.orm.Computer
@@ -39,39 +37,25 @@ class AiidaTestImplementation(ABC):
     user_email = None  # type: str
 
     @abstractmethod
-    def setUpClass_method(self):
-        """
-        This class prepares the database (cleans it up and installs some basic entries).
+    def setUpClass_method(self):  # pylint: disable=invalid-name
+        """This class prepares the database (cleans it up and installs some basic entries).
         You have also to set a self.computer and a self.user_email as explained in the docstring of the
-        AiidaTestImplemention docstring.
-        """
-
-    def setUp_method(self):
-        pass
-
-    def tearDown_method(self):
-        pass
+        AiidaTestImplemention docstring."""
 
     @abstractmethod
-    def tearDownClass_method(self):
-        """
-        Backend-specific tasks for tearing down the test environment.
-        """
+    def tearDownClass_method(self):  # pylint: disable=invalid-name
+        """Backend-specific tasks for tearing down the test environment."""
 
     @abstractmethod
     def clean_db(self):
-        """
-        This method implements the logic to fully clean the DB.
-        """
+        """This method implements the logic to fully clean the DB."""
 
     def insert_data(self):
         pass
 
     def create_user(self):
-        """
-        This method creates and stores the default user. It has the same effect
-        as the verdi setup.
-        """
+        """This method creates and stores the default user. It has the same effect
+        as the verdi setup."""
         from aiida.manage.configuration import get_config
         self.user_email = get_config().current_profile.default_user
 
@@ -83,9 +67,7 @@ class AiidaTestImplementation(ABC):
             self.user = orm.User(email=self.user_email).store()
 
     def create_computer(self):
-        """
-        This method creates and stores a computer.
-        """
+        """This method creates and stores a computer."""
         self.computer = orm.Computer(
             name='localhost',
             hostname='localhost',
@@ -96,21 +78,19 @@ class AiidaTestImplementation(ABC):
         ).store()
 
     def get_computer(self):
-        """
-        A ORM Computer object present in the DB
-        """
+        """An ORM Computer object present in the DB."""
         try:
             return self.computer
         except AttributeError:
             raise exceptions.InternalError(
-                'The AiiDA Test implementation should define a self.computer in the setUpClass_method')
+                'The AiiDA Test implementation should define a self.computer in the setUpClass_method'
+            )
 
     def get_user_email(self):
-        """
-        A string with the email of the User
-        """
+        """A string with the email of the User."""
         try:
             return self.user_email
         except AttributeError:
             raise exceptions.InternalError(
-                'The AiiDA Test implementation should define a self.user_email in the setUpClass_method')
+                'The AiiDA Test implementation should define a self.user_email in the setUpClass_method'
+            )

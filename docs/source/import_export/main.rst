@@ -301,9 +301,8 @@ A sample of the ``data.json`` file follows:
             "_scheduler-stdout.txt",
             "_scheduler-stderr.txt"
           ],
-          "last_jobinfo": {
+          "last_job_info": {
             "job_state": "DONE",
-            "detailedJobinfo": "AiiDA MESSAGE: This scheduler does not implement the routine get_detailed_jobinfo to retrieve the information on a job after it has finished.",
             "job_id": "13489"
           },
           "scheduler_state": "DONE",

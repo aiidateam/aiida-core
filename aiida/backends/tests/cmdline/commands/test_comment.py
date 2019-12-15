@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Test verdi comment command."""
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -17,17 +17,12 @@ from aiida import orm
 COMMENT = 'Well I never...'
 
 
-class TestVerdiUserCommand(AiidaTestCase):
+class TestVerdiCommentCommand(AiidaTestCase):
+    """AiiDA test class to test comments."""
 
     def setUp(self):
         self.cli_runner = CliRunner()
         self.node = orm.Data().store()
-
-    def test_comment_show_simple(self):
-        """Test simply calling the show command (without data to show)."""
-        result = self.cli_runner.invoke(cmd_comment.show, [], catch_exceptions=False)
-        self.assertEqual(result.output, '')
-        self.assertEqual(result.exit_code, 0)
 
     def test_comment_show(self):
         """Test showing an existing comment."""

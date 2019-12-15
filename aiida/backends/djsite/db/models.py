@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=import-error,no-name-in-module
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,18 +8,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Module that defines db models."""
 import contextlib
 
 from django.contrib.postgres.fields import JSONField
 from django.db import models as m
-from django.db import models as m
 from django.db.models.query import QuerySet
-from django.utils.encoding import python_2_unicode_compatible
 from pytz import UTC
 
 import aiida.backends.djsite.db.migrations as migrations
-from aiida.backends.djsite.settings import AUTH_USER_MODEL
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 
@@ -35,9 +33,11 @@ SCHEMA_VERSION = migrations.current_schema_version()
 
 
 class AiidaQuerySet(QuerySet):
-    def iterator(self):
+    """Represent a lazy database lookup for a set of objects."""
+
+    def iterator(self, chunk_size=2000):
         from aiida.orm.implementation.django import convert
-        for obj in super().iterator():
+        for obj in super().iterator(chunk_size=chunk_size):
             yield convert.get_backend_entity(obj, None)
 
     def __iter__(self):
@@ -51,19 +51,19 @@ class AiidaQuerySet(QuerySet):
     def __getitem__(self, key):
         """Get item for [] operator
 
-        Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
-        """
+        Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11."""
         from aiida.orm.implementation.django import convert
         res = super().__getitem__(key)
         return convert.get_backend_entity(res, None)
 
 
 class AiidaObjectManager(m.Manager):
+
     def get_queryset(self):
         return AiidaQuerySet(self.model, using=self._db)
 
 
-class DbUser(m.Model):
+class DbUser(m.Model):  # pylint: disable=too-few-public-methods
     """Class that represents a user as the owner of a specific Node."""
 
     is_anonymous = False
@@ -79,10 +79,8 @@ class DbUser(m.Model):
     institution = m.CharField(max_length=254, blank=True)
 
 
-@python_2_unicode_compatible
 class DbNode(m.Model):
-    """
-    Generic node: data or calculation or code.
+    """Generic node: data or calculation or code.
 
     Nodes can be linked (DbLink table)
     Naming convention for Node relationships: A --> C --> B.
@@ -99,8 +97,8 @@ class DbNode(m.Model):
     :note: Attributes in the DbAttribute table have to be thought as belonging
        to the DbNode, (this is the reason for which there is no 'user' field
        in the DbAttribute field). Moreover, Attributes define uniquely the
-       Node so should be immutable
-    """
+       Node so should be immutable."""
+
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # in the form data.upffile., data.structure., calculation., ...
     # Note that there is always a final dot, to allow to do queries of the
@@ -118,8 +116,7 @@ class DbNode(m.Model):
     user = m.ForeignKey(DbUser, on_delete=m.PROTECT, related_name='dbnodes')
 
     # Direct links
-    outputs = m.ManyToManyField('self', symmetrical=False,
-                                related_name='inputs', through='DbLink')
+    outputs = m.ManyToManyField('self', symmetrical=False, related_name='inputs', through='DbLink')
 
     # Used only if dbnode is a calculation, or remotedata
     # Avoid that computers can be deleted if at least a node exists pointing
@@ -136,36 +133,31 @@ class DbNode(m.Model):
     aiidaobjects = AiidaObjectManager()
 
     def get_simple_name(self, invalid_result=None):
-        """
-        Return a string with the last part of the type name.
+        """Return a string with the last part of the type name.
 
         If the type is empty, use 'Node'.
         If the type is invalid, return the content of the input variable
         ``invalid_result``.
 
         :param invalid_result: The value to be returned if the node type is
-            not recognized.
-        """
+            not recognized."""
         thistype = self.node_type
         # Fix for base class
         if thistype == '':
             thistype = 'node.Node.'
         if not thistype.endswith('.'):
             return invalid_result
-        else:
-            thistype = thistype[:-1]  # Strip final dot
-            return thistype.rpartition('.')[2]
+        thistype = thistype[:-1]  # Strip final dot
+        return thistype.rpartition('.')[2]
 
     def __str__(self):
         simplename = self.get_simple_name(invalid_result='Unknown')
         # node pk + type
         if self.label:
             return '{} node [{}]: {}'.format(simplename, self.pk, self.label)
-        else:
-            return '{} node [{}]'.format(simplename, self.pk)
+        return '{} node [{}]'.format(simplename, self.pk)
 
 
-@python_2_unicode_compatible
 class DbLink(m.Model):
     """Direct connection between two dbnodes. The label is identifying thelink type."""
 
@@ -184,14 +176,12 @@ class DbLink(m.Model):
             self.input.get_simple_name(invalid_result='Unknown node'),
             self.input.pk,
             self.output.get_simple_name(invalid_result='Unknown node'),
-            self.output.pk, )
+            self.output.pk,
+        )
 
 
-@python_2_unicode_compatible
 class DbSetting(m.Model):
-    """
-    This will store generic settings that should be database-wide.
-    """
+    """This will store generic settings that should be database-wide."""
     key = m.CharField(max_length=1024, db_index=True, blank=False, unique=True)
     val = JSONField(default=None, null=True)
     # I also add a description field for the variables
@@ -203,10 +193,11 @@ class DbSetting(m.Model):
         return "'{}'={}".format(self.key, self.getvalue())
 
     @classmethod
-    def set_value(cls, key, value, with_transaction=True,
-                  subspecifier_value=None, other_attribs={},
-                  stop_if_existing=False):
-
+    def set_value(
+        cls, key, value, with_transaction=True, subspecifier_value=None, other_attribs=None, stop_if_existing=False
+    ):
+        """Delete a setting value."""
+        other_attribs = other_attribs if other_attribs is not None else {}
         setting = DbSetting.objects.filter(key=key).first()
         if setting is not None:
             if stop_if_existing:
@@ -222,20 +213,17 @@ class DbSetting(m.Model):
         setting.save()
 
     def getvalue(self):
-        """
-        This can be called on a given row and will get the corresponding value.
-        """
+        """This can be called on a given row and will get the corresponding value."""
         return self.val
 
     def get_description(self):
-        """
-        This can be called on a given row and will get the corresponding
-        description.
-        """
+        """This can be called on a given row and will get the corresponding description."""
         return self.description
 
     @classmethod
     def del_value(cls, key, only_children=False, subspecifier_value=None):
+        """Set a setting value."""
+
         setting = DbSetting.objects.filter(key=key).first()
         if setting is not None:
             setting.val = None
@@ -245,7 +233,6 @@ class DbSetting(m.Model):
             raise KeyError()
 
 
-@python_2_unicode_compatible
 class DbGroup(m.Model):
     """
     A group of nodes.
@@ -268,17 +255,15 @@ class DbGroup(m.Model):
     # The owner of the group, not of the calculations
     # On user deletion, remove his/her groups too (not the calcuations, only
     # the groups
-    user = m.ForeignKey(DbUser, on_delete=m.CASCADE,
-                        related_name='dbgroups')
+    user = m.ForeignKey(DbUser, on_delete=m.CASCADE, related_name='dbgroups')
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
         unique_together = (('label', 'type_string'),)
 
     def __str__(self):
         return '<DbGroup [type_string: {}] "{}">'.format(self.type_string, self.label)
 
 
-@python_2_unicode_compatible
 class DbComputer(m.Model):
     """
     Table of computers or clusters.
@@ -324,7 +309,6 @@ class DbComputer(m.Model):
         return '{} ({})'.format(self.name, self.hostname)
 
 
-@python_2_unicode_compatible
 class DbAuthInfo(m.Model):
     """
     Table that pairs aiida users and computers, with all required authentication
@@ -342,18 +326,17 @@ class DbAuthInfo(m.Model):
     # Whether this computer is enabled (user-level enabling feature)
     enabled = m.BooleanField(default=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
         unique_together = (('aiidauser', 'dbcomputer'),)
 
     def __str__(self):
         if self.enabled:
             return 'DB authorization info for {} on {}'.format(self.aiidauser.email, self.dbcomputer.name)
-        else:
-            return 'DB authorization info for {} on {} [DISABLED]'.format(self.aiidauser.email, self.dbcomputer.name)
+        return 'DB authorization info for {} on {} [DISABLED]'.format(self.aiidauser.email, self.dbcomputer.name)
 
 
-@python_2_unicode_compatible
 class DbComment(m.Model):
+    """Class to store comments. """
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # Delete comments if the node is removed
     dbnode = m.ForeignKey(DbNode, related_name='dbcomments', on_delete=m.CASCADE)
@@ -364,12 +347,14 @@ class DbComment(m.Model):
     content = m.TextField(blank=True)
 
     def __str__(self):
-        return 'DbComment for [{} {}] on {}'.format(self.dbnode.get_simple_name(),
-                                                    self.dbnode.pk, timezone.localtime(self.ctime).strftime('%Y-%m-%d'))
+        return 'DbComment for [{} {}] on {}'.format(
+            self.dbnode.get_simple_name(), self.dbnode.pk,
+            timezone.localtime(self.ctime).strftime('%Y-%m-%d')
+        )
 
 
-@python_2_unicode_compatible
 class DbLog(m.Model):
+    """Class to store logs."""
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     time = m.DateTimeField(default=timezone.now, editable=False)
     loggername = m.CharField(max_length=255, db_index=True)
@@ -415,7 +400,7 @@ def suppress_auto_now(list_of_models_fields):
     _original_model_values = dict()
     for model, fields in list_of_models_fields:
         _original_field_values = dict()
-        for field in model._meta.local_fields:
+        for field in model._meta.local_fields:  # pylint: disable=protected-access
             if field.name in fields:
                 _original_field_values[field] = {
                     'auto_now': field.auto_now,

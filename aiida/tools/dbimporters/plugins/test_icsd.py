@@ -11,7 +11,8 @@
 Tests for IcsdDbImporter
 """
 import urllib
-import unittest
+
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 
@@ -47,7 +48,6 @@ def has_icsd_config():
     return required_keywords <= set(profile.dictionary.keys())
 
 
-@unittest.skipUnless(has_mysqldb() and has_icsd_config(), 'ICSD configuration in profile required')
 class TestIcsd(AiidaTestCase):
     """
     Tests for the ICSD importer
@@ -57,6 +57,8 @@ class TestIcsd(AiidaTestCase):
         """
         Set up IcsdDbImporter for web and mysql db query.
         """
+        if not (has_mysqldb() and has_icsd_config()):
+            pytest.skip('ICSD configuration in profile required')
         from aiida.manage.configuration import get_profile
         profile = get_profile()
 

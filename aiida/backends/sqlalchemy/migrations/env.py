@@ -7,22 +7,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Upper lewel SQLAlchemy migration funcitons."""
 from alembic import context
 
 # The available SQLAlchemy tables
-from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-from aiida.backends.sqlalchemy.models.comment import DbComment
-from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.backends.sqlalchemy.models.group import DbGroup
-from aiida.backends.sqlalchemy.models.log import DbLog
-from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
-from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.backends.sqlalchemy.models.settings import DbSetting
-from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.common.exceptions import DbContentError
-from aiida.backends.sqlalchemy.models.base import Base
-target_metadata = Base.metadata
+from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo  # noqa
+from aiida.backends.sqlalchemy.models.comment import DbComment  # noqa
+from aiida.backends.sqlalchemy.models.computer import DbComputer  # noqa
+from aiida.backends.sqlalchemy.models.group import DbGroup  # noqa
+from aiida.backends.sqlalchemy.models.log import DbLog  # noqa
+from aiida.backends.sqlalchemy.models.node import DbLink, DbNode  # noqa
+from aiida.backends.sqlalchemy.models.computer import DbComputer  # noqa
+from aiida.backends.sqlalchemy.models.settings import DbSetting  # noqa
+from aiida.backends.sqlalchemy.models.user import DbUser  # noqa
+from aiida.common.exceptions import DbContentError  # noqa
+from aiida.backends.sqlalchemy.models.base import Base  # noqa
+target_metadata = Base.metadata  # pylint: disable=invalid-name
 
 
 def run_migrations_offline():
@@ -34,9 +34,7 @@ def run_migrations_offline():
     we don't even need a DBAPI to be available.
 
     Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
+    script output."""
     raise NotImplementedError('This feature is not currently supported.')
 
 
@@ -44,21 +42,20 @@ def run_migrations_online():
     """Run migrations in 'online' mode.
 
     In this scenario we need to create an Engine
-    and associate a connection with the context.
+    and associate a connection with the context."""
 
-    """
     # This is the Alembic Config object, which provides
     # access to the values within the .ini file in use.
     # It is initialized by alembic and we enrich it here
     # to point to the right database configuration.
+    #  pylint: disable=no-member
     config = context.config
 
     connectable = config.attributes.get('connection', None)
 
     if connectable is None:
         from aiida.common.exceptions import ConfigurationError
-        raise ConfigurationError('An initialized connection is expected '
-                                 'for the AiiDA online migrations.')
+        raise ConfigurationError('An initialized connection is expected ' 'for the AiiDA online migrations.')
 
     with connectable.connect() as connection:
         context.configure(
@@ -70,8 +67,9 @@ def run_migrations_online():
         with context.begin_transaction():
             context.run_migrations()
 
+
 try:
-    if context.is_offline_mode():
+    if context.is_offline_mode():  #  pylint: disable=no-member
         run_migrations_offline()
     else:
         run_migrations_online()

@@ -7,7 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=global-statement
+"""Test engine utilities such as the exponential backoff mechanism."""
 from tornado.ioloop import IOLoop
 from tornado.gen import coroutine
 
@@ -30,8 +31,10 @@ class TestExponentialBackoffRetry(AiidaTestCase):
         cls.authinfo = orm.AuthInfo(computer=cls.computer, user=orm.User.objects.get_default())
         cls.authinfo.store()
 
-    def test_exponential_backoff_success(self):
+    @staticmethod
+    def test_exp_backoff_success():
         """Test that exponential backoff will successfully catch exceptions as long as max_attempts is not exceeded."""
+        global ITERATION
         ITERATION = 0
         loop = IOLoop()
 
@@ -46,8 +49,9 @@ class TestExponentialBackoffRetry(AiidaTestCase):
         max_attempts = MAX_ITERATIONS + 1
         loop.run_sync(lambda: exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
 
-    def test_exponential_backoff_max_attempts_exceeded(self):
+    def test_exp_backoff_max_attempts_exceeded(self):
         """Test that exponential backoff will finally raise if max_attempts is exceeded"""
+        global ITERATION
         ITERATION = 0
         loop = IOLoop()
 

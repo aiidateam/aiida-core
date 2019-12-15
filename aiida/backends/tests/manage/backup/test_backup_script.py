@@ -276,7 +276,10 @@ class TestBackupScriptIntegration(AiidaTestCase):
     _backup_rel_path = 'backup'
     _repo_rel_path = 'repository'
 
-    _bs_instance = backup_setup.BackupSetup()
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        super().setUpClass(*args, **kwargs)
+        cls._bs_instance = backup_setup.BackupSetup()
 
     def test_integration(self):
         """Test integration"""

@@ -7,4 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module for defining tests that required access to (a temporary) database."""
+"""This module defines a broken example workchain for testing that errors are not swallowed."""
+
+from aiida.engine import WorkChain
+
+
+class BrokenDemoWorkChain(WorkChain):
+    """
+    A demo workchain that raises when its spec is built.
+    """
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        raise ValueError('The broken workchain says hi!')

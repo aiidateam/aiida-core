@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Module to test remote data."""
 import errno
 import os
 import shutil
@@ -21,7 +21,7 @@ class TestRemoteData(AiidaTestCase):
     """Test for the RemoteData class."""
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls):  # pylint: disable=arguments-differ
         super().setUpClass()
         user = User.objects.get_default()
         authinfo = AuthInfo(cls.computer, user)
@@ -54,5 +54,5 @@ class TestRemoteData(AiidaTestCase):
     def test_clean(self):
         """Try cleaning a RemoteData node."""
         self.assertFalse(self.remote.is_empty)
-        self.remote._clean()
+        self.remote._clean()  # pylint: disable=protected-access
         self.assertTrue(self.remote.is_empty)

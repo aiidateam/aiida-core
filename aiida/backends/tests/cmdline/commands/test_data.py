@@ -29,7 +29,7 @@ from aiida.orm.nodes.data.cif import has_pycifrw
 from aiida.orm import Group, ArrayData, BandsData, KpointsData, CifData, Dict, RemoteData, StructureData, TrajectoryData
 
 
-class TestVerdiDataExportable:
+class DummyVerdiDataExportable:
     """Test exportable data objects."""
 
     NODE_ID_STR = 'node_id'
@@ -98,7 +98,7 @@ class TestVerdiDataExportable:
                 shutil.rmtree(tmpd)
 
 
-class TestVerdiDataListable:
+class DummyVerdiDataListable:
     """Test listable data objects."""
 
     NODE_ID_STR = 'node_id'
@@ -240,7 +240,7 @@ class TestVerdiDataArray(AiidaTestCase):
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
 
 
-class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
+class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
     """Testing verdi data bands."""
 
     @staticmethod
@@ -298,9 +298,9 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
         g_e.store()
 
         return {
-            TestVerdiDataListable.NODE_ID_STR: bands.id,
-            TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
-            TestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+            DummyVerdiDataListable.NODE_ID_STR: bands.id,
+            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
+            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
         }
 
     @classmethod
@@ -327,7 +327,7 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
         self.assertIn(b'Usage:', output, 'Sub-command verdi data bands export --help failed.')
 
     def test_bandsexport(self):
-        options = [str(self.ids[TestVerdiDataListable.NODE_ID_STR])]
+        options = [str(self.ids[DummyVerdiDataListable.NODE_ID_STR])]
         res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
         self.assertIn(b'[1.0, 3.0]', res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands' 'export')
@@ -428,7 +428,7 @@ class TestVerdiDataRemote(AiidaTestCase):
         )
 
 
-class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
+class TestVerdiDataTrajectory(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDataExportable):
     """Test verdi data trajectory."""
 
     @staticmethod
@@ -487,9 +487,9 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
         g_e.store()
 
         return {
-            TestVerdiDataListable.NODE_ID_STR: traj.id,
-            TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
-            TestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+            DummyVerdiDataListable.NODE_ID_STR: traj.id,
+            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
+            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
         }
 
     @classmethod
@@ -516,7 +516,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
         )
 
     def test_list(self):
-        self.data_listing_test(TrajectoryData, str(self.ids[TestVerdiDataListable.NODE_ID_STR]), self.ids)
+        self.data_listing_test(TrajectoryData, str(self.ids[DummyVerdiDataListable.NODE_ID_STR]), self.ids)
 
     @unittest.skipUnless(has_pycifrw(), 'Unable to import PyCifRW')
     def test_export(self):
@@ -524,7 +524,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
         self.data_export_test(TrajectoryData, self.ids, new_supported_formats)
 
 
-class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
+class TestVerdiDataStructure(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDataExportable):
     """Test verdi data structure."""
     from aiida.orm.nodes.data.structure import has_ase
 
@@ -568,9 +568,9 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
         g_e.store()
 
         return {
-            TestVerdiDataListable.NODE_ID_STR: struc.id,
-            TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
-            TestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+            DummyVerdiDataListable.NODE_ID_STR: struc.id,
+            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
+            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
         }
 
     @classmethod
@@ -707,7 +707,7 @@ PRIMVEC
 
 
 @unittest.skipUnless(has_pycifrw(), 'Unable to import PyCifRW')
-class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
+class TestVerdiDataCif(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDataExportable):
     """Test verdi data cif."""
     valid_sample_cif_str = '''
         data_test
@@ -749,9 +749,9 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
         cls.cif = a_cif
 
         return {
-            TestVerdiDataListable.NODE_ID_STR: a_cif.id,
-            TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
-            TestVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+            DummyVerdiDataListable.NODE_ID_STR: a_cif.id,
+            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
+            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
         }
 
     @classmethod
@@ -822,7 +822,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
         self.data_export_test(CifData, self.ids, cmd_cif.EXPORT_FORMATS)
 
 
-class TestVerdiDataSinglefile(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
+class TestVerdiDataSinglefile(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDataExportable):
     """Test verdi data singlefile."""
     sample_str = '''
         data_test

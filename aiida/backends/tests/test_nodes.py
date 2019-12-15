@@ -132,7 +132,7 @@ class TestNodeHashing(AiidaTestCase):
         hash1 = node.get_hash()
         node.set_process_state('finished')
         hash2 = node.get_hash()
-        self.assertNotEquals(hash1, None)
+        self.assertNotEqual(hash1, None)
         self.assertEqual(hash1, hash2)
 
 
@@ -495,7 +495,7 @@ class TestNodeBasic(AiidaTestCase):
             self.assertEqual(fhandle.read(), file_content)
 
         b = a.clone()
-        self.assertNotEquals(a.uuid, b.uuid)
+        self.assertNotEqual(a.uuid, b.uuid)
 
         # Check that the content is there
         self.assertEqual(set(b.list_object_names()), set(['file1.txt', 'file2.txt']))
@@ -603,7 +603,7 @@ class TestNodeBasic(AiidaTestCase):
 
         # clone into a new node
         b = a.clone()
-        self.assertNotEquals(a.uuid, b.uuid)
+        self.assertNotEqual(a.uuid, b.uuid)
 
         # Check that the content is there
         self.assertEqual(set(b.list_object_names('.')), set(['tree_1']))

@@ -220,7 +220,7 @@ class TestCommand(unittest.TestCase):
 
         # TEST 2:
         logging.disable(logging.ERROR)
-        with self.assertRaisesRegexp(SchedulerError, '^Error during submission, retval=1'):
+        with self.assertRaisesRegex(SchedulerError, '^Error during submission, retval=1'):
             sge_parse_submit_output = sge._parse_submit_output(1, '', '')
         logging.disable(logging.NOTSET)
 

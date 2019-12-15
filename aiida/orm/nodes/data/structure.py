@@ -530,7 +530,7 @@ def get_formula(symbol_list, mode='hill', separator=''):
         raise ValueError('Mode should be hill, hill_compact, group, ' 'reduce, count or count_compact')
 
     if mode in ['hill_compact', 'count_compact']:
-        from fractions import gcd
+        from math import gcd
         the_gcd = reduce(gcd, [e[0] for e in the_symbol_list])
         the_symbol_list = [[e[0] // the_gcd, e[1]] for e in the_symbol_list]
 

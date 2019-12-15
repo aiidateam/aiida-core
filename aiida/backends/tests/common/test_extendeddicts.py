@@ -19,14 +19,14 @@ from aiida.common import exceptions
 from aiida.common import extendeddicts
 
 
-class TestFFADExample(extendeddicts.FixedFieldsAttributeDict):
+class FFADExample(extendeddicts.FixedFieldsAttributeDict):
     """
     An example class that accepts only the 'alpha', 'beta' and 'gamma' keys/attributes.
     """
     _valid_fields = ('alpha', 'beta', 'gamma')
 
 
-class TestDFADExample(extendeddicts.DefaultFieldsAttributeDict):
+class DFADExample(extendeddicts.DefaultFieldsAttributeDict):
     """
     An example class that has 'alpha', 'beta' and 'gamma' as default keys.
     """
@@ -270,7 +270,7 @@ class TestFFAD(unittest.TestCase):
 
     def test_insertion(self):
         """Test insertion."""
-        dictionary = TestFFADExample()
+        dictionary = FFADExample()
         dictionary['alpha'] = 1
         dictionary.beta = 2
         # Not a valid key.
@@ -281,14 +281,14 @@ class TestFFAD(unittest.TestCase):
 
     def test_insertion_on_init(self):
         """Test insertion in constructor."""
-        TestFFADExample({'alpha': 1, 'beta': 2})
+        FFADExample({'alpha': 1, 'beta': 2})
         with self.assertRaises(KeyError):
             # 'delta' is not a valid key
-            TestFFADExample({'alpha': 1, 'delta': 2})
+            FFADExample({'alpha': 1, 'delta': 2})
 
     def test_pickle(self):
         """Note: pickle works here because self._valid_fields is defined at the class level!"""
-        dictionary_01 = TestFFADExample({'alpha': 1, 'beta': 2})
+        dictionary_01 = FFADExample({'alpha': 1, 'beta': 2})
         dictionary_02 = pickle.loads(pickle.dumps(dictionary_01))
         dictionary_02.gamma = 3
         with self.assertRaises(KeyError):
@@ -299,7 +299,7 @@ class TestFFAD(unittest.TestCase):
         I test that the get_valid_fields() is working as a class method,
         so I don't need to instantiate the class to get the list.
         """
-        self.assertEqual(set(TestFFADExample.get_valid_fields()), set(['alpha', 'beta', 'gamma']))
+        self.assertEqual(set(FFADExample.get_valid_fields()), set(['alpha', 'beta', 'gamma']))
 
 
 class TestDFAD(unittest.TestCase):
@@ -307,7 +307,7 @@ class TestDFAD(unittest.TestCase):
 
     def test_insertion_and_retrieval(self):
         """Test insertion and retrieval."""
-        dictionary = TestDFADExample()
+        dictionary = DFADExample()
         dictionary['alpha'] = 1
         dictionary.beta = 2
         dictionary['delta'] = 3
@@ -319,7 +319,7 @@ class TestDFAD(unittest.TestCase):
 
     def test_keylist_method(self):
         """Test keylist retrieval."""
-        dictionary = TestDFADExample()
+        dictionary = DFADExample()
         dictionary['alpha'] = 1
         dictionary.beta = 2
         dictionary['delta'] = 3
@@ -336,11 +336,11 @@ class TestDFAD(unittest.TestCase):
         I test that the get_default_fields() is working as a class method,
         so I don't need to instantiate the class to get the list.
         """
-        self.assertEqual(set(TestDFADExample.get_default_fields()), set(['alpha', 'beta', 'gamma']))
+        self.assertEqual(set(DFADExample.get_default_fields()), set(['alpha', 'beta', 'gamma']))
 
     def test_validation(self):
         """Test validation."""
-        dictionary = TestDFADExample()
+        dictionary = DFADExample()
 
         # Should be ok to have an empty 'alpha' attribute
         dictionary.validate()

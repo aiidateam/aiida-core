@@ -126,9 +126,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         import aiida.backends.sqlalchemy.models.group
         return aiida.backends.sqlalchemy.models.group.table_groups_nodes
 
-    def get_session(self):
-        return aiida.backends.sqlalchemy.get_scoped_session()
-
     def modify_expansions(self, alias, expansions):
         """
         In SQLA, the metadata should be changed to _metadata to be in-line with the database schema

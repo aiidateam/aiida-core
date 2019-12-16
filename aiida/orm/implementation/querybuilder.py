@@ -100,11 +100,13 @@ class BackendQueryBuilder:
         from aiida.orm import Node
         return Node
 
-    @abc.abstractmethod
-    def get_session(self):
+    @staticmethod
+    def get_session():
         """
         :returns: a valid session, an instance of sqlalchemy.orm.session.Session
         """
+        from aiida.backends.sqlalchemy import get_scoped_session
+        return get_scoped_session()
 
     @abc.abstractmethod
     def modify_expansions(self, alias, expansions):

@@ -246,19 +246,6 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             return not_(expr)
         return expr
 
-    @staticmethod
-    def get_session():
-        from aiida.manage.configuration import get_config
-        from aiida.backends.sqlalchemy import reset_session
-        from aiida.backends.sqlalchemy import get_scoped_session
-
-        if get_scoped_session() is None:
-            config = get_config()
-            profile = config.current_profile
-            reset_session(profile)
-
-        return get_scoped_session()
-
     def modify_expansions(self, alias, expansions):
         """
         For django, there are no additional expansions for now, so

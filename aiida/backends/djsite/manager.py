@@ -30,9 +30,6 @@ class DjangoBackendManager(BackendManager):
         os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings'
         django.setup()  # pylint: disable=no-member
 
-    def reset_backend_environment(self):
-        """Reset the backend environment."""
-
     def is_database_schema_ahead(self):
         """Determine whether the database schema version is ahead of the code schema version.
 

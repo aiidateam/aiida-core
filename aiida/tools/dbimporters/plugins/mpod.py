@@ -94,7 +94,7 @@ class MpodDbImporter(DbImporter):
         results = None
         for query in query_statements:
             response = urllib.request.urlopen(query).read()
-            this_results = re.findall('/datafiles/(\d+)\.mpod', response)
+            this_results = re.findall(r'/datafiles/(\d+)\.mpod', response)
             if results is None:
                 results = this_results
             else:

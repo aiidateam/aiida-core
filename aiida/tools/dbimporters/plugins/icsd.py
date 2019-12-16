@@ -157,7 +157,7 @@ class IcsdDbImporter(DbImporter):
         # or at the end of the formula expression (no space after).
         # Be aware that one needs to check that space/beginning of line before and ideally also space/end of line
         # after, because I found that capitalization of the element name is not enforced in these queries.
-        return ' AND '.join("SUM_FORM REGEXP '(^|\ ){}[0-9\.]+($|\ )'".format(e) for e in values)
+        return ' AND '.join(r'SUM_FORM REGEXP \'(^|\ ){}[0-9\.]+($|\ )\''.format(e) for e in values)
 
     def _double_clause(self, key, alias, values, precision):
         """

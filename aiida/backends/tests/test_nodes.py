@@ -100,8 +100,8 @@ class TestNodeHashing(AiidaTestCase):
         # Check that the query doesn't fail
         qb.all()
         # And that the results are correct
-        self.assertEquals(qb.count(), 1)
-        self.assertEquals(qb.first()[0], n.id)
+        self.assertEqual(qb.count(), 1)
+        self.assertEqual(qb.first()[0], n.id)
 
     @staticmethod
     def create_folderdata_with_empty_file():
@@ -132,8 +132,8 @@ class TestNodeHashing(AiidaTestCase):
         hash1 = node.get_hash()
         node.set_process_state('finished')
         hash2 = node.get_hash()
-        self.assertNotEquals(hash1, None)
-        self.assertEquals(hash1, hash2)
+        self.assertNotEqual(hash1, None)
+        self.assertEqual(hash1, hash2)
 
 
 class TestTransitiveNoLoops(AiidaTestCase):
@@ -211,25 +211,25 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         results = [_ for [_] in qb.all()]
         # a3, a4 should not be found because they are not CalcJobNodes.
         # a6, a7 should not be found because they have not the attribute set.
-        self.assertEquals(set([i.pk for i in results]), set([a1.pk]))
+        self.assertEqual(set([i.pk for i in results]), set([a1.pk]))
 
         # Same query, but by the generic Node class
         qb = orm.QueryBuilder()
         qb.append(orm.Node, filters={'extras': {'has_key': extra_name}})
         results = [_ for [_] in qb.all()]
-        self.assertEquals(set([i.pk for i in results]), set([a1.pk, a3.pk, a4.pk]))
+        self.assertEqual(set([i.pk for i in results]), set([a1.pk, a3.pk, a4.pk]))
 
         # Same query, but by the Data class
         qb = orm.QueryBuilder()
         qb.append(orm.Data, filters={'extras': {'has_key': extra_name}})
         results = [_ for [_] in qb.all()]
-        self.assertEquals(set([i.pk for i in results]), set([a3.pk, a4.pk]))
+        self.assertEqual(set([i.pk for i in results]), set([a3.pk, a4.pk]))
 
         # Same query, but by the Dict subclass
         qb = orm.QueryBuilder()
         qb.append(orm.Dict, filters={'extras': {'has_key': extra_name}})
         results = [_ for [_] in qb.all()]
-        self.assertEquals(set([i.pk for i in results]), set([a4.pk]))
+        self.assertEqual(set([i.pk for i in results]), set([a4.pk]))
 
 
 class TestNodeBasic(AiidaTestCase):
@@ -308,14 +308,14 @@ class TestNodeBasic(AiidaTestCase):
         a.set_attribute('k9', None)
 
         # Now I check if I can retrieve them, before the storage
-        self.assertEquals(self.boolval, a.get_attribute('k1'))
-        self.assertEquals(self.intval, a.get_attribute('k2'))
-        self.assertEquals(self.floatval, a.get_attribute('k3'))
-        self.assertEquals(self.stringval, a.get_attribute('k4'))
-        self.assertEquals(self.dictval, a.get_attribute('k5'))
-        self.assertEquals(self.listval, a.get_attribute('k6'))
-        self.assertEquals(self.emptydict, a.get_attribute('k7'))
-        self.assertEquals(self.emptylist, a.get_attribute('k8'))
+        self.assertEqual(self.boolval, a.get_attribute('k1'))
+        self.assertEqual(self.intval, a.get_attribute('k2'))
+        self.assertEqual(self.floatval, a.get_attribute('k3'))
+        self.assertEqual(self.stringval, a.get_attribute('k4'))
+        self.assertEqual(self.dictval, a.get_attribute('k5'))
+        self.assertEqual(self.listval, a.get_attribute('k6'))
+        self.assertEqual(self.emptydict, a.get_attribute('k7'))
+        self.assertEqual(self.emptylist, a.get_attribute('k8'))
         self.assertIsNone(a.get_attribute('k9'))
 
         # And now I try to delete the keys
@@ -370,7 +370,7 @@ class TestNodeBasic(AiidaTestCase):
         }
 
         # Now I check if I can retrieve them, before the storage
-        self.assertEquals(a.attributes, target_attrs)
+        self.assertEqual(a.attributes, target_attrs)
 
         # And now I try to delete the keys
         a.delete_attribute('k1')
@@ -383,7 +383,7 @@ class TestNodeBasic(AiidaTestCase):
         a.delete_attribute('k8')
         a.delete_attribute('k9')
 
-        self.assertEquals(a.attributes, {})
+        self.assertEqual(a.attributes, {})
 
     def test_get_attrs_after_storing(self):
         a = orm.Data()
@@ -412,7 +412,7 @@ class TestNodeBasic(AiidaTestCase):
         }
 
         # Now I check if I can retrieve them, before the storage
-        self.assertEquals(a.attributes, target_attrs)
+        self.assertEqual(a.attributes, target_attrs)
 
     def test_store_object(self):
         """Trying to set objects as attributes should fail, because they are not json-serializable."""
@@ -457,9 +457,9 @@ class TestNodeBasic(AiidaTestCase):
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
-        self.assertEquals(b.attributes, b_expected_attributes)
+        self.assertEqual(b.attributes, b_expected_attributes)
         # Note that during copy, I do not copy the extras!
-        self.assertEquals({k: v for k, v in b.extras.items()}, {})
+        self.assertEqual({k: v for k, v in b.extras.items()}, {})
 
         # I store now
         b.store()
@@ -468,11 +468,11 @@ class TestNodeBasic(AiidaTestCase):
         b_expected_extras = {'meta': 'textofext', '_aiida_hash': AnyValue()}
 
         # Now I check that the attributes of the original node have not changed
-        self.assertEquals({k: v for k, v in a.attributes.items()}, attrs_to_set)
+        self.assertEqual({k: v for k, v in a.attributes.items()}, attrs_to_set)
 
         # I check then on the 'b' copy
-        self.assertEquals({k: v for k, v in b.attributes.items()}, b_expected_attributes)
-        self.assertEquals({k: v for k, v in b.extras.items()}, b_expected_extras)
+        self.assertEqual({k: v for k, v in b.attributes.items()}, b_expected_attributes)
+        self.assertEqual({k: v for k, v in b.extras.items()}, b_expected_extras)
 
     def test_files(self):
         import tempfile
@@ -488,21 +488,21 @@ class TestNodeBasic(AiidaTestCase):
             a.put_object_from_file(handle.name, 'file1.txt')
             a.put_object_from_file(handle.name, 'file2.txt')
 
-        self.assertEquals(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
+        self.assertEqual(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
         with a.open('file1.txt') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
         with a.open('file2.txt') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
 
         b = a.clone()
-        self.assertNotEquals(a.uuid, b.uuid)
+        self.assertNotEqual(a.uuid, b.uuid)
 
         # Check that the content is there
-        self.assertEquals(set(b.list_object_names()), set(['file1.txt', 'file2.txt']))
+        self.assertEqual(set(b.list_object_names()), set(['file1.txt', 'file2.txt']))
         with b.open('file1.txt') as handle:
-            self.assertEquals(handle.read(), file_content)
+            self.assertEqual(handle.read(), file_content)
         with b.open('file2.txt') as handle:
-            self.assertEquals(handle.read(), file_content)
+            self.assertEqual(handle.read(), file_content)
 
         # I overwrite a file and create a new one in the clone only
         with tempfile.NamedTemporaryFile(mode='w+') as handle:
@@ -512,18 +512,18 @@ class TestNodeBasic(AiidaTestCase):
             b.put_object_from_file(handle.name, 'file3.txt')
 
         # I check the new content, and that the old one has not changed
-        self.assertEquals(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
+        self.assertEqual(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
         with a.open('file1.txt') as handle:
-            self.assertEquals(handle.read(), file_content)
+            self.assertEqual(handle.read(), file_content)
         with a.open('file2.txt') as handle:
-            self.assertEquals(handle.read(), file_content)
-        self.assertEquals(set(b.list_object_names()), set(['file1.txt', 'file2.txt', 'file3.txt']))
+            self.assertEqual(handle.read(), file_content)
+        self.assertEqual(set(b.list_object_names()), set(['file1.txt', 'file2.txt', 'file3.txt']))
         with b.open('file1.txt') as handle:
-            self.assertEquals(handle.read(), file_content)
+            self.assertEqual(handle.read(), file_content)
         with b.open('file2.txt') as handle:
-            self.assertEquals(handle.read(), file_content_different)
+            self.assertEqual(handle.read(), file_content_different)
         with b.open('file3.txt') as handle:
-            self.assertEquals(handle.read(), file_content_different)
+            self.assertEqual(handle.read(), file_content_different)
 
         # This should in principle change the location of the files,
         # so I recheck
@@ -538,19 +538,19 @@ class TestNodeBasic(AiidaTestCase):
             c.put_object_from_file(handle.name, 'file1.txt')
             c.put_object_from_file(handle.name, 'file4.txt')
 
-        self.assertEquals(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
+        self.assertEqual(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
         with a.open('file1.txt') as handle:
-            self.assertEquals(handle.read(), file_content)
+            self.assertEqual(handle.read(), file_content)
         with a.open('file2.txt') as handle:
-            self.assertEquals(handle.read(), file_content)
+            self.assertEqual(handle.read(), file_content)
 
-        self.assertEquals(set(c.list_object_names()), set(['file1.txt', 'file2.txt', 'file4.txt']))
+        self.assertEqual(set(c.list_object_names()), set(['file1.txt', 'file2.txt', 'file4.txt']))
         with c.open('file1.txt') as handle:
-            self.assertEquals(handle.read(), file_content_different)
+            self.assertEqual(handle.read(), file_content_different)
         with c.open('file2.txt') as handle:
-            self.assertEquals(handle.read(), file_content)
+            self.assertEqual(handle.read(), file_content)
         with c.open('file4.txt') as handle:
-            self.assertEquals(handle.read(), file_content_different)
+            self.assertEqual(handle.read(), file_content_different)
 
     def test_folders(self):
         """
@@ -589,13 +589,13 @@ class TestNodeBasic(AiidaTestCase):
         a.put_object_from_tree(tree_1, 'tree_1')
 
         # verify if the node has the structure I expect
-        self.assertEquals(set(a.list_object_names()), set(['tree_1']))
-        self.assertEquals(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEquals(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        self.assertEqual(set(a.list_object_names()), set(['tree_1']))
+        self.assertEqual(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
+        self.assertEqual(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
         with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
         with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
 
         # try to exit from the folder
         with self.assertRaises(ValueError):
@@ -603,16 +603,16 @@ class TestNodeBasic(AiidaTestCase):
 
         # clone into a new node
         b = a.clone()
-        self.assertNotEquals(a.uuid, b.uuid)
+        self.assertNotEqual(a.uuid, b.uuid)
 
         # Check that the content is there
-        self.assertEquals(set(b.list_object_names('.')), set(['tree_1']))
-        self.assertEquals(set(b.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEquals(set(b.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        self.assertEqual(set(b.list_object_names('.')), set(['tree_1']))
+        self.assertEqual(set(b.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
+        self.assertEqual(set(b.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
         with b.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
         with b.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
 
         # I overwrite a file and create a new one in the copy only
         dir3 = os.path.join(directory, 'dir3')
@@ -627,21 +627,21 @@ class TestNodeBasic(AiidaTestCase):
         b.put_object_from_filelike(stream, 'file3.txt')
 
         # I check the new content, and that the old one has not changed old
-        self.assertEquals(set(a.list_object_names('.')), set(['tree_1']))
-        self.assertEquals(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEquals(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        self.assertEqual(set(a.list_object_names('.')), set(['tree_1']))
+        self.assertEqual(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
+        self.assertEqual(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
         with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
         with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
         # new
-        self.assertEquals(set(b.list_object_names('.')), set(['tree_1', 'file3.txt']))
-        self.assertEquals(set(b.list_object_names('tree_1')), set(['file1.txt', 'dir1', 'dir3']))
-        self.assertEquals(set(b.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        self.assertEqual(set(b.list_object_names('.')), set(['tree_1', 'file3.txt']))
+        self.assertEqual(set(b.list_object_names('tree_1')), set(['file1.txt', 'dir1', 'dir3']))
+        self.assertEqual(set(b.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
         with b.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
         with b.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
 
         # This should in principle change the location of the files, so I recheck
         a.store()
@@ -656,22 +656,22 @@ class TestNodeBasic(AiidaTestCase):
         c.delete_object(os.path.join('tree_1', 'dir1', 'dir2'))
 
         # check old
-        self.assertEquals(set(a.list_object_names('.')), set(['tree_1']))
-        self.assertEquals(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEquals(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        self.assertEqual(set(a.list_object_names('.')), set(['tree_1']))
+        self.assertEqual(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
+        self.assertEqual(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
         with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
         with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
 
         # check new
-        self.assertEquals(set(c.list_object_names('.')), set(['tree_1']))
-        self.assertEquals(set(c.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEquals(set(c.list_object_names(os.path.join('tree_1', 'dir1'))), set(['file2.txt', 'file4.txt']))
+        self.assertEqual(set(c.list_object_names('.')), set(['tree_1']))
+        self.assertEqual(set(c.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
+        self.assertEqual(set(c.list_object_names(os.path.join('tree_1', 'dir1'))), set(['file2.txt', 'file4.txt']))
         with c.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content_different)
+            self.assertEqual(fhandle.read(), file_content_different)
         with c.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+            self.assertEqual(fhandle.read(), file_content)
 
         # garbage cleaning
         shutil.rmtree(directory)
@@ -690,12 +690,12 @@ class TestNodeBasic(AiidaTestCase):
 
         # Now I check if I can retrieve them, before the storage
         self.assertIsNone(a.get_attribute('none'))
-        self.assertEquals(self.boolval, a.get_attribute('bool'))
-        self.assertEquals(self.intval, a.get_attribute('integer'))
-        self.assertEquals(self.floatval, a.get_attribute('float'))
-        self.assertEquals(self.stringval, a.get_attribute('string'))
-        self.assertEquals(self.dictval, a.get_attribute('dict'))
-        self.assertEquals(self.listval, a.get_attribute('list'))
+        self.assertEqual(self.boolval, a.get_attribute('bool'))
+        self.assertEqual(self.intval, a.get_attribute('integer'))
+        self.assertEqual(self.floatval, a.get_attribute('float'))
+        self.assertEqual(self.stringval, a.get_attribute('string'))
+        self.assertEqual(self.dictval, a.get_attribute('dict'))
+        self.assertEqual(self.listval, a.get_attribute('list'))
 
     def test_attr_with_reload(self):
         a = orm.Data()
@@ -711,12 +711,12 @@ class TestNodeBasic(AiidaTestCase):
 
         b = orm.load_node(uuid=a.uuid)
         self.assertIsNone(a.get_attribute('none'))
-        self.assertEquals(self.boolval, b.get_attribute('bool'))
-        self.assertEquals(self.intval, b.get_attribute('integer'))
-        self.assertEquals(self.floatval, b.get_attribute('float'))
-        self.assertEquals(self.stringval, b.get_attribute('string'))
-        self.assertEquals(self.dictval, b.get_attribute('dict'))
-        self.assertEquals(self.listval, b.get_attribute('list'))
+        self.assertEqual(self.boolval, b.get_attribute('bool'))
+        self.assertEqual(self.intval, b.get_attribute('integer'))
+        self.assertEqual(self.floatval, b.get_attribute('float'))
+        self.assertEqual(self.stringval, b.get_attribute('string'))
+        self.assertEqual(self.dictval, b.get_attribute('dict'))
+        self.assertEqual(self.listval, b.get_attribute('list'))
 
     def test_extra_with_reload(self):
         a = orm.Data()
@@ -729,42 +729,42 @@ class TestNodeBasic(AiidaTestCase):
         a.set_extra('list', self.listval)
 
         # Check before storing
-        self.assertEquals(self.boolval, a.get_extra('bool'))
-        self.assertEquals(self.intval, a.get_extra('integer'))
-        self.assertEquals(self.floatval, a.get_extra('float'))
-        self.assertEquals(self.stringval, a.get_extra('string'))
-        self.assertEquals(self.dictval, a.get_extra('dict'))
-        self.assertEquals(self.listval, a.get_extra('list'))
+        self.assertEqual(self.boolval, a.get_extra('bool'))
+        self.assertEqual(self.intval, a.get_extra('integer'))
+        self.assertEqual(self.floatval, a.get_extra('float'))
+        self.assertEqual(self.stringval, a.get_extra('string'))
+        self.assertEqual(self.dictval, a.get_extra('dict'))
+        self.assertEqual(self.listval, a.get_extra('list'))
 
         a.store()
 
         # Check after storing
-        self.assertEquals(self.boolval, a.get_extra('bool'))
-        self.assertEquals(self.intval, a.get_extra('integer'))
-        self.assertEquals(self.floatval, a.get_extra('float'))
-        self.assertEquals(self.stringval, a.get_extra('string'))
-        self.assertEquals(self.dictval, a.get_extra('dict'))
-        self.assertEquals(self.listval, a.get_extra('list'))
+        self.assertEqual(self.boolval, a.get_extra('bool'))
+        self.assertEqual(self.intval, a.get_extra('integer'))
+        self.assertEqual(self.floatval, a.get_extra('float'))
+        self.assertEqual(self.stringval, a.get_extra('string'))
+        self.assertEqual(self.dictval, a.get_extra('dict'))
+        self.assertEqual(self.listval, a.get_extra('list'))
 
         b = orm.load_node(uuid=a.uuid)
         self.assertIsNone(a.get_extra('none'))
-        self.assertEquals(self.boolval, b.get_extra('bool'))
-        self.assertEquals(self.intval, b.get_extra('integer'))
-        self.assertEquals(self.floatval, b.get_extra('float'))
-        self.assertEquals(self.stringval, b.get_extra('string'))
-        self.assertEquals(self.dictval, b.get_extra('dict'))
-        self.assertEquals(self.listval, b.get_extra('list'))
+        self.assertEqual(self.boolval, b.get_extra('bool'))
+        self.assertEqual(self.intval, b.get_extra('integer'))
+        self.assertEqual(self.floatval, b.get_extra('float'))
+        self.assertEqual(self.stringval, b.get_extra('string'))
+        self.assertEqual(self.dictval, b.get_extra('dict'))
+        self.assertEqual(self.listval, b.get_extra('list'))
 
     def test_get_extras_with_default(self):
         a = orm.Data()
         a.store()
         a.set_extra('a', 'b')
 
-        self.assertEquals(a.get_extra('a'), 'b')
+        self.assertEqual(a.get_extra('a'), 'b')
         with self.assertRaises(AttributeError):
             a.get_extra('c')
 
-        self.assertEquals(a.get_extra('c', 'def'), 'def')
+        self.assertEqual(a.get_extra('c', 'def'), 'def')
 
     def test_attr_and_extras_multikey(self):
         """
@@ -807,12 +807,12 @@ class TestNodeBasic(AiidaTestCase):
 
         all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
-        self.assertEquals(set(list(a.attributes.keys())), set(attrs_to_set.keys()))
-        self.assertEquals(set(list(a.extras.keys())), set(all_extras.keys()))
+        self.assertEqual(set(list(a.attributes.keys())), set(attrs_to_set.keys()))
+        self.assertEqual(set(list(a.extras.keys())), set(all_extras.keys()))
 
-        self.assertEquals(a.attributes, attrs_to_set)
+        self.assertEqual(a.attributes, attrs_to_set)
 
-        self.assertEquals(a.extras, all_extras)
+        self.assertEqual(a.extras, all_extras)
 
     def test_delete_extras(self):
         """
@@ -836,7 +836,7 @@ class TestNodeBasic(AiidaTestCase):
         for k, v in extras_to_set.items():
             a.set_extra(k, v)
 
-        self.assertEquals({k: v for k, v in a.extras.items()}, all_extras)
+        self.assertEqual({k: v for k, v in a.extras.items()}, all_extras)
 
         # I pregenerate it, it cannot change during iteration
         list_keys = list(extras_to_set.keys())
@@ -845,7 +845,7 @@ class TestNodeBasic(AiidaTestCase):
             # performed correctly
             a.delete_extra(k)
             del all_extras[k]
-            self.assertEquals({k: v for k, v in a.extras.items()}, all_extras)
+            self.assertEqual({k: v for k, v in a.extras.items()}, all_extras)
 
     def test_replace_extras_1(self):
         """
@@ -888,7 +888,7 @@ class TestNodeBasic(AiidaTestCase):
         for k, v in extras_to_set.items():
             a.set_extra(k, v)
 
-        self.assertEquals(a.extras, all_extras)
+        self.assertEqual(a.extras, all_extras)
 
         for k, v in new_extras.items():
             # I delete one by one the keys and check if the operation is
@@ -898,7 +898,7 @@ class TestNodeBasic(AiidaTestCase):
         # I update extras_to_set with the new entries, and do the comparison
         # again
         all_extras.update(new_extras)
-        self.assertEquals(a.extras, all_extras)
+        self.assertEqual(a.extras, all_extras)
 
     def test_basetype_as_attr(self):
         """
@@ -987,7 +987,7 @@ class TestNodeBasic(AiidaTestCase):
             a.add_comment('text', user=user)
 
         a.store()
-        self.assertEquals(a.get_comments(), [])
+        self.assertEqual(a.get_comments(), [])
 
         before = timezone.now() - timedelta(seconds=1)
         a.add_comment('text', user=user)
@@ -1005,7 +1005,7 @@ class TestNodeBasic(AiidaTestCase):
             self.assertTrue(time > before)
             self.assertTrue(time < after)
 
-        self.assertEquals([(i.user.email, i.content) for i in comments], [
+        self.assertEqual([(i.user.email, i.content) for i in comments], [
             (self.user_email, 'text'),
             (self.user_email, 'text2'),
         ])
@@ -1029,15 +1029,15 @@ class TestNodeBasic(AiidaTestCase):
 
         # Test that the code1 can be loaded correctly with its label
         q_code_1 = orm.Code.get_from_string(code1.label)
-        self.assertEquals(q_code_1.id, code1.id)
-        self.assertEquals(q_code_1.label, code1.label)
-        self.assertEquals(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
+        self.assertEqual(q_code_1.id, code1.id)
+        self.assertEqual(q_code_1.label, code1.label)
+        self.assertEqual(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
 
         # Test that the code2 can be loaded correctly with its label
         q_code_2 = orm.Code.get_from_string(code2.label + '@' + self.computer.get_name())
-        self.assertEquals(q_code_2.id, code2.id)
-        self.assertEquals(q_code_2.label, code2.label)
-        self.assertEquals(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
+        self.assertEqual(q_code_2.id, code2.id)
+        self.assertEqual(q_code_2.label, code2.label)
+        self.assertEqual(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
 
         # Calling get_from_string for a non string type raises exception
         with self.assertRaises(InputValidationError):
@@ -1076,27 +1076,27 @@ class TestNodeBasic(AiidaTestCase):
 
         # Test that the code1 can be loaded correctly with its label only
         q_code_1 = orm.Code.get(label=code1.label)
-        self.assertEquals(q_code_1.id, code1.id)
-        self.assertEquals(q_code_1.label, code1.label)
-        self.assertEquals(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
+        self.assertEqual(q_code_1.id, code1.id)
+        self.assertEqual(q_code_1.label, code1.label)
+        self.assertEqual(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
 
         # Test that the code1 can be loaded correctly with its id/pk
         q_code_1 = orm.Code.get(code1.id)
-        self.assertEquals(q_code_1.id, code1.id)
-        self.assertEquals(q_code_1.label, code1.label)
-        self.assertEquals(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
+        self.assertEqual(q_code_1.id, code1.id)
+        self.assertEqual(q_code_1.label, code1.label)
+        self.assertEqual(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
 
         # Test that the code2 can be loaded correctly with its label and computername
         q_code_2 = orm.Code.get(label=code2.label, machinename=self.computer.get_name())
-        self.assertEquals(q_code_2.id, code2.id)
-        self.assertEquals(q_code_2.label, code2.label)
-        self.assertEquals(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
+        self.assertEqual(q_code_2.id, code2.id)
+        self.assertEqual(q_code_2.label, code2.label)
+        self.assertEqual(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
 
         # Test that the code2 can be loaded correctly with its id/pk
         q_code_2 = orm.Code.get(code2.id)
-        self.assertEquals(q_code_2.id, code2.id)
-        self.assertEquals(q_code_2.label, code2.label)
-        self.assertEquals(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
+        self.assertEqual(q_code_2.id, code2.id)
+        self.assertEqual(q_code_2.label, code2.label)
+        self.assertEqual(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
 
         # Test that the lookup of a nonexistent code works as expected
         with self.assertRaises(NotExistent):
@@ -1123,9 +1123,9 @@ class TestNodeBasic(AiidaTestCase):
         # Code.get(pk_label_duplicate) should return code1, as the pk takes
         # precedence
         q_code_4 = orm.Code.get(code4.label)
-        self.assertEquals(q_code_4.id, code1.id)
-        self.assertEquals(q_code_4.label, code1.label)
-        self.assertEquals(q_code_4.get_remote_exec_path(), code1.get_remote_exec_path())
+        self.assertEqual(q_code_4.id, code1.id)
+        self.assertEqual(q_code_4.label, code1.label)
+        self.assertEqual(q_code_4.get_remote_exec_path(), code1.get_remote_exec_path())
 
     def test_code_description(self):
         """
@@ -1140,10 +1140,10 @@ class TestNodeBasic(AiidaTestCase):
         code.store()
 
         q_code1 = orm.Code.get(label=code.label)
-        self.assertEquals(code.description, str(q_code1.description))
+        self.assertEqual(code.description, str(q_code1.description))
 
         q_code2 = orm.Code.get(code.id)
-        self.assertEquals(code.description, str(q_code2.description))
+        self.assertEqual(code.description, str(q_code2.description))
 
     def test_list_for_plugin(self):
         """
@@ -1396,22 +1396,22 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n3.store_all()
 
         n2_in_links = [(n.link_label, n.node.uuid) for n in n2.get_incoming()]
-        self.assertEquals(sorted(n2_in_links), sorted([
+        self.assertEqual(sorted(n2_in_links), sorted([
             ('l1', n1.uuid),
         ]))
         n3_in_links = [(n.link_label, n.node.uuid) for n in n3.get_incoming()]
-        self.assertEquals(sorted(n3_in_links), sorted([
+        self.assertEqual(sorted(n3_in_links), sorted([
             ('l2', n2.uuid),
             ('l3', n1.uuid),
         ]))
 
         n1_out_links = [(entry.link_label, entry.node.pk) for entry in n1.get_outgoing()]
-        self.assertEquals(sorted(n1_out_links), sorted([
+        self.assertEqual(sorted(n1_out_links), sorted([
             ('l1', n2.pk),
             ('l3', n3.pk),
         ]))
         n2_out_links = [(entry.link_label, entry.node.pk) for entry in n2.get_outgoing()]
-        self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
+        self.assertEqual(sorted(n2_out_links), sorted([('l2', n3.pk)]))
 
     def test_multiple_create_links(self):
         """
@@ -1488,7 +1488,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         calculation_inputs = calc.get_incoming().all()
 
         # This calculation has two data inputs
-        self.assertEquals(len(calculation_inputs), 2)
+        self.assertEqual(len(calculation_inputs), 2)
 
     def test_check_single_calc_source(self):
         """
@@ -1537,19 +1537,19 @@ class TestSubNodesAndLinks(AiidaTestCase):
         node_return.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return2')
 
         # All incoming and outgoing
-        self.assertEquals(len(node_origin.get_incoming().all()), 2)
-        self.assertEquals(len(node_origin.get_outgoing().all()), 3)
+        self.assertEqual(len(node_origin.get_incoming().all()), 2)
+        self.assertEqual(len(node_origin.get_outgoing().all()), 3)
 
         # Link specific incoming
-        self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
-        self.assertEquals(len(node_origin2.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
-        self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.INPUT_WORK).all()), 1)
-        self.assertEquals(len(node_origin.get_incoming(link_label_filter='in_ut%').all()), 1)
-        self.assertEquals(len(node_origin.get_incoming(node_class=orm.Node).all()), 2)
+        self.assertEqual(len(node_origin.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
+        self.assertEqual(len(node_origin2.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
+        self.assertEqual(len(node_origin.get_incoming(link_type=LinkType.INPUT_WORK).all()), 1)
+        self.assertEqual(len(node_origin.get_incoming(link_label_filter='in_ut%').all()), 1)
+        self.assertEqual(len(node_origin.get_incoming(node_class=orm.Node).all()), 2)
 
         # Link specific outgoing
-        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.CALL_WORK).all()), 1)
-        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.RETURN).all()), 2)
+        self.assertEqual(len(node_origin.get_outgoing(link_type=LinkType.CALL_WORK).all()), 1)
+        self.assertEqual(len(node_origin.get_outgoing(link_type=LinkType.RETURN).all()), 2)
 
 
 class AnyValue:

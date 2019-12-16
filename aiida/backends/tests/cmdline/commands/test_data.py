@@ -32,9 +32,6 @@ from aiida.orm import Group, ArrayData, BandsData, KpointsData, CifData, Dict, R
 class TestVerdiDataExportable:
     """Test exportable data objects."""
 
-    def __init__(self):
-        pass
-
     NODE_ID_STR = 'node_id'
     EMPTY_GROUP_ID_STR = 'empty_group_id'
     EMPTY_GROUP_NAME_STR = 'empty_group'
@@ -87,7 +84,7 @@ class TestVerdiDataExportable:
                 # Try to export it again. It should fail because the
                 # file exists
                 res = self.cli_runner.invoke(export_cmd, options, catch_exceptions=False)
-                self.assertNotEquals(res.exit_code, 0, 'The command should fail because the file already exists')
+                self.assertNotEqual(res.exit_code, 0, 'The command should fail because the file already exists')
 
                 # Now we force the export of the file and it should overwrite
                 # existing files
@@ -103,9 +100,6 @@ class TestVerdiDataExportable:
 
 class TestVerdiDataListable:
     """Test listable data objects."""
-
-    def __init__(self):
-        pass
 
     NODE_ID_STR = 'node_id'
     EMPTY_GROUP_ID_STR = 'empty_group_id'

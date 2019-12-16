@@ -66,7 +66,6 @@ What a plugin can do
   - db importers
   - db exporters
   - subcommands to some ``verdi`` commands
-  - tests to be run using ``verdi devel tests``
 
   This typically involves subclassing the respective base class AiiDA provides for that purpose.
 * Install separate commandline and/or GUI executables

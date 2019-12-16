@@ -74,7 +74,7 @@ def run_api(flask_app, flask_api, **kwargs):
     # If the user selects the profiling option, then we need
     # to do a little extra setup
     if wsgi_profile:
-        from werkzeug.contrib.profiler import ProfilerMiddleware
+        from werkzeug.middleware.profiler import ProfilerMiddleware
 
         app.config['PROFILE'] = True
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])

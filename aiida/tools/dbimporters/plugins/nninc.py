@@ -74,7 +74,7 @@ class NnincDbImporter(DbImporter):
 
         query = self.query_get(**kwargs)
         response = urllib.request.urlopen(query).read()
-        results = re.findall("psp_files/([^']+)\.UPF", response)
+        results = re.findall(r'psp_files/([^\']+)\.UPF', response)
 
         elements = kwargs.get('element', None)
         if elements and not isinstance(elements, list):

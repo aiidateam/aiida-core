@@ -25,7 +25,7 @@ class TestGeneric(unittest.TestCase):
         import getpass
 
         with LocalTransport() as t:
-            self.assertEquals(t.whoami(), getpass.getuser())
+            self.assertEqual(t.whoami(), getpass.getuser())
 
 
 class TestBasicConnection(unittest.TestCase):

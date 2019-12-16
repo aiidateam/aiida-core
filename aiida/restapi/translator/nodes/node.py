@@ -58,7 +58,7 @@ class NodeTranslator(BaseTranslator):
 
         # Inspect the subclasses of NodeTranslator, to avoid hard-coding
         # (should resemble the following tree)
-        """
+        r"""
                                               /- CodeTranslator
                                              /
                                             /- KpointsTranslator

@@ -144,7 +144,7 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertEqual(self.builder.metadata.description, description)
 
     def test_dynamic_setters(self):
-        """Verify that the attributes of the TestWorkChain can be set but defaults are not there."""
+        """Verify that the attributes of the DummyWorkChain can be set but defaults are not there."""
         self.builder_workchain.dynamic.namespace = self.inputs['dynamic']['namespace']
         self.builder_workchain.name.spaced = self.inputs['name']['spaced']
         self.builder_workchain.name_spaced = self.inputs['name_spaced']

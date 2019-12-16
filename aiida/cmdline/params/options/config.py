@@ -12,9 +12,8 @@
 .. py:module::config
     :synopsis: Convenience class for configuration file option
 """
-
-import yaml
 import click_config_file
+import yaml
 
 from .overridable import OverridableOption
 
@@ -22,7 +21,7 @@ from .overridable import OverridableOption
 def yaml_config_file_provider(file_path, cmd_name):  # pylint: disable=unused-argument
     """Read yaml config file."""
     with open(file_path, 'r') as handle:
-        return yaml.load(handle)
+        return yaml.safe_load(handle)
 
 
 class ConfigFileOption(OverridableOption):

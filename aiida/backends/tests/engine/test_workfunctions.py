@@ -72,7 +72,7 @@ class TestWorkFunction(AiidaTestCase):
         _ = self.test_workfunction(self.default_int)
 
         # Caching should always be disabled for a WorkFunctionNode
-        with enable_caching(WorkFunctionNode):
+        with enable_caching(identifier=WorkFunctionNode):
             _, cached = self.test_workfunction.run_get_node(self.default_int)
             self.assertFalse(cached.is_created_from_cache)
 

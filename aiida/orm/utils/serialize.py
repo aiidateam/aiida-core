@@ -14,7 +14,6 @@ WARNING: Changing the representation of things here may break people's current s
 checkpoints and messages in the RabbitMQ queue so do so with caution.  It is fine to add representers
 for new types though.
 """
-
 from functools import partial
 import yaml
 
@@ -177,8 +176,14 @@ class AiiDADumper(yaml.Dumper):
         return super().represent_data(data)
 
 
-class AiiDALoader(yaml.Loader):
-    """AiiDA specific yaml loader"""
+class AiiDALoader(yaml.FullLoader):
+    """AiiDA specific yaml loader
+
+    .. note:: we subclass the `FullLoader` which is the one that since `pyyaml>=5.1` is the loader that prevents
+        arbitrary code execution. Even though this is in principle only used internally, one could imagine someone
+        sharing a database with a maliciously crafted process instance dump, which when reloaded could execute arbitrary
+        code. This load prevents this: https://github.com/yaml/pyyaml/wiki/PyYAML-yaml.load(input)-Deprecation
+    """
 
 
 yaml.add_representer(Bundle, represent_bundle, Dumper=AiiDADumper)
@@ -216,6 +221,8 @@ def serialize(data, encoding=None):
 
 def deserialize(serialized):
     """Deserialize a yaml dump that represents a serialized data structure.
+
+    .. note:: no need to use `yaml.safe_load` here because the `Loader` will ensure that loading is safe.
 
     :param serialized: a yaml serialized string representation
     :return: the deserialized data structure

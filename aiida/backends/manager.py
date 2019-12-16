@@ -124,10 +124,10 @@ class BackendManager:
     @staticmethod
     def reset_backend_environment():
         """Reset the backend environment."""
-        from aiida.backends.sqlalchemy import ENGINE, SCOPED_SESSION_CLASS
-        if ENGINE is not None:
-            ENGINE.dispose()
-        SCOPED_SESSION_CLASS = None
+        from aiida.backends import sqlalchemy
+        if sqlalchemy.ENGINE is not None:
+            sqlalchemy.ENGINE.dispose()
+        sqlalchemy.SCOPED_SESSION_CLASS = None
 
     def migrate(self):
         """Migrate the database to the latest schema generation or version."""

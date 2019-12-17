@@ -65,79 +65,44 @@ def repo_ls(node, relative_path, color):
 
 
 @verdi_node_repo.command('dump')
-@click.option(
-    '-f', '--force', help='Replace existing directories and files without prompting for confirmation.', flag_value=True
-)
 @arguments.NODE()
 @click.argument(
     'output_directory',
-    type=click.Path(exists=True, file_okay=False, writable=True),
+    type=click.Path(),
     required=True,
 )
 @with_dbenv()
-def repo_dump(node, output_directory, force):
+def repo_dump(node, output_directory):
     """Copy the repository files of a node to an output directory."""
     from aiida.orm.utils.repository import FileType
 
     output_directory = pathlib.Path(output_directory)
 
+    try:
+        output_directory.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        click.echo('Error: Invalid value for "OUTPUT_DIRECTORY": Path "{}" exists.'.format(output_directory))
+        raise click.Abort
+
     def _copy_tree(key, output_dir):  # pylint: disable=too-many-branches
         """
         Recursively copy the content at the ``key`` path in the given node to
-        the ``output_dir``. Uses prompts in case of existing files or directories.
+        the ``output_dir``.
         """
-        if force:
-            prompt_res = 'r'
         for file in node.list_objects(key=key):
             # Not using os.path.join here, because this is the "path"
             # in the AiiDA node, not an actual OS - level path.
             file_key = file.name if not key else key + '/' + file.name
             if file.type == FileType.DIRECTORY:
                 new_out_dir = output_dir / file.name
-                if new_out_dir.exists():
-                    if not force:
-                        prompt_res = click.prompt(
-                            "Directory '{}' exists. Abort [a], "
-                            'skip [s], merge contents [m], '
-                            'or replace [r]?'.format(new_out_dir),
-                            default='a',
-                            type=click.Choice(['a', 's', 'm', 'r'])
-                        )
-                    if prompt_res == 'a':
-                        raise click.Abort
-                    elif prompt_res == 's':
-                        continue
-                    elif prompt_res == 'r':
-                        # Explicit 'str' cast is needed only in python <=3.5,
-                        # because 'shutil' does not understand pathlib
-                        # objects. This can be removed when Python3.5
-                        # support is dropped.
-                        shutil.rmtree(str(new_out_dir))
-                        new_out_dir.mkdir()
-                    else:
-                        assert prompt_res == 'm'
-                else:
-                    new_out_dir.mkdir()
-
+                assert not new_out_dir.exists()
+                new_out_dir.mkdir()
                 _copy_tree(key=file_key, output_dir=new_out_dir)
+
             else:
                 assert file.type == FileType.FILE
                 out_file_path = output_dir / file.name
-                if out_file_path.exists():
-                    if not force:
-                        prompt_res = click.prompt(
-                            "File '{}' exists. Abort [a], skip [s], or replace [r]?".format(out_file_path),
-                            default='a',
-                            type=click.Choice(['a', 's', 'r'])
-                        )
-
-                    if prompt_res == 'a':
-                        raise click.Abort
-                    elif prompt_res == 's':
-                        continue
-                    else:
-                        assert prompt_res == 'r'
-                        out_file_path.unlink()
+                assert not out_file_path.exists()
                 with node.open(file_key, 'rb') as in_file:
                     with out_file_path.open('wb') as out_file:
                         shutil.copyfileobj(in_file, out_file)

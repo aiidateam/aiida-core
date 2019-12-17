@@ -19,7 +19,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.expression import case, FunctionElement
 from sqlalchemy.ext.compiler import compiles
 
-import aiida.backends.sqlalchemy
 from aiida.common.exceptions import InputValidationError
 from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder

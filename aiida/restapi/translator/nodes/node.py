@@ -8,13 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Translator for node"""
-
-
-from aiida.common.exceptions import InputValidationError, ValidationError, \
-    InvalidOperation
-from aiida.restapi.translator.base import BaseTranslator
-from aiida.manage.manager import get_manager
 from aiida import orm
+from aiida.common.exceptions import InputValidationError, ValidationError, InvalidOperation
+from aiida.manage.manager import get_manager
+from aiida.restapi.translator.base import BaseTranslator
 
 
 class NodeTranslator(BaseTranslator):
@@ -58,7 +55,7 @@ class NodeTranslator(BaseTranslator):
 
         # Inspect the subclasses of NodeTranslator, to avoid hard-coding
         # (should resemble the following tree)
-        """
+        r"""
                                               /- CodeTranslator
                                              /
                                             /- KpointsTranslator

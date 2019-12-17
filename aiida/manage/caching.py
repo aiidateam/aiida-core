@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of caching mechanism and configuration for calculations."""
-
 import os
 import copy
 import warnings
@@ -55,7 +54,7 @@ def _get_config(config_file):
 
     try:
         with open(config_file, 'r', encoding='utf8') as handle:
-            config = yaml.load(handle)[profile.name]
+            config = yaml.safe_load(handle)[profile.name]
     except (OSError, IOError, KeyError):
         # No config file, or no config for this profile
         return DEFAULT_CONFIG

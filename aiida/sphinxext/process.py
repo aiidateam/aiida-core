@@ -11,6 +11,8 @@
 Defines an rst directive to auto-document AiiDA processes.
 """
 
+from typing import Mapping, Iterable
+
 from docutils import nodes
 from docutils.core import publish_doctree
 from docutils.parsers.rst import Directive, directives
@@ -102,7 +104,9 @@ class AiidaProcessDirective(Directive):
         """
         Returns the main content (docstring, inputs, outputs) of the documentation.
         """
-        content = nodes.paragraph(text=self.process.__doc__)
+        content = addnodes.desc_content()
+
+        content += nodes.paragraph(text=self.process.__doc__)
 
         content += self.build_doctree(
             title='Inputs:',
@@ -110,6 +114,9 @@ class AiidaProcessDirective(Directive):
         )
         content += self.build_doctree(title='Outputs:', port_namespace=self.process_spec.outputs)
 
+        if hasattr(self.process_spec, 'get_outline'):
+            outline = self.process_spec.get_outline()
+            content += self.build_outline_doctree(outline=outline)
         return content
 
     def build_doctree(self, title, port_namespace):
@@ -190,6 +197,31 @@ class AiidaProcessDirective(Directive):
                 return '(' + ', '.join(v.__name__ for v in valid_type) + ')'
             except (AttributeError, TypeError):
                 return str(valid_type)
+
+    def build_outline_doctree(self, outline):
+        """Build the doctree for a spec outline."""
+        paragraph = nodes.paragraph()
+        paragraph += nodes.strong(text='Outline:')
+        outline_str = '\n'.join(self.build_outline_lines(outline.get_description(), indent=0))
+        paragraph += nodes.literal_block(outline_str, outline_str)
+        return paragraph
+
+    def build_outline_lines(self, outline, indent):
+        """Return a list of lines which describe the process outline."""
+        indent_str = ' ' * indent
+        res = []
+        if isinstance(outline, str):
+            res.append(indent_str + outline)
+        else:
+            if isinstance(outline, Mapping):
+                for key, outline_part in outline.items():
+                    res.append(indent_str + key)
+                    res.extend(self.build_outline_lines(outline_part, indent=indent + 4))
+            else:
+                assert isinstance(outline, Iterable)
+                for outline_part in outline:
+                    res.extend(self.build_outline_lines(outline_part, indent=indent))
+        return res
 
 
 def _is_non_db(port):

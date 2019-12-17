@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=import-error,no-name-in-module
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,10 +8,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module that contains the db migrations."""
+
 from django.core.exceptions import ObjectDoesNotExist
 from aiida.common.exceptions import AiidaException, DbContentError
 
-from aiida.backends.manager import SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION, SCHEMA_GENERATION_KEY, SCHEMA_GENERATION_DESCRIPTION
+from aiida.backends.manager import SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION
+from aiida.backends.manager import SCHEMA_GENERATION_KEY, SCHEMA_GENERATION_DESCRIPTION
 
 
 class DeserializationException(AiidaException):
@@ -20,12 +24,10 @@ class DeserializationException(AiidaException):
 LATEST_MIGRATION = '0043_default_link_label'
 
 
-def _update_schema_version(version, apps, schema_editor):
-    """
-    The update schema uses the current models (and checks if the value is stored in EAV mode or JSONB)
+def _update_schema_version(version, apps, _):
+    """The update schema uses the current models (and checks if the value is stored in EAV mode or JSONB)
     to avoid to use the DbSettings schema that may change (as it changed with the migration of the
-    settings table to JSONB)
-    """
+    settings table to JSONB)."""
     db_setting_model = apps.get_model('db', 'DbSetting')
     result = db_setting_model.objects.filter(key=SCHEMA_VERSION_KEY).first()
     # If there is no schema record, create ones
@@ -44,12 +46,10 @@ def _update_schema_version(version, apps, schema_editor):
     result.save()
 
 
-def _upgrade_schema_generation(version, apps, schema_editor):
-    """
-    The update schema uses the current models (and checks if the value is stored in EAV mode or JSONB)
+def _upgrade_schema_generation(version, apps, _):
+    """The update schema uses the current models (and checks if the value is stored in EAV mode or JSONB)
     to avoid to use the DbSettings schema that may change (as it changed with the migration of the
-    settings table to JSONB)
-    """
+    settings table to JSONB)."""
     db_setting_model = apps.get_model('db', 'DbSetting')
     result = db_setting_model.objects.filter(key=SCHEMA_GENERATION_KEY).first()
     # If there is no schema record, create ones
@@ -67,16 +67,16 @@ def upgrade_schema_version(up_revision, down_revision):
     from django.db import migrations
 
     return migrations.RunPython(
-        partial(_update_schema_version, up_revision),
-        reverse_code=partial(_update_schema_version, down_revision))
+        partial(_update_schema_version, up_revision), reverse_code=partial(_update_schema_version, down_revision)
+    )
 
 
 def current_schema_version():
+    """Migrate the current schema version."""
     # Have to use this ugly way of importing because the django migration
     # files start with numbers which are not a valid package name
     latest_migration = __import__(
-        'aiida.backends.djsite.db.migrations.{}'.format(LATEST_MIGRATION),
-        fromlist=['REVISION']
+        'aiida.backends.djsite.db.migrations.{}'.format(LATEST_MIGRATION), fromlist=['REVISION']
     )
     return latest_migration.REVISION
 
@@ -90,10 +90,134 @@ def current_schema_version():
 # django detects a change in the model and creates a new migration
 
 
-def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
-                           original_pk=None, lesserrors=False):
-    """
-    Deserialize a single attribute.
+def _deserialize_basic_type(mainitem):
+    """Deserialize the basic python data types."""
+    from aiida.common.timezone import (is_naive, make_aware, get_current_timezone)
+
+    if mainitem['datatype'] == 'none':
+        return None
+    if mainitem['datatype'] == 'bool':
+        return mainitem['bval']
+    if mainitem['datatype'] == 'int':
+        return mainitem['ival']
+    if mainitem['datatype'] == 'float':
+        return mainitem['fval']
+    if mainitem['datatype'] == 'txt':
+        return mainitem['tval']
+    raise TypeError(
+        "Expected one of the following types: 'none', 'bool', 'int', 'float', 'txt', got {}".format(
+            mainitem['datatype']
+        )
+    )
+
+
+def deserialize_list(mainitem, subitems, sep, original_class, original_pk, lesserrors):
+    """Deserialize a Python list."""
+    # pylint: disable=protected-access
+    # subitems contains all subitems, here I store only those of
+    # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
+    # store only '0' and '1'
+
+    from aiida.common import AIIDA_LOGGER
+
+    firstlevelsubdict = {k: v for k, v in subitems.items() if sep not in k}
+
+    # For checking, I verify the expected values
+    expected_set = {'{:d}'.format(i) for i in range(mainitem['ival'])}
+    received_set = set(firstlevelsubdict.keys())
+    # If there are more entries than expected, but all expected
+    # ones are there, I just issue an error but I do not stop.
+
+    if not expected_set.issubset(received_set):
+        if (original_class is not None and original_class._subspecifier_field_name is not None):
+            subspecifier_string = '{}={} and '.format(original_class._subspecifier_field_name, original_pk)
+        else:
+            subspecifier_string = ''
+        if original_class is None:
+            sourcestr = 'the data passed'
+        else:
+            sourcestr = original_class.__name__
+
+        raise DeserializationException(
+            'Wrong list elements stored in {} for '
+            "{}key='{}' ({} vs {})".format(sourcestr, subspecifier_string, mainitem['key'], expected_set, received_set)
+        )
+    if expected_set != received_set:
+        if (original_class is not None and original_class._subspecifier_field_name is not None):
+            subspecifier_string = '{}={} and '.format(original_class._subspecifier_field_name, original_pk)
+        else:
+            subspecifier_string = ''
+
+        sourcestr = 'the data passed' if original_class is None else original_class.__name__
+
+        msg = (
+            'Wrong list elements stored in {} for '
+            "{}key='{}' ({} vs {})".format(sourcestr, subspecifier_string, mainitem['key'], expected_set, received_set)
+        )
+        if lesserrors:
+            AIIDA_LOGGER.error(msg)
+        else:
+            raise DeserializationException(msg)
+
+    # I get the values in memory as a dictionary
+    tempdict = {}
+    for firstsubk, firstsubv in firstlevelsubdict.items():
+        # I call recursively the same function to get subitems
+        newsubitems = {k[len(firstsubk) + len(sep):]: v for k, v in subitems.items() if k.startswith(firstsubk + sep)}
+        tempdict[firstsubk] = _deserialize_attribute(
+            mainitem=firstsubv, subitems=newsubitems, sep=sep, original_class=original_class, original_pk=original_pk
+        )
+
+    # And then I put them in a list
+    retlist = [tempdict['{:d}'.format(i)] for i in range(mainitem['ival'])]
+    return retlist
+
+
+def deserialize_dict(mainitem, subitems, sep, original_class, original_pk, lesserrors):
+    """Deserialize a Python dictionary."""
+    # pylint: disable=protected-access
+    # subitems contains all subitems, here I store only those of
+    # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
+    # store only '0' and '1'
+    from aiida.common import AIIDA_LOGGER
+
+    firstlevelsubdict = {k: v for k, v in subitems.items() if sep not in k}
+
+    if len(firstlevelsubdict) != mainitem['ival']:
+        if (original_class is not None and original_class._subspecifier_field_name is not None):
+            subspecifier_string = '{}={} and '.format(original_class._subspecifier_field_name, original_pk)
+        else:
+            subspecifier_string = ''
+        if original_class is None:
+            sourcestr = 'the data passed'
+        else:
+            sourcestr = original_class.__name__
+
+        msg = (
+            'Wrong dict length stored in {} for '
+            "{}key='{}' ({} vs {})".format(
+                sourcestr, subspecifier_string, mainitem['key'], len(firstlevelsubdict), mainitem['ival']
+            )
+        )
+        if lesserrors:
+            AIIDA_LOGGER.error(msg)
+        else:
+            raise DeserializationException(msg)
+
+    # I get the values in memory as a dictionary
+    tempdict = {}
+    for firstsubk, firstsubv in firstlevelsubdict.items():
+        # I call recursively the same function to get subitems
+        newsubitems = {k[len(firstsubk) + len(sep):]: v for k, v in subitems.items() if k.startswith(firstsubk + sep)}
+        tempdict[firstsubk] = _deserialize_attribute(
+            mainitem=firstsubv, subitems=newsubitems, sep=sep, original_class=original_class, original_pk=original_pk
+        )
+
+    return tempdict
+
+
+def _deserialize_attribute(mainitem, subitems, sep, original_class=None, original_pk=None, lesserrors=False):
+    """Deserialize a single attribute.
 
     :param mainitem: the main item (either the attribute itself for base
       types (None, string, ...) or the main item for lists and dicts.
@@ -126,167 +250,34 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
       from the number declared in the ival field).
 
     :return: the deserialized value
-    :raise aiida.backends.djsite.db.migrations.DeserializationException: if an error occurs
-    """
+    :raise aiida.backends.djsite.db.migrations.DeserializationException: if an error occurs"""
+
     from aiida.common import json
-    from aiida.common.timezone import (
-        is_naive, make_aware, get_current_timezone)
+    from aiida.common.timezone import (is_naive, make_aware, get_current_timezone)
 
-    from aiida.common import AIIDA_LOGGER
+    if mainitem['datatype'] in ['none', 'bool', 'int', 'float', 'txt']:
+        if subitems:
+            raise DeserializationException("'{}' is of a base type, " 'but has subitems!'.format(mainitem.key))
+        return _deserialize_basic_type(mainitem)
 
-    if mainitem['datatype'] == 'none':
+    if mainitem['datatype'] == 'date':
         if subitems:
-            raise DeserializationException("'{}' is of a base type, "
-                                           'but has subitems!'.format(mainitem.key))
-        return None
-    elif mainitem['datatype'] == 'bool':
-        if subitems:
-            raise DeserializationException("'{}' is of a base type, "
-                                           'but has subitems!'.format(mainitem.key))
-        return mainitem['bval']
-    elif mainitem['datatype'] == 'int':
-        if subitems:
-            raise DeserializationException("'{}' is of a base type, "
-                                           'but has subitems!'.format(mainitem.key))
-        return mainitem['ival']
-    elif mainitem['datatype'] == 'float':
-        if subitems:
-            raise DeserializationException("'{}' is of a base type, "
-                                           'but has subitems!'.format(mainitem.key))
-        return mainitem['fval']
-    elif mainitem['datatype'] == 'txt':
-        if subitems:
-            raise DeserializationException("'{}' is of a base type, "
-                                           'but has subitems!'.format(mainitem.key))
-        return mainitem['tval']
-    elif mainitem['datatype'] == 'date':
-        if subitems:
-            raise DeserializationException("'{}' is of a base type, "
-                                           'but has subitems!'.format(mainitem.key))
+            raise DeserializationException("'{}' is of a base type, " 'but has subitems!'.format(mainitem.key))
         if is_naive(mainitem['dval']):
             return make_aware(mainitem['dval'], get_current_timezone())
-        else:
-            return mainitem['dval']
+        return mainitem['dval']
 
-    elif mainitem['datatype'] == 'list':
-        # subitems contains all subitems, here I store only those of
-        # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
-        # store only '0' and '1'
-        firstlevelsubdict = {k: v for k, v in subitems.items()
-                             if sep not in k}
-
-        # For checking, I verify the expected values
-        expected_set = set(['{:d}'.format(i)
-                            for i in range(mainitem['ival'])])
-        received_set = set(firstlevelsubdict.keys())
-        # If there are more entries than expected, but all expected
-        # ones are there, I just issue an error but I do not stop.
-
-        if not expected_set.issubset(received_set):
-            if (original_class is not None and original_class._subspecifier_field_name is not None):
-                subspecifier_string = '{}={} and '.format(
-                    original_class._subspecifier_field_name,
-                    original_pk)
-            else:
-                subspecifier_string = ''
-            if original_class is None:
-                sourcestr = 'the data passed'
-            else:
-                sourcestr = original_class.__name__
-
-            raise DeserializationException('Wrong list elements stored in {} for '
-                                           "{}key='{}' ({} vs {})".format(
-                sourcestr,
-                subspecifier_string,
-                mainitem['key'], expected_set, received_set))
-        if expected_set != received_set:
-            if (original_class is not None and
-                    original_class._subspecifier_field_name is not None):
-                subspecifier_string = '{}={} and '.format(
-                    original_class._subspecifier_field_name,
-                    original_pk)
-            else:
-                subspecifier_string = ''
-            if original_class is None:
-                sourcestr = 'the data passed'
-            else:
-                sourcestr = original_class.__name__
-
-            msg = ('Wrong list elements stored in {} for '
-                   "{}key='{}' ({} vs {})".format(
-                sourcestr,
-                subspecifier_string,
-                mainitem['key'], expected_set, received_set))
-            if lesserrors:
-                AIIDA_LOGGER.error(msg)
-            else:
-                raise DeserializationException(msg)
-
-        # I get the values in memory as a dictionary
-        tempdict = {}
-        for firstsubk, firstsubv in firstlevelsubdict.items():
-            # I call recursively the same function to get subitems
-            newsubitems = {k[len(firstsubk) + len(sep):]: v
-                           for k, v in subitems.items()
-                           if k.startswith(firstsubk + sep)}
-            tempdict[firstsubk] = _deserialize_attribute(mainitem=firstsubv,
-                                                         subitems=newsubitems, sep=sep, original_class=original_class,
-                                                         original_pk=original_pk)
-
-        # And then I put them in a list
-        retlist = [tempdict['{:d}'.format(i)] for i in range(mainitem['ival'])]
-        return retlist
-    elif mainitem['datatype'] == 'dict':
-        # subitems contains all subitems, here I store only those of
-        # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
-        # store only '0' and '1'
-        firstlevelsubdict = {k: v for k, v in subitems.items()
-                             if sep not in k}
-
-        if len(firstlevelsubdict) != mainitem['ival']:
-            if (original_class is not None and
-                    original_class._subspecifier_field_name is not None):
-                subspecifier_string = '{}={} and '.format(
-                    original_class._subspecifier_field_name,
-                    original_pk)
-            else:
-                subspecifier_string = ''
-            if original_class is None:
-                sourcestr = 'the data passed'
-            else:
-                sourcestr = original_class.__name__
-
-            msg = ('Wrong dict length stored in {} for '
-                   "{}key='{}' ({} vs {})".format(
-                sourcestr,
-                subspecifier_string,
-                mainitem['key'], len(firstlevelsubdict),
-                mainitem['ival']))
-            if lesserrors:
-                AIIDA_LOGGER.error(msg)
-            else:
-                raise DeserializationException(msg)
-
-        # I get the values in memory as a dictionary
-        tempdict = {}
-        for firstsubk, firstsubv in firstlevelsubdict.items():
-            # I call recursively the same function to get subitems
-            newsubitems = {k[len(firstsubk) + len(sep):]: v
-                           for k, v in subitems.items()
-                           if k.startswith(firstsubk + sep)}
-            tempdict[firstsubk] = _deserialize_attribute(mainitem=firstsubv,
-                                                         subitems=newsubitems, sep=sep, original_class=original_class,
-                                                         original_pk=original_pk)
-
-        return tempdict
-    elif mainitem['datatype'] == 'json':
+    if mainitem['datatype'] == 'list':
+        return deserialize_list(mainitem, subitems, sep, original_class, original_pk, lesserrors)
+    if mainitem['datatype'] == 'dict':
+        return deserialize_dict(mainitem, subitems, sep, original_class, original_pk, lesserrors)
+    if mainitem['datatype'] == 'json':
         try:
             return json.loads(mainitem['tval'])
         except ValueError:
             raise DeserializationException('Error in the content of the json field')
     else:
-        raise DeserializationException("The type field '{}' is not recognized".format(
-            mainitem['datatype']))
+        raise DeserializationException("The type field '{}' is not recognized".format(mainitem['datatype']))
 
 
 def deserialize_attributes(data, sep, original_class=None, original_pk=None):
@@ -327,8 +318,7 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
     for mainkey, descriptiondict in data.items():
         prefix, thissep, postfix = mainkey.partition(sep)
         if thissep:
-            found_subitems[prefix][postfix] = {k: v for k, v
-                                               in descriptiondict.items() if k != 'key'}
+            found_subitems[prefix][postfix] = {k: v for k, v in descriptiondict.items() if k != 'key'}
         else:
             mainitem = descriptiondict.copy()
             mainitem['key'] = prefix
@@ -338,22 +328,34 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
     # without mainitmes.
     lone_subitems = set(found_subitems.keys()) - set(found_mainitems.keys())
     if lone_subitems:
-        raise DeserializationException('Missing base keys for the following '
-                                       'items: {}'.format(','.join(lone_subitems)))
+        raise DeserializationException(
+            'Missing base keys for the following '
+            'items: {}'.format(','.join(lone_subitems))
+        )
 
     # For each zero-level entity, I call the _deserialize_attribute function
     retval = {}
-    for k, v in found_mainitems.items():
+    for key, value in found_mainitems.items():
         # Note: found_subitems[k] will return an empty dictionary it the
         # key does not exist, as it is a defaultdict
-        retval[k] = _deserialize_attribute(mainitem=v,
-                                           subitems=found_subitems[k], sep=sep, original_class=original_class,
-                                           original_pk=original_pk)
+        retval[key] = _deserialize_attribute(
+            mainitem=value,
+            subitems=found_subitems[key],
+            sep=sep,
+            original_class=original_class,
+            original_pk=original_pk
+        )
 
     return retval
 
 
 class ModelModifierV0025:
+    """This class implements the legacy EAV model used originally instead of JSONB.
+
+    The original Django backend implementation used a custom entity-attribute-value table for the attributes and extras
+    of a node. The logic was implemented in this class which was removed when the native JSONB field was used. However,
+    for the migrations this code is still needed, that is why it is kept here.
+    """
 
     from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
 
@@ -369,14 +371,11 @@ class ModelModifierV0025:
         return self._apps
 
     def subspecifiers_dict(self, attr):
-        """
-        Return a dict to narrow down the query to only those matching also the
-        subspecifier.
-        """
+        """Return a dict to narrow down the query to only those matching also the
+        subspecifier."""
         if self._subspecifier_field_name is None:
             return {}
-        else:
-            return {self._subspecifier_field_name: getattr(attr, self._subspecifier_field_name)}
+        return {self._subspecifier_field_name: getattr(attr, self._subspecifier_field_name)}
 
     def subspecifier_pk(self, attr):
         """
@@ -385,10 +384,11 @@ class ModelModifierV0025:
         """
         if self._subspecifier_field_name is None:
             return None
-        else:
-            return getattr(attr, self._subspecifier_field_name).pk
 
-    def validate_key(self, key):
+        return getattr(attr, self._subspecifier_field_name).pk
+
+    @staticmethod
+    def validate_key(key):
         """
         Validate the key string to check if it is valid (e.g., if it does not
         contain the separator symbol.).
@@ -418,7 +418,7 @@ class ModelModifierV0025:
         :raise AttributeError: if no key is found for the given dbnode
         """
         cls = self._model_class
-        DbNode = self.apps.get_model('db', 'DbNode')
+        DbNode = self.apps.get_model('db', 'DbNode')  # pylint: disable=invalid-name
 
         if isinstance(dbnode, int):
             dbnode_node = DbNode(id=dbnode)
@@ -439,20 +439,19 @@ class ModelModifierV0025:
                 prefix = '{}{}'.format(attr.key, self._sep)
                 prefix_len = len(prefix)
                 dballsubvalues = self._model_class.objects.filter(
-                    key__startswith=prefix,
-                    **self.subspecifiers_dict(attr)).values_list('key',
-                                                           'datatype', 'tval', 'fval',
-                                                           'ival', 'bval', 'dval')
+                    key__startswith=prefix, **self.subspecifiers_dict(attr)
+                ).values_list('key', 'datatype', 'tval', 'fval', 'ival', 'bval', 'dval')
                 # Strip the FULL prefix and replace it with the simple
                 # "attr" prefix
-                data = {'attr.{}'.format(_[0][prefix_len:]): {
-                    'datatype': _[1],
-                    'tval': _[2],
-                    'fval': _[3],
-                    'ival': _[4],
-                    'bval': _[5],
-                    'dval': _[6],
-                } for _ in dballsubvalues
+                data = {
+                    'attr.{}'.format(_[0][prefix_len:]): {
+                        'datatype': _[1],
+                        'tval': _[2],
+                        'fval': _[3],
+                        'ival': _[4],
+                        'bval': _[5],
+                        'dval': _[6],
+                    } for _ in dballsubvalues
                 }
                 # for _ in dballsubvalues}
                 # Append also the item itself
@@ -465,12 +464,14 @@ class ModelModifierV0025:
                     'fval': attr.fval,
                     'ival': attr.ival,
                     'bval': attr.bval,
-                    'dval': attr.dval}
-                return deserialize_attributes(data, sep=self._sep,
-                                              original_class=self._model_class,
-                                              original_pk=self.subspecifier_pk(attr))['attr']
-            else:
-                data = {'attr': {
+                    'dval': attr.dval
+                }
+                return deserialize_attributes(
+                    data, sep=self._sep, original_class=self._model_class, original_pk=self.subspecifier_pk(attr)
+                )['attr']
+
+            data = {
+                'attr': {
                     # Replace the key (which may contain the separator) with the
                     # simple "attr" key. In any case I do not need to return it!
                     'key': 'attr',
@@ -479,18 +480,19 @@ class ModelModifierV0025:
                     'fval': attr.fval,
                     'ival': attr.ival,
                     'bval': attr.bval,
-                    'dval': attr.dval}}
+                    'dval': attr.dval
+                }
+            }
 
-                return deserialize_attributes(data, sep=self._sep,
-                                              original_class=self._model_class,
-                                              original_pk=self.subspecifier_pk(attr))['attr']
+            return deserialize_attributes(
+                data, sep=self._sep, original_class=self._model_class, original_pk=self.subspecifier_pk(attr)
+            )['attr']
         except DeserializationException as exc:
             exc = DbContentError(exc)
             exc.original_exception = exc
             raise exc
 
-    def set_value_for_node(self, dbnode, key, value, with_transaction=False,
-                           stop_if_existing=False):
+    def set_value_for_node(self, dbnode, key, value, with_transaction=False, stop_if_existing=False):
         """
         This is the raw-level method that accesses the DB. No checks are done
         to prevent the user from (re)setting a valid key.
@@ -521,17 +523,20 @@ class ModelModifierV0025:
         :raise ValueError: if the key contains the separator symbol used
             internally to unpack dictionaries and lists (defined in cls._sep).
         """
-        cls = self._model_class
-        DbNode = self.apps.get_model('db', 'DbNode')
+        DbNode = self.apps.get_model('db', 'DbNode')  # pylint: disable=invalid-name
 
         if isinstance(dbnode, int):
             dbnode_node = DbNode(id=dbnode)
         else:
             dbnode_node = dbnode
 
-        self.set_value(key, value, with_transaction=with_transaction,
-                      subspecifier_value=dbnode_node,
-                      stop_if_existing=stop_if_existing)
+        self.set_value(
+            key,
+            value,
+            with_transaction=with_transaction,
+            subspecifier_value=dbnode_node,
+            stop_if_existing=stop_if_existing
+        )
 
     def del_value_for_node(self, dbnode, key):
         """
@@ -565,30 +570,30 @@ class ModelModifierV0025:
 
         if self._subspecifier_field_name is None:
             if subspecifier_value is not None:
-                raise ValueError('You cannot specify a subspecifier value for '
-                                 'class {} because it has no subspecifiers'
-                                 ''.format(cls.__name__))
+                raise ValueError(
+                    'You cannot specify a subspecifier value for '
+                    'class {} because it has no subspecifiers'
+                    ''.format(cls.__name__)
+                )
             subspecifiers_dict = {}
         else:
             if subspecifier_value is None:
-                raise ValueError('You also have to specify a subspecifier value '
-                                 'for class {} (the {})'.format(self.__name__,
-                                                                self._subspecifier_field_name))
-            subspecifiers_dict = {self._subspecifier_field_name:
-                                      subspecifier_value}
+                raise ValueError(
+                    'You also have to specify a subspecifier value '
+                    'for class {} (the {})'.format(self.__name__, self._subspecifier_field_name)  # pylint: disable=no-member
+                )
+            subspecifiers_dict = {self._subspecifier_field_name: subspecifier_value}
 
-        query = Q(key__startswith='{parentkey}{sep}'.format(
-            parentkey=key, sep=self._sep),
-            **subspecifiers_dict)
+        query = Q(key__startswith='{parentkey}{sep}'.format(parentkey=key, sep=self._sep), **subspecifiers_dict)
 
         if not only_children:
             query.add(Q(key=key, **subspecifiers_dict), Q.OR)
 
         cls.objects.filter(query).delete()
 
-    def set_value(self, key, value, with_transaction=False,
-                  subspecifier_value=None, other_attribs={},
-                  stop_if_existing=False):
+    def set_value(
+        self, key, value, with_transaction=False, subspecifier_value=None, other_attribs=None, stop_if_existing=False
+    ):  # pylint: disable=too-many-arguments
         """
         Set a new value in the DB, possibly associated to the given subspecifier.
 
@@ -621,6 +626,8 @@ class ModelModifierV0025:
         cls = self._model_class
         from django.db import transaction
 
+        other_attribs = other_attribs if other_attribs is not None else {}
+
         self.validate_key(key)
 
         try:
@@ -628,9 +635,7 @@ class ModelModifierV0025:
                 sid = transaction.savepoint()
 
             # create_value returns a list of nodes to store
-            to_store = self.create_value(key, value,
-                                        subspecifier_value=subspecifier_value,
-                                        other_attribs=other_attribs)
+            to_store = self.create_value(key, value, subspecifier_value=subspecifier_value, other_attribs=other_attribs)
 
             if to_store:
                 if not stop_if_existing:
@@ -646,8 +651,7 @@ class ModelModifierV0025:
                     # there is the risk that trailing pieces remain
                     # so in general it is good to recursively clean
                     # all sub-items.
-                    self.del_value(key,
-                                  subspecifier_value=subspecifier_value)
+                    self.del_value(key, subspecifier_value=subspecifier_value)
                 cls.objects.bulk_create(to_store)
 
             if with_transaction:
@@ -659,16 +663,37 @@ class ModelModifierV0025:
             if with_transaction:
                 transaction.savepoint_rollback(sid)
             if isinstance(exc, IntegrityError) and stop_if_existing:
-                raise UniquenessError('Impossible to create the required '
-                                      'entry '
-                                      "in table '{}', "
-                                      'another entry already exists and the creation would '
-                                      'violate an uniqueness constraint.\nFurther details: '
-                                      '{}'.format(cls.__name__, exc))
+                raise UniquenessError(
+                    'Impossible to create the required '
+                    'entry '
+                    "in table '{}', "
+                    'another entry already exists and the creation would '
+                    'violate an uniqueness constraint.\nFurther details: '
+                    '{}'.format(cls.__name__, exc)
+                )
             raise
 
-    def create_value(self, key, value, subspecifier_value=None,
-                     other_attribs={}):
+    @staticmethod
+    def set_basic_data_attributes(obj, value):
+        """Set obj attributes if they are of basic Python types."""
+        if isinstance(value, bool):
+            obj.datatype = 'bool'
+            obj.bval = value
+
+        elif isinstance(value, int):
+            obj.datatype = 'int'
+            obj.ival = value
+
+        elif isinstance(value, float):
+            obj.datatype = 'float'
+            obj.fval = value
+            obj.tval = ''
+
+        elif isinstance(value, str):
+            obj.datatype = 'txt'
+            obj.tval = value
+
+    def create_value(self, key, value, subspecifier_value=None, other_attribs=None):
         """
         Create a new list of attributes, without storing them, associated
         with the current key/value pair (and to the given subspecifier,
@@ -690,116 +715,73 @@ class ModelModifierV0025:
 
         :return: always a list of class instances; it is the user
           responsibility to store such entries (typically with a Django
-          bulk_create() call).
-        """
+          bulk_create() call)."""
+
         cls = self._model_class
         import datetime
 
         from aiida.common import json
         from aiida.common.timezone import is_naive, make_aware, get_current_timezone
 
+        other_attribs = other_attribs if other_attribs is not None else {}
+
         if self._subspecifier_field_name is None:
             if subspecifier_value is not None:
-                raise ValueError('You cannot specify a subspecifier value for '
-                                 'class {} because it has no subspecifiers'
-                                 ''.format(cls.__name__))
+                raise ValueError(
+                    'You cannot specify a subspecifier value for '
+                    'class {} because it has no subspecifiers'
+                    ''.format(cls.__name__)
+                )
             new_entry = cls(key=key, **other_attribs)
         else:
             if subspecifier_value is None:
-                raise ValueError('You also have to specify a subspecifier value '
-                                 'for class {} (the {})'.format(cls.__name__,
-                                                                self._subspecifier_field_name))
+                raise ValueError(
+                    'You also have to specify a subspecifier value '
+                    'for class {} (the {})'.format(cls.__name__, self._subspecifier_field_name)
+                )
             further_params = other_attribs.copy()
-            further_params.update({self._subspecifier_field_name:
-                                       subspecifier_value})
+            further_params.update({self._subspecifier_field_name: subspecifier_value})
             new_entry = cls(key=key, **further_params)
 
         list_to_return = [new_entry]
 
-        if value is None:
-            new_entry.datatype = 'none'
-            new_entry.bval = None
-            new_entry.tval = ''
-            new_entry.ival = None
-            new_entry.fval = None
-            new_entry.dval = None
+        new_entry.datatype = 'none'
+        new_entry.bval = None
+        new_entry.tval = ''
+        new_entry.ival = None
+        new_entry.fval = None
+        new_entry.dval = None
 
-        elif isinstance(value, bool):
-            new_entry.datatype = 'bool'
-            new_entry.bval = value
-            new_entry.tval = ''
-            new_entry.ival = None
-            new_entry.fval = None
-            new_entry.dval = None
-
-        elif isinstance(value, int):
-            new_entry.datatype = 'int'
-            new_entry.ival = value
-            new_entry.tval = ''
-            new_entry.bval = None
-            new_entry.fval = None
-            new_entry.dval = None
-
-        elif isinstance(value, float):
-            new_entry.datatype = 'float'
-            new_entry.fval = value
-            new_entry.tval = ''
-            new_entry.ival = None
-            new_entry.bval = None
-            new_entry.dval = None
-
-        elif isinstance(value, str):
-            new_entry.datatype = 'txt'
-            new_entry.tval = value
-            new_entry.bval = None
-            new_entry.ival = None
-            new_entry.fval = None
-            new_entry.dval = None
+        if isinstance(value, (bool, int, float, str)):
+            self.set_basic_data_attributes(new_entry, value)
 
         elif isinstance(value, datetime.datetime):
 
-            # current timezone is taken from the settings file of django
-            if is_naive(value):
-                value_to_set = make_aware(value, get_current_timezone())
-            else:
-                value_to_set = value
-
             new_entry.datatype = 'date'
-            # TODO: time-aware and time-naive datetime objects, see
+            # For time-aware and time-naive datetime objects, see
             # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
-            new_entry.dval = value_to_set
-            new_entry.tval = ''
-            new_entry.bval = None
-            new_entry.ival = None
-            new_entry.fval = None
+            new_entry.dval = make_aware(value, get_current_timezone()) if is_naive(value) else value
 
         elif isinstance(value, (list, tuple)):
 
             new_entry.datatype = 'list'
-            new_entry.dval = None
-            new_entry.tval = ''
-            new_entry.bval = None
             new_entry.ival = len(value)
-            new_entry.fval = None
 
             for i, subv in enumerate(value):
                 # I do not need get_or_create here, because
                 # above I deleted all children (and I
                 # expect no concurrency)
                 # NOTE: I do not pass other_attribs
-                list_to_return.extend(self.create_value(
-                    key=('{}{}{:d}'.format(key, self._sep, i)),
-                    value=subv,
-                    subspecifier_value=subspecifier_value))
+                list_to_return.extend(
+                    self.create_value(
+                        key=('{}{}{:d}'.format(key, self._sep, i)), value=subv, subspecifier_value=subspecifier_value
+                    )
+                )
 
         elif isinstance(value, dict):
 
             new_entry.datatype = 'dict'
-            new_entry.dval = None
-            new_entry.tval = ''
-            new_entry.bval = None
             new_entry.ival = len(value)
-            new_entry.fval = None
 
             for subk, subv in value.items():
                 self.validate_key(subk)
@@ -808,22 +790,21 @@ class ModelModifierV0025:
                 # above I deleted all children (and I
                 # expect no concurrency)
                 # NOTE: I do not pass other_attribs
-                list_to_return.extend(self.create_value(
-                    key='{}{}{}'.format(key, self._sep, subk),
-                    value=subv,
-                    subspecifier_value=subspecifier_value))
+                list_to_return.extend(
+                    self.create_value(
+                        key='{}{}{}'.format(key, self._sep, subk), value=subv, subspecifier_value=subspecifier_value
+                    )
+                )
         else:
             try:
                 jsondata = json.dumps(value)
             except TypeError:
                 raise ValueError(
-                    'Unable to store the value: it must be either a basic datatype, or json-serializable: {}'.format(
-                        value))
+                    'Unable to store the value: it must be either a basic datatype, or json-serializable: {}'.
+                    format(value)
+                )
 
             new_entry.datatype = 'json'
             new_entry.tval = jsondata
-            new_entry.bval = None
-            new_entry.ival = None
-            new_entry.fval = None
 
         return list_to_return

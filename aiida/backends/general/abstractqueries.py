@@ -7,10 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Manage AiiDA queries."""
 import abc
 
 
 class AbstractQueryManager(abc.ABC):
+    """Manage AiiDA queries."""
 
     def __init__(self, backend):
         """
@@ -41,10 +43,8 @@ class AbstractQueryManager(abc.ABC):
             with self._backend.cursor() as cursor:
                 cursor.execute(query)
 
-    def get_creation_statistics(
-            self,
-            user_pk=None
-    ):
+    @staticmethod
+    def get_creation_statistics(user_pk=None):
         """
         Return a dictionary with the statistics of node creation, summarized by day.
 
@@ -72,8 +72,7 @@ class AbstractQueryManager(abc.ABC):
 
             def get_statistics_dict(dataset):
                 results = {}
-                for count, typestring in sorted(
-                        (v, k) for k, v in dataset.items())[::-1]:
+                for count, typestring in sorted((v, k) for k, v in dataset.items())[::-1]:
                     results[typestring] = count
                 return results
 
@@ -85,7 +84,7 @@ class AbstractQueryManager(abc.ABC):
             ctimelist = [r[1].strftime('%Y-%m-%d') for r in dataset]
             ctime = Counter(ctimelist)
 
-            if len(ctimelist) > 0:
+            if ctimelist:
 
                 # For the way the string is formatted, we can just sort it alphabetically
                 firstdate = datetime.datetime.strptime(sorted(ctimelist)[0], '%Y-%m-%d')
@@ -107,12 +106,12 @@ class AbstractQueryManager(abc.ABC):
 
         statistics = {}
 
-        q = QueryBuilder()
-        q.append(Node, project=['id', 'ctime', 'type'], tag='node')
+        q_build = QueryBuilder()
+        q_build.append(Node, project=['id', 'ctime', 'type'], tag='node')
 
         if user_pk is not None:
-            q.append(User, with_node='node', project='email', filters={'pk': user_pk})
-        qb_res = q.all()
+            q_build.append(User, with_node='node', project='email', filters={'pk': user_pk})
+        qb_res = q_build.all()
 
         # total count
         statistics['total'] = len(qb_res)
@@ -120,38 +119,67 @@ class AbstractQueryManager(abc.ABC):
 
         return statistics
 
+    @staticmethod
+    def _extract_formula(args, akinds, asites):
+        """Extract formula from the structure object."""
+        from aiida.orm.nodes.data.structure import (get_formula, get_symbols_string)
+
+        if args.element is not None:
+            all_symbols = [_['symbols'][0] for _ in akinds]
+            if not any([s in args.element for s in all_symbols]):
+                return None
+
+        if args.element_only is not None:
+            all_symbols = [_['symbols'][0] for _ in akinds]
+            if not all([s in all_symbols for s in args.element_only]):
+                return None
+
+        # We want only the StructureData that have attributes
+        if akinds is None or asites is None:
+            return None
+
+        symbol_dict = {}
+        for k in akinds:
+            symbols = k['symbols']
+            weights = k['weights']
+            symbol_dict[k['name']] = get_symbols_string(symbols, weights)
+
+        try:
+            symbol_list = []
+            for site in asites:
+                symbol_list.append(symbol_dict[site['kind_name']])
+            formula = get_formula(symbol_list, mode=args.formulamode)
+        # If for some reason there is no kind with the name
+        # referenced by the site
+        except KeyError:
+            formula = '<<UNKNOWN>>'
+        return formula
+
     def get_bands_and_parents_structure(self, args):
-        """
-        Search for bands and return bands and the closest structure that is a parent of the instance.
+        """Search for bands and return bands and the closest structure that is a parent of the instance.
         This is the backend independent way, can be overriden for performance reason
 
         :returns:
             A list of sublists, each latter containing (in order):
-                pk as string, formula as string, creation date, bandsdata-label
-        """
+                pk as string, formula as string, creation date, bandsdata-label"""
 
         import datetime
         from aiida.common import timezone
-        from aiida.orm.nodes.data.structure import (get_formula, get_symbols_string)
         from aiida import orm
 
-        qb = orm.QueryBuilder()
+        q_build = orm.QueryBuilder()
         if args.all_users is False:
-            user = orm.User.objects.get_default()
-            qb.append(orm.User, tag='creator', filters={'email': user.email})
+            q_build.append(orm.User, tag='creator', filters={'email': orm.User.objects.get_default().email})
         else:
-            qb.append(orm.User, tag='creator')
+            q_build.append(orm.User, tag='creator')
 
         bdata_filters = {}
         if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            bdata_filters.update({'ctime': {'>=': n_days_ago}})
+            bdata_filters.update({'ctime': {'>=': timezone.now() - datetime.timedelta(days=args.past_days)}})
 
-        qb.append(orm.BandsData, tag='bdata', with_user='creator',
-                  filters=bdata_filters,
-                  project=['id', 'label', 'ctime']
-                  )
+        q_build.append(
+            orm.BandsData, tag='bdata', with_user='creator', filters=bdata_filters, project=['id', 'label', 'ctime']
+        )
 
         group_filters = {}
 
@@ -160,20 +188,24 @@ class AbstractQueryManager(abc.ABC):
         if args.group_pk is not None:
             group_filters.update({'id': {'in': args.group_pk}})
         if group_filters:
-            qb.append(orm.Group, tag='group', filters=group_filters, with_node='bdata')
+            q_build.append(orm.Group, tag='group', filters=group_filters, with_node='bdata')
 
-        qb.append(orm.StructureData, tag='sdata', with_descendants='bdata',
-                  # We don't care about the creator of StructureData
-                  project=['id', 'attributes.kinds', 'attributes.sites'])
+        q_build.append(
+            orm.StructureData,
+            tag='sdata',
+            with_descendants='bdata',
+            # We don't care about the creator of StructureData
+            project=['id', 'attributes.kinds', 'attributes.sites']
+        )
 
-        qb.order_by({orm.StructureData: {'ctime': 'desc'}})
+        q_build.order_by({orm.StructureData: {'ctime': 'desc'}})
 
-        list_data = qb.distinct()
+        list_data = q_build.distinct()
 
         entry_list = []
         already_visited_bdata = set()
 
-        for [bid, blabel, bdate, sid, akinds, asites] in list_data.all():
+        for [bid, blabel, bdate, _, akinds, asites] in list_data.all():
 
             # We process only one StructureData per BandsData.
             # We want to process the closest StructureData to
@@ -185,56 +217,22 @@ class AbstractQueryManager(abc.ABC):
             if already_visited_bdata.__contains__(bid):
                 continue
             already_visited_bdata.add(bid)
-
-            if args.element is not None:
-                all_symbols = [_['symbols'][0] for _ in akinds]
-                if not any([s in args.element for s in all_symbols]
-                           ):
-                    continue
-
-            if args.element_only is not None:
-                all_symbols = [_['symbols'][0] for _ in akinds]
-                if not all(
-                        [s in all_symbols for s in args.element_only]
-                ):
-                    continue
-
-            # We want only the StructureData that have attributes
-            if akinds is None or asites is None:
+            formula = self._extract_formula(args, akinds, asites)
+            if formula is None:
                 continue
-
-            symbol_dict = {}
-            for k in akinds:
-                symbols = k['symbols']
-                weights = k['weights']
-                symbol_dict[k['name']] = get_symbols_string(symbols,
-                                                            weights)
-
-            try:
-                symbol_list = []
-                for s in asites:
-                    symbol_list.append(symbol_dict[s['kind_name']])
-                formula = get_formula(symbol_list,
-                                      mode=args.formulamode)
-            # If for some reason there is no kind with the name
-            # referenced by the site
-            except KeyError:
-                formula = '<<UNKNOWN>>'
-            entry_list.append([str(bid), str(formula),
-                               bdate.strftime('%d %b %Y'), blabel])
+            entry_list.append([str(bid), str(formula), bdate.strftime('%d %b %Y'), blabel])
 
         return entry_list
 
-    def get_all_parents(self, node_pks, return_values=('id',)):
-        """
-        Get all the parents of given nodes
+    @staticmethod
+    def get_all_parents(node_pks, return_values=('id',)):
+        """Get all the parents of given nodes
+
         :param node_pks: one node pk or an iterable of node pks
-        :return: a list of aiida objects with all the parents of the nodes
-        """
+        :return: a list of aiida objects with all the parents of the nodes"""
         from aiida.orm import Node, QueryBuilder
 
-        qb = QueryBuilder()
-        qb.append(Node, tag='low_node',
-                  filters={'id': {'in': node_pks}})
-        qb.append(Node, with_descendants='low_node', project=return_values)
-        return qb.all()
+        q_build = QueryBuilder()
+        q_build.append(Node, tag='low_node', filters={'id': {'in': node_pks}})
+        q_build.append(Node, with_descendants='low_node', project=return_values)
+        return q_build.all()

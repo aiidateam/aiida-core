@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""A module to test class loader factories."""
 import aiida
 
 from aiida.backends.testbase import AiidaTestCase
@@ -16,6 +16,7 @@ from aiida.plugins import CalculationFactory
 
 
 class TestCalcJob(AiidaTestCase):
+    """Test CalcJob."""
 
     def setUp(self):
         super().setUp()
@@ -26,6 +27,7 @@ class TestCalcJob(AiidaTestCase):
         self.assertIsNone(Process.current())
 
     def test_class_loader(self):
+        """Test that CalculationFactory works."""
         process = CalculationFactory('templatereplacer')
         loader = aiida.engine.persistence.get_object_loader()
 

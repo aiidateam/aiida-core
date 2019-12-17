@@ -8,16 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
+# pylint: disable=no-name-in-module,import-error
 """This migration creates UUID column and populates it with distinct UUIDs
 
 This migration corresponds to the 0024_dblog_update Django migration.
 
 Revision ID: ea2f50e7f615
 Revises: 041a79fc615f
-Create Date: 2019-01-30 19:22:50.984380
-
-"""
-# pylint: disable=no-name-in-module,import-error
+Create Date: 2019-01-30 19:22:50.984380"""
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql

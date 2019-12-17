@@ -7,8 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-from collections import Mapping, MutableMapping
+"""Module to test process builder."""
+# pylint: disable=no-member,protected-access,no-name-in-module
+from collections.abc import Mapping, MutableMapping
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -19,7 +20,8 @@ from aiida.plugins import CalculationFactory
 DEFAULT_INT = 256
 
 
-class TestWorkChain(WorkChain):
+class ExampleWorkChain(WorkChain):
+    """Defining test work chain."""
 
     @classmethod
     def define(cls, spec):
@@ -32,7 +34,7 @@ class TestWorkChain(WorkChain):
         spec.input('default', valid_type=orm.Int, default=orm.Int(DEFAULT_INT).store())
 
 
-class TestLazyProcessNamespace(Process):
+class LazyProcessNamespace(Process):
     """Process with basic nested namespaces to test "pruning" of empty nested namespaces from the builder."""
 
     @classmethod
@@ -65,13 +67,14 @@ class MappingData(Mapping, orm.Data):
 
 
 class TestProcessBuilder(AiidaTestCase):
+    """Test process builder.    """
 
     def setUp(self):
         super().setUp()
         self.assertIsNone(Process.current())
         self.process_class = CalculationFactory('templatereplacer')
         self.builder = self.process_class.get_builder()
-        self.builder_workchain = TestWorkChain.get_builder()
+        self.builder_workchain = ExampleWorkChain.get_builder()
         self.inputs = {
             'dynamic': {
                 'namespace': {
@@ -92,7 +95,7 @@ class TestProcessBuilder(AiidaTestCase):
 
     def test_builder_inputs(self):
         """Test the `ProcessBuilder._inputs` method to get the inputs with and without `prune` set to True."""
-        builder = TestLazyProcessNamespace.get_builder()
+        builder = LazyProcessNamespace.get_builder()
 
         # When no inputs are specified specifically, `prune=True` should get rid of completely empty namespaces
         self.assertEqual(builder._inputs(prune=False), {'namespace': {'nested': {}}, 'metadata': {}})
@@ -100,33 +103,33 @@ class TestProcessBuilder(AiidaTestCase):
 
         # With a specific input in `namespace` the case of `prune=True` should now only remove `metadata`
         integer = orm.Int(DEFAULT_INT)
-        builder = TestLazyProcessNamespace.get_builder()
+        builder = LazyProcessNamespace.get_builder()
         builder.namespace.a = integer
         self.assertEqual(builder._inputs(prune=False), {'namespace': {'a': integer, 'nested': {}}, 'metadata': {}})
         self.assertEqual(builder._inputs(prune=True), {'namespace': {'a': integer}})
 
         # A value that is a `Node` instance but also happens to be an "empty mapping" should not be pruned
         empty_node = MappingData()
-        builder = TestLazyProcessNamespace.get_builder()
+        builder = LazyProcessNamespace.get_builder()
         builder.namespace.a = empty_node
         self.assertEqual(builder._inputs(prune=False), {'namespace': {'a': empty_node, 'nested': {}}, 'metadata': {}})
         self.assertEqual(builder._inputs(prune=True), {'namespace': {'a': empty_node}})
 
         # Verify that empty lists are considered as a "value" and are not pruned
-        builder = TestLazyProcessNamespace.get_builder()
+        builder = LazyProcessNamespace.get_builder()
         builder.namespace.c = list()
         self.assertEqual(builder._inputs(prune=False), {'namespace': {'c': [], 'nested': {}}, 'metadata': {}})
         self.assertEqual(builder._inputs(prune=True), {'namespace': {'c': []}})
 
         # Verify that empty lists, even in doubly nested namespace are considered as a "value" and are not pruned
-        builder = TestLazyProcessNamespace.get_builder()
+        builder = LazyProcessNamespace.get_builder()
         builder.namespace.nested.bird = list()
         self.assertEqual(builder._inputs(prune=False), {'namespace': {'nested': {'bird': []}}, 'metadata': {}})
         self.assertEqual(builder._inputs(prune=True), {'namespace': {'nested': {'bird': []}}})
 
     def test_process_builder_attributes(self):
         """Check that the builder has all the input ports of the process class as attributes."""
-        for name, port in self.process_class.spec().inputs.items():
+        for name, _ in self.process_class.spec().inputs.items():
             self.assertTrue(hasattr(self.builder, name))
 
     def test_process_builder_set_attributes(self):
@@ -137,16 +140,16 @@ class TestProcessBuilder(AiidaTestCase):
         self.builder.metadata.label = label
         self.builder.metadata.description = description
 
-        self.assertEquals(self.builder.metadata.label, label)
-        self.assertEquals(self.builder.metadata.description, description)
+        self.assertEqual(self.builder.metadata.label, label)
+        self.assertEqual(self.builder.metadata.description, description)
 
     def test_dynamic_setters(self):
-        """Verify that the attributes of the TestWorkChain can be set but defaults are not there."""
+        """Verify that the attributes of the DummyWorkChain can be set but defaults are not there."""
         self.builder_workchain.dynamic.namespace = self.inputs['dynamic']['namespace']
         self.builder_workchain.name.spaced = self.inputs['name']['spaced']
         self.builder_workchain.name_spaced = self.inputs['name_spaced']
         self.builder_workchain.boolean = self.inputs['boolean']
-        self.assertEquals(self.builder_workchain, self.inputs)
+        self.assertEqual(self.builder_workchain, self.inputs)
 
     def test_dynamic_getters_value(self):
         """Verify that getters will return the actual value."""
@@ -162,22 +165,22 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertTrue(isinstance(self.builder_workchain.boolean, orm.Bool))
 
         # Verify that the correct value is returned by the getter
-        self.assertEquals(self.builder_workchain.dynamic.namespace, self.inputs['dynamic']['namespace'])
-        self.assertEquals(self.builder_workchain.name.spaced, self.inputs['name']['spaced'])
-        self.assertEquals(self.builder_workchain.name_spaced, self.inputs['name_spaced'])
-        self.assertEquals(self.builder_workchain.boolean, self.inputs['boolean'])
+        self.assertEqual(self.builder_workchain.dynamic.namespace, self.inputs['dynamic']['namespace'])
+        self.assertEqual(self.builder_workchain.name.spaced, self.inputs['name']['spaced'])
+        self.assertEqual(self.builder_workchain.name_spaced, self.inputs['name_spaced'])
+        self.assertEqual(self.builder_workchain.boolean, self.inputs['boolean'])
 
     def test_dynamic_getters_doc_string(self):
         """Verify that getters have the correct docstring."""
-        builder = TestWorkChain.get_builder()
-        self.assertEquals(builder.__class__.name_spaced.__doc__, str(TestWorkChain.spec().inputs['name_spaced']))
-        self.assertEquals(builder.__class__.boolean.__doc__, str(TestWorkChain.spec().inputs['boolean']))
+        builder = ExampleWorkChain.get_builder()
+        self.assertEqual(builder.__class__.name_spaced.__doc__, str(ExampleWorkChain.spec().inputs['name_spaced']))
+        self.assertEqual(builder.__class__.boolean.__doc__, str(ExampleWorkChain.spec().inputs['boolean']))
 
     def test_builder_restart_work_chain(self):
         """Verify that nested namespaces imploded into flat link labels can be reconstructed into nested namespaces."""
         caller = orm.WorkChainNode().store()
 
-        node = orm.WorkChainNode(process_type=TestWorkChain.build_process_type())
+        node = orm.WorkChainNode(process_type=ExampleWorkChain.build_process_type())
         node.add_incoming(self.inputs['dynamic']['namespace']['alp'], LinkType.INPUT_WORK, 'dynamic__namespace__alp')
         node.add_incoming(self.inputs['name']['spaced'], LinkType.INPUT_WORK, 'name__spaced')
         node.add_incoming(self.inputs['name_spaced'], LinkType.INPUT_WORK, 'name_spaced')
@@ -195,32 +198,31 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertIn('name_spaced', builder)
         self.assertIn('boolean', builder)
         self.assertIn('default', builder)
-        self.assertEquals(builder.dynamic.namespace['alp'], self.inputs['dynamic']['namespace']['alp'])
-        self.assertEquals(builder.name.spaced, self.inputs['name']['spaced'])
-        self.assertEquals(builder.name_spaced, self.inputs['name_spaced'])
-        self.assertEquals(builder.boolean, self.inputs['boolean'])
-        self.assertEquals(builder.default, orm.Int(DEFAULT_INT))
+        self.assertEqual(builder.dynamic.namespace['alp'], self.inputs['dynamic']['namespace']['alp'])
+        self.assertEqual(builder.name.spaced, self.inputs['name']['spaced'])
+        self.assertEqual(builder.name_spaced, self.inputs['name_spaced'])
+        self.assertEqual(builder.boolean, self.inputs['boolean'])
+        self.assertEqual(builder.default, orm.Int(DEFAULT_INT))
 
-    def test_port_names_overlapping_mutable_mapping_methods(self):
+    def test_port_names_overlapping_mutable_mapping_methods(self):  # pylint: disable=invalid-name
         """Check that port names take precedence over `collections.MutableMapping` methods.
 
         The `ProcessBuilderNamespace` is a `collections.MutableMapping` but since the port names are made accessible
         as attributes, they can overlap with some of the mappings builtin methods, e.g. `values()`, `items()` etc.
         The port names should take precendence in this case and if one wants to access the mapping methods one needs to
-        cast the builder to a dictionary first.
-        """
-        builder = TestWorkChain.get_builder()
+        cast the builder to a dictionary first."""
+        builder = ExampleWorkChain.get_builder()
 
         # The `values` method is obscured by a port that also happens to be called `values`, so calling it should raise
         with self.assertRaises(TypeError):
-            builder.values()
+            builder.values()  # pylint: disable=not-callable
 
         # However, we can assign a node to it
         builder.values = orm.Int(2)
 
         # Calling the attribute `values` will then actually try to call the node, which should raise
         with self.assertRaises(TypeError):
-            builder.values()
+            builder.values()  # pylint: disable=not-callable
 
         # Casting the builder to a dict, *should* then make `values` callable again
         self.assertIn(orm.Int(2), dict(builder).values())
@@ -230,7 +232,7 @@ class TestProcessBuilder(AiidaTestCase):
             self.assertNotIn(method, dir(builder))
 
         # On the other hand, all the port names *should* be present
-        for port_name in TestWorkChain.spec().inputs.keys():
+        for port_name in ExampleWorkChain.spec().inputs.keys():
             self.assertIn(port_name, dir(builder))
 
         # The `update` method is implemented, but prefixed with an underscore to not block the name for a port
@@ -239,7 +241,9 @@ class TestProcessBuilder(AiidaTestCase):
 
     def test_calc_job_node_get_builder_restart(self):
         """Test the `CalcJobNode.get_builder_restart` method."""
-        original = orm.CalcJobNode(computer=self.computer, process_type='aiida.calculations:arithmetic.add', label='original')
+        original = orm.CalcJobNode(
+            computer=self.computer, process_type='aiida.calculations:arithmetic.add', label='original'
+        )
         original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         original.set_option('max_wallclock_seconds', 1800)
 
@@ -253,8 +257,8 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertIn('y', builder)
         self.assertIn('metadata', builder)
         self.assertIn('options', builder.metadata)
-        self.assertEquals(builder.x, orm.Int(1))
-        self.assertEquals(builder.y, orm.Int(2))
+        self.assertEqual(builder.x, orm.Int(1))
+        self.assertEqual(builder.y, orm.Int(2))
         self.assertDictEqual(builder.metadata.options, original.get_options())
 
     def test_code_get_builder(self):
@@ -267,7 +271,7 @@ class TestProcessBuilder(AiidaTestCase):
 
         # Check that I can get a builder
         builder = code.get_builder()
-        self.assertEquals(builder.code.pk, code.pk)
+        self.assertEqual(builder.code.pk, code.pk)
 
         # Check that I can set the parameters
         builder.parameters = orm.Dict(dict={})

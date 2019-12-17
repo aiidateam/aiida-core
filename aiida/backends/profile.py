@@ -29,5 +29,5 @@ BACKEND_SQLA = 'sqlalchemy'
 # `profile` module. What it should be targeting is the `cProfile` method, but somehow it ends up here. Simply adding
 # the attributes here fixes the problem, even though we have absolutely no idea why. Given that the module is deprecated
 # anyway and will soon be removed at which point the problem should no longer exist.
-run = None
-runctx = None
+run = None  # pylint: disable=invalid-name
+runctx = None  # pylint: disable=invalid-name

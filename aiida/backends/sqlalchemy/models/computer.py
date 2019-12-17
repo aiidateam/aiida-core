@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=import-error,no-name-in-module
+"""Module to manage computers for the SQLA backend."""
 
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.schema import Column
@@ -17,10 +19,10 @@ from aiida.common.utils import get_new_uuid
 
 
 class DbComputer(Base):
-
+    """Class to store computers using SQLA backend."""
     __tablename__ = 'db_dbcomputer'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
     name = Column(String(255), unique=True, nullable=False)
     hostname = Column(String(255))
@@ -30,6 +32,7 @@ class DbComputer(Base):
     _metadata = Column('metadata', JSONB)
 
     def __init__(self, *args, **kwargs):
+        """Provide _metadata and description attributes to the class."""
         self._metadata = {}
         # TODO SP: it's supposed to be nullable, but there is a NOT constraint inside the DB.
         self.description = ''

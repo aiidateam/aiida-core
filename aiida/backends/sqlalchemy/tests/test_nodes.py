@@ -7,9 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Tests for nodes, attributes and links
-"""
+# pylint: disable=import-error,no-name-in-module
+"""Tests for nodes, attributes and links."""
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Data
@@ -17,15 +16,10 @@ from aiida import orm
 
 
 class TestNodeBasicSQLA(AiidaTestCase):
-    """
-    These tests check the basic features of nodes
-    (setting of attributes, copying of files, ...)
-    """
+    """These tests check the basic features of nodes(setting of attributes, copying of files, ...)."""
 
     def test_settings(self):
-        """
-        Test the settings table (similar to Attributes, but without the key.
-        """
+        """Test the settings table (similar to Attributes, but without the key."""
         from aiida.backends.sqlalchemy.models.settings import DbSetting
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -36,66 +30,64 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         DbSetting.set_value(key='pippo', value=[1, 2, 3])
 
-        # s1 = DbSetting.objects.get(key='pippo')
-        s1 = DbSetting.query.filter_by(key='pippo').first()
+        # s_1 = DbSetting.objects.get(key='pippo')
+        s_1 = DbSetting.query.filter_by(key='pippo').first()
 
-        self.assertEqual(s1.getvalue(), [1, 2, 3])
+        self.assertEqual(s_1.getvalue(), [1, 2, 3])
 
-        s2 = DbSetting(key='pippo')
-        s2.time = timezone.datetime.now(tz=UTC)
+        s_2 = DbSetting(key='pippo')
+        s_2.time = timezone.datetime.now(tz=UTC)
         with self.assertRaises(IntegrityError):
             with session.begin_nested():
                 # same name...
-                session.add(s2)
+                session.add(s_2)
 
         # Should replace pippo
         DbSetting.set_value(key='pippo', value='a')
-        s1 = DbSetting.query.filter_by(key='pippo').first()
+        s_1 = DbSetting.query.filter_by(key='pippo').first()
 
-        self.assertEqual(s1.getvalue(), 'a')
+        self.assertEqual(s_1.getvalue(), 'a')
 
     def test_load_nodes(self):
-        """
-        Test for load_node() function.
-        """
+        """Test for load_node() function."""
         from aiida.orm import load_node
         from aiida.backends.sqlalchemy import get_scoped_session
 
-        a = Data()
-        a.store()
+        a_obj = Data()
+        a_obj.store()
 
-        self.assertEquals(a.pk, load_node(identifier=a.pk).pk)
-        self.assertEquals(a.pk, load_node(identifier=a.uuid).pk)
-        self.assertEquals(a.pk, load_node(pk=a.pk).pk)
-        self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)
+        self.assertEqual(a_obj.pk, load_node(identifier=a_obj.pk).pk)
+        self.assertEqual(a_obj.pk, load_node(identifier=a_obj.uuid).pk)
+        self.assertEqual(a_obj.pk, load_node(pk=a_obj.pk).pk)
+        self.assertEqual(a_obj.pk, load_node(uuid=a_obj.uuid).pk)
 
         session = get_scoped_session()
 
         try:
             session.begin_nested()
             with self.assertRaises(ValueError):
-                load_node(identifier=a.pk, pk=a.pk)
+                load_node(identifier=a_obj.pk, pk=a_obj.pk)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
             with self.assertRaises(ValueError):
-                load_node(pk=a.pk, uuid=a.uuid)
+                load_node(pk=a_obj.pk, uuid=a_obj.uuid)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
             with self.assertRaises(TypeError):
-                load_node(pk=a.uuid)
+                load_node(pk=a_obj.uuid)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
             with self.assertRaises(TypeError):
-                load_node(uuid=a.pk)
+                load_node(uuid=a_obj.pk)
         finally:
             session.rollback()
 
@@ -127,19 +119,15 @@ class TestNodeBasicSQLA(AiidaTestCase):
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         # Query the session before commit
-        res = session.query(DbNode.uuid).filter(
-            DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 0, 'There should not be any nodes with this'
-                                      'UUID in the session/DB.')
+        res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
+        self.assertEqual(len(res), 0, 'There should not be any nodes with this' 'UUID in the session/DB.')
 
         # Commit the transaction
         session.commit()
 
         # Check again that the node is not in the DB
-        res = session.query(DbNode.uuid).filter(
-            DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 0, 'There should not be any nodes with this'
-                                      'UUID in the session/DB.')
+        res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
+        self.assertEqual(len(res), 0, 'There should not be any nodes with this' 'UUID in the session/DB.')
 
         # Get the automatic user
         dbuser = orm.User.objects.get_default().backend_entity.dbmodel
@@ -149,18 +137,12 @@ class TestNodeBasicSQLA(AiidaTestCase):
         session.add(node)
 
         # Query the session before commit
-        res = session.query(DbNode.uuid).filter(
-            DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 1,
-                         'There should be a node in the session/DB with the '
-                         'UUID {}'.format(node_uuid))
+        res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
+        self.assertEqual(len(res), 1, 'There should be a node in the session/DB with the ' 'UUID {}'.format(node_uuid))
 
         # Commit the transaction
         session.commit()
 
         # Check again that the node is in the db
-        res = session.query(DbNode.uuid).filter(
-            DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 1,
-                         'There should be a node in the session/DB with the '
-                         'UUID {}'.format(node_uuid))
+        res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
+        self.assertEqual(len(res), 1, 'There should be a node in the session/DB with the ' 'UUID {}'.format(node_uuid))

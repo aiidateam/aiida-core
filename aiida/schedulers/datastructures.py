@@ -23,7 +23,9 @@ from aiida.common.extendeddicts import DefaultFieldsAttributeDict
 
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
 
-__all__ = ('JobState', 'JobResource', 'JobTemplate', 'JobInfo', 'NodeNumberJobResource', 'ParEnvJobResource', 'MachineInfo')
+__all__ = (
+    'JobState', 'JobResource', 'JobTemplate', 'JobInfo', 'NodeNumberJobResource', 'ParEnvJobResource', 'MachineInfo'
+)
 
 
 class JobState(Enum):
@@ -115,7 +117,7 @@ class NodeNumberJobResource(JobResource):
         """
         return True
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs):  # pylint: disable=too-many-branches,too-many-statements
         """
         Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
@@ -169,8 +171,10 @@ class NodeNumberJobResource(JobResource):
             raise ValueError('num_cores_per_mpiproc must an integer')
 
         if kwargs:
-            raise TypeError('The following parameters were not recognized for '
-                            'the JobResource: {}'.format(kwargs.keys()))
+            raise TypeError(
+                'The following parameters were not recognized for '
+                'the JobResource: {}'.format(kwargs.keys())
+            )
 
         if num_machines is None:
             # Use default value, if not provided
@@ -178,8 +182,10 @@ class NodeNumberJobResource(JobResource):
                 num_mpiprocs_per_machine = default_mpiprocs_per_machine
 
             if num_mpiprocs_per_machine is None or tot_num_mpiprocs is None:
-                raise TypeError('At least two among num_machines, '
-                                'num_mpiprocs_per_machine or tot_num_mpiprocs must be specified')
+                raise TypeError(
+                    'At least two among num_machines, '
+                    'num_mpiprocs_per_machine or tot_num_mpiprocs must be specified'
+                )
             else:
                 # To avoid divisions by zero
                 if num_mpiprocs_per_machine <= 0:
@@ -196,8 +202,10 @@ class NodeNumberJobResource(JobResource):
 
             if num_mpiprocs_per_machine is None:
                 if tot_num_mpiprocs is None:
-                    raise TypeError('At least two among num_machines, '
-                                    'num_mpiprocs_per_machine or tot_num_mpiprocs must be specified')
+                    raise TypeError(
+                        'At least two among num_machines, '
+                        'num_mpiprocs_per_machine or tot_num_mpiprocs must be specified'
+                    )
                 else:
                     # To avoid divisions by zero
                     if num_machines <= 0:
@@ -209,10 +217,12 @@ class NodeNumberJobResource(JobResource):
 
         if tot_num_mpiprocs is not None:
             if tot_num_mpiprocs != self.num_mpiprocs_per_machine * self.num_machines:
-                raise ValueError('tot_num_mpiprocs must be equal to '
-                                 'num_mpiprocs_per_machine * num_machines, and in particular it '
-                                 'should be a multiple of num_mpiprocs_per_machine and/or '
-                                 'num_machines')
+                raise ValueError(
+                    'tot_num_mpiprocs must be equal to '
+                    'num_mpiprocs_per_machine * num_machines, and in particular it '
+                    'should be a multiple of num_mpiprocs_per_machine and/or '
+                    'num_machines'
+                )
 
         if self.num_mpiprocs_per_machine <= 0:
             raise ValueError('num_mpiprocs_per_machine must be >= 1')
@@ -262,8 +272,10 @@ class ParEnvJobResource(JobResource):
 
         default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
         if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError('default_mpiprocs_per_machine cannot be set '
-                                     'for schedulers that use ParEnvJobResource')
+            raise ConfigurationError(
+                'default_mpiprocs_per_machine cannot be set '
+                'for schedulers that use ParEnvJobResource'
+            )
 
         if self.tot_num_mpiprocs <= 0:
             raise ValueError('tot_num_mpiprocs must be >= 1')
@@ -283,7 +295,7 @@ class ParEnvJobResource(JobResource):
         return False
 
 
-class JobTemplate(DefaultFieldsAttributeDict):
+class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-attributes
     """
     A template for submitting jobs. This contains all required information
     to create the job header.
@@ -374,9 +386,6 @@ class JobTemplate(DefaultFieldsAttributeDict):
         Values are given by aiida.common.datastructures.CodeRunMode.
     """
 
-    # #TODO: validation key? also call the validate function in the proper
-    #        place then.
-
     _default_fields = (
         'shebang',
         'submit_as_hold',
@@ -424,7 +433,7 @@ class MachineInfo(DefaultFieldsAttributeDict):
     )
 
 
-class JobInfo(DefaultFieldsAttributeDict):
+class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-attributes
     """
     Contains properties for a job in the queue.
     Most of the fields are taken from DRMAA v.2.
@@ -475,10 +484,12 @@ class JobInfo(DefaultFieldsAttributeDict):
          'finished' state, of type datetime.datetime
     """
 
-    _default_fields = ('job_id', 'title', 'exit_status', 'terminating_signal', 'annotation', 'job_state',
-                       'job_substate', 'allocated_machines', 'job_owner', 'num_mpiprocs', 'num_cpus', 'num_machines',
-                       'queue_name', 'account', 'qos', 'wallclock_time_seconds', 'requested_wallclock_time_seconds', 'cpu_time',
-                       'submission_time', 'dispatch_time', 'finish_time')
+    _default_fields = (
+        'job_id', 'title', 'exit_status', 'terminating_signal', 'annotation', 'job_state', 'job_substate',
+        'allocated_machines', 'job_owner', 'num_mpiprocs', 'num_cpus', 'num_machines', 'queue_name', 'account', 'qos',
+        'wallclock_time_seconds', 'requested_wallclock_time_seconds', 'cpu_time', 'submission_time', 'dispatch_time',
+        'finish_time'
+    )
 
     # If some fields require special serializers, specify them here.
     # You then need to define also the respective _serialize_FIELDTYPE and
@@ -522,7 +533,6 @@ class JobInfo(DefaultFieldsAttributeDict):
 
         # is_naive check from django.utils.timezone
         if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
-            # TODO: FIX TIMEZONE
             SCHEDULER_LOGGER.debug('Datetime to serialize in JobInfo is naive, this should be fixed!')
             # v = v.replace(tzinfo = pytz.utc)
             return {'date': value.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'timezone': None}
@@ -545,14 +555,15 @@ class JobInfo(DefaultFieldsAttributeDict):
         if value['timezone'] is None:
             # naive date
             return datetime.datetime.strptime(value['date'], '%Y-%m-%dT%H:%M:%S.%f')
-        elif value['timezone'] == 'UTC':
+        if value['timezone'] == 'UTC':
             return datetime.datetime.strptime(value['date'], '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=pytz.utc)
 
         # Try your best
         return datetime.datetime.strptime(value['date'],
                                           '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=pytz.timezone(value['timezone']))
 
-    def serialize_field(self, value, field_type):
+    @classmethod
+    def serialize_field(cls, value, field_type):
         """
         Serialise a particular field value
 
@@ -564,11 +575,12 @@ class JobInfo(DefaultFieldsAttributeDict):
         if field_type is None:
             return value
 
-        serializer_method = getattr(self, '_serialize_{}'.format(field_type))
+        serializer_method = getattr(cls, '_serialize_{}'.format(field_type))
 
         return serializer_method(value)
 
-    def deserialize_field(self, value, field_type):
+    @classmethod
+    def deserialize_field(cls, value, field_type):
         """
         Deserialise the value of a particular field with a type
         :param value: The value
@@ -578,30 +590,47 @@ class JobInfo(DefaultFieldsAttributeDict):
         if field_type is None:
             return value
 
-        deserializer_method = getattr(self, '_deserialize_{}'.format(field_type))
+        deserializer_method = getattr(cls, '_deserialize_{}'.format(field_type))
 
         return deserializer_method(value)
 
     def serialize(self):
         """
-        Serialise the current data
-        :return: A serialised representation of the current data
+        Serialize the current data (as obtained by ``self.get_dict()``) into a JSON string.
+
+        :return: A string with serialised representation of the current data.
         """
         from aiida.common import json
 
-        ser_data = {k: self.serialize_field(v, self._special_serializers.get(k, None)) for k, v in self.items()}
+        return json.dumps(self.get_dict())
 
-        return json.dumps(ser_data)
-
-    def load_from_serialized(self, data):
+    def get_dict(self):
         """
-        Load value from serialised data
-        :param data: The data to load from
-        :return: The value after loading
+        Serialise the current data into a dictionary that is JSON-serializable.
+
+        :return: A dictionary
+        """
+        return {k: self.serialize_field(v, self._special_serializers.get(k, None)) for k, v in self.items()}
+
+    @classmethod
+    def load_from_dict(cls, data):
+        """
+        Create a new instance loading the values from serialised data in dictionary form
+
+        :param data: The dictionary with the data to load from
+        """
+        instance = cls()
+        for key, value in data.items():
+            instance[key] = cls.deserialize_field(value, cls._special_serializers.get(key, None))
+        return instance
+
+    @classmethod
+    def load_from_serialized(cls, data):
+        """
+        Create a new instance loading the values from JSON-serialised data as a string
+
+        :param data: The string with the JSON-serialised data to load from
         """
         from aiida.common import json
 
-        deser_data = json.loads(data)
-
-        for key, value in deser_data.items():
-            self[key] = self.deserialize_field(value, self._special_serializers.get(key, None))
+        return cls.load_from_dict(json.loads(data))

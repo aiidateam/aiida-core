@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Module to test process runners."""
 import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
@@ -17,6 +17,7 @@ from aiida.orm import WorkflowNode
 
 
 class Proc(Process):
+    """Process class."""
 
     _node_class = WorkflowNode
 
@@ -29,15 +30,14 @@ def the_hans_klok_comeback(loop):
 
 
 class TestWorkchain(AiidaTestCase):
+    """Test running work chains."""
 
     def setUp(self):
         super().setUp()
         self.runner = get_manager().get_runner()
 
-    def tearDown(self):
-        super().tearDown()
-
     def test_call_on_calculation_finish(self):
+        """Test call on calculation finish."""
         loop = self.runner.loop
         proc = Proc(runner=self.runner)
         future = plumpy.Future()

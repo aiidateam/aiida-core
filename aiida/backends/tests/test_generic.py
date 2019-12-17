@@ -14,11 +14,10 @@ from aiida import orm
 
 
 class TestCode(AiidaTestCase):
-    """
-    Test the Code class.
-    """
+    """Test the Code class."""
 
     def test_code_local(self):
+        """Test local code."""
         import tempfile
 
         from aiida.orm import Code
@@ -40,6 +39,7 @@ class TestCode(AiidaTestCase):
         self.assertTrue(code.get_execname(), 'stest.sh')
 
     def test_remote(self):
+        """Test remote code."""
         import tempfile
 
         from aiida.orm import Code
@@ -75,9 +75,9 @@ class TestCode(AiidaTestCase):
         code.delete_object('test.sh')
         code.store()
 
-        self.assertEquals(code.get_remote_computer().pk, self.computer.pk)
-        self.assertEquals(code.get_remote_exec_path(), '/bin/ls')
-        self.assertEquals(code.get_execname(), '/bin/ls')
+        self.assertEqual(code.get_remote_computer().pk, self.computer.pk)  # pylint: disable=no-member
+        self.assertEqual(code.get_remote_exec_path(), '/bin/ls')
+        self.assertEqual(code.get_execname(), '/bin/ls')
 
         self.assertTrue(code.can_run_on(self.computer))
         othercomputer = orm.Computer(
@@ -85,11 +85,13 @@ class TestCode(AiidaTestCase):
             hostname='localhost',
             transport_type='local',
             scheduler_type='pbspro',
-            workdir='/tmp/aiida').store()
+            workdir='/tmp/aiida'
+        ).store()
         self.assertFalse(code.can_run_on(othercomputer))
 
 
 class TestBool(AiidaTestCase):
+    """Test AiiDA Bool class."""
 
     def test_bool_conversion(self):
         for val in [True, False]:

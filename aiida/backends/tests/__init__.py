@@ -7,7 +7,4 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=line-too-long
-"""
-Tests that require access to a (temporary) database
-"""
+"""Module for defining tests that required access to (a temporary) database."""

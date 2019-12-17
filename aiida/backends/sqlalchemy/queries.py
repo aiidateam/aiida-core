@@ -7,24 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Module to manage custom queries under SQLA backend."""
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 
 class SqlaQueryManager(AbstractQueryManager):
-    """
-    SQLAlchemy implementation of custom queries, for efficiency reasons
-    """
+    """SQLAlchemy implementation of custom queries, for efficiency reasons."""
 
-    def __init__(self, backend):
-        super().__init__(backend)
-
-    def get_creation_statistics(
-            self,
-            user_pk=None
-    ):
-        """
-        Return a dictionary with the statistics of node creation, summarized by day,
+    def get_creation_statistics(self, user_pk=None):
+        """Return a dictionary with the statistics of node creation, summarized by day,
         optimized for the Django backend.
 
         :note: Days when no nodes were created are not present in the returned `ctime_by_day` dictionary.
@@ -41,22 +32,22 @@ class SqlaQueryManager(AbstractQueryManager):
                    "ctime_by_day": {'YYYY-MMM-DD': count, ...}
 
             where in `ctime_by_day` the key is a string in the format 'YYYY-MM-DD' and the value is
-            an integer with the number of nodes created that day.
-        """
+            an integer with the number of nodes created that day."""
         import sqlalchemy as sa
         import aiida.backends.sqlalchemy
         from aiida.backends.sqlalchemy import models as m
 
         # Get the session (uses internally aldjemy - so, sqlalchemy) also for the Djsite backend
-        s = aiida.backends.sqlalchemy.get_scoped_session()
+        session = aiida.backends.sqlalchemy.get_scoped_session()
 
         retdict = {}
 
-        total_query = s.query(m.node.DbNode)
-        types_query = s.query(m.node.DbNode.node_type.label('typestring'),
-                              sa.func.count(m.node.DbNode.id))
-        stat_query = s.query(sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),
-                             sa.func.count(m.node.DbNode.id))
+        total_query = session.query(m.node.DbNode)
+        types_query = session.query(m.node.DbNode.node_type.label('typestring'), sa.func.count(m.node.DbNode.id))  # pylint: disable=no-member
+        stat_query = session.query(
+            sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),  # pylint: disable=no-member
+            sa.func.count(m.node.DbNode.id)  # pylint: disable=no-member
+        )
 
         if user_pk is not None:
             total_query = total_query.filter(m.node.DbNode.user_id == user_pk)

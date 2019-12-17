@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=import-error,no-name-in-module
+"""Module to manage node settings for the SQLA backend."""
 
 from pytz import UTC
 
@@ -22,9 +24,10 @@ from aiida.common import timezone
 
 
 class DbSetting(Base):
+    """Class to store node settings using the SQLA backend."""
     __tablename__ = 'db_dbsetting'
     __table_args__ = (UniqueConstraint('key'),)
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
     key = Column(String(255), index=True, nullable=False)
     val = Column(JSONB, default={})
@@ -37,10 +40,11 @@ class DbSetting(Base):
         return "'{}'={}".format(self.key, self.getvalue())
 
     @classmethod
-    def set_value(cls, key, value, with_transaction=True,
-                  subspecifier_value=None, other_attribs={},
-                  stop_if_existing=False):
-
+    def set_value(
+        cls, key, value, with_transaction=True, subspecifier_value=None, other_attribs=None, stop_if_existing=False
+    ):
+        """Set a setting value."""
+        other_attribs = other_attribs if other_attribs is not None else {}
         setting = sa.get_scoped_session().query(DbSetting).filter_by(key=key).first()
         if setting is not None:
             if stop_if_existing:
@@ -57,20 +61,16 @@ class DbSetting(Base):
         setting.save()
 
     def getvalue(self):
-        """
-        This can be called on a given row and will get the corresponding value.
-        """
+        """This can be called on a given row and will get the corresponding value."""
         return self.val
 
     def get_description(self):
-        """
-        This can be called on a given row and will get the corresponding
-        description.
-        """
+        """This can be called on a given row and will get the corresponding description."""
         return self.description
 
     @classmethod
-    def del_value(cls, key, only_children=False, subspecifier_value=None):
+    def del_value(cls, key):
+        """Delete a setting value."""
         setting = sa.get_scoped_session().query(DbSetting).filter(key=key)
         setting.val = None
         setting.time = timezone.datetime.utcnow()

@@ -215,8 +215,4 @@ Thus, the conversion to ``pytest`` can look as follows:
 
 For more details on running ``unittest`` cases through pytest, see the `pytest documentation`_.
 
-.. note::
-  This modification will break the compatibility with aiida-core's testing framework and the ``verdi devel tests`` interface.
-  If you were using this interface, do not forget to remove the corresponding entry points from your ``setup.json``.
-
 .. _pytest documentation: https://docs.pytest.org/en/latest/unittest.html

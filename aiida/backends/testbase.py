@@ -7,9 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Basic test classes."""
 import os
-import sys
 import unittest
 import traceback
 
@@ -20,6 +19,8 @@ from aiida.common.lang import classproperty
 from aiida.manage import configuration
 from aiida.manage.manager import get_manager, reset_manager
 
+TEST_KEYWORD = 'test_'
+
 
 def check_if_tests_can_run():
     """Verify that the currently loaded profile is a test profile, otherwise raise `TestsNotAllowedError`."""
@@ -29,17 +30,16 @@ def check_if_tests_can_run():
 
 
 class AiidaTestCase(unittest.TestCase):
-    """
-    This is the base class for AiiDA tests, independent of the backend.
+    """This is the base class for AiiDA tests, independent of the backend.
 
-    Internally it loads the AiidaTestImplementation subclass according to the current backend
-    """
+    Internally it loads the AiidaTestImplementation subclass according to the current backend."""
     _class_was_setup = False
     __backend_instance = None
     backend = None  # type: aiida.orm.implementation.Backend
 
     @classmethod
     def get_backend_class(cls):
+        """Get backend class."""
         from aiida.backends.testimplbase import AiidaTestImplementation
         from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
         from aiida.manage.configuration import PROFILE
@@ -47,8 +47,7 @@ class AiidaTestCase(unittest.TestCase):
         # Freeze the __impl_class after the first run
         if not hasattr(cls, '__impl_class'):
             if PROFILE.database_backend == BACKEND_SQLA:
-                from aiida.backends.sqlalchemy.tests.testbase import (
-                    SqlAlchemyTests)
+                from aiida.backends.sqlalchemy.tests.testbase import (SqlAlchemyTests)
                 cls.__impl_class = SqlAlchemyTests
             elif PROFILE.database_backend == BACKEND_DJANGO:
                 from aiida.backends.djsite.db.testbase import DjangoTests
@@ -60,15 +59,13 @@ class AiidaTestCase(unittest.TestCase):
             if not issubclass(cls.__impl_class, AiidaTestImplementation):
                 raise InternalError(
                     'The AiiDA test implementation is not of type '
-                    '{}, that is not a subclass of AiidaTestImplementation'.format(
-                        cls.__impl_class.__name__
-                    )
+                    '{}, that is not a subclass of AiidaTestImplementation'.format(cls.__impl_class.__name__)
                 )
 
         return cls.__impl_class
 
     @classmethod
-    def setUpClass(cls, *args, **kwargs):
+    def setUpClass(cls, *args, **kwargs):  # pylint: disable=arguments-differ
         # Note: this will raise an exception, that will be seen as a test
         # failure. To be safe, you should do the same check also in the tearDownClass
         # to avoid that it is run
@@ -97,7 +94,7 @@ class AiidaTestCase(unittest.TestCase):
         # Call this after the instance tear down just in case it uses the loop
         reset_manager()
         loop = ioloop.IOLoop.current()
-        if not loop._closing:
+        if not loop._closing:  # pylint: disable=protected-access,no-member
             loop.close()
 
     def reset_database(self):
@@ -154,34 +151,33 @@ class AiidaTestCase(unittest.TestCase):
 
         dirpath_repository = get_profile().repository_path
 
-        TEST_KEYWORD = 'test_'
         base_repo_path = os.path.basename(os.path.normpath(dirpath_repository))
         if TEST_KEYWORD not in base_repo_path:
-            raise InvalidOperation('Warning: The repository folder {} does not '
-                                   'seem to belong to a test profile and will therefore not be deleted.\n'
-                                   'Full repository path: '
-                                   '{}'.format(base_repo_path, dirpath_repository))
+            raise InvalidOperation(
+                'Warning: The repository folder {} does not '
+                'seem to belong to a test profile and will therefore not be deleted.\n'
+                'Full repository path: '
+                '{}'.format(base_repo_path, dirpath_repository)
+            )
 
         # Clean the test repository
         shutil.rmtree(dirpath_repository, ignore_errors=True)
         os.makedirs(dirpath_repository)
 
     @classproperty
-    def computer(cls):
-        """
-        Get the default computer for this test
+    def computer(cls):  # pylint: disable=no-self-argument
+        """Get the default computer for this test
 
         :return: the test computer
-        :rtype: :class:`aiida.orm.Computer`
-        """
+        :rtype: :class:`aiida.orm.Computer`"""
         return cls.__backend_instance.get_computer()
 
     @classproperty
-    def user_email(cls):
+    def user_email(cls):  # pylint: disable=no-self-argument
         return cls.__backend_instance.get_user_email()
 
     @classmethod
-    def tearDownClass(cls, *args, **kwargs):
+    def tearDownClass(cls, *args, **kwargs):  # pylint: disable=arguments-differ
         # Double check for double security to avoid to run the tearDown
         # if this is not a test profile
         check_if_tests_can_run()
@@ -189,15 +185,16 @@ class AiidaTestCase(unittest.TestCase):
         cls.clean_repository()
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)
 
-    def assertClickSuccess(self, cli_result):
+    def assertClickSuccess(self, cli_result):  # pylint: disable=invalid-name
         self.assertEqual(cli_result.exit_code, 0, cli_result.output)
         self.assertClickResultNoException(cli_result)
 
-    def assertClickResultNoException(self, cli_result):
+    def assertClickResultNoException(self, cli_result):  # pylint: disable=invalid-name
         self.assertIsNone(cli_result.exception, ''.join(traceback.format_exception(*cli_result.exc_info)))
 
 
 class AiidaPostgresTestCase(AiidaTestCase):
+    """Setup postgres tests."""
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):

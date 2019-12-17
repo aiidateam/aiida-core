@@ -12,8 +12,10 @@
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
-from aiida.cmdline.commands.cmd_group import (group_list, group_create, group_delete, group_relabel, group_description,
-                                              group_add_nodes, group_remove_nodes, group_show, group_copy)
+from aiida.cmdline.commands.cmd_group import (
+    group_list, group_create, group_delete, group_relabel, group_description, group_add_nodes, group_remove_nodes,
+    group_show, group_copy
+)
 
 
 class TestVerdiGroup(AiidaTestCase):
@@ -107,8 +109,8 @@ class TestVerdiGroup(AiidaTestCase):
 
     def test_delete(self):
         """Test `verdi group delete` command."""
-        group_01 = orm.Group(label='group_test_delete_01').store()
-        group_02 = orm.Group(label='group_test_delete_02').store()
+        orm.Group(label='group_test_delete_01').store()
+        orm.Group(label='group_test_delete_02').store()
 
         result = self.cli_runner.invoke(group_delete, ['--force', 'group_test_delete_01'])
         self.assertClickResultNoException(result)
@@ -225,9 +227,9 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(group_copy, options)
         self.assertClickResultNoException(result)
         self.assertIn(
-            'Success: Nodes copied from group<{}> to group<{}>'.format(source_label, dest_label),
-            result.output,
-            result.exception)
+            'Success: Nodes copied from group<{}> to group<{}>'.format(source_label, dest_label), result.output,
+            result.exception
+        )
 
         # Check destination group exists with source group's nodes
         dest_group = orm.load_group(label=dest_label)
@@ -239,9 +241,9 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(group_copy, options)
         self.assertIsNotNone(result.exception, result.output)
         self.assertIn(
-            'Warning: Destination group<{}> already exists and is not empty.'.format(dest_label),
-            result.output,
-            result.exception)
+            'Warning: Destination group<{}> already exists and is not empty.'.format(dest_label), result.output,
+            result.exception
+        )
 
         # Check destination group is unchanged
         dest_group = orm.load_group(label=dest_label)

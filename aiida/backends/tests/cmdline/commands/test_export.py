@@ -15,7 +15,6 @@ import tarfile
 import traceback
 import zipfile
 
-
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -25,12 +24,11 @@ from aiida.tools.importexport import EXPORT_VERSION
 
 
 def delete_temporary_file(filepath):
-    """
-    Attempt to delete a file, given an absolute path. If the deletion fails because the file does not exist
+    """Attempt to delete a file, given an absolute path. If the deletion fails because the file does not exist
     the exception will be caught and passed. Any other exceptions will raise.
 
-    :param filepath: the absolute file path
-    """
+    :param filepath: the absolute file path"""
+
     try:
         os.remove(filepath)
     except OSError as exception:
@@ -49,11 +47,8 @@ class TestVerdiExport(AiidaTestCase):
         from aiida import orm
 
         cls.computer = orm.Computer(
-            name='comp',
-            hostname='localhost',
-            transport_type='local',
-            scheduler_type='direct',
-            workdir='/tmp/aiida').store()
+            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+        ).store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = orm.Group(label='test_group').store()

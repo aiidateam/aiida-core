@@ -60,13 +60,13 @@ class OqmdDbImporter(DbImporter):
 
         query_statement = self.query_get(**kwargs)
         response = urllib.request.urlopen(query_statement).read()
-        entries = re.findall('(/materials/entry/\d+)', response)
+        entries = re.findall(r'(/materials/entry/\d+)', response)
 
         results = []
         for entry in entries:
             response = urllib.request.urlopen('{}{}'.format(self._query_url,
                                                      entry)).read()
-            structures = re.findall('/materials/export/conventional/cif/(\d+)',
+            structures = re.findall(r'/materials/export/conventional/cif/(\d+)',
                                     response)
             for struct in structures:
                 results.append({'id': struct})

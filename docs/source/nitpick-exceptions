@@ -242,6 +242,8 @@ py:class yaml.Dumper
 py:class yaml.Loader
 py:class yaml.dumper.Dumper
 py:class yaml.loader.Loader
+py:class yaml.FullLoader
+py:class yaml.loader.FullLoader
 
 py:class uuid.UUID
 

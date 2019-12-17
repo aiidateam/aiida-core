@@ -12,8 +12,7 @@
 """
 It defines the method with all required parameters to run restapi locally.
 """
-
-import imp
+import importlib
 import os
 
 from flask_cors import CORS
@@ -53,7 +52,9 @@ def run_api(flask_app, flask_api, **kwargs):
     hookup = kwargs['hookup']
 
     # Import the right configuration file
-    confs = imp.load_source(os.path.join(config, 'config'), os.path.join(config, 'config.py'))
+    spec = importlib.util.spec_from_file_location(os.path.join(config, 'config'), os.path.join(config, 'config.py'))
+    confs = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(confs)
 
     # Instantiate an app
     app_kwargs = dict(catch_internal_server=catch_internal_server)

@@ -29,7 +29,7 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
-    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, retrieve_linked_nodes
+    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed
 )
 
 from .zip import ZipFolder
@@ -138,6 +138,7 @@ def export_tree(
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
     from collections import defaultdict
+    from aiida.tools.graph.graph_traversers import get_nodes_export
 
     if not silent:
         print('STARTING EXPORT...')
@@ -223,9 +224,31 @@ def export_tree(
     if not silent:
         print('RETRIEVING LINKED NODES AND STORING LINKS...')
 
-    to_be_exported, links_uuid, graph_traversal_rules = retrieve_linked_nodes(
-        given_calculation_entry_ids, given_data_entry_ids, **kwargs
-    )
+    initial_nodes_ids = given_calculation_entry_ids.union(given_data_entry_ids)
+    traverse_output = get_nodes_export(starting_pks=initial_nodes_ids, get_links=True, **kwargs)
+    to_be_exported = traverse_output['nodes']
+    graph_traversal_rules = traverse_output['rules']
+
+    # I create a utility dictionary for mapping pk to uuid.
+    if traverse_output['nodes']:
+        qbuilder = orm.QueryBuilder().append(
+            orm.Node,
+            project=('id', 'uuid'),
+            filters={'id': {
+                'in': traverse_output['nodes']
+            }},
+        )
+        pk_2_uuid_dict = dict(qbuilder.all())
+    else:
+        pk_2_uuid_dict = {}
+
+    # The set of tuples now has to be transformed to a list of dicts
+    links_uuid = [{
+        'input': pk_2_uuid_dict[link.source_id],
+        'output': pk_2_uuid_dict[link.target_id],
+        'label': link.link_label,
+        'type': link.link_type
+    } for link in traverse_output['links']]
 
     ## Universal "entities" attributed to all types of nodes
     # Logs

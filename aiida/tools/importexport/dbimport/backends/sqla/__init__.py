@@ -330,7 +330,6 @@ def import_data_sqla(
                                 progress_bar.reset(total=builder.count())
                                 for object_ in builder.iterall():
                                     progress_bar.update()
-                                    progress_bar.refresh()
 
                                     relevant_db_entries.update({getattr(object_[0], unique_identifier): object_[0]})
 
@@ -667,7 +666,6 @@ def import_data_sqla(
                     else:
                         for entry in builder.iterall():
                             progress_bar.update()
-                            progress_bar.refresh()
 
                             just_saved.update({entry[0]: entry[1]})
 
@@ -813,7 +811,6 @@ def import_data_sqla(
                             progress_bar.set_description_str('Creating import Group', refresh=False)
                             first = False
                         progress_bar.update()
-                        progress_bar.refresh()
                         nodes.append(entry[0].backend_entity)
                 group.backend_entity.add_nodes(nodes, skip_orm=True)
             else:

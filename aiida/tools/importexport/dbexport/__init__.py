@@ -175,13 +175,12 @@ def export_tree(
         # Instantiate progress bar - go through list of "what"
         pbar_total = len(what) if what else 1
         progress_bar = tqdm(total=pbar_total, bar_format=BAR_FORMAT, leave=True)
-        progress_bar.set_description_str('Collecting chosen entities', refresh=False)
+        progress_bar.set_description_str('Collecting chosen entities')
 
     # I store a list of the actual dbnodes
     for entry in what:
         if not silent:
             progress_bar.update()
-            progress_bar.refresh()
 
         # This returns the class name (as in imports). E.g. for a model node:
         # aiida.backends.djsite.db.models.DbNode
@@ -461,7 +460,6 @@ def export_tree(
         for res_pk, res_attributes, res_extras in all_nodes_query.iterall():
             if not silent:
                 progress_bar.update()
-                progress_bar.refresh()
 
             node_attributes[str(res_pk)] = res_attributes
             node_extras[str(res_pk)] = res_extras
@@ -487,12 +485,11 @@ def export_tree(
                 total_group_uuids = group_uuid_qb.count()
                 if total_group_uuids:
                     progress_bar.reset(total=group_uuid_qb.count())
-                    progress_bar.set_description_str('Exporting Groups - PK={}'.format(curr_group))
+                    progress_bar.set_description_str('Exporting Groups - PK={}'.format(curr_group), refresh=False)
 
             for res in group_uuid_qb.iterall():
                 if not silent:
                     progress_bar.update()
-                    progress_bar.refresh()
 
                 if str(res[0]) in groups_uuid:
                     groups_uuid[str(res[0])].append(str(res[1]))

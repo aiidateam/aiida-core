@@ -783,7 +783,6 @@ def import_data_dj(
                         progress_bar.set_description_str('Creating import Group', refresh=False)
                         first = False
                     progress_bar.update()
-                    progress_bar.refresh()
                     nodes.append(entry[0])
             group.add_nodes(nodes)
         else:

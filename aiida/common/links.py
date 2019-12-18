@@ -46,6 +46,21 @@ add adjacent nodes to finally arrive at a set of nodes that represent a valid an
 class GraphTraversalRules(Enum):
     """Graph traversal rules when deleting or exporting nodes."""
 
+    DEFAULT = {
+        'input_calc_forward': GraphTraversalRule(LinkType.INPUT_CALC, 'forward', True, False),
+        'input_calc_backward': GraphTraversalRule(LinkType.INPUT_CALC, 'backward', True, False),
+        'create_forward': GraphTraversalRule(LinkType.CREATE, 'forward', True, False),
+        'create_backward': GraphTraversalRule(LinkType.CREATE, 'backward', True, False),
+        'return_forward': GraphTraversalRule(LinkType.RETURN, 'forward', True, False),
+        'return_backward': GraphTraversalRule(LinkType.RETURN, 'backward', True, False),
+        'input_work_forward': GraphTraversalRule(LinkType.INPUT_WORK, 'forward', True, False),
+        'input_work_backward': GraphTraversalRule(LinkType.INPUT_WORK, 'backward', True, False),
+        'call_calc_forward': GraphTraversalRule(LinkType.CALL_CALC, 'forward', True, False),
+        'call_calc_backward': GraphTraversalRule(LinkType.CALL_CALC, 'backward', True, False),
+        'call_work_forward': GraphTraversalRule(LinkType.CALL_WORK, 'forward', True, False),
+        'call_work_backward': GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, False)
+    }
+
     DELETE = {
         'input_calc_forward': GraphTraversalRule(LinkType.INPUT_CALC, 'forward', False, True),
         'input_calc_backward': GraphTraversalRule(LinkType.INPUT_CALC, 'backward', False, False),

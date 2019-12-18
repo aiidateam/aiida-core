@@ -18,6 +18,7 @@ __all__ = ('LinkPair', 'LinkTriple', 'LinkManager', 'validate_link')
 
 LinkPair = namedtuple('LinkPair', ['link_type', 'link_label'])
 LinkTriple = namedtuple('LinkTriple', ['node', 'link_type', 'link_label'])
+LinkQuadruple = namedtuple('LinkQuadruple', ['source_id', 'target_id', 'link_type', 'link_label'])
 
 
 def link_triple_exists(source, target, link_type, link_label):

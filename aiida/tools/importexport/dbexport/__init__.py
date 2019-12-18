@@ -181,13 +181,37 @@ def export_tree(
             )
 
     # Add all the nodes contained within the specified groups
-    for group in given_groups:
-        for entry in group.nodes:
-            entities_starting_set[NODE_ENTITY_NAME].add(entry.uuid)
-            if issubclass(entry.__class__, orm.Data):
-                given_data_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, orm.ProcessNode):
-                given_calculation_entry_ids.add(entry.pk)
+    if given_group_entry_ids:
+
+        if not silent:
+            print('RETRIEVING NODES FROM GROUPS...')
+
+        # Use single query instead of given_group.nodes iterator for performance.
+        qh_groups = orm.QueryBuilder().append(
+            orm.Group, filters={
+                'id': {
+                    'in': given_group_entry_ids
+                }
+            }, tag='groups'
+        ).queryhelp
+
+        # Delete this import once the dbexport.zip module has been renamed
+        from builtins import zip  # pylint: disable=redefined-builtin
+
+        data_results = orm.QueryBuilder(**qh_groups).append(orm.Data, project=['id', 'uuid'], with_group='groups').all()
+        if data_results:
+            pks, uuids = map(list, zip(*data_results))
+            entities_starting_set[NODE_ENTITY_NAME].update(uuids)
+            given_data_entry_ids.update(pks)
+            del data_results, pks, uuids
+
+        calc_results = orm.QueryBuilder(**qh_groups
+                                       ).append(orm.ProcessNode, project=['id', 'uuid'], with_group='groups').all()
+        if calc_results:
+            pks, uuids = map(list, zip(*calc_results))
+            entities_starting_set[NODE_ENTITY_NAME].update(uuids)
+            given_calculation_entry_ids.update(pks)
+            del calc_results, pks, uuids
 
     for entity, entity_set in entities_starting_set.items():
         entities_starting_set[entity] = list(entity_set)

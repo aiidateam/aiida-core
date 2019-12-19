@@ -240,11 +240,14 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 )
 
         elif operator == 'in':
-            value_type_set = set(type(i) for i in value)
+            try:
+                value_type_set = set(type(i) for i in value)
+            except TypeError:
+                raise TypeError('Value for operator `in` could not be iterated')
+            if not value_type_set:
+                raise InputValidationError('Value for operator `in` is an empty list')
             if len(value_type_set) > 1:
-                raise InputValidationError('{}  contains more than one type'.format(value))
-            elif not value_type_set:
-                raise InputValidationError('{}  contains is an empty list'.format(value))
+                raise InputValidationError('Value for operator `in` contains more than one type: {}'.format(value))
         elif operator in ('and', 'or'):
             expressions_for_this_path = []
             for filter_operation_dict in value:

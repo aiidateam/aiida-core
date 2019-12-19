@@ -449,18 +449,33 @@ def test_manager(backend=BACKEND_DJANGO, profile_name=None, pgtest=None):
 
 
 def get_test_backend_name():
-    """ Read name of database backend from environment variable.
+    """ Read name of database backend from environment variable or the specified test profile.
 
-    Reads database backend ('django' or 'sqlalchemy') from 'AIIDA_TEST_BACKEND' environment variable.
+    Reads database backend ('django' or 'sqlalchemy') from 'AIIDA_TEST_BACKEND' environment variable,
+    or the backend configured for the 'AIIDA_TEST_PROFILE'.
     Defaults to django backend.
 
     :returns: content of environment variable or `BACKEND_DJANGO`
     :raises: ValueError if unknown backend name detected.
+    :raises: ValueError if both 'AIIDA_TEST_BACKEND' and 'AIIDA_TEST_PROFILE' are set, and the two
+        backends do not match.
     """
-    backend_env = os.environ.get('AIIDA_TEST_BACKEND', BACKEND_DJANGO)
-    if backend_env in (BACKEND_DJANGO, BACKEND_SQLA):
-        return backend_env
-    raise ValueError("Unknown backend '{}' read from AIIDA_TEST_BACKEND environment variable".format(backend_env))
+    test_profile_name = get_test_profile_name()
+    backend_env = os.environ.get('AIIDA_TEST_BACKEND', None)
+    if test_profile_name is not None:
+        backend_profile = configuration.get_config().get_profile(test_profile_name).database_backend
+        if backend_env is not None and backend_env != backend_profile:
+            raise ValueError(
+                "The backend '{}' read from AIIDA_TEST_BACKEND does not match the backend '{}' "
+                "of AIIDA_TEST_PROFILE '{}'".format(backend_env, backend_profile, test_profile_name)
+            )
+        backend_res = backend_profile
+    else:
+        backend_res = backend_env or BACKEND_DJANGO
+
+    if backend_res in (BACKEND_DJANGO, BACKEND_SQLA):
+        return backend_res
+    raise ValueError("Unknown backend '{}' read from AIIDA_TEST_BACKEND environment variable".format(backend_res))
 
 
 def get_test_profile_name():

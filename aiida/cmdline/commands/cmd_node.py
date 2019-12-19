@@ -9,6 +9,9 @@
 ###########################################################################
 """`verdi node` command."""
 
+import shutil
+import pathlib
+
 import click
 import tabulate
 
@@ -59,6 +62,55 @@ def repo_ls(node, relative_path, color):
         list_repository_contents(node, relative_path, color)
     except ValueError as exception:
         echo.echo_critical(exception)
+
+
+@verdi_node_repo.command('dump')
+@arguments.NODE()
+@click.argument(
+    'output_directory',
+    type=click.Path(),
+    required=True,
+)
+@with_dbenv()
+def repo_dump(node, output_directory):
+    """Copy the repository files of a node to an output directory.
+
+    The output directory should not exist. If it does, the command
+    will abort.
+    """
+    from aiida.orm.utils.repository import FileType
+
+    output_directory = pathlib.Path(output_directory)
+
+    try:
+        output_directory.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        echo.echo_critical('Invalid value for "OUTPUT_DIRECTORY": Path "{}" exists.'.format(output_directory))
+
+    def _copy_tree(key, output_dir):  # pylint: disable=too-many-branches
+        """
+        Recursively copy the content at the ``key`` path in the given node to
+        the ``output_dir``.
+        """
+        for file in node.list_objects(key=key):
+            # Not using os.path.join here, because this is the "path"
+            # in the AiiDA node, not an actual OS - level path.
+            file_key = file.name if not key else key + '/' + file.name
+            if file.type == FileType.DIRECTORY:
+                new_out_dir = output_dir / file.name
+                assert not new_out_dir.exists()
+                new_out_dir.mkdir()
+                _copy_tree(key=file_key, output_dir=new_out_dir)
+
+            else:
+                assert file.type == FileType.FILE
+                out_file_path = output_dir / file.name
+                assert not out_file_path.exists()
+                with node.open(file_key, 'rb') as in_file:
+                    with out_file_path.open('wb') as out_file:
+                        shutil.copyfileobj(in_file, out_file)
+
+    _copy_tree(key='', output_dir=output_directory)
 
 
 @verdi_node.command('label')

@@ -232,7 +232,7 @@ class TestVerdiNode(AiidaTestCase):
             options = [str(self.folder_node.uuid), str(out_path)]
             res = self.cli_runner.invoke(cmd_node.repo_dump, options, catch_exceptions=False)
             self.assertIn('exists', res.stdout)
-            self.assertIn('Aborted!', res.stdout)
+            self.assertIn('Critical:', res.stdout)
 
             # Make sure the directory content is still there
             with some_file.open('r') as file_handle:

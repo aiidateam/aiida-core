@@ -73,7 +73,11 @@ def repo_ls(node, relative_path, color):
 )
 @with_dbenv()
 def repo_dump(node, output_directory):
-    """Copy the repository files of a node to an output directory."""
+    """Copy the repository files of a node to an output directory.
+
+    The output directory should not exist. If it does, the command
+    will abort.
+    """
     from aiida.orm.utils.repository import FileType
 
     output_directory = pathlib.Path(output_directory)
@@ -81,8 +85,7 @@ def repo_dump(node, output_directory):
     try:
         output_directory.mkdir(parents=True, exist_ok=False)
     except FileExistsError:
-        click.echo('Error: Invalid value for "OUTPUT_DIRECTORY": Path "{}" exists.'.format(output_directory))
-        raise click.Abort
+        echo.echo_critical('Invalid value for "OUTPUT_DIRECTORY": Path "{}" exists.'.format(output_directory))
 
     def _copy_tree(key, output_dir):  # pylint: disable=too-many-branches
         """

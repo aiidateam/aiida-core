@@ -591,13 +591,10 @@ def import_data_sqla(
                 except KeyError:
                     if ignore_unknown_nodes:
                         continue
-                    else:
-                        raise exceptions.ImportValidationError(
-                            'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, '
-                            'out_uuid={}, label={}, type={})'.format(
-                                link['input'], link['output'], link['label'], link['type']
-                            )
-                        )
+                    raise exceptions.ImportValidationError(
+                        'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, out_uuid={}, '
+                        'label={}, type={})'.format(link['input'], link['output'], link['label'], link['type'])
+                    )
 
                 # Since backend specific Links (DbLink) are not validated upon creation, we will now validate them.
                 source = QueryBuilder().append(Node, filters={'id': in_id}, project='*').first()[0]

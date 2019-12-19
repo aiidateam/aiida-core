@@ -412,9 +412,9 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
             # If it is already visited continue to the next node
             if current_node_pk in retrieved_nodes:
                 continue
+
             # Otherwise say that it is a node to be exported
-            else:
-                retrieved_nodes.add(current_node_pk)
+            retrieved_nodes.add(current_node_pk)
 
             # INPUT_CALC(Data, CalculationNode) - Backward
             if traversal_rules['input_calc_backward']:
@@ -518,9 +518,9 @@ def retrieve_linked_nodes(process_nodes, data_nodes, **kwargs):  # pylint: disab
             # If it is already visited continue to the next node
             if current_node_pk in retrieved_nodes:
                 continue
+
             # Otherwise say that it is a node to be exported
-            else:
-                retrieved_nodes.add(current_node_pk)
+            retrieved_nodes.add(current_node_pk)
 
             # INPUT_CALC(Data, CalculationNode) - Forward
             if traversal_rules['input_calc_forward']:

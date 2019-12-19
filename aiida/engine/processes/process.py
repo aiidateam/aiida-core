@@ -642,7 +642,8 @@ class Process(plumpy.Process):
         for name, metadata in self.metadata.items():
             if name in ['store_provenance', 'dry_run', 'call_link_label']:
                 continue
-            elif name == 'label':
+
+            if name == 'label':
                 self.node.label = metadata
             elif name == 'description':
                 self.node.description = metadata

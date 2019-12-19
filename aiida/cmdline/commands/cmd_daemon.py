@@ -291,7 +291,6 @@ def start_circus(foreground, number):
 
     while should_restart:
         try:
-            arbiter = arbiter
             future = arbiter.start()
             should_restart = False
             if check_future_exception_and_log(future) is None:

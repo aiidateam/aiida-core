@@ -212,11 +212,11 @@ class InteractiveOption(ConditionalOption):
                 # dispatch - e.g. show help
                 self._ctrl[value]()
                 continue
-            else:
-                # try to convert, if unsuccessful continue prompting
-                successful, value = self.safely_convert(value, param, ctx)
-                if successful:
-                    return value
+
+            # try to convert, if unsuccessful continue prompting
+            successful, value = self.safely_convert(value, param, ctx)
+            if successful:
+                return value
 
     def after_callback(self, ctx, param, value):
         """If a callback was registered on init, call it and return it's value."""

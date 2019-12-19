@@ -9,12 +9,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that contains the db migrations."""
-
 from django.core.exceptions import ObjectDoesNotExist
-from aiida.common.exceptions import AiidaException, DbContentError
 
 from aiida.backends.manager import SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION
 from aiida.backends.manager import SCHEMA_GENERATION_KEY, SCHEMA_GENERATION_DESCRIPTION
+from aiida.common.exceptions import AiidaException, DbContentError
 
 
 class DeserializationException(AiidaException):
@@ -92,8 +91,6 @@ def current_schema_version():
 
 def _deserialize_basic_type(mainitem):
     """Deserialize the basic python data types."""
-    from aiida.common.timezone import (is_naive, make_aware, get_current_timezone)
-
     if mainitem['datatype'] == 'none':
         return None
     if mainitem['datatype'] == 'bool':

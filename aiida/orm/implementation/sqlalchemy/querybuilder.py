@@ -380,7 +380,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """
         entity = self.get_column(column_name, alias)[attrpath]
         if cast is None:
-            entity = entity
+            pass
         elif cast == 'f':
             entity = entity.astext.cast(Float)
         elif cast == 'i':

@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=import-error, no-name-in-module
 """ Django settings for the AiiDA project. """
-
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID
 

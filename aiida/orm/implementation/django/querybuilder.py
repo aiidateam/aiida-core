@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django query builder"""
-
 import uuid
 
 from aldjemy import core
@@ -21,9 +20,64 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.expression import FunctionElement
 from sqlalchemy.types import Integer, Float, Boolean, DateTime
 
-import aiida.backends.djsite.db.models as djmodels
+from aiida.backends.djsite.db import models
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
+
+ENGINE = None
+SESSION_FACTORY = None
+
+
+def reset_session():
+    """Reset the session which means setting the global engine and session factory instances to `None`."""
+    global ENGINE  # pylint: disable=global-statement
+    global SESSION_FACTORY  # pylint: disable=global-statement
+
+    ENGINE = None
+    SESSION_FACTORY = None
+
+
+def get_scoped_session(profile):
+    """Return a scoped session for the given profile that is exclusively to be used for the `QueryBuilder`.
+
+    Since the `QueryBuilder` implementation uses SqlAlchemy to map the query onto the models in order to generate the
+    SQL to be sent to the database, it requires a session, which is an :class:`sqlalchemy.orm.session.Session` instance.
+    The only purpose is for SqlAlchemy to be able to connect to the database perform the query and retrieve the results.
+    Even the Django backend implementation will use SqlAlchemy for its `QueryBuilder` and so also needs an SqlA session.
+    It is important that we do not reuse the scoped session factory in the SqlAlchemy implementation, because that runs
+    the risk of cross-talk once profiles can be switched dynamically in a single python interpreter. Therefore the
+    Django implementation of the `QueryBuilder` should keep its own SqlAlchemy engine and scoped session factory
+    instances that are used to provide the query builder with a session.
+
+    :param profile: :class:`aiida.manage.configuration.profile.Profile` for which to configure the engine.
+    :return: :class:`sqlalchemy.orm.session.Session` instance with engine configured for the given profile.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import scoped_session, sessionmaker
+
+    global ENGINE  # pylint: disable=global-statement
+    global SESSION_FACTORY  # pylint: disable=global-statement
+
+    if SESSION_FACTORY is not None:
+        session = SESSION_FACTORY()
+        return session
+
+    if ENGINE is None:
+        from aiida.common import json
+        separator = ':' if profile.database_port else ''
+        engine_url = 'postgresql://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
+            separator=separator,
+            user=profile.database_username,
+            password=profile.database_password,
+            hostname=profile.database_hostname,
+            port=profile.database_port,
+            name=profile.database_name
+        )
+        ENGINE = create_engine(engine_url, json_serializer=json.dumps, json_deserializer=json.loads, encoding='utf-8')
+
+    SESSION_FACTORY = scoped_session(sessionmaker(bind=ENGINE))
+    session = SESSION_FACTORY()
+    return session
 
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
@@ -75,35 +129,35 @@ class DjangoQueryBuilder(BackendQueryBuilder):
 
     @property
     def Node(self):
-        return djmodels.DbNode.sa
+        return models.DbNode.sa
 
     @property
     def Link(self):
-        return djmodels.DbLink.sa
+        return models.DbLink.sa
 
     @property
     def Computer(self):
-        return djmodels.DbComputer.sa
+        return models.DbComputer.sa
 
     @property
     def User(self):
-        return djmodels.DbUser.sa
+        return models.DbUser.sa
 
     @property
     def Group(self):
-        return djmodels.DbGroup.sa
+        return models.DbGroup.sa
 
     @property
     def AuthInfo(self):
-        return djmodels.DbAuthInfo.sa
+        return models.DbAuthInfo.sa
 
     @property
     def Comment(self):
-        return djmodels.DbComment.sa
+        return models.DbComment.sa
 
     @property
     def Log(self):
-        return djmodels.DbLog.sa
+        return models.DbLog.sa
 
     @property
     def table_groups_nodes(self):
@@ -252,15 +306,9 @@ class DjangoQueryBuilder(BackendQueryBuilder):
     @staticmethod
     def get_session():
         from aiida.manage.configuration import get_config
-        from aiida.backends.sqlalchemy import reset_session
-        from aiida.backends.sqlalchemy import get_scoped_session
-
-        if get_scoped_session() is None:
-            config = get_config()
-            profile = config.current_profile
-            reset_session(profile)
-
-        return get_scoped_session()
+        config = get_config()
+        profile = config.current_profile
+        return get_scoped_session(profile)
 
     def modify_expansions(self, alias, expansions):
         """

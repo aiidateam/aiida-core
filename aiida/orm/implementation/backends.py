@@ -114,6 +114,13 @@ class Backend(abc.ABC):
         :return: a context manager to group database operations
         """
 
+    @abc.abstractmethod
+    def get_session(self):
+        """Return a database session that can be used by the `QueryBuilder` to perform its query.
+
+        :return: an instance of :class:`sqlalchemy.orm.session.Session`
+        """
+
 
 class BackendEntity(abc.ABC):
     """An first-class entity in the backend"""

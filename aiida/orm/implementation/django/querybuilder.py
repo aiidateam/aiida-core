@@ -8,76 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django query builder"""
-import uuid
-
 from aldjemy import core
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module, import-error
-from sqlalchemy_utils.types.choice import Choice
 from sqlalchemy import and_, or_, not_, case
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.expression import FunctionElement
-from sqlalchemy.types import Integer, Float, Boolean, DateTime
+from sqlalchemy.types import Float, Boolean
 
 from aiida.backends.djsite.db import models
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
-
-ENGINE = None
-SESSION_FACTORY = None
-
-
-def reset_session():
-    """Reset the session which means setting the global engine and session factory instances to `None`."""
-    global ENGINE  # pylint: disable=global-statement
-    global SESSION_FACTORY  # pylint: disable=global-statement
-
-    ENGINE = None
-    SESSION_FACTORY = None
-
-
-def get_scoped_session(profile):
-    """Return a scoped session for the given profile that is exclusively to be used for the `QueryBuilder`.
-
-    Since the `QueryBuilder` implementation uses SqlAlchemy to map the query onto the models in order to generate the
-    SQL to be sent to the database, it requires a session, which is an :class:`sqlalchemy.orm.session.Session` instance.
-    The only purpose is for SqlAlchemy to be able to connect to the database perform the query and retrieve the results.
-    Even the Django backend implementation will use SqlAlchemy for its `QueryBuilder` and so also needs an SqlA session.
-    It is important that we do not reuse the scoped session factory in the SqlAlchemy implementation, because that runs
-    the risk of cross-talk once profiles can be switched dynamically in a single python interpreter. Therefore the
-    Django implementation of the `QueryBuilder` should keep its own SqlAlchemy engine and scoped session factory
-    instances that are used to provide the query builder with a session.
-
-    :param profile: :class:`aiida.manage.configuration.profile.Profile` for which to configure the engine.
-    :return: :class:`sqlalchemy.orm.session.Session` instance with engine configured for the given profile.
-    """
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import scoped_session, sessionmaker
-
-    global ENGINE  # pylint: disable=global-statement
-    global SESSION_FACTORY  # pylint: disable=global-statement
-
-    if SESSION_FACTORY is not None:
-        session = SESSION_FACTORY()
-        return session
-
-    if ENGINE is None:
-        from aiida.common import json
-        separator = ':' if profile.database_port else ''
-        engine_url = 'postgresql://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
-            separator=separator,
-            user=profile.database_username,
-            password=profile.database_password,
-            hostname=profile.database_hostname,
-            port=profile.database_port,
-            name=profile.database_name
-        )
-        ENGINE = create_engine(engine_url, json_serializer=json.dumps, json_deserializer=json.loads, encoding='utf-8')
-
-    SESSION_FACTORY = scoped_session(sessionmaker(bind=ENGINE))
-    session = SESSION_FACTORY()
-    return session
 
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
@@ -303,13 +245,6 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             return not_(expr)
         return expr
 
-    @staticmethod
-    def get_session():
-        from aiida.manage.configuration import get_config
-        config = get_config()
-        profile = config.current_profile
-        return get_scoped_session(profile)
-
     def modify_expansions(self, alias, expansions):
         """
         For django, there are no additional expansions for now, so
@@ -407,154 +342,10 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             raise InputValidationError('Unknown operator {} for filters in JSON field'.format(operator))
         return expr
 
-    def get_projectable_attribute(self, alias, column_name, attrpath, cast=None, **kwargs):  # pylint: disable=redefined-outer-name
-        """
-        :returns: An attribute store in a JSON field of the give column
-        """
-        entity = self.get_column(column_name, alias)[attrpath]
-        if cast is None:
-            pass
-        elif cast == 'f':
-            entity = entity.astext.cast(Float)
-        elif cast == 'i':
-            entity = entity.astext.cast(Integer)
-        elif cast == 'b':
-            entity = entity.astext.cast(Boolean)
-        elif cast == 't':
-            entity = entity.astext
-        elif cast == 'j':
-            entity = entity.astext.cast(JSONB)
-        elif cast == 'd':
-            entity = entity.astext.cast(DateTime)
-        else:
-            raise InputValidationError('Unkown casting key {}'.format(cast))
-        return entity
-
-    def get_aiida_res(self, key, res):
-        """
-        Some instance returned by ORM (django or SA) need to be converted
-        to Aiida instances (eg nodes). Choice (sqlalchemy_utils)
-        will return their value
-
-        :param key: The key
-        :param res: the result returned by the query
-
-        :returns: an aiida-compatible instance
-        """
-        if isinstance(res, Choice):
-            result = res.value
-        elif isinstance(res, uuid.UUID):
-            result = str(res)
-        else:
-            try:
-                result = self._backend.get_backend_entity(res)
-            except TypeError:
-                result = res
-
-        return result
-
-    def yield_per(self, query, batch_size):
-        """
-        :param count: Number of rows to yield per step
-
-        Yields *count* rows at a time
-
-        :returns: a generator
-        """
-        from django.db import transaction
-        with transaction.atomic():
-            return query.yield_per(batch_size)
-
-    def count(self, query):
-
-        from django.db import transaction
-        with transaction.atomic():
-            return query.count()
-
-    def first(self, query):
-        """
-        Executes query in the backend asking for one instance.
-
-        :returns: One row of aiida results
-        """
-        from django.db import transaction
-        with transaction.atomic():
-            return query.first()
-
-    def iterall(self, query, batch_size, tag_to_index_dict):
-        from django.db import transaction
-        if not tag_to_index_dict:
-            raise ValueError('Got an empty dictionary: {}'.format(tag_to_index_dict))
-
-        with transaction.atomic():
-            results = query.yield_per(batch_size)
-
-            if len(tag_to_index_dict) == 1:
-                # Sqlalchemy, for some strange reason, does not return a list of lists
-                # if you have provided an ormclass
-
-                if list(tag_to_index_dict.values()) == ['*']:
-                    for rowitem in results:
-                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
-                else:
-                    for rowitem, in results:
-                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
-            elif len(tag_to_index_dict) > 1:
-                for resultrow in results:
-                    yield [
-                        self.get_aiida_res(tag_to_index_dict[colindex], rowitem)
-                        for colindex, rowitem in enumerate(resultrow)
-                    ]
-
-    def iterdict(self, query, batch_size, tag_to_projected_properties_dict, tag_to_alias_map):
-        from django.db import transaction
-
-        def get_table_name(aliased_class):
-            """ Returns the table name given an Aliased class based on Aldjemy"""
-            return aliased_class._aliased_insp._target.table.name  # pylint: disable=protected-access
-
-        nr_items = sum(len(v) for v in tag_to_projected_properties_dict.values())
-
-        if not nr_items:
-            raise ValueError('Got an empty dictionary')
-
-        # Wrapping everything in an atomic transaction:
-        with transaction.atomic():
-            results = query.yield_per(batch_size)
-            # Two cases: If one column was asked, the database returns a matrix of rows * columns:
-            if nr_items > 1:
-                for this_result in results:
-                    yield {
-                        tag: {
-                            self.get_corresponding_property(
-                                get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
-                            ): self.get_aiida_res(attrkey, this_result[index_in_sql_result])
-                            for attrkey, index_in_sql_result in projected_entities_dict.items()
-                        } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
-                    }
-            elif nr_items == 1:
-                # I this case, sql returns a  list, where each listitem is the result
-                # for one row. Here I am converting it to a list of lists (of length 1)
-                if [v for entityd in tag_to_projected_properties_dict.values() for v in entityd.keys()] == ['*']:
-                    for this_result in results:
-                        yield {
-                            tag: {
-                                self.get_corresponding_property(
-                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
-                                ): self.get_aiida_res(attrkey, this_result)
-                                for attrkey, position in projected_entities_dict.items()
-                            } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
-                        }
-                else:
-                    for this_result, in results:
-                        yield {
-                            tag: {
-                                self.get_corresponding_property(
-                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
-                                ): self.get_aiida_res(attrkey, this_result)
-                                for attrkey, position in projected_entities_dict.items()
-                            } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
-                        }
+    @staticmethod
+    def get_table_name(aliased_class):
+        """Returns the table name given an Aliased class based on Aldjemy"""
+        return aliased_class._aliased_insp._target.table.name  # pylint: disable=protected-access
 
     def get_column_names(self, alias):
         """

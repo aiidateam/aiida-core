@@ -54,15 +54,12 @@ class SqlaBackendManager(BackendManager):
 
     def _load_backend_environment(self):
         """Load the backend environment."""
-        from . import reset_session
-        reset_session()
+        get_scoped_session()
 
     def reset_backend_environment(self):
         """Reset the backend environment."""
-        from aiida.backends import sqlalchemy
-        if sqlalchemy.ENGINE is not None:
-            sqlalchemy.ENGINE.dispose()
-        sqlalchemy.SCOPED_SESSION_CLASS = None
+        from . import reset_session
+        reset_session()
 
     def is_database_schema_ahead(self):
         """Determine whether the database schema version is ahead of the code schema version.

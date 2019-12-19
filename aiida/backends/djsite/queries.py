@@ -39,16 +39,19 @@ class DjangoQueryManager(AbstractQueryManager):
         # pylint: disable=no-member
         import sqlalchemy as sa
         import aiida.backends.djsite.db.models as djmodels
-        from aiida.orm.implementation.django.querybuilder import DjangoQueryBuilder
+        from aiida.manage.manager import get_manager
+        backend = get_manager().get_backend()
 
         # Get the session (uses internally aldjemy - so, sqlalchemy) also for the Djsite backend
-        sssn = DjangoQueryBuilder.get_session()
+        session = backend.get_session()
 
         retdict = {}
 
-        total_query = sssn.query(djmodels.DbNode.sa)
-        types_query = sssn.query(djmodels.DbNode.sa.node_type.label('typestring'), sa.func.count(djmodels.DbNode.sa.id))
-        stat_query = sssn.query(
+        total_query = session.query(djmodels.DbNode.sa)
+        types_query = session.query(
+            djmodels.DbNode.sa.node_type.label('typestring'), sa.func.count(djmodels.DbNode.sa.id)
+        )
+        stat_query = session.query(
             sa.func.date_trunc('day', djmodels.DbNode.sa.ctime).label('cday'), sa.func.count(djmodels.DbNode.sa.id)
         )
 

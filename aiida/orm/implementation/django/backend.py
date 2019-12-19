@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django implementation of `aiida.orm.implementation.backends.Backend`."""
-
 from contextlib import contextmanager
 
 # pylint: disable=import-error,no-name-in-module
@@ -88,6 +87,18 @@ class DjangoBackend(SqlBackend[models.Model]):
     def transaction():
         """Open a transaction to be used as a context manager."""
         return transaction.atomic()
+
+    @staticmethod
+    def get_session():
+        """Return a database session that can be used by the `QueryBuilder` to perform its query.
+
+        If there is an exception within the context then the changes will be rolled back and the state will
+        be as before entering.  Transactions can be nested.
+
+        :return: an instance of :class:`sqlalchemy.orm.session.Session`
+        """
+        from aiida.backends.djsite import get_scoped_session
+        return get_scoped_session()
 
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
 

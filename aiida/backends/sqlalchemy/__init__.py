@@ -9,13 +9,26 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module,global-statement
 """Module with implementation of the database backend using SqlAlchemy."""
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session
-from sqlalchemy.orm import sessionmaker
+from aiida.backends.utils import create_sqlalchemy_engine, create_scoped_session_factory
 
-# The next two serve as global variables, set in the `load_dbenv` call and should be properly reset upon forking.
 ENGINE = None
-SCOPED_SESSION_CLASS = None
+SESSION_FACTORY = None
+
+
+def reset_session():
+    """Reset the session which means setting the global engine and session factory instances to `None`."""
+    global ENGINE
+    global SESSION_FACTORY
+
+    if ENGINE is not None:
+        ENGINE.dispose()
+
+    if SESSION_FACTORY is not None:
+        SESSION_FACTORY.expunge_all()  # pylint: disable=no-member
+        SESSION_FACTORY.close()  # pylint: disable=no-member
+
+    ENGINE = None
+    SESSION_FACTORY = None
 
 
 def get_scoped_session():
@@ -24,55 +37,37 @@ def get_scoped_session():
     According to SQLAlchemy docs, this returns always the same object within a thread, and a different object in a
     different thread. Moreover, since we update the session class upon forking, different session objects will be used.
     """
-    global SCOPED_SESSION_CLASS
+    from multiprocessing.util import register_after_fork
+    from aiida.manage.configuration import get_profile
 
-    if SCOPED_SESSION_CLASS is None:
-        reset_session()
+    global ENGINE
+    global SESSION_FACTORY
 
-    return SCOPED_SESSION_CLASS()
+    if SESSION_FACTORY is not None:
+        session = SESSION_FACTORY()
+        return session
+
+    if ENGINE is None:
+        ENGINE = create_sqlalchemy_engine(get_profile())
+
+    SESSION_FACTORY = create_scoped_session_factory(ENGINE, expire_on_commit=True)
+    register_after_fork(ENGINE, recreate_after_fork)
+
+    return SESSION_FACTORY()
 
 
-def recreate_after_fork(engine):  # pylint: disable=unused-argument
+def recreate_after_fork(engine):
     """Callback called after a fork.
 
     Not only disposes the engine, but also recreates a new scoped session to use independent sessions in the fork.
 
     :param engine: the engine that will be used by the sessionmaker
     """
-    global ENGINE
-    global SCOPED_SESSION_CLASS
-
-    ENGINE.dispose()
-    SCOPED_SESSION_CLASS = scoped_session(sessionmaker(bind=ENGINE, expire_on_commit=True))
-
-
-def reset_session(profile=None):
-    """
-    Resets (global) engine and sessionmaker classes, to create a new one
-    (or creates a new one from scratch if not already available)
-
-    :param profile: the profile whose configuration to use to connect to the database
-    """
-    from multiprocessing.util import register_after_fork
-    from aiida.common import json
     from aiida.manage.configuration import get_profile
 
     global ENGINE
-    global SCOPED_SESSION_CLASS
+    global SESSION_FACTORY
 
-    if profile is None:
-        profile = get_profile()
-
-    separator = ':' if profile.database_port else ''
-    engine_url = 'postgresql://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
-        separator=separator,
-        user=profile.database_username,
-        password=profile.database_password,
-        hostname=profile.database_hostname,
-        port=profile.database_port,
-        name=profile.database_name
-    )
-
-    ENGINE = create_engine(engine_url, json_serializer=json.dumps, json_deserializer=json.loads, encoding='utf-8')
-    SCOPED_SESSION_CLASS = scoped_session(sessionmaker(bind=ENGINE, expire_on_commit=True))
-    register_after_fork(ENGINE, recreate_after_fork)
+    engine.dispose()
+    ENGINE = create_sqlalchemy_engine(get_profile())
+    SESSION_FACTORY = create_scoped_session_factory(ENGINE, expire_on_commit=True)

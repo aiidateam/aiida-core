@@ -8,10 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
-
 from contextlib import contextmanager
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import base
 from aiida.backends.sqlalchemy.queries import SqlaQueryManager
 from aiida.backends.sqlalchemy.manager import SqlaBackendManager
@@ -83,11 +81,14 @@ class SqlaBackend(SqlBackend[base.Base]):
     def users(self):
         return self._users
 
-    @staticmethod
     @contextmanager
-    def transaction():
-        """Open a transaction to be used as a context manager."""
-        session = get_scoped_session()
+    def transaction(self):
+        """Open a transaction to be used as a context manager.
+
+        If there is an exception within the context then the changes will be rolled back and the state will be as before
+        entering. Transactions can be nested.
+        """
+        session = self.get_session()
         nested = session.transaction.nested
         try:
             session.begin_nested()
@@ -100,6 +101,15 @@ class SqlaBackend(SqlBackend[base.Base]):
             if not nested:
                 # Make sure to commit the outermost session
                 session.commit()
+
+    @staticmethod
+    def get_session():
+        """Return a database session that can be used by the `QueryBuilder` to perform its query.
+
+        :return: an instance of :class:`sqlalchemy.orm.session.Session`
+        """
+        from aiida.backends.sqlalchemy import get_scoped_session
+        return get_scoped_session()
 
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
 

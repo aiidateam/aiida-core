@@ -2067,7 +2067,7 @@ class QueryBuilder:
             raise Exception('length of query result does not match the number of specified projections')
 
         return [
-            self.get_aiida_entity_res(self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem))
+            self.get_aiida_entity_res(self._impl.get_aiida_res(rowitem))
             for colindex, rowitem in enumerate(result)
         ]
 

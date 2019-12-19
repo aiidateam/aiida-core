@@ -13,6 +13,27 @@ from aiida.manage import configuration
 AIIDA_ATTRIBUTE_SEP = '.'
 
 
+def create_sqlalchemy_engine(profile):
+    from sqlalchemy import create_engine
+    from aiida.common import json
+
+    separator = ':' if profile.database_port else ''
+    engine_url = 'postgresql://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
+        separator=separator,
+        user=profile.database_username,
+        password=profile.database_password,
+        hostname=profile.database_hostname,
+        port=profile.database_port,
+        name=profile.database_name
+    )
+    return create_engine(engine_url, json_serializer=json.dumps, json_deserializer=json.loads, encoding='utf-8')
+
+
+def create_scoped_session_factory(engine, **kwargs):
+    from sqlalchemy.orm import scoped_session, sessionmaker
+    return scoped_session(sessionmaker(bind=engine, **kwargs))
+
+
 def delete_nodes_and_connections(pks):
     if configuration.PROFILE.database_backend == BACKEND_DJANGO:
         from aiida.backends.djsite.utils import delete_nodes_and_connections_django as delete_nodes_backend

@@ -15,7 +15,6 @@ from django.db import connection
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import Capturing
-from aiida.manage.configuration import get_profile
 
 
 class TestMigrations(AiidaTestCase):
@@ -36,7 +35,7 @@ class TestMigrations(AiidaTestCase):
 
     def setUp(self):
         """Go to a specific schema version before running tests."""
-        from aiida.orm.implementation.django.querybuilder import get_scoped_session
+        from aiida.backends.djsite import get_scoped_session
         from aiida.orm import autogroup
 
         self.current_autogroup = autogroup.current_autogroup
@@ -52,7 +51,7 @@ class TestMigrations(AiidaTestCase):
         # Before running the migration, make sure we close the querybuilder session which may still contain references
         # to objects whose mapping may be invalidated after resetting the schema to an older version. This can block
         # the migrations so we first expunge those objects by closing the session.
-        get_scoped_session(get_profile()).close()
+        get_scoped_session().close()
 
         # Reverse to the original migration
         with Capturing():

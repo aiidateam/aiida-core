@@ -32,7 +32,7 @@ class DjangoBackendManager(BackendManager):
 
     def reset_backend_environment(self):
         """Reset the backend environment."""
-        from aiida.orm.implementation.django.querybuilder import reset_session
+        from . import reset_session
         reset_session()
 
     def is_database_schema_ahead(self):

@@ -62,5 +62,17 @@ class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
         pass
 
 
+class EmptyOutlineWorkChain(WorkChain):  # pylint: disable=abstract-method
+    """
+    Here we check that the directive works even if the outline is empty.
+    """
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+
+        spec.input('x', valid_type=Float, help='First input argument.')
+
+
 class NormalClass:  # pylint: disable=too-few-public-methods
     """This is here to check that we didn't break the regular autoclass."""

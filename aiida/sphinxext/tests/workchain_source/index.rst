@@ -24,6 +24,11 @@ The namespaces can be set to expand by default, using the ``:expand-namespaces:`
     :module: demo_workchain
     :expand-namespaces:
 
+The following workchain checks that the directive works also when no outline is specified:
+
+.. aiida-workchain:: EmptyOutlineWorkChain
+    :module: demo_workchain
+
 The command is also hooked into ``sphinx.ext.autodoc``, so AiiDA processes will be properly documented using ``.. automodule::`` as well.
 
 .. automodule:: demo_workchain

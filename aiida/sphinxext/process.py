@@ -116,7 +116,8 @@ class AiidaProcessDirective(Directive):
 
         if hasattr(self.process_spec, 'get_outline'):
             outline = self.process_spec.get_outline()
-            content += self.build_outline_doctree(outline=outline)
+            if outline is not None:
+                content += self.build_outline_doctree(outline=outline)
         return content
 
     def build_doctree(self, title, port_namespace):

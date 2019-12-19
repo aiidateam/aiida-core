@@ -9,13 +9,13 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module,invalid-name
 """ The basic functionality for the migration tests"""
-
 from django.apps import apps
 from django.db.migrations.executor import MigrationExecutor
 from django.db import connection
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import Capturing
+from aiida.manage.configuration import get_profile
 
 
 class TestMigrations(AiidaTestCase):
@@ -36,7 +36,7 @@ class TestMigrations(AiidaTestCase):
 
     def setUp(self):
         """Go to a specific schema version before running tests."""
-        from aiida.backends import sqlalchemy as sa
+        from aiida.orm.implementation.django.querybuilder import get_scoped_session
         from aiida.orm import autogroup
 
         self.current_autogroup = autogroup.current_autogroup
@@ -49,13 +49,14 @@ class TestMigrations(AiidaTestCase):
         self.apps = executor.loader.project_state(self.migrate_from).apps
         self.schema_editor = connection.schema_editor()
 
-        # Reset session for the migration
-        sa.get_scoped_session().close()
+        # Before running the migration, make sure we close the querybuilder session which may still contain references
+        # to objects whose mapping may be invalidated after resetting the schema to an older version. This can block
+        # the migrations so we first expunge those objects by closing the session.
+        get_scoped_session(get_profile()).close()
+
         # Reverse to the original migration
         with Capturing():
             executor.migrate(self.migrate_from)
-        # Reset session after the migration
-        sa.get_scoped_session().close()
 
         self.DbLink = self.apps.get_model('db', 'DbLink')
         self.DbNode = self.apps.get_model('db', 'DbNode')
@@ -70,12 +71,8 @@ class TestMigrations(AiidaTestCase):
             executor = MigrationExecutor(connection)
             executor.loader.build_graph()
 
-            # Reset session for the migration
-            sa.get_scoped_session().close()
             with Capturing():
                 executor.migrate(self.migrate_to)
-            # Reset session after the migration
-            sa.get_scoped_session().close()
 
             self.apps = executor.loader.project_state(self.migrate_to).apps
         except Exception:
@@ -97,17 +94,10 @@ class TestMigrations(AiidaTestCase):
     def _revert_database_schema(self):
         """Bring back the DB to the correct state."""
         from aiida.backends.djsite.db.migrations import LATEST_MIGRATION
-        from aiida.backends import sqlalchemy as sa
-
         self.migrate_to = [(self.app, LATEST_MIGRATION)]
-
-        # Reset session for the migration
-        sa.get_scoped_session().close()
         executor = MigrationExecutor(connection)
         with Capturing():
             executor.migrate(self.migrate_to)
-        # Reset session after the migration
-        sa.get_scoped_session().close()
 
     def load_node(self, pk):
         return self.DbNode.objects.get(pk=pk)

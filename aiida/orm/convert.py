@@ -25,7 +25,38 @@ def get_orm_entity(backend_entity):
 
 @get_orm_entity.register(Mapping)
 def _(backend_entity):
-    return {key: get_orm_entity(value) for key, value in backend_entity.items()}
+    """Convert all values of the given mapping to ORM entities if they are backend ORM instances."""
+    converted = {}
+
+    # Note that we cannot use a simple comprehension because raised `TypeError` should be caught here otherwise only
+    # parts of the mapping will be converted.
+    for key, value in backend_entity.items():
+        try:
+            converted[key] = get_orm_entity(value)
+        except TypeError:
+            converted[key] = value
+
+    return converted
+
+
+@get_orm_entity.register(list)
+@get_orm_entity.register(tuple)
+def _(backend_entity):
+    """Convert all values of the given list or tuple to ORM entities if they are backend ORM instances.
+
+    Note that we do not register on `collections.abc.Sequence` because that will also match strings.
+    """
+    converted = []
+
+    # Note that we cannot use a simple comprehension because raised `TypeError` should be caught here otherwise only
+    # parts of the mapping will be converted.
+    for value in backend_entity:
+        try:
+            converted.append(get_orm_entity(value))
+        except TypeError:
+            converted.append(value)
+
+    return converted
 
 
 @get_orm_entity.register(BackendGroup)

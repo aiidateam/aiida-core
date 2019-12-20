@@ -30,8 +30,8 @@ class BackendGroup(backends.BackendEntity):
         :return: the name of the group as a string
         """
 
-    @abc.abstractproperty
     @label.setter
+    @abc.abstractmethod
     def label(self, name):
         """
         Attempt to change the name of the group instance. If the group is already stored
@@ -140,7 +140,7 @@ class BackendGroup(backends.BackendEntity):
         the number of nodes in the group using len().
         """
 
-    @abc.abstractproperty
+    @abc.abstractmethod
     def count(self):
         """Return the number of entities in this group.
 

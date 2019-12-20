@@ -583,7 +583,8 @@ class SlurmScheduler(Scheduler):
             this_job.queue_name = thisjob_dict['partition']
 
             try:
-                this_job.requested_wallclock_time_seconds = (self._convert_time(thisjob_dict['time_limit']))  # pylint: disable=invalid-name
+                walltime = (self._convert_time(thisjob_dict['time_limit']))
+                this_job.requested_wallclock_time_seconds = walltime  # pylint: disable=invalid-name
             except ValueError:
                 self.logger.warning('Error parsing the time limit for job id {}'.format(this_job.job_id))
 

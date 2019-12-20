@@ -282,8 +282,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 # If there is a piece with > to readdress stderr or stdout,
                 # skip from here on (anything else can only be readdressing)
                 break
-            else:
-                new_pieces.append(piece)
+
+            new_pieces.append(piece)
+
         return ' '.join(new_pieces)
 
     @classmethod

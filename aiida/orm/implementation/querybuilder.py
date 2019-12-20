@@ -35,7 +35,7 @@ class BackendQueryBuilder:
         self.inner_to_outer_schema = dict()
         self.outer_to_inner_schema = dict()
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def Node(self):
         """
         Decorated as a property, returns the implementation for DbNode.
@@ -43,49 +43,49 @@ class BackendQueryBuilder:
         a corresponding dummy-model  must be written.
         """
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def Link(self):
         """
         A property, decorated with @property. Returns the implementation for the DbLink
         """
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def Computer(self):
         """
         A property, decorated with @property. Returns the implementation for the Computer
         """
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def User(self):
         """
         A property, decorated with @property. Returns the implementation for the User
         """
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def Group(self):
         """
         A property, decorated with @property. Returns the implementation for the Group
         """
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def AuthInfo(self):
         """
         A property, decorated with @property. Returns the implementation for the AuthInfo
         """
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def Comment(self):
         """
         A property, decorated with @property. Returns the implementation for the Comment
         """
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def Log(self):
         """
         A property, decorated with @property. Returns the implementation for the Log
         """
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def table_groups_nodes(self):
         """
         A property, decorated with @property. Returns the implementation for the many-to-many

@@ -200,7 +200,7 @@ class TestComplex(AiidaTestCase):
             group = orm.Group.get(label=grouplabel)
             # exporting based on all members of the group
             # this also checks if group memberships are preserved!
-            export([group] + [n for n in group.nodes], outfile=filename, silent=True)
+            export([group] + list(group.nodes), outfile=filename, silent=True)
             # cleaning the DB!
             self.clean_db()
             self.create_user()

@@ -224,9 +224,9 @@ class TestVerdiCalculation(AiidaTestCase):
         for job in calculations:
             if job[0].uuid == self.arithmetic_job.uuid:
                 continue
-            else:
-                add_job = job[0]
-                return
+
+            add_job = job[0]
+            return
 
         # Make sure add_job does not specify options 'input_filename' and 'output_filename'
         self.assertIsNone(

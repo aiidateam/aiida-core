@@ -52,9 +52,7 @@ def configure_computer_main(computer, user, **kwargs):
 
 def common_params(command_func):
     """Decorate a command function with common click parameters for all transport plugins."""
-    params = [i for i in TRANSPORT_PARAMS]
-    params.reverse()
-    for param in params:
+    for param in TRANSPORT_PARAMS.copy().reverse():
         command_func = param(command_func)
     return command_func
 

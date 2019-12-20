@@ -81,7 +81,6 @@ class MaterialsProjectImporter(DbImporter):
         """
         return self._properties
 
-    @property
     def get_supported_keywords(self):
         """
         Returns the list of all supported query keywords

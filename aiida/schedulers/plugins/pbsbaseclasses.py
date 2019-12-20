@@ -605,7 +605,7 @@ class PbsBaseClass(Scheduler):
                 _LOGGER.debug("No 'queue' field for job id {}".format(this_job.job_id))
 
             try:
-                this_job.requested_wallclock_time = (self._convert_time(raw_data['resource_list.walltime']))
+                this_job.requested_wallclock_time = (self._convert_time(raw_data['resource_list.walltime']))  # pylint: disable=invalid-name
             except KeyError:
                 _LOGGER.debug("No 'resource_list.walltime' field for job id {}".format(this_job.job_id))
             except ValueError:

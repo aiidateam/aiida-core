@@ -600,7 +600,7 @@ fi
                             year=new_year, month=old_month, day=old_day, hour=old_hour, minute=old_minute)
                         requested_walltime = psd_finish_time - psd_start_time
 
-                    this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds()
+                    this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds()  # pylint: disable=invalid-name
                 except (TypeError, ValueError):
                     self.logger.warning('Error parsing the time limit for job id {}'.format(this_job.job_id))
 

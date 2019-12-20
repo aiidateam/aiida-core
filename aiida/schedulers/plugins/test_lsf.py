@@ -99,7 +99,7 @@ class TestParserBjobs(unittest.TestCase):
         self.assertEqual(num_machines, parsed_num_machines)
         self.assertEqual(allocated_machines, parsed_allocated_machines)
 
-        self.assertEqual([j.requested_wallclock_time_seconds for j in job_list if j.job_id == '764254593'][0], 60)
+        self.assertEqual([j.requested_wallclock_time_seconds for j in job_list if j.job_id == '764254593'][0], 60)  # pylint: disable=invalid-name
         self.assertEqual([j.wallclock_time_seconds for j in job_list if j.job_id == '764255172'][0], 9)
         self.assertEqual([j.wallclock_time_seconds for j in job_list if j.job_id == '764245175'][0], 4785)
         current_year = datetime.datetime.now().year

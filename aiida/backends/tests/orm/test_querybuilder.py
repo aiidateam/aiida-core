@@ -363,6 +363,21 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertTrue(id(query1) != id(query2))
         self.assertTrue(id(query2) == id(query3))
 
+    def test_dict_multiple_projections(self):
+        """Test that the `.dict()` accumulator with multiple projections returns the correct types."""
+        node = orm.Data().store()
+        builder = orm.QueryBuilder().append(orm.Data, project=['*', 'id'])
+        results = builder.dict()
+
+        self.assertIsInstance(results, list)
+        self.assertTrue(all(isinstance(value, dict) for value in results))
+
+        dictionary = list(results[0].values())[0]  # `results` should have the form [{'Data_1': {'*': Node, 'id': 1}}]
+
+        self.assertIsInstance(dictionary['*'], orm.Data)
+        self.assertEqual(dictionary['*'].pk, node.pk)
+        self.assertEqual(dictionary['id'], node.pk)
+
     def test_operators_eq_lt_gt(self):
         nodes = [orm.Data() for _ in range(8)]
 

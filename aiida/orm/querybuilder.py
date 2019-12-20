@@ -18,7 +18,6 @@ an interface classes which enforces the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.
 """
-
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
 import copy

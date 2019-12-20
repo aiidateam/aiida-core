@@ -74,10 +74,6 @@
         aiida/plugins/entry.py|
         aiida/plugins/info.py|
         aiida/plugins/registry.py|
-        aiida/schedulers/plugins/direct.py|
-        aiida/schedulers/plugins/lsf.py|
-        aiida/schedulers/plugins/sge.py|
-        aiida/schedulers/plugins/slurm.py|
         aiida/schedulers/plugins/test_direct.py|
         aiida/schedulers/plugins/test_lsf.py|
         aiida/schedulers/plugins/test_pbspro.py|

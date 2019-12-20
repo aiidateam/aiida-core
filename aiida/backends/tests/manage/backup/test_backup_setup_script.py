@@ -105,7 +105,7 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
                 backup_setup.BackupSetup().run()
 
             # Get the backup configuration files & dirs
-            backup_conf_records = [f for f in os.listdir(temp_aiida_folder)]
+            backup_conf_records = os.listdir(temp_aiida_folder)
             # Check if all files & dirs are there
             self.assertTrue(
                 backup_conf_records is not None and len(backup_conf_records) == 4 and

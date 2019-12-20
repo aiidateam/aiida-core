@@ -530,13 +530,10 @@ def import_data_dj(
                 except KeyError:
                     if ignore_unknown_nodes:
                         continue
-                    else:
-                        raise exceptions.ImportValidationError(
-                            'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, '
-                            'out_uuid={}, label={}, type={})'.format(
-                                link['input'], link['output'], link['label'], link['type']
-                            )
-                        )
+                    raise exceptions.ImportValidationError(
+                        'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, out_uuid={}, '
+                        'label={}, type={})'.format(link['input'], link['output'], link['label'], link['type'])
+                    )
 
                 # Check if link already exists, skip if it does
                 # This is equivalent to an existing triple link (i.e. unique_triple from below)

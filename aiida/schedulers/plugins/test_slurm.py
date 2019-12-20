@@ -73,7 +73,7 @@ class TestParserSqueue(unittest.TestCase):
         parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(JOBS_RUNNING), set(parsed_running_jobs))
 
-        self.assertEqual(job_dict['863553'].requested_wallclock_time_seconds, 30 * 60)
+        self.assertEqual(job_dict['863553'].requested_wallclock_time_seconds, 30 * 60)  # pylint: disable=invalid-name
         self.assertEqual(job_dict['863553'].wallclock_time_seconds, 29 * 60 + 29)
         self.assertEqual(job_dict['863553'].dispatch_time, datetime.datetime(2013, 5, 23, 11, 44, 11))
         self.assertEqual(job_dict['863553'].submission_time, datetime.datetime(2013, 5, 23, 10, 42, 11))
@@ -85,7 +85,7 @@ class TestParserSqueue(unittest.TestCase):
 
         self.assertEqual(job_dict['861352'].title, 'Pressure_PBEsol_0')
 
-        self.assertEqual(job_dict['863554'].requested_wallclock_time_seconds, None)  # not set
+        self.assertEqual(job_dict['863554'].requested_wallclock_time_seconds, None)  # pylint: disable=invalid-name
 
         # allocated_machines is not implemented in this version of the plugin
         #        for j in job_list:

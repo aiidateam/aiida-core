@@ -301,7 +301,7 @@ class TestLinks(AiidaTestCase):
                 export_target_uuids, imported_node_uuids,
                 'Problem in comparison of export node: ' + export_node_str + '\n' + 'Expected set: ' +
                 str(export_target_uuids) + '\n' + 'Imported set: ' + str(imported_node_uuids) + '\n' + 'Difference: ' +
-                str([_ for _ in export_target_uuids.symmetric_difference(imported_node_uuids)])
+                str(export_target_uuids.symmetric_difference(imported_node_uuids))
             )
 
     @with_temp_dir

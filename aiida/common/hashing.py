@@ -275,7 +275,7 @@ def _(folder, **kwargs):
                     yield digest
                 yield _END_DIGEST
 
-    return [_single_digest('folder')] + [d for d in folder_digests(folder)]
+    return [_single_digest('folder')] + list(folder_digests(folder))
 
 
 def float_to_text(value, sig):

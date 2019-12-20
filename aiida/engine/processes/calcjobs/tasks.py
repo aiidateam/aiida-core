@@ -36,6 +36,10 @@ TRANSPORT_TASK_MAXIMUM_ATTEMTPS = 5
 logger = logging.getLogger(__name__)
 
 
+class PreSubmitException(Exception):
+    """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
+
+
 @coroutine
 def task_upload_job(process, transport_queue, cancellable):
     """Transport task that will attempt to upload the files of a job calculation to the remote.
@@ -67,15 +71,25 @@ def task_upload_job(process, transport_queue, cancellable):
     def do_upload():
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
+
             with SandboxFolder() as folder:
-                calc_info, script_filename = process.presubmit(folder)
-                execmanager.upload_calculation(node, transport, calc_info, folder)
+                # Any exception thrown in `presubmit` call is not transient so we circumvent the exponential backoff
+                try:
+                    calc_info, script_filename = process.presubmit(folder)
+                except Exception as exception:  # pylint: disable=broad-except
+                    raise PreSubmitException('exception occurred in presubmit call') from exception
+                else:
+                    execmanager.upload_calculation(node, transport, calc_info, folder)
+
             raise Return((calc_info, script_filename))
 
     try:
         logger.info('scheduled request to upload CalcJob<{}>'.format(node.pk))
+        ignore_exceptions = (plumpy.CancelledError, PreSubmitException)
         result = yield exponential_backoff_retry(
-            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.CancelledError)
+            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions)
+    except PreSubmitException:
+        raise
     except plumpy.CancelledError:
         pass
     except Exception:

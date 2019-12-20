@@ -8,8 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for the `CalcJob` process sub class."""
+from copy import deepcopy
+from functools import partial
+from unittest.mock import patch
 
-import copy
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -21,12 +24,21 @@ from aiida.plugins import CalculationFactory
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
 
 
+def raise_exception(exception):
+    """Raise an exception of the specified class.
+
+    :param exception: exception class to raise
+    """
+    raise exception()
+
+
 class TestCalcJob(AiidaTestCase):
     """Test for the `CalcJob` process sub class."""
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
+        cls.computer.configure()  # pylint: disable=no-member
         cls.remote_code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.local_code = orm.Code(local_executable='true', files=['/bin/true']).store()
         cls.inputs = {
@@ -111,7 +123,7 @@ class TestCalcJob(AiidaTestCase):
         This should work, because the `computer` should be retrieved from the `code` and automatically set for the
         process by the engine itself.
         """
-        inputs = copy.deepcopy(self.inputs)
+        inputs = deepcopy(self.inputs)
         inputs['code'] = self.remote_code
 
         process = ArithmeticAddCalculation(inputs=inputs)
@@ -120,7 +132,7 @@ class TestCalcJob(AiidaTestCase):
 
     def test_remote_code_unstored_computer(self):
         """Test launching a `CalcJob` with an unstored computer which should raise."""
-        inputs = copy.deepcopy(self.inputs)
+        inputs = deepcopy(self.inputs)
         inputs['code'] = self.remote_code
         inputs['metadata']['computer'] = orm.Computer('different', 'localhost', 'desc', 'local', 'direct')
 
@@ -133,7 +145,7 @@ class TestCalcJob(AiidaTestCase):
         This should work as long as the explicitly defined computer is the same as the one configured for the `code`
         input. If this is not the case, it should raise.
         """
-        inputs = copy.deepcopy(self.inputs)
+        inputs = deepcopy(self.inputs)
         inputs['code'] = self.remote_code
 
         # Setting explicitly a computer that is not the same as that of the `code` should raise
@@ -149,7 +161,7 @@ class TestCalcJob(AiidaTestCase):
 
     def test_local_code_set_computer(self):
         """Test launching a `CalcJob` with a local code *with* explicitly defining a computer, which should work."""
-        inputs = copy.deepcopy(self.inputs)
+        inputs = deepcopy(self.inputs)
         inputs['code'] = self.local_code
         inputs['metadata']['computer'] = self.computer
 
@@ -159,7 +171,7 @@ class TestCalcJob(AiidaTestCase):
 
     def test_local_code_no_computer(self):
         """Test launching a `CalcJob` with a local code *without* explicitly defining a computer, which should raise."""
-        inputs = copy.deepcopy(self.inputs)
+        inputs = deepcopy(self.inputs)
         inputs['code'] = self.local_code
 
         with self.assertRaises(exceptions.InputValidationError):
@@ -167,7 +179,7 @@ class TestCalcJob(AiidaTestCase):
 
     def test_invalid_parser_name(self):
         """Passing an invalid parser name should already stop during input validation."""
-        inputs = copy.deepcopy(self.inputs)
+        inputs = deepcopy(self.inputs)
         inputs['code'] = self.remote_code
         inputs['metadata']['options']['parser_name'] = 'invalid_parser'
 
@@ -176,9 +188,28 @@ class TestCalcJob(AiidaTestCase):
 
     def test_invalid_resources(self):
         """Passing invalid resources should already stop during input validation."""
-        inputs = copy.deepcopy(self.inputs)
+        inputs = deepcopy(self.inputs)
         inputs['code'] = self.remote_code
         inputs['metadata']['options']['resources'].pop('num_machines')
 
         with self.assertRaises(exceptions.InputValidationError):
             ArithmeticAddCalculation(inputs=inputs)
+
+    @pytest.mark.timeout(5)
+    @patch.object(CalcJob, 'presubmit', partial(raise_exception, exceptions.InputValidationError))
+    def test_exception_presubmit(self):
+        """Test that an exception in the presubmit circumvents the exponential backoff and just excepts the process.
+
+        The `presubmit` call of the `CalcJob` is now called in `aiida.engine.processes.calcjobs.tasks.task_upload_job`
+        which is wrapped in the exponential backoff mechanism. The latter was introduced to recover from transient
+        problems such as connection problems during the actual upload to a remote machine. However, it should not catch
+        exceptions from the `presubmit` call which are not actually transient and thus not automatically recoverable. In
+        this case the process should simply except. Here we test this by mocking the presubmit to raise an exception and
+        check that it is bubbled up and the process does not end up in a paused state.
+        """
+        from aiida.engine.processes.calcjobs.tasks import PreSubmitException
+
+        with self.assertRaises(PreSubmitException) as context:
+            launch.run(ArithmeticAddCalculation, code=self.remote_code, **self.inputs)
+
+        self.assertIn('exception occurred in presubmit call', str(context.exception))

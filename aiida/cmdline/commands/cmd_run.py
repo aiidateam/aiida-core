@@ -9,6 +9,7 @@
 ###########################################################################
 """`verdi run` command."""
 import contextlib
+import os
 import sys
 
 import click
@@ -19,17 +20,21 @@ from aiida.cmdline.utils import decorators, echo
 
 
 @contextlib.contextmanager
-def update_environment(new_argv):
-    """
-    Used as a context manager, changes sys.argv with the
-    new_argv argument, and restores it upon exit.
-    """
-    _argv = sys.argv[:]
-    sys.argv = new_argv[:]
-    yield
+def update_environment(argv):
+    """Context manager that temporarily replaces `sys.argv` with `argv` and adds current working dir to the path."""
+    try:
+        # Store a copy of the current path and argv as a backup variable so it can be restored later
+        _path = sys.path[:]
+        _argv = sys.argv[:]
 
-    # Restore old parameters when exiting from the context manager
-    sys.argv = _argv
+        # Add the current working directory to the path, such that local modules can be imported
+        sys.path.append(os.getcwd())
+        sys.argv = argv[:]
+        yield
+    finally:
+        # Restore old parameters when exiting from the context manager
+        sys.argv = _argv
+        sys.path = _path
 
 
 @verdi.command('run', context_settings=dict(ignore_unknown_options=True,))
@@ -103,8 +108,8 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
     else:
         try:
             # Must add also argv[0]
-            new_argv = [scriptname] + list(varargs)
-            with update_environment(new_argv=new_argv):
+            argv = [scriptname] + list(varargs)
+            with update_environment(argv=argv):
                 # Compile the script for execution and pass it to exec with the globals_dict
                 exec(compile(handle.read(), scriptname, 'exec', dont_inherit=True), globals_dict)  # yapf: disable # pylint: disable=exec-used
         except SystemExit:  # pylint: disable=try-except-raise

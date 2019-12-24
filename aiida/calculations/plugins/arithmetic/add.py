@@ -20,9 +20,9 @@ class ArithmeticAddCalculation(CalcJob):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('metadata.options.input_filename', valid_type=str, default='aiida.in', non_db=True)
-        spec.input('metadata.options.output_filename', valid_type=str, default='aiida.out', non_db=True)
-        spec.input('metadata.options.parser_name', valid_type=str, default='arithmetic.add', non_db=True)
+        spec.inputs['metadata']['options']['parser_name'].default = 'arithmetic.add'
+        spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
+        spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
         spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')

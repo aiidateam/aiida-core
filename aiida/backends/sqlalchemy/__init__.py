@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module,global-statement
+# pylint: disable=global-statement
 """Module with implementation of the database backend using SqlAlchemy."""
 from aiida.backends.utils import create_sqlalchemy_engine, create_scoped_session_factory
 
@@ -37,7 +37,6 @@ def get_scoped_session():
     According to SQLAlchemy docs, this returns always the same object within a thread, and a different object in a
     different thread. Moreover, since we update the session class upon forking, different session objects will be used.
     """
-    from multiprocessing.util import register_after_fork
     from aiida.manage.configuration import get_profile
 
     global ENGINE
@@ -51,23 +50,5 @@ def get_scoped_session():
         ENGINE = create_sqlalchemy_engine(get_profile())
 
     SESSION_FACTORY = create_scoped_session_factory(ENGINE, expire_on_commit=True)
-    register_after_fork(ENGINE, recreate_after_fork)
 
     return SESSION_FACTORY()
-
-
-def recreate_after_fork(engine):
-    """Callback called after a fork.
-
-    Not only disposes the engine, but also recreates a new scoped session to use independent sessions in the fork.
-
-    :param engine: the engine that will be used by the sessionmaker
-    """
-    from aiida.manage.configuration import get_profile
-
-    global ENGINE
-    global SESSION_FACTORY
-
-    engine.dispose()
-    ENGINE = create_sqlalchemy_engine(get_profile())
-    SESSION_FACTORY = create_scoped_session_factory(ENGINE, expire_on_commit=True)

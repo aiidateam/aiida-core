@@ -56,15 +56,16 @@ class OqmdDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdSearchResults`.
         """
+        from urllib.request import urlopen
         import re
 
         query_statement = self.query_get(**kwargs)
-        response = urllib.request.urlopen(query_statement).read()
+        response = urlopen(query_statement).read()
         entries = re.findall(r'(/materials/entry/\d+)', response)
 
         results = []
         for entry in entries:
-            response = urllib.request.urlopen('{}{}'.format(self._query_url,
+            response = urlopen('{}{}'.format(self._query_url,
                                                      entry)).read()
             structures = re.findall(r'/materials/export/conventional/cif/(\d+)',
                                     response)

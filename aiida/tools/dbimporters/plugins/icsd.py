@@ -406,7 +406,7 @@ class IcsdDbImporter(DbImporter):
         :param kwargs: A list of ``keyword = [values]`` pairs
         :return: IcsdSearchResults
         """
-
+        from urllib.parse import urlencode
         self.actual_args = {
             'action': 'Search',
             'nb_rows': '100',  # max is 100
@@ -428,7 +428,7 @@ class IcsdDbImporter(DbImporter):
             except KeyError as exc:
                 raise TypeError("ICSDImporter got an unexpected keyword argument '{}'".format(exc.args[0]))
 
-        url_values = urllib.parse.urlencode(self.actual_args)
+        url_values = urlencode(self.actual_args)
         query_url = self.db_parameters['urladd'] + url_values
 
         return IcsdSearchResults(query=query_url, db_parameters=self.db_parameters)
@@ -590,11 +590,12 @@ class IcsdSearchResults(DbSearchResults):
 
         else:
             from bs4 import BeautifulSoup
+            from urllib.request import urlopen
             import re
 
-            self.html = urllib.request.urlopen(self.db_parameters['server'] +
-                                               self.db_parameters['db'] + '/' +
-                                               self.query.format(str(self.page))).read()
+            self.html = urlopen(self.db_parameters['server'] +
+                                self.db_parameters['db'] + '/' +
+                                self.query.format(str(self.page))).read()
 
             self.soup = BeautifulSoup(self.html)
 

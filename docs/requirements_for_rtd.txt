@@ -3,7 +3,7 @@ aiida-export-migration-tests==0.8.0
 aldjemy~=0.9.1
 alembic~=1.2
 ase~=3.18
-circus~=0.15.0
+circus~=0.16.1
 click-completion~=0.5.1
 click-config-file~=0.5.0
 click-spinner~=0.1.8
@@ -15,7 +15,7 @@ flask-cors~=3.0
 flask-restful~=0.3.7
 flask~=1.1
 graphviz~=0.13
-ipython>=4.0,<6.0
+ipython~=7.0
 jinja2~=2.10
 kiwipy[rmq]~=0.5.1
 numpy~=1.17,<1.18

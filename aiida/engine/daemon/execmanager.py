@@ -47,7 +47,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     link_label = 'remote_folder'
     if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
         execlogger.warning('CalcJobNode<{}> already has a `{}` output: skipping upload'.format(node.pk, link_label))
-        return calc_info, script_filename
+        return calc_info
 
     computer = node.computer
 
@@ -139,8 +139,14 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     for code in input_codes:
         if code.is_local():
             # Note: this will possibly overwrite files
-            for f in code.get_folder_list():
-                transport.put(code.get_abs_path(f), f)
+            for f in code.list_object_names():
+                # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
+                # combination with the new `Transport.put_object_from_filelike`
+                # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
+                with NamedTemporaryFile(mode='wb+') as handle:
+                    handle.write(code.get_object_content(f, mode='rb'))
+                    handle.flush()
+                    transport.put(handle.name, f)
             transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
 
     # In a dry_run, the working directory is the raw input folder, which will already contain these resources
@@ -192,7 +198,6 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
             with NamedTemporaryFile(mode='wb+') as handle:
                 handle.write(data_node.get_object_content(filename, mode='rb'))
                 handle.flush()
-                handle.seek(0)
                 transport.put(handle.name, target)
 
     if dry_run:

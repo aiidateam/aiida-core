@@ -10,6 +10,7 @@
 """Test for the `CalcJob` process sub class."""
 from copy import deepcopy
 from functools import partial
+import os
 from unittest.mock import patch
 
 import pytest
@@ -38,9 +39,11 @@ class TestCalcJob(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
+        import aiida
+        files = [os.path.join(os.path.dirname(aiida.__file__), os.pardir, '.ci', 'add.sh')]
         cls.computer.configure()  # pylint: disable=no-member
         cls.remote_code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
-        cls.local_code = orm.Code(local_executable='true', files=['/bin/true']).store()
+        cls.local_code = orm.Code(local_executable='add.sh', files=files).store()
         cls.inputs = {
             'x': orm.Int(1),
             'y': orm.Int(2),
@@ -213,3 +216,18 @@ class TestCalcJob(AiidaTestCase):
             launch.run(ArithmeticAddCalculation, code=self.remote_code, **self.inputs)
 
         self.assertIn('exception occurred in presubmit call', str(context.exception))
+
+    def test_run_local_code(self):
+        """Run a dry-run with local code."""
+        inputs = deepcopy(self.inputs)
+        inputs['code'] = self.local_code
+        inputs['metadata']['computer'] = self.computer
+        inputs['metadata']['dry_run'] = True
+
+        # The following will run `upload_calculation` which will test that uploading files works correctly
+        _, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
+        uploaded_files = os.listdir(node.dry_run_info['folder'])
+
+        # Since the repository will only contain files on the top-level due to `Code.set_files` we only check those
+        for filename in self.local_code.list_object_names():
+            self.assertTrue(filename in uploaded_files)

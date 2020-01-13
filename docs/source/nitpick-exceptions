@@ -93,6 +93,7 @@ py:class  builtins.int
 py:class  builtins.object
 py:class  builtins.str
 py:class  builtins.dict
+py:class  set
 
 # python builtin objects
 py:obj basestring

@@ -19,9 +19,8 @@ def get_nodes_delete(starting_pks, get_links=False, **kwargs):
     to a list of initial nodes through any sequence of specified authorized
     links and directions for deletion.
 
-    :type starting_pks: list or tuple
-    :param starting_pks:
-        Contains the (valid) pks of the starting nodes (also accepts sets).
+    :type starting_pks: list or tuple or set
+    :param starting_pks: Contains the (valid) pks of the starting nodes.
 
     :param bool get_links:
         Pass True to also return the links between all nodes (found + initial).
@@ -55,9 +54,8 @@ def get_nodes_export(starting_pks, get_links=False, **kwargs):
     links and directions for export. This will also return the links and
     the traversal rules parsed.
 
-    :type starting_pks: list or tuple
-    :param starting_pks:
-        Contains the (valid) pks of the starting nodes (also accepts sets).
+    :type starting_pks: list or tuple or set
+    :param starting_pks: Contains the (valid) pks of the starting nodes.
 
     :param bool get_links:
         Pass True to also return the links between all nodes (found + initial).
@@ -166,8 +164,8 @@ def traverse_graph(starting_pks, max_iterations=None, get_links=False, links_for
     to a list of initial nodes through any sequence of specified links.
     Optionally, it may also return the links that connect these nodes.
 
-    :type starting_pks: list or tuple
-    :param starting_pks: The set of (valid) pks for the starting nodes (also accepts sets).
+    :type starting_pks: list or tuple or set
+    :param starting_pks: Contains the (valid) pks of the starting nodes.
 
     :type max_iterations: int or None
     :param max_iterations:

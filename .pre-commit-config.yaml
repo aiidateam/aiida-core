@@ -14,8 +14,7 @@
     args: ["-i"]
     exclude: &exclude_files >
       (?x)^(
-        docs/.*|
-        examples/.*|
+        .ci/workchains.py|
         aiida/backends/djsite/queries.py|
         aiida/backends/djsite/db/models.py|
         aiida/backends/djsite/db/migrations/0001_initial.py|
@@ -50,9 +49,6 @@
         aiida/backends/sqlalchemy/models/computer.py|
         aiida/backends/sqlalchemy/models/settings.py|
         aiida/backends/sqlalchemy/models/node.py|
-        aiida/backends/tests/engine/test_work_chain.py|
-        aiida/backends/tests/test_dataclasses.py|
-        aiida/backends/tests/test_nodes.py|
         aiida/backends/utils.py|
         aiida/common/datastructures.py|
         aiida/engine/daemon/execmanager.py|
@@ -98,7 +94,11 @@
         aiida/transports/plugins/test_all_plugins.py|
         aiida/transports/plugins/test_local.py|
         aiida/transports/plugins/test_ssh.py|
-        .ci/workchains.py|
+        docs/.*|
+        examples/.*|
+        tests/engine/test_work_chain.py|
+        tests/test_dataclasses.py|
+        tests/test_nodes.py|
       )$
 
   # prospector: collection of linters

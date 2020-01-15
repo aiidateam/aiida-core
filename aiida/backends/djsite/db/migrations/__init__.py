@@ -14,6 +14,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from aiida.backends.manager import SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION
 from aiida.backends.manager import SCHEMA_GENERATION_KEY, SCHEMA_GENERATION_DESCRIPTION
 from aiida.common.exceptions import AiidaException, DbContentError
+from aiida.manage.configuration import get_config_option
 
 
 class DeserializationException(AiidaException):
@@ -649,7 +650,7 @@ class ModelModifierV0025:
                     # so in general it is good to recursively clean
                     # all sub-items.
                     self.del_value(key, subspecifier_value=subspecifier_value)
-                cls.objects.bulk_create(to_store)
+                cls.objects.bulk_create(to_store, batch_size=get_config_option('db.batch_size'))
 
             if with_transaction:
                 transaction.savepoint_commit(sid)

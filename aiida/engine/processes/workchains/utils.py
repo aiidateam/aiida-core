@@ -7,8 +7,8 @@ from ..exit_code import ExitCode
 
 __all__ = ('ProcessHandler', 'ProcessHandlerReport', 'register_process_handler')
 
-ProcessHandler = namedtuple('ProcessHandler', 'method priority')
-ProcessHandler.__new__.__defaults__ = (None, 0)
+ProcessHandler = namedtuple('ProcessHandler', 'method priority exit_codes')
+ProcessHandler.__new__.__defaults__ = (None, 0, None)
 """A namedtuple to define a process handler for a :class:`aiida.engine.BaseRestartWorkChain`.
 
 The priority determines in which order the handlers methods are executed, with the higher priority being executed
@@ -18,6 +18,8 @@ to be considered or whether the workchain should be terminated immediately.
 
 :param method: the workchain class method
 :param priority: integer denoting the process handler's priority
+:param exit_codes: single or list of `ExitCode` instances. A handler that defines this should only be called for a given
+    completed process if its exit status is a member of `exit_codes`.
 """
 
 ProcessHandlerReport = namedtuple('ProcessHandlerReport', 'do_break exit_code')
@@ -34,7 +36,7 @@ non-zero exit status can be set. This exit code is what will be set on the work 
 """
 
 
-def register_process_handler(cls, *, priority=None):
+def register_process_handler(cls, *, priority=None, exit_codes=None):
     """Decorator to register a function as a handler for a :class:`~aiida.engine.BaseRestartWorkChain`.
 
     The function expects two arguments, a workchain class and a priortity. The decorator will add the function as a
@@ -60,6 +62,9 @@ def register_process_handler(cls, *, priority=None):
     :param cls: the workchain class to register the process handler with
     :param priority: optional integer that defines the order in which registered handlers will be called during the
         handling of a finished process. Higher priorities will be handled first.
+    :param exit_codes: single or list of `ExitCode` instances. If defined, the handler will return `None` if the exit
+        code set on the `node` does not appear in the `exit_codes`. This is useful to have a handler called only when
+        the process failed with a specific exit code.
     """
     if priority is None:
         priority = 0
@@ -67,13 +72,26 @@ def register_process_handler(cls, *, priority=None):
     if not isinstance(priority, int):
         raise TypeError('the `priority` should be an integer.')
 
+    if exit_codes is not None and not isinstance(exit_codes, list):
+        exit_codes = [exit_codes]
+
+    if exit_codes and any([not isinstance(exit_code, ExitCode) for exit_code in exit_codes]):
+        raise TypeError('`exit_codes` should be an instance of `ExitCode` or list thereof.')
+
     def process_handler_decorator(handler):
         """Decorate a function to dynamically register a handler to a `WorkChain` class."""
 
         @wraps(handler)
         def process_handler(self, node):
             """Wrap handler to add a log to the report if the handler is called and verbosity is turned on."""
-            if hasattr(cls, '_verbose') and cls._verbose:  # pylint: disable=protected-access
+            verbose = hasattr(cls, '_verbose') and cls._verbose  # pylint: disable=protected-access
+
+            if exit_codes and node.exit_status not in [exit_code.status for exit_code in exit_codes]:
+                if verbose:
+                    self.report('skipped {} because of exit code filter'.format(handler.__name__))
+                return None
+
+            if verbose:
                 self.report('({}){}'.format(priority, handler.__name__))
 
             result = handler(self, node)
@@ -93,7 +111,7 @@ def register_process_handler(cls, *, priority=None):
 
             return result
 
-        cls.register_handler(handler.__name__, ProcessHandler(process_handler, priority))
+        cls.register_handler(handler.__name__, ProcessHandler(process_handler, priority, exit_codes))
 
         return process_handler
 

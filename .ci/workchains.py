@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from aiida.common import AttributeDict
-from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_, while_
+from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_, while_, ExitCode
 from aiida.engine import BaseRestartWorkChain, register_process_handler, ProcessHandlerReport
 from aiida.engine.persistence import ObjectLoader
 from aiida.orm import Int, List, Str
@@ -56,13 +56,18 @@ def sanity_check_not_too_big(self, node):
         return ProcessHandlerReport(True, self.exit_codes.ERROR_TOO_BIG)
 
 
-@register_process_handler(ArithmeticAddBaseWorkChain, priority=400)
+@register_process_handler(ArithmeticAddBaseWorkChain, priority=450, exit_codes=ExitCode(1000, 'Unicorn encountered'))
+def a_magic_unicorn_appeared(self, node):
+    """As we all know unicorns do not exist so we should never have to deal with it."""
+    raise RuntimeError('this handler should never even have been called')
+
+
+@register_process_handler(ArithmeticAddBaseWorkChain, priority=400, exit_codes=ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
 def error_negative_sum(self, node):
     """What even is a negative number, how can I have minus three melons?!."""
-    if node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER.status:
-        self.ctx.inputs.x = Int(abs(node.inputs.x.value))
-        self.ctx.inputs.y = Int(abs(node.inputs.y.value))
-        return ProcessHandlerReport(True)
+    self.ctx.inputs.x = Int(abs(node.inputs.x.value))
+    self.ctx.inputs.y = Int(abs(node.inputs.y.value))
+    return ProcessHandlerReport(True)
 
 
 class NestedWorkChain(WorkChain):

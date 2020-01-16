@@ -17,16 +17,17 @@ from concurrent.futures import Future
 
 from click.testing import CliRunner
 from tornado import gen
-import plumpy
 import kiwipy
+import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils import processes as test_processes
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.manage.manager import get_manager
 from aiida.orm import WorkflowNode, WorkFunctionNode, WorkChainNode
+
+from tests.utils import processes as test_processes
 
 
 def get_result_lines(result):

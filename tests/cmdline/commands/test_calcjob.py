@@ -14,11 +14,12 @@ from click.testing import CliRunner
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import import_archive
 from aiida.cmdline.commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
 from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class
+
+from tests.utils.archives import import_archive
 
 
 def get_result_lines(result):

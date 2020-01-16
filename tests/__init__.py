@@ -8,3 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for defining tests that required access to (a temporary) database."""
+from aiida import __version__ as version_core
+
+# The following statement needs to be here for the tests in `tests.plugins.test_utils.py` to work. There, some processes
+# are defined in place, such as a `WorkChain` and a calcfunction and the version of their "plugin" is defined as the
+# version of the top-level module in which they are defined, which is this `tests` module.
+__version__ = version_core

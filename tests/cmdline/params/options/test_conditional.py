@@ -8,13 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the ConditionalOption."""
-
 import unittest
 
 import click
 from click.testing import CliRunner
 
-from .conditional import ConditionalOption
+from aiida.cmdline.params.options.conditional import ConditionalOption
 
 
 class ConditionalOptionTest(unittest.TestCase):

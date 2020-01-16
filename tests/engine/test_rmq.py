@@ -10,14 +10,15 @@
 """Module to test RabbitMQ."""
 import datetime
 
-import plumpy
 from tornado import gen
+import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils import processes as test_processes
 from aiida.engine import ProcessState, submit
 from aiida.manage.manager import get_manager
 from aiida.orm import Int
+
+from tests.utils import processes as test_processes
 
 
 class TestProcessControl(AiidaTestCase):

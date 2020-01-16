@@ -10,9 +10,10 @@
 """Test export file migration from export version 0.7 to 0.8"""
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_json_files
 from aiida.tools.importexport.migration.utils import verify_metadata_version
 from aiida.tools.importexport.migration.v07_to_v08 import (migrate_v7_to_v8, migration_default_link_label)
+
+from tests.utils.archives import get_json_files
 
 
 class TestMigrateV07toV08(AiidaTestCase):

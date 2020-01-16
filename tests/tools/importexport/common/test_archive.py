@@ -11,8 +11,9 @@
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import InvalidOperation
-from aiida.backends.tests.utils.archives import get_archive_file
 from aiida.tools.importexport import Archive, CorruptArchive
+
+from tests.utils.archives import get_archive_file
 
 
 class TestCommonArchive(AiidaTestCase):

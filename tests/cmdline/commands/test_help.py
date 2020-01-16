@@ -13,7 +13,8 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_verdi
-from aiida.backends.tests.utils.configuration import with_temporary_config_instance
+
+from tests.utils.configuration import with_temporary_config_instance
 
 
 class TestVerdiHelpCommand(AiidaTestCase):

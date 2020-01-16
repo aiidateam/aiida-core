@@ -11,9 +11,10 @@
 import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.processes import DummyProcess
 from aiida.engine.persistence import AiiDAPersister
 from aiida.engine import Process, run
+
+from tests.utils.processes import DummyProcess
 
 
 class TestProcess(AiidaTestCase):

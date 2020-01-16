@@ -14,8 +14,9 @@ import os
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.configuration import with_temp_dir
 from aiida.tools.importexport import import_data, export
+
+from tests.utils.configuration import with_temp_dir
 
 
 class TestProvenanceRedesign(AiidaTestCase):
@@ -88,11 +89,11 @@ class TestProvenanceRedesign(AiidaTestCase):
     @with_temp_dir
     def test_node_process_type(self, temp_dir):
         """ Column `process_type` added to `Node` entity DB table """
-        from aiida.backends.tests.utils.processes import AddProcess
         from aiida.engine import run_get_node
+        from tests.utils.processes import AddProcess
         # Node types
         node_type = 'process.workflow.WorkflowNode.'
-        node_process_type = 'aiida.backends.tests.utils.processes.AddProcess'
+        node_process_type = 'tests.utils.processes.AddProcess'
 
         # Run workflow
         inputs = {'a': orm.Int(2), 'b': orm.Int(3)}

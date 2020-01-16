@@ -16,7 +16,7 @@ import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 
-from . import icsd
+from aiida.tools.dbimporters.plugins import icsd
 
 
 def has_mysqldb():

@@ -17,7 +17,7 @@ import copy
 
 from django.db import transaction
 
-from aiida.backends.djsite.db.subtests.migrations.test_migrations_common import TestMigrations
+from .test_migrations_common import TestMigrations
 
 # The following sample dictionary can be used for the conversion test of attributes and extras
 SAMPLE_DICT = {

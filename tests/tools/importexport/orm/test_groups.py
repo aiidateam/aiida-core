@@ -13,8 +13,9 @@ import os
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.configuration import with_temp_dir
 from aiida.tools.importexport import import_data, export
+
+from tests.utils.configuration import with_temp_dir
 
 
 class TestGroups(AiidaTestCase):

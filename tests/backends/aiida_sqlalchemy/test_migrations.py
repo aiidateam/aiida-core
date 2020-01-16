@@ -20,10 +20,10 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.general.migrations import utils
 from aiida.backends.sqlalchemy import manager
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.tests.test_utils import new_database
 from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import Capturing
+from .test_utils import new_database
 
 
 class TestMigrationsSQLA(AiidaTestCase):

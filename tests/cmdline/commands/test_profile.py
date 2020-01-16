@@ -13,8 +13,9 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
-from aiida.backends.tests.utils.configuration import create_mock_profile, with_temporary_config_instance
 from aiida.manage import configuration
+
+from tests.utils.configuration import create_mock_profile, with_temporary_config_instance
 
 
 class TestVerdiProfileSetup(AiidaPostgresTestCase):

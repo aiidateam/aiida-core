@@ -10,7 +10,7 @@
 # pylint: disable=import-error,no-name-in-module,invalid-name
 """Tests for the migrations of legacy process attributes."""
 
-from aiida.backends.djsite.db.subtests.migrations.test_migrations_common import TestMigrations
+from .test_migrations_common import TestMigrations
 
 
 class TestSealUnsealedProcessesMigration(TestMigrations):

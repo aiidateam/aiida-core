@@ -24,7 +24,7 @@ def get_archive_file(archive, filepath=None, external_module=None):
 
     The expected path for these files:
 
-        aiida.backends.tests.fixtures.filepath
+        tests.fixtures.filepath
 
     :param archive: the relative filename of the archive
     :param filepath: str of directories of where to find archive (starting "/"s are irrelevant)

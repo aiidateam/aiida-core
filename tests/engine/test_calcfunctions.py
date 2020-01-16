@@ -40,7 +40,7 @@ def execution_counter_calcfunction(data):
 class TestCalcFunction(AiidaTestCase):
     """Tests for calcfunctions.
 
-    .. note: tests common to all process functions should go in `aiida.backends.tests.work.test_process_function.py`
+    .. note: tests common to all process functions should go in `tests.engine.test_process_function.py`
     """
 
     def setUp(self):

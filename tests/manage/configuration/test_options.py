@@ -10,9 +10,10 @@
 """Tests for the configuration options."""
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.configuration import with_temporary_config_instance
 from aiida.manage.configuration.options import get_option, get_option_names, parse_option, Option, CONFIG_OPTIONS
 from aiida.manage.configuration import get_config, get_config_option
+
+from tests.utils.configuration import with_temporary_config_instance
 
 
 class TestConfigurationOptions(AiidaTestCase):

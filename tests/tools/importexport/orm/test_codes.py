@@ -13,10 +13,11 @@ import os
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.tools.importexport.utils import get_all_node_links
-from aiida.backends.tests.utils.configuration import with_temp_dir
 from aiida.common.links import LinkType
 from aiida.tools.importexport import import_data, export
+
+from tests.utils.configuration import with_temp_dir
+from tests.tools.importexport.utils import get_all_node_links
 
 
 class TestCode(AiidaTestCase):

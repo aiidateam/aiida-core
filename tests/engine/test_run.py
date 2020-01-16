@@ -10,9 +10,10 @@
 """Tests for the `run` functions."""
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.processes import DummyProcess
 from aiida.engine import run, run_get_node
 from aiida.orm import Int, Str, ProcessNode
+
+from tests.utils.processes import DummyProcess
 
 
 class TestRun(AiidaTestCase):

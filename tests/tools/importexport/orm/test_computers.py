@@ -14,8 +14,9 @@ import os
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.configuration import with_temp_dir
 from aiida.tools.importexport import import_data, export
+
+from tests.utils.configuration import with_temp_dir
 
 
 class TestComputer(AiidaTestCase):
@@ -350,7 +351,7 @@ class TestComputer(AiidaTestCase):
 
     def test_import_of_django_sqla_export_file(self):
         """Check that sqla import manages to import the django export file correctly"""
-        from aiida.backends.tests.utils.archives import import_archive
+        from tests.utils.archives import import_archive
 
         for archive in ['django.aiida', 'sqlalchemy.aiida']:
             # Clean the database

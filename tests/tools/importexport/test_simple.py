@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Simple tests for the export and import routines"""
-
 import os
 import shutil
 import tarfile
@@ -18,9 +17,10 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import json
 from aiida.common.exceptions import LicensingException
-from aiida.backends.tests.utils.configuration import with_temp_dir
 from aiida.tools.importexport import import_data, export
 from aiida.tools.importexport.common import exceptions
+
+from tests.utils.configuration import with_temp_dir
 
 
 class TestSimple(AiidaTestCase):

@@ -252,15 +252,14 @@ class TestNnincDbImporter(AiidaTestCase):
 
         from aiida.tools.dbimporters.plugins.nninc import NnincSearchResults
         from aiida.common.exceptions import ParsingError
-        import aiida
 
         upf = 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030'
 
         results = NnincSearchResults([{'id': upf}])
         entry = results.at(0)
 
-        path_root = os.path.split(aiida.__file__)[0]
-        path_pseudos = os.path.join(path_root, 'backends', 'tests', 'fixtures', 'pseudos')
+        path_root = os.path.split(__file__)[0]
+        path_pseudos = os.path.join(path_root, 'fixtures', 'pseudos')
         with open(os.path.join(path_pseudos, '{}.UPF'.format(upf)), 'r', encoding='utf8') as fpntr:
             entry._contents = fpntr.read()  # pylint: disable=protected-access
 

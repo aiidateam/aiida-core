@@ -19,11 +19,12 @@ import numpy as np
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.configuration import with_temp_dir
 from aiida.common.folders import RepositoryFolder
 from aiida.orm.utils.repository import Repository
 from aiida.tools.importexport import import_data, export
 from aiida.tools.importexport.common import exceptions
+
+from tests.utils.configuration import with_temp_dir
 
 
 class TestSpecificImport(AiidaTestCase):
@@ -332,7 +333,7 @@ class TestSpecificImport(AiidaTestCase):
         It is important to check that the source directory or any of its contents are not deleted after import.
         """
         from aiida.common.folders import SandboxFolder
-        from aiida.backends.tests.utils.archives import get_archive_file
+        from tests.utils.archives import get_archive_file
         from aiida.tools.importexport.common.archive import extract_zip
 
         archive = get_archive_file('arithmetic.add.aiida', filepath='calcjob')

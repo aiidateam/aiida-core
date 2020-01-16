@@ -147,7 +147,7 @@ class ProfileManager:
             from aiida.backends.djsite.db.testbase import DjangoTests
             self._test_case = DjangoTests()
         elif backend == BACKEND_SQLA:
-            from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
+            from aiida.backends.sqlalchemy.testbase import SqlAlchemyTests
             from aiida.backends.sqlalchemy import get_scoped_session
 
             self._test_case = SqlAlchemyTests()

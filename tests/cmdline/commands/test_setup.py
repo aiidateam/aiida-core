@@ -16,10 +16,11 @@ import pytest
 from aiida import orm
 from aiida.backends import BACKEND_DJANGO
 from aiida.backends.testbase import AiidaPostgresTestCase
-from aiida.backends.tests.utils.configuration import with_temporary_config_instance
 from aiida.cmdline.commands import cmd_setup
 from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
+
+from tests.utils.configuration import with_temporary_config_instance
 
 
 class TestVerdiSetup(AiidaPostgresTestCase):

@@ -11,9 +11,10 @@
 # pylint: disable=too-many-branches
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_json_files
 from aiida.tools.importexport.migration.utils import verify_metadata_version
 from aiida.tools.importexport.migration.v02_to_v03 import migrate_v2_to_v3
+
+from tests.utils.archives import get_json_files
 
 
 class TestMigrateV02toV03(AiidaTestCase):

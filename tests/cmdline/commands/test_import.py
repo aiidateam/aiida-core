@@ -13,10 +13,11 @@ from click.testing import CliRunner
 from click.exceptions import BadParameter
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_archive_file
 from aiida.cmdline.commands import cmd_import
 from aiida.orm import Group
 from aiida.tools.importexport import EXPORT_VERSION
+
+from tests.utils.archives import get_archive_file
 
 
 class TestVerdiImport(AiidaTestCase):

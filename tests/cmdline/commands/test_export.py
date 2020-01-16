@@ -18,9 +18,10 @@ import zipfile
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_archive_file
 from aiida.cmdline.commands import cmd_export
 from aiida.tools.importexport import EXPORT_VERSION
+
+from tests.utils.archives import get_archive_file
 
 
 def delete_temporary_file(filepath):

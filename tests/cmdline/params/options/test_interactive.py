@@ -14,8 +14,8 @@ import click
 from click.testing import CliRunner
 from click.types import IntParamType
 
-from . import NON_INTERACTIVE
-from .interactive import InteractiveOption
+from aiida.cmdline.params.options import NON_INTERACTIVE
+from aiida.cmdline.params.options.interactive import InteractiveOption
 
 
 class Only42IntParamType(IntParamType):

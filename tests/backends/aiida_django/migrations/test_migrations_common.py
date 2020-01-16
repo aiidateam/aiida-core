@@ -29,7 +29,7 @@ class TestMigrations(AiidaTestCase):
 
     @property
     def app(self):
-        return apps.get_containing_app_config(type(self).__module__).name.split('.')[-1]
+        return apps.get_containing_app_config('aiida.backends.djsite.db').name.split('.')[-1]
 
     migrate_from = None
     migrate_to = None
@@ -96,7 +96,7 @@ class TestMigrations(AiidaTestCase):
 
     def _revert_database_schema(self):
         """Bring back the DB to the correct state."""
-        from ...migrations import LATEST_MIGRATION
+        from aiida.backends.djsite.db.migrations import LATEST_MIGRATION
         from aiida.backends import sqlalchemy as sa
 
         self.migrate_to = [(self.app, LATEST_MIGRATION)]

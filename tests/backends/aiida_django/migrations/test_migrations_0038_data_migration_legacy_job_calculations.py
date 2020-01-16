@@ -12,9 +12,8 @@
 Tests for the migrations of the attributes, extras and settings from EAV to JSONB
 Migration 0037_attributes_extras_settings_json
 """
-
-from aiida.backends.djsite.db.subtests.migrations.test_migrations_common import TestMigrations
 from aiida.backends.general.migrations.calc_state import STATE_MAPPING
+from .test_migrations_common import TestMigrations
 
 
 class TestLegacyJobCalcStateDataMigration(TestMigrations):

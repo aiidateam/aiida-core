@@ -10,7 +10,7 @@ verdi daemon start 4
 verdi -p test_${AIIDA_TEST_BACKEND} run .ci/test_daemon.py
 verdi daemon stop
 
-AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest
+AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest tests
 AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest .ci/pytest
 pytest --noconftest .ci/test_test_manager.py
 pytest --noconftest .ci/test_profile_manager.py

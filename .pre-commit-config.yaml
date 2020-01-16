@@ -70,13 +70,6 @@
         aiida/plugins/entry.py|
         aiida/plugins/info.py|
         aiida/plugins/registry.py|
-        aiida/schedulers/plugins/test_direct.py|
-        aiida/schedulers/plugins/test_lsf.py|
-        aiida/schedulers/plugins/test_pbspro.py|
-        aiida/schedulers/plugins/test_sge.py|
-        aiida/schedulers/plugins/test_torque.py|
-        aiida/sphinxext/tests/workchain_source/conf.py|
-        aiida/sphinxext/tests/workchain_source_broken/conf.py|
         aiida/tools/data/array/kpoints/legacy.py|
         aiida/tools/data/array/kpoints/seekpath.py|
         aiida/tools/data/__init__.py|
@@ -91,12 +84,19 @@
         aiida/tools/dbimporters/plugins/nninc.py|
         aiida/tools/dbimporters/plugins/oqmd.py|
         aiida/tools/dbimporters/plugins/pcod.py|
-        aiida/transports/plugins/test_all_plugins.py|
-        aiida/transports/plugins/test_local.py|
-        aiida/transports/plugins/test_ssh.py|
         docs/.*|
         examples/.*|
         tests/engine/test_work_chain.py|
+        tests/schedulers/test_direct.py|
+        tests/schedulers/test_lsf.py|
+        tests/schedulers/test_pbspro.py|
+        tests/schedulers/test_sge.py|
+        tests/schedulers/test_torque.py|
+        tests/sphinxext/workchain_source/conf.py|
+        tests/sphinxext/workchain_source_broken/conf.py|
+        tests/transports/test_all_plugins.py|
+        tests/transports/test_local.py|
+        tests/transports/test_ssh.py|
         tests/test_dataclasses.py|
         tests/test_nodes.py|
       )$

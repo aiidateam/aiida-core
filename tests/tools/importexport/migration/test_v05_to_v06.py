@@ -11,9 +11,10 @@
 
 from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.archives import get_json_files
 from aiida.tools.importexport.migration.utils import verify_metadata_version
 from aiida.tools.importexport.migration.v05_to_v06 import migrate_v5_to_v6
+
+from tests.utils.archives import get_json_files
 
 
 class TestMigrateV05toV06(AiidaTestCase):

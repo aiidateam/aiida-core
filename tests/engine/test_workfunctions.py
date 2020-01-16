@@ -19,7 +19,7 @@ from aiida.orm import Int, WorkFunctionNode, CalcFunctionNode
 class TestWorkFunction(AiidaTestCase):
     """Tests for workfunctions.
 
-    .. note: tests common to all process functions should go in `aiida.backends.tests.work.test_process_function.py`
+    .. note: tests common to all process functions should go in `tests.engine.test_process_function.py`
     """
 
     def setUp(self):

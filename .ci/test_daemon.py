@@ -14,7 +14,7 @@ import sys
 import time
 
 from aiida.common import exceptions
-from aiida.engine import run, submit
+from aiida.engine import run, submit, ProcessHandler
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.caching import enable_caching
@@ -22,7 +22,8 @@ from aiida.orm import CalcJobNode, load_node, Int, Str, List, Dict, load_code
 from aiida.plugins import CalculationFactory
 from workchains import (
     NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, CalcFunctionRunnerWorkChain,
-    WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain, ArithmeticAddBaseWorkChain
+    WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain, ArithmeticAddBaseWorkChain,
+    process_handler_abort_with_500
 )
 
 CODENAME_ADD = 'add@localhost'
@@ -263,6 +264,7 @@ def create_calculation_process(code, inputval):
 
 def run_base_restart_workchain():
     """Run the `AddArithmeticBaseWorkChain` a few times for various inputs."""
+    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
     code = load_code(CODENAME_ADD)
     inputs = {
         'add': {
@@ -296,6 +298,19 @@ def run_base_restart_workchain():
     assert len(node.called) == 2
     assert 'sum' in results
     assert results['sum'].value == 5
+
+    # Dynamically adding process handlers. We insert one with priority 470 which should therefore be called before the
+    # `error_negative_sum` handler. The `process_handler_abort_with_500` will always just abort the workchain with a
+    # `500` exit status. The `exit_codes` is used to have the handler only trigger when the calculation fails with the
+    # `ERROR_NEGATIVE_NUMBER` exit status.
+    exit_codes = ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER
+    inputs['process_handlers'] = {
+        'process_handler_abort_with_500': ProcessHandler(process_handler_abort_with_500, 470, exit_codes),
+    }
+    results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
+    assert node.is_failed, node.exit_status
+    assert node.exit_status == 500
+    assert len(node.called) == 1
 
     # The silly sanity check aborts the workchain if the sum is bigger than 10
     inputs['add']['y'] = Int(10)

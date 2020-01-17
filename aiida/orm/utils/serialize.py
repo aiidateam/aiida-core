@@ -7,14 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Serialisation functions for AiiDA types
+"""Serialisation functions for AiiDA types.
 
-WARNING: Changing the representation of things here may break people's current saved e.g. things like
-checkpoints and messages in the RabbitMQ queue so do so with caution.  It is fine to add representers
-for new types though.
+.. warning: Changing the representation of things here may break people's current saved e.g. things like checkpoints and
+    messages in the RabbitMQ queue so do so with caution. It is fine to add representers for new types though.
+
 """
 from functools import partial
+import types
 import yaml
 
 from plumpy import Bundle
@@ -29,6 +29,7 @@ _COMPUTER_TAG = '!aiida_computer'
 _ATTRIBUTE_DICT_TAG = '!aiida_attributedict'
 _PLUMPY_ATTRIBUTES_FROZENDICT_TAG = '!plumpy:attributes_frozendict'
 _PLUMPY_BUNDLE = '!plumpy:bundle'
+_FUNCTION_TAG = '!aiida_function'
 
 
 def represent_node(dumper, node):
@@ -159,6 +160,31 @@ def bundle_constructor(loader, bundle):
     return bundle
 
 
+def represent_function(dumper, function):
+    """Represent a function in yaml.
+
+    :param dumper: the dumper to use
+    :type dumper: :class:`yaml.dumper.Dumper`
+    :param mapping: the function to represent
+    :return: the representation
+    """
+    return dumper.represent_scalar(_FUNCTION_TAG, '%s:%s' % (function.__module__, function.__name__))
+
+
+def function_constructor(loader, representation):
+    """Construct a function from the representation.
+
+    :param loader: the yaml loader
+    :type loader: :class:`yaml.loader.Loader`
+    :param mapping: the function representation
+    :return: the reconstructed mapping
+    """
+    from importlib import import_module
+    module_name, function_name = loader.construct_scalar(representation).split(':')
+    module = import_module(module_name)
+    return getattr(module, function_name)
+
+
 class AiiDADumper(yaml.Dumper):
     """Custom AiiDA yaml dumper.
 
@@ -186,6 +212,7 @@ class AiiDALoader(yaml.FullLoader):
     """
 
 
+yaml.add_representer(types.FunctionType, represent_function, Dumper=AiiDADumper)  # pylint: disable=no-member
 yaml.add_representer(Bundle, represent_bundle, Dumper=AiiDADumper)
 yaml.add_representer(AttributeDict, partial(represent_mapping, _ATTRIBUTE_DICT_TAG), Dumper=AiiDADumper)
 yaml.add_constructor(_ATTRIBUTE_DICT_TAG, partial(mapping_constructor, AttributeDict), Loader=AiiDALoader)
@@ -199,6 +226,7 @@ yaml.add_constructor(_PLUMPY_BUNDLE, bundle_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_COMPUTER_TAG, computer_constructor, Loader=AiiDALoader)
+yaml.add_constructor(_FUNCTION_TAG, function_constructor, Loader=AiiDALoader)
 
 
 def serialize(data, encoding=None):

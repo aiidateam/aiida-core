@@ -18,6 +18,11 @@ from aiida.plugins import CalculationFactory
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
 
 
+def process_handler_abort_with_500(self, node):
+    """This is process handler to be added dynamically and will always return `ExitCode(500)` to abort the workchain."""
+    return ProcessHandlerReport(True, ExitCode(500))
+
+
 class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
     """Ridiculous workchain around `AritmethicAddCalculation` with automated sanity checks and error handling."""
 

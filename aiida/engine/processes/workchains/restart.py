@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """Base implementation of `WorkChain` class that implements a simple automated restart mechanism for sub processes."""
+import inspect
+import types
+
 from aiida import orm
 from aiida.common import exceptions, AttributeDict
 from aiida.common.lang import override, classproperty
@@ -7,9 +10,35 @@ from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 
 from .context import ToContext, append_
 from .workchain import WorkChain
-from .utils import ProcessHandlerReport
+from .utils import ProcessHandler, ProcessHandlerReport, register_process_handler
 
 __all__ = ('BaseRestartWorkChain',)
+
+
+def validate_process_handlers(mapping):  # pylint: disable=inconsistent-return-statements
+    """Validate the `inputs.process_handlers` namespace."""
+    from aiida.engine import ExitCode
+
+    for handler in mapping.values():
+
+        if not isinstance(handler.priority, int):
+            return 'priority should be an integer'
+
+        if not isinstance(handler.method, types.FunctionType):  # pylint: disable=no-member
+            return 'handler should be a function'
+
+        if handler.exit_codes is not None and not isinstance(handler.exit_codes, list):
+            exit_codes = [handler.exit_codes]
+        else:
+            exit_codes = None
+
+        if exit_codes and any([not isinstance(exit_code, ExitCode) for exit_code in exit_codes]):
+            return '`exit_codes` should be an instance of `ExitCode` or list thereof.'
+
+        spec = inspect.getfullargspec(handler.method)
+
+        if len(spec[0]) != 2:
+            return 'handler `{}` does not take the required two arguments'.format(handler.method.__name__)
 
 
 class BaseRestartWorkChain(WorkChain):
@@ -67,6 +96,9 @@ class BaseRestartWorkChain(WorkChain):
             help='Maximum number of iterations the work chain will restart the process to finish successfully.')
         spec.input('clean_workdir', valid_type=orm.Bool, default=lambda: orm.Bool(False),
             help='If `True`, work directories of all called calculation jobs will be cleaned at the end of execution.')
+        spec.input_namespace('process_handlers',
+            valid_type=ProcessHandler, validator=validate_process_handlers, dynamic=True,
+            help='Dynamically register process handlers.')
         spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED',
             message='The sub process excepted.')
         spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED',
@@ -237,6 +269,10 @@ class BaseRestartWorkChain(WorkChain):
         if self._process_class is None or not issubclass(self._process_class, Process):
             raise ValueError('no valid Process class defined for `_process_class` attribute')
 
+    @override
+    def on_create(self):
+        """Register any process handlers after the inputs have been parsed and setup in `on_create`."""
+        super().on_create()
         self._load_handlers()
 
     @override
@@ -250,19 +286,28 @@ class BaseRestartWorkChain(WorkChain):
         self._load_handlers()
 
     def _load_handlers(self):
-        """Load the handlers defined through entry points, if any."""
+        """Load the handlers defined through entry points and `process_handlers` input namespace, if any."""
+        if self.inputs.process_handlers:
+            for name, handler in self.inputs.process_handlers.items():
+                self.logger.info("registered '%s' process handler from the `process_handlers` input namespace", name)
+                kwargs = {
+                    'priority': handler.priority,
+                    'exit_codes': handler.exit_codes
+                }
+                register_process_handler(self.__class__, **kwargs)(handler.method)
+
         if self._handler_entry_point is not None:
             for entry_point_name in get_entry_point_names(self._handler_entry_point):
                 try:
-                    load_entry_point(self._handler_entry_point, entry_point_name)
+                    handler = load_entry_point(self._handler_entry_point, entry_point_name)
                     self.logger.info(
-                        "loaded the '%s' entry point for the '%s' handlers category", entry_point_name,
-                        self._handler_entry_point
+                        "registered '%s' process handler from the '%s:%s' entry point", handler.__name__,
+                        self._handler_entry_point, entry_point_name
                     )
                 except exceptions.EntryPointError as exception:
                     self.logger.warning(
-                        "failed to load the '%s' entry point for the '%s' handlers: %s", entry_point_name,
-                        self._handler_entry_point, exception
+                        "failed to register process handler from the '%s:%s' entry point: %s",
+                        self._handler_entry_point, entry_point_name, exception
                     )
 
     @classproperty

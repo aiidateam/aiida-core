@@ -981,14 +981,17 @@ class QueryBuilder:
         if not isinstance(filters, dict):
             raise InputValidationError('Filters have to be passed as dictionaries')
 
+        processed_filters = {}
+
         for key, value in filters.items():
             if isinstance(value, entities.Entity):
                 # Convert to be the id of the joined entity because we can't query
                 # for the object instance directly
-                filters.pop(key)
-                filters['{}_id'.format(key)] = value.id
+                processed_filters['{}_id'.format(key)] = value.id
+            else:
+                processed_filters[key] = value
 
-        return filters
+        return processed_filters
 
     def _add_type_filter(self, tagspec, classifiers, subclassing):
         """

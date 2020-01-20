@@ -91,7 +91,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.5, 3.7]
+        python-version: [3.5, 3.8]
         backend: ['django', 'sqlalchemy']
 
     steps:

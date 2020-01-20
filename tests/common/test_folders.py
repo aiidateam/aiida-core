@@ -22,32 +22,37 @@ def fs_encoding_is_utf8():
     """
     :return: True if the current filesystem encoding is set to UTF-8
     """
-
     return sys.getfilesystemencoding() == 'utf-8'
 
 
 class FoldersTest(unittest.TestCase):
     """Tests for the Folder class."""
 
-    @classmethod
     @unittest.skipUnless(
         fs_encoding_is_utf8(), ('Testing for unicode folders requires UTF-8 to be set for filesystem encoding')
     )
-    def test_unicode(cls):
+    def test_unicode(self):
         """Check that there are no exceptions raised when using unicode folders."""
         tmpsource = tempfile.mkdtemp()
         tmpdest = tempfile.mkdtemp()
+
         with open(os.path.join(tmpsource, 'sąžininga'), 'w', encoding='utf8') as fhandle:
             fhandle.write('test')
         with open(os.path.join(tmpsource, 'žąsis'), 'w', encoding='utf8') as fhandle:
             fhandle.write('test')
+
         folder = Folder(tmpdest)
         folder.insert_path(tmpsource, 'destination')
         folder.insert_path(tmpsource, 'šaltinis')
 
+        self.assertEqual(sorted(folder.get_content_list()), sorted(['destination', 'šaltinis']))
+        self.assertEqual(sorted(folder.get_subfolder('destination').get_content_list()), sorted(['sąžininga', 'žąsis']))
+        self.assertEqual(sorted(folder.get_subfolder('šaltinis').get_content_list()), sorted(['sąžininga', 'žąsis']))
+
         folder = Folder(os.path.join(tmpsource, 'šaltinis'))
-        folder.insert_path(tmpsource, 'destination')
+        folder.insert_path(tmpdest, 'destination')
         folder.insert_path(tmpdest, 'kitas-šaltinis')
+        self.assertEqual(sorted(folder.get_content_list()), sorted(['destination', 'kitas-šaltinis']))
 
     def test_get_abs_path_without_limit(self):
         """

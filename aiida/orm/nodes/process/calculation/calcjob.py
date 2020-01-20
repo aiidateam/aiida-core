@@ -229,7 +229,7 @@ class CalcJobNode(CalculationNode):
         :param state: a string with the state from ``aiida.common.datastructures.CalcJobState``.
         :raise: ValueError if state is invalid
         """
-        if state not in CalcJobState:
+        if not isinstance(state, CalcJobState):
             raise ValueError('{} is not a valid CalcJobState'.format(state))
 
         self.set_attribute(self.CALC_JOB_STATE_KEY, state.value)

@@ -24,7 +24,7 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
-
+import copy
 import os
 
 import numpy as np
@@ -312,7 +312,8 @@ def migration_calc_job_option_attribute_keys(data):
                 'jobresource_params': 'resources',
                 'parser': 'parser_name'
             }
-            for key in content:
+            # Need to loop over a clone because the `content` needs to be modified in place
+            for key in copy.deepcopy(content):
                 if key in key_mapper:
                     content[key_mapper[key]] = content.pop(key)
 

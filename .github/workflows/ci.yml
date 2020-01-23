@@ -185,4 +185,5 @@ jobs:
 
     - name: Check 'verdi profile list' command
       run: |
+        export DOCKERID=`docker ps -qf 'ancestor=aiida-core'`
         docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi profile list'

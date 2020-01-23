@@ -22,29 +22,17 @@ fi
 # Setup AiiDA.
 if [[ $NEED_SETUP_PROFILE == true ]]; then
 
-    # Create postgres database first.
-    psql -h localhost -d template1 -c "CREATE USER $AIIDADB_USER WITH PASSWORD '$AIIDADB_PASS';"
-    psql -h localhost -d template1 -c "CREATE DATABASE $AIIDADB_NAME OWNER $AIIDADB_USER;"
-    psql -h localhost -d template1 -c "GRANT ALL PRIVILEGES ON DATABASE $AIIDADB_NAME to $AIIDADB_USER;"
-
-    # Then create AiiDA profile.
-    verdi setup                                \
-        --profile $PROFILE_NAME                \
+    # Create AiiDA profile if required.
+    verdi quicksetup                           \
         --non-interactive                      \
+        --profile $PROFILE_NAME                \
         --email $USER_EMAIL                    \
         --first-name $USER_FIRST_NAME          \
         --last-name $USER_LAST_NAME            \
         --institution $USER_INSTITUTION        \
-        --db-backend $AIIDADB_BACKEND          \
-        --db-username $AIIDADB_USER            \
-        --db-password $AIIDADB_PASS            \
-        --db-name $AIIDADB_NAME                \
-        --db-host $AIIDADB_HOST                \
-        --db-port $AIIDADB_PORT                \
+        --db-backend $AIIDADB_BACKEND
 
-    verdi profile setdefault $PROFILE_NAME
-
-    # Finally setup and configure local computer.
+    # Ssetup and configure local computer.
     computer_name=localhost
     verdi computer show $computer_name || verdi computer setup \
         --non-interactive                                      \
@@ -61,9 +49,6 @@ if [[ $NEED_SETUP_PROFILE == true ]]; then
     --safe-interval 0.0
 fi
 
-
-# Perform the database migration if needed and start the daemon.
-verdi database migrate --force
-
-# Start AiiDA daemon.
-verdi daemon start
+# Migration is run if at least one profile exists.
+# Daemon is run if the database was successfully migrated.
+( verdi profile show && verdi database migrate --force && verdi daemon start ) || echo "Daemon is not runing."

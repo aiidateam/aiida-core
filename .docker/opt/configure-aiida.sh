@@ -3,7 +3,7 @@
 # This script is executed whenever the docker container is (re)started.
 
 # Debugging.
-#set -x
+set -x
 
 # Environment.
 reentry scan
@@ -12,17 +12,17 @@ export SHELL=/bin/bash
 # Setup AiiDA autocompletion.
 grep _VERDI_COMPLETE .bash_profile &> /dev/null || echo 'eval "$(_VERDI_COMPLETE=source verdi)"' >> /home/$SYSTEM_USER/.bashrc
 
-# Check if profile $PROFILE_NAME needs to be setup an if it exists already
+# Check if user requested to set up AiiDA profile (and if it exists already)
 if [[ $SETUP_DEFAULT_PROFILE == true ]] && ! verdi profile show $PROFILE_NAME &> /dev/null; then
     NEED_SETUP_PROFILE=true;
 else
     NEED_SETUP_PROFILE=false;
 fi
 
-# Setup AiiDA.
+# Setup AiiDA profile if needed.
 if [[ $NEED_SETUP_PROFILE == true ]]; then
 
-    # Create AiiDA profile if required.
+    # Create AiiDA profile.
     verdi quicksetup                           \
         --non-interactive                      \
         --profile $PROFILE_NAME                \
@@ -32,7 +32,7 @@ if [[ $NEED_SETUP_PROFILE == true ]]; then
         --institution $USER_INSTITUTION        \
         --db-backend $AIIDADB_BACKEND
 
-    # Ssetup and configure local computer.
+    # Setup and configure local computer.
     computer_name=localhost
     verdi computer show $computer_name || verdi computer setup \
         --non-interactive                                      \
@@ -46,9 +46,9 @@ if [[ $NEED_SETUP_PROFILE == true ]]; then
         --mpiprocs-per-machine 1 &&                            \
     verdi computer configure local ${computer_name}            \
         --non-interactive                                      \
-    --safe-interval 0.0
+      --safe-interval 0.0
 fi
 
 # Migration is run if at least one profile exists.
 # Daemon is run if the database was successfully migrated.
-( verdi profile show && verdi database migrate --force && verdi daemon start ) || echo "Daemon is not runing."
+( verdi profile show && verdi database migrate --force && verdi daemon start ) || echo "AiiDA daemon is not running."

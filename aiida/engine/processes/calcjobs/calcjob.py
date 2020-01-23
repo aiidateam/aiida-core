@@ -24,7 +24,7 @@ from .tasks import Waiting, UPLOAD_COMMAND
 __all__ = ('CalcJob',)
 
 
-def validate_calc_job(inputs):
+def validate_calc_job(inputs, ctx):
     """Validate the entire set of inputs passed to the `CalcJob` constructor.
 
     Reasons that will cause this validation to raise an `InputValidationError`:
@@ -32,16 +32,19 @@ def validate_calc_job(inputs):
      * No `Computer` has been specified, neither directly in `metadata.computer` nor indirectly through the `Code` input
      * The specified computer is not stored
      * The `Computer` specified in `metadata.computer` is not the same as that of the specified `Code`
-     * The `metadata.options.parser_name` does not correspond to a loadable `Parser` class.
-     * The `metadata.options.resources` are invalid for the `Scheduler` of the specified `Computer`.
 
     :raises `~aiida.common.exceptions.InputValidationError`: if inputs are invalid
     """
-    from aiida.plugins import ParserFactory
+    try:
+        ctx.get_port('code')
+        ctx.get_port('metadata.computer')
+    except ValueError:
+        # If the namespace no longer contains the `code` or `metadata.computer` ports we skip validation
+        return
 
-    code = inputs['code']
+    code = inputs.get('code', None)
     computer_from_code = code.computer
-    computer_from_metadata = inputs['metadata'].get('computer', None)
+    computer_from_metadata = inputs.get('metadata', {}).get('computer', None)
 
     if not computer_from_code and not computer_from_metadata:
         raise exceptions.InputValidationError('no computer has been specified in `metadata.computer` nor via `code`.')
@@ -60,31 +63,32 @@ def validate_calc_job(inputs):
             )
         )
 
-    # At this point at least one computer is defined and if both they are the same so we just pick one
-    computer = computer_from_metadata if computer_from_metadata else computer_from_code
 
-    options = inputs['metadata'].get('options', {})
-    parser_name = options.get('parser_name', None)
-    resources = options.get('resources', None)
+def validate_parser(parser_name, ctx):
+    """Validate the parser.
 
-    if parser_name is not None:
+    :raises InputValidationError: if the parser name does not correspond to a loadable `Parser` class.
+    """
+    from aiida.plugins import ParserFactory
+
+    if parser_name is not plumpy.UNSPECIFIED:
         try:
             ParserFactory(parser_name)
         except exceptions.EntryPointError as exception:
             raise exceptions.InputValidationError('invalid parser specified: {}'.format(exception))
 
-    scheduler = computer.get_scheduler()  # pylint: disable=no-member
-    def_cpus_machine = computer.get_default_mpiprocs_per_machine()  # pylint: disable=no-member
 
-    if def_cpus_machine is not None:
-        resources['default_mpiprocs_per_machine'] = def_cpus_machine
+def validate_resources(resources, ctx):
+    """Validate the resources.
 
-    try:
-        scheduler.create_job_resource(**resources)
-    except (TypeError, ValueError) as exception:
-        raise exceptions.InputValidationError(
-            'invalid resources for the scheduler of the specified computer<{}>: {}'.format(computer, exception)
-        )
+    :raises InputValidationError: if `num_machines` is not specified or is not an integer.
+    """
+    if resources is not plumpy.UNSPECIFIED:
+        if 'num_machines' not in resources:
+            raise exceptions.InputValidationError('the `resources` input has to at least include `num_machines`.')
+
+        if not isinstance(resources['num_machines'], int):
+            raise exceptions.InputValidationError('the input `resources.num_machines` shoud be an integer.')
 
 
 class CalcJob(Process):
@@ -125,7 +129,7 @@ class CalcJob(Process):
             help='Filename to which the content of stdout of the scheduler will be written.')
         spec.input('metadata.options.scheduler_stderr', valid_type=str, default='_scheduler-stderr.txt',
             help='Filename to which the content of stderr of the scheduler will be written.')
-        spec.input('metadata.options.resources', valid_type=dict, required=True,
+        spec.input('metadata.options.resources', valid_type=dict, required=True, validator=validate_resources,
             help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
                  'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
                  'scheduler for more details.')
@@ -161,7 +165,7 @@ class CalcJob(Process):
         spec.input('metadata.options.append_text', valid_type=str, default='',
             help='Set the calculation-specific append text, which is going to be appended in the scheduler-job '
                  'script, just after the code execution',)
-        spec.input('metadata.options.parser_name', valid_type=str, required=False,
+        spec.input('metadata.options.parser_name', valid_type=str, required=False, validator=validate_parser,
             help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
         spec.output('remote_folder', valid_type=orm.RemoteData,

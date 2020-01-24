@@ -25,30 +25,36 @@ if [[ $NEED_SETUP_PROFILE == true ]]; then
     # Create AiiDA profile.
     verdi quicksetup                           \
         --non-interactive                      \
-        --profile $PROFILE_NAME                \
-        --email $USER_EMAIL                    \
-        --first-name $USER_FIRST_NAME          \
-        --last-name $USER_LAST_NAME            \
-        --institution $USER_INSTITUTION        \
-        --db-backend $AIIDADB_BACKEND
+        --profile "${PROFILE_NAME}"            \
+        --email "${USER_EMAIL}"                \
+        --first-name "${USER_FIRST_NAME}"      \
+        --last-name "${USER_LAST_NAME}"        \
+        --institution "${USER_INSTITUTION}"    \
+        --db-backend "${AIIDADB_BACKEND}"
 
     # Setup and configure local computer.
     computer_name=localhost
     verdi computer show $computer_name || verdi computer setup \
         --non-interactive                                      \
-        --label ${computer_name}                               \
-        --description "this computer"                          \
-        --hostname ${computer_name}                            \
+        --label "${computer_name}"                             \
+        --description "${this computer}"                       \
+        --hostname "${computer_name}"                          \
         --transport local                                      \
         --scheduler direct                                     \
         --work-dir /home/aiida/aiida_run/                      \
         --mpirun-command "mpirun -np {tot_num_mpiprocs}"       \
         --mpiprocs-per-machine 1 &&                            \
-    verdi computer configure local ${computer_name}            \
+    verdi computer configure local "${computer_name}"          \
         --non-interactive                                      \
-      --safe-interval 0.0
+        --safe-interval 0.0
 fi
 
-# Migration is run if at least one profile exists.
-# Daemon is run if the database is either up to date or it has been successfully migrated.
-( verdi profile show && verdi database migrate --force && verdi daemon start ) || echo "AiiDA daemon is not running."
+
+# Show the default profile
+verdi profile show || echo "The default profile is not set."
+
+# Migration will run for the default profile.
+verdi database migrate --force || echo "Database migration failed."
+
+# Daemon will start only if the database exists and is migrated to the latest version.
+verdi daemon start || echo "AiiDA daemon is not running."

@@ -12,6 +12,7 @@
 import os
 import subprocess
 import time
+import sys
 
 import click
 from click_spinner import spinner
@@ -86,6 +87,7 @@ def status(all_profiles):
     else:
         profiles = [config.current_profile]
 
+    daemons_running = []
     for profile in profiles:
         client = get_daemon_client(profile.name)
         delete_stale_pid_file(client)
@@ -93,6 +95,10 @@ def status(all_profiles):
         click.secho('{}'.format(profile.name), bold=True)
         result = get_daemon_status(client)
         echo.echo(result)
+        daemons_running.append(client.is_daemon_running)
+
+    if not all(daemons_running):
+        sys.exit(1)
 
 
 @verdi_daemon.command()

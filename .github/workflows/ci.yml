@@ -180,10 +180,9 @@ jobs:
       run: |
         docker build -t aiida-core .
         docker run -d aiida-core
-        export DOCKERID=`docker ps -qf 'ancestor=aiida-core'`
-        while [[ \"healthy\" != `docker inspect --format='{{json .State.Health.Status}}' $DOCKERID` ]]; do sleep 1; done
 
     - name: Check 'verdi profile list' command
       run: |
         export DOCKERID=`docker ps -qf 'ancestor=aiida-core'`
-        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi profile list'
+        docker exec --tty $DOCKERID wait-for-services
+        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdy profile show default'

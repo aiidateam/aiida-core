@@ -50,5 +50,5 @@ if [[ $NEED_SETUP_PROFILE == true ]]; then
 fi
 
 # Migration is run if at least one profile exists.
-# Daemon is run if the database was successfully migrated.
+# Daemon is run if the database is either up to date or it has been successfully migrated.
 ( verdi profile show && verdi database migrate --force && verdi daemon start ) || echo "AiiDA daemon is not running."

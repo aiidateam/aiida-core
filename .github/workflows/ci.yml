@@ -181,7 +181,7 @@ jobs:
         docker build -t aiida-core .
         docker run -d aiida-core
 
-    - name: Check 'verdi profile list' command
+    - name: Check that default AiiDA profile was set up
       run: |
         export DOCKERID=`docker ps -qf 'ancestor=aiida-core'`
         docker exec --tty $DOCKERID wait-for-services

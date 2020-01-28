@@ -37,7 +37,7 @@ if [[ $NEED_SETUP_PROFILE == true ]]; then
     verdi computer show $computer_name || verdi computer setup \
         --non-interactive                                      \
         --label "${computer_name}"                             \
-        --description "${this computer}"                       \
+        --description "this computer"                          \
         --hostname "${computer_name}"                          \
         --transport local                                      \
         --scheduler direct                                     \

@@ -342,7 +342,7 @@ def get_node_namespace():
     from aiida import orm
     from aiida.plugins.entry_point import is_valid_entry_point_string, parse_entry_point_string
 
-    builder = orm.QueryBuilder().append(orm.Node, project=['node_type', 'process_type'])
+    builder = orm.QueryBuilder().append(orm.Node, project=['node_type', 'process_type']).distinct()
     unique_types = {(node_type, process_type if process_type else '') for node_type, process_type in builder.all()}
 
     # First we create a flat list of all "leaf" node types.

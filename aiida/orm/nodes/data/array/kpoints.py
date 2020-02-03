@@ -218,7 +218,10 @@ class KpointsData(ArrayData):
     @property
     def reciprocal_cell(self):
         """
-        Return the reciprocal cell in units of 1/Angstrom from the internally set cell
+        Compute reciprocal cell from the internally set cell.
+
+        :returns: reciprocal cell in units of 1/Angstrom with cell vectors stored as rows.
+            Use e.g. reciprocal_cell[0] to access the first reciprocal cell vector.
         """
         the_cell = numpy.array(self.cell)
         reciprocal_cell = 2. * numpy.pi * numpy.linalg.inv(the_cell).transpose()

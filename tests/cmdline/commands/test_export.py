@@ -263,7 +263,7 @@ class TestVerdiExport(AiidaTestCase):
             options = ['--version', filename_input]
             result = self.cli_runner.invoke(cmd_export.inspect, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertEqual(result.output.strip(), version_number)
+            self.assertEqual(result.output.strip()[-len(version_number):], version_number)
 
     def test_inspect_empty_archive(self):
         """Test the functionality of `verdi export inspect` for an empty archive."""

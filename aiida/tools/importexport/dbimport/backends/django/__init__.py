@@ -607,7 +607,7 @@ def import_data_dj(
             for link in import_links:
                 # Check for dangling Links within the, supposed, self-consistent archive
                 if not silent:
-                    progress_bar.set_description_str(pbar_base_str + 'label={}'.format(link['label']), refres=False)
+                    progress_bar.set_description_str(pbar_base_str + 'label={}'.format(link['label']), refresh=False)
                     progress_bar.update()
 
                 try:

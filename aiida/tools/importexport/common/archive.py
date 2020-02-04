@@ -81,9 +81,9 @@ class Archive:
         if os.path.isdir(self.filepath):
             extract_tree(self.filepath, self.folder)
         elif tarfile.is_tarfile(self.filepath):
-            extract_tar(self.filepath, self.folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+            extract_tar(self.filepath, self.folder, silent=False, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
         elif zipfile.is_zipfile(self.filepath):
-            extract_zip(self.filepath, self.folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+            extract_zip(self.filepath, self.folder, silent=False, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
         else:
             raise CorruptArchive('unrecognized archive format')
 

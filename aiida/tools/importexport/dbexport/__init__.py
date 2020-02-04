@@ -170,7 +170,7 @@ def export_tree(
 
     if not silent:
         # Instantiate progress bar - go through list of "what"
-        pbar_total = len(what) if what else 1
+        pbar_total = len(what) + 2 if what else 2
         progress_bar = tqdm(total=pbar_total, bar_format=BAR_FORMAT, leave=True)
         progress_bar.set_description_str('Collecting chosen entities', refresh=False)
 
@@ -221,14 +221,14 @@ def export_tree(
             given_node_entry_ids.update(pks)
             del node_results, pks, uuids
 
+        if debug or not silent:
+            progress_bar.update()
+
     # We will iteratively explore the AiiDA graph to find further nodes that should also be exported.
     # At the same time, we will create the links_uuid list of dicts to be exported
 
-    # if not silent:
-    #     kwargs['progress_bar'] = progress_bar
-
-    if debug:
-        print('RETRIEVING LINKED NODES AND STORING LINKS...')
+    if debug or not silent:
+        progress_bar.set_description_str('Getting provenance and storing links ...', refresh=True)
 
     traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **kwargs)
     node_ids_to_be_exported = traverse_output['nodes']
@@ -254,6 +254,9 @@ def export_tree(
         'label': link.link_label,
         'type': link.link_type
     } for link in traverse_output['links']]
+
+    if debug or not silent:
+        progress_bar.update()
 
     if not silent:
         # Progress bar initialization - Entities

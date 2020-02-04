@@ -164,10 +164,7 @@ def export_tree(
     entities_starting_set = defaultdict(set)
 
     # The set that contains the nodes ids of the nodes that should be exported
-    given_data_entry_ids = set()
-    given_calculation_entry_ids = set()
-    given_group_entry_ids = set()
-    given_computer_entry_ids = set()
+    given_node_entry_ids = set()
     given_log_entry_ids = set()
     given_comment_entry_ids = set()
 
@@ -175,7 +172,7 @@ def export_tree(
         # Instantiate progress bar - go through list of "what"
         pbar_total = len(what) if what else 1
         progress_bar = tqdm(total=pbar_total, bar_format=BAR_FORMAT, leave=True)
-        progress_bar.set_description_str('Collecting chosen entities')
+        progress_bar.set_description_str('Collecting chosen entities', refresh=False)
 
     # I store a list of the actual dbnodes
     for entry in what:
@@ -189,32 +186,27 @@ def export_tree(
         # entry_entity_name = schema_to_entity_names(entry_class_string)
         if issubclass(entry.__class__, orm.Group):
             entities_starting_set[GROUP_ENTITY_NAME].add(entry.uuid)
-            given_group_entry_ids.add(entry.id)
         elif issubclass(entry.__class__, orm.Node):
             entities_starting_set[NODE_ENTITY_NAME].add(entry.uuid)
-            if issubclass(entry.__class__, orm.Data):
-                given_data_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, orm.ProcessNode):
-                given_calculation_entry_ids.add(entry.pk)
+            given_node_entry_ids.add(entry.pk)
         elif issubclass(entry.__class__, orm.Computer):
             entities_starting_set[COMPUTER_ENTITY_NAME].add(entry.uuid)
-            given_computer_entry_ids.add(entry.pk)
         else:
             raise exceptions.ArchiveExportError(
                 'I was given {} ({}), which is not a Node, Computer, or Group instance'.format(entry, type(entry))
             )
 
     # Add all the nodes contained within the specified groups
-    if given_group_entry_ids:
+    if GROUP_ENTITY_NAME in entities_starting_set:
 
         if debug or not silent:
-            progress_bar.set_description_str('Retrieving Nodes from Groups ...')
+            progress_bar.set_description_str('Retrieving Nodes from Groups ...', refresh=True)
 
         # Use single query instead of given_group.nodes iterator for performance.
         qh_groups = orm.QueryBuilder().append(
             orm.Group, filters={
-                'id': {
-                    'in': given_group_entry_ids
+                'uuid': {
+                    'in': entities_starting_set[GROUP_ENTITY_NAME]
                 }
             }, tag='groups'
         ).queryhelp
@@ -222,104 +214,86 @@ def export_tree(
         # Delete this import once the dbexport.zip module has been renamed
         from builtins import zip  # pylint: disable=redefined-builtin
 
-        data_results = orm.QueryBuilder(**qh_groups).append(orm.Data, project=['id', 'uuid'], with_group='groups').all()
-        if data_results:
-            pks, uuids = map(list, zip(*data_results))
+        node_results = orm.QueryBuilder(**qh_groups).append(orm.Node, project=['id', 'uuid'], with_group='groups').all()
+        if node_results:
+            pks, uuids = map(list, zip(*node_results))
             entities_starting_set[NODE_ENTITY_NAME].update(uuids)
-            given_data_entry_ids.update(pks)
-            del data_results, pks, uuids
+            given_node_entry_ids.update(pks)
+            del node_results, pks, uuids
 
-        calc_results = orm.QueryBuilder(**qh_groups
-                                       ).append(orm.ProcessNode, project=['id', 'uuid'], with_group='groups').all()
-        if calc_results:
-            pks, uuids = map(list, zip(*calc_results))
-            entities_starting_set[NODE_ENTITY_NAME].update(uuids)
-            given_calculation_entry_ids.update(pks)
-            del calc_results, pks, uuids
-
-    for entity, entity_set in entities_starting_set.items():
-        entities_starting_set[entity] = list(entity_set)
-
-    # We will iteratively explore the AiiDA graph to find further nodes that
-    # should also be exported.
+    # We will iteratively explore the AiiDA graph to find further nodes that should also be exported.
     # At the same time, we will create the links_uuid list of dicts to be exported
 
-    if not silent:
-        kwargs['progress_bar'] = progress_bar
+    # if not silent:
+    #     kwargs['progress_bar'] = progress_bar
 
     if debug:
         print('RETRIEVING LINKED NODES AND STORING LINKS...')
 
-    initial_nodes_ids = given_calculation_entry_ids.union(given_data_entry_ids)
-    traverse_output = get_nodes_export(starting_pks=initial_nodes_ids, get_links=True, **kwargs)
-    to_be_exported = traverse_output['nodes']
+    traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **kwargs)
+    node_ids_to_be_exported = traverse_output['nodes']
     graph_traversal_rules = traverse_output['rules']
 
     # I create a utility dictionary for mapping pk to uuid.
-    if traverse_output['nodes']:
+    if node_ids_to_be_exported:
         qbuilder = orm.QueryBuilder().append(
             orm.Node,
             project=('id', 'uuid'),
             filters={'id': {
-                'in': traverse_output['nodes']
+                'in': node_ids_to_be_exported
             }},
         )
-        pk_2_uuid_dict = dict(qbuilder.all())
+        node_pk_2_uuid_mapping = dict(qbuilder.all())
     else:
-        pk_2_uuid_dict = {}
+        node_pk_2_uuid_mapping = {}
 
     # The set of tuples now has to be transformed to a list of dicts
     links_uuid = [{
-        'input': pk_2_uuid_dict[link.source_id],
-        'output': pk_2_uuid_dict[link.target_id],
+        'input': node_pk_2_uuid_mapping[link.source_id],
+        'output': node_pk_2_uuid_mapping[link.target_id],
         'label': link.link_label,
         'type': link.link_type
     } for link in traverse_output['links']]
 
     if not silent:
         # Progress bar initialization - Entities
-        progress_bar.set_description_str('Initializing export of all entities')
+        progress_bar.set_description_str('Initializing export of all entities', refresh=True)
 
     ## Universal "entities" attributed to all types of nodes
     # Logs
-    if include_logs and to_be_exported:
+    if include_logs and node_ids_to_be_exported:
         # Get related log(s) - universal for all nodes
         builder = orm.QueryBuilder()
-        builder.append(orm.Log, filters={'dbnode_id': {'in': to_be_exported}}, project='id')
+        builder.append(orm.Log, filters={'dbnode_id': {'in': node_ids_to_be_exported}}, project='uuid')
         res = set(builder.all(flat=True))
         given_log_entry_ids.update(res)
 
     # Comments
-    if include_comments and to_be_exported:
+    if include_comments and node_ids_to_be_exported:
         # Get related log(s) - universal for all nodes
         builder = orm.QueryBuilder()
-        builder.append(orm.Comment, filters={'dbnode_id': {'in': to_be_exported}}, project='id')
+        builder.append(orm.Comment, filters={'dbnode_id': {'in': node_ids_to_be_exported}}, project='uuid')
         res = set(builder.all(flat=True))
         given_comment_entry_ids.update(res)
 
     # Here we get all the columns that we plan to project per entity that we would like to extract
-    given_entities = list()
-    if given_group_entry_ids:
-        given_entities.append(GROUP_ENTITY_NAME)
-    if to_be_exported:
-        given_entities.append(NODE_ENTITY_NAME)
-    if given_computer_entry_ids:
-        given_entities.append(COMPUTER_ENTITY_NAME)
+    given_entities = set(entities_starting_set.keys())
+    if node_ids_to_be_exported:
+        given_entities.add(NODE_ENTITY_NAME)
     if given_log_entry_ids:
-        given_entities.append(LOG_ENTITY_NAME)
+        given_entities.add(LOG_ENTITY_NAME)
     if given_comment_entry_ids:
-        given_entities.append(COMMENT_ENTITY_NAME)
+        given_entities.add(COMMENT_ENTITY_NAME)
 
     if not silent and given_entities:
         progress_bar.reset(total=len(given_entities))
         pbar_base_str = 'Preparing entities'
-        progress_bar.set_description_str(pbar_base_str)
 
     entries_to_add = dict()
     for given_entity in given_entities:
         if not silent:
+            progress_bar.set_description_str(pbar_base_str + ' - {}s'.format(given_entity), refresh=False)
             progress_bar.update()
-            progress_bar.set_description_str(pbar_base_str + ' - {}s'.format(given_entity))
 
         project_cols = ['id']
         # The following gets a list of fields that we need,
@@ -336,22 +310,20 @@ def export_tree(
             project_cols.append(nprop)
 
         # Getting the ids that correspond to the right entity
-        if given_entity == GROUP_ENTITY_NAME:
-            entry_ids_to_add = given_group_entry_ids
+        entry_uuids_to_add = entities_starting_set.get(given_entity, set())
+        if not entry_uuids_to_add:
+            if given_entity == LOG_ENTITY_NAME:
+                entry_uuids_to_add = given_log_entry_ids
+            elif given_entity == COMMENT_ENTITY_NAME:
+                entry_uuids_to_add = given_comment_entry_ids
         elif given_entity == NODE_ENTITY_NAME:
-            entry_ids_to_add = to_be_exported
-        elif given_entity == COMPUTER_ENTITY_NAME:
-            entry_ids_to_add = given_computer_entry_ids
-        elif given_entity == LOG_ENTITY_NAME:
-            entry_ids_to_add = given_log_entry_ids
-        elif given_entity == COMMENT_ENTITY_NAME:
-            entry_ids_to_add = given_comment_entry_ids
+            entry_uuids_to_add.update({node_pk_2_uuid_mapping[_] for _ in node_ids_to_be_exported})
 
         builder = orm.QueryBuilder()
         builder.append(
             entity_names_to_entities[given_entity],
-            filters={'id': {
-                'in': entry_ids_to_add
+            filters={'uuid': {
+                'in': entry_uuids_to_add
             }},
             project=project_cols,
             tag=given_entity,
@@ -363,7 +335,11 @@ def export_tree(
     # Check the licenses of exported data.
     if allowed_licenses is not None or forbidden_licenses is not None:
         builder = orm.QueryBuilder()
-        builder.append(orm.Node, project=['id', 'attributes.source.license'], filters={'id': {'in': to_be_exported}})
+        builder.append(
+            orm.Node, project=['id', 'attributes.source.license'], filters={'id': {
+                'in': node_ids_to_be_exported
+            }}
+        )
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
         node_licenses = list((a, b) for [a, b] in builder.all() if b is not None)
         check_licenses(node_licenses, allowed_licenses, forbidden_licenses)
@@ -377,13 +353,13 @@ def export_tree(
     if not silent and entries_to_add:
         progress_bar.reset(total=len(entries_to_add))
 
-    export_data = dict()
+    export_data = defaultdict(dict)
     entity_separator = '_'
     for entity_name, partial_query in entries_to_add.items():
 
         if not silent:
+            progress_bar.set_description_str('Exporting {}s'.format(entity_name), refresh=False)
             progress_bar.update()
-            progress_bar.set_description_str('Exporting {}s'.format(entity_name))
 
         foreign_fields = {k: v for k, v in all_fields_info[entity_name].items() if 'requires' in v}
 
@@ -401,16 +377,12 @@ def export_tree(
                 if temp_d[key]['id'] is None:
                     continue
 
-                temp_d2 = {
+                export_data[current_entity].update({
                     temp_d[key]['id']:
                     serialize_dict(
                         temp_d[key], remove_fields=['id'], rename_fields=model_fields_to_file_fields[current_entity]
                     )
-                }
-                try:
-                    export_data[current_entity].update(temp_d2)
-                except KeyError:
-                    export_data[current_entity] = temp_d2
+                })
 
     if not silent:
         # Close progress up until this point in order to print properly
@@ -420,27 +392,21 @@ def export_tree(
     #######################################
     # Manually manage attributes and extras
     #######################################
-    # I use .get because there may be no nodes to export
-    all_nodes_pk = list()
-    if NODE_ENTITY_NAME in export_data:
-        all_nodes_pk.extend(export_data.get(NODE_ENTITY_NAME).keys())
+    # Pointer. Renaming, since Nodes have now technically been retrieved and "stored"
+    all_node_pks = node_ids_to_be_exported
 
-    if sum(len(model_data) for model_data in export_data.values()) == 0:
+    model_data = sum(len(model_data) for model_data in export_data.values())
+    if not model_data:
         if not silent or debug:
             print('Nothing to store, exiting...')
         return
 
     if not silent or debug:
-        print(
-            'Exporting a total of {} database entries, of which {} are Nodes.'.format(
-                sum(len(model_data) for model_data in export_data.values()), len(all_nodes_pk)
-            )
-        )
+        print('Exporting a total of {} database entries, of which {} are Nodes.'.format(model_data, len(all_node_pks)))
 
     if not silent:
         # Instantiate new progress bar
         progress_bar = tqdm(total=1, bar_format=BAR_FORMAT, leave=True)
-        progress_bar.set_description_str('Exporting')
 
     # ATTRIBUTES and EXTRAS
     if debug:
@@ -448,53 +414,49 @@ def export_tree(
     node_attributes = {}
     node_extras = {}
 
-    # A second QueryBuilder query to get the attributes and extras. See if this can be optimized
-    if all_nodes_pk:
-        all_nodes_query = orm.QueryBuilder()
-        all_nodes_query.append(orm.Node, filters={'id': {'in': all_nodes_pk}}, project=['id', 'attributes', 'extras'])
+    # Anoter QueryBuilder query to get the attributes and extras. TODO: See if this can be optimized
+    if all_node_pks:
+        all_nodes_query = orm.QueryBuilder().append(
+            orm.Node, filters={'id': {
+                'in': all_node_pks
+            }}, project=['id', 'attributes', 'extras']
+        )
 
         if not silent:
             progress_bar.reset(total=all_nodes_query.count())
-            progress_bar.set_description_str('Exporting Attributes and Extras')
+            progress_bar.set_description_str('Exporting Attributes and Extras', refresh=False)
 
-        for res_pk, res_attributes, res_extras in all_nodes_query.iterall():
+        for node_pk, attributes, extras in all_nodes_query.iterall():
             if not silent:
                 progress_bar.update()
 
-            node_attributes[str(res_pk)] = res_attributes
-            node_extras[str(res_pk)] = res_extras
+            node_attributes[str(node_pk)] = attributes
+            node_extras[str(node_pk)] = extras
 
     if debug:
         print('STORING GROUP ELEMENTS...')
-    groups_uuid = dict()
+    groups_uuid = defaultdict(list)
     # If a group is in the exported data, we export the group/node correlation
     if GROUP_ENTITY_NAME in export_data:
-        for curr_group in export_data[GROUP_ENTITY_NAME]:
-            group_uuid_qb = orm.QueryBuilder()
-            group_uuid_qb.append(
-                entity_names_to_entities[GROUP_ENTITY_NAME],
-                filters={'id': {
-                    '==': curr_group
-                }},
-                project=['uuid'],
-                tag='group'
-            )
-            group_uuid_qb.append(entity_names_to_entities[NODE_ENTITY_NAME], project=['uuid'], with_group='group')
+        group_uuids_with_node_uuids = orm.QueryBuilder().append(
+            orm.Group, filters={
+                'id': {
+                    'in': export_data[GROUP_ENTITY_NAME]
+                }
+            }, project='uuid', tag='groups'
+        ).append(orm.Node, project='uuid', with_group='groups')
 
+        if not silent:
+            total_node_uuids_for_groups = group_uuids_with_node_uuids.count()
+            if total_node_uuids_for_groups:
+                progress_bar.reset(total=total_node_uuids_for_groups)
+                progress_bar.set_description_str('Exporting Groups ...', refresh=False)
+
+        for group_uuid, node_uuid in group_uuids_with_node_uuids.iterall():
             if not silent:
-                total_group_uuids = group_uuid_qb.count()
-                if total_group_uuids:
-                    progress_bar.reset(total=group_uuid_qb.count())
-                    progress_bar.set_description_str('Exporting Groups - PK={}'.format(curr_group), refresh=False)
+                progress_bar.update()
 
-            for res in group_uuid_qb.iterall():
-                if not silent:
-                    progress_bar.update()
-
-                if str(res[0]) in groups_uuid:
-                    groups_uuid[str(res[0])].append(str(res[1]))
-                else:
-                    groups_uuid[str(res[0])] = [str(res[1])]
+            groups_uuid[group_uuid].append(node_uuid)
 
     #######################################
     # Final check for unsealed ProcessNodes
@@ -507,7 +469,7 @@ def export_tree(
     check_process_nodes_sealed(process_nodes)
 
     ######################################
-    # Now I store
+    # Now collecting and storing
     ######################################
     # subfolder inside the export package
     nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
@@ -528,8 +490,9 @@ def export_tree(
         # fhandle.write(json.dumps(data, cls=UUIDEncoder))
         fhandle.write(json.dumps(data))
 
-    # Add proper signature to unique identifiers & all_fields_info
-    # Ignore if a key doesn't exist in any of the two dictionaries
+    # Turn sets into lists to be able to export them as JSON metadata.
+    for entity, entity_set in entities_starting_set.items():
+        entities_starting_set[entity] = list(entity_set)
 
     metadata = {
         'aiida_version': get_version(),
@@ -551,22 +514,19 @@ def export_tree(
         print('STORING REPOSITORY FILES...')
 
     # If there are no nodes, there are no repository files to store
-    if all_nodes_pk:
-        # Large speed increase by not getting the node itself and looping in memory in python, but just getting the uuid
-        uuid_query = orm.QueryBuilder()
-        uuid_query.append(orm.Node, filters={'id': {'in': all_nodes_pk}}, project='uuid')
+    if all_node_pks:
+        all_node_uuids = {node_pk_2_uuid_mapping[_] for _ in all_node_pks}
 
         if not silent:
-            progress_bar.reset(total=uuid_query.count())
+            progress_bar.reset(total=len(all_node_uuids))
             pbar_base_str = 'Exporting repository - '
 
-        for res in uuid_query.all():
-            uuid = str(res[0])
+        for uuid in all_node_uuids:
             sharded_uuid = export_shard_uuid(uuid)
 
             if not silent:
+                progress_bar.set_description_str(pbar_base_str + 'UUID={}'.format(uuid.split('-')[0]), refresh=False)
                 progress_bar.update()
-                progress_bar.set_description_str(pbar_base_str + 'UUID={}'.format(uuid.split('-')[0]))
 
             # Important to set create=False, otherwise creates twice a subfolder. Maybe this is a bug of insert_path?
             thisnodefolder = nodesubfolder.get_subfolder(sharded_uuid, create=False, reset_limit=True)

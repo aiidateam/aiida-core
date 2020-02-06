@@ -21,5 +21,3 @@ COPY .docker/my_init.d/configure-aiida.sh /etc/my_init.d/40_configure-aiida.sh
 
 # Use phusion baseimage docker init system.
 CMD ["/sbin/my_init"]
-
-#EOF

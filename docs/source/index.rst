@@ -115,6 +115,8 @@ This work is supported by:
 * the `MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598;
 * the `swissuniversities P-5 project "Materials Cloud"`_.
 
+AiiDA is a NumFOCUS Affiliated Project. Visit `numfocus.org`_ for more information.
+
 .. image:: images/MARVEL.png
    :height: 100px
    :target: `MARVEL National Centre for Competency in Research`_
@@ -131,3 +133,4 @@ This work is supported by:
 .. _Swiss National Science Foundation: http://www.snf.ch/en
 .. _MaX European Centre of Excellence: http://www.max-centre.eu
 .. _swissuniversities P-5 project "Materials Cloud": https://www.materialscloud.org/swissuniversities
+.. _numfocus.org: https://www.numfocus.org

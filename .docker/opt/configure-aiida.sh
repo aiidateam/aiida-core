@@ -6,11 +6,26 @@
 set -x
 
 # Environment.
-reentry scan
 export SHELL=/bin/bash
 
+# Activate conda.
+__conda_setup="$('/opt/conda/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/opt/conda/etc/profile.d/conda.sh" ]; then
+        . "/opt/conda/etc/profile.d/conda.sh"
+    else
+        export PATH="/opt/conda/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+
+# Very important to run after conda activation, otherwise AiiDA won't work.
+reentry scan
+
 # Setup AiiDA autocompletion.
-grep _VERDI_COMPLETE .bash_profile &> /dev/null || echo 'eval "$(_VERDI_COMPLETE=source verdi)"' >> /home/$SYSTEM_USER/.bashrc
+grep _VERDI_COMPLETE /home/$SYSTEM_USER/.bashrc &> /dev/null || echo 'eval "$(_VERDI_COMPLETE=source verdi)"' >> /home/$SYSTEM_USER/.bashrc
 
 # Check if user requested to set up AiiDA profile (and if it exists already)
 if [[ $SETUP_DEFAULT_PROFILE == true ]] && ! verdi profile show $PROFILE_NAME &> /dev/null; then

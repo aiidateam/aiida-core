@@ -55,7 +55,7 @@ class RemoteData(Data):
 
     def getfile(self, relpath, destpath):
         """
-        Connects to the remote folder and gets a string with the (full) content of the file.
+        Connects to the remote folder and retrieves the content of a file.
 
         :param relpath:  The relative path of the file on the remote to retrieve.
         :param destpath: The absolute path of the copied/retrieved file on the local machine.

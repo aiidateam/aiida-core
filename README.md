@@ -8,6 +8,7 @@ AiiDA (www.aiida.net) is a workflow manager for computational science with a str
 |Getting help| [![Docs status](https://readthedocs.org/projects/aiida-core/badge)](http://aiida-core.readthedocs.io/) [![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/aiidausers)
 |Build status| [![Build Status](https://travis-ci.org/aiidateam/aiida-core.svg?branch=develop)](https://travis-ci.org/aiidateam/aiida-core) [![Coverage Status](https://coveralls.io/repos/github/aiidateam/aiida-core/badge.svg?branch=develop)](https://coveralls.io/github/aiidateam/aiida-core?branch=develop) |
 |Activity| [![PyPI-downloads](https://img.shields.io/pypi/dm/aiida-core.svg?style=flat)](https://pypistats.org/packages/aiida-core) [![Commit Activity](https://img.shields.io/github/commit-activity/m/aiidateam/aiida-core.svg)](https://github.com/aiidateam/aiida-core/pulse)
+|Community| [![Affiliated with NumFOCUS](https://img.shields.io/badge/NumFOCUS-affiliated%20project-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://numfocus.org/sponsored-projects/affiliated-projects) [![Twitter](https://img.shields.io/twitter/follow/aiidateam.svg?style=social&label=Follow)](https://twitter.com/aiidateam)
 
 
 ## Features

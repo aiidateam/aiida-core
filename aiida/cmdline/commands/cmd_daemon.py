@@ -98,7 +98,7 @@ def status(all_profiles):
         daemons_running.append(client.is_daemon_running)
 
     if not all(daemons_running):
-        sys.exit(1)
+        sys.exit(3)
 
 
 @verdi_daemon.command()

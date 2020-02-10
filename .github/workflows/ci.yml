@@ -187,3 +187,4 @@ jobs:
         docker logs $DOCKERID
         docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi profile show default'
         docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi computer show localhost'
+        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi daemon status'

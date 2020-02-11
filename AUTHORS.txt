@@ -70,6 +70,7 @@ and the following people for code contributions, bug fixes, improvements of the 
 * Daniele Tomerini
 * Nicola Varini
 * Jason Yu
+* Austin Zadoks
 * Bonan Zhu
 * Mario Zic
 

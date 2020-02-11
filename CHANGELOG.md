@@ -1,5 +1,61 @@
 # Changelog
 
+## v1.1.0
+
+**Note Bene:** although this is a minor version release, the support for python 2 is dropped [(#3566)](https://github.com/aiidateam/aiida-core/pull/3566) following the reasoning outlined in the corresponding [AEP001](https://github.com/aiidateam/AEP/tree/master/001_drop_python2).
+Critical bug fixes for python 2 will be supported until July 1 2020 on the `v1.0.*` release series.
+With the addition of python 3.8 [(#3719)](https://github.com/aiidateam/aiida-core/pull/3719), this version is now compatible with all current python versions that are not end-of-life:
+ * 3.5
+ * 3.6
+ * 3.7
+ * 3.8
+
+### Features
+- Add the AiiDA Graph Explorer (AGE) a generic tool for traversing provenance graph [[#3686]](https://github.com/aiidateam/aiida-core/pull/3686)
+- Add the `BaseRestartWorkChain` which makes it easier to write a simple work chain wrapper around another process with automated error handling [[#3748]](https://github.com/aiidateam/aiida-core/pull/3748)
+- Add `provenance_exclude_list` attribute to `CalcInfo` data structure, allowing to prevent calculation input files from being permanently stored in the repository [[#3720]](https://github.com/aiidateam/aiida-core/pull/3720)
+- Add the `verdi node repo dump` command [[#3623]](https://github.com/aiidateam/aiida-core/pull/3623)
+- Add more methods to control cache invalidation of completed process node [[#3637]](https://github.com/aiidateam/aiida-core/pull/3637)
+- Allow documentation to be build without installing and configuring AiiDA [[#3669]](https://github.com/aiidateam/aiida-core/pull/3669)
+- Add option to expand namespaces in sphinx directive [[#3631]](https://github.com/aiidateam/aiida-core/pull/3631)
+
+### Performance
+- Add `node_type` to list of immutable model fields, preventing repeated database hits [[#3619]](https://github.com/aiidateam/aiida-core/pull/3619)
+- Add cache for entry points in an entry point group [[#3622]](https://github.com/aiidateam/aiida-core/pull/3622)
+- Improve the performance when exporting many groups [[#3681]](https://github.com/aiidateam/aiida-core/pull/3681)
+
+### Changes
+- `CalcJob`: move `presubmit` call from `CalcJob.run` to `Waiting.execute` [[#3666]](https://github.com/aiidateam/aiida-core/pull/3666)
+- `CalcJob`: do not pause when exception thrown in the `presubmit` [[#3699]](https://github.com/aiidateam/aiida-core/pull/3699)
+- Move `CalcJob` spec validator to corresponding namespaces [[#3702]](https://github.com/aiidateam/aiida-core/pull/3702)
+- Move getting completed job accounting to `retrieve` transport task [[#3639]](https://github.com/aiidateam/aiida-core/pull/3639)
+- Move `last_job_info` from JSON-serialized string to dictionary [[#3651]](https://github.com/aiidateam/aiida-core/pull/3651)
+- Improve SqlAlchemy session handling for `QueryBuilder` [[#3708]](https://github.com/aiidateam/aiida-core/pull/3708)
+- Use built-in `open` instead of `io.open`, which is possible now that python 2 is no longer supported [[#3615]](https://github.com/aiidateam/aiida-core/pull/3615)
+- Add non-zero exit code for `verdi daemon status` [[#3729]](https://github.com/aiidateam/aiida-core/pull/3729)
+
+### Bug fixes
+- Deal with unreachable daemon worker in `get_daemon_status` [[#3683]](https://github.com/aiidateam/aiida-core/pull/3683)
+- Django backend: limit batch size for `bulk_create` operations [[#3713]](https://github.com/aiidateam/aiida-core/pull/3713)
+- Make sure that datetime conversions ignore `None` [[#3628]](https://github.com/aiidateam/aiida-core/pull/3628)
+- Allow empty `key_filename` in `verdi computer configure ssh` and reuse cooldown time when reconfiguring [[#3636]](https://github.com/aiidateam/aiida-core/pull/3636)
+- Update `pyyaml` to v5.1.2 to prevent arbitrary code execution [[#3675]](https://github.com/aiidateam/aiida-core/pull/3675)
+- `QueryBuilder`: fix validation bug and improve message for `in` operator [[#3682]](https://github.com/aiidateam/aiida-core/pull/3682)
+- Consider 'AIIDA_TEST_PROFILE' in 'get_test_backend_name' [[#3685]](https://github.com/aiidateam/aiida-core/pull/3685)
+- Ensure correct types for `QueryBuilder().dict()` with multiple projections [[#3695]](https://github.com/aiidateam/aiida-core/pull/3695)
+- Make local modules importable when running `verdi run` [[#3700]](https://github.com/aiidateam/aiida-core/pull/3700)
+- Fix bug in `upload_calculation` for `CalcJobs` with local codes [[#3707]](https://github.com/aiidateam/aiida-core/pull/3707)
+- Add imports from `urllib` to dbimporters [[#3704]](https://github.com/aiidateam/aiida-core/pull/3704)
+
+### Developers
+- Moved continuous integration from Travis to Github actions [[#3571]](https://github.com/aiidateam/aiida-core/pull/3571)
+- Replace custom unit test framework for `pytest` and move all tests to `tests` top level directory [[#3653]](https://github.com/aiidateam/aiida-core/pull/3653)[[#3674]](https://github.com/aiidateam/aiida-core/pull/3674)[[#3715]](https://github.com/aiidateam/aiida-core/pull/3715)
+- Cleaned up direct dependencies and relaxed requirements where possible [[#3597]](https://github.com/aiidateam/aiida-core/pull/3597)
+- Set job poll interval to zero in localhost pytest fixture [[#3605]](https://github.com/aiidateam/aiida-core/pull/3605)
+- Make command line deprecation warnings visible with test profile [[#3665]](https://github.com/aiidateam/aiida-core/pull/3665)
+- Add docker image with minimal running AiiDA instance [[#3722]](https://github.com/aiidateam/aiida-core/pull/3722)
+
+
 ## v1.0.1
 
 ### Improvements
@@ -223,8 +279,8 @@ Changes between 1.0 alpha/beta releases are not included - for those see the cha
 - Add license file to MANIFEST [[#2339]](https://github.com/aiidateam/aiida-core/pull/2339)
 - Add instructions when `verdi import` fails [[#2420]](https://github.com/aiidateam/aiida-core/pull/2420)
 
-# v0.12.2
-#
+## v0.12.2
+
 ### Improvements
 - Support the hashing of `uuid.UUID` types by registering a hashing function  [[#1861]](https://github.com/aiidateam/aiida-core/pull/1861)
 - Add documentation on plugin cutter [[#1904]](https://github.com/aiidateam/aiida-core/pull/1904)

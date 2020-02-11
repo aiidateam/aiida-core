@@ -75,9 +75,12 @@ def start(foreground, number):
 
 
 @verdi_daemon.command()
-@click.option('--all', 'all_profiles', is_flag=True, help='Show all daemons.')
+@click.option('--all', 'all_profiles', is_flag=True, help='Show status of all daemons.')
 def status(all_profiles):
-    """Print the status of the current daemon or all daemons."""
+    """Print the status of the current daemon or all daemons.
+
+    Returns exit code 0 if all requested daemons are running, else exit code 3.
+    """
     from aiida.engine.daemon.client import get_daemon_client
 
     config = get_config()

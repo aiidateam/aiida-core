@@ -21,70 +21,6 @@ Option = collections.namedtuple(
     'Option', ['name', 'key', 'valid_type', 'valid_values', 'default', 'description', 'global_only']
 )
 
-
-def get_option(option_name):
-    """Return a configuration option.configuration
-
-    :param option_name: the name of the configuration option
-    :return: the configuration option
-    :raises ValueError: if the configuration option does not exist
-    """
-    try:
-        option = Option(option_name, **CONFIG_OPTIONS[option_name])
-    except KeyError:
-        raise ValueError('the option {} does not exist'.format(option_name))
-    else:
-        return option
-
-
-def get_option_names():
-    """Return a list of available option names.
-
-    :return: list of available option names
-    """
-    return CONFIG_OPTIONS.keys()
-
-
-def parse_option(option_name, option_value):
-    """Parse and validate a value for a configuration option.
-
-    :param option_name: the name of the configuration option
-    :param option_value: the option value
-    :return: a tuple of the option and the parsed value
-    """
-    option = get_option(option_name)
-
-    value = False
-
-    if option.valid_type == 'bool':
-        if isinstance(option_value, str):
-            if option_value.strip().lower() in ['0', 'false', 'f']:
-                value = False
-            elif option_value.strip().lower() in ['1', 'true', 't']:
-                value = True
-            else:
-                raise ValueError('option {} expects a boolean value'.format(option.name))
-        else:
-            value = bool(option_value)
-    elif option.valid_type == 'string':
-        value = str(option_value)
-    elif option.valid_type == 'int':
-        value = int(option_value)
-    elif option.valid_type == 'list_of_str':
-        value = option_value.split()
-    else:
-        raise NotImplementedError('Type string {} not implemented yet'.format(option.valid_type))
-
-    if option.valid_values is not None:
-        if value not in option.valid_values:
-            raise ValueError(
-                '{} is not among the list of accepted values for option {}.\nThe valid values are: '
-                '{}'.format(value, option.name, ', '.join(option.valid_values))
-            )
-
-    return option, value
-
-
 CONFIG_OPTIONS = {
     'runner.poll.interval': {
         'key': 'runner_poll_interval',
@@ -100,6 +36,16 @@ CONFIG_OPTIONS = {
         'valid_values': None,
         'default': DEFAULT_DAEMON_TIMEOUT,
         'description': 'The timeout in seconds for calls to the circus client',
+        'global_only': False,
+    },
+    'db.batch_size': {
+        'key': 'db_batch_size',
+        'valid_type': 'int',
+        'valid_values': None,
+        'default': 100000,
+        'description':
+        'Batch size for bulk CREATE operations in the database. Avoids hitting MaxAllocSize of PostgreSQL'
+        '(1GB) when creating large numbers of database records in one go.',
         'global_only': False,
     },
     'verdi.shell.auto_import': {
@@ -223,3 +169,66 @@ CONFIG_OPTIONS = {
         'global_only': False,
     },
 }
+
+
+def get_option(option_name):
+    """Return a configuration option.configuration
+
+    :param option_name: the name of the configuration option
+    :return: the configuration option
+    :raises ValueError: if the configuration option does not exist
+    """
+    try:
+        option = Option(option_name, **CONFIG_OPTIONS[option_name])
+    except KeyError:
+        raise ValueError('the option {} does not exist'.format(option_name))
+    else:
+        return option
+
+
+def get_option_names():
+    """Return a list of available option names.
+
+    :return: list of available option names
+    """
+    return CONFIG_OPTIONS.keys()
+
+
+def parse_option(option_name, option_value):
+    """Parse and validate a value for a configuration option.
+
+    :param option_name: the name of the configuration option
+    :param option_value: the option value
+    :return: a tuple of the option and the parsed value
+    """
+    option = get_option(option_name)
+
+    value = False
+
+    if option.valid_type == 'bool':
+        if isinstance(option_value, str):
+            if option_value.strip().lower() in ['0', 'false', 'f']:
+                value = False
+            elif option_value.strip().lower() in ['1', 'true', 't']:
+                value = True
+            else:
+                raise ValueError('option {} expects a boolean value'.format(option.name))
+        else:
+            value = bool(option_value)
+    elif option.valid_type == 'string':
+        value = str(option_value)
+    elif option.valid_type == 'int':
+        value = int(option_value)
+    elif option.valid_type == 'list_of_str':
+        value = option_value.split()
+    else:
+        raise NotImplementedError('Type string {} not implemented yet'.format(option.valid_type))
+
+    if option.valid_values is not None:
+        if value not in option.valid_values:
+            raise ValueError(
+                '{} is not among the list of accepted values for option {}.\nThe valid values are: '
+                '{}'.format(value, option.name, ', '.join(option.valid_values))
+            )
+
+    return option, value

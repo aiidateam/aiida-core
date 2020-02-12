@@ -13,4 +13,4 @@ conda install setuptools
 
 conda update -q conda
 conda info -a
-conda env create -f environment.yml -n test-environment python=$PYTHON_VERSION
+conda env create -f environment.yml -n test-environment

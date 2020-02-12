@@ -1,4 +1,4 @@
-# Usage: conda env create -n myenvname -f environment.yml python=3.6
+# Usage: conda env create -n myenvname -f environment.yml
 ---
 name: aiida
 channels:
@@ -6,6 +6,7 @@ channels:
 - conda-forge
 - etetoolkit
 dependencies:
+- python==3.7
 - aldjemy~=0.9.1
 - alembic~=1.2
 - circus~=0.16.1

@@ -291,7 +291,7 @@ def update_environment_yml():
     # python version cannot be overriden from outside environment.yml
     # (even if it is not specified at all in environment.yml)
     # https://github.com/conda/conda/issues/9506
-    conda_requires = ['python==3.6']
+    conda_requires = ['python~=3.7']
     for req in install_requires:
         # skip packages required for specific python versions
         # (environment.yml aims at the latest python version)

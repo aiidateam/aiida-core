@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Plugin aware click command Group."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import click
 
 from aiida.common import exceptions
@@ -24,11 +21,11 @@ class Pluginable(click.Group):
         """Initialize with entry point group."""
         self._exclude_external_plugins = False  # Default behavior is of course to include external plugins
         self._entry_point_group = kwargs.pop('entry_point_group')
-        super(Pluginable, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def list_commands(self, ctx):
         """Add entry point names of available plugins to the command list."""
-        subcommands = super(Pluginable, self).list_commands(ctx)
+        subcommands = super().list_commands(ctx)
 
         if not self._exclude_external_plugins:
             subcommands.extend(get_entry_point_names(self._entry_point_group))
@@ -42,9 +39,9 @@ class Pluginable(click.Group):
             try:
                 command = load_entry_point(self._entry_point_group, name)
             except exceptions.EntryPointError:
-                command = super(Pluginable, self).get_command(ctx, name)
+                command = super().get_command(ctx, name)
         else:
-            command = super(Pluginable, self).get_command(ctx, name)
+            command = super().get_command(ctx, name)
         return command
 
     def set_exclude_external_plugins(self, exclude_external_plugins):

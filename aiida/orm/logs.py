@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for orm logging abstract classes"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.common import timezone
 from aiida.manage.manager import get_manager
@@ -178,7 +175,7 @@ class Log(entities.Entity):
             message=message,
             metadata=metadata
         )
-        super(Log, self).__init__(model)
+        super().__init__(model)
         self.store()  # Logs are immutable and automatically stored
 
     @property

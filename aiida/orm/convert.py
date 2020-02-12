@@ -7,23 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cyclic-import,ungrouped-imports
+# pylint: disable=cyclic-import
 """Module for converting backend entities into frontend, ORM, entities"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from collections import Mapping
-
-try:  # Python3
-    from functools import singledispatch
-except ImportError:  # Python2
-    from singledispatch import singledispatch
-
-try:
-    from collections.abc import Iterator, Sized  # only works on python 3.3+
-except ImportError:
-    from collections import Iterator, Sized
+from collections.abc import Mapping, Iterator, Sized
+from functools import singledispatch
 
 from aiida.orm.implementation import BackendComputer, BackendGroup, BackendUser, BackendAuthInfo, BackendComment, \
     BackendLog, BackendNode
@@ -38,7 +25,38 @@ def get_orm_entity(backend_entity):
 
 @get_orm_entity.register(Mapping)
 def _(backend_entity):
-    return {key: get_orm_entity(value) for key, value in backend_entity.items()}
+    """Convert all values of the given mapping to ORM entities if they are backend ORM instances."""
+    converted = {}
+
+    # Note that we cannot use a simple comprehension because raised `TypeError` should be caught here otherwise only
+    # parts of the mapping will be converted.
+    for key, value in backend_entity.items():
+        try:
+            converted[key] = get_orm_entity(value)
+        except TypeError:
+            converted[key] = value
+
+    return converted
+
+
+@get_orm_entity.register(list)
+@get_orm_entity.register(tuple)
+def _(backend_entity):
+    """Convert all values of the given list or tuple to ORM entities if they are backend ORM instances.
+
+    Note that we do not register on `collections.abc.Sequence` because that will also match strings.
+    """
+    converted = []
+
+    # Note that we cannot use a simple comprehension because raised `TypeError` should be caught here otherwise only
+    # parts of the mapping will be converted.
+    for value in backend_entity:
+        try:
+            converted.append(get_orm_entity(value))
+        except TypeError:
+            converted.append(value)
+
+    return converted
 
 
 @get_orm_entity.register(BackendGroup)
@@ -92,7 +110,7 @@ class ConvertIterator(Iterator, Sized):
     """
 
     def __init__(self, backend_iterator):
-        super(ConvertIterator, self).__init__()
+        super().__init__()
         self._backend_iterator = backend_iterator
         self.generator = self._genfunction()
 
@@ -112,9 +130,5 @@ class ConvertIterator(Iterator, Sized):
 
         return get_orm_entity(self._backend_iterator[value])
 
-    # For future python-3 compatibility
     def __next__(self):
-        return next(self.generator)
-
-    def next(self):
         return next(self.generator)

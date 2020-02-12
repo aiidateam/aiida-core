@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions for AiiDA ORM implementations."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 __all__ = ('get_attr',)
 

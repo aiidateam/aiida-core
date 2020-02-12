@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Manage code objects with lazy loading of the db env"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import enum
 import os
@@ -20,7 +17,7 @@ from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.common.utils import ErrorAccumulator
 
 
-class CodeBuilder(object):
+class CodeBuilder:
     """Build a code with validation of attribute combinations"""
 
     def __init__(self, **kwargs):
@@ -151,7 +148,7 @@ class CodeBuilder(object):
     def __setattr__(self, key, value):
         if not key.startswith('_'):
             self._set_code_attr(key, value)
-        super(CodeBuilder, self).__setattr__(key, value)
+        super().__setattr__(key, value)
 
     def _set_code_attr(self, key, value):
         """Set a code attribute, if it passes validation.
@@ -207,7 +204,7 @@ class CodeBuilder(object):
         """
 
         def __init__(self, msg):
-            super(CodeBuilder.CodeValidationError, self).__init__()
+            super().__init__()
             self.msg = msg
 
         def __str__(self):

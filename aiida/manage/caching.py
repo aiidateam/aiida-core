@@ -8,11 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of caching mechanism and configuration for calculations."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import io
 import os
 import copy
 import warnings
@@ -20,7 +15,6 @@ from enum import Enum
 from contextlib import contextmanager
 
 import yaml
-import six
 from wrapt import decorator
 
 from aiida.common import exceptions
@@ -59,8 +53,8 @@ def _get_config(config_file):
         exceptions.ConfigurationError('no profile has been loaded')
 
     try:
-        with io.open(config_file, 'r', encoding='utf8') as handle:
-            config = yaml.load(handle)[profile.name]
+        with open(config_file, 'r', encoding='utf8') as handle:
+            config = yaml.safe_load(handle)[profile.name]
     except (OSError, IOError, KeyError):
         # No config file, or no config for this profile
         return DEFAULT_CONFIG
@@ -141,7 +135,7 @@ def get_use_cache(node_class=None, identifier=None):
         )
 
     if identifier is not None:
-        type_check(identifier, six.string_types)
+        type_check(identifier, str)
 
         enabled = identifier in _CONFIG[ConfigKeys.ENABLED.value]
         disabled = identifier in _CONFIG[ConfigKeys.DISABLED.value]

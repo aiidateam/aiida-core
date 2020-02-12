@@ -8,12 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import six
-from six.moves import filter
 
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
@@ -28,7 +23,7 @@ class MpodDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, six.string_types) and not isinstance(values, int):
+        if not isinstance(values, str) and not isinstance(values, int):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
         return '{}={}'.format(key, values)
@@ -93,14 +88,14 @@ class MpodDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodSearchResults`.
         """
-        from six.moves import urllib
+        from urllib.request import urlopen
         import re
 
         query_statements = self.query_get(**kwargs)
         results = None
         for query in query_statements:
-            response = urllib.request.urlopen(query).read()
-            this_results = re.findall('/datafiles/(\d+)\.mpod', response)
+            response = urlopen(query).read()
+            this_results = re.findall(r'/datafiles/(\d+)\.mpod', response)
             if results is None:
                 results = this_results
             else:
@@ -137,7 +132,7 @@ class MpodSearchResults(DbSearchResults):
     _base_url = 'http://mpod.cimav.edu.mx/datafiles/'
 
     def __init__(self, results):
-        super(MpodSearchResults, self).__init__(results)
+        super().__init__(results)
         self._return_class = MpodEntry
 
     def __len__(self):
@@ -172,7 +167,7 @@ class MpodEntry(CifEntry):
         :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodEntry`, related
         to the supplied URI.
         """
-        super(MpodEntry, self).__init__(db_name='Material Properties Open Database',
+        super().__init__(db_name='Material Properties Open Database',
                                         db_uri='http://mpod.cimav.edu.mx',
                                         uri=uri,
                                         **kwargs)

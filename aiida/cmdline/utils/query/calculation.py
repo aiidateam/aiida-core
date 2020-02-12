@@ -8,14 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A utility module with a factory of standard QueryBuilder instances for Calculation nodes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from aiida.common.lang import classproperty
 from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper
 
 
-class CalculationQueryBuilder(object):
+class CalculationQueryBuilder:
     """Utility class to construct a QueryBuilder instance for Calculation nodes and project the query set."""
 
     # This tuple serves to mark compound projections that cannot explicitly be projected in the QueryBuilder, but will

@@ -8,22 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Sqla query builder implementation"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import uuid
-import six
-
 # pylint: disable=no-name-in-module, import-error
-from sqlalchemy_utils.types.choice import Choice
 from sqlalchemy import and_, or_, not_
-from sqlalchemy.types import Integer, Float, Boolean, DateTime
+from sqlalchemy.types import Float, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.expression import case, FunctionElement
 from sqlalchemy.ext.compiler import compiles
 
-import aiida.backends.sqlalchemy
 from aiida.common.exceptions import InputValidationError
 from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
@@ -130,9 +121,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         import aiida.backends.sqlalchemy.models.group
         return aiida.backends.sqlalchemy.models.group.table_groups_nodes
 
-    def get_session(self):
-        return aiida.backends.sqlalchemy.get_scoped_session()
-
     def modify_expansions(self, alias, expansions):
         """
         In SQLA, the metadata should be changed to _metadata to be in-line with the database schema
@@ -237,18 +225,21 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             if not isinstance(value, int):
                 raise InputValidationError('You have to give an integer when comparing to a length')
         elif operator in ('like', 'ilike'):
-            if not isinstance(value, six.string_types):
+            if not isinstance(value, str):
                 raise InputValidationError(
                     'Value for operator {} has to be a string (you gave {})'
                     ''.format(operator, value)
                 )
 
         elif operator == 'in':
-            value_type_set = set(type(i) for i in value)
+            try:
+                value_type_set = set(type(i) for i in value)
+            except TypeError:
+                raise TypeError('Value for operator `in` could not be iterated')
+            if not value_type_set:
+                raise InputValidationError('Value for operator `in` is an empty list')
             if len(value_type_set) > 1:
-                raise InputValidationError('{}  contains more than one type'.format(value))
-            elif not value_type_set:
-                raise InputValidationError('{}  contains is an empty list'.format(value))
+                raise InputValidationError('Value for operator `in` contains more than one type: {}'.format(value))
         elif operator in ('and', 'or'):
             expressions_for_this_path = []
             for filter_operation_dict in value:
@@ -303,7 +294,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             elif isinstance(value, dict):
                 type_filter = jsonb_typeof(path_in_json) == 'array'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
-            elif isinstance(value, six.string_types):
+            elif isinstance(value, str):
                 type_filter = jsonb_typeof(path_in_json) == 'string'
                 casted_entity = path_in_json.astext
             elif value is None:
@@ -375,169 +366,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise InputValidationError('Unknown operator {} for filters in JSON field'.format(operator))
         return expr
 
-    def get_projectable_attribute(self, alias, column_name, attrpath, cast=None, **kwargs):
-        """
-        :returns: An attribute store in a JSON field of the give column
-        """
-        entity = self.get_column(column_name, alias)[attrpath]
-        if cast is None:
-            entity = entity
-        elif cast == 'f':
-            entity = entity.astext.cast(Float)
-        elif cast == 'i':
-            entity = entity.astext.cast(Integer)
-        elif cast == 'b':
-            entity = entity.astext.cast(Boolean)
-        elif cast == 't':
-            entity = entity.astext
-        elif cast == 'j':
-            entity = entity.astext.cast(JSONB)
-        elif cast == 'd':
-            entity = entity.astext.cast(DateTime)
-        else:
-            raise InputValidationError('Unkown casting key {}'.format(cast))
-        return entity
-
-    def get_aiida_res(self, key, res):
-        """
-        Some instance returned by ORM (django or SA) need to be converted
-        to AiiDA instances (eg nodes). Choice (sqlalchemy_utils)
-        will return their value
-
-        :param key: The key
-        :param res: the result returned by the query
-
-        :returns: an aiida-compatible instance
-        """
-        if isinstance(res, Choice):
-            returnval = res.value
-        elif isinstance(res, uuid.UUID):
-            returnval = six.text_type(res)
-        else:
-            try:
-                returnval = self._backend.get_backend_entity(res)
-            except TypeError:
-                returnval = res
-
-        return returnval
-
-    def yield_per(self, query, batch_size):
-        """
-        :param count: Number of rows to yield per step
-
-        Yields *count* rows at a time
-
-        :returns: a generator
-        """
-        try:
-            return query.yield_per(batch_size)
-        except Exception:
-            # exception was raised. Rollback the session
-            self.get_session().rollback()
-            raise
-
-    def count(self, query):
-        try:
-            return query.count()
-        except Exception:
-            # exception was raised. Rollback the session
-            self.get_session().rollback()
-            raise
-
-    def first(self, query):
-        """
-        Executes query in the backend asking for one instance.
-
-        :returns: One row of aiida results
-        """
-        try:
-            return query.first()
-        except Exception:
-            # exception was raised. Rollback the session
-            self.get_session().rollback()
-            raise
-
-    def iterall(self, query, batch_size, tag_to_index_dict):
-        if not tag_to_index_dict:
-            raise Exception('Got an empty dictionary: {}'.format(tag_to_index_dict))
-
-        try:
-            results = query.yield_per(batch_size)
-
-            if len(tag_to_index_dict) == 1:
-                # Sqlalchemy, for some strange reason, does not return a list of lsits
-                # if you have provided an ormclass
-
-                if list(tag_to_index_dict.values()) == ['*']:
-                    for rowitem in results:
-                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
-                else:
-                    for rowitem, in results:
-                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
-            elif len(tag_to_index_dict) > 1:
-                for resultrow in results:
-                    yield [
-                        self.get_aiida_res(tag_to_index_dict[colindex], rowitem)
-                        for colindex, rowitem in enumerate(resultrow)
-                    ]
-            else:
-                raise ValueError('Got an empty dictionary')
-        except Exception:
-            self.get_session().rollback()
-            raise
-
-    def iterdict(self, query, batch_size, tag_to_projected_properties_dict, tag_to_alias_map):
-
-        def get_table_name(aliased_class):
-            """ Returns the table name given an Aliased class"""
-            return aliased_class.__tablename__
-
-        nr_items = sum(len(v) for v in tag_to_projected_properties_dict.values())
-
-        if not nr_items:
-            raise ValueError('Got an empty dictionary')
-
-        # Wrapping everything in an atomic transaction:
-        try:
-            results = query.yield_per(batch_size)
-            if nr_items > 1:
-                for this_result in results:
-                    yield {
-                        tag: {
-                            self.get_corresponding_property(
-                                get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
-                            ): self.get_aiida_res(attrkey, this_result[index_in_sql_result])
-                            for attrkey, index_in_sql_result in projected_entities_dict.items()
-                        } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
-                    }
-            elif nr_items == 1:
-                # I this case, sql returns a  list, where each listitem is the result
-                # for one row. Here I am converting it to a list of lists (of length 1)
-                if [v for entityd in tag_to_projected_properties_dict.values() for v in entityd.keys()] == ['*']:
-                    for this_result in results:
-                        yield {
-                            tag: {
-                                self.get_corresponding_property(
-                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
-                                ): self.get_aiida_res(attrkey, this_result)
-                                for attrkey, position in projected_entities_dict.items()
-                            } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
-                        }
-                else:
-                    for this_result, in results:
-                        yield {
-                            tag: {
-                                self.get_corresponding_property(
-                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
-                                ): self.get_aiida_res(attrkey, this_result)
-                                for attrkey, position in projected_entities_dict.items()
-                            } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
-                        }
-            else:
-                raise ValueError('Got an empty dictionary')
-        except Exception:
-            self.get_session().rollback()
-            raise
+    @staticmethod
+    def get_table_name(aliased_class):
+        """ Returns the table name given an Aliased class"""
+        return aliased_class.__tablename__
 
     def get_column_names(self, alias):
         """

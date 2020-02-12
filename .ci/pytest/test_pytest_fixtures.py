@@ -10,9 +10,6 @@
 """
 Test pytest fixtures.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 
 def test_aiida_localhost(aiida_localhost):

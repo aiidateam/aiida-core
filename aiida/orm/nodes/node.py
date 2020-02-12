@@ -9,14 +9,9 @@
 ###########################################################################
 # pylint: disable=too-many-lines
 """Package for node ORM classes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 import copy
 import importlib
 import warnings
-import six
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -41,8 +36,7 @@ __all__ = ('Node',)
 _NO_DEFAULT = tuple()
 
 
-@six.add_metaclass(AbstractNodeMeta)
-class Node(Entity):
+class Node(Entity, metaclass=AbstractNodeMeta):
     """
     Base class for all nodes in AiiDA.
 
@@ -106,7 +100,7 @@ class Node(Entity):
 
     @classmethod
     def from_backend_entity(cls, backend_entity):
-        entity = super(Node, cls).from_backend_entity(backend_entity)
+        entity = super().from_backend_entity(backend_entity)
         return entity
 
     def __init__(self, backend=None, user=None, computer=None, **kwargs):
@@ -124,7 +118,7 @@ class Node(Entity):
         backend_entity = backend.nodes.create(
             node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs
         )
-        super(Node, self).__init__(backend_entity)
+        super().__init__(backend_entity)
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -149,7 +143,7 @@ class Node(Entity):
 
         This needs to be called explicitly in each specific subclass implementation of the init.
         """
-        super(Node, self).initialize()
+        super().initialize()
 
         # A cache of incoming links represented as a list of LinkTriples instances
         self._incoming_cache = list()

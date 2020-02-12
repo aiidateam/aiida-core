@@ -10,20 +10,13 @@
 """
 Base classes for PBSPro and PBS/Torque plugins.
 """
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-import abc
 import logging
-
-import six
 
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import Scheduler, SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import (JobInfo, JobState, MachineInfo, NodeNumberJobResource)
 
 _LOGGER = logging.getLogger(__name__)
-
 
 # This maps PbsPro status letters to our own status list
 
@@ -57,7 +50,7 @@ _MAP_STATUS_PBS_COMMON = {
     'E': JobState.RUNNING,  # If exiting, for our purposes it is still running
     'F': JobState.DONE,
     'H': JobState.QUEUED_HELD,
-    'M': JobState.UNDETERMINED,  # TODO: check if this is ok?
+    'M': JobState.UNDETERMINED,  # TODO: check if this is ok?  # pylint: disable=fixme
     'Q': JobState.QUEUED,
     'R': JobState.RUNNING,
     'S': JobState.SUSPENDED,
@@ -91,12 +84,14 @@ class PbsJobResource(NodeNumberJobResource):
            num_cores_per_machine
         3. If only num_cores_per_machine is passed, use it
         """
-        super(PbsJobResource, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
-        value_error = ('num_cores_per_machine must be equal to '
-                       'num_cores_per_mpiproc * num_mpiprocs_per_machine, '
-                       'and in perticular it should be a multiple of '
-                       'num_cores_per_mpiproc and/or num_mpiprocs_per_machine')
+        value_error = (
+            'num_cores_per_machine must be equal to '
+            'num_cores_per_mpiproc * num_mpiprocs_per_machine, '
+            'and in perticular it should be a multiple of '
+            'num_cores_per_mpiproc and/or num_mpiprocs_per_machine'
+        )
 
         if self.num_cores_per_machine is not None and self.num_cores_per_mpiproc is not None:
             if self.num_cores_per_machine != (self.num_cores_per_mpiproc * self.num_mpiprocs_per_machine):
@@ -112,7 +107,6 @@ class PbsJobResource(NodeNumberJobResource):
             self.num_cores_per_machine = (self.num_cores_per_mpiproc * self.num_mpiprocs_per_machine)
 
 
-@six.add_metaclass(abc.ABCMeta)
 class PbsBaseClass(Scheduler):
     """
     Base class with support for the PBSPro scheduler
@@ -133,8 +127,9 @@ class PbsBaseClass(Scheduler):
 
     _map_status = _MAP_STATUS_PBS_COMMON
 
-    def _get_resource_lines(self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb,
-                            max_wallclock_seconds):
+    def _get_resource_lines(
+        self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb, max_wallclock_seconds
+    ):
         """
         Return a set a list of lines (possibly empty) with the header
         lines relative to:
@@ -168,7 +163,7 @@ class PbsBaseClass(Scheduler):
             command.append('-u{}'.format(user))
 
         if jobs:
-            if isinstance(jobs, six.string_types):
+            if isinstance(jobs, str):
                 command.append('{}'.format(escape_for_bash(jobs)))
             else:
                 try:
@@ -180,14 +175,14 @@ class PbsBaseClass(Scheduler):
         _LOGGER.debug('qstat command: {}'.format(comm))
         return comm
 
-    def _get_detailed_jobinfo_command(self, jobid):
+    def _get_detailed_job_info_command(self, job_id):
         """
         Return the command to run to get the detailed information on a job,
         even after the job has finished.
 
         The output text is just retrieved, and returned for logging purposes.
         """
-        return 'tracejob -v {}'.format(escape_for_bash(jobid))
+        return 'tracejob -v {}'.format(escape_for_bash(job_id))
 
     def _get_submit_script_header(self, job_tmpl):
         """
@@ -199,6 +194,7 @@ class PbsBaseClass(Scheduler):
 
         TODO: truncate the title if too long
         """
+        # pylint: disable=too-many-statements,too-many-branches
         import re
         import string
 
@@ -226,9 +222,11 @@ class PbsBaseClass(Scheduler):
         if email_events:
             lines.append('#PBS -m {}'.format(email_events))
             if not job_tmpl.email:
-                _LOGGER.info('Email triggers provided to PBSPro script for job,'
-                             'but no email field set; will send emails to '
-                             'the job owner as set in the scheduler')
+                _LOGGER.info(
+                    'Email triggers provided to PBSPro script for job,'
+                    'but no email field set; will send emails to '
+                    'the job owner as set in the scheduler'
+                )
         else:
             lines.append('#PBS -m n')
 
@@ -271,8 +269,10 @@ class PbsBaseClass(Scheduler):
             # 'n' : Standard error and standard output are not merged (default)
             lines.append('#PBS -j oe')
             if job_tmpl.sched_error_path:
-                _LOGGER.info('sched_join_files is True, but sched_error_path is set in '
-                             'PBSPro script; ignoring sched_error_path')
+                _LOGGER.info(
+                    'sched_join_files is True, but sched_error_path is set in '
+                    'PBSPro script; ignoring sched_error_path'
+                )
         else:
             if job_tmpl.sched_error_path:
                 lines.append('#PBS -e {}'.format(job_tmpl.sched_error_path))
@@ -287,7 +287,7 @@ class PbsBaseClass(Scheduler):
             # Priority of the job.  Format: host-dependent integer.  Default:
             # zero.   Range:  [-1024,  +1023] inclusive.  Sets job's Priority
             # attribute to priority.
-            # TODO: Here I expect that priority is passed in the correct PBSPro
+            # TODO: Here I expect that priority is passed in the correct PBSPro  # pylint: disable=fixme
             # format. To fix.
             lines.append('#PBS -p {}'.format(job_tmpl.priority))
 
@@ -299,7 +299,8 @@ class PbsBaseClass(Scheduler):
             num_mpiprocs_per_machine=job_tmpl.job_resource.num_mpiprocs_per_machine,
             num_cores_per_machine=job_tmpl.job_resource.num_cores_per_machine,
             max_memory_kb=job_tmpl.max_memory_kb,
-            max_wallclock_seconds=job_tmpl.max_wallclock_seconds)
+            max_wallclock_seconds=job_tmpl.max_wallclock_seconds
+        )
 
         lines += resource_lines
 
@@ -358,7 +359,7 @@ class PbsBaseClass(Scheduler):
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
         """
-
+        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         # I don't raise because if I pass a list of jobs, I get a non-zero status
         # if one of the job is not in the list anymore
 
@@ -375,17 +376,22 @@ class PbsBaseClass(Scheduler):
         # those schedulers configured to leave the job in the output
         # of qstat for some time after job completion.
         filtered_stderr = '\n'.join(
-            l for l in stderr.split('\n') if 'Unknown Job Id' not in l and 'Job has finished' not in l)
+            l for l in stderr.split('\n') if 'Unknown Job Id' not in l and 'Job has finished' not in l
+        )
         if filtered_stderr.strip():
-            _LOGGER.warning('Warning in _parse_joblist_output, non-empty '
-                            "(filtered) stderr='{}'".format(filtered_stderr))
+            _LOGGER.warning(
+                'Warning in _parse_joblist_output, non-empty '
+                "(filtered) stderr='{}'".format(filtered_stderr)
+            )
             if retval != 0:
-                raise SchedulerError('Error during qstat parsing, retval={}\n'
-                                    'stdout={}\nstderr={}'.format(retval, stdout, stderr))
+                raise SchedulerError(
+                    'Error during qstat parsing, retval={}\n'
+                    'stdout={}\nstderr={}'.format(retval, stdout, stderr)
+                )
 
         jobdata_raw = []  # will contain raw data parsed from qstat output
         # Get raw data and split in lines
-        for line_num, line in enumerate(stdout.split('\n'), start=1):
+        for line_num, line in enumerate(stdout.split('\n'), start=1):  # pylint: disable=too-many-nested-blocks
             # Each new job stanza starts with the string 'Job Id:': I
             # create a new item in the jobdata_raw list
             if line.startswith('Job Id:'):
@@ -413,8 +419,10 @@ class PbsBaseClass(Scheduler):
                             # I append to the previous string
                             # stripping the TAB
                             if not jobdata_raw[-1]['lines']:
-                                raise SchedulerParsingError('Line {} is the first line of the job, but it '
-                                                            'starts with a TAB! ({})'.format(line_num, line))
+                                raise SchedulerParsingError(
+                                    'Line {} is the first line of the job, but it '
+                                    'starts with a TAB! ({})'.format(line_num, line)
+                                )
                             jobdata_raw[-1]['lines'][-1] += line[1:]
                         else:
                             # raise SchedulerParsingError(
@@ -442,9 +450,7 @@ class PbsBaseClass(Scheduler):
                 raise SchedulerParsingError('There are lines without equals sign.')
 
             raw_data = {
-                i.split('=', 1)[0].strip().lower(): i.split('=', 1)[1].lstrip()
-                for i in job['lines']
-                if '=' in i
+                i.split('=', 1)[0].strip().lower(): i.split('=', 1)[1].lstrip() for i in job['lines'] if '=' in i
             }
 
             ## I ignore the errors for the time being - this seems to be
@@ -489,8 +495,10 @@ class PbsBaseClass(Scheduler):
                 try:
                     this_job.job_state = self._map_status[job_state_string]
                 except KeyError:
-                    _LOGGER.warning("Unrecognized job_state '{}' for job "
-                                    'id {}'.format(job_state_string, this_job.job_id))
+                    _LOGGER.warning(
+                        "Unrecognized job_state '{}' for job "
+                        'id {}'.format(job_state_string, this_job.job_id)
+                    )
                     this_job.job_state = JobState.UNDETERMINED
             except KeyError:
                 _LOGGER.debug("No 'job_state' field for job id {}".format(this_job.job_id))
@@ -522,21 +530,25 @@ class PbsBaseClass(Scheduler):
                         node.name, data = exec_host.split('/')
                         data = data.split('*')
                         if len(data) == 1:
-                            node.jobIndex = int(data[0])
+                            node.job_index = int(data[0])
                             node.num_cpus = 1
                         elif len(data) == 2:
-                            node.jobIndex = int(data[0])
+                            node.job_index = int(data[0])
                             node.num_cpus = int(data[1])
                         else:
-                            raise ValueError('Wrong number of pieces: {} '
-                                             'instead of 1 or 2 in exec_hosts: '
-                                             '{}'.format(len(data), exec_hosts))
+                            raise ValueError(
+                                'Wrong number of pieces: {} '
+                                'instead of 1 or 2 in exec_hosts: '
+                                '{}'.format(len(data), exec_hosts)
+                            )
                         exec_host_list.append(node)
                     this_job.allocated_machines = exec_host_list
-                except Exception as exc:
-                    _LOGGER.debug('Problem parsing the node names, I '
-                                  'got Exception {} with message {}; '
-                                  'exec_hosts was {}'.format(str(type(exc)), exc, exec_hosts))
+                except Exception as exc:  # pylint: disable=broad-except
+                    _LOGGER.debug(
+                        'Problem parsing the node names, I '
+                        'got Exception {} with message {}; '
+                        'exec_hosts was {}'.format(str(type(exc)), exc, exec_hosts)
+                    )
 
             try:
                 # I strip the part after the @: is this always ok?
@@ -546,39 +558,46 @@ class PbsBaseClass(Scheduler):
 
             try:
                 this_job.num_cpus = int(raw_data['resource_list.ncpus'])
-                # TODO: understand if this is the correct field also for
-                #       multithreaded (OpenMP) jobs.
+                # TODO: understand if this is the correct field also for multithreaded (OpenMP) jobs.  # pylint: disable=fixme
             except KeyError:
                 _LOGGER.debug("No 'resource_list.ncpus' field for job id {}".format(this_job.job_id))
             except ValueError:
-                _LOGGER.warning("'resource_list.ncpus' is not an integer "
-                                '({}) for job id {}!'.format(raw_data['resource_list.ncpus'], this_job.job_id))
+                _LOGGER.warning(
+                    "'resource_list.ncpus' is not an integer "
+                    '({}) for job id {}!'.format(raw_data['resource_list.ncpus'], this_job.job_id)
+                )
 
             try:
                 this_job.num_mpiprocs = int(raw_data['resource_list.mpiprocs'])
-                # TODO: understand if this is the correct field also for
-                #       multithreaded (OpenMP) jobs.
+                # TODO: understand if this is the correct field also for multithreaded (OpenMP) jobs.  # pylint: disable=fixme
             except KeyError:
                 _LOGGER.debug("No 'resource_list.mpiprocs' field for job id {}".format(this_job.job_id))
             except ValueError:
-                _LOGGER.warning("'resource_list.mpiprocs' is not an integer "
-                                '({}) for job id {}!'.format(raw_data['resource_list.mpiprocs'], this_job.job_id))
+                _LOGGER.warning(
+                    "'resource_list.mpiprocs' is not an integer "
+                    '({}) for job id {}!'.format(raw_data['resource_list.mpiprocs'], this_job.job_id)
+                )
 
             try:
                 this_job.num_machines = int(raw_data['resource_list.nodect'])
             except KeyError:
                 _LOGGER.debug("No 'resource_list.nodect' field for job id {}".format(this_job.job_id))
             except ValueError:
-                _LOGGER.warning("'resource_list.nodect' is not an integer "
-                                '({}) for job id {}!'.format(raw_data['resource_list.nodect'], this_job.job_id))
+                _LOGGER.warning(
+                    "'resource_list.nodect' is not an integer "
+                    '({}) for job id {}!'.format(raw_data['resource_list.nodect'], this_job.job_id)
+                )
 
             # Double check of redundant info
             if (this_job.allocated_machines is not None and this_job.num_machines is not None):
                 if len(set(machine.name for machine in this_job.allocated_machines)) != this_job.num_machines:
-                    _LOGGER.error('The length of the list of allocated '
-                                  'nodes ({}) is different from the '
-                                  'expected number of nodes ({})!'.format(
-                                      len(this_job.allocated_machines), this_job.num_machines))
+                    _LOGGER.error(
+                        'The length of the list of allocated '
+                        'nodes ({}) is different from the '
+                        'expected number of nodes ({})!'.format(
+                            len(this_job.allocated_machines), this_job.num_machines
+                        )
+                    )
 
             try:
                 this_job.queue_name = raw_data['queue']
@@ -586,7 +605,7 @@ class PbsBaseClass(Scheduler):
                 _LOGGER.debug("No 'queue' field for job id {}".format(this_job.job_id))
 
             try:
-                this_job.RequestedWallclockTime = (self._convert_time(raw_data['resource_list.walltime']))
+                this_job.requested_wallclock_time = (self._convert_time(raw_data['resource_list.walltime']))  # pylint: disable=invalid-name
             except KeyError:
                 _LOGGER.debug("No 'resource_list.walltime' field for job id {}".format(this_job.job_id))
             except ValueError:
@@ -632,8 +651,7 @@ class PbsBaseClass(Scheduler):
             except ValueError:
                 _LOGGER.warning("Error parsing 'stime' for job id {}".format(this_job.job_id))
 
-            # TODO: see if we want to set also finish_time for finished jobs,
-            # if there are any
+            # TODO: see if we want to set also finish_time for finished jobs, if there are any  # pylint: disable=fixme
 
             # Everything goes here anyway for debugging purposes
             this_job.raw_data = raw_data
@@ -709,10 +727,14 @@ class PbsBaseClass(Scheduler):
         Return a string with the JobID.
         """
         if retval != 0:
-            _LOGGER.error('Error in _parse_submit_output: retval={}; '
-                          'stdout={}; stderr={}'.format(retval, stdout, stderr))
-            raise SchedulerError('Error during submission, retval={}\n'
-                                 'stdout={}\nstderr={}'.format(retval, stdout, stderr))
+            _LOGGER.error(
+                'Error in _parse_submit_output: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
+            raise SchedulerError(
+                'Error during submission, retval={}\n'
+                'stdout={}\nstderr={}'.format(retval, stdout, stderr)
+            )
 
         if stderr.strip():
             _LOGGER.warning('in _parse_submit_output there was some text in stderr: {}'.format(stderr))
@@ -738,8 +760,10 @@ class PbsBaseClass(Scheduler):
         :return: True if everything seems ok, False otherwise.
         """
         if retval != 0:
-            _LOGGER.error('Error in _parse_kill_output: retval={}; '
-                          'stdout={}; stderr={}'.format(retval, stdout, stderr))
+            _LOGGER.error(
+                'Error in _parse_kill_output: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
             return False
 
         if stderr.strip():

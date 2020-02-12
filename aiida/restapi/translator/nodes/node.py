@@ -8,16 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Translator for node"""
-
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-from aiida.common.exceptions import InputValidationError, ValidationError, \
-    InvalidOperation
-from aiida.restapi.translator.base import BaseTranslator
-from aiida.manage.manager import get_manager
 from aiida import orm
+from aiida.common.exceptions import InputValidationError, ValidationError, InvalidOperation
+from aiida.manage.manager import get_manager
+from aiida.restapi.translator.base import BaseTranslator
 
 
 class NodeTranslator(BaseTranslator):
@@ -55,13 +49,13 @@ class NodeTranslator(BaseTranslator):
         """
 
         # basic initialization
-        super(NodeTranslator, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self._default_projections = ['id', 'label', 'node_type', 'process_type', 'ctime', 'mtime', 'uuid', 'user_id']
 
         # Inspect the subclasses of NodeTranslator, to avoid hard-coding
         # (should resemble the following tree)
-        """
+        r"""
                                               /- CodeTranslator
                                              /
                                             /- KpointsTranslator
@@ -207,7 +201,7 @@ class NodeTranslator(BaseTranslator):
             full_type_filter = get_full_type_filters(full_type)
             filters.update(full_type_filter)
 
-        super(NodeTranslator, self).set_query(
+        super().set_query(
             filters=filters,
             orders=orders,
             projections=projections,
@@ -553,7 +547,7 @@ class NodeTranslator(BaseTranslator):
         if self._content_type is not None:
             return self._get_content()
 
-        return super(NodeTranslator, self).get_results()
+        return super().get_results()
 
     def get_formatted_result(self, label):
         """
@@ -565,7 +559,7 @@ class NodeTranslator(BaseTranslator):
         :return: a list of the query results
         """
 
-        results = super(NodeTranslator, self).get_formatted_result(label)
+        results = super().get_formatted_result(label)
 
         if self._result_type == 'with_outgoing':
             result_name = 'incoming'

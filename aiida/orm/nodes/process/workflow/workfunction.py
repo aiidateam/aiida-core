@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for workflow function processes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.common.links import LinkType
 from aiida.orm.utils.mixins import FunctionCalculationMixin
@@ -39,7 +36,7 @@ class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        super(WorkFunctionNode, self).validate_outgoing(target, link_type, link_label)
+        super().validate_outgoing(target, link_type, link_label)
         if link_type is LinkType.RETURN and not target.is_stored:
             raise ValueError(
                 'trying to return an unstored Data node from a @workfunction, however, @workfunctions cannot create '

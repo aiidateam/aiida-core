@@ -8,17 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a list."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from six import PY2
+from collections.abc import MutableSequence
 
-if PY2:
-    from collections import MutableSequence  # pylint: disable=no-name-in-module
-else:
-    from collections.abc import MutableSequence  # pylint: disable=no-name-in-module, import-error
-
-from .data import Data  # pylint: disable=wrong-import-position
+from .data import Data
 
 __all__ = ('List',)
 
@@ -30,7 +22,7 @@ class List(Data, MutableSequence):
 
     def __init__(self, **kwargs):
         data = kwargs.pop('list', list())
-        super(List, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.set_list(data)
 
     def __getitem__(self, item):
@@ -52,7 +44,7 @@ class List(Data, MutableSequence):
         return len(self.get_list())
 
     def __str__(self):
-        return super(List, self).__str__() + ' value: {}'.format(self.get_list())
+        return super().__str__() + ' value: {}'.format(self.get_list())
 
     def __eq__(self, other):
         try:

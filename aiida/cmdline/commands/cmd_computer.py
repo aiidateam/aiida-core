@@ -9,13 +9,8 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` command."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import io
 from functools import partial
-from six.moves import zip
 
 import click
 
@@ -166,7 +161,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
 
     try:
         transport.getfile(remote_file_path, destfile)
-        with io.open(destfile, encoding='utf8') as dfile:
+        with open(destfile, encoding='utf8') as dfile:
             read_string = dfile.read()
 
         if read_string != file_content:

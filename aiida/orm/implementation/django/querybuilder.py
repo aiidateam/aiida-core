@@ -8,24 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django query builder"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-import uuid
-import six
-
 from aldjemy import core
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module, import-error
-from sqlalchemy_utils.types.choice import Choice
 from sqlalchemy import and_, or_, not_, case
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.expression import FunctionElement
-from sqlalchemy.types import Integer, Float, Boolean, DateTime
+from sqlalchemy.types import Float, Boolean
 
-import aiida.backends.djsite.db.models as djmodels
+from aiida.backends.djsite.db import models
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
 
@@ -79,35 +71,35 @@ class DjangoQueryBuilder(BackendQueryBuilder):
 
     @property
     def Node(self):
-        return djmodels.DbNode.sa
+        return models.DbNode.sa
 
     @property
     def Link(self):
-        return djmodels.DbLink.sa
+        return models.DbLink.sa
 
     @property
     def Computer(self):
-        return djmodels.DbComputer.sa
+        return models.DbComputer.sa
 
     @property
     def User(self):
-        return djmodels.DbUser.sa
+        return models.DbUser.sa
 
     @property
     def Group(self):
-        return djmodels.DbGroup.sa
+        return models.DbGroup.sa
 
     @property
     def AuthInfo(self):
-        return djmodels.DbAuthInfo.sa
+        return models.DbAuthInfo.sa
 
     @property
     def Comment(self):
-        return djmodels.DbComment.sa
+        return models.DbComment.sa
 
     @property
     def Log(self):
-        return djmodels.DbLog.sa
+        return models.DbLog.sa
 
     @property
     def table_groups_nodes(self):
@@ -204,17 +196,20 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             if not isinstance(value, int):
                 raise InputValidationError('You have to give an integer when comparing to a length')
         elif operator in ('like', 'ilike'):
-            if not isinstance(value, six.string_types):
+            if not isinstance(value, str):
                 raise InputValidationError(
                     'Value for operator {} has to be a string (you gave {})'
                     ''.format(operator, value)
                 )
         elif operator == 'in':
-            value_type_set = set(type(i) for i in value)
+            try:
+                value_type_set = set(type(i) for i in value)
+            except TypeError:
+                raise TypeError('Value for operator `in` could not be iterated')
+            if not value_type_set:
+                raise InputValidationError('Value for operator `in` is an empty list')
             if len(value_type_set) > 1:
-                raise InputValidationError('{}  contains more than one type'.format(value))
-            elif not value_type_set:
-                raise InputValidationError('{}  contains is an empty list'.format(value))
+                raise InputValidationError('Value for operator `in` contains more than one type: {}'.format(value))
         elif operator in ('and', 'or'):
             expressions_for_this_path = []
             for filter_operation_dict in value:
@@ -250,19 +245,6 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             return not_(expr)
         return expr
 
-    @staticmethod
-    def get_session():
-        from aiida.manage.configuration import get_config
-        from aiida.backends.sqlalchemy import reset_session
-        from aiida.backends.sqlalchemy import get_scoped_session
-
-        if get_scoped_session() is None:
-            config = get_config()
-            profile = config.current_profile
-            reset_session(profile)
-
-        return get_scoped_session()
-
     def modify_expansions(self, alias, expansions):
         """
         For django, there are no additional expansions for now, so
@@ -288,7 +270,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             elif isinstance(value, dict):
                 type_filter = jsonb_typeof(path_in_json) == 'array'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
-            elif isinstance(value, six.string_types):
+            elif isinstance(value, str):
                 type_filter = jsonb_typeof(path_in_json) == 'string'
                 casted_entity = path_in_json.astext
             elif value is None:
@@ -360,154 +342,10 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             raise InputValidationError('Unknown operator {} for filters in JSON field'.format(operator))
         return expr
 
-    def get_projectable_attribute(self, alias, column_name, attrpath, cast=None, **kwargs):  # pylint: disable=redefined-outer-name
-        """
-        :returns: An attribute store in a JSON field of the give column
-        """
-        entity = self.get_column(column_name, alias)[attrpath]
-        if cast is None:
-            entity = entity
-        elif cast == 'f':
-            entity = entity.astext.cast(Float)
-        elif cast == 'i':
-            entity = entity.astext.cast(Integer)
-        elif cast == 'b':
-            entity = entity.astext.cast(Boolean)
-        elif cast == 't':
-            entity = entity.astext
-        elif cast == 'j':
-            entity = entity.astext.cast(JSONB)
-        elif cast == 'd':
-            entity = entity.astext.cast(DateTime)
-        else:
-            raise InputValidationError('Unkown casting key {}'.format(cast))
-        return entity
-
-    def get_aiida_res(self, key, res):
-        """
-        Some instance returned by ORM (django or SA) need to be converted
-        to Aiida instances (eg nodes). Choice (sqlalchemy_utils)
-        will return their value
-
-        :param key: The key
-        :param res: the result returned by the query
-
-        :returns: an aiida-compatible instance
-        """
-        if isinstance(res, Choice):
-            result = res.value
-        elif isinstance(res, uuid.UUID):
-            result = six.text_type(res)
-        else:
-            try:
-                result = self._backend.get_backend_entity(res)
-            except TypeError:
-                result = res
-
-        return result
-
-    def yield_per(self, query, batch_size):
-        """
-        :param count: Number of rows to yield per step
-
-        Yields *count* rows at a time
-
-        :returns: a generator
-        """
-        from django.db import transaction
-        with transaction.atomic():
-            return query.yield_per(batch_size)
-
-    def count(self, query):
-
-        from django.db import transaction
-        with transaction.atomic():
-            return query.count()
-
-    def first(self, query):
-        """
-        Executes query in the backend asking for one instance.
-
-        :returns: One row of aiida results
-        """
-        from django.db import transaction
-        with transaction.atomic():
-            return query.first()
-
-    def iterall(self, query, batch_size, tag_to_index_dict):
-        from django.db import transaction
-        if not tag_to_index_dict:
-            raise ValueError('Got an empty dictionary: {}'.format(tag_to_index_dict))
-
-        with transaction.atomic():
-            results = query.yield_per(batch_size)
-
-            if len(tag_to_index_dict) == 1:
-                # Sqlalchemy, for some strange reason, does not return a list of lists
-                # if you have provided an ormclass
-
-                if list(tag_to_index_dict.values()) == ['*']:
-                    for rowitem in results:
-                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
-                else:
-                    for rowitem, in results:
-                        yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
-            elif len(tag_to_index_dict) > 1:
-                for resultrow in results:
-                    yield [
-                        self.get_aiida_res(tag_to_index_dict[colindex], rowitem)
-                        for colindex, rowitem in enumerate(resultrow)
-                    ]
-
-    def iterdict(self, query, batch_size, tag_to_projected_properties_dict, tag_to_alias_map):
-        from django.db import transaction
-
-        def get_table_name(aliased_class):
-            """ Returns the table name given an Aliased class based on Aldjemy"""
-            return aliased_class._aliased_insp._target.table.name  # pylint: disable=protected-access
-
-        nr_items = sum(len(v) for v in tag_to_projected_properties_dict.values())
-
-        if not nr_items:
-            raise ValueError('Got an empty dictionary')
-
-        # Wrapping everything in an atomic transaction:
-        with transaction.atomic():
-            results = query.yield_per(batch_size)
-            # Two cases: If one column was asked, the database returns a matrix of rows * columns:
-            if nr_items > 1:
-                for this_result in results:
-                    yield {
-                        tag: {
-                            self.get_corresponding_property(
-                                get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
-                            ): self.get_aiida_res(attrkey, this_result[index_in_sql_result])
-                            for attrkey, index_in_sql_result in projected_entities_dict.items()
-                        } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
-                    }
-            elif nr_items == 1:
-                # I this case, sql returns a  list, where each listitem is the result
-                # for one row. Here I am converting it to a list of lists (of length 1)
-                if [v for entityd in tag_to_projected_properties_dict.values() for v in entityd.keys()] == ['*']:
-                    for this_result in results:
-                        yield {
-                            tag: {
-                                self.get_corresponding_property(
-                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
-                                ): self.get_aiida_res(attrkey, this_result)
-                                for attrkey, position in projected_entities_dict.items()
-                            } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
-                        }
-                else:
-                    for this_result, in results:
-                        yield {
-                            tag: {
-                                self.get_corresponding_property(
-                                    get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
-                                ): self.get_aiida_res(attrkey, this_result)
-                                for attrkey, position in projected_entities_dict.items()
-                            } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
-                        }
+    @staticmethod
+    def get_table_name(aliased_class):
+        """Returns the table name given an Aliased class based on Aldjemy"""
+        return aliased_class._aliased_insp._target.table.name  # pylint: disable=protected-access
 
     def get_column_names(self, alias):
         """

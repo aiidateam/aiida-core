@@ -7,13 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import io
 import os
-import six
 
 from aiida.common.exceptions import ValidationError, EntryPointError, InputValidationError
 
@@ -42,7 +37,7 @@ class Code(Data):
     """
 
     def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
-        super(Code, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if remote_computer_exec and local_executable:
             raise ValueError('cannot set `remote_computer_exec` and `local_executable` at the same time')
@@ -91,12 +86,12 @@ class Code(Data):
              to be able to call this function.
         """
 
-        if isinstance(files, six.string_types):
+        if isinstance(files, str):
             files = [files]
 
         for filename in files:
             if os.path.isfile(filename):
-                with io.open(filename, 'rb') as handle:
+                with open(filename, 'rb') as handle:
                     self.put_object_from_filelike(handle, os.path.split(filename)[1], 'wb', encoding=None)
 
     def __str__(self):
@@ -273,7 +268,7 @@ class Code(Data):
             return [c.pk for c in valid_codes]
 
     def _validate(self):
-        super(Code, self)._validate()
+        super()._validate()
 
         if self.is_local() is None:
             raise ValidationError('You did not set whether the code is local or remote')
@@ -298,14 +293,14 @@ class Code(Data):
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
         """
-        self.set_attribute('prepend_text', six.text_type(code))
+        self.set_attribute('prepend_text', str(code))
 
     def get_prepend_text(self):
         """
         Return the code that will be put in the scheduler script before the
         execution, or an empty string if no pre-exec code was defined.
         """
-        return self.get_attribute('prepend_text', u'')
+        return self.get_attribute('prepend_text', '')
 
     def set_input_plugin_name(self, input_plugin):
         """
@@ -315,7 +310,7 @@ class Code(Data):
         if input_plugin is None:
             self.set_attribute('input_plugin', None)
         else:
-            self.set_attribute('input_plugin', six.text_type(input_plugin))
+            self.set_attribute('input_plugin', str(input_plugin))
 
     def get_input_plugin_name(self):
         """
@@ -329,13 +324,13 @@ class Code(Data):
         Pass a string of code that will be put in the scheduler script after the
         execution of the code.
         """
-        self.set_attribute('append_text', six.text_type(code))
+        self.set_attribute('append_text', str(code))
 
     def get_append_text(self):
         """
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
-        return self.get_attribute('append_text', u'')
+        return self.get_attribute('append_text', '')
 
     def set_local_executable(self, exec_name):
         """
@@ -346,7 +341,7 @@ class Code(Data):
         self.set_attribute('local_executable', exec_name)
 
     def get_local_executable(self):
-        return self.get_attribute('local_executable', u'')
+        return self.get_attribute('local_executable', '')
 
     def set_remote_computer_exec(self, remote_computer_exec):
         """
@@ -447,7 +442,7 @@ class Code(Data):
         For remote codes, it is the absolute path to the executable.
         """
         if self.is_local():
-            return u'./{}'.format(self.get_local_executable())
+            return './{}'.format(self.get_local_executable())
         else:
             return self.get_remote_exec_path()
 

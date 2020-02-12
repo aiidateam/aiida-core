@@ -8,14 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for Computer entities"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import logging
 import os
 import warnings
-import six
 
 from aiida import transports, schedulers
 from aiida.common import exceptions
@@ -87,7 +83,7 @@ class Computer(entities.Entity):
             transport_type=transport_type,
             scheduler_type=scheduler_type
         )
-        super(Computer, self).__init__(model)
+        super().__init__(model)
         if workdir is not None:
             self.set_workdir(workdir)
 
@@ -219,7 +215,7 @@ class Computer(entities.Entity):
         Validates the mpirun_command variable. MUST be called after properly
         checking for a valid scheduler.
         """
-        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, six.string_types) for i in mpirun_cmd):
+        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, str) for i in mpirun_cmd):
             raise exceptions.ValidationError('the mpirun_command must be a list of strings')
 
         try:
@@ -274,7 +270,7 @@ class Computer(entities.Entity):
         if def_cpus_per_machine is None:
             return
 
-        if not isinstance(def_cpus_per_machine, six.integer_types) or def_cpus_per_machine <= 0:
+        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:
             raise exceptions.ValidationError(
                 'Invalid value for default_mpiprocs_per_machine, '
                 'must be a positive integer, or an empty '
@@ -298,7 +294,7 @@ class Computer(entities.Entity):
         are to be changed (e.g. a new mpirun command, etc.)
         """
         self.validate()
-        return super(Computer, self).store()
+        return super().store()
 
     @property
     def name(self):
@@ -399,13 +395,13 @@ class Computer(entities.Entity):
         return self.get_property('prepend_text', '')
 
     def set_prepend_text(self, val):
-        self.set_property('prepend_text', six.text_type(val))
+        self.set_property('prepend_text', str(val))
 
     def get_append_text(self):
         return self.get_property('append_text', '')
 
     def set_append_text(self, val):
-        self.set_property('append_text', six.text_type(val))
+        self.set_property('append_text', str(val))
 
     def get_mpirun_command(self):
         """
@@ -421,7 +417,7 @@ class Computer(entities.Entity):
         Set the mpirun command. It must be a list of strings (you can use
         string.split() if you have a single, space-separated string).
         """
-        if not isinstance(val, (tuple, list)) or not all(isinstance(i, six.string_types) for i in val):
+        if not isinstance(val, (tuple, list)) or not all(isinstance(i, str) for i in val):
             raise TypeError('the mpirun_command must be a list of strings')
         self.set_property('mpirun_command', val)
 
@@ -440,7 +436,7 @@ class Computer(entities.Entity):
         if def_cpus_per_machine is None:
             self.delete_property('default_mpiprocs_per_machine', raise_exception=False)
         else:
-            if not isinstance(def_cpus_per_machine, six.integer_types):
+            if not isinstance(def_cpus_per_machine, int):
                 raise TypeError('def_cpus_per_machine must be an integer (or None)')
         self.set_property('default_mpiprocs_per_machine', def_cpus_per_machine)
 
@@ -509,7 +505,7 @@ class Computer(entities.Entity):
         """
         :param str val: A valid shebang line
         """
-        if not isinstance(val, six.string_types):
+        if not isinstance(val, str):
             raise ValueError('{} is invalid. Input has to be a string'.format(val))
         if not val.startswith('#!'):
             raise ValueError('{} is invalid. A shebang line has to start with #!'.format(val))

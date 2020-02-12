@@ -12,9 +12,6 @@
 This WorkChain example is a very contrived implementation of the infamous FizzBuzz problem, that serves to illustrate
 the various logical blocks that one can incorporate into the outline of the workchain's spec.
 """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from aiida.engine import WorkChain, run, while_, if_
 from aiida.orm import Int
@@ -24,7 +21,7 @@ class OutlineWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(OutlineWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('a', valid_type=Int)
         spec.outline(
             cls.setup,

@@ -10,9 +10,6 @@
 """
 AiiDA ORM data class storing (numpy) arrays
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from ..data import Data
 
@@ -37,7 +34,7 @@ class ArrayData(Data):
     _cached_arrays = None
 
     def initialize(self):
-        super(ArrayData, self).initialize()
+        super().initialize()
         self._cached_arrays = {}
 
     def delete_array(self, name):
@@ -194,4 +191,4 @@ class ArrayData(Data):
                 'Mismatch of files and properties for ArrayData'
                 ' node (pk= {}): {} vs. {}'.format(self.pk, files, properties)
             )
-        super(ArrayData, self)._validate()
+        super()._validate()

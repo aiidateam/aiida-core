@@ -29,11 +29,7 @@ pipeline {
         }
     }
     environment {
-        // I define some environment variables that are used
-        // internally by the travis scripts that I call
-        TEST_TYPE="tests"
-        // To mock what TRAVIS WOULD USE
-        TRAVIS_BUILD_DIR="."
+        WORKSPACE_PATH="."
         COMPUTER_SETUP_TYPE="jenkins"
         // The following two variables allow to run selectively tests only for one backend
         RUN_ALSO_DJANGO="true"
@@ -70,10 +66,6 @@ pipeline {
                 // Debug: check that I can connect without password
                 sh 'echo "SELECT datname FROM pg_database" | psql -h localhost -U postgres -w'
 
-                // We skip the creation of a docker image
-                // to ssh into, as it is done in travis. Here, in Jenkins,
-                // we instead ssh to localhost to investigate.
-
                 // Add the line to the .bashrc, but before it stops when non-interactive
                 // So it can find the location of 'verdi'
                 sh "sed -i '/interactively/iexport PATH=\${PATH}:~/.local/bin' ~/.bashrc"
@@ -84,7 +76,6 @@ pipeline {
         }
         stage('Build') {
             steps {
-                sh 'pip install -U pip==18.1'
                 sh 'pip install --user .[all]'
                 // To be able to do ssh localhost
                 sh 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'
@@ -109,18 +100,13 @@ pipeline {
                         // they might get at the point of writing the config.json at the
                         // same time and one of the two would crash
                         AIIDA_PATH="/tmp/aiida-django-folder"
-                        // To collect coverage info for each backend in a different file
-                        // and avoiding potential problems
-                        COVERAGE_FILE=".coverage.django"
                     }
                     when {
                         // This allows to selectively run only one backend
                         environment name: 'RUN_ALSO_DJANGO', value: 'true'
                     }
                     steps {
-                        sh '.ci/setup_profiles.sh'
-                        sh '.ci/before_script.sh'
-                        sh '.ci/test_script.sh'
+                        sh '.ci/setup.sh'
                         sh '.ci/test_rpn.sh'
                     }
                 }
@@ -128,37 +114,17 @@ pipeline {
                     environment {
                         AIIDA_TEST_BACKEND="sqlalchemy"
                         AIIDA_PATH="/tmp/aiida-sqla-folder"
-                        COVERAGE_FILE=".coverage.sqlalchemy"
                     }
                     when {
                         // This allows to selectively run only one backend
                         environment name: 'RUN_ALSO_SQLALCHEMY', value: 'true'
                     }
                     steps {
-                        sh '.ci/setup_profiles.sh'
-                        sh '.ci/before_script.sh'
-                        sh '.ci/test_script.sh'
+                        sh '.ci/setup.sh'
                         sh '.ci/test_rpn.sh'
                     }
                 }
             }
-        }
-        stage('Final') {
-            steps {
-                // create the final coverage info, summed over the various backends
-                sh '.ci/create_coverage_info.sh'
-            }
-            // post {
-            //    always {
-            //        // note: junit does not like the XML output, it says
-            //        // 'None of the test reports contained any result'
-            //        // (maybe because it's coverage and not testing?)
-            //        // For now I'm not doing it as it's ~3 MB every time
-            //        // NOTE MOREOVER that one should run 'zip -r html.zip html' in the
-            //        // coverage folder, first
-            //        archiveArtifacts artifacts: '.ci/coverage/html.zip', fingerprint: true
-            //    }
-            // }
         }
     }
     post {

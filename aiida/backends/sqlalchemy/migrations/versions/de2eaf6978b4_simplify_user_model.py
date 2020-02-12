@@ -17,9 +17,6 @@ Create Date: 2019-05-28 11:15:33.242602
 
 """
 # pylint: disable=invalid-name,no-member,import-error,no-name-in-module
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from alembic import op
 import sqlalchemy as sa

@@ -9,10 +9,6 @@
 ###########################################################################
 """A utility module with simple functions to format variables into strings for cli outputs."""
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 
 def format_relative_time(datetime):
     """
@@ -38,24 +34,24 @@ def format_state(process_state, paused=None, exit_status=None):
     :return: string representation of the process' state
     """
     if process_state in ['excepted']:
-        symbol = u'\u2A2F'
+        symbol = '\u2A2F'
     elif process_state in ['killed']:
-        symbol = u'\u2620'
+        symbol = '\u2620'
     elif process_state in ['created', 'finished']:
-        symbol = u'\u23F9'
+        symbol = '\u23F9'
     elif process_state in ['running', 'waiting']:
         if paused is True:
-            symbol = u'\u23F8'
+            symbol = '\u23F8'
         else:
-            symbol = u'\u23F5'
+            symbol = '\u23F5'
     else:
         # Unknown process state, use invisible separator
-        symbol = u'\u00B7'  # middle dot
+        symbol = '\u00B7'  # middle dot
 
     if process_state == 'finished' and exit_status is not None:
-        return u'{} {} [{}]'.format(symbol, format_process_state(process_state), exit_status)
+        return '{} {} [{}]'.format(symbol, format_process_state(process_state), exit_status)
 
-    return u'{} {}'.format(symbol, format_process_state(process_state))
+    return '{} {}'.format(symbol, format_process_state(process_state))
 
 
 def format_process_state(process_state):

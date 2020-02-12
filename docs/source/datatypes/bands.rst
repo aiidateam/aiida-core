@@ -61,10 +61,10 @@ To insert kpoints and bands in the ``bs`` object we should employ
 From now the band structure can be visualized. Last thing that we may want to
 add is the array of kpoint labels::
 
-    labels = [(0, u'GAMMA'),
-              (5, u'X'),
-              (6, u'X'),
-              (11, u'U')]
+    labels = [(0, 'GAMMA'),
+              (5, 'X'),
+              (6, 'X'),
+              (11, 'U')]
 
     bs.labels = labels
     bs.show_mpl() # to visualize the bands
@@ -83,16 +83,16 @@ Plotting the band structure
 You may notice that depending on how you assign the kpoints labels the output
 of the ``show_mpl()`` method looks different. Please compare::
 
-    bs.labels = [(0, u'GAMMA'),
-              (5, u'X'),
-              (6, u'Y'),
-              (11, u'U')]
+    bs.labels = [(0, 'GAMMA'),
+              (5, 'X'),
+              (6, 'Y'),
+              (11, 'U')]
     bs.show_mpl()
 
-    bs.labels = [(0, u'GAMMA'),
-              (5, u'X'),
-              (7, u'Y'),
-              (11, u'U')]
+    bs.labels = [(0, 'GAMMA'),
+              (5, 'X'),
+              (7, 'Y'),
+              (11, 'U')]
     bs.show_mpl()
 
 In the first case two neighboring kpoints with ``X`` and ``Y`` labels will look like

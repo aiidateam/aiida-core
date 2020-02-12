@@ -8,12 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SqlAlchemy implementations for the `Computer` entity and collection."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from copy import copy
-import six
 
 # pylint: disable=import-error,no-name-in-module
 from sqlalchemy.exc import SQLAlchemyError
@@ -36,12 +32,12 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
     MODEL_CLASS = DbComputer
 
     def __init__(self, backend, **kwargs):
-        super(SqlaComputer, self).__init__(backend)
+        super().__init__(backend)
         self._dbmodel = utils.ModelWrapper(DbComputer(**kwargs))
 
     @property
     def uuid(self):
-        return six.text_type(self._dbmodel.uuid)
+        return str(self._dbmodel.uuid)
 
     @property
     def pk(self):
@@ -66,7 +62,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         make_transient(dbcomputer)
         session.add(dbcomputer)
 
-        newobject = self.__class__.from_dbmodel(dbcomputer)
+        newobject = self.__class__.from_dbmodel(dbcomputer)  # pylint: disable=no-value-for-parameter
 
         return newobject
 

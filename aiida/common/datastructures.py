@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to define commonly used data structures."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from enum import Enum, IntEnum
 
@@ -70,6 +67,12 @@ class CalcInfo(DefaultFieldsAttributeDict):
     * local_copy_list: a list of tuples with format ('node_uuid', 'filename', relativedestpath')
     * remote_copy_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
     * remote_symlink_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
+    * provenance_exclude_list: a sequence of relative paths of files in the sandbox folder of a `CalcJob` instance that
+        should not be stored permanantly in the repository folder of the corresponding `CalcJobNode` that will be
+        created, but should only be copied to the remote working directory on the target computer. This is useful for
+        input files that should be copied to the working directory but should not be copied as well to the repository
+        either, for example, because they contain proprietary information or because they are big and their content is
+        already indirectly present in the repository through one of the data nodes passed as input to the calculation.
     * codes_info: a list of dictionaries used to pass the info of the execution of a code
     * codes_run_mode: a string used to specify the order in which multi codes can be executed
     """
@@ -94,6 +97,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'local_copy_list',
         'remote_copy_list',
         'remote_symlink_list',
+        'provenance_exclude_list',
         'codes_info',
         'codes_run_mode'
     )
@@ -172,7 +176,7 @@ class CodeRunMode(IntEnum):
     PARALLEL = 1
 
 
-class LazyStore(object):
+class LazyStore:
     """
     A container that provides a mapping to objects based on a key, if the object is not
     found in the container when it is retrieved it will created using a provided factory

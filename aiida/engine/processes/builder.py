@@ -9,22 +9,14 @@
 ###########################################################################
 # pylint: disable=cell-var-from-loop
 """Convenience classes to help building the input dictionaries for Processes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from six import PY2
+import collections
 
-if PY2:
-    import collections
-else:
-    import collections.abc as collections  # pylint: disable=import-error, no-name-in-module
-
-from aiida.engine.processes.ports import PortNamespace  # pylint: disable=wrong-import-position
+from aiida.engine.processes.ports import PortNamespace
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 
 
-class ProcessBuilderNamespace(collections.MutableMapping):
+class ProcessBuilderNamespace(collections.abc.MutableMapping):
     """Input namespace for the `ProcessBuilder`.
 
     Dynamically generates the getters and setters for the input ports of a given PortNamespace
@@ -124,7 +116,7 @@ class ProcessBuilderNamespace(collections.MutableMapping):
         """Update the values of the builder namespace passing a mapping as argument or individual keyword value pairs.
 
         The method is prefixed with an underscore in order to not reserve the name for a potential port, but in
-        principle the method functions just as `collections.MutableMapping.update`.
+        principle the method functions just as `collections.abc.MutableMapping.update`.
 
         :param args: a single mapping that should be mapped on the namespace
         :type args: list
@@ -137,13 +129,13 @@ class ProcessBuilderNamespace(collections.MutableMapping):
 
         if args:
             for key, value in args[0].items():
-                if isinstance(value, collections.Mapping):
+                if isinstance(value, collections.abc.Mapping):
                     self[key].update(value)
                 else:
                     self.__setattr__(key, value)
 
         for key, value in kwds.items():
-            if isinstance(value, collections.Mapping):
+            if isinstance(value, collections.abc.Mapping):
                 self[key].update(value)
             else:
                 self.__setattr__(key, value)
@@ -170,12 +162,12 @@ class ProcessBuilderNamespace(collections.MutableMapping):
         """
         from aiida.orm import Node
 
-        if isinstance(value, collections.Mapping) and not isinstance(value, Node):
+        if isinstance(value, collections.abc.Mapping) and not isinstance(value, Node):
             result = {}
             for key, sub_value in value.items():
                 pruned = self._prune(sub_value)
                 # If `pruned` is an "empty'ish" mapping and not an instance of `Node`, skip it, otherwise keep it.
-                if not (isinstance(pruned, collections.Mapping) and not pruned and not isinstance(pruned, Node)):
+                if not (isinstance(pruned, collections.abc.Mapping) and not pruned and not isinstance(pruned, Node)):
                     result[key] = pruned
             return result
 
@@ -192,7 +184,7 @@ class ProcessBuilder(ProcessBuilderNamespace):
         """
         self._process_class = process_class
         self._process_spec = self._process_class.spec()
-        super(ProcessBuilder, self).__init__(self._process_spec.inputs)
+        super().__init__(self._process_spec.inputs)
 
     @property
     def process_class(self):

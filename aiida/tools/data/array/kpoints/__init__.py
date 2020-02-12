@@ -11,9 +11,6 @@
 Various utilities to deal with KpointsData instances or create new ones
 (e.g. band paths, kpoints from a parsed input text file, ...)
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.orm import KpointsData, Dict
 from aiida.tools.data.array.kpoints import legacy

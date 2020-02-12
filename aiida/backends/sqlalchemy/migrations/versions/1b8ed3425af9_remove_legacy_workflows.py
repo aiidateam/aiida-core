@@ -15,9 +15,6 @@ Revises: 3d6190594e19
 Create Date: 2019-04-03 17:11:44.073582
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import sys
 import click
 
@@ -139,9 +136,9 @@ def downgrade():
         sa.Column('module_class', sa.TEXT(), autoincrement=False, nullable=True),
         sa.Column('script_path', sa.TEXT(), autoincrement=False, nullable=True),
         sa.Column('script_md5', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-        sa.ForeignKeyConstraint(['user_id'], [u'db_dbuser.id'], name=u'db_dbworkflow_user_id_fkey'),
-        sa.PrimaryKeyConstraint('id', name=u'db_dbworkflow_pkey'),
-        sa.UniqueConstraint('uuid', name=u'db_dbworkflow_uuid_key'),
+        sa.ForeignKeyConstraint(['user_id'], ['db_dbuser.id'], name='db_dbworkflow_user_id_fkey'),
+        sa.PrimaryKeyConstraint('id', name='db_dbworkflow_pkey'),
+        sa.UniqueConstraint('uuid', name='db_dbworkflow_uuid_key'),
         postgresql_ignore_search_path=False
     )
     op.create_index('ix_db_dbworkflow_label', 'db_dbworkflow', ['label'], unique=False)
@@ -154,10 +151,10 @@ def downgrade():
         sa.Column('value_type', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
         sa.Column('json_value', sa.TEXT(), autoincrement=False, nullable=True),
         sa.Column('aiida_obj_id', sa.INTEGER(), autoincrement=False, nullable=True),
-        sa.ForeignKeyConstraint(['aiida_obj_id'], [u'db_dbnode.id'], name=u'db_dbworkflowdata_aiida_obj_id_fkey'),
-        sa.ForeignKeyConstraint(['parent_id'], [u'db_dbworkflow.id'], name=u'db_dbworkflowdata_parent_id_fkey'),
-        sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowdata_pkey'),
-        sa.UniqueConstraint('parent_id', 'name', 'data_type', name=u'db_dbworkflowdata_parent_id_name_data_type_key')
+        sa.ForeignKeyConstraint(['aiida_obj_id'], ['db_dbnode.id'], name='db_dbworkflowdata_aiida_obj_id_fkey'),
+        sa.ForeignKeyConstraint(['parent_id'], ['db_dbworkflow.id'], name='db_dbworkflowdata_parent_id_fkey'),
+        sa.PrimaryKeyConstraint('id', name='db_dbworkflowdata_pkey'),
+        sa.UniqueConstraint('parent_id', 'name', 'data_type', name='db_dbworkflowdata_parent_id_name_data_type_key')
     )
     op.create_index('ix_db_dbworkflowdata_parent_id', 'db_dbworkflowdata', ['parent_id'], unique=False)
     op.create_index('ix_db_dbworkflowdata_aiida_obj_id', 'db_dbworkflowdata', ['aiida_obj_id'], unique=False)
@@ -169,32 +166,31 @@ def downgrade():
         sa.Column('time', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
         sa.Column('nextcall', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
         sa.Column('state', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-        sa.ForeignKeyConstraint(['parent_id'], [u'db_dbworkflow.id'], name=u'db_dbworkflowstep_parent_id_fkey'),
-        sa.ForeignKeyConstraint(['user_id'], [u'db_dbuser.id'], name=u'db_dbworkflowstep_user_id_fkey'),
-        sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_pkey'),
-        sa.UniqueConstraint('parent_id', 'name', name=u'db_dbworkflowstep_parent_id_name_key')
+        sa.ForeignKeyConstraint(['parent_id'], ['db_dbworkflow.id'], name='db_dbworkflowstep_parent_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], ['db_dbuser.id'], name='db_dbworkflowstep_user_id_fkey'),
+        sa.PrimaryKeyConstraint('id', name='db_dbworkflowstep_pkey'),
+        sa.UniqueConstraint('parent_id', 'name', name='db_dbworkflowstep_parent_id_name_key')
     )
     op.create_table(
         'db_dbworkflowstep_calculations', sa.Column('id', sa.INTEGER(), autoincrement=True, nullable=False),
         sa.Column('dbworkflowstep_id', sa.INTEGER(), autoincrement=False, nullable=True),
         sa.Column('dbnode_id', sa.INTEGER(), autoincrement=False, nullable=True),
-        sa.ForeignKeyConstraint(['dbnode_id'], [u'db_dbnode.id'],
-                                name=u'db_dbworkflowstep_calculations_dbnode_id_fkey'),
-        sa.ForeignKeyConstraint(['dbworkflowstep_id'], [u'db_dbworkflowstep.id'],
-                                name=u'db_dbworkflowstep_calculations_dbworkflowstep_id_fkey'),
-        sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_calculations_pkey'),
-        sa.UniqueConstraint('dbworkflowstep_id', 'dbnode_id', name=u'db_dbworkflowstep_calculations_id_dbnode_id_key')
+        sa.ForeignKeyConstraint(['dbnode_id'], ['db_dbnode.id'], name='db_dbworkflowstep_calculations_dbnode_id_fkey'),
+        sa.ForeignKeyConstraint(['dbworkflowstep_id'], ['db_dbworkflowstep.id'],
+                                name='db_dbworkflowstep_calculations_dbworkflowstep_id_fkey'),
+        sa.PrimaryKeyConstraint('id', name='db_dbworkflowstep_calculations_pkey'),
+        sa.UniqueConstraint('dbworkflowstep_id', 'dbnode_id', name='db_dbworkflowstep_calculations_id_dbnode_id_key')
     )
     op.create_table(
         'db_dbworkflowstep_sub_workflows', sa.Column('id', sa.INTEGER(), autoincrement=True, nullable=False),
         sa.Column('dbworkflowstep_id', sa.INTEGER(), autoincrement=False, nullable=True),
         sa.Column('dbworkflow_id', sa.INTEGER(), autoincrement=False, nullable=True),
-        sa.ForeignKeyConstraint(['dbworkflow_id'], [u'db_dbworkflow.id'],
-                                name=u'db_dbworkflowstep_sub_workflows_dbworkflow_id_fkey'),
-        sa.ForeignKeyConstraint(['dbworkflowstep_id'], [u'db_dbworkflowstep.id'],
-                                name=u'db_dbworkflowstep_sub_workflows_dbworkflowstep_id_fkey'),
-        sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_sub_workflows_pkey'),
+        sa.ForeignKeyConstraint(['dbworkflow_id'], ['db_dbworkflow.id'],
+                                name='db_dbworkflowstep_sub_workflows_dbworkflow_id_fkey'),
+        sa.ForeignKeyConstraint(['dbworkflowstep_id'], ['db_dbworkflowstep.id'],
+                                name='db_dbworkflowstep_sub_workflows_dbworkflowstep_id_fkey'),
+        sa.PrimaryKeyConstraint('id', name='db_dbworkflowstep_sub_workflows_pkey'),
         sa.UniqueConstraint(
-            'dbworkflowstep_id', 'dbworkflow_id', name=u'db_dbworkflowstep_sub_workflows_id_dbworkflow__key'
+            'dbworkflowstep_id', 'dbworkflow_id', name='db_dbworkflowstep_sub_workflows_id_dbworkflow__key'
         )
     )

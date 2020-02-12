@@ -8,14 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `OrmEntityLoader` and its sub classes that simplify loading entities through their identifiers."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-from abc import ABCMeta
 from enum import Enum
-
-import six
 
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.lang import abstractclassmethod, classproperty
@@ -64,8 +57,7 @@ class IdentifierType(Enum):
     LABEL = 'LABEL'
 
 
-@six.add_metaclass(ABCMeta)
-class OrmEntityLoader(object):
+class OrmEntityLoader:
     """Base class for entity loaders."""
 
     label_ambiguity_breaker = '!'
@@ -283,7 +275,7 @@ class OrmEntityLoader(object):
         if not value:
             raise ValueError('the value for the identifier cannot be empty')
 
-        if not isinstance(value, six.string_types):
+        if not isinstance(value, str):
             value = str(value)
 
         # If the final character of the value is the special marker, we enforce LABEL interpretation

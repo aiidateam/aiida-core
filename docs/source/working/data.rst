@@ -46,7 +46,7 @@ Therefore, we have to override the constructor :meth:`~aiida.orm.nodes.node.Node
 
         def __init__(self, **kwargs)
             value = kwargs.pop('value')
-            super(NewData, self).__init__(**kwargs)
+            super().__init__(**kwargs)
             self.set_attribute('value', value)
 
 .. warning::
@@ -123,7 +123,7 @@ Imagine a data type that needs to wrap a single text file.
 
             :param file: an absolute filepath of the file to wrap
             """
-            super(TextFileData, self).__init__(**kwargs)
+            super().__init__(**kwargs)
 
             filename = os.path.basename(filepath)  # Get the filename from the absolute path
             self.put_object_from_file(filepath, filename)  # Store the file in the repository under the given filename

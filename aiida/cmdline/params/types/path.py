@@ -8,10 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Click parameter types for paths."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import os
+import urllib
+
 import click
 
 URL_TIMEOUT_SECONDS = 10
@@ -26,13 +25,29 @@ class AbsolutePathParamType(click.Path):
 
     def convert(self, value, param, ctx):
         value = os.path.expanduser(value)
-        newval = super(AbsolutePathParamType, self).convert(value, param, ctx)
+        newval = super().convert(value, param, ctx)
         if not os.path.isabs(newval):
             raise click.BadParameter('path must be absolute')
         return newval
 
     def __repr__(self):
         return 'ABSOLUTEPATH'
+
+
+class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
+    """
+    The ParamType for identifying absolute Paths, accepting also empty paths.
+    """
+
+    name = 'AbsolutePathEmpty'
+
+    def convert(self, value, param, ctx):
+        if not value:
+            return value
+        return super().convert(value, param, ctx)
+
+    def __repr__(self):
+        return 'ABSOLUTEPATHEMPTY'
 
 
 class ImportPath(click.Path):
@@ -47,7 +62,7 @@ class ImportPath(click.Path):
     # pylint: disable=protected-access
 
     def __init__(self, timeout_seconds=URL_TIMEOUT_SECONDS, **kwargs):
-        super(ImportPath, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.timeout_seconds = timeout_seconds
 
@@ -57,14 +72,13 @@ class ImportPath(click.Path):
         """
         try:
             # Check if `click.Path`-type
-            return super(ImportPath, self).convert(value, param, ctx)
+            return super().convert(value, param, ctx)
         except click.exceptions.BadParameter:
             # Check if URL
             return self.checks_url(value, param, ctx)
 
     def checks_url(self, value, param, ctx):
         """Do checks for possible URL path"""
-        from six.moves import urllib
         from socket import timeout
 
         url = value

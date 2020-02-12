@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all common top level AiiDA entity classes and methods"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import typing
 
@@ -175,7 +172,7 @@ class Collection(typing.Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(object):
+class Entity:
     """An AiiDA entity"""
 
     _objects = None

@@ -8,17 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data class that can be used to store a single file in its repository."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import warnings
+import inspect
 import os
-import six
+import warnings
 
 from aiida.common import exceptions
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.common.lang import get_arg_spec
 from .data import Data
 
 __all__ = ('SinglefileData',)
@@ -37,10 +32,10 @@ class SinglefileData(Data):
         :param filename: specify filename to use (defaults to name of provided file).
         """
         # pylint: disable=redefined-builtin
-        super(SinglefileData, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # 'filename' argument was added to 'set_file' after 1.0.0.
-        if 'filename' not in get_arg_spec(self.set_file)[0]:  # pylint: disable=deprecated-method
+        if 'filename' not in inspect.getfullargspec(self.set_file)[0]:
             warnings.warn(  # pylint: disable=no-member
                 "Method '{}.set_file' does not support the 'filename' argument. ".format(type(self).__name__) +
                 'This will raise an exception in AiiDA 2.0.', AiidaDeprecationWarning
@@ -90,7 +85,7 @@ class SinglefileData(Data):
         """
         # pylint: disable=redefined-builtin
 
-        if isinstance(file, six.string_types):
+        if isinstance(file, str):
             is_filelike = False
 
             key = os.path.basename(file)
@@ -129,7 +124,7 @@ class SinglefileData(Data):
 
     def _validate(self):
         """Ensure that there is one object stored in the repository, whose key matches value set for `filename` attr."""
-        super(SinglefileData, self)._validate()
+        super()._validate()
 
         try:
             filename = self.filename

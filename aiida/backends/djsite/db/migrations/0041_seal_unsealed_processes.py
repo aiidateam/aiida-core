@@ -19,10 +19,6 @@ The problem here is that this will yield `False` if the attribute `process_state
 case for legacy calculations like `InlineCalculation` nodes. Their node type was already migrated in `0020` but most of
 them will be unsealed.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error

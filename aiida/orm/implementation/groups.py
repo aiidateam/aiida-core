@@ -8,12 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Backend group module"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import abc
-import six
 
 from aiida.common import exceptions
 
@@ -23,7 +19,6 @@ from .nodes import BackendNode
 __all__ = ('BackendGroup', 'BackendGroupCollection')
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendGroup(backends.BackendEntity):
     """
     An AiiDA ORM implementation of group of nodes.
@@ -35,8 +30,8 @@ class BackendGroup(backends.BackendEntity):
         :return: the name of the group as a string
         """
 
-    @abc.abstractproperty
     @label.setter
+    @abc.abstractmethod
     def label(self, name):
         """
         Attempt to change the name of the group instance. If the group is already stored
@@ -145,7 +140,7 @@ class BackendGroup(backends.BackendEntity):
         the number of nodes in the group using len().
         """
 
-    @abc.abstractproperty
+    @abc.abstractmethod
     def count(self):
         """Return the number of entities in this group.
 
@@ -198,7 +193,6 @@ class BackendGroup(backends.BackendEntity):
         return '"{}" [user-defined], of user {}'.format(self.label, self.user.email)
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendGroupCollection(backends.BackendCollection[BackendGroup]):
     """The collection of Group entries."""
 

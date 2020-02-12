@@ -10,9 +10,6 @@
 """
 Module to define multi value options for click.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import click
 
@@ -58,7 +55,7 @@ class MultipleValueOption(click.Option):
         if param_type is not None:
             kwargs['type'] = types.MultipleValueParamType(param_type)
 
-        super(MultipleValueOption, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._previous_parser_process = None
         self._eat_all_parser = None
 
@@ -69,7 +66,7 @@ class MultipleValueOption(click.Option):
         """
         # pylint: disable=protected-access
 
-        result = super(MultipleValueOption, self).add_to_parser(parser, ctx)
+        result = super().add_to_parser(parser, ctx)
 
         def parser_process(value, state):
             """

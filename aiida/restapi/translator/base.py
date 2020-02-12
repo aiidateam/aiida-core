@@ -9,12 +9,6 @@
 ###########################################################################
 """Base translator class"""
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import six
-
 from aiida.common.exceptions import InputValidationError, InvalidOperation
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.common.exceptions import RestValidationError, \
@@ -22,7 +16,7 @@ from aiida.restapi.common.exceptions import RestValidationError, \
 from aiida.restapi.common.utils import PK_DBSYNONYM
 
 
-class BaseTranslator(object):
+class BaseTranslator:
     """
     Generic class for translator. It contains the methods
     required to build a related QueryBuilder object
@@ -481,7 +475,7 @@ class BaseTranslator(object):
         if self._has_uuid:
 
             # For consistency check that id is a string
-            if not isinstance(node_id, six.string_types):
+            if not isinstance(node_id, str):
                 raise RestValidationError('parameter id has to be a string')
 
             identifier_type = IdentifierType.UUID

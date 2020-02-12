@@ -31,12 +31,8 @@ Examples of invalid full types:
     'process.calculation%.calcfunction.%|aiida.calculations:arithmetic.add'  # More than one operator in segment
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import collections
-import six
 
 from aiida.common.escaping import escape_for_sql_like
 
@@ -54,7 +50,7 @@ def validate_full_type(full_type):
     """
     from aiida.common.lang import type_check
 
-    type_check(full_type, six.string_types)
+    type_check(full_type, str)
 
     if FULL_TYPE_CONCATENATOR not in full_type:
         raise ValueError(
@@ -294,7 +290,7 @@ class Namespace(collections.MutableMapping):
         :returns: Namespace
         :raises: ValueError if any sub namespace is occupied by a non-Namespace port
         """
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise ValueError('name has to be a string type, not {}'.format(type(name)))
 
         if not name:
@@ -346,7 +342,7 @@ def get_node_namespace():
     from aiida import orm
     from aiida.plugins.entry_point import is_valid_entry_point_string, parse_entry_point_string
 
-    builder = orm.QueryBuilder().append(orm.Node, project=['node_type', 'process_type'])
+    builder = orm.QueryBuilder().append(orm.Node, project=['node_type', 'process_type']).distinct()
     unique_types = {(node_type, process_type if process_type else '') for node_type, process_type in builder.all()}
 
     # First we create a flat list of all "leaf" node types.

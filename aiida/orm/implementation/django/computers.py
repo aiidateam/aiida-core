@@ -8,11 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django implementations for the `Computer` entity and collection."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import six
 
 # pylint: disable=import-error,no-name-in-module
 from django.db import IntegrityError, transaction
@@ -34,12 +29,12 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
 
     def __init__(self, backend, **kwargs):
         """Construct a new `DjangoComputer` instance."""
-        super(DjangoComputer, self).__init__(backend)
+        super().__init__(backend)
         self._dbmodel = utils.ModelWrapper(models.DbComputer(**kwargs))
 
     @property
     def uuid(self):
-        return six.text_type(self._dbmodel.uuid)
+        return str(self._dbmodel.uuid)
 
     def copy(self):
         """Create an unstored clone of an already stored `Computer`."""
@@ -48,7 +43,7 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
         dbomputer = models.DbComputer.objects.get(pk=self.pk)
         dbomputer.pk = None
 
-        newobject = self.__class__.from_dbmodel(dbomputer)
+        newobject = self.__class__.from_dbmodel(dbomputer)  # pylint: disable=no-value-for-parameter
 
         return newobject
 

@@ -8,21 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to operate on filesystem folders."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 import errno
 import fnmatch
-import io
 import os
 import shutil
 import tempfile
 
-import six
-
+from aiida.manage.configuration import get_profile
 from . import timezone
-from .utils import get_repository_folder
 
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.
@@ -34,7 +27,7 @@ CALC_JOB_DRY_RUN_BASE_PATH = 'submit_test'
 VALID_SECTIONS = ['node']
 
 
-class Folder(object):
+class Folder:
     """
     A class to manage generic folders, avoiding to get out of
     specific given folder borders.
@@ -103,7 +96,7 @@ class Folder(object):
 
         :Returns: a Folder object pointing to the subfolder.
         """
-        dest_abs_dir = os.path.abspath(os.path.join(self.abspath, six.text_type(subfolder)))
+        dest_abs_dir = os.path.abspath(os.path.join(self.abspath, str(subfolder)))
 
         if reset_limit:
             # Create a new Folder object, with a limit to itself (cannot go
@@ -173,11 +166,11 @@ class Folder(object):
         """
         # pylint: disable=too-many-branches
         if dest_name is None:
-            filename = six.text_type(os.path.basename(src))
+            filename = str(os.path.basename(src))
         else:
-            filename = six.text_type(dest_name)
+            filename = str(dest_name)
 
-        src = six.text_type(src)
+        src = str(src)
 
         dest_abs_path = self.get_abs_path(filename)
 
@@ -229,29 +222,14 @@ class Folder(object):
         :param encoding: the encoding with which the target file will be written
         :return: the absolute filepath of the created file
         """
-        filename = six.text_type(filename)
+        filename = str(filename)
         filepath = self.get_abs_path(filename)
 
         if 'b' in mode:
             encoding = None
 
-        with io.open(filepath, mode=mode, encoding=encoding) as handle:
-
-            # In python 2 a string literal can either be of unicode or string (bytes) type. Since we do not know what
-            # will be coming in, if the requested mode is not binary, in the case of incoming bytes, the content will
-            # have to be encoded. Therefore in the case of a non-binary mode for python2, we attempt to encode the
-            # incoming filelike object and in case of failure do nothing.
-            if six.PY2 and 'b' not in mode:
-                import codecs
-                utf8reader = codecs.getreader('utf8')
-
-                try:
-                    shutil.copyfileobj(utf8reader(filelike), handle)
-                except (UnicodeDecodeError, UnicodeEncodeError):
-                    filelike.seek(0)
-                    shutil.copyfileobj(filelike, handle)
-            else:
-                shutil.copyfileobj(filelike, handle)
+        with open(filepath, mode=mode, encoding=encoding) as handle:
+            shutil.copyfileobj(filelike, handle)
 
         os.chmod(filepath, self.mode_file)
 
@@ -310,7 +288,7 @@ class Folder(object):
         if 'b' in mode:
             encoding = None
 
-        return io.open(self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding)
+        return open(self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding)
 
     @property
     def abspath(self):
@@ -450,13 +428,13 @@ class SandboxFolder(Folder):
         """
         # First check if the sandbox folder already exists
         if sandbox_in_repo:
-            sandbox = get_repository_folder('sandbox')
+            sandbox = os.path.join(get_profile().repository_path, 'sandbox')
             if not os.path.exists(sandbox):
                 os.makedirs(sandbox)
             abspath = tempfile.mkdtemp(dir=sandbox)
         else:
             abspath = tempfile.mkdtemp()
-        super(SandboxFolder, self).__init__(abspath=abspath)
+        super().__init__(abspath=abspath)
 
     def __enter__(self):
         """
@@ -490,7 +468,7 @@ class SubmitTestFolder(Folder):
 
         :param basepath: name of the base directory that will be created in the current working directory
         """
-        super(SubmitTestFolder, self).__init__(abspath=os.path.abspath(basepath))
+        super().__init__(abspath=os.path.abspath(basepath))
 
         self.create()
 
@@ -553,18 +531,18 @@ class RepositoryFolder(Folder):
         # normpath, that may be slow): this is done abywat by the super
         # class.
         entity_dir = os.path.join(
-            get_repository_folder('repository'), six.text_type(section),
-            six.text_type(uuid)[:2],
-            six.text_type(uuid)[2:4],
-            six.text_type(uuid)[4:]
+            get_profile().repository_path, 'repository', str(section),
+            str(uuid)[:2],
+            str(uuid)[2:4],
+            str(uuid)[4:]
         )
-        dest = os.path.join(entity_dir, six.text_type(subfolder))
+        dest = os.path.join(entity_dir, str(subfolder))
 
         # Internal variable of this class
         self._subfolder = subfolder
 
         # This will also do checks on the folder limits
-        super(RepositoryFolder, self).__init__(abspath=dest, folder_limit=entity_dir)
+        super().__init__(abspath=dest, folder_limit=entity_dir)
 
     @property
     def section(self):

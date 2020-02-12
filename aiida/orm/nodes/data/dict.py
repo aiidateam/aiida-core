@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a dictionary."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import copy
 
@@ -35,7 +32,7 @@ class Dict(Data):
         :param dict: the dictionary to set
         """
         dictionary = kwargs.pop('dict', None)
-        super(Dict, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if dictionary:
             self.set_dict(dictionary)
 

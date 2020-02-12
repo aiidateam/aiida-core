@@ -11,10 +11,6 @@
 Test classes and test runners for testing AiiDA plugins with unittest.
 """
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import unittest
 
 from aiida.manage.manager import get_manager
@@ -93,4 +89,4 @@ class TestRunner(unittest.runner.TextTestRunner):
         with test_manager(
             backend=backend or get_test_backend_name(), profile_name=profile_name or get_test_profile_name()
         ):
-            return super(TestRunner, self).run(suite)
+            return super().run(suite)

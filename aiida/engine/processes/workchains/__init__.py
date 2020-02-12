@@ -9,11 +9,9 @@
 ###########################################################################
 # pylint: disable=wildcard-import,undefined-variable
 """Module for the `WorkChain` process and related utilities."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 from .context import *
+from .restart import *
+from .utils import *
 from .workchain import *
 
-__all__ = (context.__all__ + workchain.__all__)
+__all__ = (context.__all__ + restart.__all__ + utils.__all__ + workchain.__all__)

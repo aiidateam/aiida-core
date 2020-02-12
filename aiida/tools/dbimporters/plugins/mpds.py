@@ -8,14 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import copy
 import enum
 import os
 
-from six.moves import range
 import requests
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbEntry, DbImporter, DbSearchResults
@@ -278,7 +274,7 @@ class MpdsDbImporter(DbImporter):
         return entry_id
 
 
-class StructuresCollection(object):
+class StructuresCollection:
 
     def __init__(self, engine):
         self._engine = engine
@@ -318,7 +314,7 @@ class MpdsEntry(DbEntry):
         if license is not None:
             self._license = license
 
-        super(MpdsEntry, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
 
 class MpdsCifEntry(CifEntry, MpdsEntry):
@@ -335,7 +331,7 @@ class MpdsCifEntry(CifEntry, MpdsEntry):
         """
         cif = kwargs.pop('cif', None)
         kwargs['uri'] = url
-        super(MpdsCifEntry, self).__init__(url, **kwargs)
+        super().__init__(url, **kwargs)
 
         if cif is not None:
             self.cif = cif
@@ -353,7 +349,7 @@ class MpdsSearchResults(DbSearchResults):
     def __init__(self, results, return_class=None):
         if return_class is not None:
             self._return_class = return_class
-        super(MpdsSearchResults, self).__init__(results)
+        super().__init__(results)
 
     def _get_source_dict(self, result_dict):
         """

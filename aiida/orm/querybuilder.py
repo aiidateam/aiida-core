@@ -18,17 +18,11 @@ an interface classes which enforces the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.
 """
-
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
 import copy
 import logging
 import warnings
-import six
-from six.moves import range
 from sqlalchemy import and_, or_, not_, func as sa_func, select, join
 from sqlalchemy.types import Integer
 from sqlalchemy.orm import aliased
@@ -269,7 +263,7 @@ def get_process_type_filter(classifiers, subclassing):
     return filter
 
 
-class QueryBuilder(object):
+class QueryBuilder:
     """
     The class to query the AiiDA database.
 
@@ -385,7 +379,7 @@ class QueryBuilder(object):
             if isinstance(path_spec, dict):
                 self.append(**path_spec)
             # ~ except TypeError as e:
-            elif isinstance(path_spec, six.string_types):
+            elif isinstance(path_spec, str):
                 # Maybe it is just a string,
                 # I assume user means the type
                 self.append(entity_type=path_spec)
@@ -631,10 +625,10 @@ class QueryBuilder(object):
         elif entity_type:
             if isinstance(entity_type, (tuple, list, set)):
                 for t in entity_type:
-                    if not isinstance(t, six.string_types):
+                    if not isinstance(t, str):
                         raise InputValidationError('{} was passed as entity_type, but is not a string'.format(t))
             else:
-                if not isinstance(entity_type, six.string_types):
+                if not isinstance(entity_type, str):
                     raise InputValidationError('{} was passed as entity_type, but is not a string'.format(entity_type))
 
         ormclass, classifiers = self._get_ormclass(cls, entity_type)
@@ -922,7 +916,7 @@ class QueryBuilder(object):
                 tag = self._get_tag_from_specification(tagspec)
                 _order_spec[tag] = []
                 for item_to_order_by in items_to_order_by:
-                    if isinstance(item_to_order_by, six.string_types):
+                    if isinstance(item_to_order_by, str):
                         item_to_order_by = {item_to_order_by: {}}
                     elif isinstance(item_to_order_by, dict):
                         pass
@@ -934,7 +928,7 @@ class QueryBuilder(object):
                         # if somebody specifies eg {'node':{'id':'asc'}}
                         # tranform to {'node':{'id':{'order':'asc'}}}
 
-                        if isinstance(orderspec, six.string_types):
+                        if isinstance(orderspec, str):
                             this_order_spec = {'order': orderspec}
                         elif isinstance(orderspec, dict):
                             this_order_spec = orderspec
@@ -987,14 +981,17 @@ class QueryBuilder(object):
         if not isinstance(filters, dict):
             raise InputValidationError('Filters have to be passed as dictionaries')
 
+        processed_filters = {}
+
         for key, value in filters.items():
             if isinstance(value, entities.Entity):
                 # Convert to be the id of the joined entity because we can't query
                 # for the object instance directly
-                filters.pop(key)
-                filters['{}_id'.format(key)] = value.id
+                processed_filters['{}_id'.format(key)] = value.id
+            else:
+                processed_filters[key] = value
 
-        return filters
+        return processed_filters
 
     def _add_type_filter(self, tagspec, classifiers, subclassing):
         """
@@ -1086,7 +1083,7 @@ class QueryBuilder(object):
 
             QueryBuilder().append(StructureData,tag='s', project='**').limit(1).dict()[0]['s'].keys()
 
-            # >>> u'user_id, description, ctime, label, extras, mtime, id, attributes, dbcomputer_id, type, uuid'
+            # >>> 'user_id, description, ctime, label, extras, mtime, id, attributes, dbcomputer_id, type, uuid'
 
         Be aware that the result of ``**`` depends on the backend implementation.
 
@@ -1101,7 +1098,7 @@ class QueryBuilder(object):
         for projection in projection_spec:
             if isinstance(projection, dict):
                 _thisprojection = projection
-            elif isinstance(projection, six.string_types):
+            elif isinstance(projection, str):
                 _thisprojection = {projection: {}}
             else:
                 raise InputValidationError('Cannot deal with projection specification {}\n'.format(projection))
@@ -1115,7 +1112,7 @@ class QueryBuilder(object):
                 for key, val in spec.items():
                     if key not in self._VALID_PROJECTION_KEYS:
                         raise InputValidationError('{} is not a valid key {}'.format(key, self._VALID_PROJECTION_KEYS))
-                    if not isinstance(val, six.string_types):
+                    if not isinstance(val, str):
                         raise InputValidationError('{} has to be a string'.format(val))
             _projections.append(_thisprojection)
         if self._debug:
@@ -1202,7 +1199,7 @@ class QueryBuilder(object):
             In that case, I simply check that it's not a duplicate.
             If it is a class, I check if it's in the _cls_to_tag_map!
         """
-        if isinstance(specification, six.string_types):
+        if isinstance(specification, str):
             if specification in self.tag_to_alias_map.keys():
                 tag = specification
             else:
@@ -2070,7 +2067,7 @@ class QueryBuilder(object):
             raise Exception('length of query result does not match the number of specified projections')
 
         return [
-            self.get_aiida_entity_res(self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem))
+            self.get_aiida_entity_res(self._impl.get_aiida_res(rowitem))
             for colindex, rowitem in enumerate(result)
         ]
 
@@ -2202,11 +2199,11 @@ class QueryBuilder(object):
 
             qb.iterdict()
             >>> {'descendant': {
-                    'entity_type': u'calculation.job.quantumespresso.pw.PwCalculation.',
+                    'entity_type': 'calculation.job.quantumespresso.pw.PwCalculation.',
                     'id': 7716}
                 }
             >>> {'descendant': {
-                    'entity_type': u'data.remote.RemoteData.',
+                    'entity_type': 'data.remote.RemoteData.',
                     'id': 8510}
                 }
 

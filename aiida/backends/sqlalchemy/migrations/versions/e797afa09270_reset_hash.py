@@ -15,15 +15,12 @@ Revises: 26d561acd560
 Create Date: 2019-07-01 19:39:33.605457
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from alembic import op
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from sqlalchemy.sql import text
-from aiida.cmdline.utils.echo import echo_warning
+from aiida.cmdline.utils import echo
 
 # revision identifiers, used by Alembic.
 revision = 'e797afa09270'
@@ -35,21 +32,24 @@ depends_on = None
 _HASH_EXTRA_KEY = '_aiida_hash'
 
 
-def upgrade():
-    """drop the hashes when upgrading"""
-    conn = op.get_bind()
+def drop_hashes(conn):  # pylint: disable=unused-argument
+    """Drop hashes of nodes.
 
-    # Invalidate all the hashes & inform the user
-    echo_warning('Invalidating all the hashes of all the nodes. Please run verdi rehash', bold=True)
+    Print warning only if the DB actually contains nodes.
+    """
+    n_nodes = conn.execute(text("""SELECT count(*) FROM db_dbnode;""")).fetchall()[0][0]
+    if n_nodes > 0:
+        echo.echo_warning('Invalidating the hashes of all nodes. Please run "verdi rehash".', bold=True)
+
     statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
     conn.execute(statement)
+
+
+def upgrade():
+    """drop the hashes when upgrading"""
+    drop_hashes(op.get_bind())
 
 
 def downgrade():
     """drop the hashes also when downgrading"""
-    conn = op.get_bind()
-
-    # Invalidate all the hashes & inform the user
-    echo_warning('Invalidating all the hashes of all the nodes. Please run verdi rehash', bold=True)
-    statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
-    conn.execute(statement)
+    drop_hashes(op.get_bind())

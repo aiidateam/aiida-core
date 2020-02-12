@@ -9,17 +9,12 @@
 ###########################################################################
 # pylint: disable=too-many-nested-blocks,protected-access,fixme,too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 """ SQLAlchemy-specific import of AiiDA entities """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from distutils.version import StrictVersion
-import io
 import os
 import tarfile
 import zipfile
 from itertools import chain
-import six
 
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
@@ -145,10 +140,10 @@ def import_data_sqla(
         if not folder.get_content_list():
             raise exceptions.CorruptArchive('The provided file/folder ({}) is empty'.format(in_path))
         try:
-            with io.open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
+            with open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
 
-            with io.open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
+            with open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
                 data = json.load(fhandle)
         except IOError as error:
             raise exceptions.CorruptArchive(
@@ -174,7 +169,7 @@ def import_data_sqla(
         #              I HAVE ALL NODES FOR THE LINKS                     #
         ###################################################################
         linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
-        group_nodes = set(chain.from_iterable(six.itervalues(data['groups_uuid'])))
+        group_nodes = set(chain.from_iterable(data['groups_uuid'].values()))
 
         # Check that UUIDs are valid
         linked_nodes = set(x for x in linked_nodes if validate_uuid(x))
@@ -236,9 +231,9 @@ def import_data_sqla(
         # to map one id (the pk) to a different one.
         # One of the things to remove for v0.4
         # {
-        # u'Node': {2362: u'82a897b5-fb3a-47d7-8b22-c5fe1b4f2c14',
-        #           2363: u'ef04aa5d-99e7-4bfd-95ef-fe412a6a3524', 2364: u'1dc59576-af21-4d71-81c2-bac1fc82a84a'},
-        # u'User': {1: u'aiida@localhost'}
+        # 'Node': {2362: '82a897b5-fb3a-47d7-8b22-c5fe1b4f2c14',
+        #           2363: 'ef04aa5d-99e7-4bfd-95ef-fe412a6a3524', 2364: '1dc59576-af21-4d71-81c2-bac1fc82a84a'},
+        # 'User': {1: 'aiida@localhost'}
         # }
         import_unique_ids_mappings = {}
         # Export data since v0.3 contains the keys entity_name
@@ -325,7 +320,7 @@ def import_data_sqla(
                                 # stored as (unicode) strings of the serialized
                                 # JSON objects and not as simple serialized
                                 # JSON objects.
-                                if isinstance(value['metadata'], (six.string_types, six.binary_type)):
+                                if isinstance(value['metadata'], (str, bytes)):
                                     value['metadata'] = json.loads(value['metadata'])
 
                                 # Check if there is already a computer with the
@@ -596,13 +591,10 @@ def import_data_sqla(
                 except KeyError:
                     if ignore_unknown_nodes:
                         continue
-                    else:
-                        raise exceptions.ImportValidationError(
-                            'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, '
-                            'out_uuid={}, label={}, type={})'.format(
-                                link['input'], link['output'], link['label'], link['type']
-                            )
-                        )
+                    raise exceptions.ImportValidationError(
+                        'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, out_uuid={}, '
+                        'label={}, type={})'.format(link['input'], link['output'], link['label'], link['type'])
+                    )
 
                 # Since backend specific Links (DbLink) are not validated upon creation, we will now validate them.
                 source = QueryBuilder().append(Node, filters={'id': in_id}, project='*').first()[0]
@@ -647,9 +639,9 @@ def import_data_sqla(
             # Put everything in a specific group
             ######################################################
             existing = existing_entries.get(NODE_ENTITY_NAME, {})
-            existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in six.itervalues(existing)]
+            existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in existing.values()]
             new = new_entries.get(NODE_ENTITY_NAME, {})
-            new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in six.itervalues(new)]
+            new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in new.values()]
 
             pks_for_group = existing_pk + new_pk
 
@@ -701,8 +693,6 @@ def import_data_sqla(
             raise
 
     if not silent:
-        print('*** WARNING: MISSING EXISTING UUID CHECKS!!')
-        print('*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)')
         print('DONE.')
 
     return ret_dict

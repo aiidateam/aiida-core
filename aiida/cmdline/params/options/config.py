@@ -12,12 +12,8 @@
 .. py:module::config
     :synopsis: Convenience class for configuration file option
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import yaml
 import click_config_file
+import yaml
 
 from .overridable import OverridableOption
 
@@ -25,7 +21,7 @@ from .overridable import OverridableOption
 def yaml_config_file_provider(file_path, cmd_name):  # pylint: disable=unused-argument
     """Read yaml config file."""
     with open(file_path, 'r') as handle:
-        return yaml.load(handle)
+        return yaml.safe_load(handle)
 
 
 class ConfigFileOption(OverridableOption):
@@ -59,7 +55,7 @@ class ConfigFileOption(OverridableOption):
         :param kwargs: default keyword arguments to be used that can be overridden in the call
         """
         kwargs.update({'provider': yaml_config_file_provider, 'implicit': False})
-        super(ConfigFileOption, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def __call__(self, **kwargs):
         """

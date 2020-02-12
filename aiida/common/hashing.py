@@ -7,41 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Common password and hash generation functions.
-"""
-
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
+"""Common password and hash generation functions."""
 import hashlib
-try:  # Python3
+try:  # Python > 3.5
     from hashlib import blake2b
-except ImportError:  # Python2
+except ImportError:  # Python 3.5
     from pyblake2 import blake2b
 import numbers
 import random
 import time
 import uuid
+from collections import abc, OrderedDict
 from datetime import datetime
-from operator import itemgetter
+from functools import singledispatch
 from itertools import chain
+from operator import itemgetter
 
-import six
-from six.moves import range
-from passlib.context import CryptContext
 import pytz
 
-try:  # Python3
-    from functools import singledispatch
-    from collections import abc, OrderedDict
-except ImportError:  # Python2
-    from singledispatch import singledispatch
-    import collections as abc
-    from collections import OrderedDict
-
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
-
 from .folders import Folder
 
 # The prefix of the hashed using pbkdf2_sha256 algorithm in Django
@@ -58,16 +42,6 @@ HASHING_KEY = 'HashingKey'
 
 # The key that is used to store the hash in the node extras
 _HASH_EXTRA_KEY = '_aiida_hash'
-
-pwd_context = CryptContext(  # pylint: disable=invalid-name
-    # The list of hashes that we support
-    schemes=['argon2', 'pbkdf2_sha256', 'des_crypt'],
-    # The default hashing mechanism
-    default='pbkdf2_sha256',
-
-    # We set the number of rounds that should be used...
-    pbkdf2_sha256__default_rounds=8000,
-)
 
 ###################################################################
 # THE FOLLOWING WAS TAKEN FROM DJANGO BUT IT CAN BE EASILY REPLACED
@@ -99,7 +73,7 @@ def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyz' 'ABC
         # properties of the chosen random sequence slightly, but this
         # is better than absolute predictability.
         random.seed(hashlib.sha256(('%s%s%s' % (random.getstate(), time.time(), HASHING_KEY)).encode('utf-8')).digest())
-    return u''.join(random.choice(allowed_chars) for i in range(length))
+    return ''.join(random.choice(allowed_chars) for i in range(length))
 
 
 BLAKE2B_OPTIONS = {
@@ -163,21 +137,15 @@ def _single_digest(obj_type, obj_bytes=b''):
 _END_DIGEST = _single_digest(')')
 
 
-@_make_hash.register(six.binary_type)
+@_make_hash.register(bytes)
 def _(bytes_obj, **kwargs):
-    """
-    Hash arbitrary binary strings (str in Python 2, bytes in Python 3).
-    For compat reason between Python 2 and 3, this gets the same hash-type
-    as for unicode in Python 2, resp. str in Python 3."""
+    """Hash arbitrary byte strings."""
     return [_single_digest('str', bytes_obj)]
 
 
-@_make_hash.register(six.text_type)
+@_make_hash.register(str)
 def _(val, **kwargs):
-    """
-    If the type is unicode in Python 2 or a str in Python 3, convert it
-    to a str in Python 2 and bytes in Python 3 using the utf-8 encoding.
-    """
+    """Convert strings explicitly to bytes."""
     return [_single_digest('str', val.encode('utf-8'))]
 
 
@@ -243,7 +211,7 @@ def _(val, **kwargs):
     """
     return [
         _single_digest(
-            'complex', u'{}!{}'.format(
+            'complex', '{}!{}'.format(
                 float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION), float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)
             ).encode('utf-8')
         )
@@ -253,7 +221,7 @@ def _(val, **kwargs):
 @_make_hash.register(numbers.Integral)
 def _(val, **kwargs):
     """get the hash of the little-endian signed long long representation of the integer"""
-    return [_single_digest('int', u'{}'.format(val).encode('utf-8'))]
+    return [_single_digest('int', '{}'.format(val).encode('utf-8'))]
 
 
 @_make_hash.register(bool)
@@ -269,17 +237,10 @@ def _(val, **kwargs):
 @_make_hash.register(datetime)
 def _(val, **kwargs):
     """hashes the little-endian rep of the float <epoch-seconds>.<subseconds>"""
-
     # see also https://stackoverflow.com/a/8778548 for an excellent elaboration
-
-    if six.PY2:
-        if val.tzinfo is not None and val.utcoffset() is not None:
-            val = val.replace(tzinfo=None) - val.utcoffset()
-        timestamp = (val - datetime(1970, 1, 1)).total_seconds()
-    else:
-        if val.tzinfo is None or val.utcoffset() is None:
-            val = val.replace(tzinfo=pytz.utc)
-        timestamp = val.timestamp()
+    if val.tzinfo is None or val.utcoffset() is None:
+        val = val.replace(tzinfo=pytz.utc)
+    timestamp = val.timestamp()
 
     return [_single_digest('datetime', float_to_text(timestamp, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
 
@@ -314,7 +275,7 @@ def _(folder, **kwargs):
                     yield digest
                 yield _END_DIGEST
 
-    return [_single_digest('folder')] + [d for d in folder_digests(folder)]
+    return [_single_digest('folder')] + list(folder_digests(folder))
 
 
 def float_to_text(value, sig):
@@ -325,5 +286,5 @@ def float_to_text(value, sig):
     :param value: the float value to convert
     :param sig: choose how many digits after the comma should be output
     """
-    fmt = u'{{:.{}g}}'.format(sig)
+    fmt = '{{:.{}g}}'.format(sig)
     return fmt.format(value)

@@ -8,19 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Mixin classes for ORM classes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import inspect
-import io
 
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.lang import classproperty
 
 
-class FunctionCalculationMixin(object):
+class FunctionCalculationMixin:
     """
     This mixin should be used for ProcessNode subclasses that are used to record the execution
     of a python function. For example the process nodes that are used for a function that
@@ -59,7 +55,7 @@ class FunctionCalculationMixin(object):
 
         try:
             source_file_path = inspect.getsourcefile(func)
-            with io.open(source_file_path, 'rb') as handle:
+            with open(source_file_path, 'rb') as handle:
                 self.put_object_from_filelike(handle, self.FUNCTION_SOURCE_FILE_PATH, mode='wb', encoding=None)
         except (IOError, OSError):
             pass
@@ -117,7 +113,7 @@ class FunctionCalculationMixin(object):
         return self.get_object_content(self.FUNCTION_SOURCE_FILE_PATH)
 
 
-class Sealable(object):
+class Sealable:
     """Mixin to mark a Node as `sealable`."""
     # pylint: disable=no-member,unsupported-membership-test
 
@@ -140,7 +136,7 @@ class Sealable(object):
         if self.is_sealed:
             raise exceptions.ModificationNotAllowed('Cannot add a link to a sealed node')
 
-        super(Sealable, self).validate_incoming(source, link_type=link_type, link_label=link_label)
+        super().validate_incoming(source, link_type=link_type, link_label=link_label)
 
     def validate_outgoing(self, target, link_type, link_label):
         """Validate adding a link of the given type from ourself to a given node.
@@ -155,7 +151,7 @@ class Sealable(object):
         if self.is_sealed:
             raise exceptions.ModificationNotAllowed('Cannot add a link from a sealed node')
 
-        super(Sealable, self).validate_outgoing(target, link_type=link_type, link_label=link_label)
+        super().validate_outgoing(target, link_type=link_type, link_label=link_label)
 
     @property
     def is_sealed(self):

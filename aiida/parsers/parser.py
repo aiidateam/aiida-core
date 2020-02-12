@@ -11,12 +11,7 @@
 This module implements a generic output plugin, that is general enough
 to allow the reading of the outputs of a calculation.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-from abc import ABCMeta, abstractmethod
-import six
+from abc import ABC, abstractmethod
 
 from aiida.common import exceptions, extendeddicts
 from aiida.engine import calcfunction
@@ -25,8 +20,7 @@ from aiida.engine.processes.ports import CalcJobOutputPort
 __all__ = ('Parser',)
 
 
-@six.add_metaclass(ABCMeta)
-class Parser(object):
+class Parser(ABC):
     """Base class for a Parser that can parse the outputs produced by a CalcJob process."""
 
     def __init__(self, node):

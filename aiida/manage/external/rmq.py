@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Components to communicate tasks to RabbitMQ."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import collections
 import logging
 
@@ -187,7 +184,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             raise gen.Return(future.result())
 
         try:
-            result = yield super(ProcessLauncher, self)._continue(communicator, pid, nowait, tag)
+            result = yield super()._continue(communicator, pid, nowait, tag)
         except ImportError as exception:
             message = 'the class of the process could not be imported.'
             self.handle_continue_exception(node, exception, message)

@@ -13,13 +13,7 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 import os
-
-from six.moves import zip
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcJobState
@@ -35,14 +29,13 @@ REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 execlogger = AIIDA_LOGGER.getChild('execmanager')
 
 
-def upload_calculation(node, transport, calc_info, script_filename, inputs=None, dry_run=False):
+def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=False):
     """Upload a `CalcJob` instance
 
     :param node: the `CalcJobNode`.
     :param transport: an already opened transport to use to submit the calculation.
-    :param calc_info: the calculation info datastructure returned by `CalcJobNode.presubmit`
-    :param script_filename: the job launch script returned by `CalcJobNode.presubmit`
-    :return: tuple of ``calc_info`` and ``script_filename``
+    :param calc_info: the calculation info datastructure returned by `CalcJob.presubmit`
+    :param folder: temporary local file system folder containing the inputs written by `CalcJob.prepare_for_submission`
     """
     from logging import LoggerAdapter
     from tempfile import NamedTemporaryFile
@@ -54,7 +47,7 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
     link_label = 'remote_folder'
     if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
         execlogger.warning('CalcJobNode<{}> already has a `{}` output: skipping upload'.format(node.pk, link_label))
-        return calc_info, script_filename
+        return calc_info
 
     computer = node.computer
 
@@ -68,8 +61,6 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
     if not dry_run and node.has_cached_links():
         raise ValueError('Cannot submit calculation {} because it has cached input links! If you just want to test the '
                          'submission, set `metadata.dry_run` to True in the inputs.'.format(node.pk))
-
-    folder = node._raw_input_folder
 
     # If we are performing a dry-run, the working directory should actually be a local folder that should already exist
     if dry_run:
@@ -145,8 +136,14 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
     for code in input_codes:
         if code.is_local():
             # Note: this will possibly overwrite files
-            for f in code.get_folder_list():
-                transport.put(code.get_abs_path(f), f)
+            for f in code.list_object_names():
+                # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
+                # combination with the new `Transport.put_object_from_filelike`
+                # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
+                with NamedTemporaryFile(mode='wb+') as handle:
+                    handle.write(code.get_object_content(f, mode='rb'))
+                    handle.flush()
+                    transport.put(handle.name, f)
             transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
 
     # In a dry_run, the working directory is the raw input folder, which will already contain these resources
@@ -198,7 +195,6 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
             with NamedTemporaryFile(mode='wb+') as handle:
                 handle.write(data_node.get_object_content(filename, mode='rb'))
                 handle.flush()
-                handle.seek(0)
                 transport.put(handle.name, target)
 
     if dry_run:
@@ -245,6 +241,23 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
                 raise IOError('It is not possible to create a symlink between two different machines for '
                               'calculation {}'.format(node.pk))
 
+    provenance_exclude_list = calc_info.provenance_exclude_list or []
+
+    # Loop recursively over content of the sandbox folder copying all that are not in `provenance_exclude_list`. Note
+    # that directories are not created explicitly. The `node.put_object_from_filelike` call will create intermediate
+    # directories for nested files automatically when needed. This means though that empty folders in the sandbox or
+    # folders that would be empty when considering the `provenance_exclude_list` will *not* be copied to the repo. The
+    # advantage of this explicit copying instead of deleting the files from `provenance_exclude_list` from the sandbox
+    # first before moving the entire remaining content to the node's repository, is that in this way we are guaranteed
+    # not to accidentally move files to the repository that should not go there at all cost.
+    for root, dirnames, filenames in os.walk(folder.abspath):
+        for filename in filenames:
+            filepath = os.path.join(root, filename)
+            relpath = os.path.relpath(filepath, folder.abspath)
+            if relpath not in provenance_exclude_list:
+                with open(filepath, 'rb') as handle:
+                    node.put_object_from_filelike(handle, relpath, 'wb', force=True)
+
     if not dry_run:
         # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
         # chance of making this method idempotent. That is to say, if a runner gets interrupted during this action, it
@@ -254,8 +267,6 @@ def upload_calculation(node, transport, calc_info, script_filename, inputs=None,
         remotedata = RemoteData(computer=computer, remote_path=workdir)
         remotedata.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
         remotedata.store()
-
-    return calc_info, script_filename
 
 
 def submit_calculation(calculation, transport, calc_info, script_filename):

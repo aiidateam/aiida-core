@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import collections
 import re
@@ -27,7 +24,7 @@ PORT_NAMESPACE_SEPARATOR = '__'  # The character sequence to represent a nested 
 OutputPort = ports.OutputPort  # pylint: disable=invalid-name
 
 
-class WithNonDb(object):
+class WithNonDb:
     """
     A mixin that adds support to a port to flag a that should not be stored
     in the database using the non_db=True flag.
@@ -39,7 +36,7 @@ class WithNonDb(object):
     def __init__(self, *args, **kwargs):
         self._non_db_explicitly_set = bool('non_db' in kwargs)
         non_db = kwargs.pop('non_db', False)
-        super(WithNonDb, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._non_db = non_db
 
     @property
@@ -68,7 +65,7 @@ class WithNonDb(object):
         self._non_db = non_db
 
 
-class WithSerialize(object):
+class WithSerialize:
     """
     A mixin that adds support for a serialization function which is automatically applied on inputs
     that are not AiiDA data types.
@@ -76,7 +73,7 @@ class WithSerialize(object):
 
     def __init__(self, *args, **kwargs):
         serializer = kwargs.pop('serializer', None)
-        super(WithSerialize, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._serializer = serializer
 
     def serialize(self, value):
@@ -105,7 +102,7 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
 
         :returns: a dictionary of the stringified InputPort attributes
         """
-        description = super(InputPort, self).get_description()
+        description = super().get_description()
         description['non_db'] = '{}'.format(self.non_db)
 
         return description
@@ -116,7 +113,7 @@ class CalcJobOutputPort(ports.OutputPort):
 
     def __init__(self, *args, **kwargs):
         pass_to_parser = kwargs.pop('pass_to_parser', False)
-        super(CalcJobOutputPort, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._pass_to_parser = pass_to_parser
 
     @property
@@ -147,7 +144,7 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         if hasattr(port, 'non_db_explicitly_set') and not port.non_db_explicitly_set:
             port.non_db = self.non_db
 
-        super(PortNamespace, self).__setitem__(key, port)
+        super().__setitem__(key, port)
 
     @staticmethod
     def validate_port_name(port_name):

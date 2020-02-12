@@ -18,17 +18,13 @@ Revision ID: 041a79fc615f
 Revises: 7ca08c391c49
 Create Date: 2018-12-28 15:53:14.596810
 """
-# pylint: disable=wrong-import-order
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import sys
-from six.moves import zip
+
 import click
+
+from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import text
-from alembic import op
 
 from aiida.backends.general.migrations.utils import dumps_json
 from aiida.manage import configuration
@@ -262,12 +258,7 @@ def upgrade():
     connection.execute(text("""UPDATE db_dblog SET dbnode_id=objpk"""))
 
     op.create_foreign_key(
-        None,
-        'db_dblog',
-        'db_dbnode', ['dbnode_id'], ['id'],
-        ondelete=u'CASCADE',
-        initially=u'DEFERRED',
-        deferrable=True
+        None, 'db_dblog', 'db_dbnode', ['dbnode_id'], ['id'], ondelete='CASCADE', initially='DEFERRED', deferrable=True
     )
 
     # Update the dbnode_id column to not nullable

@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Generic backend related objects"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import abc
 import typing

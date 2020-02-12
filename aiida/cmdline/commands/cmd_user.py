@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi user` command."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from functools import partial
 import click

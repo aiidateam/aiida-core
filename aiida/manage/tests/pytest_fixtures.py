@@ -16,13 +16,10 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
  * aiida_local_code_factory
 
 """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import tempfile
 import shutil
 import pytest
+
 from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
 
 
@@ -97,6 +94,7 @@ def aiida_localhost(temp_dir):  # pylint: disable=redefined-outer-name
             scheduler_type='direct'
         )
         computer.store()
+        computer.set_minimum_job_poll_interval(0.)
         computer.configure()
 
     return computer
@@ -129,13 +127,12 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
         :rtype: :py:class:`aiida.orm.Code`
         """
         from aiida.orm import Code
-        from aiida.common.files import which
 
         codes = Code.objects.find(filters={'label': executable})  # pylint: disable=no-member
         if codes:
             return codes[0]
 
-        executable_path = which(executable)
+        executable_path = shutil.which(executable)
 
         code = Code(
             input_plugin_name=entry_point,

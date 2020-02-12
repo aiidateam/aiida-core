@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for workchain processes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.common.lang import classproperty
 
@@ -29,7 +26,7 @@ class WorkChainNode(WorkflowNode):
     @classproperty
     def _updatable_attributes(cls):
         # pylint: disable=no-self-argument
-        return super(WorkChainNode, cls)._updatable_attributes + (cls.STEPPER_STATE_INFO_KEY,)
+        return super()._updatable_attributes + (cls.STEPPER_STATE_INFO_KEY,)
 
     @property
     def stepper_state_info(self):

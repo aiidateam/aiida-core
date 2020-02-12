@@ -10,11 +10,8 @@
 """ Utility functions for import/export of AiiDA entities """
 # pylint: disable=inconsistent-return-statements,too-many-branches,too-many-return-statements
 # pylint: disable=too-many-nested-blocks,too-many-locals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-from six.moves.html_parser import HTMLParser
+import urllib
+from html.parser import HTMLParser
 
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
@@ -53,17 +50,18 @@ def schema_to_entity_names(class_string):
         return COMMENT_ENTITY_NAME
 
 
-# pylint: disable=abstract-method
 class HTMLGetLinksParser(HTMLParser):
     """
     If a filter_extension is passed, only links with extension matching
     the given one will be returned.
     """
 
+    # pylint: disable=abstract-method
+
     def __init__(self, filter_extension=None):  # pylint: disable=super-on-old-class
         self.filter_extension = filter_extension
         self.links = []
-        super(HTMLGetLinksParser, self).__init__()
+        super().__init__()
 
     def handle_starttag(self, tag, attrs):
         """
@@ -87,8 +85,6 @@ def get_valid_import_links(url):
     Open the given URL, parse the HTML and return a list of valid links where
     the link file has a .aiida extension.
     """
-    from six.moves import urllib
-
     request = urllib.request.urlopen(url)
     parser = HTMLGetLinksParser(filter_extension='aiida')
     parser.feed(request.read().decode('utf8'))

@@ -8,11 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The verdi shell command"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import io
 import os
 import click
 
@@ -77,10 +73,8 @@ def shell(plain, no_startup, interface):
                 if not os.path.isfile(pythonrc):
                     continue
                 try:
-                    with io.open(pythonrc, encoding='utf8') as handle:
-                        # Disable yapf to keep Python 3 style here
-                        exec(compile(handle.read(), pythonrc, 'exec'),  # pylint: disable=exec-used
-                             imported_objects)  # yapf:disable
+                    with open(pythonrc, encoding='utf8') as handle:
+                        exec(compile(handle.read(), pythonrc, 'exec'), imported_objects)  # pylint: disable=exec-used
                 except NameError:
                     pass
 

@@ -8,14 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """General utilities for Transport classes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import time
 
 from paramiko import ProxyCommand
-from six.moves import range
 
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
@@ -40,14 +36,12 @@ class _DetachedProxyCommand(ProxyCommand):
     """Modifies paramiko's ProxyCommand by launching the process in a separate process group."""
 
     def __init__(self, command_line):  # pylint: disable=super-init-not-called
-        # Note that the super().__init__ MUST NOT be called here, otherwise
-        # two subprocesses will be created.
-        import os
+        # Note that the super().__init__ MUST NOT be called here, otherwise two subprocesses will be created.
         from subprocess import Popen, PIPE
         from shlex import split as shlsplit
 
         self.cmd = shlsplit(command_line)
-        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setsid)  # pylint: disable=subprocess-popen-preexec-fn
+        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, start_new_session=True)
         self.timeout = None
 
     def close(self):

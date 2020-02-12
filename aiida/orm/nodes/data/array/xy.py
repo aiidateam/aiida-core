@@ -12,12 +12,7 @@ This module defines the classes related to Xy data. That is data that contains
 collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import six
-from six.moves import range, zip
 
 import numpy as np
 from aiida.common.exceptions import InputValidationError, NotExistent
@@ -50,7 +45,7 @@ class XyData(ArrayData):
         Validates that the array is an numpy.ndarray and that the name is
         of type basestring. Raises InputValidationError if this not the case.
         """
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise InputValidationError('The name must always be an instance of basestring.')
 
         if not isinstance(array, np.ndarray):
@@ -59,7 +54,7 @@ class XyData(ArrayData):
             array.astype(float)
         except ValueError:
             raise InputValidationError('The input array must only contain floats')
-        if not isinstance(units, six.string_types):
+        if not isinstance(units, str):
             raise InputValidationError('The units must always be an instance of basestring.')
 
     def set_x(self, x_array, x_name, x_units):

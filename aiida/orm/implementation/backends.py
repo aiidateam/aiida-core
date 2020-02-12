@@ -8,21 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Generic backend related objects"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 import abc
 import typing
-import six
 
 __all__ = ('Backend', 'BackendEntity', 'BackendCollection', 'EntityType')
 
 EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Backend(object):
+class Backend(abc.ABC):
     """The public interface that defines a backend factory that creates backend specific concrete objects."""
 
     @abc.abstractmethod
@@ -120,9 +114,15 @@ class Backend(object):
         :return: a context manager to group database operations
         """
 
+    @abc.abstractmethod
+    def get_session(self):
+        """Return a database session that can be used by the `QueryBuilder` to perform its query.
 
-@six.add_metaclass(abc.ABCMeta)
-class BackendEntity(object):
+        :return: an instance of :class:`sqlalchemy.orm.session.Session`
+        """
+
+
+class BackendEntity(abc.ABC):
     """An first-class entity in the backend"""
 
     def __init__(self, backend):

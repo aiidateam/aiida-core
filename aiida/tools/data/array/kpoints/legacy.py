@@ -7,12 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
-import six
-from six.moves import range, zip
 import numpy
 
 
@@ -158,7 +153,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
                 return False
 
             for i in path:
-                are_str = all([isinstance(b, six.string_types) for b in i])
+                are_str = all([isinstance(b, str) for b in i])
                 if not are_str:
                     return False
         except IndexError:
@@ -171,8 +166,8 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             if not are_three:
                 return False
 
-            are_good = all([all([isinstance(b[0], six.string_types),
-                                 isinstance(b[1], six.string_types),
+            are_good = all([all([isinstance(b[0], str),
+                                 isinstance(b[1], str),
                                  isinstance(b[2], int)])
                             for b in path])
             if not are_good:
@@ -195,7 +190,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             are_four = all([len(i) == 4 for i in path])
             if not are_four:
                 return False
-            have_labels = all(all([isinstance(i[0], six.string_types), isinstance(i[2], six.string_types)]) for i in path)
+            have_labels = all(all([isinstance(i[0], str), isinstance(i[2], str)]) for i in path)
             if not have_labels:
                 return False
             for i in path:
@@ -214,7 +209,7 @@ def get_explicit_kpoints_path(value=None, cell=None, pbc=None, kpoint_distance=N
             are_five = all([len(i) == 5 for i in path])
             if not are_five:
                 return False
-            have_labels = all(all([isinstance(i[0], six.string_types), isinstance(i[2], six.string_types)]) for i in path)
+            have_labels = all(all([isinstance(i[0], str), isinstance(i[2], str)]) for i in path)
             if not have_labels:
                 return False
             have_points_num = all([isinstance(i[4], int) for i in path])

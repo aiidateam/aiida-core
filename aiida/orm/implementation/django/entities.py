@@ -9,10 +9,6 @@
 ###########################################################################
 """Classes and methods for Django specific backend entities"""
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 import typing
 
 from django.db.models import Model  # pylint: disable=import-error, no-name-in-module
@@ -69,7 +65,7 @@ class DjangoModelEntity(typing.Generic[ModelType]):
         raise ValueError("Unknown attribute '{}'".format(attr_name))
 
     def __init__(self, *args, **kwargs):
-        super(DjangoModelEntity, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._class_check()
 
     @property

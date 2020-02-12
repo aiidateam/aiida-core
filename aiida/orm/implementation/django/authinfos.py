@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the Django backend implementation of the `AuthInfo` ORM class."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.common import exceptions
@@ -35,7 +32,7 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
         """
         from . import computers
         from . import users
-        super(DjangoAuthInfo, self).__init__(backend)
+        super().__init__(backend)
         type_check(user, users.DjangoUser)
         type_check(computer, computers.DjangoComputer)
         self._dbmodel = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbmodel, aiidauser=user.dbmodel))

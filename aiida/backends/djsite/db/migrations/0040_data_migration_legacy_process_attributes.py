@@ -26,10 +26,6 @@ it set to `True`. Excluding the nodes that have a `process_state` attribute of o
 `running`; or `waiting`, because those are valid active processes that are not yet sealed.
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error

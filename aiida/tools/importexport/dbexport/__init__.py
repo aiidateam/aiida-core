@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=fixme,too-many-branches,too-many-locals,too-many-statements,too-many-arguments
 """Provides export functionalities."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import os
 import tarfile
@@ -32,7 +29,7 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
-    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, retrieve_linked_nodes
+    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed
 )
 
 from .zip import ZipFolder
@@ -141,6 +138,7 @@ def export_tree(
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
     from collections import defaultdict
+    from aiida.tools.graph.graph_traversers import get_nodes_export
 
     if not silent:
         print('STARTING EXPORT...')
@@ -184,13 +182,37 @@ def export_tree(
             )
 
     # Add all the nodes contained within the specified groups
-    for group in given_groups:
-        for entry in group.nodes:
-            entities_starting_set[NODE_ENTITY_NAME].add(entry.uuid)
-            if issubclass(entry.__class__, orm.Data):
-                given_data_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, orm.ProcessNode):
-                given_calculation_entry_ids.add(entry.pk)
+    if given_group_entry_ids:
+
+        if not silent:
+            print('RETRIEVING NODES FROM GROUPS...')
+
+        # Use single query instead of given_group.nodes iterator for performance.
+        qh_groups = orm.QueryBuilder().append(
+            orm.Group, filters={
+                'id': {
+                    'in': given_group_entry_ids
+                }
+            }, tag='groups'
+        ).queryhelp
+
+        # Delete this import once the dbexport.zip module has been renamed
+        from builtins import zip  # pylint: disable=redefined-builtin
+
+        data_results = orm.QueryBuilder(**qh_groups).append(orm.Data, project=['id', 'uuid'], with_group='groups').all()
+        if data_results:
+            pks, uuids = map(list, zip(*data_results))
+            entities_starting_set[NODE_ENTITY_NAME].update(uuids)
+            given_data_entry_ids.update(pks)
+            del data_results, pks, uuids
+
+        calc_results = orm.QueryBuilder(**qh_groups
+                                       ).append(orm.ProcessNode, project=['id', 'uuid'], with_group='groups').all()
+        if calc_results:
+            pks, uuids = map(list, zip(*calc_results))
+            entities_starting_set[NODE_ENTITY_NAME].update(uuids)
+            given_calculation_entry_ids.update(pks)
+            del calc_results, pks, uuids
 
     for entity, entity_set in entities_starting_set.items():
         entities_starting_set[entity] = list(entity_set)
@@ -202,9 +224,31 @@ def export_tree(
     if not silent:
         print('RETRIEVING LINKED NODES AND STORING LINKS...')
 
-    to_be_exported, links_uuid, graph_traversal_rules = retrieve_linked_nodes(
-        given_calculation_entry_ids, given_data_entry_ids, **kwargs
-    )
+    initial_nodes_ids = given_calculation_entry_ids.union(given_data_entry_ids)
+    traverse_output = get_nodes_export(starting_pks=initial_nodes_ids, get_links=True, **kwargs)
+    to_be_exported = traverse_output['nodes']
+    graph_traversal_rules = traverse_output['rules']
+
+    # I create a utility dictionary for mapping pk to uuid.
+    if traverse_output['nodes']:
+        qbuilder = orm.QueryBuilder().append(
+            orm.Node,
+            project=('id', 'uuid'),
+            filters={'id': {
+                'in': traverse_output['nodes']
+            }},
+        )
+        pk_2_uuid_dict = dict(qbuilder.all())
+    else:
+        pk_2_uuid_dict = {}
+
+    # The set of tuples now has to be transformed to a list of dicts
+    links_uuid = [{
+        'input': pk_2_uuid_dict[link.source_id],
+        'output': pk_2_uuid_dict[link.target_id],
+        'label': link.link_label,
+        'type': link.link_type
+    } for link in traverse_output['links']]
 
     ## Universal "entities" attributed to all types of nodes
     # Logs

@@ -8,11 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import six
 
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
@@ -27,7 +23,7 @@ class OqmdDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, six.string_types) and not isinstance(values, int):
+        if not isinstance(values, str) and not isinstance(values, int):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
         return '{}={}'.format(key, values)
@@ -60,18 +56,18 @@ class OqmdDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdSearchResults`.
         """
-        from six.moves import urllib
+        from urllib.request import urlopen
         import re
 
         query_statement = self.query_get(**kwargs)
-        response = urllib.request.urlopen(query_statement).read()
-        entries = re.findall('(/materials/entry/\d+)', response)
+        response = urlopen(query_statement).read()
+        entries = re.findall(r'(/materials/entry/\d+)', response)
 
         results = []
         for entry in entries:
-            response = urllib.request.urlopen('{}{}'.format(self._query_url,
+            response = urlopen('{}{}'.format(self._query_url,
                                                      entry)).read()
-            structures = re.findall('/materials/export/conventional/cif/(\d+)',
+            structures = re.findall(r'/materials/export/conventional/cif/(\d+)',
                                     response)
             for struct in structures:
                 results.append({'id': struct})
@@ -107,7 +103,7 @@ class OqmdSearchResults(DbSearchResults):
     _base_url = 'http://oqmd.org/materials/export/conventional/cif/'
 
     def __init__(self, results):
-        super(OqmdSearchResults, self).__init__(results)
+        super().__init__(results)
         self._return_class = OqmdEntry
 
     def __len__(self):
@@ -142,7 +138,7 @@ class OqmdEntry(CifEntry):
         :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdEntry`, related
         to the supplied URI.
         """
-        super(OqmdEntry, self).__init__(db_name='Open Quantum Materials Database',
+        super().__init__(db_name='Open Quantum Materials Database',
                                         db_uri='http://oqmd.org',
                                         uri=uri,
                                         **kwargs)

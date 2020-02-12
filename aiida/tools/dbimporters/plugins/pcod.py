@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from aiida.tools.dbimporters.plugins.cod import (CodDbImporter,
                                                  CodSearchResults, CodEntry)
 
@@ -22,28 +19,28 @@ class PcodDbImporter(CodDbImporter):
     """
 
     def _int_clause(self, *args, **kwargs):
-        return super(PcodDbImporter, self)._int_clause(*args, **kwargs)
+        return super()._int_clause(*args, **kwargs)
 
     def _composition_clause(self, *args, **kwargs):
-        return super(PcodDbImporter, self)._composition_clause(*args, **kwargs)
+        return super()._composition_clause(*args, **kwargs)
 
     def _formula_clause(self, *args, **kwargs):
-        return super(PcodDbImporter, self)._formula_clause(*args, **kwargs)
+        return super()._formula_clause(*args, **kwargs)
 
     def _volume_clause(self, *args, **kwargs):
-        return super(PcodDbImporter, self)._volume_clause(*args, **kwargs)
+        return super()._volume_clause(*args, **kwargs)
 
     def _str_exact_clause(self, *args, **kwargs):
-        return super(PcodDbImporter, self)._str_exact_clause(*args, **kwargs)
+        return super()._str_exact_clause(*args, **kwargs)
 
     def _length_clause(self, *args, **kwargs):
-        return super(PcodDbImporter, self)._length_clause(*args, **kwargs)
+        return super()._length_clause(*args, **kwargs)
 
     def _angle_clause(self, *args, **kwargs):
-        return super(PcodDbImporter, self)._angle_clause(*args, **kwargs)
+        return super()._angle_clause(*args, **kwargs)
 
     def _str_fuzzy_clause(self, *args, **kwargs):
-        return super(PcodDbImporter, self)._str_fuzzy_clause(*args, **kwargs)
+        return super()._str_fuzzy_clause(*args, **kwargs)
 
     _keywords = {'id': ['file', _int_clause],
                  'element': ['element', _composition_clause],
@@ -60,7 +57,7 @@ class PcodDbImporter(CodDbImporter):
                  'text': ['text', _str_fuzzy_clause]}
 
     def __init__(self, **kwargs):
-        super(PcodDbImporter, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self._db_parameters = {'host': 'www.crystallography.net',
                                'user': 'pcod_reader',
                                'passwd': '',
@@ -123,7 +120,7 @@ class PcodSearchResults(CodSearchResults):
     _base_url = 'http://www.crystallography.net/pcod/cif/'
 
     def __init__(self, results):
-        super(PcodSearchResults, self).__init__(results)
+        super().__init__(results)
         self._return_class = PcodEntry
 
     def _get_url(self, result_dict):
@@ -152,7 +149,7 @@ class PcodEntry(CodEntry):
         :py:class:`aiida.tools.dbimporters.plugins.pcod.PcodEntry`, related
         to the supplied URI.
         """
-        super(PcodEntry, self).__init__(db_name=db_name,
+        super().__init__(db_name=db_name,
                                         db_uri=db_uri,
                                         uri=uri,
                                         **kwargs)

@@ -89,7 +89,7 @@ As the snippet above demonstrates, the class method takes two arguments:
  * ``spec`` which is the 'specification'
 
 .. warning::
-    Do not forget to add the line ``super(ArithmeticAddCalculation, self).define(spec)`` as the first line of the ``define`` method, where you replace the class name with the name of your calculation job.
+    Do not forget to add the line ``super().define(spec)`` as the first line of the ``define`` method, where you replace the class name with the name of your calculation job.
     This will call the ``define`` method of the parent class, which is necessary for the calculation job to work properly
 
 As the name suggests, the ``spec`` can be used to specify the properties of the calculation job.
@@ -141,6 +141,15 @@ The implementation of the ``ArithmeticAddCalculation`` that we are considering i
 Before we go into the code line-by-line, let's describe the big picture of what is happening here.
 The goal of this method is to help the engine accomplish the three steps required for preparing the submission a calculation job, as described above.
 The raw input files that are required can be written to a sandbox folder that is passed in as the ``folder`` argument.
+
+.. note::
+
+    The ``folder`` argument points to a temporary sandbox folder on the local file system that can be used to write the input files to.
+    After the ``prepare_for_submission`` method returns, the engine will take those contents and copy them to the working directory where the calculation will be run.
+    On top of that, these files will also be written to the file repository of the node that represents the calculation as an additional measure of provenance.
+    Even though the information written there should be a derivation of the contents of the nodes that were passed as input nodes, since it is a derived form we store this explicitly nonetheless.
+    Sometimes, this behavior is undesirable, for example for efficiency or data privacy reasons, so it can be controlled with various lists such as :ref:`local_copy_list <working_calcjobs_file_lists_local_copy>` and :ref:`provenance_exclude_list <working_calcjobs_file_lists_provenance_exclude>`.
+
 All the other required information, such as the directives of which files to copy and what command line options to use are defined through the :py:class:`~aiida.common.datastructures.CalcInfo` datastructure, which should be returned from the method as the only value.
 In principle, this is what one **should do** in the ``prepare_for_submission`` method:
 
@@ -244,6 +253,47 @@ If instead, you need to transfer a specific file from a ``FolderData``, you can 
 Note that the filenames in the relative source and target path need not be the same.
 This depends fully on how the files are stored in the node's repository and what files need to be written to the working directory.
 
+One might think what the purpose of the list is, when one could just as easily use normal the normal API to write the file to the ``folder`` sandbox folder.
+It is true, that in this way the file will be copied to the working directory, however, then it will *also* be copied into the repository of the calculation node.
+Since in this case it is merely a direct one-to-one copy of the file that is already part of one of the input nodes (in an unaltered form), this duplication is unnecessary and adds useless weight to the file repository.
+Using the ``local_copy_list`` prevents this unnecessary duplication of file content.
+It can also be used if the content of a particular input node is privacy sensitive and cannot be duplicated in the repository.
+
+.. _working_calcjobs_file_lists_provenance_exclude:
+
+Provenance exclude list
+~~~~~~~~~~~~~~~~~~~~~~~
+The :ref:`local_copy_list <working_calcjobs_file_lists_local_copy>`  allows one to instruct the engine to write files from the input files to the working directory, without them *also* being copied to the file repository of the calculation node.
+As discussed in the corresponding section, this is useful in order to avoid duplication or in case where the data of the nodes is proprietary or privacy sensitive and cannot be duplicated arbitrarily everywhere in the file repository.
+However, the limitation of the ``local_copy_list`` is that the it can only target single files in its entirety and cannot be used for arbitrary files that are written to the ``folder`` sandbox folder.
+To provide full control over what files from the ``folder`` are stored permanently in the calculation node file repository, the ``provenance_exclude_list`` is introduced.
+This :py:class:`~aiida.common.datastructures.CalcInfo` attribute is a list of filepaths, relative to the base path of the ``folder`` sandbox folder, which *are not stored* in the file repository.
+
+Consider the following file structure as written by an implementation of ``prepare_for_submission`` to the ``folder`` sandbox:
+
+.. code:: bash
+
+    ├─ sub
+    │  ├─ file_b.txt
+    │  └─ personal.dat
+    ├─ file_a.txt
+    └─ secret.key
+
+Clearly, we do not want the ``personal.dat`` and ``secret.key`` files to end up permanently in the file repository.
+This can be achieved by defining:
+
+.. code:: python
+
+    calc_info.provenance_exclude_list = ['sub/personal.dat', 'secret.key']
+
+With this specification, the final contents of the repository of the calculation node will contain:
+
+.. code:: bash
+
+    ├─ sub
+    │  └─ file_b.txt
+    └─ file_a.txt
+
 .. _working_calcjobs_file_lists_remote_copy:
 
 Remote copy list
@@ -323,6 +373,7 @@ The full list of available options are documented below as part of the ``CalcJob
 
 .. aiida-calcjob:: CalcJob
     :module: aiida.engine.processes.calcjobs
+    :expand-namespaces:
 
 
 .. _working_calcjobs_launch:

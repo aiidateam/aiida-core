@@ -8,17 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi data remote` command."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
+import stat
 
-import io
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments, types
 from aiida.cmdline.utils import echo
-from aiida.common.files import get_mode_string
 
 
 @verdi_data.group('remote')
@@ -50,7 +46,7 @@ def remote_ls(ls_long, path, datum):
         if ls_long:
             mtime = datetime.datetime.fromtimestamp(metadata['attributes'].st_mtime)
             pre_line = '{} {:10}  {}  '.format(
-                get_mode_string(metadata['attributes'].st_mode), metadata['attributes'].st_size,
+                stat.filemode(metadata['attributes'].st_mode), metadata['attributes'].st_size,
                 mtime.strftime('%d %b %Y %H:%M')
             )
             click.echo(pre_line, nl=False)
@@ -72,7 +68,7 @@ def remote_cat(datum, path):
         with tempfile.NamedTemporaryFile(delete=False) as tmpf:
             tmpf.close()
             datum.getfile(path, tmpf.name)
-            with io.open(tmpf.name, encoding='utf8') as fhandle:
+            with open(tmpf.name, encoding='utf8') as fhandle:
                 sys.stdout.write(fhandle.read())
     except IOError as err:
         echo.echo_critical('{}: {}'.format(err.errno, str(err)))

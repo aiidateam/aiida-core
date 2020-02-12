@@ -8,12 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ Resources for REST API """
+from urllib.parse import unquote
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-from six.moves.urllib.parse import unquote  # pylint: disable=import-error
 from flask import request, make_response
 from flask_restful import Resource
 
@@ -217,7 +213,7 @@ class Node(BaseResource):
     _parse_pk_uuid = 'uuid'  # Parse a uuid pattern in the URL path (not a pk)
 
     def __init__(self, **kwargs):
-        super(Node, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         from aiida.orm import Node as tNode
         self.tclass = tNode
 

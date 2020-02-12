@@ -11,13 +11,7 @@
 # pylint: disable=invalid-name,too-few-public-methods
 """Migration for the update of the DbLog table. Addition of uuids"""
 
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
-from __future__ import print_function
 import sys
-from six.moves import zip
 import click
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed

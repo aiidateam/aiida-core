@@ -8,20 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Backend specific computer objects and methods"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import abc
 import logging
-import six
 
 from . import backends
 
 __all__ = ('BackendComputer', 'BackendComputerCollection')
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendComputer(backends.BackendEntity):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -122,7 +117,6 @@ class BackendComputer(backends.BackendEntity):
         pass
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendComputerCollection(backends.BackendCollection[BackendComputer]):
     """The collection of Computer entries."""
 

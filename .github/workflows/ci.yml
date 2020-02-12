@@ -1,0 +1,190 @@
+name: aiida-core
+
+on: [push, pull_request]
+
+jobs:
+
+  conda:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Conda install
+      env:
+        PYTHON_VERSION: 3.7
+      run:
+        .github/workflows/conda.sh
+
+  docs:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install system dependencies
+      # remove occasionally problematic repositories we don't use anyway
+      run: |
+        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
+        sudo apt update
+        sudo apt install texlive-base texlive-generic-recommended texlive-fonts-recommended texlive-latex-base texlive-latex-recommended texlive-latex-extra dvipng dvidvi
+
+    - name: Install python dependencies
+      run: |
+        pip install numpy==1.17.4
+        pip install -e .[docs,testing]
+
+    - name: Build documentation
+      env:
+        READTHEDOCS: 'True'
+      run:
+        SPHINXOPTS='-nW' make -C docs html
+
+  pre-commit:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install system dependencies
+      run: |
+        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
+        sudo apt update
+        sudo apt install libkrb5-dev ruby ruby-dev
+
+    - name: Install python dependencies
+      run: |
+        pip install numpy==1.17.4
+        pip install -e .[all]
+        pip freeze
+
+    - name: Run pre-commit
+      run:
+        pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+
+  tests:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.5, 3.8]
+        backend: ['django', 'sqlalchemy']
+
+    steps:
+    - uses: actions/checkout@v1
+    - uses: harmon758/postgresql-action@v1
+      with:
+        postgresql version: '11'
+        postgresql db: test_${{ matrix.backend }}
+        postgresql user: 'postgres'
+        postgresql password: ''
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies
+      run: |
+        wget -O - "https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc" | sudo apt-key add -
+        echo 'deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
+        echo 'deb https://dl.bintray.com/rabbitmq/debian bionic main' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
+        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
+        sudo apt update
+        sudo apt install postgresql postgresql-server-dev-all postgresql-client rabbitmq-server graphviz
+        sudo systemctl status rabbitmq-server.service
+
+    - name: Install python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install numpy==1.17.4
+        pip install -e .[atomic_tools,docs,notebook,rest,testing]
+        reentry scan
+
+    - name: Setup environment
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run:
+        .github/workflows/setup.sh
+
+    - name: Run test suite
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run:
+        .github/workflows/tests.sh
+
+  verdi:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install python dependencies
+      run: |
+        pip install numpy==1.17.4
+        pip install -e .
+
+    - name: Run verdi
+      run: |
+        verdi devel check-load-time
+        .github/workflows/verdi.sh
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Install docker
+      run: |
+        sudo apt-get update
+        sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu  $(lsb_release -cs)  stable"
+        sudo apt-get update
+        sudo apt-get install docker-ce
+
+    - name: Build the aiida-core image
+      run:
+        docker build -t aiida-core .
+
+    - name: Run aiida-core image and test the default aiida profile and localhost computer.
+      run: |
+        export DOCKERID=`docker run -d aiida-core`
+        docker exec --tty $DOCKERID wait-for-services
+        docker logs $DOCKERID
+        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi profile show default'
+        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi computer show localhost'
+        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi daemon status'

@@ -8,11 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi data upf` command."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import io
 import os
 import click
 
@@ -120,7 +116,7 @@ def upf_exportfamily(folder, group):
     for node in group.nodes:
         dest_path = os.path.join(folder, node.filename)
         if not os.path.isfile(dest_path):
-            with io.open(dest_path, 'w', encoding='utf8') as handle:
+            with open(dest_path, 'w', encoding='utf8') as handle:
                 handle.write(node.get_content())
         else:
             echo.echo_warning('File {} is already present in the destination folder'.format(node.filename))

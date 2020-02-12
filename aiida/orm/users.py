@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the ORM user class."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import warnings
 
@@ -33,7 +30,7 @@ class User(entities.Entity):
         _default_user = None  # type: aiida.orm.User
 
         def __init__(self, *args, **kwargs):
-            super(User.Collection, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
             self._default_user = self.UNDEFINED
 
         def get_or_create(self, email, **kwargs):
@@ -86,7 +83,7 @@ class User(entities.Entity):
         backend = backend or get_manager().get_backend()
         email = self.normalize_email(email)
         backend_entity = backend.users.create(email, first_name, last_name, institution)
-        super(User, self).__init__(backend_entity)
+        super().__init__(backend_entity)
 
     def __str__(self):
         return self.email

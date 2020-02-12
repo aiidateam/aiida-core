@@ -8,11 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import io
 
 from aiida.common import exceptions
 from aiida.common.links import LinkType
@@ -223,10 +218,10 @@ class Data(Node):
 
         for additional_fname, additional_fcontent in extra_files.items():
             retlist.append(additional_fname)
-            with io.open(additional_fname, 'wb', encoding=None) as fhandle:
+            with open(additional_fname, 'wb', encoding=None) as fhandle:
                 fhandle.write(additional_fcontent)  # This is up to each specific plugin
         retlist.append(path)
-        with io.open(path, 'wb', encoding=None) as fhandle:
+        with open(path, 'wb', encoding=None) as fhandle:
             fhandle.write(filetext)
 
         return retlist
@@ -296,7 +291,7 @@ class Data(Node):
         """
         if fileformat is None:
             fileformat = fname.split('.')[-1]
-        with io.open(fname, 'r', encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
+        with open(fname, 'r', encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
             self.importstring(fhandle.read(), fileformat)
 
     def _get_importers(self):
@@ -320,12 +315,11 @@ class Data(Node):
         :param object_format: Specify the output format
         """
         # pylint: disable=keyword-arg-before-vararg
-        import six
 
         if object_format is None:
             raise ValueError('object_format must be provided')
 
-        if not isinstance(object_format, six.string_types):
+        if not isinstance(object_format, str):
             raise ValueError('object_format should be a string')
 
         converters = self._get_converters()
@@ -373,7 +367,7 @@ class Data(Node):
         """
         # Validation of ``source`` is commented out due to Issue #9
         # (https://bitbucket.org/epfl_theos/aiida_epfl/issues/9/)
-        # super(Data, self)._validate()
+        # super()._validate()
         # if self.source is not None and \
         #    self.source.get('license', None) and \
         #    self.source['license'].startswith('CC-BY') and \

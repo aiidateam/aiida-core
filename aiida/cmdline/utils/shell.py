@@ -9,10 +9,6 @@
 ###########################################################################
 """Definition of modules that are to be automatically loaded for `verdi shell`."""
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 DEFAULT_MODULES_LIST = [
     ('aiida.common.links', 'LinkType', 'LinkType'),
     ('aiida.orm', 'Node', 'Node'),

@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions for migration of export-files."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.tools.importexport.common import exceptions
 

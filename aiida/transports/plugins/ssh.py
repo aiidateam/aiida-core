@@ -7,34 +7,36 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
+"""Plugin for transport over SSH (and SFTP for file transfer)."""
+# pylint: disable=too-many-lines
+import glob
 import io
 import os
-import click
-import glob
 from stat import S_ISDIR, S_ISREG
 
-import six
-from six.moves import cStringIO as StringIO
+import click
 
 from aiida.cmdline.params import options
-from aiida.cmdline.params.types.path import AbsolutePathParamType
+from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
 from ..transport import Transport, TransportInternalError
-
 
 __all__ = ('parse_sshconfig', 'convert_to_bool', 'SshTransport')
 
 
-# TODO : callback functions in paramiko are currently not used much and probably broken
 def parse_sshconfig(computername):
+    """
+    Return the ssh configuration for a given computer name.
+
+    This parses the ``.ssh/config`` file in the home directory and
+    returns the part of configuration of the given computer name.
+
+    :param computername: the computer name for which we want the configuration.
+    """
     import paramiko
     config = paramiko.SSHConfig()
     try:
-        config.parse(io.open(os.path.expanduser('~/.ssh/config'), encoding='utf8'))
+        config.parse(open(os.path.expanduser('~/.ssh/config'), encoding='utf8'))
     except IOError:
         # No file found, so empty configuration
         pass
@@ -43,17 +45,22 @@ def parse_sshconfig(computername):
 
 
 def convert_to_bool(string):
+    """
+    Convert a string passed in the CLI to a valid bool.
+
+    :return: the parsed bool value.
+    :raise ValueError: If the value is not parsable as a bool
+    """
     upstring = str(string).upper()
 
     if upstring in ['Y', 'YES', 'T', 'TRUE']:
         return True
-    elif upstring in ['N', 'NO', 'F', 'FALSE']:
+    if upstring in ['N', 'NO', 'F', 'FALSE']:
         return False
-    else:
-        raise ValueError('Invalid boolean value provided')
+    raise ValueError('Invalid boolean value provided')
 
 
-class SshTransport(Transport):
+class SshTransport(Transport):  # pylint: disable=too-many-public-methods
     """
     Support connection, command execution and data transfer to remote computers via SSH+SFTP.
     """
@@ -61,18 +68,92 @@ class SshTransport(Transport):
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.
     _valid_connect_options = [
-        ('username', {'prompt': 'User name', 'help': 'user name for the computer', 'non_interactive_default': True}),
-        ('port', {'option': options.PORT, 'prompt': 'port Nr', 'non_interactive_default': True}),
-        ('look_for_keys', {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True}),
-        ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file if default path is not set in ssh config', 'non_interactive_default': True}),
-        ('timeout', {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True}),
-        ('allow_agent', {'switch': True, 'prompt': 'Allow ssh agent', 'help': 'switch to allow or disallow ssh agent', 'non_interactive_default': True}),
-        ('proxy_command', {'prompt': 'SSH proxy command', 'help': 'SSH proxy command', 'non_interactive_default': True}),  # Managed 'manually' in connect
-        ('compress', {'switch': True, 'prompt': 'Compress file transfers', 'help': 'switch file transfer compression on / off', 'non_interactive_default': True}),
-        ('gss_auth', {'type': bool, 'prompt': 'GSS auth', 'help': 'GSS auth for kerberos', 'non_interactive_default': True}),
-        ('gss_kex', {'type': bool, 'prompt': 'GSS kex', 'help': 'GSS kex for kerberos', 'non_interactive_default': True}),
-        ('gss_deleg_creds', {'type': bool, 'prompt': 'GSS deleg_creds', 'help': 'GSS deleg_creds for kerberos', 'non_interactive_default': True}),
-        ('gss_host', {'prompt': 'GSS host', 'help': 'GSS host for kerberos', 'non_interactive_default': True}),
+        ('username', {
+            'prompt': 'User name',
+            'help': 'user name for the computer',
+            'non_interactive_default': True
+        }),
+        ('port', {
+            'option': options.PORT,
+            'prompt': 'port Nr',
+            'non_interactive_default': True
+        }),
+        (
+            'look_for_keys', {
+                'switch': True,
+                'prompt': 'Look for keys',
+                'help': 'switch automatic key file discovery on / off',
+                'non_interactive_default': True
+            }
+        ),
+        (
+            'key_filename', {
+                'type': AbsolutePathOrEmptyParamType(dir_okay=False, exists=True),
+                'prompt': 'SSH key file',
+                'help': 'Manually pass a key file if default path is not set in ssh config',
+                'non_interactive_default': True
+            }
+        ),
+        (
+            'timeout', {
+                'type': int,
+                'prompt': 'Connection timeout in s',
+                'help': 'time in seconds to wait for connection before giving up',
+                'non_interactive_default': True
+            }
+        ),
+        (
+            'allow_agent', {
+                'switch': True,
+                'prompt': 'Allow ssh agent',
+                'help': 'switch to allow or disallow ssh agent',
+                'non_interactive_default': True
+            }
+        ),
+        (
+            'proxy_command', {
+                'prompt': 'SSH proxy command',
+                'help': 'SSH proxy command',
+                'non_interactive_default': True
+            }
+        ),  # Managed 'manually' in connect
+        (
+            'compress', {
+                'switch': True,
+                'prompt': 'Compress file transfers',
+                'help': 'switch file transfer compression on / off',
+                'non_interactive_default': True
+            }
+        ),
+        (
+            'gss_auth', {
+                'type': bool,
+                'prompt': 'GSS auth',
+                'help': 'GSS auth for kerberos',
+                'non_interactive_default': True
+            }
+        ),
+        (
+            'gss_kex', {
+                'type': bool,
+                'prompt': 'GSS kex',
+                'help': 'GSS kex for kerberos',
+                'non_interactive_default': True
+            }
+        ),
+        (
+            'gss_deleg_creds', {
+                'type': bool,
+                'prompt': 'GSS deleg_creds',
+                'help': 'GSS deleg_creds for kerberos',
+                'non_interactive_default': True
+            }
+        ),
+        ('gss_host', {
+            'prompt': 'GSS host',
+            'help': 'GSS host for kerberos',
+            'non_interactive_default': True
+        }),
         # for Kerberos support through python-gssapi
     ]
 
@@ -89,8 +170,22 @@ class SshTransport(Transport):
     # to return a suggestion; it must accept only one parameter, being a Computer
     # instance
     _valid_auth_options = _valid_connect_options + [
-        ('load_system_host_keys', {'switch': True, 'prompt': 'Load system host keys', 'help': 'switch loading system host keys on / off', 'non_interactive_default': True}),
-        ('key_policy', {'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']), 'prompt': 'Key policy', 'help': 'SSH key policy', 'non_interactive_default': True})
+        (
+            'load_system_host_keys', {
+                'switch': True,
+                'prompt': 'Load system host keys',
+                'help': 'switch loading system host keys on / off',
+                'non_interactive_default': True
+            }
+        ),
+        (
+            'key_policy', {
+                'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']),
+                'prompt': 'Key policy',
+                'help': 'SSH key policy',
+                'non_interactive_default': True
+            }
+        )
     ]
 
     @classmethod
@@ -123,7 +218,7 @@ class SshTransport(Transport):
         try:
             identities = config['identityfile']
             # In paramiko > 0.10, identity file is a list of strings.
-            if isinstance(identities, six.string_types):
+            if isinstance(identities, str):
                 identity = identities
             elif isinstance(identities, (list, tuple)):
                 if not identities:
@@ -187,26 +282,27 @@ class SshTransport(Transport):
                 # If there is a piece with > to readdress stderr or stdout,
                 # skip from here on (anything else can only be readdressing)
                 break
-            else:
-                new_pieces.append(piece)
-        return' '.join(new_pieces)
+
+            new_pieces.append(piece)
+
+        return ' '.join(new_pieces)
 
     @classmethod
-    def _get_compress_suggestion_string(cls, computer):
+    def _get_compress_suggestion_string(cls, computer):  # pylint: disable=unused-argument
         """
         Return a suggestion for the specific field.
         """
         return 'True'
 
     @classmethod
-    def _get_load_system_host_keys_suggestion_string(cls, computer):
+    def _get_load_system_host_keys_suggestion_string(cls, computer):  # pylint: disable=unused-argument
         """
         Return a suggestion for the specific field.
         """
         return 'True'
 
     @classmethod
-    def _get_key_policy_suggestion_string(cls, computer):
+    def _get_key_policy_suggestion_string(cls, computer):  # pylint: disable=unused-argument
         """
         Return a suggestion for the specific field.
         """
@@ -244,10 +340,6 @@ class SshTransport(Transport):
         config = parse_sshconfig(computer.hostname)
         return str(config.get('gssapihostname', computer.hostname))
 
-    @classmethod
-    def _get_safe_interval_suggestion_string(cls, computer):
-        return cls._DEFAULT_SAFE_OPEN_INTERVAL
-
     def __init__(self, *args, **kwargs):
         """
         Initialize the SshTransport class.
@@ -264,7 +356,7 @@ class SshTransport(Transport):
         accepted paramiko.SSHClient.connect() params.
         """
         import paramiko
-        super(SshTransport, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self._sftp = None
         self._proxy = None
@@ -284,8 +376,10 @@ class SshTransport(Transport):
         elif self._missing_key_policy == 'AutoAddPolicy':
             self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         else:
-            raise ValueError('Unknown value of the key policy, allowed values '
-                             'are: RejectPolicy, WarningPolicy, AutoAddPolicy')
+            raise ValueError(
+                'Unknown value of the key policy, allowed values '
+                'are: RejectPolicy, WarningPolicy, AutoAddPolicy'
+            )
 
         self._connect_args = {}
         for k in self._valid_connect_params:
@@ -319,9 +413,10 @@ class SshTransport(Transport):
         try:
             self._client.connect(self._machine, **connection_arguments)
         except Exception as exc:
-            self.logger.error("Error connecting to '{}' through SSH: ".format(self._machine) +
-                              '[{}] {}, '.format(self.__class__.__name__, exc) +
-                              'connect_args were: {}'.format(self._connect_args))
+            self.logger.error(
+                "Error connecting to '{}' through SSH: ".format(self._machine) +
+                '[{}] {}, '.format(self.__class__.__name__, exc) + 'connect_args were: {}'.format(self._connect_args)
+            )
             raise
 
         # Open also a SFTPClient
@@ -392,11 +487,11 @@ class SshTransport(Transport):
         if path is not None:
             try:
                 self.sftp.chdir(path)
-            except SFTPError as e:
+            except SFTPError as exc:
                 # e.args[0] is an error code. For instance,
                 # 20 is 'the object is not a directory'
                 # Here I just re-raise the message as IOError
-                raise IOError(e.args[1])
+                raise IOError(exc.args[1])
 
         # Paramiko already checked that path is a folder, otherwise I would
         # have gotten an exception. Now, I want to check that I have read
@@ -414,7 +509,7 @@ class SshTransport(Transport):
                 self.chdir(old_path)
             raise IOError(str(exc))
 
-    def normalize(self, path):
+    def normalize(self, path='.'):
         """
         Returns the normalized path (removing double slashes, etc...)
         """
@@ -483,15 +578,18 @@ class SshTransport(Transport):
             self.sftp.mkdir(path)
         except IOError as exc:
             if os.path.isabs(path):
-                raise OSError("Error during mkdir of '{}', "
-                              "maybe you don't have the permissions to do it, "
-                              'or the directory already exists? ({})'.format(path, exc))
+                raise OSError(
+                    "Error during mkdir of '{}', "
+                    "maybe you don't have the permissions to do it, "
+                    'or the directory already exists? ({})'.format(path, exc)
+                )
             else:
-                raise OSError("Error during mkdir of '{}' from folder '{}', "
-                              "maybe you don't have the permissions to do it, "
-                              'or the directory already exists? ({})'.format(path, self.getcwd(), exc))
+                raise OSError(
+                    "Error during mkdir of '{}' from folder '{}', "
+                    "maybe you don't have the permissions to do it, "
+                    'or the directory already exists? ({})'.format(path, self.getcwd(), exc)
+                )
 
-    # TODO : implement rmtree
     def rmtree(self, path):
         """
         Remove a file or a directory at path, recursively
@@ -502,8 +600,6 @@ class SshTransport(Transport):
         :raise IOError: if the rm execution failed.
         """
         # Assuming linux rm command!
-
-        # TODO : do we need to avoid the aliases when calling rm_exe='rm'? Call directly /bin/rm?
 
         rm_exe = 'rm'
         rm_flags = '-r -f'
@@ -519,16 +615,25 @@ class SshTransport(Transport):
             if stderr.strip():
                 self.logger.warning('There was nonempty stderr in the rm command: {}'.format(stderr))
             return True
-        else:
-            self.logger.error("Problem executing rm. Exit code: {}, stdout: '{}', "
-                              "stderr: '{}'".format(retval, stdout, stderr))
-            raise IOError('Error while executing rm. Exit code: {}'.format(retval))
+        self.logger.error(
+            "Problem executing rm. Exit code: {}, stdout: '{}', "
+            "stderr: '{}'".format(retval, stdout, stderr)
+        )
+        raise IOError('Error while executing rm. Exit code: {}'.format(retval))
 
     def rmdir(self, path):
         """
         Remove the folder named 'path' if empty.
         """
         self.sftp.rmdir(path)
+
+    def chown(self, path, uid, gid):
+        """
+        Change owner permissions of a file.
+
+        For now, this is not implemented for the SSH transport.
+        """
+        raise NotImplementedError
 
     def isdir(self, path):
         """
@@ -541,12 +646,11 @@ class SshTransport(Transport):
             return False
         try:
             return S_ISDIR(self.sftp.stat(path).st_mode)
-        except IOError as e:
-            if getattr(e, 'errno', None) == 2:
+        except IOError as exc:
+            if getattr(exc, 'errno', None) == 2:
                 # errno=2 means path does not exist: I return False
                 return False
-            else:
-                raise  # Typically if I don't have permissions (errno=13)
+            raise  # Typically if I don't have permissions (errno=13)
 
     def chmod(self, path, mode):
         """
@@ -559,7 +663,8 @@ class SshTransport(Transport):
             raise IOError('Input path is an empty argument.')
         return self.sftp.chmod(path, mode)
 
-    def _os_path_split_asunder(self, path):
+    @staticmethod
+    def _os_path_split_asunder(path):
         """
         Used by makedirs. Takes path (a str)
         and returns a list deconcatenating the path
@@ -569,14 +674,15 @@ class SshTransport(Transport):
             newpath, tail = os.path.split(path)
             if newpath == path:
                 assert not tail
-                if path: parts.append(path)
+                if path:
+                    parts.append(path)
                 break
             parts.append(tail)
             path = newpath
         parts.reverse()
         return parts
 
-    def put(self, localpath, remotepath, callback=None, dereference=True, overwrite=True, ignore_nonexisting=False):
+    def put(self, localpath, remotepath, callback=None, dereference=True, overwrite=True, ignore_nonexisting=False):  # pylint: disable=too-many-arguments,too-many-branches,arguments-differ
         """
         Put a file or a folder from local to remote.
         Redirects to putfile or puttree.
@@ -591,10 +697,6 @@ class SshTransport(Transport):
         :raise ValueError: if local path is invalid
         :raise OSError: if the localpath does not exist
         """
-        # TODO: flag confirm exists since v1.7.7. What is the paramiko
-        # version supported?
-
-        # TODO : add dereference
         if not dereference:
             raise NotImplementedError
 
@@ -619,37 +721,35 @@ class SshTransport(Transport):
                 else:  # the remote path is a directory
                     rename_remote = True
 
-            for s in to_copy_list:
-                if os.path.isfile(s):
+            for file in to_copy_list:
+                if os.path.isfile(file):
                     if rename_remote:  # copying more than one file in one directory
                         # here is the case isfile and more than one file
-                        r = os.path.join(remotepath, os.path.split(s)[1])
-                        self.putfile(s, r, callback, dereference, overwrite)
+                        remotefile = os.path.join(remotepath, os.path.split(file)[1])
+                        self.putfile(file, remotefile, callback, dereference, overwrite)
 
                     elif self.isdir(remotepath):  # one file to copy in '.'
-                        r = os.path.join(remotepath, os.path.split(s)[1])
-                        self.putfile(s, r, callback, dereference, overwrite)
+                        remotefile = os.path.join(remotepath, os.path.split(file)[1])
+                        self.putfile(file, remotefile, callback, dereference, overwrite)
                     else:  # one file to copy on one file
-                        self.putfile(s, remotepath, callback, dereference, overwrite)
+                        self.putfile(file, remotepath, callback, dereference, overwrite)
                 else:
-                    self.puttree(s, remotepath, callback, dereference, overwrite)
+                    self.puttree(file, remotepath, callback, dereference, overwrite)
 
         else:
             if os.path.isdir(localpath):
                 self.puttree(localpath, remotepath, callback, dereference, overwrite)
             elif os.path.isfile(localpath):
                 if self.isdir(remotepath):
-                    r = os.path.join(remotepath, os.path.split(localpath)[1])
-                    self.putfile(localpath, r, callback, dereference, overwrite)
+                    remote = os.path.join(remotepath, os.path.split(localpath)[1])
+                    self.putfile(localpath, remote, callback, dereference, overwrite)
                 else:
                     self.putfile(localpath, remotepath, callback, dereference, overwrite)
             else:
-                if ignore_nonexisting:
-                    pass
-                else:
+                if not ignore_nonexisting:
                     raise OSError('The local path {} does not exist'.format(localpath))
 
-    def putfile(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):
+    def putfile(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):  # pylint: disable=arguments-differ
         """
         Put a file from local to remote.
 
@@ -662,11 +762,8 @@ class SshTransport(Transport):
         :raise OSError: if the localpath does not exist,
                     or unintentionally overwriting
         """
-        # TODO : add dereference
         if not dereference:
             raise NotImplementedError
-
-        # TODO : check what happens if I give in input a directory
 
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
@@ -676,9 +773,11 @@ class SshTransport(Transport):
 
         return self.sftp.put(localpath, remotepath, callback=callback)
 
-    def puttree(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):  # by default overwrite
+    def puttree(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):  # pylint: disable=too-many-branches,arguments-differ,unused-argument
         """
         Put a folder recursively from local to remote.
+
+        By default, overwrite.
 
         :param localpath: an (absolute) local path
         :param remotepath: a remote path
@@ -694,7 +793,6 @@ class SshTransport(Transport):
         .. note:: setting dereference equal to True could cause infinite loops.
               see os.walk() documentation
         """
-        # TODO : add dereference
         if not dereference:
             raise NotImplementedError
 
@@ -721,17 +819,15 @@ class SshTransport(Transport):
             remotepath = os.path.join(remotepath, os.path.split(localpath)[1])
             self.mkdir(remotepath)  # create a nested folder
 
-        # TODO, NOTE: we are not using 'onerror' because we checked above that
-        # the folder exists, but it would be better to use it
         for this_source in os.walk(localpath):
             # Get the relative path
             this_basename = os.path.relpath(path=this_source[0], start=localpath)
 
             try:
                 self.sftp.stat(os.path.join(remotepath, this_basename))
-            except IOError as e:
+            except IOError as exc:
                 import errno
-                if e.errno == errno.ENOENT:  # Missing file
+                if exc.errno == errno.ENOENT:  # Missing file
                     self.mkdir(os.path.join(remotepath, this_basename))
                 else:
                     raise
@@ -741,7 +837,7 @@ class SshTransport(Transport):
                 this_remote_file = os.path.join(remotepath, this_basename, this_file)
                 self.putfile(this_local_file, this_remote_file)
 
-    def get(self, remotepath, localpath, callback=None, dereference=True, overwrite=True, ignore_nonexisting=False):
+    def get(self, remotepath, localpath, callback=None, dereference=True, overwrite=True, ignore_nonexisting=False):  # pylint: disable=too-many-branches,arguments-differ,too-many-arguments
         """
         Get a file or folder from remote to local.
         Redirects to getfile or gettree.
@@ -757,7 +853,6 @@ class SshTransport(Transport):
         :raise ValueError: if local path is invalid
         :raise IOError: if the remotepath is not found
         """
-        # TODO : add dereference
         if not dereference:
             raise NotImplementedError
 
@@ -781,24 +876,24 @@ class SshTransport(Transport):
                 else:  # the remote path is a directory
                     rename_local = True
 
-            for s in to_copy_list:
-                if self.isfile(s):
+            for file in to_copy_list:
+                if self.isfile(file):
                     if rename_local:  # copying more than one file in one directory
                         # here is the case isfile and more than one file
-                        r = os.path.join(localpath, os.path.split(s)[1])
-                        self.getfile(s, r, callback, dereference, overwrite)
+                        remote = os.path.join(localpath, os.path.split(file)[1])
+                        self.getfile(file, remote, callback, dereference, overwrite)
                     else:  # one file to copy on one file
-                        self.getfile(s, localpath, callback, dereference, overwrite)
+                        self.getfile(file, localpath, callback, dereference, overwrite)
                 else:
-                    self.gettree(s, localpath, callback, dereference, overwrite)
+                    self.gettree(file, localpath, callback, dereference, overwrite)
 
         else:
             if self.isdir(remotepath):
                 self.gettree(remotepath, localpath, callback, dereference, overwrite)
             elif self.isfile(remotepath):
                 if os.path.isdir(localpath):
-                    r = os.path.join(localpath, os.path.split(remotepath)[1])
-                    self.getfile(remotepath, r, callback, dereference, overwrite)
+                    remote = os.path.join(localpath, os.path.split(remotepath)[1])
+                    self.getfile(remotepath, remote, callback, dereference, overwrite)
                 else:
                     self.getfile(remotepath, localpath, callback, dereference, overwrite)
             else:
@@ -807,7 +902,7 @@ class SshTransport(Transport):
                 else:
                     raise IOError('The remote path {} does not exist'.format(remotepath))
 
-    def getfile(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):
+    def getfile(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):  # pylint: disable=arguments-differ
         """
         Get a file from remote to local.
 
@@ -819,8 +914,6 @@ class SshTransport(Transport):
         :raise ValueError: if local path is invalid
         :raise OSError: if unintentionally overwriting
         """
-        # TODO : add dereference
-
         if not os.path.isabs(localpath):
             raise ValueError('localpath must be an absolute path')
 
@@ -840,7 +933,7 @@ class SshTransport(Transport):
                 pass
             raise
 
-    def gettree(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):
+    def gettree(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):  # pylint: disable=arguments-differ,unused-argument
         """
         Get a folder recursively from remote to local.
 
@@ -856,7 +949,6 @@ class SshTransport(Transport):
         :raise IOError: if the remotepath is not found
         :raise OSError: if unintentionally overwriting
         """
-        # TODO : add dereference
         if not dereference:
             raise NotImplementedError
 
@@ -904,7 +996,7 @@ class SshTransport(Transport):
         aiida_attr = FileAttribute()
         # map the paramiko class into the aiida one
         # note that paramiko object contains more informations than the aiida
-        for key in aiida_attr._valid_fields:
+        for key in aiida_attr._valid_fields:  # pylint: disable=protected-access
             aiida_attr[key] = getattr(paramiko_attr, key)
         return aiida_attr
 
@@ -931,8 +1023,6 @@ class SshTransport(Transport):
         .. note:: setting dereference equal to True could cause infinite loops.
         """
         # In the majority of cases, we should deal with linux cp commands
-        # TODO : do we need to avoid the aliases when calling cp_exe='cp'? Call directly /bin/cp?
-
         cp_flags = '-f'
         if recursive:
             cp_flags += ' -r'
@@ -948,11 +1038,14 @@ class SshTransport(Transport):
         # if in input I give an invalid object raise ValueError
         if not remotesource:
             raise ValueError(
-                'Input to copy() must be a non empty string. ' + 'Found instead %s as remotesource' % remotesource)
+                'Input to copy() must be a non empty string. ' + 'Found instead %s as remotesource' % remotesource
+            )
 
         if not remotedestination:
-            raise ValueError('Input to copy() must be a non empty string. ' +
-                             'Found instead %s as remotedestination' % remotedestination)
+            raise ValueError(
+                'Input to copy() must be a non empty string. ' +
+                'Found instead %s as remotedestination' % remotedestination
+            )
 
         if self.has_magic(remotedestination):
             raise ValueError('Pathname patterns are not allowed in the destination')
@@ -964,47 +1057,50 @@ class SshTransport(Transport):
                 if not self.path_exists(remotedestination) or self.isfile(remotedestination):
                     raise OSError("Can't copy more than one file in the same destination file")
 
-            for s in to_copy_list:
-                self._exec_cp(cp_exe, cp_flags, s, remotedestination)
+            for file in to_copy_list:
+                self._exec_cp(cp_exe, cp_flags, file, remotedestination)
 
         else:
             self._exec_cp(cp_exe, cp_flags, remotesource, remotedestination)
 
     def _exec_cp(self, cp_exe, cp_flags, src, dst):
+        """Execute the ``cp`` command on the remote machine."""
         # to simplify writing the above copy function
         command = '{} {} {} {}'.format(cp_exe, cp_flags, escape_for_bash(src), escape_for_bash(dst))
 
         retval, stdout, stderr = self.exec_command_wait(command)
 
-        # TODO : check and fix below
-
         if retval == 0:
             if stderr.strip():
                 self.logger.warning('There was nonempty stderr in the cp command: {}'.format(stderr))
         else:
-            self.logger.error("Problem executing cp. Exit code: {}, stdout: '{}', "
-                              "stderr: '{}', command: '{}'".format(retval, stdout, stderr, command))
-            raise IOError('Error while executing cp. Exit code: {}, '
-                          "stdout: '{}', stderr: '{}', "
-                          "command: '{}'".format(retval, stdout, stderr, command))
+            self.logger.error(
+                "Problem executing cp. Exit code: {}, stdout: '{}', "
+                "stderr: '{}', command: '{}'".format(retval, stdout, stderr, command)
+            )
+            raise IOError(
+                'Error while executing cp. Exit code: {}, '
+                "stdout: '{}', stderr: '{}', "
+                "command: '{}'".format(retval, stdout, stderr, command)
+            )
 
-    def _local_listdir(self, path, pattern=None):
+    @staticmethod
+    def _local_listdir(path, pattern=None):
         """
         Acts on the local folder, for the rest, same as listdir
         """
         if not pattern:
             return os.listdir(path)
+        import re
+        if path.startswith('/'):  # always this is the case in the local case
+            base_dir = path
         else:
-            import re
-            if path.startswith('/'):  # always this is the case in the local case
-                base_dir = path
-            else:
-                base_dir = os.path.join(os.getcwd(), path)
+            base_dir = os.path.join(os.getcwd(), path)
 
-            filtered_list = glob.glob(os.path.join(base_dir, pattern))
-            if not base_dir.endswith(os.sep):
-                base_dir += os.sep
-            return [re.sub(base_dir, '', i) for i in filtered_list]
+        filtered_list = glob.glob(os.path.join(base_dir, pattern))
+        if not base_dir.endswith(os.sep):
+            base_dir += os.sep
+        return [re.sub(base_dir, '', i) for i in filtered_list]
 
     def listdir(self, path='.', pattern=None):
         """
@@ -1016,17 +1112,16 @@ class SshTransport(Transport):
         """
         if not pattern:
             return self.sftp.listdir(path)
+        import re
+        if path.startswith('/'):
+            base_dir = path
         else:
-            import re
-            if path.startswith('/'):
-                base_dir = path
-            else:
-                base_dir = os.path.join(self.getcwd(), path)
+            base_dir = os.path.join(self.getcwd(), path)
 
-            filtered_list = glob.glob(os.path.join(base_dir, pattern))
-            if not base_dir.endswith('/'):
-                base_dir += '/'
-            return [re.sub(base_dir, '', i) for i in filtered_list]
+        filtered_list = glob.glob(os.path.join(base_dir, pattern))
+        if not base_dir.endswith('/'):
+            base_dir += '/'
+        return [re.sub(base_dir, '', i) for i in filtered_list]
 
     def remove(self, path):
         """
@@ -1034,28 +1129,28 @@ class SshTransport(Transport):
         """
         return self.sftp.remove(path)
 
-    def rename(self, src, dst):
+    def rename(self, oldpath, newpath):
         """
-        Rename a file or folder from src to dst.
+        Rename a file or folder from oldpath to newpath.
 
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
-        :raises IOError: if src/dst is not found
-        :raises ValueError: if src/dst is not a valid string
+        :raises IOError: if oldpath/newpath is not found
+        :raises ValueError: if sroldpathc/newpath is not a valid string
         """
-        if not src:
-            raise ValueError('Source {} is not a valid string'.format(src))
-        if not dst:
-            raise ValueError('Destination {} is not a valid string'.format(dst))
-        if not self.isfile(src):
-            if not self.isdir(src):
-                raise IOError('Source {} does not exist'.format(src))
-        if not self.isfile(dst):
-            if not self.isdir(dst):
-                raise IOError('Destination {} does not exist'.format(dst))
+        if not oldpath:
+            raise ValueError('Source {} is not a valid string'.format(oldpath))
+        if not newpath:
+            raise ValueError('Destination {} is not a valid string'.format(newpath))
+        if not self.isfile(oldpath):
+            if not self.isdir(oldpath):
+                raise IOError('Source {} does not exist'.format(oldpath))
+        if not self.isfile(newpath):
+            if not self.isdir(newpath):
+                raise IOError('Destination {} does not exist'.format(newpath))
 
-        return self.sftp.rename(src, dst)
+        return self.sftp.rename(oldpath, newpath)
 
     def isfile(self, path):
         """
@@ -1068,18 +1163,20 @@ class SshTransport(Transport):
         if not path:
             return False
         try:
-            self.logger.debug("stat for path '{}' ('{}'): {} [{}]".format(path, self.sftp.normalize(path),
-                                                                          self.sftp.stat(path),
-                                                                          self.sftp.stat(path).st_mode))
+            self.logger.debug(
+                "stat for path '{}' ('{}'): {} [{}]".format(
+                    path, self.sftp.normalize(path), self.sftp.stat(path),
+                    self.sftp.stat(path).st_mode
+                )
+            )
             return S_ISREG(self.sftp.stat(path).st_mode)
-        except IOError as e:
-            if getattr(e, 'errno', None) == 2:
+        except IOError as exc:
+            if getattr(exc, 'errno', None) == 2:
                 # errno=2 means path does not exist: I return False
                 return False
-            else:
-                raise  # Typically if I don't have permissions (errno=13)
+            raise  # Typically if I don't have permissions (errno=13)
 
-    def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1):
+    def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1):  # pylint: disable=arguments-differ
         """
         Executes the specified command in bash login shell.
 
@@ -1106,8 +1203,10 @@ class SshTransport(Transport):
 
         if self.getcwd() is not None:
             escaped_folder = escape_for_bash(self.getcwd())
-            command_to_execute = ('cd {escaped_folder} && '
-                                  '{real_command}'.format(escaped_folder=escaped_folder, real_command=command))
+            command_to_execute = (
+                'cd {escaped_folder} && '
+                '{real_command}'.format(escaped_folder=escaped_folder, real_command=command)
+            )
         else:
             command_to_execute = command
 
@@ -1123,7 +1222,7 @@ class SshTransport(Transport):
 
         return stdin, stdout, stderr, channel
 
-    def exec_command_wait(self, command, stdin=None, combine_stderr=False, bufsize=-1):
+    def exec_command_wait(self, command, stdin=None, combine_stderr=False, bufsize=-1):  # pylint: disable=arguments-differ
         """
         Executes the specified command and waits for it to finish.
 
@@ -1137,19 +1236,17 @@ class SshTransport(Transport):
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are strings.
         """
-        # TODO: To see if like this it works or hangs because of buffer problems.
-
         ssh_stdin, stdout, stderr, channel = self._exec_command_internal(command, combine_stderr, bufsize=bufsize)
 
         if stdin is not None:
-            if isinstance(stdin, six.string_types):
-                filelike_stdin = StringIO(stdin)
+            if isinstance(stdin, str):
+                filelike_stdin = io.StringIO(stdin)
             else:
                 filelike_stdin = stdin
 
             try:
-                for l in filelike_stdin.readlines():
-                    ssh_stdin.write(l)
+                for line in filelike_stdin.readlines():
+                    ssh_stdin.write(line)
             except AttributeError:
                 raise ValueError('stdin can only be either a string of a file-like object!')
 
@@ -1172,9 +1269,6 @@ class SshTransport(Transport):
         Specific gotocomputer string to connect to a given remote computer via
         ssh and directly go to the calculation folder.
         """
-
-        # TODO: add also ProxyCommand and Timeout support
-
         further_params = []
         if 'username' in self._connect_args:
             further_params.append('-l {}'.format(escape_for_bash(self._connect_args['username'])))
@@ -1186,11 +1280,18 @@ class SshTransport(Transport):
             further_params.append('-i {}'.format(escape_for_bash(self._connect_args['key_filename'])))
 
         further_params_str = ' '.join(further_params)
-        connect_string = """ssh -t {machine} {further_params} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -l ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-            further_params=further_params_str,
-            machine=self._machine,
-            escaped_remotedir="'{}'".format(remotedir),
-            remotedir=remotedir)
+        # I use triple strings because I both have single and double quotes, but I still want everything in
+        # a single line
+        connect_string = (
+            """ssh -t {machine} {further_params} "if [ -d {escaped_remotedir} ] ;"""
+            """ then cd {escaped_remotedir} ; bash -l ; else echo '  ** The directory' ; """
+            """echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+                further_params=further_params_str,
+                machine=self._machine,
+                escaped_remotedir="'{}'".format(remotedir),
+                remotedir=remotedir
+            )
+        )
 
         # print connect_string
         return connect_string
@@ -1204,21 +1305,21 @@ class SshTransport(Transport):
         :param remotedestination: remote destination
         """
         # paramiko gives some errors if path is starting with '.'
-        s = os.path.normpath(remotesource)
-        d = os.path.normpath(remotedestination)
+        source = os.path.normpath(remotesource)
+        dest = os.path.normpath(remotedestination)
 
-        if self.has_magic(s):
-            if self.has_magic(d):
+        if self.has_magic(source):
+            if self.has_magic(dest):
                 # if there are patterns in dest, I don't know which name to assign
                 raise ValueError('Remotedestination cannot have patterns')
 
             # find all files matching pattern
-            for this_s in self.glob(s):
+            for this_source in self.glob(source):
                 # create the name of the link: take the last part of the path
-                this_d = os.path.join(remotedestination, os.path.split(this_s)[-1])
-                self.sftp.symlink(this_s, this_d)
+                this_dest = os.path.join(remotedestination, os.path.split(this_source)[-1])
+                self.sftp.symlink(this_source, this_dest)
         else:
-            self.sftp.symlink(s, d)
+            self.sftp.symlink(source, dest)
 
     def path_exists(self, path):
         """
@@ -1227,8 +1328,8 @@ class SshTransport(Transport):
         import errno
         try:
             self.sftp.stat(path)
-        except IOError as e:
-            if e.errno == errno.ENOENT:
+        except IOError as exc:
+            if exc.errno == errno.ENOENT:
                 return False
             raise
         else:

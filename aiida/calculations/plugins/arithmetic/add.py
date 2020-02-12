@@ -8,12 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of CalcJobNode to add two numbers for testing and demonstration purposes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import six
-
 from aiida import orm
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.engine import CalcJob
@@ -24,20 +18,23 @@ class ArithmeticAddCalculation(CalcJob):
 
     @classmethod
     def define(cls, spec):
-        super(ArithmeticAddCalculation, cls).define(spec)
-        spec.input('metadata.options.input_filename', valid_type=six.string_types, default='aiida.in', non_db=True)
-        spec.input('metadata.options.output_filename', valid_type=six.string_types, default='aiida.out', non_db=True)
-        spec.input('metadata.options.parser_name', valid_type=six.string_types, default='arithmetic.add', non_db=True)
+        super().define(spec)
+        # yapf: disable
+        spec.inputs['metadata']['options']['parser_name'].default = 'arithmetic.add'
+        spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
+        spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
         spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
+        spec.input('settings', required=False, valid_type=orm.Dict, help='Optional settings.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
-        spec.exit_code(
-            100, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved folder data node could not be accessed.'
-        )
-        spec.exit_code(
-            110, 'ERROR_READING_OUTPUT_FILE', message='The output file could not be read from the retrieved folder.'
-        )
-        spec.exit_code(120, 'ERROR_INVALID_OUTPUT', message='The output file contains invalid output.')
+        spec.exit_code(300, 'ERROR_NO_RETRIEVED_FOLDER',
+            message='The retrieved folder data node could not be accessed.')
+        spec.exit_code(310, 'ERROR_READING_OUTPUT_FILE',
+            message='The output file could not be read from the retrieved folder.')
+        spec.exit_code(320, 'ERROR_INVALID_OUTPUT',
+            message='The output file contains invalid output.')
+        spec.exit_code(410, 'ERROR_NEGATIVE_NUMBER',
+            message='The sum of the operands is a negative number. Only thrown if `settings.allow_negative = False`.')
 
     def prepare_for_submission(self, folder):
         """
@@ -111,4 +108,4 @@ class ArithmeticAddCalculation(CalcJob):
         :param input_y: the numeric node representing the right operand of the summation
         """
         with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
-            handle.write(u'{} {}\n'.format(input_x.value, input_y.value))
+            handle.write('{} {}\n'.format(input_x.value, input_y.value))

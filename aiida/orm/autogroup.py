@@ -7,11 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import six
 
 from aiida.common import exceptions, timezone
 from aiida.orm import GroupTypeString
@@ -23,7 +19,7 @@ VERDIAUTOGROUP_TYPE = GroupTypeString.VERDIAUTOGROUP_TYPE.value
 
 # TODO: make the Autogroup usable to the user, and not only to the verdi run
 
-class Autogroup(object):
+class Autogroup:
     """
     An object used for the autogrouping of objects.
     The autogrouping is checked by the Node.store() method.
@@ -154,7 +150,7 @@ class Autogroup(object):
         """
         Set the name of the group to be created
         """
-        if not isinstance(gname, six.string_types):
+        if not isinstance(gname, str):
             raise exceptions.ValidationError('group name must be a string')
         self.group_name = gname
 

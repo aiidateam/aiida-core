@@ -13,9 +13,6 @@ Classes for describing atomic orbitals.
 Contains general Orbital class.
 For subclasses of Orbital, see submodules.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.common.exceptions import ValidationError
 from aiida.plugins.entry_point import get_entry_point_from_class
@@ -83,7 +80,7 @@ def validate_len3_list_or_none(value):
     return validate_len3_list(value)
 
 
-class Orbital(object):
+class Orbital:
     """
     Base class for Orbitals. Can handle certain basic fields, their setting
     and validation. More complex Orbital objects should then inherit from

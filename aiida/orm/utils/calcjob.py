@@ -9,15 +9,12 @@
 ###########################################################################
 """Utilities to operate on `CalcJobNode` instances."""
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from aiida.common import exceptions
 
 __all__ = ('CalcJobResultManager',)
 
 
-class CalcJobResultManager(object):
+class CalcJobResultManager:
     """
     Utility class to easily access the contents of the 'default output' node of a `CalcJobNode`.
 

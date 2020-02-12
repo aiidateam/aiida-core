@@ -13,14 +13,10 @@ Various utilities to deal with StructureData instances or create new ones
 format, ...)
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import copy
 import re
 
-from six.moves import zip
 import numpy as np
 
 from aiida.common.constants import elements
@@ -186,7 +182,7 @@ def xyz_parser_iterator(xyz_string):
     :param xyz_string: a string containing XYZ-structured text
     """
 
-    class BlockIterator(object):
+    class BlockIterator:
         """
         An iterator for wrapping the iterator returned by `match.finditer`
         to extract the required fields directly from the match object
@@ -226,13 +222,6 @@ def xyz_parser_iterator(xyz_string):
                 )
 
             return (match.group('sym'), (float(match.group('x')), float(match.group('y')), float(match.group('z'))))
-
-        def next(self):
-            """
-            The iterator method expected by python 2.x,
-            implemented as python 3.x style method.
-            """
-            return self.__next__()
 
     pos_regex = re.compile(
         r"""

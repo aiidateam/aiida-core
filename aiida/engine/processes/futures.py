@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import tornado.gen
 
 import plumpy
@@ -41,7 +38,7 @@ class CalculationFuture(plumpy.Future):
         from aiida.orm import load_node
         from .process import ProcessState
 
-        super(CalculationFuture, self).__init__()
+        super().__init__()
         assert not (poll_interval is None and communicator is None), 'Must poll or have a communicator to use'
 
         calc_node = load_node(pk=pk)

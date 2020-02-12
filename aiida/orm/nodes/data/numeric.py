@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for defintion of base `Data` sub class for numeric based data types."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .base import to_aiida_type, BaseType
 

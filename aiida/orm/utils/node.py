@@ -8,25 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities to operate on `Node` classes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 from abc import ABCMeta
 import logging
 import math
 import numbers
+from collections.abc import Iterable, Mapping
 
-import six
-
-if six.PY2:
-    from collections import Iterable, Mapping  # pylint: disable=no-name-in-module
-else:
-    from collections.abc import Iterable, Mapping  # pylint: disable=no-name-in-module, import-error
-
-from aiida.common import exceptions  # pylint: disable=wrong-import-position
-from aiida.common.utils import strip_prefix  # pylint: disable=wrong-import-position
-from aiida.common.constants import AIIDA_FLOAT_PRECISION  # pylint: disable=wrong-import-position
+from aiida.common import exceptions
+from aiida.common.utils import strip_prefix
+from aiida.common.constants import AIIDA_FLOAT_PRECISION
 
 # This separator character is reserved to indicate nested fields in node attribute and extras dictionaries and
 # therefore is not allowed in individual attribute or extra keys.
@@ -167,7 +157,7 @@ def validate_attribute_extra_key(key):
 
     :raise aiida.common.ValidationError: if the key is not a string or contains reserved separator character
     """
-    if not key or not isinstance(key, six.string_types):
+    if not key or not isinstance(key, str):
         raise exceptions.ValidationError('key for attributes or extras should be a string')
 
     if FIELD_SEPARATOR in key:
@@ -202,7 +192,7 @@ def clean_value(value):
         It mainly checks that we don't store NaN or Inf.
         """
         # This is a whitelist of all the things we understand currently
-        if val is None or isinstance(val, (bool, six.string_types)):
+        if val is None or isinstance(val, (bool, str)):
             return val
 
         # This fixes #2773 - in python3, ``numpy.int64(-1)`` cannot be json-serialized
@@ -242,7 +232,7 @@ def clean_value(value):
         # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.items()}
 
-    if (isinstance(value, Iterable) and not isinstance(value, six.string_types)):
+    if (isinstance(value, Iterable) and not isinstance(value, str)):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object

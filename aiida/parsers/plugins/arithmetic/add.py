@@ -7,10 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 from aiida.common import exceptions
 from aiida.orm import Int
 from aiida.parsers.parser import Parser
@@ -33,6 +29,14 @@ class ArithmeticAddParser(Parser):
 
         if result is None:
             return self.exit_codes.ERROR_INVALID_OUTPUT
+
+        try:
+            allow_negative = self.node.inputs.settings.get_attribute('allow_negative', True)
+        except exceptions.NotExistent:
+            allow_negative = True
+
+        if not allow_negative and result < 0:
+            return self.exit_codes.ERROR_NEGATIVE_NUMBER
 
         self.out('sum', Int(result))
 

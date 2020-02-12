@@ -7,13 +7,67 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_
+from aiida.common import AttributeDict
+from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_, while_, ExitCode
+from aiida.engine import BaseRestartWorkChain, register_process_handler, ProcessHandlerReport
 from aiida.engine.persistence import ObjectLoader
 from aiida.orm import Int, List, Str
+from aiida.plugins import CalculationFactory
+
+
+ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+
+
+class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
+    """Ridiculous work chain around `AritmethicAddCalculation` with automated sanity checks and error handling."""
+
+    _process_class = ArithmeticAddCalculation
+
+    @classmethod
+    def define(cls, spec):
+        """Define the process specification."""
+        super().define(spec)
+        spec.expose_inputs(ArithmeticAddCalculation, namespace='add')
+        spec.expose_outputs(ArithmeticAddCalculation)
+        spec.outline(
+            cls.setup,
+            while_(cls.should_run_process)(
+                cls.run_process,
+                cls.inspect_process,
+            ),
+            cls.results,
+        )
+        spec.exit_code(100, 'ERROR_TOO_BIG', message='The sum was too big.')
+
+    def setup(self):
+        """Call the `setup` of the `BaseRestartWorkChain` and then create the inputs dictionary in `self.ctx.inputs`.
+
+        This `self.ctx.inputs` dictionary will be used by the `BaseRestartWorkChain` to submit the process in the
+        internal loop.
+        """
+        super().setup()
+        self.ctx.inputs = AttributeDict(self.exposed_inputs(ArithmeticAddCalculation, 'add'))
+
+
+@register_process_handler(ArithmeticAddBaseWorkChain, priority=500)
+def sanity_check_not_too_big(self, node):
+    """My puny brain cannot deal with numbers that I cannot count on my hand."""
+    if node.is_finished_ok and node.outputs.sum > 10:
+        return ProcessHandlerReport(True, self.exit_codes.ERROR_TOO_BIG)
+
+
+@register_process_handler(ArithmeticAddBaseWorkChain, priority=450, exit_codes=ExitCode(1000, 'Unicorn encountered'))
+def a_magic_unicorn_appeared(self, node):
+    """As we all know unicorns do not exist so we should never have to deal with it."""
+    raise RuntimeError('this handler should never even have been called')
+
+
+@register_process_handler(ArithmeticAddBaseWorkChain, priority=400, exit_codes=ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
+def error_negative_sum(self, node):
+    """What even is a negative number, how can I have minus three melons?!."""
+    self.ctx.inputs.x = Int(abs(node.inputs.x.value))
+    self.ctx.inputs.y = Int(abs(node.inputs.y.value))
+    return ProcessHandlerReport(True)
 
 
 class NestedWorkChain(WorkChain):
@@ -22,7 +76,7 @@ class NestedWorkChain(WorkChain):
     """
     @classmethod
     def define(cls, spec):
-        super(NestedWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('inp', valid_type=Int)
         spec.outline(
             cls.do_submit,
@@ -56,7 +110,7 @@ class NestedWorkChain(WorkChain):
 class SerializeWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(SerializeWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.input(
             'test',
@@ -74,7 +128,7 @@ class SerializeWorkChain(WorkChain):
 class NestedInputNamespace(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(NestedInputNamespace, cls).define(spec)
+        super().define(spec)
 
         spec.input('foo.bar.baz', valid_type=Int)
         spec.output('output', valid_type=Int)
@@ -87,7 +141,7 @@ class NestedInputNamespace(WorkChain):
 class ListEcho(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(ListEcho, cls).define(spec)
+        super().define(spec)
 
         spec.input('list', valid_type=List)
         spec.output('output', valid_type=List)
@@ -101,7 +155,7 @@ class ListEcho(WorkChain):
 class DynamicNonDbInput(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(DynamicNonDbInput, cls).define(spec)
+        super().define(spec)
         spec.input_namespace('namespace', dynamic=True)
         spec.output('output', valid_type=List)
         spec.outline(cls.do_test)
@@ -116,7 +170,7 @@ class DynamicNonDbInput(WorkChain):
 class DynamicDbInput(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(DynamicDbInput, cls).define(spec)
+        super().define(spec)
         spec.input_namespace('namespace', dynamic=True)
         spec.output('output', valid_type=Int)
         spec.outline(cls.do_test)
@@ -130,7 +184,7 @@ class DynamicDbInput(WorkChain):
 class DynamicMixedInput(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(DynamicMixedInput, cls).define(spec)
+        super().define(spec)
         spec.input_namespace('namespace', dynamic=True)
         spec.output('output', valid_type=Int)
         spec.outline(cls.do_test)
@@ -150,7 +204,7 @@ class CalcFunctionRunnerWorkChain(WorkChain):
     """
     @classmethod
     def define(cls, spec):
-        super(CalcFunctionRunnerWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.input('input', valid_type=Int)
         spec.output('output', valid_type=Int)
@@ -167,7 +221,7 @@ class WorkFunctionRunnerWorkChain(WorkChain):
     """
     @classmethod
     def define(cls, spec):
-        super(WorkFunctionRunnerWorkChain, cls).define(spec)
+        super().define(spec)
 
         spec.input('input', valid_type=Str)
         spec.output('output', valid_type=Str)

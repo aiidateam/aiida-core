@@ -110,9 +110,12 @@ If you use AiiDA for your research, please cite the following work:
 Acknowledgements
 ****************
 
-This work is supported by the `MARVEL National Centre for Competency in Research`_
-funded by the `Swiss National Science Foundation`_, as well as by the
-`MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598.
+This work is supported by:
+* the `MARVEL National Centre for Competency in Research`_ funded by the `Swiss National Science Foundation`_;
+* the `MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598;
+* the `swissuniversities P-5 project "Materials Cloud"`_.
+
+AiiDA is a NumFOCUS Affiliated Project. Visit `numfocus.org`_ for more information.
 
 .. image:: images/MARVEL.png
    :height: 100px
@@ -122,6 +125,12 @@ funded by the `Swiss National Science Foundation`_, as well as by the
    :height: 80px
    :target: `MaX European Centre of Excellence`_
 
+.. image:: images/swissuniversities.png
+   :height: 35px
+   :target: `swissuniversities P-5 project "Materials Cloud"`_
+
 .. _MARVEL National Centre for Competency in Research: http://www.marvel-nccr.ch
 .. _Swiss National Science Foundation: http://www.snf.ch/en
 .. _MaX European Centre of Excellence: http://www.max-centre.eu
+.. _swissuniversities P-5 project "Materials Cloud": https://www.materialscloud.org/swissuniversities
+.. _numfocus.org: https://www.numfocus.org

@@ -8,11 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines methods required to setup a new AiiDA instance."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 import os
+import urllib
 
 import click
 
@@ -28,9 +25,7 @@ def delete_repository(profile, non_interactive=True):
     :param non_interactive: do not prompt for configuration values, fail if not all values are given as kwargs.
     :type non_interactive: bool
     """
-    from six.moves.urllib.parse import urlparse  # pylint: disable=import-error
-
-    repo_path = urlparse(profile.repository_uri).path
+    repo_path = urllib.parse.urlparse(profile.repository_uri).path
     repo_path = os.path.expanduser(repo_path)
 
     if not os.path.isabs(repo_path):

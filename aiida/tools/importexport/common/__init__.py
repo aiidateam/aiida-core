@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=wildcard-import,undefined-variable
 """Common utility functions, classes, and exceptions"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .archive import *
 from .config import *

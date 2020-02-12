@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for workflow processes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.common.links import LinkType
 from aiida.orm.utils.managers import NodeLinksManager
@@ -64,7 +61,7 @@ class WorkflowNode(ProcessNode):
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        super(WorkflowNode, self).validate_outgoing(target, link_type, link_label)
+        super().validate_outgoing(target, link_type, link_label)
         if link_type is LinkType.RETURN and not target.is_stored:
             raise ValueError(
                 'Workflow<{}> tried returning an unstored `Data` node. This likely means new `Data` is being created '

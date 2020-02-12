@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a boolean value."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import numpy
 
@@ -27,11 +24,6 @@ class Bool(BaseType):
     def __int__(self):
         return int(bool(self))
 
-    # Python 2
-    def __nonzero__(self):
-        return self.__bool__()
-
-    # Python 3
     def __bool__(self):
         return self.value
 

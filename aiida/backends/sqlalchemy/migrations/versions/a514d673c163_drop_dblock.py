@@ -14,9 +14,6 @@ Revises: f9a69de76a9a
 Create Date: 2018-05-10 19:08:51.780194
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from alembic import op
 from sqlalchemy.dialects import postgresql
 import sqlalchemy as sa
@@ -39,5 +36,5 @@ def downgrade():
     sa.Column('creation', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.Column('timeout', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('owner', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-    sa.PrimaryKeyConstraint('key', name=u'db_dblock_pkey')
+    sa.PrimaryKeyConstraint('key', name='db_dblock_pkey')
     )

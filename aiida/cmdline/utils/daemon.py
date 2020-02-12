@@ -8,15 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions for command line commands related to the daemon."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 import click
 from tabulate import tabulate
 
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.common import format_local_time
 
 _START_CIRCUS_COMMAND = 'start-circus'
 
@@ -51,6 +46,7 @@ def get_daemon_status(client):
 
     :param client: the DaemonClient
     """
+    from aiida.cmdline.utils.common import format_local_time
 
     if not client.is_daemon_running:
         return 'The daemon is not running'
@@ -74,8 +70,12 @@ def get_daemon_status(client):
 
     workers = [['PID', 'MEM %', 'CPU %', 'started']]
     for worker_pid, worker_info in worker_response['info'].items():
-        worker_row = [worker_pid, worker_info['mem'], worker_info['cpu'], format_local_time(worker_info['create_time'])]
-        workers.append(worker_row)
+        if isinstance(worker_info, dict):
+            row = [worker_pid, worker_info['mem'], worker_info['cpu'], format_local_time(worker_info['create_time'])]
+        else:
+            row = [worker_pid, '-', '-', '-']
+
+        workers.append(row)
 
     if len(workers) > 1:
         workers_info = tabulate(workers, headers='firstrow', tablefmt='simple')

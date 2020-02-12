@@ -14,9 +14,6 @@ This has been tested on GE 6.2u3.
 Plugin originally written by Marco Dorigo.
 Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
 import xml.parsers.expat
 import xml.dom.minidom
 
@@ -135,8 +132,8 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         return command
         # raise NotImplementedError
 
-    def _get_detailed_jobinfo_command(self, jobid):
-        command = 'qacct -j {}'.format(escape_for_bash(jobid))
+    def _get_detailed_job_info_command(self, job_id):
+        command = 'qacct -j {}'.format(escape_for_bash(job_id))
         return command
 
     def _get_submit_script_header(self, job_tmpl):
@@ -149,6 +146,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
 
         TODO: truncate the title if too long
         """
+        # pylint: disable=too-many-statements,too-many-branches
         import re
         import string
 
@@ -186,9 +184,11 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         if email_events:
             lines.append('#$ -m {}'.format(email_events))
             if not job_tmpl.email:
-                self.logger.info('Email triggers provided to SGE script for job,'
-                                 'but no email field set; will send emails to '
-                                 'the job owner as set in the scheduler')
+                self.logger.info(
+                    'Email triggers provided to SGE script for job,'
+                    'but no email field set; will send emails to '
+                    'the job owner as set in the scheduler'
+                )
         else:
             lines.append('#$ -m n')
 
@@ -221,8 +221,10 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             # 'n' : Standard error and standard output are not merged (default)
             lines.append('#$ -j y')
             if job_tmpl.sched_error_path:
-                self.logger.info('sched_join_files is True, but sched_error_path is set in '
-                                 'SGE script; ignoring sched_error_path')
+                self.logger.info(
+                    'sched_join_files is True, but sched_error_path is set in '
+                    'SGE script; ignoring sched_error_path'
+                )
         else:
             if job_tmpl.sched_error_path:
                 lines.append('#$ -e {}'.format(job_tmpl.sched_error_path))
@@ -252,9 +254,11 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError('max_wallclock_seconds must be '
-                                 "a positive integer (in seconds)! It is instead '{}'"
-                                 ''.format((job_tmpl.max_wallclock_seconds)))
+                raise ValueError(
+                    'max_wallclock_seconds must be '
+                    "a positive integer (in seconds)! It is instead '{}'"
+                    ''.format((job_tmpl.max_wallclock_seconds))
+                )
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
             minutes = tot_minutes // 60
@@ -291,6 +295,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                 directory.
                 IMPORTANT: submit_script should be already escaped.
         """
+        # pylint: disable=too-many-statements,too-many-branches
         submit_command = 'qsub -terse {}'.format(submit_script)
 
         self.logger.info('submitting with: ' + submit_command)
@@ -298,15 +303,20 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         return submit_command
 
     def _parse_joblist_output(self, retval, stdout, stderr):
+        # pylint: disable=too-many-statements,too-many-branches
         if retval != 0:
-            self.logger.error('Error in _parse_joblist_output: retval={}; '
-                              'stdout={}; stderr={}'.format(retval, stdout, stderr))
+            self.logger.error(
+                'Error in _parse_joblist_output: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
             raise SchedulerError('Error during joblist retrieval, retval={}'. \
                                  format(retval))
 
         if stderr.strip():
-            self.logger.warning('in _parse_joblist_output for {}: '
-                                'there was some text in stderr: {}'.format(str(self.transport), stderr))
+            self.logger.warning(
+                'in _parse_joblist_output for {}: '
+                'there was some text in stderr: {}'.format(str(self.transport), stderr)
+            )
 
         if stdout:
             try:
@@ -315,8 +325,10 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                 self.logger.error('in sge._parse_joblist_output: xml parsing of stdout failed:' '{}'.format(stdout))
                 raise SchedulerParsingError('Error during joblist retrieval,' 'xml parsing of stdout failed')
         else:
-            self.logger.error('Error in sge._parse_joblist_output: retval={}; '
-                              'stdout={}; stderr={}'.format(retval, stdout, stderr))
+            self.logger.error(
+                'Error in sge._parse_joblist_output: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
             raise SchedulerError('Error during joblist retrieval,' 'no stdout produced')
 
         try:
@@ -337,16 +349,18 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         except SchedulerError:
             self.logger.error('Error in sge._parse_joblist_output: stdout={}' \
                               .format(stdout))
-            raise SchedulerError('Error during xml processing, of stdout:'
-                                 "There is no 'job_info' or no 'queue_info'"
-                                 'element or there are no jobs!')
+            raise SchedulerError(
+                'Error during xml processing, of stdout:'
+                "There is no 'job_info' or no 'queue_info'"
+                'element or there are no jobs!'
+            )
         # If something weird happens while firstChild, pop, etc:
         except Exception:
             self.logger.error('Error in sge._parse_joblist_output: stdout={}' \
                               .format(stdout))
             raise SchedulerError('Error during xml processing, of stdout')
 
-        jobs = [i for i in first_child.getElementsByTagName('job_list')]
+        jobs = list(first_child.getElementsByTagName('job_list'))
         # jobs = [i for i in jobinfo.getElementsByTagName('job_list')]
         # print [i[0].childNodes[0].data for i in job_numbers if i]
         joblist = []
@@ -381,8 +395,10 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                 try:
                     this_job.job_state = _MAP_STATUS_SGE[job_state_string]
                 except KeyError:
-                    self.logger.warning("Unrecognized job_state '{}' for job "
-                                        'id {}'.format(job_state_string, this_job.job_id))
+                    self.logger.warning(
+                        "Unrecognized job_state '{}' for job "
+                        'id {}'.format(job_state_string, this_job.job_id)
+                    )
                     this_job.job_state = JobState.UNDETERMINED
             except IndexError:
                 self.logger.warning("No 'job_state' field for job id {} in" 'stdout={}'.format(this_job.job_id, stdout))
@@ -417,8 +433,10 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                 try:
                     this_job.submission_time = self._parse_time_string(time_string)
                 except ValueError:
-                    self.logger.warning("Error parsing 'JB_submission_time' "
-                                        "for job id {} ('{}')".format(this_job.job_id, time_string))
+                    self.logger.warning(
+                        "Error parsing 'JB_submission_time' "
+                        "for job id {} ('{}')".format(this_job.job_id, time_string)
+                    )
             except IndexError:
                 try:
                     job_element = job.getElementsByTagName('JAT_start_time').pop(0)
@@ -427,12 +445,16 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                     try:
                         this_job.dispatch_time = self._parse_time_string(time_string)
                     except ValueError:
-                        self.logger.warning("Error parsing 'JAT_start_time'"
-                                            "for job id {} ('{}')".format(this_job.job_id, time_string))
+                        self.logger.warning(
+                            "Error parsing 'JAT_start_time'"
+                            "for job id {} ('{}')".format(this_job.job_id, time_string)
+                        )
                 except IndexError:
-                    self.logger.warning("No 'JB_submission_time' and no "
-                                        "'JAT_start_time' field for job "
-                                        'id {}'.format(this_job.job_id))
+                    self.logger.warning(
+                        "No 'JB_submission_time' and no "
+                        "'JAT_start_time' field for job "
+                        'id {}'.format(this_job.job_id)
+                    )
 
             # There is also cpu_usage, mem_usage, io_usage information available:
             if this_job.job_state == JobState.RUNNING:
@@ -457,14 +479,20 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         Return a string with the JobID.
         """
         if retval != 0:
-            self.logger.error('Error in _parse_submit_output: retval={}; '
-                              'stdout={}; stderr={}'.format(retval, stdout, stderr))
-            raise SchedulerError('Error during submission, retval={}\n'
-                                 'stdout={}\nstderr={}'.format(retval, stdout, stderr))
+            self.logger.error(
+                'Error in _parse_submit_output: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
+            raise SchedulerError(
+                'Error during submission, retval={}\n'
+                'stdout={}\nstderr={}'.format(retval, stdout, stderr)
+            )
 
         if stderr.strip():
-            self.logger.warning('in _parse_submit_output for {}: '
-                                'there was some text in stderr: {}'.format(str(self.transport), stderr))
+            self.logger.warning(
+                'in _parse_submit_output for {}: '
+                'there was some text in stderr: {}'.format(str(self.transport), stderr)
+            )
 
         return stdout.strip()
 
@@ -507,16 +535,22 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         :return: True if everything seems ok, False otherwise.
         """
         if retval != 0:
-            self.logger.error('Error in _parse_kill_output: retval={}; '
-                              'stdout={}; stderr={}'.format(retval, stdout, stderr))
+            self.logger.error(
+                'Error in _parse_kill_output: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
             return False
 
         if stderr.strip():
-            self.logger.warning('in _parse_kill_output for {}: '
-                                'there was some text in stderr: {}'.format(str(self.transport), stderr))
+            self.logger.warning(
+                'in _parse_kill_output for {}: '
+                'there was some text in stderr: {}'.format(str(self.transport), stderr)
+            )
 
         if stdout.strip():
-            self.logger.info('in _parse_kill_output for {}: '
-                             'there was some text in stdout: {}'.format(str(self.transport), stdout))
+            self.logger.info(
+                'in _parse_kill_output for {}: '
+                'there was some text in stdout: {}'.format(str(self.transport), stdout)
+            )
 
         return True

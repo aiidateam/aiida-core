@@ -7,9 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import os
 
 from .data import Data
@@ -26,7 +23,7 @@ class RemoteData(Data):
     """
 
     def __init__(self, remote_path=None, **kwargs):
-        super(RemoteData, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)
 
@@ -173,7 +170,7 @@ class RemoteData(Data):
     def _validate(self):
         from aiida.common.exceptions import ValidationError
 
-        super(RemoteData, self)._validate()
+        super()._validate()
 
         try:
             self.get_remote_path()

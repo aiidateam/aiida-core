@@ -10,9 +10,6 @@
 """
 Module for custom click param type group
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import click
 
@@ -28,7 +25,7 @@ class GroupParamType(IdentifierParamType):
 
     def __init__(self, create_if_not_exist=False):
         self._create_if_not_exist = create_if_not_exist
-        super(GroupParamType, self).__init__()
+        super().__init__()
 
     @property
     def orm_class_loader(self):
@@ -45,7 +42,7 @@ class GroupParamType(IdentifierParamType):
     def convert(self, value, param, ctx):
         from aiida.orm import Group, GroupTypeString
         try:
-            group = super(GroupParamType, self).convert(value, param, ctx)
+            group = super().convert(value, param, ctx)
         except click.BadParameter:
             if self._create_if_not_exist:
                 group = Group(label=value, type_string=GroupTypeString.USER.value)

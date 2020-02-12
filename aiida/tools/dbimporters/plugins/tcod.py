@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Importer implementation for the TCOD."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from aiida.tools.dbimporters.plugins.cod import (CodDbImporter, CodSearchResults, CodEntry)
 
 
@@ -20,7 +17,7 @@ class TcodDbImporter(CodDbImporter):
     """
 
     def __init__(self, **kwargs):
-        super(TcodDbImporter, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self._db_parameters = {'host': 'www.crystallography.net', 'user': 'cod_reader', 'passwd': '', 'db': 'tcod'}
         self.setup_db(**kwargs)
 
@@ -56,7 +53,7 @@ class TcodSearchResults(CodSearchResults):
     _base_url = 'http://www.crystallography.net/tcod/'
 
     def __init__(self, results):
-        super(TcodSearchResults, self).__init__(results)
+        super().__init__(results)
         self._return_class = TcodEntry
 
 
@@ -81,4 +78,4 @@ class TcodEntry(CodEntry):
         :py:class:`aiida.tools.dbimporters.plugins.tcod.TcodEntry`, related
         to the supplied URI.
         """
-        super(TcodEntry, self).__init__(db_name=db_name, db_uri=db_uri, uri=uri, **kwargs)
+        super().__init__(db_name=db_name, db_uri=db_uri, uri=uri, **kwargs)

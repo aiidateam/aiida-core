@@ -16,9 +16,6 @@ Create Date: 2018-11-17 17:18:58.691209
 """
 # pylint: disable=invalid-name
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from alembic import op
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed

@@ -10,9 +10,6 @@
 """
 Module to define custom click param type for multiple values
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import click
 
 
@@ -22,7 +19,7 @@ class MultipleValueParamType(click.ParamType):
     """
 
     def __init__(self, param_type):
-        super(MultipleValueParamType, self).__init__()
+        super().__init__()
         self._param_type = param_type
 
         if hasattr(param_type, 'name'):

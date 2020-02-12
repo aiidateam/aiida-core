@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=undefined-variable,wildcard-import
 """Methods and definitions of migrations for the configuration file of an AiiDA instance."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .migrations import *
 from .utils import *

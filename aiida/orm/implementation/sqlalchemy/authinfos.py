@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the SqlAlchemy backend implementation of the `AuthInfo` ORM class."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
@@ -36,7 +33,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         """
         from . import computers
         from . import users
-        super(SqlaAuthInfo, self).__init__(backend)
+        super().__init__(backend)
         type_check(user, users.SqlaUser)
         type_check(computer, computers.SqlaComputer)
         self._dbmodel = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbmodel, aiidauser=user.dbmodel))

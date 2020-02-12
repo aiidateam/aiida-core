@@ -8,13 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A utility module with mapper objects that map database entities projections on attributes and labels."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from aiida.cmdline.utils.query import formatting
 
 
-class ProjectionMapper(object):
+class ProjectionMapper:
     """
     Class to map projection names from the CLI to entity labels, attributes and formatters.
 
@@ -147,4 +144,4 @@ class CalculationProjectionMapper(ProjectionMapper):
                 else:
                     default_formatters[projection] = formatter
 
-        super(CalculationProjectionMapper, self).__init__(default_labels, default_attributes, default_formatters)
+        super().__init__(default_labels, default_attributes, default_formatters)

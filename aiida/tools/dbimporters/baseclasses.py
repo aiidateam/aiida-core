@@ -7,14 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import six
 
 
-class DbImporter(object):
+
+class DbImporter:
     """
     Base class for database importers.
     """
@@ -81,7 +77,7 @@ class DbImporter(object):
         raise NotImplementedError('not implemented in base class')
 
 
-class DbSearchResults(object):
+class DbSearchResults:
     """
     Base class for database results.
 
@@ -94,7 +90,7 @@ class DbSearchResults(object):
         self._results = results
         self._entries = {}
 
-    class DbSearchResultsIterator(object):
+    class DbSearchResultsIterator:
         """
         Iterator for search results
         """
@@ -111,13 +107,6 @@ class DbSearchResults(object):
                 return self._results[pos]
             else:
                 raise StopIteration()
-
-        def next(self):
-            """
-            The iterator method expected by python 2.x,
-            implemented as python 3.x style method.
-            """
-            return self.__next__()
 
     def __iter__(self):
         """
@@ -187,7 +176,7 @@ class DbSearchResults(object):
         raise NotImplementedError('not implemented in base class')
 
 
-class DbEntry(object):
+class DbEntry:
     """
     Represents an entry from external database.
     """
@@ -221,7 +210,7 @@ class DbEntry(object):
     def __repr__(self):
         return '{}({})'.format(self.__class__.__name__,
                                ','.join(['{}={}'.format(k, '"{}"'.format(self.source[k])
-                               if issubclass(self.source[k].__class__, six.string_types)
+                               if issubclass(self.source[k].__class__, str)
                                else self.source[k])
                                          for k in sorted(self.source.keys())]))
 
@@ -231,10 +220,10 @@ class DbEntry(object):
         Returns raw contents of a file as string.
         """
         if self._contents is None:
-            from six.moves import urllib
+            from urllib.request import urlopen
             from hashlib import md5
 
-            self._contents = urllib.request.urlopen(self.source['uri']).read().decode('utf-8')
+            self._contents = urlopen(self.source['uri']).read().decode('utf-8')
             self.source['source_md5'] = md5(self._contents.encode('utf-8')).hexdigest()
         return self._contents
 
@@ -282,7 +271,6 @@ class CifEntry(DbEntry):
         .. note:: To be removed, as it is duplicated in
             :py:class:`aiida.orm.nodes.data.cif.CifData`.
         """
-        from six.moves import cStringIO as StringIO
         from aiida.orm import CifData
         return CifData.read_cif(StringIO(self.cif))
 

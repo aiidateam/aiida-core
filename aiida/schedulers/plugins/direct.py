@@ -10,11 +10,6 @@
 """
 Plugin for direct execution.
 """
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-
-import six
 
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
@@ -93,14 +88,14 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
         """
-        # Using subprocess.Popen with `preexec_fn=os.setsid` (as done in both local and ssh transport) results in
+        # Using subprocess.Popen with `start_new_session=True` (as done in both local and ssh transport) results in
         # processes without a controlling terminal.
         # The -x option tells ps to include processes which do not have a controlling terminal, which would not be
         # listed otherwise (leading the direct scheduler to conclude that the process already completed).
         command = 'ps -xo pid,stat,user,time'
 
         if jobs:
-            if isinstance(jobs, six.string_types):
+            if isinstance(jobs, str):
                 command += ' {}'.format(escape_for_bash(jobs))
             else:
                 try:
@@ -120,6 +115,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         Args:
            job_tmpl: an JobTemplate instance with relevant parameters set.
         """
+        # pylint: disable=too-many-branches
 
         lines = []
         empty_line = ''
@@ -130,7 +126,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             lines.append('exec > {}'.format(job_tmpl.sched_output_path))
 
         if job_tmpl.sched_join_files:
-            # TODO: manual says:
+            # TODO: manual says:  # pylint: disable=fixme
             # By  default both standard output and standard error are directed
             # to a file of the name "slurm-%j.out", where the "%j" is replaced
             # with  the  job  allocation  number.
@@ -151,9 +147,11 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                 if virtual_memory_kb <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError('max_memory_kb must be '
-                                 "a positive integer (in kB)! It is instead '{}'"
-                                 ''.format((job_tmpl.max_memory_kb)))
+                raise ValueError(
+                    'max_memory_kb must be '
+                    "a positive integer (in kB)! It is instead '{}'"
+                    ''.format((job_tmpl.max_memory_kb))
+                )
             lines.append('ulimit -v {}'.format(virtual_memory_kb))
         if not job_tmpl.import_sys_environment:
             lines.append('env --ignore-environment \\')
@@ -230,8 +228,10 @@ class DirectScheduler(aiida.schedulers.Scheduler):
 
         filtered_stderr = '\n'.join(l for l in stderr.split('\n'))
         if filtered_stderr.strip():
-            self.logger.warning('Warning in _parse_joblist_output, non-empty '
-                                "(filtered) stderr='{}'".format(filtered_stderr))
+            self.logger.warning(
+                'Warning in _parse_joblist_output, non-empty '
+                "(filtered) stderr='{}'".format(filtered_stderr)
+            )
             if retval != 0:
                 raise SchedulerError('Error during direct execution parsing (_parse_joblist_output function)')
 
@@ -247,8 +247,10 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             this_job.job_id = job[0]
 
             if len(job) < 3:
-                raise SchedulerError('Unexpected output from the scheduler, '
-                                     "not enough fields in line '{}'".format(line))
+                raise SchedulerError(
+                    'Unexpected output from the scheduler, '
+                    "not enough fields in line '{}'".format(line)
+                )
 
             try:
                 job_state_string = job[1][0]  # I just check the first character
@@ -260,8 +262,10 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                     this_job.job_state = \
                         _MAP_STATUS_PS[job_state_string]
                 except KeyError:
-                    self.logger.warning("Unrecognized job_state '{}' for job "
-                                        'id {}'.format(job_state_string, this_job.job_id))
+                    self.logger.warning(
+                        "Unrecognized job_state '{}' for job "
+                        'id {}'.format(job_state_string, this_job.job_id)
+                    )
                     this_job.job_state = JobState.UNDETERMINED
 
             try:
@@ -288,7 +292,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         Overrides original method from DirectScheduler in order to list
         missing processes as DONE.
         """
-        job_stats = super(DirectScheduler, self).get_jobs(jobs=jobs, user=user, as_dict=as_dict)
+        job_stats = super().get_jobs(jobs=jobs, user=user, as_dict=as_dict)
 
         found_jobs = []
         # Get the list of known jobs
@@ -365,20 +369,30 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         Return a string with the JobID.
         """
         if retval != 0:
-            self.logger.error('Error in _parse_submit_output: retval={}; '
-                              'stdout={}; stderr={}'.format(retval, stdout, stderr))
-            raise SchedulerError('Error during submission, retval={}\n'
-                                 'stdout={}\nstderr={}'.format(retval, stdout, stderr))
+            self.logger.error(
+                'Error in _parse_submit_output: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
+            raise SchedulerError(
+                'Error during submission, retval={}\n'
+                'stdout={}\nstderr={}'.format(retval, stdout, stderr)
+            )
 
         if stderr.strip():
-            self.logger.warning('in _parse_submit_output for {}: '
-                                'there was some text in stderr: {}'.format(str(self.transport), stderr))
+            self.logger.warning(
+                'in _parse_submit_output for {}: '
+                'there was some text in stderr: {}'.format(str(self.transport), stderr)
+            )
 
         if not stdout.strip():
-            self.logger.debug('Unable to get the PID: retval={}; '
-                              'stdout={}; stderr={}'.format(retval, stdout, stderr))
-            raise SchedulerError('Unable to get the PID: retval={}; '
-                                 'stdout={}; stderr={}'.format(retval, stdout, stderr))
+            self.logger.debug(
+                'Unable to get the PID: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
+            raise SchedulerError(
+                'Unable to get the PID: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
 
         return stdout.strip()
 
@@ -401,16 +415,22 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         :return: True if everything seems ok, False otherwise.
         """
         if retval != 0:
-            self.logger.error('Error in _parse_kill_output: retval={}; '
-                              'stdout={}; stderr={}'.format(retval, stdout, stderr))
+            self.logger.error(
+                'Error in _parse_kill_output: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
             return False
 
         if stderr.strip():
-            self.logger.warning('in _parse_kill_output for {}: '
-                                'there was some text in stderr: {}'.format(str(self.transport), stderr))
+            self.logger.warning(
+                'in _parse_kill_output for {}: '
+                'there was some text in stderr: {}'.format(str(self.transport), stderr)
+            )
 
         if stdout.strip():
-            self.logger.warning('in _parse_kill_output for {}: '
-                                'there was some text in stdout: {}'.format(str(self.transport), stdout))
+            self.logger.warning(
+                'in _parse_kill_output for {}: '
+                'there was some text in stdout: {}'.format(str(self.transport), stdout)
+            )
 
         return True

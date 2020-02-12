@@ -8,11 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities related to the ORM."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import six
 
 __all__ = ('load_code', 'load_computer', 'load_group', 'load_node')
 
@@ -62,7 +57,7 @@ def load_entity(
 
     elif uuid is not None:
 
-        if not isinstance(uuid, six.string_types):
+        if not isinstance(uuid, str):
             raise TypeError('uuid has to be a string type')
 
         identifier = uuid
@@ -70,7 +65,7 @@ def load_entity(
 
     elif label is not None:
 
-        if not isinstance(label, six.string_types):
+        if not isinstance(label, str):
             raise TypeError('label has to be a string type')
 
         identifier = label

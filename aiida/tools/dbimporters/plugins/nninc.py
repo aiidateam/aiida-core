@@ -8,11 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import six
 
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  UpfEntry)
@@ -27,7 +23,7 @@ class NnincDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance(values, six.string_types):
+        if not isinstance(values, str):
             raise ValueError("incorrect value for keyword '{}' -- only "
                              'strings and integers are accepted'.format(alias))
         return '{}={}'.format(key, values)
@@ -74,12 +70,12 @@ class NnincDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincSearchResults`.
         """
-        from six.moves import urllib
+        from urllib.request import urlopen
         import re
 
         query = self.query_get(**kwargs)
-        response = urllib.request.urlopen(query).read()
-        results = re.findall("psp_files/([^']+)\.UPF", response)
+        response = urlopen(query).read()
+        results = re.findall(r'psp_files/([^\']+)\.UPF', response)
 
         elements = kwargs.get('element', None)
         if elements and not isinstance(elements, list):
@@ -125,7 +121,7 @@ class NnincSearchResults(DbSearchResults):
     _base_url = 'http://nninc.cnf.cornell.edu/psp_files/'
 
     def __init__(self, results):
-        super(NnincSearchResults, self).__init__(results)
+        super().__init__(results)
         self._return_class = NnincEntry
 
     def __len__(self):
@@ -160,7 +156,7 @@ class NnincEntry(UpfEntry):
         :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincEntry`, related
         to the supplied URI.
         """
-        super(NnincEntry, self).__init__(db_name='NNIN/C Pseudopotential Virtual Vault',
+        super().__init__(db_name='NNIN/C Pseudopotential Virtual Vault',
                                          db_uri='http://nninc.cnf.cornell.edu',
                                          uri=uri,
                                          **kwargs)

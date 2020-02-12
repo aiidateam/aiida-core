@@ -24,10 +24,7 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
+import copy
 import os
 
 import numpy as np
@@ -315,7 +312,8 @@ def migration_calc_job_option_attribute_keys(data):
                 'jobresource_params': 'resources',
                 'parser': 'parser_name'
             }
-            for key in content:
+            # Need to loop over a clone because the `content` needs to be modified in place
+            for key in copy.deepcopy(content):
                 if key in key_mapper:
                     content[key_mapper[key]] = content.pop(key)
 
@@ -410,14 +408,13 @@ def migration_replace_text_field_with_json_field(data):
     Store dict-values as JSON serializable dicts instead of strings
     NB! Specific for Django backend
     """
-    import six
     from aiida.common import json
     for content in data['export_data'].get('Computer', {}).values():
         for value in ['metadata', 'transport_params']:
-            if isinstance(content[value], six.text_type):
+            if isinstance(content[value], str):
                 content[value] = json.loads(content[value])
     for content in data['export_data'].get('Log', {}).values():
-        if isinstance(content['metadata'], six.text_type):
+        if isinstance(content['metadata'], str):
             content['metadata'] = json.loads(content['metadata'])
 
 

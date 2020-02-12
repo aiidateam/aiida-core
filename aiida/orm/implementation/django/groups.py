@@ -9,25 +9,15 @@
 ###########################################################################
 # pylint: disable=no-member
 """Django Group entity"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
+from collections.abc import Iterable, Iterator, Sized
 
-import collections
-
-try:
-    from collections.abc import Iterator, Sized  # only works on python 3.3+
-except ImportError:
-    from collections import Iterator, Sized
-import six
-
-# pylint: disable=no-name-in-module, import-error
+# pylint: disable=no-name-in-module,import-error
 from django.db import transaction
 from django.db.models import Q
 
-from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
-from aiida.common.lang import type_check
 from aiida.backends.djsite.db import models
+from aiida.common.lang import type_check
+from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
 from . import entities
 from . import users
@@ -43,7 +33,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     def __init__(self, backend, label, user, description='', type_string=''):
         """Construct a new Django group"""
         type_check(user, users.DjangoUser)
-        super(DjangoGroup, self).__init__(backend)
+        super().__init__(backend)
 
         self._dbmodel = utils.ModelWrapper(
             models.DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string)
@@ -89,7 +79,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
     @property
     def uuid(self):
-        return six.text_type(self._dbmodel.uuid)
+        return str(self._dbmodel.uuid)
 
     def __int__(self):
         if not self.is_stored:
@@ -130,7 +120,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
             """The nodes iterator"""
 
             def __init__(self, dbnodes, backend):
-                super(NodesIterator, self).__init__()
+                super().__init__()
                 self._backend = backend
                 self._dbnodes = dbnodes
                 self.generator = self._genfunction()
@@ -153,11 +143,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
                 return self._backend.get_backend_entity(self._dbnodes[value])
 
-            # For future python-3 compatibility
             def __next__(self):
-                return next(self.generator)
-
-            def next(self):
                 return next(self.generator)
 
         return NodesIterator(self._dbmodel.dbnodes.all(), self._backend)
@@ -165,7 +151,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     def add_nodes(self, nodes, **kwargs):
         from .nodes import DjangoNode
 
-        super(DjangoGroup, self).add_nodes(nodes)
+        super().add_nodes(nodes)
 
         node_pks = []
 
@@ -184,7 +170,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     def remove_nodes(self, nodes):
         from .nodes import DjangoNode
 
-        super(DjangoGroup, self).remove_nodes(nodes)
+        super().remove_nodes(nodes)
 
         node_pks = []
 
@@ -242,7 +228,7 @@ class DjangoGroupCollection(BackendGroupCollection):
         if nodes is not None:
             pk_list = []
 
-            if not isinstance(nodes, collections.Iterable):
+            if not isinstance(nodes, Iterable):
                 nodes = [nodes]
 
             for node in nodes:
@@ -257,7 +243,7 @@ class DjangoGroupCollection(BackendGroupCollection):
             queryobject &= Q(dbnodes__in=pk_list)
 
         if user is not None:
-            if isinstance(user, six.string_types):
+            if isinstance(user, str):
                 queryobject &= Q(user__email=user)
             else:
                 queryobject &= Q(user=user.id)
@@ -270,7 +256,7 @@ class DjangoGroupCollection(BackendGroupCollection):
 
         if node_attributes is not None:
             for k, vlist in node_attributes.items():
-                if isinstance(vlist, six.string_types) or not isinstance(vlist, collections.Iterable):
+                if isinstance(vlist, str) or not isinstance(vlist, Iterable):
                     vlist = [vlist]
 
                 for value in vlist:

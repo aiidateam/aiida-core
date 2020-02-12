@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi node` command."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
+
+import shutil
+import pathlib
 
 import click
 import tabulate
@@ -62,6 +62,55 @@ def repo_ls(node, relative_path, color):
         list_repository_contents(node, relative_path, color)
     except ValueError as exception:
         echo.echo_critical(exception)
+
+
+@verdi_node_repo.command('dump')
+@arguments.NODE()
+@click.argument(
+    'output_directory',
+    type=click.Path(),
+    required=True,
+)
+@with_dbenv()
+def repo_dump(node, output_directory):
+    """Copy the repository files of a node to an output directory.
+
+    The output directory should not exist. If it does, the command
+    will abort.
+    """
+    from aiida.orm.utils.repository import FileType
+
+    output_directory = pathlib.Path(output_directory)
+
+    try:
+        output_directory.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        echo.echo_critical('Invalid value for "OUTPUT_DIRECTORY": Path "{}" exists.'.format(output_directory))
+
+    def _copy_tree(key, output_dir):  # pylint: disable=too-many-branches
+        """
+        Recursively copy the content at the ``key`` path in the given node to
+        the ``output_dir``.
+        """
+        for file in node.list_objects(key=key):
+            # Not using os.path.join here, because this is the "path"
+            # in the AiiDA node, not an actual OS - level path.
+            file_key = file.name if not key else key + '/' + file.name
+            if file.type == FileType.DIRECTORY:
+                new_out_dir = output_dir / file.name
+                assert not new_out_dir.exists()
+                new_out_dir.mkdir()
+                _copy_tree(key=file_key, output_dir=new_out_dir)
+
+            else:
+                assert file.type == FileType.FILE
+                out_file_path = output_dir / file.name
+                assert not out_file_path.exists()
+                with node.open(file_key, 'rb') as in_file:
+                    with out_file_path.open('wb') as out_file:
+                        shutil.copyfileobj(in_file, out_file)
+
+    _copy_tree(key='', output_dir=output_directory)
 
 
 @verdi_node.command('label')
@@ -227,64 +276,17 @@ def extras(nodes, keys, fmt, identifier, raw):
 @arguments.NODES()
 @click.option('-d', '--depth', 'depth', default=1, help='Show children of nodes up to given depth')
 @with_dbenv()
+@decorators.deprecated_command('This command will be removed in `aiida-core==2.0.0`.')
 def tree(nodes, depth):
     """Show a tree of nodes starting from a given node."""
     from aiida.common import LinkType
+    from aiida.cmdline.utils.ascii_vis import NodeTreePrinter
 
     for node in nodes:
         NodeTreePrinter.print_node_tree(node, depth, tuple(LinkType.__members__.values()))
 
         if len(nodes) > 1:
             echo.echo('')
-
-
-class NodeTreePrinter(object):
-    """Utility functions for printing node trees."""
-
-    @classmethod
-    def print_node_tree(cls, node, max_depth, follow_links=()):
-        """Top-level function for printing node tree."""
-        from ete3 import Tree
-        from aiida.cmdline.utils.common import get_node_summary
-
-        echo.echo(get_node_summary(node))
-
-        tree_string = '({});'.format(cls._build_tree(node, max_depth=max_depth, follow_links=follow_links))
-        tmp = Tree(tree_string, format=1)
-        echo.echo(tmp.get_ascii(show_internal=True))
-
-    @staticmethod
-    def _ctime(link_triple):
-        return link_triple.node.ctime
-
-    @classmethod
-    def _build_tree(cls, node, show_pk=True, max_depth=None, follow_links=(), depth=0):
-        """Return string with tree."""
-        if max_depth is not None and depth > max_depth:
-            return None
-
-        children = []
-        for entry in sorted(node.get_outgoing(link_type=follow_links).all(), key=cls._ctime):
-            child_str = cls._build_tree(
-                entry.node, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1
-            )
-            if child_str:
-                children.append(child_str)
-
-        out_values = []
-        if children:
-            out_values.append('(')
-            out_values.append(', '.join(children))
-            out_values.append(')')
-
-        lab = node.__class__.__name__
-
-        if show_pk:
-            lab += ' [{}]'.format(node.pk)
-
-        out_values.append(lab)
-
-        return ''.join(out_values)
 
 
 @verdi_node.command('delete')

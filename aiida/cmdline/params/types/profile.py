@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Profile param type for click."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import click
 
@@ -23,7 +20,7 @@ class ProfileParamType(click.ParamType):
     def __init__(self, *args, **kwargs):
         self._cannot_exist = kwargs.pop('cannot_exist', False)
         self._load_profile = kwargs.pop('load_profile', False)  # If True, will load the profile converted from value
-        super(ProfileParamType, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @staticmethod
     def deconvert_default(value):

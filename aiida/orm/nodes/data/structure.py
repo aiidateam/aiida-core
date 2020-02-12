@@ -11,16 +11,11 @@
 This module defines the classes for structures and all related
 functions to operate on them.
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
 import itertools
 import copy
 from functools import reduce
 
-import six
-from six.moves import range, zip
 
 from .data import Data
 from aiida.common.constants import elements
@@ -163,7 +158,7 @@ def _create_symbols_tuple(symbols):
     Returns a tuple with the symbols provided. If a string is provided,
     this is converted to a tuple with one single element.
     """
-    if isinstance(symbols, six.string_types):
+    if isinstance(symbols, str):
         symbols_list = (symbols,)
     else:
         symbols_list = tuple(symbols)
@@ -320,7 +315,7 @@ def get_formula_from_symbol_list(_list, separator=''):
         else:
             multiplicity_str = str(elem[0])
 
-        if isinstance(elem[1], six.string_types):
+        if isinstance(elem[1], str):
             list_str.append('{}{}'.format(elem[1], multiplicity_str))
         elif elem[0] > 1:
             list_str.append('({}){}'.format(
@@ -535,7 +530,7 @@ def get_formula(symbol_list, mode='hill', separator=''):
         raise ValueError('Mode should be hill, hill_compact, group, ' 'reduce, count or count_compact')
 
     if mode in ['hill_compact', 'count_compact']:
-        from fractions import gcd
+        from math import gcd
         the_gcd = reduce(gcd, [e[0] for e in the_symbol_list])
         the_symbol_list = [[e[0] // the_gcd, e[1]] for e in the_symbol_list]
 
@@ -737,7 +732,7 @@ class StructureData(Data):
             if args[left] is not None and args[right] is not None:
                 raise ValueError('cannot pass {} and {} at the same time'.format(left, right))
 
-        super(StructureData, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if any([ext is not None for ext in [ase, pymatgen, pymatgen_structure, pymatgen_molecule]]):
 
@@ -931,7 +926,7 @@ class StructureData(Data):
 
         from aiida.common.exceptions import ValidationError
 
-        super(StructureData, self)._validate()
+        super()._validate()
 
         try:
             _get_valid_cell(self.cell)
@@ -1837,7 +1832,7 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
         """
-        from pymatgen.core.structure import Structure
+        from pymatgen import Structure
 
         if self.pbc != (True, True, True):
             raise ValueError('Periodic boundary conditions must apply in all three dimensions of real space')
@@ -1847,7 +1842,7 @@ class StructureData(Data):
 
         if (kwargs.pop('add_spin', False) and any([n.endswith('1') or n.endswith('2') for n in self.get_kind_names()])):
             # case when spins are defined -> no partial occupancy allowed
-            from pymatgen.core.structure import Specie
+            from pymatgen import Specie
             oxidation_state = 0  # now I always set the oxidation_state to zero
             for s in self.sites:
                 k = self.get_kind(s.kind_name)
@@ -1891,7 +1886,7 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
         """
-        from pymatgen.core.structure import Molecule
+        from pymatgen import Molecule
 
         if kwargs:
             raise ValueError('Unrecognized parameters passed to pymatgen converter: {}'.format(kwargs.keys()))
@@ -1905,7 +1900,7 @@ class StructureData(Data):
         return Molecule(species, positions)
 
 
-class Kind(object):
+class Kind:
     """
     This class contains the information about the species (kinds) of the system.
 
@@ -2080,7 +2075,7 @@ class Kind(object):
         """
         Set the name of this site (a string).
         """
-        self._name = six.text_type(value)
+        self._name = str(value)
 
     def set_automatic_kind_name(self, tag=None):
         """
@@ -2279,7 +2274,7 @@ class Kind(object):
         return "name '{}', symbol '{}'".format(self.name, symbol)
 
 
-class Site(object):
+class Site:
     """
     This class contains the information about a given site of the system.
 
@@ -2362,7 +2357,7 @@ class Site(object):
                 tag_list.append(None)
             # If the kind name is equal to the specie name,
             # then no tag should be set
-            elif six.text_type(k.name) == six.text_type(k.symbols[0]):
+            elif str(k.name) == str(k.symbols[0]):
                 tag_list.append(None)
             else:
                 # Name is not the specie name
@@ -2380,7 +2375,7 @@ class Site(object):
             # If it is a string, it is the name of the element,
             # and I have to generate a new integer for this element
             # and replace tag_list[i] with this new integer
-            if isinstance(tag_list[i], six.string_types):
+            if isinstance(tag_list[i], str):
                 # I get a list of used tags for this element
                 existing_tags = used_tags[tag_list[i]]
                 if existing_tags:
@@ -2424,7 +2419,7 @@ class Site(object):
         """
         Set the type of this site (a string).
         """
-        self._kind_name = six.text_type(value)
+        self._kind_name = str(value)
 
     @property
     def position(self):

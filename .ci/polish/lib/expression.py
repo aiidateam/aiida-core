@@ -8,15 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Functions to dynamically generate reversed polish notation expressions."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import collections
 import operator as operators
 import random
-from six.moves import range
-import six
 
 OPERATORS = {
     '+': operators.add,
@@ -133,7 +128,7 @@ def evaluate(expression, modulo=None):
             left_hand = int(stack.popleft())
             right_hand = int(stack.popleft())
             result = operator(left_hand, right_hand)
-            stack.appendleft(six.text_type(result))
+            stack.appendleft(str(result))
 
     if modulo is not None:
         return int(result % modulo)

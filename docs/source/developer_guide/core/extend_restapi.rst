@@ -85,7 +85,7 @@ Let's assume you've put the code in the file ``example.py``, reading:
             This init serves to add new endpoints to the basic AiiDA Api
 
             """
-            super(NewApi, self).__init__(app=app, **kwargs)
+            super().__init__(app=app, **kwargs)
 
             self.add_resource(NewResource, '/new-endpoint/', strict_slashes=False)
 
@@ -216,7 +216,7 @@ This is done in the ``__init__()`` of ``NewApi`` by means of the method ``add_re
             This init serves to add new endpoints to the basic AiiDA Api
 
             """
-            super(NewApi, self).__init__(app=app, **kwargs)
+            super().__init__(app=app, **kwargs)
 
             self.add_resource(NewResource, '/new-endpoint/', strict_slashes=False)
 
@@ -230,7 +230,7 @@ In fact, the general form of ``__init__()`` is meant to be:
 
         def __init__(self, app=None, **kwargs):
 
-            super(NewApi, self.__init__(app=app, *kwargs))
+            super())
 
             self.add_resource( ... )
             self.add_resource( ... )

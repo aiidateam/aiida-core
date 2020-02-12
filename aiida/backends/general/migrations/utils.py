@@ -9,13 +9,9 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Various utils that should be used during migrations and migrations tests because the AiiDA ORM cannot be used."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import datetime
 import errno
-import io
 import os
 import re
 
@@ -50,7 +46,7 @@ def put_object_from_string(uuid, name, content):
     ensure_repository_folder_created(uuid)
     filepath = os.path.join(get_node_repository_sub_folder(uuid), name)
 
-    with io.open(filepath, 'w', encoding='utf-8') as handle:
+    with open(filepath, 'w', encoding='utf-8') as handle:
         handle.write(content)
 
 
@@ -62,7 +58,7 @@ def get_object_from_repository(uuid, name):
     """
     filepath = os.path.join(get_node_repository_sub_folder(uuid), name)
 
-    with io.open(filepath) as handle:
+    with open(filepath) as handle:
         return handle.read()
 
 
@@ -72,11 +68,11 @@ def get_node_repository_sub_folder(uuid):
     :param uuid: UUID of the node
     :return: absolute path to node repository folder, i.e `/some/path/repository/node/12/ab/c123134-a123/path`
     """
-    from aiida.common.utils import get_repository_folder
+    from aiida.manage.configuration import get_profile
 
     uuid = str(uuid)
 
-    repo_dirpath = get_repository_folder('repository')
+    repo_dirpath = os.path.join(get_profile().repository_path, 'repository')
     node_dirpath = os.path.join(repo_dirpath, 'node', uuid[:2], uuid[2:4], uuid[4:], 'path')
 
     return node_dirpath
@@ -102,7 +98,7 @@ def store_numpy_array_in_repository(uuid, name, array):
     ensure_repository_folder_created(uuid)
     filepath = get_numpy_array_absolute_path(uuid, name)
 
-    with io.open(filepath, 'wb') as handle:
+    with open(filepath, 'wb') as handle:
         numpy.save(handle, array)
 
 

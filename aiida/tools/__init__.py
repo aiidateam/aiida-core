@@ -20,9 +20,6 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 .. note:: Modules in this sub package may require the database environment to be loaded
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .calculations import *
 from .data.array.kpoints import *

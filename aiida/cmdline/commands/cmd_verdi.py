@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The main `verdi` click group."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import difflib
 import click
@@ -58,14 +55,11 @@ class MostSimilarCommandGroup(click.Group):
         if cmd is not None:
             return cmd
 
-        try:
-            if int(cmd_name.lower().encode('utf-8').hex(), 16) == 0x6769757365707065:
-                import base64
-                import gzip
-                click.echo(gzip.decompress(base64.b85decode(GIU.encode('utf-8'))).decode('utf-8'))
-                return None
-        except AttributeError:
-            pass  # on Python 2 we don't have .hex() and .decompress(), simply ignore it
+        if int(cmd_name.lower().encode('utf-8').hex(), 16) == 0x6769757365707065:
+            import base64
+            import gzip
+            click.echo(gzip.decompress(base64.b85decode(GIU.encode('utf-8'))).decode('utf-8'))
+            return None
 
         # we might get better results with the Levenshtein distance
         # or more advanced methods implemented in FuzzyWuzzy or similar libs,

@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A transport queue to batch process multiple tasks that require a Transport."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from collections import namedtuple
 import contextlib
 import logging
@@ -20,17 +17,17 @@ from tornado import concurrent, gen, ioloop
 _LOGGER = logging.getLogger(__name__)
 
 
-class TransportRequest(object):
+class TransportRequest:
     """ Information kept about request for a transport object """
 
     # pylint: disable=too-few-public-methods
     def __init__(self):
-        super(TransportRequest, self).__init__()
+        super().__init__()
         self.future = concurrent.Future()
         self.count = 0
 
 
-class TransportQueue(object):
+class TransportQueue:
     """
     A queue to get transport objects from authinfo.  This class allows clients
     to register their interest in a transport object which will be provided at

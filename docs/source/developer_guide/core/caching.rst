@@ -23,10 +23,18 @@ Below are some methods you can use to control how the hashes of calculation and 
 Controlling caching
 -------------------
 
-There are two methods you can use to disable caching for particular nodes:
+There are several methods you can use to disable caching for particular nodes:
+
+On the level of generic :class:`aiida.orm.nodes.Node`:
 
 * The :meth:`~aiida.orm.nodes.Node.is_valid_cache` property determines whether a particular node can be used as a cache. This is used for example to disable caching from failed calculations.
 * Node classes have a ``_cachable`` attribute, which can be set to ``False`` to completely switch off caching for nodes of that class. This avoids performing queries for the hash altogether.
+
+On the level of :class:`aiida.engine.processes.process.Process` and :class:`aiida.orm.nodes.process.ProcessNode`:
+
+* The :meth:`ProcessNode.is_valid_cache <aiida.orm.nodes.process.ProcessNode.is_valid_cache>` calls :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`, passing the node itself. This can be used in :class:`~aiida.engine.processes.process.Process` subclasses (e.g. in calculation plugins) to implement custom ways of invalidating the cache.
+* The ``spec.exit_code`` has a keyword argument ``invalidates_cache``. If this is set to ``True``, returning that exit code means the process is no longer considered a valid cache. This is implemented in :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`.
+
 
 The ``WorkflowNode`` example
 ............................
@@ -48,6 +56,3 @@ When modifying the hashing/caching behaviour of your classes, keep in mind that 
 * False positives, where two different nodes get the same hash by mistake
 
 False negatives are **highly preferrable** because they only increase the runtime of your calculations, while false positives can lead to wrong results.
-
-
-

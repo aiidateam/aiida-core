@@ -7,11 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import os
-import six
 
 
 def clean_remote(transport, path):
@@ -22,7 +18,7 @@ def clean_remote(transport, path):
     :param transport: an open Transport channel
     :param path: an absolute path on the remote made available through the transport
     """
-    if not isinstance(path, six.string_types):
+    if not isinstance(path, str):
         raise ValueError('the path has to be a string type')
 
     if not os.path.isabs(path):

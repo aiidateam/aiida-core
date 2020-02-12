@@ -8,14 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with utilities and data structures pertaining to links between nodes in the provenance graph."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from collections import namedtuple
 from enum import Enum
-
-import six
 
 from .lang import isidentifier, type_check
 
@@ -50,6 +45,21 @@ add adjacent nodes to finally arrive at a set of nodes that represent a valid an
 
 class GraphTraversalRules(Enum):
     """Graph traversal rules when deleting or exporting nodes."""
+
+    DEFAULT = {
+        'input_calc_forward': GraphTraversalRule(LinkType.INPUT_CALC, 'forward', True, False),
+        'input_calc_backward': GraphTraversalRule(LinkType.INPUT_CALC, 'backward', True, False),
+        'create_forward': GraphTraversalRule(LinkType.CREATE, 'forward', True, False),
+        'create_backward': GraphTraversalRule(LinkType.CREATE, 'backward', True, False),
+        'return_forward': GraphTraversalRule(LinkType.RETURN, 'forward', True, False),
+        'return_backward': GraphTraversalRule(LinkType.RETURN, 'backward', True, False),
+        'input_work_forward': GraphTraversalRule(LinkType.INPUT_WORK, 'forward', True, False),
+        'input_work_backward': GraphTraversalRule(LinkType.INPUT_WORK, 'backward', True, False),
+        'call_calc_forward': GraphTraversalRule(LinkType.CALL_CALC, 'forward', True, False),
+        'call_calc_backward': GraphTraversalRule(LinkType.CALL_CALC, 'backward', True, False),
+        'call_work_forward': GraphTraversalRule(LinkType.CALL_WORK, 'forward', True, False),
+        'call_work_backward': GraphTraversalRule(LinkType.CALL_WORK, 'backward', True, False)
+    }
 
     DELETE = {
         'input_calc_forward': GraphTraversalRule(LinkType.INPUT_CALC, 'forward', False, True),
@@ -97,7 +107,7 @@ def validate_link_label(link_label):
     import re
 
     message = 'invalid link label `{}`: should be string type but is instead: {}'.format(link_label, type(link_label))
-    type_check(link_label, six.string_types, message)
+    type_check(link_label, str, message)
 
     allowed_character_set = '[a-zA-Z0-9_]'
 

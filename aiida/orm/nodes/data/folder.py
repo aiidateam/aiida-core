@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a folder on a file system."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .data import Data
 
@@ -38,6 +35,6 @@ class FolderData(Data):
         :type tree: str
         """
         tree = kwargs.pop('tree', None)
-        super(FolderData, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if tree:
             self.put_object_from_tree(tree)

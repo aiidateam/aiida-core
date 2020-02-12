@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django implementation of the `BackendNode` and `BackendNodeCollection` classes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 # pylint: disable=import-error,no-name-in-module
 from datetime import datetime
@@ -61,7 +58,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param mtime: The modification time as datetime object
         """
         # pylint: disable=too-many-arguments
-        super(DjangoNode, self).__init__(backend)
+        super().__init__(backend)
 
         arguments = {
             'user': user.dbmodel,

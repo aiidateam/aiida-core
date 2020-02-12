@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=wildcard-import,undefined-variable
 """Module for the `CalcJob` process and related utilities."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from .calcjob import *
 

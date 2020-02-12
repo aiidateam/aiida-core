@@ -14,9 +14,6 @@ For the time being the API returns the parsed valid endpoints upon GET request
 Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from flask import Flask, jsonify
 from flask_restful import Api
 from werkzeug.exceptions import HTTPException
@@ -38,7 +35,7 @@ class App(Flask):
             pass
 
         # Basic initialization
-        super(App, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Error handler
         from aiida.restapi.common.exceptions import RestInputValidationError, \
@@ -103,7 +100,7 @@ class AiidaApi(Api):
 
         self.app = app
 
-        super(AiidaApi, self).__init__(app=app, prefix=kwargs['PREFIX'], catch_all_404s=True)
+        super().__init__(app=app, prefix=kwargs['PREFIX'], catch_all_404s=True)
 
         self.add_resource(
             ServerInfo,

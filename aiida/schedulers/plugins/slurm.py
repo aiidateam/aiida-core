@@ -11,17 +11,10 @@
 Plugin for SLURM.
 This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 """
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
 import re
 
-import six
-from six.moves import zip
-
-import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
-from aiida.schedulers import SchedulerError
+from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
 
 # This maps SLURM state codes to our own status list
@@ -71,7 +64,8 @@ _SLURM_SUBMITTED_REGEXP = re.compile(r'(.*:\s*)?([Gg]ranted job allocation|[Ss]u
 # acceptable  time  formats include
 # "minutes",  "minutes:seconds",  "hours:minutes:seconds",
 # "days-hours",  "days-hours:minutes" and "days-hours:minutes:seconds".
-_TIME_REGEXP = re.compile(r"""
+_TIME_REGEXP = re.compile(
+    r"""
     ^                            # beginning of string
     \s*                          # any number of white spaces
     (?=\d)                       # I check that there is at least a digit
@@ -101,7 +95,8 @@ _TIME_REGEXP = re.compile(r"""
                                  # 2 minutes
     \s*                          # any number of whitespaces
     $                            # end of line
-   """, re.VERBOSE)
+   """, re.VERBOSE
+)
 
 # Separator between fields in the output of squeue
 _FIELD_SEPARATOR = '^^^'
@@ -128,12 +123,14 @@ class SlurmJobResource(NodeNumberJobResource):
            num_cores_per_mpiproc which should always be an integer value
         3. If only num_cores_per_mpiproc is passed, use it
         """
-        super(SlurmJobResource, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
-        value_error = ('num_cores_per_machine must be equal to '
-                       'num_cores_per_mpiproc * num_mpiprocs_per_machine, '
-                       'and in perticular it should be a multiple of '
-                       'num_cores_per_mpiproc and/or num_mpiprocs_per_machine')
+        value_error = (
+            'num_cores_per_machine must be equal to '
+            'num_cores_per_mpiproc * num_mpiprocs_per_machine, '
+            'and in perticular it should be a multiple of '
+            'num_cores_per_mpiproc and/or num_mpiprocs_per_machine'
+        )
 
         if self.num_cores_per_machine is not None and self.num_cores_per_mpiproc is not None:
             if self.num_cores_per_machine != (self.num_cores_per_mpiproc * self.num_mpiprocs_per_machine):
@@ -151,16 +148,25 @@ class SlurmJobResource(NodeNumberJobResource):
                 raise ValueError(value_error)
 
 
-class SlurmScheduler(aiida.schedulers.Scheduler):
+class SlurmScheduler(Scheduler):
     """
     Support for the SLURM scheduler (http://slurm.schedmd.com/).
     """
-    _logger = aiida.schedulers.Scheduler._logger.getChild('slurm')
+    _logger = Scheduler._logger.getChild('slurm')
 
     # Query only by list of jobs and not by user
     _features = {
         'can_query_by_user': False,
     }
+
+    _detailed_job_info_fields = [
+        'AllocCPUS', 'Account', 'AssocID', 'AveCPU', 'AvePages', 'AveRSS', 'AveVMSize', 'Cluster', 'Comment', 'CPUTime',
+        'CPUTimeRAW', 'DerivedExitCode', 'Elapsed', 'Eligible', 'End', 'ExitCode', 'GID', 'Group', 'JobID', 'JobName',
+        'MaxRSS', 'MaxRSSNode', 'MaxRSSTask', 'MaxVMSize', 'MaxVMSizeNode', 'MaxVMSizeTask', 'MinCPU', 'MinCPUNode',
+        'MinCPUTask', 'NCPUS', 'NNodes', 'NodeList', 'NTasks', 'Priority', 'Partition', 'QOSRAW', 'ReqCPUS', 'Reserved',
+        'ResvCPU', 'ResvCPURAW', 'Start', 'State', 'Submit', 'Suspended', 'SystemCPU', 'Timelimit', 'TotalCPU', 'UID',
+        'User', 'UserCPU'
+    ]
 
     # The class to be used for the job resource.
     _job_resource_class = SlurmJobResource
@@ -198,8 +204,8 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         # I add the environment variable SLURM_TIME_FORMAT in front to be
         # sure to get the times in 'standard' format
         command = [
-            "SLURM_TIME_FORMAT='standard'", 'squeue', '--noheader', "-o '{}'".format(
-                _FIELD_SEPARATOR.join(_[0] for _ in self.fields))
+            "SLURM_TIME_FORMAT='standard'", 'squeue', '--noheader',
+            "-o '{}'".format(_FIELD_SEPARATOR.join(_[0] for _ in self.fields))
         ]
 
         if user and jobs:
@@ -210,7 +216,7 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
 
         if jobs:
             joblist = []
-            if isinstance(jobs, six.string_types):
+            if isinstance(jobs, str):
                 joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):
@@ -222,7 +228,7 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         self.logger.debug('squeue command: {}'.format(comm))
         return comm
 
-    def _get_detailed_jobinfo_command(self, jobid):
+    def _get_detailed_job_info_command(self, job_id):
         """
         Return the command to run to get the detailed information on a job,
         even after the job has finished.
@@ -231,13 +237,8 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         --parsable split the fields with a pipe (|), adding a pipe also at
         the end.
         """
-        return 'sacct --format=AllocCPUS,Account,AssocID,AveCPU,AvePages,' \
-               'AveRSS,AveVMSize,Cluster,Comment,CPUTime,CPUTimeRAW,DerivedExitCode,' \
-               'Elapsed,Eligible,End,ExitCode,GID,Group,JobID,JobName,MaxRSS,MaxRSSNode,' \
-               'MaxRSSTask,MaxVMSize,MaxVMSizeNode,MaxVMSizeTask,MinCPU,MinCPUNode,' \
-               'MinCPUTask,NCPUS,NNodes,NodeList,NTasks,Priority,Partition,QOSRAW,ReqCPUS,' \
-               'Reserved,ResvCPU,ResvCPURAW,Start,State,Submit,Suspended,SystemCPU,Timelimit,' \
-               'TotalCPU,UID,User,UserCPU --parsable --jobs={}'.format(jobid)
+        fields = ','.join(self._detailed_job_info_fields)
+        return 'sacct --format={} --parsable --jobs={}'.format(fields, job_id)
 
     def _get_submit_script_header(self, job_tmpl):
         """
@@ -249,6 +250,7 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
 
         TODO: truncate the title if too long
         """
+        # pylint: disable=too-many-statements,too-many-branches
         import string
 
         empty_line = ''
@@ -301,15 +303,17 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
             lines.append('#SBATCH --output={}'.format(job_tmpl.sched_output_path))
 
         if job_tmpl.sched_join_files:
-            # TODO: manual says:
+            # TODO: manual says:  # pylint: disable=fixme
             # By  default both standard output and standard error are directed
             # to a file of the name "slurm-%j.out", where the "%j" is replaced
             # with  the  job  allocation  number.
             # See that this automatic redirection works also if
             # I specify a different --output file
             if job_tmpl.sched_error_path:
-                self.logger.info('sched_join_files is True, but sched_error_path is set in '
-                                 'SLURM script; ignoring sched_error_path')
+                self.logger.info(
+                    'sched_join_files is True, but sched_error_path is set in '
+                    'SLURM script; ignoring sched_error_path'
+                )
         else:
             if job_tmpl.sched_error_path:
                 lines.append('#SBATCH --error={}'.format(job_tmpl.sched_error_path))
@@ -349,9 +353,11 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError('max_wallclock_seconds must be '
-                                 "a positive integer (in seconds)! It is instead '{}'"
-                                 ''.format((job_tmpl.max_wallclock_seconds)))
+                raise ValueError(
+                    'max_wallclock_seconds must be '
+                    "a positive integer (in seconds)! It is instead '{}'"
+                    ''.format((job_tmpl.max_wallclock_seconds))
+                )
             days = tot_secs // 86400
             tot_hours = tot_secs % 86400
             hours = tot_hours // 3600
@@ -370,9 +376,11 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
                 if virtual_memory_kb <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError('max_memory_kb must be '
-                                 "a positive integer (in kB)! It is instead '{}'"
-                                 ''.format((job_tmpl.MaxMemoryKb)))
+                raise ValueError(
+                    'max_memory_kb must be '
+                    "a positive integer (in kB)! It is instead '{}'"
+                    ''.format((job_tmpl.MaxMemoryKb))
+                )
             # --mem: Specify the real memory required per node in MegaBytes.
             # --mem and  --mem-per-cpu  are  mutually exclusive.
             lines.append('#SBATCH --mem={}'.format(virtual_memory_kb // 1024))
@@ -425,10 +433,14 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         Return a string with the JobID.
         """
         if retval != 0:
-            self.logger.error('Error in _parse_submit_output: retval={}; '
-                              'stdout={}; stderr={}'.format(retval, stdout, stderr))
-            raise SchedulerError('Error during submission, retval={}\n'
-                                 'stdout={}\nstderr={}'.format(retval, stdout, stderr))
+            self.logger.error(
+                'Error in _parse_submit_output: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
+            raise SchedulerError(
+                'Error during submission, retval={}\n'
+                'stdout={}\nstderr={}'.format(retval, stdout, stderr)
+            )
 
         try:
             transport_string = ' for {}'.format(self.transport)
@@ -436,8 +448,10 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
             transport_string = ''
 
         if stderr.strip():
-            self.logger.warning('in _parse_submit_output{}: '
-                                'there was some text in stderr: {}'.format(transport_string, stderr))
+            self.logger.warning(
+                'in _parse_submit_output{}: '
+                'there was some text in stderr: {}'.format(transport_string, stderr)
+            )
 
         # I check for a valid string in the output.
         # See comments near the regexp above.
@@ -447,10 +461,14 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
             if match:
                 return match.group('jobid')
         # If I am here, no valid line could be found.
-        self.logger.error('in _parse_submit_output{}: '
-                          'unable to find the job id: {}'.format(transport_string, stdout))
-        raise SchedulerError('Error during submission, could not retrieve the jobID from '
-                             'sbatch output; see log for more info.')
+        self.logger.error(
+            'in _parse_submit_output{}: '
+            'unable to find the job id: {}'.format(transport_string, stdout)
+        )
+        raise SchedulerError(
+            'Error during submission, could not retrieve the jobID from '
+            'sbatch output; see log for more info.'
+        )
 
     def _parse_joblist_output(self, retval, stdout, stderr):
         """
@@ -469,6 +487,7 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
         """
+        # pylint: disable=too-many-branches,too-many-statements
         num_fields = len(self.fields)
 
         # I don't raise because if I pass a list of jobs,
@@ -517,8 +536,10 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
             try:
                 job_state_string = _MAP_STATUS_SLURM[job_state_raw]
             except KeyError:
-                self.logger.warning("Unrecognized job_state '{}' for job "
-                                    'id {}'.format(job_state_raw, this_job.job_id))
+                self.logger.warning(
+                    "Unrecognized job_state '{}' for job "
+                    'id {}'.format(job_state_raw, this_job.job_id)
+                )
                 job_state_string = JobState.UNDETERMINED
             # QUEUED_HELD states are not specific states in SLURM;
             # they are instead set with state QUEUED, and then the
@@ -535,8 +556,10 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
             # There are actually a few others, like possible
             # failures, or partition-related reasons, but for the moment I
             # leave them in the QUEUED state.
-            if (job_state_string == JobState.QUEUED and
-                    this_job.annotation in ['Dependency', 'JobHeldUser', 'JobHeldAdmin', 'BeginTime']):
+            if (
+                job_state_string == JobState.QUEUED and
+                this_job.annotation in ['Dependency', 'JobHeldUser', 'JobHeldAdmin', 'BeginTime']
+            ):
                 job_state_string = JobState.QUEUED_HELD
 
             this_job.job_state = job_state_string
@@ -549,30 +572,34 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
                 # I store this job only with the information
                 # gathered up to now, and continue to the next job
                 # Also print a warning
-                self.logger.warning('Wrong line length in squeue output!'
-                                    "Skipping optional fields. Line: '{}'"
-                                    ''.format(jobdata_raw))
+                self.logger.warning(
+                    'Wrong line length in squeue output!'
+                    "Skipping optional fields. Line: '{}'"
+                    ''.format(jobdata_raw)
+                )
                 # I append this job before continuing
                 job_list.append(this_job)
                 continue
 
-            # TODO: store executing_host?
+            # TODO: store executing_host?  # pylint: disable=fixme
 
             this_job.job_owner = thisjob_dict['username']
 
             try:
                 this_job.num_machines = int(thisjob_dict['number_nodes'])
             except ValueError:
-                self.logger.warning('The number of allocated nodes is not '
-                                    'an integer ({}) for job id {}!'.format(thisjob_dict['number_nodes'],
-                                                                            this_job.job_id))
+                self.logger.warning(
+                    'The number of allocated nodes is not '
+                    'an integer ({}) for job id {}!'.format(thisjob_dict['number_nodes'], this_job.job_id)
+                )
 
             try:
                 this_job.num_mpiprocs = int(thisjob_dict['number_cpus'])
             except ValueError:
-                self.logger.warning('The number of allocated cores is not '
-                                    'an integer ({}) for job id {}!'.format(thisjob_dict['number_cpus'],
-                                                                            this_job.job_id))
+                self.logger.warning(
+                    'The number of allocated cores is not '
+                    'an integer ({}) for job id {}!'.format(thisjob_dict['number_cpus'], this_job.job_id)
+                )
 
             # ALLOCATED NODES HERE
             # string may be in the format
@@ -586,7 +613,8 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
             this_job.queue_name = thisjob_dict['partition']
 
             try:
-                this_job.requested_wallclock_time_seconds = (self._convert_time(thisjob_dict['time_limit']))
+                walltime = (self._convert_time(thisjob_dict['time_limit']))
+                this_job.requested_wallclock_time_seconds = walltime  # pylint: disable=invalid-name
             except ValueError:
                 self.logger.warning('Error parsing the time limit for job id {}'.format(this_job.job_id))
 
@@ -618,10 +646,13 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
             # version of the plugin is never set
             if (this_job.allocated_machines is not None and this_job.num_machines is not None):
                 if len(this_job.allocated_machines) != this_job.num_machines:
-                    self.logger.error('The length of the list of allocated '
-                                      'nodes ({}) is different from the '
-                                      'expected number of nodes ({})!'.format(
-                        len(this_job.allocated_machines), this_job.num_machines))
+                    self.logger.error(
+                        'The length of the list of allocated '
+                        'nodes ({}) is different from the '
+                        'expected number of nodes ({})!'.format(
+                            len(this_job.allocated_machines), this_job.num_machines
+                        )
+                    )
 
             # I append to the list of jobs to return
             job_list.append(this_job)
@@ -691,8 +722,10 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
         :return: True if everything seems ok, False otherwise.
         """
         if retval != 0:
-            self.logger.error('Error in _parse_kill_output: retval={}; '
-                              'stdout={}; stderr={}'.format(retval, stdout, stderr))
+            self.logger.error(
+                'Error in _parse_kill_output: retval={}; '
+                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+            )
             return False
 
         try:
@@ -701,11 +734,15 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
             transport_string = ''
 
         if stderr.strip():
-            self.logger.warning('in _parse_kill_output{}: '
-                                'there was some text in stderr: {}'.format(transport_string, stderr))
+            self.logger.warning(
+                'in _parse_kill_output{}: '
+                'there was some text in stderr: {}'.format(transport_string, stderr)
+            )
 
         if stdout.strip():
-            self.logger.warning('in _parse_kill_output{}: '
-                                'there was some text in stdout: {}'.format(transport_string, stdout))
+            self.logger.warning(
+                'in _parse_kill_output{}: '
+                'there was some text in stdout: {}'.format(transport_string, stdout)
+            )
 
         return True

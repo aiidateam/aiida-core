@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """AiiDA manager for global settings"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import functools
 
@@ -20,7 +17,7 @@ __all__ = ('get_manager', 'reset_manager')
 MANAGER = None
 
 
-class Manager(object):
+class Manager:
     """
     Manager singleton to provide global versions of commonly used profile/settings related objects
     and methods to facilitate their construction.
@@ -331,7 +328,7 @@ class Manager(object):
         self._runner = None
 
     def __init__(self):
-        super(Manager, self).__init__()
+        super().__init__()
         self._backend = None  # type: aiida.orm.implementation.Backend
         self._backend_manager = None  # type: aiida.backend.manager.BackendManager
         self._config = None  # type: aiida.manage.configuration.config.Config

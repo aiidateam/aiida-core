@@ -1,0 +1,9 @@
+---
+label: doubler
+description: doubler
+input_plugin: templatereplacer
+on_computer: true
+computer: localhost
+remote_abs_path: PLACEHOLDER_REMOTE_ABS_PATH_DOUBLER
+prepend_text: ' '
+append_text: ' '

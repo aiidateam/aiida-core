@@ -10,13 +10,9 @@
 """Module that contains the class definitions necessary to offer support for
 queries to Materials Project."""
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import os
 import datetime
 import requests
-from six import raise_from
 from pymatgen import MPRester
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
@@ -45,14 +41,11 @@ class MaterialsProjectImporter(DbImporter):
         except KeyError:
             try:
                 api_key = os.environ['PMG_MAPI_KEY']
-            except KeyError as exc:
-                raise_from(
-                    KeyError(
-                        'API key not supplied and PMG_MAPI_KEY environment '
-                        'variable not set. Either pass it when initializing the class, '
-                        'or set the environment variable PMG_MAPI_KEY to your API key.'
-                    ), exc
-                )
+            except KeyError as exception:
+                raise KeyError(
+                    'API key not supplied and PMG_MAPI_KEY environment variable not set. Either pass it when '
+                    'initializing the class, or set the environment variable PMG_MAPI_KEY to your API key.'
+                ) from exception
             api_key = None
 
         self._api_key = api_key
@@ -88,7 +81,6 @@ class MaterialsProjectImporter(DbImporter):
         """
         return self._properties
 
-    @property
     def get_supported_keywords(self):
         """
         Returns the list of all supported query keywords
@@ -159,7 +151,7 @@ class MaterialsProjectCifEntry(CifEntry):  # pylint: disable=abstract-method
         """
         cif = kwargs.pop('cif', None)
         kwargs['uri'] = url
-        super(MaterialsProjectCifEntry, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if cif is not None:
             self.cif = cif
@@ -180,7 +172,7 @@ class MaterialsProjectSearchResults(DbSearchResults):  # pylint: disable=abstrac
 
     def __init__(self, results, return_class):
         self._return_class = return_class
-        super(MaterialsProjectSearchResults, self).__init__(results)
+        super().__init__(results)
 
     def _get_source_dict(self, result_dict):
         """

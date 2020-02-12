@@ -7,11 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import io
 import os
 
 from aiida.common import exceptions
@@ -65,7 +61,7 @@ class TemplatereplacerDoublerParser(Parser):
                         retrieved_file, retrieved_temporary_folder))
                     return self.exit_codes.ERROR_READING_TEMPORARY_RETRIEVED_FILE
 
-                with io.open(file_path, 'r', encoding='utf8') as handle:
+                with open(file_path, 'r', encoding='utf8') as handle:
                     parsed_value = handle.read().strip()
 
                 # We always strip the content of the file from whitespace to simplify testing for expected output

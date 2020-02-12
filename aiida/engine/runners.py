@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=global-statement
 """Runners that can run and submit processes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import collections
 import logging
@@ -37,7 +34,7 @@ ResultAndNode = collections.namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPk = collections.namedtuple('ResultAndPk', ['result', 'pk'])
 
 
-class Runner(object):  # pylint: disable=too-many-public-methods
+class Runner:  # pylint: disable=too-many-public-methods
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
     _persister = None

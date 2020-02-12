@@ -8,13 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi daemon` commands."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import os
 import subprocess
 import time
+import sys
 
 import click
 from click_spinner import spinner
@@ -77,9 +75,12 @@ def start(foreground, number):
 
 
 @verdi_daemon.command()
-@click.option('--all', 'all_profiles', is_flag=True, help='Show all daemons.')
+@click.option('--all', 'all_profiles', is_flag=True, help='Show status of all daemons.')
 def status(all_profiles):
-    """Print the status of the current daemon or all daemons."""
+    """Print the status of the current daemon or all daemons.
+
+    Returns exit code 0 if all requested daemons are running, else exit code 3.
+    """
     from aiida.engine.daemon.client import get_daemon_client
 
     config = get_config()
@@ -89,6 +90,7 @@ def status(all_profiles):
     else:
         profiles = [config.current_profile]
 
+    daemons_running = []
     for profile in profiles:
         client = get_daemon_client(profile.name)
         delete_stale_pid_file(client)
@@ -96,6 +98,10 @@ def status(all_profiles):
         click.secho('{}'.format(profile.name), bold=True)
         result = get_daemon_status(client)
         echo.echo(result)
+        daemons_running.append(client.is_daemon_running)
+
+    if not all(daemons_running):
+        sys.exit(3)
 
 
 @verdi_daemon.command()
@@ -294,7 +300,6 @@ def start_circus(foreground, number):
 
     while should_restart:
         try:
-            arbiter = arbiter
             future = arbiter.start()
             should_restart = False
             if check_future_exception_and_log(future) is None:

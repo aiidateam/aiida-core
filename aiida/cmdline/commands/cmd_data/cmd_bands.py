@@ -8,12 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi data bands` command."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import click
-from six.moves import range
 
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.commands.cmd_data import cmd_show

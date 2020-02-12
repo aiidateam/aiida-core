@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-locals,too-many-statements
 """Tools for handling Crystallographic Information Files (CIF)"""
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
 from aiida.common.utils import Capturing
 
@@ -271,7 +268,7 @@ class CifData(SinglefileData):
             if args[left] is not None and args[right] is not None:
                 raise ValueError('cannot pass {} and {} at the same time'.format(left, right))
 
-        super(CifData, self).__init__(file, filename=filename, **kwargs)
+        super().__init__(file, filename=filename, **kwargs)
         self.set_scan_type(scan_type or CifData._SCAN_TYPE_DEFAULT)
         self.set_parse_policy(parse_policy or CifData._PARSE_POLICY_DEFAULT)
 
@@ -476,7 +473,7 @@ class CifData(SinglefileData):
         if not self.is_stored:
             self.set_attribute('md5', self.generate_md5())
 
-        return super(CifData, self).store(*args, **kwargs)
+        return super().store(*args, **kwargs)
 
     def set_file(self, file, filename=None):
         """
@@ -490,7 +487,7 @@ class CifData(SinglefileData):
         :param filename: specify filename to use (defaults to name of provided file).
         """
         # pylint: disable=redefined-builtin
-        super(CifData, self).set_file(file, filename=filename)
+        super().set_file(file, filename=filename)
         md5sum = self.generate_md5()
         if isinstance(self.source, dict) and \
                 self.source.get('source_md5', None) is not None and \
@@ -786,7 +783,7 @@ class CifData(SinglefileData):
         """
         from aiida.common.exceptions import ValidationError
 
-        super(CifData, self)._validate()
+        super()._validate()
 
         try:
             attr_md5 = self.get_attribute('md5')

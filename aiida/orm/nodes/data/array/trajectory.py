@@ -10,13 +10,8 @@
 """
 AiiDA class to deal with crystal structure trajectories.
 """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 import collections
-import six
-from six.moves import range, zip
 
 from .array import ArrayData
 
@@ -28,7 +23,7 @@ class TrajectoryData(ArrayData):
     """
 
     def __init__(self, structurelist=None, **kwargs):
-        super(TrajectoryData, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if structurelist is not None:
             self.set_structurelist(structurelist)
 
@@ -42,7 +37,7 @@ class TrajectoryData(ArrayData):
 
         if not isinstance(symbols, collections.Iterable):
             raise TypeError('TrajectoryData.symbols must be of type list')
-        if any([not isinstance(i, six.string_types) for i in symbols]):
+        if any([not isinstance(i, str) for i in symbols]):
             raise TypeError('TrajectoryData.symbols must be a 1d list of strings')
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError('TrajectoryData.positions must be a numpy array of floats')

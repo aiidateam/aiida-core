@@ -8,22 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all logging methods/classes that don't need the ORM."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
+import collections
 import copy
 import logging
 import types
 from contextlib import contextmanager
-import six
 
-if six.PY2:
-    import collections
-else:
-    import collections.abc as collections  # pylint: disable=no-name-in-module, import-error
-
-from aiida.manage.configuration import get_config_option  # pylint: disable=wrong-import-position
+from aiida.manage.configuration import get_config_option
 
 __all__ = ('AIIDA_LOGGER', 'override_log_level')
 
@@ -139,7 +130,7 @@ def evaluate_logging_configuration(dictionary):
     result = {}
 
     for key, value in dictionary.items():
-        if isinstance(value, collections.Mapping):
+        if isinstance(value, collections.abc.Mapping):
             result[key] = evaluate_logging_configuration(value)
         elif isinstance(value, types.LambdaType):  # pylint: disable=no-member
             result[key] = value()

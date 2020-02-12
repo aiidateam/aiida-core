@@ -8,11 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import io
 import os
 import shutil
 
@@ -24,7 +20,7 @@ from .profile import Profile
 __all__ = ('Config',)
 
 
-class Config(object):  # pylint: disable=too-many-public-methods
+class Config:  # pylint: disable=too-many-public-methods
     """Object that represents the configuration file of an AiiDA instance."""
 
     KEY_VERSION = 'CONFIG_VERSION'
@@ -47,7 +43,7 @@ class Config(object):  # pylint: disable=too-many-public-methods
         from .migrations import check_and_migrate_config, config_needs_migrating
 
         try:
-            with io.open(filepath, 'r', encoding='utf8') as handle:
+            with open(filepath, 'r', encoding='utf8') as handle:
                 config = json.load(handle)
         except (IOError, OSError):
             config = Config(filepath, check_and_migrate_config({}))
@@ -379,7 +375,7 @@ class Config(object):  # pylint: disable=too-many-public-methods
 
         # If the filepath of this configuration does not yet exist, simply write it.
         if not os.path.isfile(self.filepath):
-            with io.open(self.filepath, 'wb') as handle:
+            with open(self.filepath, 'wb') as handle:
                 self._write(handle)
             return self
 

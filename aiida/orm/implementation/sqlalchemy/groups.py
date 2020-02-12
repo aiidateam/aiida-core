@@ -8,14 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA groups"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import collections
 import logging
-
-import six
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
@@ -50,7 +45,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         :param type_string: an optional type for the group to contain
         """
         type_check(user, users.SqlaUser)
-        super(SqlaGroup, self).__init__(backend)
+        super().__init__(backend)
 
         dbgroup = DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string)
         self._dbmodel = utils.ModelWrapper(dbgroup)
@@ -108,7 +103,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
     @property
     def uuid(self):
-        return six.text_type(self._dbmodel.uuid)
+        return str(self._dbmodel.uuid)
 
     def __int__(self):
         if not self.is_stored:
@@ -145,7 +140,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
     def nodes(self):
         """Get an iterator to all the nodes in the group"""
 
-        class Iterator(object):
+        class Iterator:
             """Nodes iterator"""
 
             def __init__(self, dbnodes, backend):
@@ -170,11 +165,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
                 return self._backend.get_backend_entity(self._dbnodes[value])
 
-            # For future python-3 compatibility
             def __next__(self):
-                return next(self.generator)
-
-            def next(self):
                 return next(self.generator)
 
         return Iterator(self._dbmodel.dbnodes, self._backend)
@@ -197,7 +188,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.backends.sqlalchemy.models.base import Base
 
-        super(SqlaGroup, self).add_nodes(nodes)
+        super().add_nodes(nodes)
         skip_orm = kwargs.get('skip_orm', False)
 
         def check_node(given_node):
@@ -247,7 +238,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         """
         from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
-        super(SqlaGroup, self).remove_nodes(nodes)
+        super().remove_nodes(nodes)
 
         # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
         dbnodes = self._dbmodel.dbnodes
@@ -328,7 +319,7 @@ class SqlaGroupCollection(BackendGroupCollection):
 
             filters.append(sub_query)
         if user:
-            if isinstance(user, six.string_types):
+            if isinstance(user, str):
                 filters.append(DbGroup.user.has(email=user.email))
             else:
                 type_check(user, users.SqlaUser)

@@ -8,12 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for calculation job processes."""
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 import warnings
-import six
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
@@ -39,7 +35,8 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_JOB_ID_KEY = 'job_id'
     SCHEDULER_STATE_KEY = 'scheduler_state'
     SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
-    SCHEUDLER_LAST_JOB_INFO_KEY = 'last_jobinfo'
+    SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
+    SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
 
     # Base path within the repository where to put objects by default
     _repository_base_path = 'raw_input'
@@ -80,7 +77,7 @@ class CalcJobNode(CalculationNode):
 
     @classproperty
     def _updatable_attributes(cls):  # pylint: disable=no-self-argument
-        return super(CalcJobNode, cls)._updatable_attributes + (
+        return super()._updatable_attributes + (
             cls.CALC_JOB_STATE_KEY,
             cls.REMOTE_WORKDIR_KEY,
             cls.RETRIEVE_LIST_KEY,
@@ -89,12 +86,13 @@ class CalcJobNode(CalculationNode):
             cls.SCHEDULER_JOB_ID_KEY,
             cls.SCHEDULER_STATE_KEY,
             cls.SCHEDULER_LAST_CHECK_TIME_KEY,
-            cls.SCHEUDLER_LAST_JOB_INFO_KEY,
+            cls.SCHEDULER_LAST_JOB_INFO_KEY,
+            cls.SCHEDULER_DETAILED_JOB_INFO_KEY,
         )
 
     @classproperty
     def _hash_ignored_attributes(cls):  # pylint: disable=no-self-argument
-        return super(CalcJobNode, cls)._hash_ignored_attributes + (
+        return super()._hash_ignored_attributes + (
             'queue_name',
             'account',
             'qos',
@@ -141,7 +139,7 @@ class CalcJobNode(CalculationNode):
 
         :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
         """
-        builder = super(CalcJobNode, self).get_builder_restart()
+        builder = super().get_builder_restart()
         builder.metadata.options = self.get_options()
 
         return builder
@@ -231,7 +229,7 @@ class CalcJobNode(CalculationNode):
         :param state: a string with the state from ``aiida.common.datastructures.CalcJobState``.
         :raise: ValueError if state is invalid
         """
-        if state not in CalcJobState:
+        if not isinstance(state, CalcJobState):
             raise ValueError('{} is not a valid CalcJobState'.format(state))
 
         self.set_attribute(self.CALC_JOB_STATE_KEY, state.value)
@@ -270,17 +268,17 @@ class CalcJobNode(CalculationNode):
         for directive in directives:
 
             # A string as a directive is valid, so we continue
-            if isinstance(directive, six.string_types):
+            if isinstance(directive, str):
                 continue
 
             # Otherwise, it has to be a tuple of length three with specific requirements
             if not isinstance(directive, (tuple, list)) or len(directive) != 3:
                 raise ValueError('invalid directive, not a list or tuple of length three: {}'.format(directive))
 
-            if not isinstance(directive[0], six.string_types):
+            if not isinstance(directive[0], str):
                 raise ValueError('invalid directive, first element has to be a string representing remote path')
 
-            if not isinstance(directive[1], six.string_types):
+            if not isinstance(directive[1], str):
                 raise ValueError('invalid directive, second element has to be a string representing local path')
 
             if not isinstance(directive[2], int):
@@ -346,7 +344,7 @@ class CalcJobNode(CalculationNode):
             raise TypeError('retrieve_singlefile_list has to be a list or tuple')
 
         for j in retrieve_singlefile_list:
-            if not isinstance(j, (tuple, list)) or not all(isinstance(i, six.string_types) for i in j):
+            if not isinstance(j, (tuple, list)) or not all(isinstance(i, str) for i in j):
                 raise ValueError('You have to pass a list (or tuple) of lists of strings as retrieve_singlefile_list')
 
         self.set_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, retrieve_singlefile_list)
@@ -369,7 +367,7 @@ class CalcJobNode(CalculationNode):
 
         :param job_id: the id assigned by the scheduler after submission
         """
-        return self.set_attribute(self.SCHEDULER_JOB_ID_KEY, six.text_type(job_id))
+        return self.set_attribute(self.SCHEDULER_JOB_ID_KEY, str(job_id))
 
     def get_job_id(self):
         """Return job id that was assigned to the calculation by the scheduler.
@@ -419,12 +417,26 @@ class CalcJobNode(CalculationNode):
 
         return value
 
+    def set_detailed_job_info(self, detailed_job_info):
+        """Set the detailed job info dictionary.
+
+        :param detailed_job_info: a dictionary with metadata with the accounting of a completed job
+        """
+        self.set_attribute(self.SCHEDULER_DETAILED_JOB_INFO_KEY, detailed_job_info)
+
+    def get_detailed_job_info(self):
+        """Return the detailed job info dictionary.
+
+        :return: the dictionary with detailed job info if defined or None
+        """
+        return self.get_attribute(self.SCHEDULER_DETAILED_JOB_INFO_KEY, None)
+
     def set_last_job_info(self, last_job_info):
         """Set the last job info.
 
         :param last_job_info: a `JobInfo` object
         """
-        self.set_attribute(self.SCHEUDLER_LAST_JOB_INFO_KEY, last_job_info.serialize())
+        self.set_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, last_job_info.get_dict())
 
     def get_last_job_info(self):
         """Return the last information asked to the scheduler about the status of the job.
@@ -433,11 +445,10 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.schedulers.datastructures import JobInfo
 
-        last_job_info_serialized = self.get_attribute(self.SCHEUDLER_LAST_JOB_INFO_KEY, None)
+        last_job_info_dictserialized = self.get_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, None)
 
-        if last_job_info_serialized is not None:
-            job_info = JobInfo()
-            job_info.load_from_serialized(last_job_info_serialized)
+        if last_job_info_dictserialized is not None:
+            job_info = JobInfo.load_from_dict(last_job_info_dictserialized)
         else:
             job_info = None
 

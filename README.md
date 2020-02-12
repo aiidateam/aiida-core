@@ -8,6 +8,7 @@ AiiDA (www.aiida.net) is a workflow manager for computational science with a str
 |Getting help| [![Docs status](https://readthedocs.org/projects/aiida-core/badge)](http://aiida-core.readthedocs.io/) [![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/aiidausers)
 |Build status| [![Build Status](https://travis-ci.org/aiidateam/aiida-core.svg?branch=develop)](https://travis-ci.org/aiidateam/aiida-core) [![Coverage Status](https://coveralls.io/repos/github/aiidateam/aiida-core/badge.svg?branch=develop)](https://coveralls.io/github/aiidateam/aiida-core?branch=develop) |
 |Activity| [![PyPI-downloads](https://img.shields.io/pypi/dm/aiida-core.svg?style=flat)](https://pypistats.org/packages/aiida-core) [![Commit Activity](https://img.shields.io/github/commit-activity/m/aiidateam/aiida-core.svg)](https://github.com/aiidateam/aiida-core/pulse)
+|Community| [![Affiliated with NumFOCUS](https://img.shields.io/badge/NumFOCUS-affiliated%20project-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://numfocus.org/sponsored-projects/affiliated-projects) [![Twitter](https://img.shields.io/twitter/follow/aiidateam.svg?style=social&label=Follow)](https://twitter.com/aiidateam)
 
 
 ## Features
@@ -62,10 +63,11 @@ For a list of other open source components included in AiiDA, see [`open_source_
 
 ## Acknowledgements
 
-This work is supported by the [MARVEL National Centre for Competency in
-Research](<http://nccr-marvel.ch>) funded by the [Swiss National
-Science Foundation](<http://www.snf.ch/en>), as well as by the [MaX
-European Centre of Excellence](<http://www.max-centre.eu/>) funded by
-the Horizon 2020 EINFRA-5 program, Grant No. 676598.
+This work is supported by:
+* the [MARVEL National Centre for Competency in Research](http://nccr-marvel.ch) funded by the [Swiss National Science Foundation](http://www.snf.ch/en);
+* the [MaX European Centre of Excellence](http://www.max-centre.eu/) funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598;
+* the [swissuniversities P-5 project "Materials Cloud"](https://www.materialscloud.org/swissuniversities).
 
-<img src="docs/source/images/MARVEL.png" alt="AiiDA" style="padding:10px;" width="150"/> <img src="docs/source/images/MaX.png" alt="AiiDA" style="padding:10px;" width="250"/>
+<img src="docs/source/images/MARVEL.png" alt="MARVEL" style="padding:10px;" width="150"/>
+<img src="docs/source/images/MaX.png" alt="MaX" style="padding:10px;" width="250"/>
+<img src="docs/source/images/swissuniversities.png" alt="swissuniversities" style="padding:10px;" width="250"/>

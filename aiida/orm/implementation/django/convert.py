@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=cyclic-import,no-member
 """Module to get an ORM backend instance from a database model instance."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 try:  # Python3
     from functools import singledispatch

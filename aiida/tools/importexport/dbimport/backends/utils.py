@@ -9,12 +9,6 @@
 ###########################################################################
 """ Utility functions for import of AiiDA entities """
 # pylint: disable=inconsistent-return-statements,too-many-branches
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-from six.moves import zip
-
 import click
 
 from aiida.orm import QueryBuilder, Comment
@@ -91,8 +85,7 @@ def merge_extras(old_extras, new_extras, mode):
         in case of a name collision. Can be l (leave the old value), u (update with a new value),
         d (delete the extra), a (ask what to do if the content is different).
     """
-    from six import string_types
-    if not isinstance(mode, string_types):
+    if not isinstance(mode, str):
         raise exceptions.ImportValidationError(
             "Parameter 'mode' should be of string type, you provided '{}' type".format(type(mode))
         )

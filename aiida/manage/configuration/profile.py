@@ -8,19 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA profile related code"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
+import collections
 import os
-from six import PY2
 
-if PY2:
-    import collections
-else:
-    import collections.abc as collections  # pylint: disable=import-error, no-name-in-module
-
-from aiida.common import exceptions  # pylint: disable=wrong-import-position
-from .settings import DAEMON_DIR, DAEMON_LOG_DIR  # pylint: disable=wrong-import-position
+from aiida.common import exceptions
+from .settings import DAEMON_DIR, DAEMON_LOG_DIR
 
 __all__ = ('Profile',)
 
@@ -35,7 +27,7 @@ CIRCUS_PUBSUB_SOCKET_TEMPLATE = 'circus.p.sock'
 CIRCUS_STATS_SOCKET_TEMPLATE = 'circus.s.sock'
 
 
-class Profile(object):  # pylint: disable=too-many-public-methods
+class Profile:  # pylint: disable=too-many-public-methods
     """Class that models a profile as it is stored in the configuration file of an AiiDA instance."""
 
     RMQ_PREFIX = 'aiida-{uuid}'
@@ -76,7 +68,7 @@ class Profile(object):  # pylint: disable=too-many-public-methods
         return set(dictionary.keys()) - set(cls._map_config_to_internal.keys())
 
     def __init__(self, name, attributes, from_config=False):
-        if not isinstance(attributes, collections.Mapping):
+        if not isinstance(attributes, collections.abc.Mapping):
             raise TypeError('attributes should be a mapping but is {}'.format(type(attributes)))
 
         self._name = name
@@ -264,10 +256,11 @@ class Profile(object):  # pylint: disable=too-many-public-methods
 
         :return: a tuple (protocol, address).
         """
-        import uritools
-        parts = uritools.urisplit(self.repository_uri)
+        from urllib.parse import urlparse
 
-        if parts.scheme != u'file':
+        parts = urlparse(self.repository_uri)
+
+        if parts.scheme != 'file':
             raise exceptions.ConfigurationError('invalid repository protocol, only the local `file://` is supported')
 
         if not os.path.isabs(parts.path):

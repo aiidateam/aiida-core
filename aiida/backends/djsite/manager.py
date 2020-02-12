@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Utilities and configuration of the Django database schema."""
-from __future__ import absolute_import
 
 import os
 import django
@@ -33,6 +40,8 @@ class DjangoBackendManager(BackendManager):
 
     def reset_backend_environment(self):
         """Reset the backend environment."""
+        from . import reset_session
+        reset_session()
 
     def is_database_schema_ahead(self):
         """Determine whether the database schema version is ahead of the code schema version.
@@ -109,7 +118,7 @@ class DjangoBackendManager(BackendManager):
         """
         # pylint: disable=cyclic-import
         from aiida.manage.manager import get_manager
-        super(DjangoBackendManager, self)._migrate_database_generation()
+        super()._migrate_database_generation()
 
         backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
         backend.execute_raw(r"""DELETE FROM django_migrations WHERE app = 'db';""")
@@ -119,7 +128,7 @@ class DjangoBackendManager(BackendManager):
 
     def _migrate_database_version(self):
         """Migrate the database to the current schema version."""
-        super(DjangoBackendManager, self)._migrate_database_version()
+        super()._migrate_database_version()
         from django.core.management import call_command  # pylint: disable=no-name-in-module,import-error
         call_command('migrate')
 

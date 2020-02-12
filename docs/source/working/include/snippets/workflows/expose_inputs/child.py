@@ -7,7 +7,7 @@ class ChildWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        super(ChildWorkChain, cls).define(spec)
+        super().define(spec)
         spec.input('a', valid_type=Int)
         spec.input('b', valid_type=Float)
         spec.input('c', valid_type=Bool)

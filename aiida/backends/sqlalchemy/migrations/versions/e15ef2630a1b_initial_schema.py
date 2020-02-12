@@ -14,9 +14,6 @@ Revises:
 Create Date: 2017-06-28 17:12:23.327195
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -43,7 +40,7 @@ def upgrade():
     sa.Column('is_active', sa.BOOLEAN(), autoincrement=False, nullable=True),
     sa.Column('last_login', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.Column('date_joined', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbuser_pkey'),
+    sa.PrimaryKeyConstraint('id', name='db_dbuser_pkey'),
     postgresql_ignore_search_path=False
     )
     op.create_index('ix_db_dbuser_email', 'db_dbuser', ['email'], unique=True)
@@ -63,8 +60,8 @@ def upgrade():
     sa.Column('module_class', sa.TEXT(), autoincrement=False, nullable=True),
     sa.Column('script_path', sa.TEXT(), autoincrement=False, nullable=True),
     sa.Column('script_md5', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], [u'db_dbuser.id'], name=u'db_dbworkflow_user_id_fkey'),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbworkflow_pkey'),
+    sa.ForeignKeyConstraint(['user_id'], ['db_dbuser.id'], name='db_dbworkflow_user_id_fkey'),
+    sa.PrimaryKeyConstraint('id', name='db_dbworkflow_pkey'),
     postgresql_ignore_search_path=False
     )
     op.create_index('ix_db_dbworkflow_label', 'db_dbworkflow', ['label'])
@@ -76,10 +73,10 @@ def upgrade():
     sa.Column('time', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.Column('nextcall', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
     sa.Column('state', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['parent_id'], [u'db_dbworkflow.id'], name=u'db_dbworkflowstep_parent_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'db_dbuser.id'], name=u'db_dbworkflowstep_user_id_fkey'),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_pkey'),
-    sa.UniqueConstraint('parent_id', 'name', name=u'db_dbworkflowstep_parent_id_name_key'),
+    sa.ForeignKeyConstraint(['parent_id'], ['db_dbworkflow.id'], name='db_dbworkflowstep_parent_id_fkey'),
+    sa.ForeignKeyConstraint(['user_id'], ['db_dbuser.id'], name='db_dbworkflowstep_user_id_fkey'),
+    sa.PrimaryKeyConstraint('id', name='db_dbworkflowstep_pkey'),
+    sa.UniqueConstraint('parent_id', 'name', name='db_dbworkflowstep_parent_id_name_key'),
     postgresql_ignore_search_path=False
     )
     op.create_table('db_dbcomputer',
@@ -93,8 +90,8 @@ def upgrade():
     sa.Column('scheduler_type', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
     sa.Column('transport_params', postgresql.JSONB(), autoincrement=False, nullable=True),
     sa.Column('metadata', postgresql.JSONB(), autoincrement=False, nullable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbcomputer_pkey'),
-    sa.UniqueConstraint('name', name=u'db_dbcomputer_name_key')
+    sa.PrimaryKeyConstraint('id', name='db_dbcomputer_pkey'),
+    sa.UniqueConstraint('name', name='db_dbcomputer_name_key')
     )
     op.create_table('db_dbauthinfo',
     sa.Column('id', sa.INTEGER(), nullable=False),
@@ -103,10 +100,10 @@ def upgrade():
     sa.Column('metadata', postgresql.JSONB(), autoincrement=False, nullable=True),
     sa.Column('auth_params', postgresql.JSONB(), autoincrement=False, nullable=True),
     sa.Column('enabled', sa.BOOLEAN(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['aiidauser_id'], [u'db_dbuser.id'], name=u'db_dbauthinfo_aiidauser_id_fkey', ondelete=u'CASCADE', initially=u'DEFERRED', deferrable=True),
-    sa.ForeignKeyConstraint(['dbcomputer_id'], [u'db_dbcomputer.id'], name=u'db_dbauthinfo_dbcomputer_id_fkey', ondelete=u'CASCADE', initially=u'DEFERRED', deferrable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbauthinfo_pkey'),
-    sa.UniqueConstraint('aiidauser_id', 'dbcomputer_id', name=u'db_dbauthinfo_aiidauser_id_dbcomputer_id_key')
+    sa.ForeignKeyConstraint(['aiidauser_id'], ['db_dbuser.id'], name='db_dbauthinfo_aiidauser_id_fkey', ondelete='CASCADE', initially='DEFERRED', deferrable=True),
+    sa.ForeignKeyConstraint(['dbcomputer_id'], ['db_dbcomputer.id'], name='db_dbauthinfo_dbcomputer_id_fkey', ondelete='CASCADE', initially='DEFERRED', deferrable=True),
+    sa.PrimaryKeyConstraint('id', name='db_dbauthinfo_pkey'),
+    sa.UniqueConstraint('aiidauser_id', 'dbcomputer_id', name='db_dbauthinfo_aiidauser_id_dbcomputer_id_key')
     )
     op.create_table('db_dbgroup',
     sa.Column('id', sa.INTEGER(), nullable=False),
@@ -116,9 +113,9 @@ def upgrade():
     sa.Column('time', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.Column('description', sa.TEXT(), autoincrement=False, nullable=True),
     sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], [u'db_dbuser.id'], name=u'db_dbgroup_user_id_fkey', ondelete=u'CASCADE', initially=u'DEFERRED', deferrable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbgroup_pkey'),
-    sa.UniqueConstraint('name', 'type', name=u'db_dbgroup_name_type_key')
+    sa.ForeignKeyConstraint(['user_id'], ['db_dbuser.id'], name='db_dbgroup_user_id_fkey', ondelete='CASCADE', initially='DEFERRED', deferrable=True),
+    sa.PrimaryKeyConstraint('id', name='db_dbgroup_pkey'),
+    sa.UniqueConstraint('name', 'type', name='db_dbgroup_name_type_key')
     )
     op.create_index('ix_db_dbgroup_name', 'db_dbgroup', ['name'])
     op.create_index('ix_db_dbgroup_type', 'db_dbgroup', ['type'])
@@ -136,9 +133,9 @@ def upgrade():
     sa.Column('extras', postgresql.JSONB(), autoincrement=False, nullable=True),
     sa.Column('dbcomputer_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=False),
-    sa.ForeignKeyConstraint(['dbcomputer_id'], [u'db_dbcomputer.id'], name=u'db_dbnode_dbcomputer_id_fkey', ondelete=u'RESTRICT', initially=u'DEFERRED', deferrable=True),
-    sa.ForeignKeyConstraint(['user_id'], [u'db_dbuser.id'], name=u'db_dbnode_user_id_fkey', ondelete=u'RESTRICT', initially=u'DEFERRED', deferrable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbnode_pkey'),postgresql_ignore_search_path=False
+    sa.ForeignKeyConstraint(['dbcomputer_id'], ['db_dbcomputer.id'], name='db_dbnode_dbcomputer_id_fkey', ondelete='RESTRICT', initially='DEFERRED', deferrable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['db_dbuser.id'], name='db_dbnode_user_id_fkey', ondelete='RESTRICT', initially='DEFERRED', deferrable=True),
+    sa.PrimaryKeyConstraint('id', name='db_dbnode_pkey'),postgresql_ignore_search_path=False
     )
     op.create_index('ix_db_dbnode_label', 'db_dbnode', ['label'])
     op.create_index('ix_db_dbnode_type', 'db_dbnode', ['type'])
@@ -146,16 +143,16 @@ def upgrade():
     sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('dbnode_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('dbgroup_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['dbgroup_id'], [u'db_dbgroup.id'], name=u'db_dbgroup_dbnodes_dbgroup_id_fkey', initially=u'DEFERRED', deferrable=True),
-    sa.ForeignKeyConstraint(['dbnode_id'], [u'db_dbnode.id'], name=u'db_dbgroup_dbnodes_dbnode_id_fkey', initially=u'DEFERRED', deferrable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbgroup_dbnodes_pkey')
+    sa.ForeignKeyConstraint(['dbgroup_id'], ['db_dbgroup.id'], name='db_dbgroup_dbnodes_dbgroup_id_fkey', initially='DEFERRED', deferrable=True),
+    sa.ForeignKeyConstraint(['dbnode_id'], ['db_dbnode.id'], name='db_dbgroup_dbnodes_dbnode_id_fkey', initially='DEFERRED', deferrable=True),
+    sa.PrimaryKeyConstraint('id', name='db_dbgroup_dbnodes_pkey')
     )
     op.create_table('db_dblock',
     sa.Column('key', sa.VARCHAR(length=255), autoincrement=False, nullable=False),
     sa.Column('creation', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.Column('timeout', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('owner', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-    sa.PrimaryKeyConstraint('key', name=u'db_dblock_pkey')
+    sa.PrimaryKeyConstraint('key', name='db_dblock_pkey')
     )
     op.create_table('db_dbworkflowdata',
     sa.Column('id', sa.INTEGER(), nullable=False),
@@ -166,10 +163,10 @@ def upgrade():
     sa.Column('value_type', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
     sa.Column('json_value', sa.TEXT(), autoincrement=False, nullable=True),
     sa.Column('aiida_obj_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['aiida_obj_id'], [u'db_dbnode.id'], name=u'db_dbworkflowdata_aiida_obj_id_fkey'),
-    sa.ForeignKeyConstraint(['parent_id'], [u'db_dbworkflow.id'], name=u'db_dbworkflowdata_parent_id_fkey'),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowdata_pkey'),
-    sa.UniqueConstraint('parent_id', 'name', 'data_type', name=u'db_dbworkflowdata_parent_id_name_data_type_key')
+    sa.ForeignKeyConstraint(['aiida_obj_id'], ['db_dbnode.id'], name='db_dbworkflowdata_aiida_obj_id_fkey'),
+    sa.ForeignKeyConstraint(['parent_id'], ['db_dbworkflow.id'], name='db_dbworkflowdata_parent_id_fkey'),
+    sa.PrimaryKeyConstraint('id', name='db_dbworkflowdata_pkey'),
+    sa.UniqueConstraint('parent_id', 'name', 'data_type', name='db_dbworkflowdata_parent_id_name_data_type_key')
     )
     op.create_table('db_dblink',
     sa.Column('id', sa.INTEGER(), nullable=False),
@@ -177,19 +174,19 @@ def upgrade():
     sa.Column('output_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('label', sa.VARCHAR(length=255), autoincrement=False, nullable=False),
     sa.Column('type', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['input_id'], [u'db_dbnode.id'], name=u'db_dblink_input_id_fkey', initially=u'DEFERRED', deferrable=True),
-    sa.ForeignKeyConstraint(['output_id'], [u'db_dbnode.id'], name=u'db_dblink_output_id_fkey', ondelete=u'CASCADE', initially=u'DEFERRED', deferrable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dblink_pkey'),
+    sa.ForeignKeyConstraint(['input_id'], ['db_dbnode.id'], name='db_dblink_input_id_fkey', initially='DEFERRED', deferrable=True),
+    sa.ForeignKeyConstraint(['output_id'], ['db_dbnode.id'], name='db_dblink_output_id_fkey', ondelete='CASCADE', initially='DEFERRED', deferrable=True),
+    sa.PrimaryKeyConstraint('id', name='db_dblink_pkey'),
     )
     op.create_index('ix_db_dblink_label', 'db_dblink', ['label'])
     op.create_table('db_dbworkflowstep_calculations',
     sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('dbworkflowstep_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('dbnode_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['dbnode_id'], [u'db_dbnode.id'], name=u'db_dbworkflowstep_calculations_dbnode_id_fkey'),
-    sa.ForeignKeyConstraint(['dbworkflowstep_id'], [u'db_dbworkflowstep.id'], name=u'db_dbworkflowstep_calculations_dbworkflowstep_id_fkey'),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_calculations_pkey'),
-    sa.UniqueConstraint('dbworkflowstep_id', 'dbnode_id', name=u'db_dbworkflowstep_calculations_id_dbnode_id_key')
+    sa.ForeignKeyConstraint(['dbnode_id'], ['db_dbnode.id'], name='db_dbworkflowstep_calculations_dbnode_id_fkey'),
+    sa.ForeignKeyConstraint(['dbworkflowstep_id'], ['db_dbworkflowstep.id'], name='db_dbworkflowstep_calculations_dbworkflowstep_id_fkey'),
+    sa.PrimaryKeyConstraint('id', name='db_dbworkflowstep_calculations_pkey'),
+    sa.UniqueConstraint('dbworkflowstep_id', 'dbnode_id', name='db_dbworkflowstep_calculations_id_dbnode_id_key')
     )
     op.create_table('db_dbpath',
     sa.Column('id', sa.INTEGER(), nullable=False),
@@ -199,18 +196,18 @@ def upgrade():
     sa.Column('entry_edge_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('direct_edge_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('exit_edge_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['child_id'], [u'db_dbnode.id'], name=u'db_dbpath_child_id_fkey', initially=u'DEFERRED', deferrable=True),
-    sa.ForeignKeyConstraint(['parent_id'], [u'db_dbnode.id'], name=u'db_dbpath_parent_id_fkey', initially=u'DEFERRED', deferrable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbpath_pkey')
+    sa.ForeignKeyConstraint(['child_id'], ['db_dbnode.id'], name='db_dbpath_child_id_fkey', initially='DEFERRED', deferrable=True),
+    sa.ForeignKeyConstraint(['parent_id'], ['db_dbnode.id'], name='db_dbpath_parent_id_fkey', initially='DEFERRED', deferrable=True),
+    sa.PrimaryKeyConstraint('id', name='db_dbpath_pkey')
     )
     op.create_table('db_dbcalcstate',
     sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('dbnode_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('state', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
     sa.Column('time', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['dbnode_id'], [u'db_dbnode.id'], name=u'db_dbcalcstate_dbnode_id_fkey', ondelete=u'CASCADE', initially=u'DEFERRED', deferrable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbcalcstate_pkey'),
-    sa.UniqueConstraint('dbnode_id', 'state', name=u'db_dbcalcstate_dbnode_id_state_key')
+    sa.ForeignKeyConstraint(['dbnode_id'], ['db_dbnode.id'], name='db_dbcalcstate_dbnode_id_fkey', ondelete='CASCADE', initially='DEFERRED', deferrable=True),
+    sa.PrimaryKeyConstraint('id', name='db_dbcalcstate_pkey'),
+    sa.UniqueConstraint('dbnode_id', 'state', name='db_dbcalcstate_dbnode_id_state_key')
     )
     op.create_index('ix_db_dbcalcstate_state', 'db_dbcalcstate', ['state'])
     op.create_table('db_dbsetting',
@@ -219,8 +216,8 @@ def upgrade():
     sa.Column('val', postgresql.JSONB(), autoincrement=False, nullable=True),
     sa.Column('description', sa.VARCHAR(length=255), autoincrement=False, nullable=False),
     sa.Column('time', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbsetting_pkey'),
-    sa.UniqueConstraint('key', name=u'db_dbsetting_key_key')
+    sa.PrimaryKeyConstraint('id', name='db_dbsetting_pkey'),
+    sa.UniqueConstraint('key', name='db_dbsetting_key_key')
     )
     op.create_index('ix_db_dbsetting_key', 'db_dbsetting', ['key'])
     op.create_table('db_dbcomment',
@@ -231,9 +228,9 @@ def upgrade():
     sa.Column('mtime', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('content', sa.TEXT(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['dbnode_id'], [u'db_dbnode.id'], name=u'db_dbcomment_dbnode_id_fkey', ondelete=u'CASCADE', initially=u'DEFERRED', deferrable=True),
-    sa.ForeignKeyConstraint(['user_id'], [u'db_dbuser.id'], name=u'db_dbcomment_user_id_fkey', ondelete=u'CASCADE', initially=u'DEFERRED', deferrable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbcomment_pkey')
+    sa.ForeignKeyConstraint(['dbnode_id'], ['db_dbnode.id'], name='db_dbcomment_dbnode_id_fkey', ondelete='CASCADE', initially='DEFERRED', deferrable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['db_dbuser.id'], name='db_dbcomment_user_id_fkey', ondelete='CASCADE', initially='DEFERRED', deferrable=True),
+    sa.PrimaryKeyConstraint('id', name='db_dbcomment_pkey')
     )
     op.create_table('db_dblog',
     sa.Column('id', sa.INTEGER(), nullable=False),
@@ -244,7 +241,7 @@ def upgrade():
     sa.Column('objpk', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('message', sa.TEXT(), autoincrement=False, nullable=True),
     sa.Column('metadata', postgresql.JSONB(), autoincrement=False, nullable=True),
-    sa.PrimaryKeyConstraint('id', name=u'db_dblog_pkey')
+    sa.PrimaryKeyConstraint('id', name='db_dblog_pkey')
     )
     op.create_index('ix_db_dblog_levelname', 'db_dblog', ['levelname'])
     op.create_index('ix_db_dblog_loggername', 'db_dblog', ['loggername'])
@@ -254,10 +251,10 @@ def upgrade():
     sa.Column('id', sa.INTEGER(), nullable=False),
     sa.Column('dbworkflowstep_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('dbworkflow_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['dbworkflow_id'], [u'db_dbworkflow.id'], name=u'db_dbworkflowstep_sub_workflows_dbworkflow_id_fkey'),
-    sa.ForeignKeyConstraint(['dbworkflowstep_id'], [u'db_dbworkflowstep.id'], name=u'db_dbworkflowstep_sub_workflows_dbworkflowstep_id_fkey'),
-    sa.PrimaryKeyConstraint('id', name=u'db_dbworkflowstep_sub_workflows_pkey'),
-    sa.UniqueConstraint('dbworkflowstep_id', 'dbworkflow_id', name=u'db_dbworkflowstep_sub_workflows_id_dbworkflow__key')
+    sa.ForeignKeyConstraint(['dbworkflow_id'], ['db_dbworkflow.id'], name='db_dbworkflowstep_sub_workflows_dbworkflow_id_fkey'),
+    sa.ForeignKeyConstraint(['dbworkflowstep_id'], ['db_dbworkflowstep.id'], name='db_dbworkflowstep_sub_workflows_dbworkflowstep_id_fkey'),
+    sa.PrimaryKeyConstraint('id', name='db_dbworkflowstep_sub_workflows_pkey'),
+    sa.UniqueConstraint('dbworkflowstep_id', 'dbworkflow_id', name='db_dbworkflowstep_sub_workflows_id_dbworkflow__key')
     )
     # I get the session using the alembic connection
     # (Keep in mind that alembic uses the AiiDA SQLA

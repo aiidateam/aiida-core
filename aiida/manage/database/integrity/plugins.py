@@ -9,9 +9,6 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Generic functions to verify the integrity of the database and optionally apply patches to fix problems."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 # These are all the entry points from the `aiida.calculations` category as registered with the AiiDA registry
 # on Tuesday December 4 at 13:00:00 UTC

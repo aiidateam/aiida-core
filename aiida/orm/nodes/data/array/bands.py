@@ -11,15 +11,9 @@
 This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
-import io
 from string import Template
 
-import six
-from six.moves import range, zip
 import numpy
 
 from aiida.common.exceptions import ValidationError
@@ -307,9 +301,9 @@ class BandsData(KpointsData):
 
         # check the labels
         if labels is not None:
-            if isinstance(labels, six.string_types):
+            if isinstance(labels, str):
                 the_labels = [str(labels)]
-            elif isinstance(labels, (tuple, list)) and all([isinstance(_, six.string_types) for _ in labels]):
+            elif isinstance(labels, (tuple, list)) and all([isinstance(_, str) for _ in labels]):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError('Band labels have an unrecognized type ({})'
@@ -918,7 +912,7 @@ class BandsData(KpointsData):
         # first prepare the xy coordinates of the sets
         raw_data, _ = self._prepare_dat_blocks(plot_info, comments=comments)
 
-        xtics_string = u', '.join(u'"{}" {}'.format(label, pos) for pos, label in plot_info['labels'])
+        xtics_string = ', '.join('"{}" {}'.format(label, pos) for pos, label in plot_info['labels'])
 
         script = []
         # Start with some useful comments
@@ -945,25 +939,25 @@ class BandsData(KpointsData):
 """)
 
         # Actual logic
-        script.append(u'set termopt enhanced')  # Properly deals with e.g. subscripts
-        script.append(u'set encoding utf8')  # To deal with Greek letters
-        script.append(u'set xtics ({})'.format(xtics_string))
-        script.append(u'set grid xtics lt 1 lc rgb "#888888"')
+        script.append('set termopt enhanced')  # Properly deals with e.g. subscripts
+        script.append('set encoding utf8')  # To deal with Greek letters
+        script.append('set xtics ({})'.format(xtics_string))
+        script.append('set grid xtics lt 1 lc rgb "#888888"')
 
-        script.append(u'unset key')
+        script.append('unset key')
 
-        script.append(u'set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
-        script.append(u'set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
+        script.append('set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
+        script.append('set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
 
-        script.append(u'set ylabel "{}"'.format(u'Dispersion ({})'.format(self.units)))
+        script.append('set ylabel "{}"'.format('Dispersion ({})'.format(self.units)))
 
         if title:
-            script.append(u'set title "{}"'.format(title.replace('"', '\"')))
+            script.append('set title "{}"'.format(title.replace('"', '\"')))
 
         # Plot, escaping filename
-        script.append(u'plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
+        script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
 
-        script_data = u'\n'.join(script) + u'\n'
+        script_data = '\n'.join(script) + '\n'
         extra_files = {dat_filename: raw_data}
 
         return script_data.encode('utf-8'), extra_files
@@ -1014,7 +1008,7 @@ class BandsData(KpointsData):
         if not os.path.exists(filename):
             raise RuntimeError('Unable to generate the PDF...')
 
-        with io.open(filename, 'rb', encoding=None) as f:
+        with open(filename, 'rb', encoding=None) as f:
             imgdata = f.read()
         os.remove(filename)
 
@@ -1055,7 +1049,6 @@ class BandsData(KpointsData):
         # I don't exec it because I might mess up with the matplotlib backend etc.
         # I run instead in a different process, with the same executable
         # (so it should work properly with virtualenvs)
-        #exec s
         with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(s)
             f.flush()
@@ -1065,7 +1058,7 @@ class BandsData(KpointsData):
         if not os.path.exists(filename):
             raise RuntimeError('Unable to generate the PNG...')
 
-        with io.open(filename, 'rb', encoding=None) as f:
+        with open(filename, 'rb', encoding=None) as f:
             imgdata = f.read()
         os.remove(filename)
 
@@ -1079,12 +1072,7 @@ class BandsData(KpointsData):
 
         Other kwargs are passed to self._exportcontent.
         """
-        # In Python 2, exec is a statement which was extended to also take a tuple, while Python 3's exec
-        # is a real function. We could unpack the tuple into arguments in Python 3 as follows:
-        #    exec(*self._exportcontent(...))
-        # but this does not work in Python 2. But it is anyway clearer to explicitly unpack the 2-tuple instead.
-        code_obj, code_globals = self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs)
-        exec (code_obj, code_globals)  # pylint: disable=exec-used
+        exec(*self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs))  # pylint: disable=exec-used
 
     def _prepare_agr(self,
                      main_file_name='',
@@ -1632,7 +1620,6 @@ print_comment = False
 # see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
 matplotlib_header_template = Template('''# -*- coding: utf-8 -*-
 
-from __future__ import print_function
 from matplotlib import rc
 # Uncomment to change default font
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
@@ -1655,7 +1642,7 @@ print_comment = False
 matplotlib_import_data_inline_template = Template('''all_data_str = r"""$all_data_json"""
 ''')
 
-matplotlib_import_data_fromfile_template = Template('''with io.open("$json_fname", encoding='utf8') as f:
+matplotlib_import_data_fromfile_template = Template('''with open("$json_fname", encoding='utf8') as f:
     all_data_str = f.read()
 ''')
 

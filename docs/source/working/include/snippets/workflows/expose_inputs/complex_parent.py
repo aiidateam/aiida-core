@@ -6,7 +6,7 @@ from child import ChildWorkChain
 class ComplexParentWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
-        super(ComplexParentWorkChain, cls).define(spec)
+        super().define(spec)
         spec.expose_inputs(ChildWorkChain, include=['a'])
         spec.expose_inputs(ChildWorkChain, namespace='child_1', exclude=['a'])
         spec.expose_inputs(ChildWorkChain, namespace='child_2', exclude=['a'])

@@ -61,7 +61,7 @@ py:class  unittest.runner.TextTestRunner
 py:class  unittest2.case.TestCase
 py:meth   unittest.TestLoader.discover
 py:meth   copy.copy
-py:class  ABCMeta
+py:class  abc.ABC
 py:class  exceptions.Exception
 py:class  exceptions.ValueError
 py:class  exceptions.BaseException
@@ -93,6 +93,7 @@ py:class  builtins.int
 py:class  builtins.object
 py:class  builtins.str
 py:class  builtins.dict
+py:class  set
 
 # python builtin objects
 py:obj basestring
@@ -218,12 +219,6 @@ py:exc    sqlalchemy.orm.exc.MultipleResultsFound
 
 py:class  sphinx.ext.autodoc.ClassDocumenter
 
-py:class  _abcoll.Mapping
-py:class  _abcoll.MutableMapping
-py:class  _abcoll.MutableSequence
-py:class  _abcoll.Iterator
-py:class  _abcoll.Sized
-# repeat for Python 3:
 py:class  collections.abc.Mapping
 py:class  collections.abc.MutableMapping
 py:class  collections.abc.MutableSequence
@@ -248,6 +243,8 @@ py:class yaml.Dumper
 py:class yaml.Loader
 py:class yaml.dumper.Dumper
 py:class yaml.loader.Loader
+py:class yaml.FullLoader
+py:class yaml.loader.FullLoader
 
 py:class uuid.UUID
 

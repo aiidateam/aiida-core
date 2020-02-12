@@ -1,0 +1,12 @@
+---
+label: localhost
+description: localhost
+hostname: localhost
+transport: local
+scheduler: direct
+shebang: '#!/usr/bin/env bash'
+work_dir: PLACEHOLDER_WORK_DIR
+mpirun_command: ' '
+mpiprocs_per_machine: 1
+prepend_text: ' '
+append_text: ' '

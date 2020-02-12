@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for the implementation of the SqlAlchemy backend."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import contextlib
 
@@ -22,10 +19,10 @@ from sqlalchemy.orm.attributes import flag_modified
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.common import exceptions
 
-IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid'}
+IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type'}
 
 
-class ModelWrapper(object):
+class ModelWrapper:
     """Wrap a database model instance to correctly update and flush the data model when getting or setting a field.
 
     If the model is not stored, the behavior of the get and set attributes is unaltered. However, if the model is
@@ -44,7 +41,7 @@ class ModelWrapper(object):
         :param auto_flush: an optional tuple of database model fields that are always to be flushed, in addition to
             the field that corresponds to the attribute being set through `__setattr__`.
         """
-        super(ModelWrapper, self).__init__()
+        super().__init__()
         # Have to do it this way because we overwrite __setattr__
         object.__setattr__(self, '_model', model)
         object.__setattr__(self, '_auto_flush', auto_flush)

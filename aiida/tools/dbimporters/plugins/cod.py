@@ -8,11 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-import six
 
 from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
                                                  CifEntry)
@@ -28,7 +24,7 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying integer fields.
         """
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, six.string_types):
+            if not isinstance(e, int) and not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
         return key + ' IN (' + ', '.join(str(int(i)) for i in values) + ')'
@@ -39,7 +35,7 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, six.string_types):
+            if not isinstance(e, int) and not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
             if isinstance(e, int):
@@ -70,7 +66,7 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying formula fields.
         """
         for e in values:
-            if not isinstance(e, six.string_types):
+            if not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return self._str_exact_clause(key, \
@@ -83,7 +79,7 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, six.string_types):
+            if not isinstance(e, int) and not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
             if isinstance(e, int):
@@ -97,7 +93,7 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance(e, six.string_types):
+            if not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
             clause_parts.append("formula REGEXP ' " + e + "[0-9 ]'")
@@ -291,7 +287,7 @@ class CodSearchResults(DbSearchResults):
     _base_url = 'http://www.crystallography.net/cod/'
 
     def __init__(self, results):
-        super(CodSearchResults, self).__init__(results)
+        super().__init__(results)
         self._return_class = CodEntry
 
     def __len__(self):
@@ -337,5 +333,5 @@ class CodEntry(CifEntry):
         :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`, related
         to the supplied URI.
         """
-        super(CodEntry, self).__init__(db_name=db_name, db_uri=db_uri,
+        super().__init__(db_name=db_name, db_uri=db_uri,
                                        uri=uri, **kwargs)

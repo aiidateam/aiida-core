@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA user"""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.orm.implementation.users import BackendUser, BackendUserCollection
 from . import entities
@@ -26,7 +23,7 @@ class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
 
     def __init__(self, backend, email, first_name, last_name, institution):
         # pylint: disable=too-many-arguments
-        super(SqlaUser, self).__init__(backend)
+        super().__init__(backend)
         self._dbmodel = utils.ModelWrapper(
             DbUser(email=email, first_name=first_name, last_name=last_name, institution=institution)
         )

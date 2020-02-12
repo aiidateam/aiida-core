@@ -8,11 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for dealing with links between nodes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-from collections import namedtuple, OrderedDict, Mapping
+from collections import namedtuple, OrderedDict
+from collections.abc import Mapping
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -21,6 +18,7 @@ __all__ = ('LinkPair', 'LinkTriple', 'LinkManager', 'validate_link')
 
 LinkPair = namedtuple('LinkPair', ['link_type', 'link_label'])
 LinkTriple = namedtuple('LinkTriple', ['node', 'link_type', 'link_label'])
+LinkQuadruple = namedtuple('LinkQuadruple', ['source_id', 'target_id', 'link_type', 'link_label'])
 
 
 def link_triple_exists(source, target, link_type, link_label):
@@ -188,7 +186,7 @@ def validate_link(source, target, link_type, link_label):
             target.uuid, link_type, link_label, source.uuid))
 
 
-class LinkManager(object):
+class LinkManager:
     """
     Class to convert a list of LinkTriple tuples into an iterator.
 
@@ -221,10 +219,6 @@ class LinkManager(object):
         """
         for link_triple in self.link_triples:
             yield link_triple
-
-    # Python 2 specific, python 3 uses `__bool__`
-    def __nonzero__(self):
-        return len(self.link_triples)
 
     def __bool__(self):
         return bool(len(self.link_triples))

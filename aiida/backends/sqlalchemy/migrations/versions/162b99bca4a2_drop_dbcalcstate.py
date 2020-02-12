@@ -14,9 +14,6 @@ Revises: a603da2cc809
 Create Date: 2018-11-14 08:37:13.719646
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from alembic import op
 from sqlalchemy.dialects import postgresql
 import sqlalchemy as sa
@@ -39,9 +36,9 @@ def downgrade():
         sa.Column('state', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
         sa.Column('time', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
         sa.ForeignKeyConstraint(
-            ['dbnode_id'], [u'db_dbnode.id'],
-            name=u'db_dbcalcstate_dbnode_id_fkey',
-            ondelete=u'CASCADE',
-            initially=u'DEFERRED',
-            deferrable=True), sa.PrimaryKeyConstraint('id', name=u'db_dbcalcstate_pkey'),
-        sa.UniqueConstraint('dbnode_id', 'state', name=u'db_dbcalcstate_dbnode_id_state_key'))
+            ['dbnode_id'], ['db_dbnode.id'],
+            name='db_dbcalcstate_dbnode_id_fkey',
+            ondelete='CASCADE',
+            initially='DEFERRED',
+            deferrable=True), sa.PrimaryKeyConstraint('id', name='db_dbcalcstate_pkey'),
+        sa.UniqueConstraint('dbnode_id', 'state', name='db_dbcalcstate_dbnode_id_state_key'))

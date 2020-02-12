@@ -24,9 +24,6 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
 
@@ -76,10 +73,10 @@ def migration_data_migration_legacy_process_attributes(data):
                     uuid_pk = data['export_data']['Node'][node_pk].get('uuid', node_pk)
                     illegal_cases.append([uuid_pk, process_state])
                     continue  # No reason to do more now
-                else:
-                    # Either the ProcessNode is in a non-active state or its 'process_state' hasn't been set.
-                    # In both cases we claim the ProcessNode 'sealed' and make it importable.
-                    content['sealed'] = True
+
+                # Either the ProcessNode is in a non-active state or its 'process_state' hasn't been set.
+                # In both cases we claim the ProcessNode 'sealed' and make it importable.
+                content['sealed'] = True
 
                 # Remove attributes
                 for attr in attrs_to_remove:

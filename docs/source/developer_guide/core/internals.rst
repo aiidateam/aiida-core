@@ -343,7 +343,7 @@ Navigating inputs and outputs
     '__str__',
     '__subclasshook__',
     '__weakref__',
-    u'remote_folder']
+    'remote_folder']
 
   The ``.inputs`` manager for ``WorkflowNode`` and the ``.outputs`` manager both for ``CalculationNode`` and ``WorkflowNode`` work in the same way (see below).
 
@@ -458,16 +458,11 @@ In particular, it's important when creating subprocesses.
 When a signal is sent, the whole process group receives that signal.
 As a result, the subprocess can be killed even though the Python main process captures the signal.
 This can be avoided by creating a new process group for the subprocess, meaning that it will not receive the signal.
-To do this, you need to pass ``preexec_fn=os.setsid`` to the ``subprocess`` function:
+To do this, you need to pass ``start_new_session=True`` to the ``subprocess`` function:
 
 .. code:: python
 
     import os
     import subprocess
 
-    print(subprocess.check_output('sleep 3; echo bar', preexec_fn=os.setsid))
-
-.. note::
-
-    When dropping python 2.7 support, ``preexec_fn=os.setsid`` should be replaced
-    by the thread safe ``start_new_session=True`` introduced in python 3.2.
+    print(subprocess.check_output('sleep 3; echo bar', start_new_session=True))

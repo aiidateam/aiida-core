@@ -12,9 +12,6 @@
 Note: In order to not override the built-in `ImportError`, both `ImportError` and `ExportError` are prefixed with
     `Archive`.
 """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 from aiida.common.exceptions import AiidaException
 

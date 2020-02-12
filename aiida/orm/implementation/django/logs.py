@@ -9,9 +9,6 @@
 ###########################################################################
 """The Django log and log collection module"""
 # pylint: disable=import-error,no-name-in-module
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -29,7 +26,7 @@ class DjangoLog(entities.DjangoModelEntity[models.DbLog], BackendLog):
 
     def __init__(self, backend, time, loggername, levelname, dbnode_id, message='', metadata=None):
         # pylint: disable=too-many-arguments
-        super(DjangoLog, self).__init__(backend)
+        super().__init__(backend)
         self._dbmodel = models.DbLog(
             time=time,
             loggername=loggername,

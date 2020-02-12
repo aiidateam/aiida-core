@@ -8,11 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a string value."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-import six
 
 from .base import BaseType, to_aiida_type
 
@@ -25,6 +20,6 @@ class Str(BaseType):
     _type = str
 
 
-@to_aiida_type.register(six.string_types[0])
+@to_aiida_type.register(str)
 def _(value):
     return Str(value)

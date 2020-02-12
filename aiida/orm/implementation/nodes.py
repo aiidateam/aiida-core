@@ -8,19 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Abstract BackendNode and BackendNodeCollection implementation."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
 import abc
-import six
 
 from . import backends
 
 __all__ = ('BackendNode', 'BackendNodeCollection')
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendNode(backends.BackendEntity):
     """Wrapper around a `DbNode` instance to set and retrieve data independent of the database implementation."""
 
@@ -385,7 +380,6 @@ class BackendNode(backends.BackendEntity):
         """
 
 
-@six.add_metaclass(abc.ABCMeta)
 class BackendNodeCollection(backends.BackendCollection[BackendNode]):
     """The collection of `BackendNode` entries."""
 

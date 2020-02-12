@@ -9,11 +9,9 @@
 ###########################################################################
 """`verdi import` command."""
 # pylint: disable=broad-except,too-many-arguments,too-many-locals,too-many-branches
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 from enum import Enum
 import traceback
+import urllib
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -199,7 +197,6 @@ def cmd_import(
 
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
-    from six.moves import urllib
 
     from aiida.common.folders import SandboxFolder
     from aiida.tools.importexport.common.utils import get_valid_import_links

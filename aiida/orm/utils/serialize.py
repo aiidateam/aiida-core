@@ -14,10 +14,6 @@ WARNING: Changing the representation of things here may break people's current s
 checkpoints and messages in the RabbitMQ queue so do so with caution.  It is fine to add representers
 for new types though.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 from functools import partial
 import yaml
 
@@ -45,7 +41,7 @@ def represent_node(dumper, node):
     """
     if not node.is_stored:
         raise ValueError('node {}<{}> cannot be represented because it is not stored'.format(type(node), node.uuid))
-    return dumper.represent_scalar(_NODE_TAG, u'%s' % node.uuid)
+    return dumper.represent_scalar(_NODE_TAG, '%s' % node.uuid)
 
 
 def node_constructor(loader, node):
@@ -70,7 +66,7 @@ def represent_group(dumper, group):
     """
     if not group.is_stored:
         raise ValueError('group {} cannot be represented because it is not stored'.format(group))
-    return dumper.represent_scalar(_GROUP_TAG, u'%s' % group.uuid)
+    return dumper.represent_scalar(_GROUP_TAG, '%s' % group.uuid)
 
 
 def group_constructor(loader, group):
@@ -95,7 +91,7 @@ def represent_computer(dumper, computer):
     """
     if not computer.is_stored:
         raise ValueError('computer {} cannot be represented because it is not stored'.format(computer))
-    return dumper.represent_scalar(_COMPUTER_TAG, u'%s' % computer.uuid)
+    return dumper.represent_scalar(_COMPUTER_TAG, '%s' % computer.uuid)
 
 
 def computer_constructor(loader, computer):
@@ -177,11 +173,17 @@ class AiiDADumper(yaml.Dumper):
         if isinstance(data, orm.Group):
             return represent_group(self, data)
 
-        return super(AiiDADumper, self).represent_data(data)
+        return super().represent_data(data)
 
 
-class AiiDALoader(yaml.Loader):
-    """AiiDA specific yaml loader"""
+class AiiDALoader(yaml.FullLoader):
+    """AiiDA specific yaml loader
+
+    .. note:: we subclass the `FullLoader` which is the one that since `pyyaml>=5.1` is the loader that prevents
+        arbitrary code execution. Even though this is in principle only used internally, one could imagine someone
+        sharing a database with a maliciously crafted process instance dump, which when reloaded could execute arbitrary
+        code. This load prevents this: https://github.com/yaml/pyyaml/wiki/PyYAML-yaml.load(input)-Deprecation
+    """
 
 
 yaml.add_representer(Bundle, represent_bundle, Dumper=AiiDADumper)
@@ -219,6 +221,8 @@ def serialize(data, encoding=None):
 
 def deserialize(serialized):
     """Deserialize a yaml dump that represents a serialized data structure.
+
+    .. note:: no need to use `yaml.safe_load` here because the `Loader` will ensure that loading is safe.
 
     :param serialized: a yaml serialized string representation
     :return: the deserialized data structure

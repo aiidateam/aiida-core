@@ -53,7 +53,6 @@ A query returns an instance of :py:class:`~aiida.tools.dbimporters.plugins.cod.C
 
 .. code-block:: python
 
-    from __future__ import print_function
 
     print(len(results))
 

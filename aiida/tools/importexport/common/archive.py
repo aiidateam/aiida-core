@@ -8,11 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions and classes to interact with AiiDA export archives."""
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
-import io
 import os
 import sys
 import tarfile
@@ -29,7 +25,7 @@ from aiida.tools.importexport.common.exceptions import CorruptArchive
 __all__ = ('Archive', 'extract_zip', 'extract_tar', 'extract_tree')
 
 
-class Archive(object):
+class Archive:
     """Utility class to operate on exported archive files or directories.
 
     The main usage should be to construct the class with the filepath of the export archive as an argument.
@@ -218,7 +214,7 @@ class Archive(object):
         :param filename: the filename relative to the sandbox folder
         :return: a dictionary with the loaded JSON content
         """
-        with io.open(self.folder.get_abs_path(filename), 'r', encoding='utf8') as fhandle:
+        with open(self.folder.get_abs_path(filename), 'r', encoding='utf8') as fhandle:
             return json.load(fhandle)
 
 

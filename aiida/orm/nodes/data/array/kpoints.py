@@ -12,11 +12,7 @@ Module of the KpointsData class, defining the AiiDA data type for storing
 lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
-from six.moves import range, zip
 import numpy
 
 from .array import ArrayData
@@ -222,7 +218,10 @@ class KpointsData(ArrayData):
     @property
     def reciprocal_cell(self):
         """
-        Return the reciprocal cell in units of 1/Angstrom from the internally set cell
+        Compute reciprocal cell from the internally set cell.
+
+        :returns: reciprocal cell in units of 1/Angstrom with cell vectors stored as rows.
+            Use e.g. reciprocal_cell[0] to access the first reciprocal cell vector.
         """
         the_cell = numpy.array(self.cell)
         reciprocal_cell = 2. * numpy.pi * numpy.linalg.inv(the_cell).transpose()

@@ -8,19 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Miscellaneous generic utility functions and classes."""
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 import filecmp
 import inspect
+import io
 import os
 import re
 import sys
-
-import six
-from six.moves import range
-from six.moves import cStringIO as StringIO
 
 from .lang import classproperty
 
@@ -32,35 +25,7 @@ def get_new_uuid():
     aiida.backends.settings.AIIDANODES_UUID_VERSION
     """
     import uuid
-    return six.text_type(uuid.uuid4())
-
-
-# To speed up the process (os.path.abspath calls are slow)
-_repository_folder_cache = {}  # pylint: disable=invalid-name
-
-
-def get_repository_folder(subfolder=None):
-    """
-    Return the top folder of the local repository.
-    """
-    try:
-        return _repository_folder_cache[subfolder]
-    except KeyError:
-        from aiida.manage.configuration import get_profile
-        repository_path = get_profile().repository_path
-
-        if not os.path.isdir(repository_path):
-            raise ImportError
-        if subfolder is None:
-            retval = os.path.abspath(repository_path)
-        elif subfolder == 'sandbox':
-            retval = os.path.abspath(os.path.join(repository_path, 'sandbox'))
-        elif subfolder == 'repository':
-            retval = os.path.abspath(os.path.join(repository_path, 'repository'))
-        else:
-            raise ValueError("Invalid 'subfolder' passed to get_repository_folder: {}".format(subfolder))
-        _repository_folder_cache[subfolder] = retval
-        return retval
+    return str(uuid.uuid4())
 
 
 def validate_list_of_string_tuples(val, tuple_length):
@@ -90,7 +55,7 @@ def validate_list_of_string_tuples(val, tuple_length):
     for element in val:
         if (
             not isinstance(element, (list, tuple)) or (len(element) != tuple_length) or
-            not all(isinstance(s, six.string_types) for s in element)
+            not all(isinstance(s, str) for s in element)
         ):
             raise ValidationError(err_msg)
 
@@ -240,7 +205,7 @@ def grouper(n, iterable):  # pylint: disable=invalid-name
         yield chunk
 
 
-class ArrayCounter(object):
+class ArrayCounter:
     """
     A counter & a method that increments it and returns its value.
     It is used in various tests.
@@ -302,7 +267,7 @@ def are_dir_trees_equal(dir1, dir2):
     return True, 'The given directories ({} and {}) are equal'.format(dir1, dir2)
 
 
-class Prettifier(object):
+class Prettifier:
     """
     Class to manage prettifiers (typically for labels of kpoints
     in band plots)
@@ -359,10 +324,10 @@ class Prettifier(object):
 
         label = (
             label
-                .replace(u'GAMMA', u'Γ')
-                .replace(u'DELTA', u'Δ')
-                .replace(u'LAMBDA', u'Λ')
-                .replace(u'SIGMA', u'Σ')
+                .replace('GAMMA', 'Γ')
+                .replace('DELTA', 'Δ')
+                .replace('LAMBDA', 'Λ')
+                .replace('SIGMA', 'Σ')
         )  # yapf:disable
         return re.sub(r'_(.?)', r'_{\1}', label)
 
@@ -377,7 +342,7 @@ class Prettifier(object):
         """
 
         if label == 'G':
-            return u'Γ'
+            return 'Γ'
 
         return re.sub(r'(\d+)', r'_{\1}', label)
 
@@ -525,7 +490,7 @@ def strip_prefix(full_string, prefix):
     return full_string
 
 
-class Capturing(object):
+class Capturing:
     """
     This class captures stdout and returns it
     (as a list, split by lines).
@@ -550,7 +515,7 @@ class Capturing(object):
 
     def __init__(self, capture_stderr=False):
         self.stdout_lines = list()
-        super(Capturing, self).__init__()
+        super().__init__()
 
         self._capture_stderr = capture_stderr
         if self._capture_stderr:
@@ -561,11 +526,11 @@ class Capturing(object):
     def __enter__(self):
         """Enter the context where all output is captured."""
         self._stdout = sys.stdout
-        self._stringioout = StringIO()
+        self._stringioout = io.StringIO()
         sys.stdout = self._stringioout
         if self._capture_stderr:
             self._stderr = sys.stderr
-            self._stringioerr = StringIO()
+            self._stringioerr = io.StringIO()
             sys.stderr = self._stringioerr
         return self
 
@@ -586,7 +551,7 @@ class Capturing(object):
         return iter(self.stdout_lines)
 
 
-class ErrorAccumulator(object):
+class ErrorAccumulator:
     """
     Allows to run a number of functions and collect all the errors they raise
 

@@ -11,16 +11,12 @@
 """
 Invalidating node hash - User should rehash nodes for caching
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from django.db import migrations
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-from aiida.cmdline.utils.echo import echo_warning
+from aiida.cmdline.utils import echo
 
 REVISION = '1.0.39'
 DOWN_REVISION = '1.0.38'
@@ -30,7 +26,9 @@ _HASH_EXTRA_KEY = '_aiida_hash'
 
 
 def notify_user(apps, schema_editor):  # pylint: disable=unused-argument
-    echo_warning('Invalidating all the hashes of all the nodes. Please run verdi rehash', bold=True)
+    DbNode = apps.get_model('db', 'DbNode')
+    if DbNode.objects.count():
+        echo.echo_warning('Invalidating the hashes of all nodes. Please run "verdi rehash".', bold=True)
 
 
 class Migration(migrations.Migration):

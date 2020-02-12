@@ -26,7 +26,7 @@ To create and activate a new virtual environment, run the following commands::
     virtualenv ~/.virtualenvs/aiida              # create "aiida" environment
     source ~/.virtualenvs/aiida/bin/activate     # activate "aiida" environment
 
-.. note:: We recommend setting up a **python 3** virtual environment.
+.. note:: AiiDA requires a **python 3** virtual environment.
    If your system runs python 2 by default but has a ``python3`` executable, you can still set up a python 3 virtual environment using::
 
        virtualenv --python python3 ~/.virtualenvs/aiida

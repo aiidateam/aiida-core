@@ -288,7 +288,10 @@ def update_environment_yml():
     replacements = {'psycopg2-binary': 'psycopg2', 'graphviz': 'python-graphviz'}
     install_requires = get_setup_json()['install_requires']
 
-    conda_requires = []
+    # python version cannot be overriden from outside environment.yml
+    # (even if it is not specified at all in environment.yml)
+    # https://github.com/conda/conda/issues/9506
+    conda_requires = ['python~=3.7']
     for req in install_requires:
         # skip packages required for specific python versions
         # (environment.yml aims at the latest python version)
@@ -309,7 +312,7 @@ def update_environment_yml():
     environment_filename = 'environment.yml'
     file_path = os.path.join(ROOT_DIR, environment_filename)
     with open(file_path, 'w') as env_file:
-        env_file.write('# Usage: conda env create -n myenvname -f environment.yml python=3.6\n')
+        env_file.write('# Usage: conda env create -n myenvname -f environment.yml\n')
         yaml.safe_dump(
             environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True
         )

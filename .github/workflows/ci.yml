@@ -87,6 +87,8 @@ jobs:
 
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      POSTGRES_PW: "54320g9jwe09drgfuj430"
 
     strategy:
       fail-fast: false
@@ -101,7 +103,7 @@ jobs:
         postgresql version: '11'
         postgresql db: test_${{ matrix.backend }}
         postgresql user: 'postgres'
-        postgresql password: ''
+        postgresql password: '$POSTGRES_PW'
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1

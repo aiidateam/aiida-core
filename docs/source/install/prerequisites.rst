@@ -140,7 +140,7 @@ You can check whether it is running by checking the status through the command:
 
     /usr/local/sbin/rabbitmqctl status
 
-Wait for few seconds for running the server and then ru the status:
+Wait for few seconds for running the server and then run the status:
 
 If you encounter problems installing RabbitMQ, please refer to the detailed instructions provided on the `website of RabbitMQ itself for Homebrew <https://www.rabbitmq.com/install-homebrew.html>`_.
 

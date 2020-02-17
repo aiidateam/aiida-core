@@ -117,7 +117,7 @@ jobs:
         echo 'deb https://dl.bintray.com/rabbitmq/debian bionic main' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
         sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt update
-        sudo apt install postgresql postgresql-server-dev-all postgresql-client rabbitmq-server graphviz
+        sudo apt install postgresql-client rabbitmq-server graphviz
         sudo systemctl status rabbitmq-server.service
 
     - name: Install python dependencies

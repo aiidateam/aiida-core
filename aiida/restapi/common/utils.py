@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ Util methods """
-import urllib
+import urllib.parse
 from datetime import datetime, timedelta
 
 from flask import jsonify

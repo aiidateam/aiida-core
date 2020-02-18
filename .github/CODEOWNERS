@@ -1,0 +1,8 @@
+# All files related to dependency management are owned by the
+# currently active dependency manager (DM) to trigger an automatic review
+# request from the DM upon changes. Please see AEP-002 for details:
+# https://github.com/aiidateam/AEP/tree/master/002_dependency_management
+setup.*             @csadorf
+environment.yml     @csadorf
+requirements*.txt   @csadorf
+pyproject.toml      @csadorf

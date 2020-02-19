@@ -263,35 +263,3 @@ The guide for Ubuntu above can generally be followed, but there are a few things
 It may be worth considering adding some of these commands to your ``~/.bashrc`` file, since some of these settings may reset upon reboot.
 
 .. hint:: For using WSL as a developer, please see the considerations made in our `wiki-page for developers <https://github.com/aiidateam/aiida-core/wiki/Development-environment#using-windows-subsystem-for-linux-wsl>`_.
-
-Installation via CONDA
-========================
-
-To install conda, go to Anaconda `official documentation`_.
-
-.. _official documentation: https://www.anaconda.com/distribution/
-
-If you have not installed the packages yet, you can install them using command
-
-.. code-block:: bash
-
-        conda install -c conda-forge aiida-core.services
-
-Now install postgresql via conda
-
-.. code-block:: bash
-
-        conda install -y -c conda-forge postgresql
-
-Now create a base database locally
-
-..code-block:: bash
-
-        initdb -D mylocal_db
-
-To start the server
-
-..code-block:: bash
-
-         pg_ctl -D mylocal_db -l logfile start
-

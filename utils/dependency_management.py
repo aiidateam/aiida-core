@@ -32,7 +32,7 @@ def cli():
     restrictions from the `setup.json`, except for those packages where it is known that a upper limit is necessary.
     This is accomplished by the command:
 
-        python update_dependencies.py unrestrict
+        python dependency_management.py unrestrict
 
     The command will update the `setup.json` to remove all explicit limits, except for those packages specified by the
     `--exclude` option. After this step, install `aiida-core` through pip with the `[all]` flag to install all optional
@@ -47,7 +47,7 @@ def cli():
     for this setup, we can now set those versions as the new requirements in the `setup.json`. Note that this is why a
     clean virtual environment should be used for this entire procedure. Now execute the command:
 
-        python update_dependencies.py update requirements.txt
+        python dependency_management.py update requirements.txt
 
     This will now update the `setup.json` to reinstate the exact version requirements for all dependencies. Commit the
     changes to `setup.json` and make a pull request.

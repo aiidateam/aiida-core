@@ -408,7 +408,7 @@ class BandsData(KpointsData):
         else:
             return to_return
 
-    def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None, get_segments=False, y_origin=0.):
+    def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None, get_segments=False, y_origin=0., normalize=False):
         """
         Get data to plot a band structure
 
@@ -471,7 +471,11 @@ class BandsData(KpointsData):
             numpy.linalg.norm(kpoints[i] - kpoints[i - 1])
             if not (i in labels_indices and i - 1 in labels_indices) else 0. for i in range(1, len(kpoints))
         ]
-        x = [float(sum(distances[:i])) for i in range(len(distances) + 1)]
+        if normalize:
+            sum_distances = sum(distances)
+            x = [float(sum(distances[:i]))/sum_distances for i in range(len(distances) + 1)]
+        else:
+            x = [float(sum(distances[:i])) for i in range(len(distances) + 1)]
 
         # transform the index of the labels in the coordinates of x
         raw_labels = [(x[i[0]], i[1]) for i in labels]

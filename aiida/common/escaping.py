@@ -63,7 +63,6 @@ def escape_for_sql_like(string):
     - ``_`` -> match exactly one character
 
     """
-    string = str(string)
     return string.replace('%', '\\%').replace('_', '\\_')
 
 

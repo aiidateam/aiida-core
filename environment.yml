@@ -2,9 +2,8 @@
 ---
 name: aiida
 channels:
-- defaults
 - conda-forge
-- etetoolkit
+- defaults
 dependencies:
 - python~=3.7
 - aldjemy~=0.9.1

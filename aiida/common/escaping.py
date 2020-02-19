@@ -98,7 +98,6 @@ def get_regex_pattern_from_sql(sql_pattern):
         :param tokens_to_apply: the list of tokens still to process (in order: the first will be processed first)
         :return: a tokenized and escaped string for regex
         """
-        string = str(string)
         if tokens_to_apply:
             # We still have tokens to process
             # find the first occurrence of the first token passed in the list
@@ -142,5 +141,4 @@ def sql_string_match(string, pattern):
     :param pattern: the SQL pattern
     :return: True if the string matches, False otherwise
     """
-    string = str(string)
     return bool(re.match(get_regex_pattern_from_sql(pattern), string))

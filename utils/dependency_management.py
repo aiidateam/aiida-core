@@ -10,9 +10,14 @@
 ###########################################################################
 """Utility CLI to update dependency version requirements of the `setup.json`."""
 
-import copy
 import os
+import re
+import json
+import copy
+from pkg_resources import Requirement
+
 import click
+import yaml
 
 from validate_consistency import get_setup_json, write_setup_json
 
@@ -21,6 +26,22 @@ SCRIPT_PATH = os.path.split(os.path.realpath(__file__))[0]
 ROOT_DIR = os.path.join(SCRIPT_PATH, os.pardir)
 FILEPATH_SETUP_JSON = os.path.join(ROOT_DIR, FILENAME_SETUP_JSON)
 DEFAULT_EXCLUDE_LIST = ['django', 'circus', 'numpy', 'pymatgen', 'ase', 'monty', 'pyyaml']
+
+SETUPTOOLS_CONDA_MAPPINGS = {
+    'psycopg2-binary': 'psycopg2',
+    'graphviz': 'python-graphviz',
+}
+
+CONDA_IGNORE = [
+    'pyblake2',
+]
+
+
+def _setuptools_to_conda(req):
+    for pattern, replacement in SETUPTOOLS_CONDA_MAPPINGS.items():
+        if re.match(pattern, req):
+            return re.sub(pattern, replacement, req)
+    return req
 
 
 @click.group()
@@ -52,6 +73,74 @@ def cli():
     This will now update the `setup.json` to reinstate the exact version requirements for all dependencies. Commit the
     changes to `setup.json` and make a pull request.
     """
+
+
+@cli.command('validate', help='Validate consistency of the dependency specification.')
+def validate():
+    """Validate consistency of the requirements specification of the package.
+
+    Validates that the specification of requirements/dependencies is consistent across
+    the following files:
+
+    - setup.json
+    - environment.yml
+    """
+    # Read the requirements from 'setup.json' and 'environment.yml'.
+    with open('setup.json') as file:
+        setup_cfg = json.load(file)
+        install_requirements = setup_cfg['install_requires']
+        python_requires = Requirement.parse('python' + setup_cfg['python_requires'])
+
+    with open('environment.yml') as file:
+        conda_dependencies = set(yaml.load(file, Loader=yaml.SafeLoader)['dependencies'])
+
+    # Attempt to find the specification of Python among the 'environment.yml' dependencies.
+    for dependency in conda_dependencies:
+        req = Requirement.parse(dependency)
+        if req.name == 'python':  # Found the Python dependency specification
+            conda_python_dependency = req
+            conda_dependencies.remove(dependency)
+            break
+    else:  # Failed to find Python dependency specification
+        raise click.ClickException("Did not find specification of Python version in 'environment.yml'.")
+
+    # The Python version specified in 'setup.json' should be listed as trove classifiers.
+    for spec in conda_python_dependency.specifier:
+        expected_classifier = 'Programming Language :: Python :: ' + spec.version
+        if expected_classifier not in setup_cfg['classifiers']:
+            raise click.ClickException("Trove classifier '{}' missing from 'setup.json'.".format(expected_classifier))
+
+        # The Python version should be specified as supported in 'setup.json'.
+        if not any(spec.version >= other_spec.version for other_spec in python_requires.specifier):
+            raise click.ClickException(
+                "Required Python version between 'setup.json' and 'environment.yml' not consistent."
+            )
+
+        break
+    else:
+        raise click.ClickException("Missing specifier: '{}'.".format(conda_python_dependency))
+
+    # Check that all requirements specified in the setup.json file are found in the
+    # conda environment specification.
+    missing_from_env = set()
+    for req in install_requirements:
+        if any(re.match(ignore, req) for ignore in CONDA_IGNORE):
+            continue  # skip explicitly ignored packages
+
+        try:
+            conda_dependencies.remove(_setuptools_to_conda(req))
+        except KeyError:
+            raise click.ClickException("Requirement '{}' not specified in 'environment.yml'.".format(req))
+
+    # The only dependency left should be the one for Python itself, which is not part of
+    # the install_requirements for setuptools.
+    if len(conda_dependencies) > 0:
+        raise click.ClickException(
+            "The 'environment.yml' file contains dependencies that are missing "
+            "in 'setup.json':\n- {}".format('\n- '.join(conda_dependencies))
+        )
+
+    click.secho('Dependency specification is consistent.', fg='green')
 
 
 @cli.command('unrestrict')

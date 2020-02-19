@@ -35,6 +35,7 @@ def escape_for_bash(str_to_escape):
     within triple quotes to make it work, getting finally: the complicated
     string found below.
     """
+    str_to_escape = str(str_to_escape)
     if str_to_escape is None:
         return ''
 
@@ -62,6 +63,7 @@ def escape_for_sql_like(string):
     - ``_`` -> match exactly one character
 
     """
+    string = str(string)
     return string.replace('%', '\\%').replace('_', '\\_')
 
 
@@ -96,6 +98,7 @@ def get_regex_pattern_from_sql(sql_pattern):
         :param tokens_to_apply: the list of tokens still to process (in order: the first will be processed first)
         :return: a tokenized and escaped string for regex
         """
+        string = str(string)
         if tokens_to_apply:
             # We still have tokens to process
             # find the first occurrence of the first token passed in the list
@@ -139,4 +142,5 @@ def sql_string_match(string, pattern):
     :param pattern: the SQL pattern
     :return: True if the string matches, False otherwise
     """
+    string = str(string)
     return bool(re.match(get_regex_pattern_from_sql(pattern), string))

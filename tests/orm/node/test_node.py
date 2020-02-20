@@ -749,4 +749,5 @@ def test_store_from_cache():
     data.store()
     with enable_caching():
         clone = data.clone().store()
+    assert clone.get_cache_source() == data.uuid
     assert data.get_hash() == clone.get_hash()

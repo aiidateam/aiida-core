@@ -52,6 +52,17 @@ def _load_setup_cfg():
         raise DependencySpecificationError("The 'setup.json' file is missing!")
 
 
+def _load_environment_yml():
+    """Load the conda environment specification from the 'environment.yml' file."""
+    try:
+        with open(ROOT / 'environment.yml') as file:
+            return yaml.load(file, Loader=yaml.SafeLoader)
+    except yaml.error.YAMLError as error:
+        raise DependencySpecificationError("Error while parsing 'environment.yml':\n{}".format(error))
+    except FileNotFoundError as error:
+        raise DependencySpecificationError(str(error))
+
+
 def _setuptools_to_conda(req):
     for pattern, replacement in SETUPTOOLS_CONDA_MAPPINGS.items():
         if re.match(pattern, str(req)):
@@ -143,7 +154,7 @@ def generate_requirements_for_rtd():
 
 
 @cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
-def validate_environment_yml():
+def validate_environment_yml():  # pylint: disable=too-many-branches
     """Validate consistency of the requirements specification of the package.
 
     Validates that the specification of requirements/dependencies is consistent across
@@ -157,8 +168,19 @@ def validate_environment_yml():
     install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
     python_requires = Requirement.parse('python' + setup_cfg['python_requires'])
 
-    with open(ROOT / 'environment.yml') as file:
-        conda_dependencies = {Requirement.parse(d) for d in yaml.load(file, Loader=yaml.SafeLoader)['dependencies']}
+    environment_yml = _load_environment_yml()
+    try:
+        assert environment_yml['name'] == 'aiida', "environment name should be 'aiida'."
+        assert environment_yml['channels'] == [
+            'conda-forge', 'defaults'
+        ], "channels should be 'conda-forge', 'defaults'."
+    except AssertionError as error:
+        raise DependencySpecificationError("Error in 'environment.yml': {}".format(error))
+
+    try:
+        conda_dependencies = {Requirement.parse(d) for d in environment_yml['dependencies']}
+    except TypeError as error:
+        raise DependencySpecificationError("Error while parsing requirements from 'environment_yml': {}".format(error))
 
     # Attempt to find the specification of Python among the 'environment.yml' dependencies.
     for dependency in conda_dependencies:

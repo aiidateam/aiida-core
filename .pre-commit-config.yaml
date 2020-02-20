@@ -124,14 +124,15 @@
     pass_filenames: false
 
   - id: pyproject
-    name: Validating pyproject.toml
-    entry: python ./utils/validate_consistency.py toml
+    name: Validate pyproject.toml
+    entry: python ./utils/dependency_management.py validate-pyproject-toml
     language: system
     files: >-
       (?x)^(
         setup.json|
         setup.py|
-        utils/validate_consistency.py|
+        utils/dependency_management.py|
+        pyproject.toml
       )$
     pass_filenames: false
   - id: dependencies

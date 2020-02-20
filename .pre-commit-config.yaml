@@ -134,15 +134,15 @@
         utils/validate_consistency.py|
       )$
     pass_filenames: false
-  - id: conda
-    name: Validating environment.yml
-    entry: python ./utils/validate_consistency.py conda
+  - id: dependencies
+    name: Validate dependency specification consistency
+    entry: python ./utils/dependency_management.py validate
     language: system
     files: >-
       (?x)^(
         setup.json|
         setup.py|
-        utils/validate_consistency.py|
+        utils/dependency_management.py|
         environment.yml|
       )$
     pass_filenames: false

@@ -14,6 +14,7 @@ import os
 import re
 import json
 import copy
+from collections import OrderedDict
 from pkg_resources import Requirement
 
 import click
@@ -39,9 +40,9 @@ CONDA_IGNORE = [
 
 def _setuptools_to_conda(req):
     for pattern, replacement in SETUPTOOLS_CONDA_MAPPINGS.items():
-        if re.match(pattern, req):
-            return re.sub(pattern, replacement, req)
-    return req
+        if re.match(pattern, str(req)):
+            return Requirement.parse(re.sub(pattern, replacement, str(req)))
+    return req  # did not match any of the replacement patterns, just return original
 
 
 @click.group()
@@ -75,6 +76,46 @@ def cli():
     """
 
 
+@cli.command('generate-environment-yml')
+def generate_environment_yml():
+    """Generate `environment.yml` file for conda."""
+
+    # needed for ordered dict, see https://stackoverflow.com/a/52621703
+    yaml.add_representer(
+        OrderedDict,
+        lambda self, data: yaml.representer.SafeRepresenter.represent_dict(self, data.items()),
+        Dumper=yaml.SafeDumper
+    )
+
+    # Read the requirements from 'setup.json'
+    with open('setup.json') as file:
+        setup_cfg = json.load(file)
+        install_requirements = setup_cfg['install_requires']
+
+    # python version cannot be overriden from outside environment.yml
+    # (even if it is not specified at all in environment.yml)
+    # https://github.com/conda/conda/issues/9506
+    conda_requires = ['python~=3.7']
+    for req in [Requirement.parse(r) for r in install_requirements]:
+        if req.name == 'python' or any(re.match(ignore, str(req)) for ignore in CONDA_IGNORE):
+            continue
+        conda_requires.append(str(_setuptools_to_conda(req)))
+
+    environment = OrderedDict([
+        ('name', 'aiida'),
+        ('channels', ['conda-forge', 'defaults']),
+        ('dependencies', conda_requires),
+    ])
+
+    environment_filename = 'environment.yml'
+    file_path = os.path.join(ROOT_DIR, environment_filename)
+    with open(file_path, 'w') as env_file:
+        env_file.write('# Usage: conda env create -n myenvname -f environment.yml\n')
+        yaml.safe_dump(
+            environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True
+        )
+
+
 @cli.command('validate', help='Validate consistency of the dependency specification.')
 def validate():
     """Validate consistency of the requirements specification of the package.
@@ -88,17 +129,16 @@ def validate():
     # Read the requirements from 'setup.json' and 'environment.yml'.
     with open('setup.json') as file:
         setup_cfg = json.load(file)
-        install_requirements = setup_cfg['install_requires']
+        install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
         python_requires = Requirement.parse('python' + setup_cfg['python_requires'])
 
     with open('environment.yml') as file:
-        conda_dependencies = set(yaml.load(file, Loader=yaml.SafeLoader)['dependencies'])
+        conda_dependencies = {Requirement.parse(d) for d in yaml.load(file, Loader=yaml.SafeLoader)['dependencies']}
 
     # Attempt to find the specification of Python among the 'environment.yml' dependencies.
     for dependency in conda_dependencies:
-        req = Requirement.parse(dependency)
-        if req.name == 'python':  # Found the Python dependency specification
-            conda_python_dependency = req
+        if dependency.name == 'python':  # Found the Python dependency specification
+            conda_python_dependency = dependency
             conda_dependencies.remove(dependency)
             break
     else:  # Failed to find Python dependency specification
@@ -124,7 +164,7 @@ def validate():
     # conda environment specification.
     missing_from_env = set()
     for req in install_requirements:
-        if any(re.match(ignore, req) for ignore in CONDA_IGNORE):
+        if any(re.match(ignore, str(req)) for ignore in CONDA_IGNORE):
             continue  # skip explicitly ignored packages
 
         try:

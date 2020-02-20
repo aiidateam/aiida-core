@@ -103,7 +103,7 @@ def cli():
 
 @cli.command('generate-environment-yml')
 def generate_environment_yml():
-    """Generate `environment.yml` file for conda."""
+    """Generate 'environment.yml' file."""
 
     # needed for ordered dict, see https://stackoverflow.com/a/52621703
     yaml.add_representer(
@@ -261,8 +261,8 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     click.secho('Conda dependency specification is consistent.', fg='green')
 
 
-@cli.command('validate-rtd-reqs', help='Validate requirements_for_rtd.txt.')
-def validate_rtd_reqs():
+@cli.command('validate-rtd-reqs', help="Validate 'docs/requirements_for_rtd.txt'.")
+def validate_requirements_for_rtd():
     """Validate consistency of the specification of 'docs/requirements_for_rtd.txt'."""
 
     # Read the requirements from 'setup.json'
@@ -327,7 +327,7 @@ def validate_all(ctx):
     """
 
     ctx.invoke(validate_environment_yml)
-    ctx.invoke(validate_rtd_reqs)
+    ctx.invoke(validate_requirements_for_rtd)
     ctx.invoke(validate_pyproject_toml)
 
 

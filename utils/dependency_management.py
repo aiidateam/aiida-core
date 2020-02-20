@@ -37,6 +37,10 @@ CONDA_IGNORE = [
 ]
 
 
+class DependencySpecificationError(click.ClickException):
+    """Indicates an issue in a dependency specification."""
+
+
 def _setuptools_to_conda(req):
     for pattern, replacement in SETUPTOOLS_CONDA_MAPPINGS.items():
         if re.match(pattern, str(req)):
@@ -155,23 +159,25 @@ def validate_environment_yml():
             conda_dependencies.remove(dependency)
             break
     else:  # Failed to find Python dependency specification
-        raise click.ClickException("Did not find specification of Python version in 'environment.yml'.")
+        raise DependencySpecificationError("Did not find specification of Python version in 'environment.yml'.")
 
     # The Python version specified in 'setup.json' should be listed as trove classifiers.
     for spec in conda_python_dependency.specifier:
         expected_classifier = 'Programming Language :: Python :: ' + spec.version
         if expected_classifier not in setup_cfg['classifiers']:
-            raise click.ClickException("Trove classifier '{}' missing from 'setup.json'.".format(expected_classifier))
+            raise DependencySpecificationError(
+                "Trove classifier '{}' missing from 'setup.json'.".format(expected_classifier)
+            )
 
         # The Python version should be specified as supported in 'setup.json'.
         if not any(spec.version >= other_spec.version for other_spec in python_requires.specifier):
-            raise click.ClickException(
+            raise DependencySpecificationError(
                 "Required Python version between 'setup.json' and 'environment.yml' not consistent."
             )
 
         break
     else:
-        raise click.ClickException("Missing specifier: '{}'.".format(conda_python_dependency))
+        raise DependencySpecificationError("Missing specifier: '{}'.".format(conda_python_dependency))
 
     # Check that all requirements specified in the setup.json file are found in the
     # conda environment specification.
@@ -183,12 +189,12 @@ def validate_environment_yml():
         try:
             conda_dependencies.remove(_setuptools_to_conda(req))
         except KeyError:
-            raise click.ClickException("Requirement '{}' not specified in 'environment.yml'.".format(req))
+            raise DependencySpecificationError("Requirement '{}' not specified in 'environment.yml'.".format(req))
 
     # The only dependency left should be the one for Python itself, which is not part of
     # the install_requirements for setuptools.
     if len(conda_dependencies) > 0:
-        raise click.ClickException(
+        raise DependencySpecificationError(
             "The 'environment.yml' file contains dependencies that are missing "
             "in 'setup.json':\n- {}".format('\n- '.join(conda_dependencies))
         )
@@ -229,7 +235,7 @@ def validate_pyproject_toml():
             reentry_requirement = requirement
             break
     else:
-        raise click.ClickException("Failed to find reentry requirement in 'setup.json'.")
+        raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
 
     try:
         with open(ROOT / 'pyproject.toml') as file:
@@ -237,10 +243,12 @@ def validate_pyproject_toml():
             pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
 
         if reentry_requirement not in pyproject_requires:
-            raise click.ClickException("Missing requirement '{}' in 'pyproject.toml'.".format(reentry_requirement))
+            raise DependencySpecificationError(
+                "Missing requirement '{}' in 'pyproject.toml'.".format(reentry_requirement)
+            )
 
     except FileNotFoundError as error:
-        raise click.ClickException("The 'pyproject.toml' file is missing!")
+        raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
 
     click.secho('Pyproject.toml dependency specification is consistent.', fg='green')
 

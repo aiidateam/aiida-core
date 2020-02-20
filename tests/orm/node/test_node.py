@@ -738,6 +738,9 @@ def test_store_from_cache(aiida_profile):  # pylint: disable=unused-argument
     Regression test for storing a Node with (nested) repository
     content with caching.
     """
+    # This is needed because other parts of the tests (not using the
+    # fixture infrastructure) delete the User.
+    aiida_profile.reset_db()
     data = Data()
     with tempfile.TemporaryDirectory() as tmpdir:
         dir_path = os.path.join(tmpdir, 'directory')

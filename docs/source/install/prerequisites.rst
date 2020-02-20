@@ -115,7 +115,7 @@ Or, if you don't want/need a background service you can just run:
     pg_ctl -D /usr/local/var/postgres start
 
 For a more detailed description of database requirements and usage see the :ref:`database<database>` section.
-Installing the RabbitMQ message broke through Homebrew is as easy as:
+Installing the RabbitMQ message broker through Homebrew is as easy as:
 
 .. code-block:: bash
 
@@ -140,7 +140,7 @@ You can check whether it is running by checking the status through the command:
 
     /usr/local/sbin/rabbitmqctl status
 
-Wait for few seconds for running the server and then run the status:
+Wait for a few seconds until the server has started, and query its status:
 
 If you encounter problems installing RabbitMQ, please refer to the detailed instructions provided on the `website of RabbitMQ itself for Homebrew <https://www.rabbitmq.com/install-homebrew.html>`_.
 

@@ -46,7 +46,7 @@ def _load_setup_cfg():
     try:
         with open(ROOT / 'setup.json') as setup_json_file:
             return json.load(setup_json_file)
-    except json.decoder.JSONDecodeError as error:
+    except json.decoder.JSONDecodeError as error:  # pylint: disable=no-member
         raise DependencySpecificationError("Error while parsing 'setup.json' file: {}".format(error))
     except FileNotFoundError:
         raise DependencySpecificationError("The 'setup.json' file is missing!")

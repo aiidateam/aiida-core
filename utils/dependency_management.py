@@ -10,10 +10,10 @@
 ###########################################################################
 """Utility CLI to update dependency version requirements of the `setup.json`."""
 
-import os
 import re
 import json
 import copy
+from pathlib import Path
 from collections import OrderedDict
 from pkg_resources import Requirement
 
@@ -23,12 +23,9 @@ import toml
 
 from validate_consistency import get_setup_json, write_setup_json
 
-FILENAME_SETUP_JSON = 'setup.json'
-SCRIPT_PATH = os.path.split(os.path.realpath(__file__))[0]
-ROOT_DIR = os.path.join(SCRIPT_PATH, os.pardir)
-FILEPATH_SETUP_JSON = os.path.join(ROOT_DIR, FILENAME_SETUP_JSON)
+ROOT = Path(__file__).resolve().parent.parent  # repository root
+
 DEFAULT_EXCLUDE_LIST = ['django', 'circus', 'numpy', 'pymatgen', 'ase', 'monty', 'pyyaml']
-DOCS_DIR = os.path.join(ROOT_DIR, 'docs')
 
 SETUPTOOLS_CONDA_MAPPINGS = {
     'psycopg2-binary': 'psycopg2',
@@ -90,7 +87,7 @@ def generate_environment_yml():
     )
 
     # Read the requirements from 'setup.json'
-    with open('setup.json') as file:
+    with open(ROOT / 'setup.json') as file:
         setup_cfg = json.load(file)
         install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
 
@@ -109,9 +106,7 @@ def generate_environment_yml():
         ('dependencies', conda_requires),
     ])
 
-    environment_filename = 'environment.yml'
-    file_path = os.path.join(ROOT_DIR, environment_filename)
-    with open(file_path, 'w') as env_file:
+    with open(ROOT / 'environment.yml', 'w') as env_file:
         env_file.write('# Usage: conda env create -n myenvname -f environment.yml\n')
         yaml.safe_dump(
             environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True
@@ -123,16 +118,14 @@ def generate_requirements_for_rtd():
     """Generate 'docs/requirements_for_rtd.txt' file."""
 
     # Read the requirements from 'setup.json'
-    with open('setup.json') as file:
+    with open(ROOT / 'setup.json') as file:
         setup_cfg = json.load(file)
         install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
         for key in ('testing', 'docs', 'rest', 'atomic_tools'):
             install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
 
-    basename = 'requirements_for_rtd.txt'
-
     # pylint: disable=bad-continuation
-    with open(os.path.join(DOCS_DIR, basename), 'w') as reqs_file:
+    with open(ROOT / Path('docs', 'requirements_for_rtx.txt'), 'w') as reqs_file:
         reqs_file.write('\n'.join(sorted(map(str, install_requirements))))
 
 
@@ -147,12 +140,12 @@ def validate_environment_yml():
     - environment.yml
     """
     # Read the requirements from 'setup.json' and 'environment.yml'.
-    with open('setup.json') as file:
+    with open(ROOT / 'setup.json') as file:
         setup_cfg = json.load(file)
         install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
         python_requires = Requirement.parse('python' + setup_cfg['python_requires'])
 
-    with open('environment.yml') as file:
+    with open(ROOT / 'environment.yml') as file:
         conda_dependencies = {Requirement.parse(d) for d in yaml.load(file, Loader=yaml.SafeLoader)['dependencies']}
 
     # Attempt to find the specification of Python among the 'environment.yml' dependencies.
@@ -208,16 +201,14 @@ def validate_rtd_reqs():
     """Validate consistency of the specification of 'docs/requirements_for_rtd.txt'."""
 
     # Read the requirements from 'setup.json'
-    with open('setup.json') as file:
+    with open(ROOT / 'setup.json') as file:
         setup_cfg = json.load(file)
         install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
         for key in ('testing', 'docs', 'rest', 'atomic_tools'):
             install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
 
-    basename = 'requirements_for_rtd.txt'
-
-    with open(os.path.join(DOCS_DIR, basename)) as rtd_reqs_file:
-        reqs = {Requirement.parse(r) for r in rtd_reqs_file}
+    with open(ROOT / Path('docs', 'requirements_for_rtd.txt')) as reqs_file:
+        reqs = {Requirement.parse(r) for r in reqs_file}
 
     assert reqs == install_requirements
 
@@ -229,7 +220,7 @@ def validate_pyproject_toml():
     """Validate consistency of the specification of 'pyprojec.toml'."""
 
     # Read the requirements from 'setup.json'
-    with open('setup.json') as file:
+    with open(ROOT / 'setup.json') as file:
         setup_cfg = json.load(file)
         install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
 
@@ -241,7 +232,7 @@ def validate_pyproject_toml():
         raise click.ClickException("Failed to find reentry requirement in 'setup.json'.")
 
     try:
-        with open(os.path.join(ROOT_DIR, 'pyproject.toml')) as file:
+        with open(ROOT / 'pyproject.toml') as file:
             pyproject = toml.load(file)
             pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
 

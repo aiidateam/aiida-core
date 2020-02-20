@@ -204,7 +204,7 @@ def validate_environment_yml():
     if len(conda_dependencies) > 0:
         raise DependencySpecificationError(
             "The 'environment.yml' file contains dependencies that are missing "
-            "in 'setup.json':\n- {}".format('\n- '.join(conda_dependencies))
+            "in 'setup.json':\n- {}".format('\n- '.join(map(str, conda_dependencies)))
         )
 
     click.secho('Conda dependency specification is consistent.', fg='green')

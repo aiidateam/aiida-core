@@ -245,7 +245,8 @@ def validate_rtd_reqs():
     with open(ROOT / Path('docs', 'requirements_for_rtd.txt')) as reqs_file:
         reqs = {Requirement.parse(r) for r in reqs_file}
 
-    assert reqs == install_requirements
+    if reqs != install_requirements:
+        raise DependencySpecificationError("The requirements for RTD are inconsistent with 'setup.json'.")
 
     click.secho('RTD requirements specification is consistent.', fg='green')
 

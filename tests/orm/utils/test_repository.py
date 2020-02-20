@@ -16,6 +16,7 @@ import tempfile
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Node, Data
 from aiida.orm.utils.repository import File, FileType
+from aiida.common.exceptions import ModificationNotAllowed
 
 
 class TestRepository(AiidaTestCase):
@@ -189,4 +190,4 @@ class TestRepository(AiidaTestCase):
         self.assertEqual(sorted(node.list_object_names()), ['c.txt', 'subdir'])
         self.assertEqual(sorted(node.list_object_names('subdir')), ['a.txt', 'b.txt', 'nested'])
 
-        node._repository.erase()  # pylint: disable=protected-access
+        self.assertRaises(ModificationNotAllowed, node._repository.erase)  # pylint: disable=protected-access

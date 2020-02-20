@@ -21,7 +21,7 @@ import click
 import yaml
 import toml
 
-from validate_consistency import get_setup_json, write_setup_json
+from validate_consistency import write_setup_json
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
@@ -39,6 +39,17 @@ CONDA_IGNORE = [
 
 class DependencySpecificationError(click.ClickException):
     """Indicates an issue in a dependency specification."""
+
+
+def _load_setup_cfg():
+    """Load the setup configuration from the 'setup.json' file."""
+    try:
+        with open(ROOT / 'setup.json') as setup_json_file:
+            return json.load(setup_json_file)
+    except json.decoder.JSONDecodeError as error:
+        raise DependencySpecificationError("Error while parsing 'setup.json' file: {}".format(error))
+    except FileNotFoundError:
+        raise DependencySpecificationError("The 'setup.json' file is missing!")
 
 
 def _setuptools_to_conda(req):
@@ -91,9 +102,8 @@ def generate_environment_yml():
     )
 
     # Read the requirements from 'setup.json'
-    with open(ROOT / 'setup.json') as file:
-        setup_cfg = json.load(file)
-        install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
+    setup_cfg = _load_setup_cfg()
+    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
 
     # python version cannot be overriden from outside environment.yml
     # (even if it is not specified at all in environment.yml)
@@ -122,11 +132,10 @@ def generate_requirements_for_rtd():
     """Generate 'docs/requirements_for_rtd.txt' file."""
 
     # Read the requirements from 'setup.json'
-    with open(ROOT / 'setup.json') as file:
-        setup_cfg = json.load(file)
-        install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
-        for key in ('testing', 'docs', 'rest', 'atomic_tools'):
-            install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
+    setup_cfg = _load_setup_cfg()
+    install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+    for key in ('testing', 'docs', 'rest', 'atomic_tools'):
+        install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
 
     # pylint: disable=bad-continuation
     with open(ROOT / Path('docs', 'requirements_for_rtx.txt'), 'w') as reqs_file:
@@ -144,10 +153,9 @@ def validate_environment_yml():
     - environment.yml
     """
     # Read the requirements from 'setup.json' and 'environment.yml'.
-    with open(ROOT / 'setup.json') as file:
-        setup_cfg = json.load(file)
-        install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-        python_requires = Requirement.parse('python' + setup_cfg['python_requires'])
+    setup_cfg = _load_setup_cfg()
+    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
+    python_requires = Requirement.parse('python' + setup_cfg['python_requires'])
 
     with open(ROOT / 'environment.yml') as file:
         conda_dependencies = {Requirement.parse(d) for d in yaml.load(file, Loader=yaml.SafeLoader)['dependencies']}
@@ -207,11 +215,10 @@ def validate_rtd_reqs():
     """Validate consistency of the specification of 'docs/requirements_for_rtd.txt'."""
 
     # Read the requirements from 'setup.json'
-    with open(ROOT / 'setup.json') as file:
-        setup_cfg = json.load(file)
-        install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
-        for key in ('testing', 'docs', 'rest', 'atomic_tools'):
-            install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
+    setup_cfg = _load_setup_cfg()
+    install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+    for key in ('testing', 'docs', 'rest', 'atomic_tools'):
+        install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
 
     with open(ROOT / Path('docs', 'requirements_for_rtd.txt')) as reqs_file:
         reqs = {Requirement.parse(r) for r in reqs_file}
@@ -226,9 +233,8 @@ def validate_pyproject_toml():
     """Validate consistency of the specification of 'pyprojec.toml'."""
 
     # Read the requirements from 'setup.json'
-    with open(ROOT / 'setup.json') as file:
-        setup_cfg = json.load(file)
-        install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
+    setup_cfg = _load_setup_cfg()
+    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
 
     for requirement in install_requirements:
         if requirement.name == 'reentry':
@@ -282,7 +288,7 @@ def unrestrict_requirements(exclude):
     operators, additional filters after a semicolon, or with extra requirements (using `[]`) are not supported. The
     limits for these statements will have to be updated manually.
     """
-    setup = get_setup_json()
+    setup = _load_setup_cfg()
     clone = copy.deepcopy(setup)
     clone['install_requires'] = []
 
@@ -318,7 +324,7 @@ def update_requirements(requirements):
 
     The REQUIREMENTS file should contain the output of `pip freeze`.
     """
-    setup = get_setup_json()
+    setup = _load_setup_cfg()
 
     package_versions = []
 

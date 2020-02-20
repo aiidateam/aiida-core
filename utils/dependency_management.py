@@ -27,6 +27,7 @@ SCRIPT_PATH = os.path.split(os.path.realpath(__file__))[0]
 ROOT_DIR = os.path.join(SCRIPT_PATH, os.pardir)
 FILEPATH_SETUP_JSON = os.path.join(ROOT_DIR, FILENAME_SETUP_JSON)
 DEFAULT_EXCLUDE_LIST = ['django', 'circus', 'numpy', 'pymatgen', 'ase', 'monty', 'pyyaml']
+DOCS_DIR = os.path.join(ROOT_DIR, 'docs')
 
 SETUPTOOLS_CONDA_MAPPINGS = {
     'psycopg2-binary': 'psycopg2',
@@ -90,13 +91,13 @@ def generate_environment_yml():
     # Read the requirements from 'setup.json'
     with open('setup.json') as file:
         setup_cfg = json.load(file)
-        install_requirements = setup_cfg['install_requires']
+        install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
 
     # python version cannot be overriden from outside environment.yml
     # (even if it is not specified at all in environment.yml)
     # https://github.com/conda/conda/issues/9506
     conda_requires = ['python~=3.7']
-    for req in [Requirement.parse(r) for r in install_requirements]:
+    for req in install_requirements:
         if req.name == 'python' or any(re.match(ignore, str(req)) for ignore in CONDA_IGNORE):
             continue
         conda_requires.append(str(_setuptools_to_conda(req)))
@@ -116,8 +117,26 @@ def generate_environment_yml():
         )
 
 
-@cli.command('validate', help='Validate consistency of the dependency specification.')
-def validate():
+@cli.command('generate-rtd-reqs')
+def generate_requirements_for_rtd():
+    """Generate 'docs/requirements_for_rtd.txt' file."""
+
+    # Read the requirements from 'setup.json'
+    with open('setup.json') as file:
+        setup_cfg = json.load(file)
+        install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+        for key in ('testing', 'docs', 'rest', 'atomic_tools'):
+            install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
+
+    basename = 'requirements_for_rtd.txt'
+
+    # pylint: disable=bad-continuation
+    with open(os.path.join(DOCS_DIR, basename), 'w') as reqs_file:
+        reqs_file.write('\n'.join(sorted(map(str, install_requirements))))
+
+
+@cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
+def validate_environment_yml():
     """Validate consistency of the requirements specification of the package.
 
     Validates that the specification of requirements/dependencies is consistent across
@@ -180,7 +199,45 @@ def validate():
             "in 'setup.json':\n- {}".format('\n- '.join(conda_dependencies))
         )
 
-    click.secho('Dependency specification is consistent.', fg='green')
+    click.secho('Conda dependency specification is consistent.', fg='green')
+
+
+@cli.command('validate-rtd-reqs', help='Validate requirements_for_rtd.txt.')
+def validate_rtd_reqs():
+    """Validate consistency of the specification of 'docs/requirements_for_rtd.txt'."""
+
+    # Read the requirements from 'setup.json'
+    with open('setup.json') as file:
+        setup_cfg = json.load(file)
+        install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+        for key in ('testing', 'docs', 'rest', 'atomic_tools'):
+            install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
+
+    basename = 'requirements_for_rtd.txt'
+
+    with open(os.path.join(DOCS_DIR, basename)) as rtd_reqs_file:
+        reqs = {Requirement.parse(r) for r in rtd_reqs_file}
+
+    assert reqs == install_requirements
+
+    click.secho('RTD requirements specification is consistent.', fg='green')
+
+
+@cli.command('validate-all', help='Validate consistency of all requirements.')
+@click.pass_context
+def validate_all(ctx):
+    """Validate consistency of all requirement specifications of the package.
+
+    Validates that the specification of requirements/dependencies is consistent across
+    the following files:
+
+    - setup.py
+    - setup.json
+    - environment.yml
+    - docs/requirements_for_rtd.txt
+    """
+    ctx.invoke(validate_environment_yml)
+    ctx.invoke(validate_rtd_reqs)
 
 
 @cli.command('unrestrict')

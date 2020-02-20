@@ -19,6 +19,7 @@ from pkg_resources import Requirement
 
 import click
 import yaml
+import toml
 
 from validate_consistency import get_setup_json, write_setup_json
 
@@ -223,6 +224,36 @@ def validate_rtd_reqs():
     click.secho('RTD requirements specification is consistent.', fg='green')
 
 
+@cli.command('validate-pyproject-toml', help="Validate 'pyproject.toml'.")
+def validate_pyproject_toml():
+    """Validate consistency of the specification of 'pyprojec.toml'."""
+
+    # Read the requirements from 'setup.json'
+    with open('setup.json') as file:
+        setup_cfg = json.load(file)
+        install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
+
+    for requirement in install_requirements:
+        if requirement.name == 'reentry':
+            reentry_requirement = requirement
+            break
+    else:
+        raise click.ClickException("Failed to find reentry requirement in 'setup.json'.")
+
+    try:
+        with open(os.path.join(ROOT_DIR, 'pyproject.toml')) as file:
+            pyproject = toml.load(file)
+            pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
+
+        if reentry_requirement not in pyproject_requires:
+            raise click.ClickException("Missing requirement '{}' in 'pyproject.toml'.".format(reentry_requirement))
+
+    except FileNotFoundError as error:
+        raise click.ClickException("The 'pyproject.toml' file is missing!")
+
+    click.secho('Pyproject.toml dependency specification is consistent.', fg='green')
+
+
 @cli.command('validate-all', help='Validate consistency of all requirements.')
 @click.pass_context
 def validate_all(ctx):
@@ -234,9 +265,12 @@ def validate_all(ctx):
     - setup.py
     - setup.json
     - environment.yml
+    - pyproject.toml
     - docs/requirements_for_rtd.txt
     """
+
     ctx.invoke(validate_environment_yml)
+    ctx.invoke(validate_pyproject_toml)
     ctx.invoke(validate_rtd_reqs)
 
 

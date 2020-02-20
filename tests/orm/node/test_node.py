@@ -733,7 +733,7 @@ class TestNodeLinks(AiidaTestCase):
             _ = workflow.outputs.some_label
 
 
-def test_store_from_cache():
+def test_store_from_cache(aiida_profile):  # pylint: disable=unused-argument
     """
     Regression test for storing a Node with (nested) repository
     content with caching.

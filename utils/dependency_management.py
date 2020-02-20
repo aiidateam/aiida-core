@@ -153,6 +153,35 @@ def generate_requirements_for_rtd():
         reqs_file.write('\n'.join(sorted(map(str, install_requirements))))
 
 
+@cli.command()
+def generate_pyproject_toml():
+    """Generate 'pyproject.toml' file."""
+
+    # Read the requirements from 'setup.json'
+    setup_cfg = _load_setup_cfg()
+    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
+
+    for requirement in install_requirements:
+        if requirement.name == 'reentry':
+            reentry_requirement = requirement
+            break
+    else:
+        raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
+
+    pyproject = {'build-system': {'requires': ['setuptools', 'wheel', str(reentry_requirement)]}}
+    with open(ROOT / 'pyproject.toml', 'w') as file:
+        toml.dump(pyproject, file)
+
+
+@cli.command()
+@click.pass_context
+def generate_all(ctx):
+    """Generate all dependent requirement files."""
+    ctx.invoke(generate_environment_yml)
+    ctx.invoke(generate_requirements_for_rtd)
+    ctx.invoke(generate_pyproject_toml)
+
+
 @cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
 def validate_environment_yml():  # pylint: disable=too-many-branches
     """Validate consistency of the requirements specification of the package.
@@ -298,8 +327,8 @@ def validate_all(ctx):
     """
 
     ctx.invoke(validate_environment_yml)
-    ctx.invoke(validate_pyproject_toml)
     ctx.invoke(validate_rtd_reqs)
+    ctx.invoke(validate_pyproject_toml)
 
 
 @cli.command('unrestrict')

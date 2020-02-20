@@ -149,7 +149,7 @@ def generate_requirements_for_rtd():
         install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
 
     # pylint: disable=bad-continuation
-    with open(ROOT / Path('docs', 'requirements_for_rtx.txt'), 'w') as reqs_file:
+    with open(ROOT / Path('docs', 'requirements_for_rtd.txt'), 'w') as reqs_file:
         reqs_file.write('\n'.join(sorted(map(str, install_requirements))))
 
 

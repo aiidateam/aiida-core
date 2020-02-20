@@ -9,27 +9,13 @@
 ###########################################################################
 """Utilities for `WorkChain` implementations."""
 from collections import namedtuple
-from functools import wraps
+from functools import partial
+from inspect import getfullargspec
+from wrapt import decorator
 
 from ..exit_code import ExitCode
 
-__all__ = ('ProcessHandler', 'ProcessHandlerReport', 'register_process_handler')
-
-ProcessHandler = namedtuple('ProcessHandler', 'method priority exit_codes')
-ProcessHandler.__new__.__defaults__ = (None, 0, None)
-"""A namedtuple to define a process handler for a :class:`aiida.engine.BaseRestartWorkChain`.
-
-The `method` element refers to a function decorated by the `register_process_handler` that has turned it into a bound
-method of the target `WorkChain` class. The method takes an instance of a :class:`~aiida.orm.ProcessNode` as its sole
-argument. The method can return an optional `ProcessHandlerReport` to signal whether other handlers still need to be
-considered or whether the work chain should be terminated immediately. The priority determines in which order the
-handler methods are executed, with the higher priority being executed first.
-
-:param method: the decorated process handling function turned into a bound work chain class method
-:param priority: integer denoting the process handler's priority
-:param exit_codes: single or list of `ExitCode` instances. A handler that defines this should only be called for a given
-    completed process if its exit status is a member of `exit_codes`.
-"""
+__all__ = ('ProcessHandlerReport', 'process_handler')
 
 ProcessHandlerReport = namedtuple('ProcessHandlerReport', 'do_break exit_code')
 ProcessHandlerReport.__new__.__defaults__ = (False, ExitCode())
@@ -49,16 +35,12 @@ returning a non-zero exit code from any work chain step will instruct the engine
 """
 
 
-def register_process_handler(cls, *, priority=None, exit_codes=None):
-    """Decorator to register a function as a handler for a :class:`~aiida.engine.BaseRestartWorkChain`.
+def process_handler(wrapped=None, *, priority=None, exit_codes=None):
+    """Decorator to register a :class:`~aiida.engine.BaseRestartWorkChain` instance method as a process handler.
 
-    The function expects two arguments, a work chain class and a priortity. The decorator will add the function as a
-    class method to the work chain class and add an :class:`~aiida.engine.ProcessHandler` tuple to the `__handlers`
-    private attribute of the work chain. During the `inspect_process` outline method, the work chain will retrieve all
-    the registered handlers through the :meth:`~aiida.engine.BaseRestartWorkChain._handlers` property and loop over them
-    sorted with respect to their priority in reverse. If the work chain class defines the
-    :attr:`~aiida.engine.BaseRestartWorkChain._verbose` attribute and is set to `True`, a report message will be fired
-    when the process handler is executed.
+    The decorator will validate the `priority` and `exit_codes` optional keyword arguments and then add itself as an
+    attribute to the `wrapped` instance method. This is used in the `inspect_process` to return all instance methods of
+    the class that have been decorated by this function and therefore are considered to be process handlers.
 
     Requirements on the function signature of process handling functions. The function to which the decorator is applied
     needs to take two arguments:
@@ -79,6 +61,9 @@ def register_process_handler(cls, *, priority=None, exit_codes=None):
         code set on the `node` does not appear in the `exit_codes`. This is useful to have a handler called only when
         the process failed with a specific exit code.
     """
+    if wrapped is None:
+        return partial(process_handler, priority=priority, exit_codes=exit_codes)
+
     if priority is None:
         priority = 0
 
@@ -91,41 +76,40 @@ def register_process_handler(cls, *, priority=None, exit_codes=None):
     if exit_codes and any([not isinstance(exit_code, ExitCode) for exit_code in exit_codes]):
         raise TypeError('`exit_codes` should be an instance of `ExitCode` or list thereof.')
 
-    def process_handler_decorator(handler):
-        """Decorate a function to dynamically register a handler to a `WorkChain` class."""
+    handler_args = getfullargspec(wrapped)[0]
 
-        @wraps(handler)
-        def process_handler(self, node):
-            """Wrap handler to add a log to the report if the handler is called and verbosity is turned on."""
-            verbose = hasattr(cls, '_verbose') and cls._verbose  # pylint: disable=protected-access
+    if len(handler_args) != 2:
+        raise TypeError('process handler `{}` has invalid signature: should be (self, node)'.format(wrapped.__name__))
 
-            if exit_codes and node.exit_status not in [exit_code.status for exit_code in exit_codes]:
-                if verbose:
-                    self.report('skipped {} because of exit code filter'.format(handler.__name__))
-                return None
+    wrapped.decorator = process_handler
+    wrapped.priority = priority if priority else 0
 
-            if verbose:
-                self.report('({}){}'.format(priority, handler.__name__))
+    @decorator
+    def wrapper(wrapped, instance, args, kwargs):
 
-            result = handler(self, node)
+        # When the handler will be called by the `BaseRestartWorkChain` it will pass the node as the only argument
+        node = args[0]
 
-            # If a handler report is returned, attach the handler's name to node's attributes
-            if isinstance(result, ProcessHandlerReport):
-                try:
-                    called_process_handlers = self.node.get_extra('called_process_handlers', [])
-                    current_process = called_process_handlers[-1]
-                except IndexError:
-                    # The extra was never initialized, so we skip this functionality
-                    pass
-                else:
-                    # Append the name of the handler to the last list in `called_process_handlers` and save it
-                    current_process.append(handler.__name__)
-                    self.node.set_extra('called_process_handlers', called_process_handlers)
+        if exit_codes and node.exit_status not in [exit_code.status for exit_code in exit_codes]:
+            result = None
+        else:
+            result = wrapped(*args, **kwargs)
 
-            return result
+        # Append the name and return value of the current process handler to the `considered_handlers` extra.
+        try:
+            considered_handlers = instance.node.get_extra(instance._considered_handlers_extra, [])  # pylint: disable=protected-access
+            current_process = considered_handlers[-1]
+        except IndexError:
+            # The extra was never initialized, so we skip this functionality
+            pass
+        else:
+            # Append the name of the handler to the last list in `considered_handlers` and save it
+            serialized = result
+            if isinstance(serialized, ProcessHandlerReport):
+                serialized = {'do_break': serialized.do_break, 'exit_status': serialized.exit_code.status}
+            current_process.append((wrapped.__name__, serialized))
+            instance.node.set_extra(instance._considered_handlers_extra, considered_handlers)  # pylint: disable=protected-access
 
-        cls.register_handler(handler.__name__, ProcessHandler(process_handler, priority, exit_codes))
+        return result
 
-        return process_handler
-
-    return process_handler_decorator
+    return wrapper(wrapped)  # pylint: disable=no-value-for-parameter

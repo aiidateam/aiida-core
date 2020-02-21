@@ -114,6 +114,7 @@ def get_use_cache(*, identifier=None):
     :raises ConfigurationError: if the configuration is invalid, either due to a general
         configuration error, or by defining the class both enabled and disabled
     """
+    type_check(identifier, (type(None), str))
 
     if identifier is not None:
         type_check(identifier, str)
@@ -184,6 +185,7 @@ def enable_caching(*, identifier=None):
     :param identifier: the full entry point string of the process, e.g. `aiida.calculations:arithmetic.add`
     """
 
+    type_check(identifier, (type(None), str))
     with _reset_config():
         if identifier is None:
             _CONFIG[ConfigKeys.DEFAULT.value] = True
@@ -204,6 +206,7 @@ def disable_caching(*, identifier=None):
     :param node_class: Node class for which caching should be disabled.
     :param identifier: the full entry point string of the process, e.g. `aiida.calculations:arithmetic.add`
     """
+    type_check(identifier, (type(None), str))
 
     with _reset_config():
         if identifier is None:

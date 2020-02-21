@@ -88,7 +88,7 @@ class TestCalcFunction(AiidaTestCase):
         self.assertEqual(EXECUTION_COUNTER, 1)
 
         # Caching a CalcFunctionNode should be possible
-        with enable_caching(CalcFunctionNode):
+        with enable_caching(identifier='*.execution_counter_calcfunction'):
             input_node = Int(5)
             result, cached = execution_counter_calcfunction.run_get_node(input_node)
 
@@ -109,7 +109,7 @@ class TestCalcFunction(AiidaTestCase):
             """This calcfunction has a different source code from the one created at the module level."""
             return Int(data.value + 2)
 
-        with enable_caching(CalcFunctionNode):
+        with enable_caching(identifier='*.add_calcfunction'):
             result_cached, cached = add_calcfunction.run_get_node(self.default_int)
             self.assertNotEqual(result_original, result_cached)
             self.assertFalse(cached.is_created_from_cache)

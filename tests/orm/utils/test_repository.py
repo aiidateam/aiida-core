@@ -181,7 +181,7 @@ class TestRepository(AiidaTestCase):
     def test_erase_stored_raise(self):
         """
         Test that trying to erase the repository content of a stored
-        Data node without the force flag raises
+        Data node without the force flag raises.
         """
         node = Data()
         node.put_object_from_tree(self.tempdir, '')

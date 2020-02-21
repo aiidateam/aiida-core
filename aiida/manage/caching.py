@@ -111,7 +111,7 @@ def get_use_cache(*, identifier=None):
     :param identifier: Process type string of the node
     :type identifier: str
     :return: boolean, True if caching is enabled, False otherwise
-    :raises ConfigurationError: if the configuration is invalid, either due to a general
+    :raises: `~aiida.common.exceptions.ConfigurationError` if the configuration is invalid, either due to a general
         configuration error, or by defining the class both enabled and disabled
     """
     type_check(identifier, (type(None), str))

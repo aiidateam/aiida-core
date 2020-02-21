@@ -151,6 +151,9 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
 
         executable_path = shutil.which(executable)
 
+        if not executable_path:
+            raise ValueError('The executable "{}" was not found in the $PATH.'.format(executable))
+
         code = Code(
             input_plugin_name=entry_point,
             remote_computer_exec=[computer, executable_path],

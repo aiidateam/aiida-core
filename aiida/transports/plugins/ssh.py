@@ -1297,6 +1297,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are strings.
         """
+        import socket
+        import time
+
         ssh_stdin, stdout, stderr, channel = self._exec_command_internal(command, combine_stderr, bufsize=bufsize)
 
         if stdin is not None:
@@ -1316,14 +1319,68 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         ssh_stdin.flush()
         ssh_stdin.channel.shutdown_write()
 
+        # Now I get the output
+        stdout_bytes = []
+        stderr_bytes = []
+        # 10kB buffer (note that this should be smaller than the window size of paramiko)
+        # Also, apparently if the data is coming slowly, the read() command will not unlock even for
+        # times much larger than the timeout. Therefore we don't want to have very large buffers otherwise
+        # you risk that a lot of output is sent to both stdout and stderr, and stderr goes beyond the
+        # winodw size and blocks.
+        bufsize = 10 * 1024
+
+        # Set a small timeout on the channels, so that if we get data from both
+        # stderr and stdout, and the connection is slow, we interleave the receive and don't hang
+        stdout.channel.settimeout(0.1)
+        stderr.channel.settimeout(0.1)  # Maybe redundant, as this could be the same channel.
+
+        while True:
+            chunk_exists = False
+
+            if stdout.channel.recv_ready():  # True means that the next .read call will at least receive 1 byte
+                chunk_exists = True
+                try:
+                    piece = stdout.read(bufsize)
+                    stdout_bytes.append(piece)
+                except socket.timeout:
+                    # There was a timeout: I continue as there should still be data
+                    pass
+
+            if stderr.channel.recv_stderr_ready():  # True means that the next .read call will at least receive 1 byte
+                chunk_exists = True
+                try:
+                    piece = stderr.read(bufsize)
+                    stderr_bytes.append(piece)
+                except socket.timeout:
+                    # There was a timeout: I continue as there should still be data
+                    pass
+
+            # If chunk_exists, there is data (either already read and put in the std*_bytes lists, or
+            # still in the buffer because of a timeout). I need to loop.
+            # Otherwise, there is no data in the buffers, and I enter this block.
+            if not chunk_exists:
+                # Both channels have no data in the buffer
+                if channel.exit_status_ready():
+                    # The remote execution is over
+
+                    # I think that in some corner cases there might still be some data,
+                    # in case the data arrived between the previous calls and this check.
+                    # So we do a final read. Since the execution is over, I think all data is in the buffers,
+                    # so we can just read the whole buffer without loops
+                    stdout_bytes.append(stdout.read())
+                    stderr_bytes.append(stderr.read())
+                    # And we go out of the `while True` loop
+                    break
+                # The exit status is not ready:
+                # I just put a small sleep to avoid infinite fast loops when data
+                # is not available on a slow connection, and loop
+                time.sleep(0.05)
+
         # I get the return code (blocking)
+        # However, if I am here, the exit status is ready so this should be returning very quickly
         retval = channel.recv_exit_status()
 
-        # needs to be after 'recv_exit_status', otherwise it might hang
-        output_text = stdout.read().decode('utf-8')
-        stderr_text = stderr.read().decode('utf-8')
-
-        return retval, output_text, stderr_text
+        return (retval, b''.join(stdout_bytes).decode('utf-8'), b''.join(stderr_bytes).decode('utf-8'))
 
     def gotocomputer_command(self, remotedir):
         """

@@ -12,12 +12,14 @@ import os
 import copy
 import fnmatch
 from enum import Enum
+from collections import namedtuple
 from contextlib import contextmanager, suppress
 
 import yaml
 from wrapt import decorator
 
 from aiida.common import exceptions
+from aiida.common.lang import type_check
 
 __all__ = ('get_use_cache', 'enable_caching', 'disable_caching')
 
@@ -60,12 +62,19 @@ def _get_config(config_file):
     # Validate configuration
     for key in config:
         if key not in DEFAULT_CONFIG:
-            raise ValueError("Configuration error: Invalid key '{}' in cache_config.yml".format(key))
+            raise exceptions.ConfigurationError("Configuration error: Invalid key '{}' in cache_config.yml".format(key))
 
     # Add defaults where key is either completely missing or specifies no values in which case it will be `None`
     for key, default_config in DEFAULT_CONFIG.items():
         if key not in config or config[key] is None:
             config[key] = default_config
+
+    try:
+        type_check(config[ConfigKeys.DEFAULT.value], bool)
+        type_check(config[ConfigKeys.ENABLED.value], list)
+        type_check(config[ConfigKeys.DISABLED.value], list)
+    except TypeError as exc:
+        raise exceptions.ConfigurationError('Invalid type in caching configuration file.') from exc
 
     return config
 
@@ -102,24 +111,54 @@ def get_use_cache(*, identifier=None):
     :param identifier: Process type string of the node
     :type identifier: str
     :return: boolean, True if caching is enabled, False otherwise
-    :raises ValueError: if the configuration is invalid, either due to a general
+    :raises ConfigurationError: if the configuration is invalid, either due to a general
         configuration error, or by defining the class both enabled and disabled
     """
-    from aiida.common.lang import type_check
 
     if identifier is not None:
         type_check(identifier, str)
 
-        enabled = any(fnmatch.fnmatch(identifier, pattern) for pattern in _CONFIG[ConfigKeys.ENABLED.value])
-        disabled = any(fnmatch.fnmatch(identifier, pattern) for pattern in _CONFIG[ConfigKeys.DISABLED.value])
+        enable_matches = [
+            pattern for pattern in _CONFIG[ConfigKeys.ENABLED.value] if fnmatch.fnmatch(identifier, pattern)
+        ]
+        disable_matches = [
+            pattern for pattern in _CONFIG[ConfigKeys.DISABLED.value] if fnmatch.fnmatch(identifier, pattern)
+        ]
 
-        if enabled and disabled:
-            raise ValueError('Invalid configuration: caching for {} is both enabled and disabled.'.format(identifier))
-        elif enabled:
+        if enable_matches and disable_matches:
+            # If both enable and disable have matching identifier, we search for
+            # the most specific one. This is determined by checking whether
+            # all other patterns match the specific pattern.
+            PatternWithResult = namedtuple('PatternWithResult', ['pattern', 'use_cache'])
+            most_specific = []
+            for specific_pattern in enable_matches:
+                if all(
+                    fnmatch.fnmatch(specific_pattern, other_pattern)
+                    for other_pattern in enable_matches + disable_matches
+                ):
+                    most_specific.append(PatternWithResult(pattern=specific_pattern, use_cache=True))
+            for specific_pattern in disable_matches:
+                if all(
+                    fnmatch.fnmatch(specific_pattern, other_pattern)
+                    for other_pattern in enable_matches + disable_matches
+                ):
+                    most_specific.append(PatternWithResult(pattern=specific_pattern, use_cache=False))
+
+            if len(most_specific) > 1:
+                raise exceptions.ConfigurationError((
+                    'Invalid configuration: multiple matches for identifier {}'
+                    ', but the most specific identifier is not unique. Candidates: {}'
+                ).format(identifier, [match.pattern for match in most_specific]))
+            if not most_specific:
+                raise exceptions.ConfigurationError(
+                    'Invalid configuration: multiple matches for identifier {}, but none of them is most specific.'.
+                    format(identifier)
+                )
+            return most_specific[0].use_cache
+        if enable_matches:
             return True
-        elif disabled:
+        if disable_matches:
             return False
-
     return _CONFIG[ConfigKeys.DEFAULT.value]
 
 

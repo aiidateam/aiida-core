@@ -11,11 +11,13 @@
 """Tests for the Node ORM class."""
 
 import os
+import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, LinkType
 from aiida.orm import Data, Node, User, CalculationNode, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
+from aiida.manage.caching import enable_caching
 
 
 class TestNode(AiidaTestCase):
@@ -729,3 +731,25 @@ class TestNodeLinks(AiidaTestCase):
         self.assertEqual(workflow.outputs.result_b.pk, output2.pk)
         with self.assertRaises(exceptions.NotExistent):
             _ = workflow.outputs.some_label
+
+
+# Clearing the DB is needed because other parts of the tests (not using
+# the fixture infrastructure) delete the User.
+def test_store_from_cache(clear_database_before_test):  # pylint: disable=unused-argument
+    """
+    Regression test for storing a Node with (nested) repository
+    content with caching.
+    """
+    data = Data()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dir_path = os.path.join(tmpdir, 'directory')
+        os.makedirs(dir_path)
+        with open(os.path.join(dir_path, 'file'), 'w') as file:
+            file.write('content')
+        data.put_object_from_tree(tmpdir)
+
+    data.store()
+    with enable_caching():
+        clone = data.clone().store()
+    assert clone.get_cache_source() == data.uuid
+    assert data.get_hash() == clone.get_hash()

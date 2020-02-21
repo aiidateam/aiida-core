@@ -37,12 +37,29 @@ def aiida_profile():
 
 
 @pytest.fixture(scope='function')
-def clear_database(aiida_profile):  # pylint: disable=redefined-outer-name
+def clear_database(clear_database_after_test):  # pylint: disable=redefined-outer-name,unused-argument
+    """Alias for 'clear_database_after_test'.
+
+    Clears the database after each test. Use of the explicit
+    'clear_database_after_test' is preferred.
+    """
+
+
+@pytest.fixture(scope='function')
+def clear_database_after_test(aiida_profile):  # pylint: disable=redefined-outer-name
     """Clear the database after each test.
     """
     yield
     # after the test function has completed, reset the database
     aiida_profile.reset_db()
+
+
+@pytest.fixture(scope='function')
+def clear_database_before_test(aiida_profile):  # pylint: disable=redefined-outer-name
+    """Clear the database before each test.
+    """
+    aiida_profile.reset_db()
+    yield
 
 
 @pytest.fixture(scope='function')
@@ -133,6 +150,9 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
             return codes[0]
 
         executable_path = shutil.which(executable)
+
+        if not executable_path:
+            raise ValueError('The executable "{}" was not found in the $PATH.'.format(executable))
 
         code = Code(
             input_plugin_name=entry_point,

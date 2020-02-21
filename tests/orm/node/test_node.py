@@ -733,14 +733,13 @@ class TestNodeLinks(AiidaTestCase):
             _ = workflow.outputs.some_label
 
 
-def test_store_from_cache(aiida_profile):  # pylint: disable=unused-argument
+# Clearing the DB is needed because other parts of the tests (not using
+# the fixture infrastructure) delete the User.
+def test_store_from_cache(clear_database_before_test):  # pylint: disable=unused-argument
     """
     Regression test for storing a Node with (nested) repository
     content with caching.
     """
-    # This is needed because other parts of the tests (not using the
-    # fixture infrastructure) delete the User.
-    aiida_profile.reset_db()
     data = Data()
     with tempfile.TemporaryDirectory() as tmpdir:
         dir_path = os.path.join(tmpdir, 'directory')

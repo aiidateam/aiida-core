@@ -294,3 +294,4 @@ To start the server
 ..code-block:: bash
 
 	 pg_ctl -D mylocal_db -l logfile start
+

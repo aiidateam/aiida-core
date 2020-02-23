@@ -56,6 +56,7 @@ class Config:  # pylint: disable=too-many-public-methods
                 echo.echo_warning('original backed up to `{}`'.format(filepath_backup))
 
             config = Config(filepath, check_and_migrate_config(config))
+            config.store()
 
         return config
 

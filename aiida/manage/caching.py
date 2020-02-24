@@ -9,8 +9,8 @@
 ###########################################################################
 """Definition of caching mechanism and configuration for calculations."""
 import os
+import re
 import copy
-import fnmatch
 from enum import Enum
 from collections import namedtuple
 from contextlib import contextmanager, suppress
@@ -120,10 +120,12 @@ def get_use_cache(*, identifier=None):
         type_check(identifier, str)
 
         enable_matches = [
-            pattern for pattern in _CONFIG[ConfigKeys.ENABLED.value] if fnmatch.fnmatch(identifier, pattern)
+            pattern for pattern in _CONFIG[ConfigKeys.ENABLED.value]
+            if _match_wildcard(string=identifier, pattern=pattern)
         ]
         disable_matches = [
-            pattern for pattern in _CONFIG[ConfigKeys.DISABLED.value] if fnmatch.fnmatch(identifier, pattern)
+            pattern for pattern in _CONFIG[ConfigKeys.DISABLED.value]
+            if _match_wildcard(string=identifier, pattern=pattern)
         ]
 
         if enable_matches and disable_matches:
@@ -134,13 +136,13 @@ def get_use_cache(*, identifier=None):
             most_specific = []
             for specific_pattern in enable_matches:
                 if all(
-                    fnmatch.fnmatch(specific_pattern, other_pattern)
+                    _match_wildcard(string=specific_pattern, pattern=other_pattern)
                     for other_pattern in enable_matches + disable_matches
                 ):
                     most_specific.append(PatternWithResult(pattern=specific_pattern, use_cache=True))
             for specific_pattern in disable_matches:
                 if all(
-                    fnmatch.fnmatch(specific_pattern, other_pattern)
+                    _match_wildcard(string=specific_pattern, pattern=other_pattern)
                     for other_pattern in enable_matches + disable_matches
                 ):
                     most_specific.append(PatternWithResult(pattern=specific_pattern, use_cache=False))
@@ -217,3 +219,12 @@ def disable_caching(*, identifier=None):
             with suppress(ValueError):
                 _CONFIG[ConfigKeys.ENABLED.value].remove(identifier)
         yield
+
+
+def _match_wildcard(*, string, pattern):
+    """
+    Helper function to check whether a given name matches a pattern
+    which can contain '*' wildcards.
+    """
+    regexp = '.*'.join(re.escape(part) for part in pattern.split('*'))
+    return re.fullmatch(pattern=regexp, string=string) is not None

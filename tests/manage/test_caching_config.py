@@ -139,9 +139,9 @@ def test_default(use_default_configuration):  # pylint: disable=unused-argument
     }, ['aiida.calculations:templatereplacer'], ['some_identifier', 'aiida.calculations:arithmetic.add']),
     ({
         'default': False,
-        'enabled': ['aiida.calculations:ar?thmetic.add'],
+        'enabled': ['aiida.calculations:ar*thmetic.add'],
         'disabled': ['aiida.calculations:*'],
-    }, ['aiida.calculations:arithmetic.add', 'aiida.calculations:arathmetic.add'
+    }, ['aiida.calculations:arithmetic.add', 'aiida.calculations:arblarghthmetic.add'
        ], ['some_identifier', 'aiida.calculations:templatereplacer']),
 ])
 def test_configuration(configure_caching, config_dict, enabled, disabled):
@@ -158,8 +158,8 @@ def test_configuration(configure_caching, config_dict, enabled, disabled):
     ['config_dict', 'valid_identifiers', 'invalid_identifiers'],
     [({
         'default': False,
-        'enabled': ['aiida.calculations:?rithmetic.add'],
-        'disabled': ['aiida.calculations:arithm?tic.add']
+        'enabled': ['aiida.calculations:*thmetic.add'],
+        'disabled': ['aiida.calculations:arith*ic.add']
     }, ['some_identifier', 'aiida.calculations:templatereplacer'], ['aiida.calculations:arithmetic.add']),
      ({
          'default': False,

@@ -262,7 +262,7 @@ class Repository:
         if not force:
             self.validate_mutability()
 
-        self._repo_folder.erase()
+        self._get_base_folder().erase()
 
     def store(self):
         """Store the contents of the sandbox folder into the repository folder."""

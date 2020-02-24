@@ -10,12 +10,10 @@
 """
 Tests for IcsdDbImporter
 """
-import urllib
-
+import urllib.request
 import pytest
 
 from aiida.backends.testbase import AiidaTestCase
-
 from aiida.tools.dbimporters.plugins import icsd
 
 

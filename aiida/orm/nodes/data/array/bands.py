@@ -1700,6 +1700,12 @@ p = fig.add_subplot(1,1,1)
 first_band_1 = True
 first_band_2 = True
 
+if len(paths) <= 1:
+    path = paths[0]
+    values = path['values']
+    x = [path['x'] for _ in values]
+    p.scatter(x, values, marker="_")
+
 for path in paths:
     if path['length'] <= 1:
         # Avoid printing empty lines

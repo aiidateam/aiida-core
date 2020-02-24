@@ -9,6 +9,7 @@
 ###########################################################################
 """Django implementations for the Comment entity and collection."""
 # pylint: disable=import-error,no-name-in-module
+import contextlib
 
 from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist
@@ -61,13 +62,14 @@ class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment
 
     def store(self):
         """Can only store if both the node and user are stored as well."""
-        from aiida.common.lang import EmptyContextManager
         from aiida.backends.djsite.db.models import suppress_auto_now
 
         if self._dbmodel.dbnode.id is None or self._dbmodel.user.id is None:
             raise exceptions.ModificationNotAllowed('The corresponding node and/or user are not stored')
 
-        with suppress_auto_now([(models.DbComment, ['mtime'])]) if self.mtime else EmptyContextManager():
+        # `contextlib.suppress` provides empty context and can be replaced with `contextlib.nullcontext` after we drop
+        # support for python 3.6
+        with suppress_auto_now([(models.DbComment, ['mtime'])]) if self.mtime else contextlib.suppress():
             super().store()
 
     @property

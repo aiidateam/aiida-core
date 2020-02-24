@@ -178,6 +178,60 @@ class TestConfig(AiidaTestCase):
         if self.config_filebase and os.path.isdir(self.config_filebase):
             shutil.rmtree(self.config_filebase)
 
+    def compare_config_in_memory_and_on_disk(self, config, filepath):
+        """Verify that the contents of `config` are identical to the contents of the file with path `filepath`.
+
+        :param config: instance of `Config`
+        :param filepath: absolute filepath to a configuration file
+        :raises AssertionError: if content of `config` is not equal to that of file on disk
+        """
+        from io import BytesIO
+
+        # Write the content of the `config` in memory to a byte stream
+        stream = BytesIO()
+        config._write(stream)  # pylint: disable=protected-access
+        in_memory = stream.getvalue()
+
+        # Read the content stored on disk
+        with open(filepath, 'rb') as handle:
+            on_disk = handle.read()
+
+        # Compare content of in memory config and the one on disk
+        self.assertEqual(in_memory, on_disk)
+
+    def test_from_file(self):
+        """Test the `Config.from_file` class method.
+
+        Regression test for #3790: make sure configuration is written to disk after it is loaded and migrated.
+        """
+
+        # If the config file does not exist, a completely new file is created with a migrated config
+        filepath_nonexisting = os.path.join(self.config_filebase, 'config_nonexisting.json')
+        config = Config.from_file(filepath_nonexisting)
+
+        # Make sure that the migrated config is written to disk, by loading it from disk and comparing to the content
+        # of the in memory config object. This we do by calling `Config._write` passing a simple stream to have the
+        # class write the file to memory instead of overwriting the file on disk.
+        self.compare_config_in_memory_and_on_disk(config, filepath_nonexisting)
+
+        # Now repeat the test for an existing file. The previous filepath now *does* exist and is migrated
+        filepath_existing = filepath_nonexisting
+        config = Config.from_file(filepath_existing)
+
+        self.compare_config_in_memory_and_on_disk(config, filepath_existing)
+
+        # Finally, we test that an existing configuration file with an outdated schema is migrated and written to disk
+        with tempfile.NamedTemporaryFile() as handle:
+
+            # Write content of configuration with old schema to disk
+            filepath = os.path.join(os.path.dirname(__file__), 'migrations', 'test_samples', 'input', '0.json')
+            with open(filepath, 'rb') as source:
+                handle.write(source.read())
+                handle.flush()
+
+            config = Config.from_file(handle.name)
+            self.compare_config_in_memory_and_on_disk(config, handle.name)
+
     def test_basic_properties(self):
         """Test the basic properties of the Config class."""
         config = Config(self.config_filepath, self.config_dictionary)

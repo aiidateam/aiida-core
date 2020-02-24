@@ -24,7 +24,7 @@ from sqlalchemy.types import Integer, Float, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aiida.common import exceptions
-from aiida.common.lang import abstractclassmethod, type_check
+from aiida.common.lang import type_check
 from aiida.common.exceptions import InputValidationError
 
 __all__ = ('BackendQueryBuilder',)
@@ -126,7 +126,7 @@ class BackendQueryBuilder:
         This is important for the schema having attributes in a different table.
         """
 
-    @abstractclassmethod
+    @abc.abstractclassmethod
     def get_filter_expr_from_attributes(cls, operator, value, attr_key, column=None, column_name=None, alias=None):  # pylint: disable=too-many-arguments
         """
         Returns an valid SQLAlchemy expression.
@@ -383,8 +383,7 @@ class BackendQueryBuilder:
             self.get_session().close()
             raise
 
-    @staticmethod
-    @abstractclassmethod
+    @abc.abstractstaticmethod
     def get_table_name(aliased_class):
         """Returns the table name given an Aliased class."""
 

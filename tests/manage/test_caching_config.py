@@ -122,7 +122,8 @@ def test_default(use_default_configuration):  # pylint: disable=unused-argument
         'default': True,
         'enabled': ['aiida.calculations:arithmetic.add'],
         'disabled': ['aiida.calculations:templatereplacer']
-    }, ['some_identifier', 'aiida.calculations:arithmetic.add'], ['aiida.calculations:templatereplacer']),
+    }, ['some_identifier', 'aiida.calculations:arithmetic.add', 'aiida.calculations:TEMPLATEREPLACER'
+       ], ['aiida.calculations:templatereplacer']),
     ({
         'default': False,
         'enabled': ['aiida.calculations:arithmetic.add'],
@@ -136,7 +137,8 @@ def test_default(use_default_configuration):  # pylint: disable=unused-argument
         'default': False,
         'enabled': ['aiida.calculations:*'],
         'disabled': ['aiida.calculations:arithmetic.add']
-    }, ['aiida.calculations:templatereplacer'], ['some_identifier', 'aiida.calculations:arithmetic.add']),
+    }, ['aiida.calculations:templatereplacer', 'aiida.calculations:ARIthmetic.add'
+       ], ['some_identifier', 'aiida.calculations:arithmetic.add']),
     ({
         'default': False,
         'enabled': ['aiida.calculations:ar*thmetic.add'],

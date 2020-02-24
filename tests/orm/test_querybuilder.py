@@ -24,6 +24,16 @@ class TestQueryBuilder(AiidaTestCase):
         self.clean_db()
         self.insert_data()
 
+    def test_date_filters_support(self):
+        """Verify that `datetime.date` is supported in filters."""
+        from datetime import datetime, date, timedelta
+
+        orm.Data(ctime=datetime.now() - timedelta(days=3)).store()
+        orm.Data(ctime=datetime.now() - timedelta(days=1)).store()
+
+        builder = orm.QueryBuilder().append(orm.Node, filters={'ctime': {'>': date.today() - timedelta(days=1)}})
+        self.assertEqual(builder.count(), 1)
+
     def test_ormclass_type_classification(self):
         """
         This tests the classifications of the QueryBuilder

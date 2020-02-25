@@ -750,7 +750,8 @@ def test_store_from_cache(clear_database_before_test):  # pylint: disable=unused
     data.store()
 
     clone = data.clone()
-    clone._store_from_cache(data, with_transaction=False)  # pylint: disable=protected-access
+    clone._store_from_cache(data, with_transaction=True)  # pylint: disable=protected-access
 
+    assert clone.is_stored
     assert clone.get_cache_source() == data.uuid
     assert data.get_hash() == clone.get_hash()

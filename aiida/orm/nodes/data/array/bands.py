@@ -1009,6 +1009,7 @@ class BandsData(KpointsData):
         """
         import os
 
+        # here the problem
         dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
 
         if prettify_format is None:

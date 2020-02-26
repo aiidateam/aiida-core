@@ -166,6 +166,7 @@ class Data(Node):
                     'No formats are implemented yet.'.format(fileformat, self.__class__.__name__)
                 )
 
+        import pdb; pdb.set_trace()
         string, dictionary = func(main_file_name=main_file_name, **kwargs)
         assert isinstance(string, bytes), 'export function `{}` did not return the content as a byte string.'
 

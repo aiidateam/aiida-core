@@ -94,7 +94,11 @@ def setup_code(non_interactive, **kwargs):
         kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
 
     code_builder = CodeBuilder(**kwargs)
-    code = code_builder.new()
+
+    try:
+        code = code_builder.new()
+    except InputValidationError as exception:
+        echo.echo_critical('invalid inputs: {}'.format(exception))
 
     try:
         code.store()

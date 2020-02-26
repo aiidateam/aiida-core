@@ -23,7 +23,7 @@ from kiwipy.communications import UnroutableError
 from aiida import orm
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
-from aiida.common.lang import classproperty, override, protected
+from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 
@@ -456,7 +456,6 @@ class Process(plumpy.Process):
         """
         return self._runner
 
-    @protected
     def get_parent_calc(self):
         """
         Get the parent process node
@@ -495,7 +494,6 @@ class Process(plumpy.Process):
 
         return process_type
 
-    @protected
     def report(self, msg, *args, **kwargs):
         """Log a message to the logger, which should get saved to the database through the attached DbLogHandler.
 

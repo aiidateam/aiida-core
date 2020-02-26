@@ -338,8 +338,17 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         bands.set_kpoints([[0., 0., 0.]])
         bands.set_bands([[1.0, 2.0]])
         bands.store()
-        options = [str(bands.id)]
+
+        # matplotlib
+        options = [str(bands.id), '--format', 'mpl_singlefile']
         res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
+        self.assertIn(b'p.scatter', res.stdout_bytes, 'The string p.scatter was not found in the bands mpl export')
+
+        # gnuplot
+        options = [str(bands.id), '--format', 'mpl_singlefile']
+        res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
+        self.assertIn(b'p.scatter', res.stdout_bytes, 'The string p.scatter was not found in the bands mpl export')
+
 
 
 class TestVerdiDataDict(AiidaTestCase):

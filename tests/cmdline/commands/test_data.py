@@ -332,6 +332,15 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
         self.assertIn(b'[1.0, 3.0]', res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands' 'export')
 
+    def test_bandsexport_single_kp(self):
+        """ test issue #2462 """
+        bands = BandsData()
+        bands.set_kpoints([[0., 0., 0.]])
+        bands.set_bands([[1.0, 2.0]])
+        bands.store()
+        options = [str(bands.id)]
+        res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
+
 
 class TestVerdiDataDict(AiidaTestCase):
     """Testing verdi data dict."""

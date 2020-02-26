@@ -825,7 +825,7 @@ class BandsData(KpointsData):
 
         s_header = matplotlib_header_template.substitute()
         s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
-        s_body = matplotlib_body_template.substitute()
+        s_body = matplotlib_body_template.substitute(plot_code=matplotlib_body_plot_single_kp)
         s_footer = matplotlib_footer_template_show.substitute()
 
         s = s_header + s_import + s_body + s_footer
@@ -1646,6 +1646,42 @@ matplotlib_import_data_fromfile_template = Template('''with open("$json_fname", 
     all_data_str = f.read()
 ''')
 
+matplotlib_body_plot_str = '''
+for path in paths:
+    if path['length'] <= 1:
+        # Avoid printing empty lines
+        continue
+    x = path['x']
+    #for band in bands:
+    for band, band_type in zip(path['values'], all_data['band_type_idx']):
+
+        # For now we support only two colors
+        if band_type % 2 == 0:
+            further_plot_options = further_plot_options1
+        else:
+            further_plot_options = further_plot_options2
+
+        # Put the legend text only once
+        label = None
+        if first_band_1 and band_type % 2 == 0:
+            first_band_1 = False
+            label = all_data.get('legend_text', None)
+        elif first_band_2 and band_type % 2 == 1:
+            first_band_2 = False
+            label = all_data.get('legend_text2', None)
+
+        p.plot(x, band, label=label,
+               **further_plot_options
+        )
+'''
+
+matplotlib_body_plot_single_kp = '''
+path = paths[0]
+values = path['values']
+x = [path['x'] for _ in values]
+p.scatter(x, values, marker="_")
+'''
+
 matplotlib_body_template = Template('''all_data = json.loads(all_data_str)
 
 if not all_data.get('use_latex', False):
@@ -1700,39 +1736,7 @@ p = fig.add_subplot(1,1,1)
 first_band_1 = True
 first_band_2 = True
 
-if len(paths) <= 1:
-    path = paths[0]
-    values = path['values']
-    x = [path['x'] for _ in values]
-    p.scatter(x, values, marker="_")
-
-for path in paths:
-    if path['length'] <= 1:
-        # Avoid printing empty lines
-        continue
-    x = path['x']
-    #for band in bands:
-    for band, band_type in zip(path['values'], all_data['band_type_idx']):
-
-        # For now we support only two colors
-        if band_type % 2 == 0:
-            further_plot_options = further_plot_options1
-        else:
-            further_plot_options = further_plot_options2
-
-        # Put the legend text only once
-        label = None
-        if first_band_1 and band_type % 2 == 0:
-            first_band_1 = False
-            label = all_data.get('legend_text', None)
-        elif first_band_2 and band_type % 2 == 1:
-            first_band_2 = False
-            label = all_data.get('legend_text2', None)
-
-        p.plot(x, band, label=label,
-               **further_plot_options
-        )
-
+${plot_code}
 
 p.set_xticks(tick_pos)
 p.set_xticklabels(tick_labels)

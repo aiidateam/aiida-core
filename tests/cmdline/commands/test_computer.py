@@ -557,6 +557,8 @@ class TestVerdiComputerCommands(AiidaTestCase):
             workdir='/tmp/aiida'
         )
         cls.comp.set_default_mpiprocs_per_machine(1)
+        cls.comp.set_prepend_text('text to prepend')
+        cls.comp.set_append_text('text to append')
         cls.comp.store()
 
     def setUp(self):

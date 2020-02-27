@@ -334,10 +334,50 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
 
     def test_bandsexport_single_kp(self):
         """ test issue #2462 """
-        bands = BandsData()
-        bands.set_kpoints([[0., 0., 0.]])
-        bands.set_bands([[1.0, 2.0]])
-        bands.store()
+
+        # Create bands structure object.
+        alat = 4.  # angstrom
+        cell = [
+            [
+                alat,
+                0.,
+                0.,
+            ],
+            [
+                0.,
+                alat,
+                0.,
+            ],
+            [
+                0.,
+                0.,
+                alat,
+            ],
+        ]
+        strct = StructureData(cell=cell)
+        strct.append_atom(position=(0., 0., 0.), symbols='Fe')
+        strct.append_atom(position=(alat / 2., alat / 2., alat / 2.), symbols='O')
+        strct.store()
+
+        @calcfunction
+        def connect_structure_bands(strct):  # pylint: disable=unused-argument
+            alat = 4.
+            cell = np.array([
+                [alat, 0., 0.],
+                [0., alat, 0.],
+                [0., 0., alat],
+            ])
+
+            kpnts = KpointsData()
+            kpnts.set_cell(cell)
+            kpnts.set_kpoints([[0., 0., 0.]])
+
+            bands = BandsData()
+            bands.set_kpointsdata(kpnts)
+            bands.set_bands([[1.0, 2.0]])
+            return bands
+
+        bands = connect_structure_bands(strct)
 
         # matplotlib
         options = [str(bands.id), '--format', 'mpl_singlefile']

@@ -888,9 +888,9 @@ class BandsData(KpointsData):
         s_header = matplotlib_header_agg_template.substitute()
         s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
         if len(all_data['paths']) == 1:
-            s_body = matplotlib_body_template.substitute(plot_code=matplotlib_body_plot_single_kp)
+            s_body = matplotlib_body_template.substitute(plot_code=single_kp)
         else:
-            s_body = matplotlib_body_template.substitute(plot_code=matplotlib_body_plot)
+            s_body = matplotlib_body_template.substitute(plot_code=multi_kp)
 
         # I get a temporary file name
         handle, filename = tempfile.mkstemp()
@@ -942,9 +942,9 @@ class BandsData(KpointsData):
         s_header = matplotlib_header_agg_template.substitute()
         s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
         if len(all_data['paths']) == 1:
-            s_body = matplotlib_body_template.substitute(plot_code=matplotlib_body_plot_single_kp)
+            s_body = matplotlib_body_template.substitute(plot_code=single_kp)
         else:
-            s_body = matplotlib_body_template.substitute(plot_code=matplotlib_body_plot)
+            s_body = matplotlib_body_template.substitute(plot_code=multi_kp)
 
         # I get a temporary file name
         handle, filename = tempfile.mkstemp()

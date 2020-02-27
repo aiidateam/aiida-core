@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=no-member, too-many-lines
-
 """Test data-related verdi commands."""
 
 import io
@@ -386,8 +385,12 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         self.assertIn(b'p.scatter', res.stdout_bytes, 'The string p.scatter was not found in the bands mpl export')
 
         # gnuplot
-        res_script, _ = bands._prepare_gnuplot()
-        self.assertIn(b'vectors nohead', res_script, 'The string vectors nohead was not found in the gnuplot script')
+        with self.cli_runner.isolated_filesystem():
+            options = [str(bands.id), '--format', 'gnuplot', '-o', 'bands.gnu']
+            self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
+            with open('bands.gnu', 'r') as f:
+                res = f.read()
+                self.assertIn('vectors nohead', res, 'The string vectors nohead was not found in the gnuplot script')
 
 
 class TestVerdiDataDict(AiidaTestCase):

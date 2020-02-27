@@ -867,6 +867,115 @@ class BandsData(KpointsData):
 
         return s.encode('utf-8'), ext_files
 
+    def _prepare_gnuplot(self,
+                         main_file_name='',
+                         title='',
+                         comments=True,
+                         prettify_format=None,
+                         y_max_lim=None,
+                         y_min_lim=None,
+                         y_origin=0.):
+        """
+        Prepare an gnuplot script to plot the bands, with the .dat file
+        returned as an independent file.
+
+        :param main_file_name: if the user asks to write the main content on a
+             file, this contains the filename. This should be used to infer a
+             good filename for the additional files.
+             In this case, we remove the extension, and add '_data.dat'
+        :param title: if specified, add a title to the plot
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
+        :param prettify_format: if None, use the default prettify format. Otherwise
+            specify a string with the prettifier to use.
+        """
+        import os
+
+        if main_file_name is not None:
+            dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
+        else:
+            dat_filename = 'band_data.dat'
+
+        if prettify_format is None:
+            # Default. Specified like this to allow caller functions to pass 'None'
+            prettify_format = 'gnuplot_seekpath'
+
+        plot_info = self._get_bandplot_data(
+            cartesian=True, prettify_format=prettify_format, join_symbol='|', y_origin=y_origin)
+
+        bands = plot_info['y']
+        x = plot_info['x']
+        labels = plot_info['labels']
+
+        num_labels = len(labels)
+        num_bands = bands.shape[1]
+
+        # axis limits
+        if y_max_lim is None:
+            y_max_lim = bands.max()
+        if y_min_lim is None:
+            y_min_lim = bands.min()
+        x_min_lim = min(x)  # this isn't a numpy array, but a list
+        x_max_lim = max(x)
+
+        # first prepare the xy coordinates of the sets
+        raw_data, _ = self._prepare_dat_blocks(plot_info, comments=comments)
+
+        xtics_string = ', '.join('"{}" {}'.format(label, pos) for pos, label in plot_info['labels'])
+
+        script = []
+        # Start with some useful comments
+
+        if comments:
+            script.append(prepare_header_comment(self.uuid, plot_info=plot_info, comment_char='# '))
+        script.append('')
+
+        script.append(u"""## Uncomment the next two lines to write directly to PDF
+## Note: You need to have gnuplot installed with pdfcairo support!
+#set term pdfcairo
+#set output 'out.pdf'
+
+### Uncomment one of the options below to change font
+### For the LaTeX fonts, you can download them from here:
+### https://sourceforge.net/projects/cm-unicode/
+### And then install them in your system
+## LaTeX Serif font, if installed
+#set termopt font "CMU Serif, 12"
+## LaTeX Sans Serif font, if installed
+#set termopt font "CMU Sans Serif, 12"
+## Classical Times New Roman
+#set termopt font "Times New Roman, 12"
+""")
+
+        # Actual logic
+        script.append('set termopt enhanced')  # Properly deals with e.g. subscripts
+        script.append('set encoding utf8')  # To deal with Greek letters
+        script.append('set xtics ({})'.format(xtics_string))
+
+        script.append('unset key')
+
+
+        script.append('set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
+
+        script.append('set ylabel "{}"'.format('Dispersion ({})'.format(self.units)))
+
+        if title:
+            script.append('set title "{}"'.format(title.replace('"', '\"')))
+
+        # Plot, escaping filename
+        if len(x) > 1:
+            script.append('set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
+            script.append('set grid xtics lt 1 lc rgb "#888888"')
+            script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
+        else:
+            script.append('set xrange [-1.0:1.0]')
+            script.append('plot "{}" using ($1-0.25):($2):(0.5):(0) with vectors nohead lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
+
+        script_data = '\n'.join(script) + '\n'
+        extra_files = {dat_filename: raw_data}
+
+        return script_data.encode('utf-8'), extra_files
+
     def _prepare_mpl_pdf(self, main_file_name='', *args, **kwargs):
         """
         Prepare a python script using matplotlib to plot the bands, with the JSON
@@ -984,115 +1093,6 @@ class BandsData(KpointsData):
         Other kwargs are passed to self._exportcontent.
         """
         exec(*self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs))  # pylint: disable=exec-used
-
-    def _prepare_gnuplot(self,
-                         main_file_name='',
-                         title='',
-                         comments=True,
-                         prettify_format=None,
-                         y_max_lim=None,
-                         y_min_lim=None,
-                         y_origin=0.):
-        """
-        Prepare an gnuplot script to plot the bands, with the .dat file
-        returned as an independent file.
-
-        :param main_file_name: if the user asks to write the main content on a
-             file, this contains the filename. This should be used to infer a
-             good filename for the additional files.
-             In this case, we remove the extension, and add '_data.dat'
-        :param title: if specified, add a title to the plot
-        :param comments: if True, print comments (if it makes sense for the given
-            format)
-        :param prettify_format: if None, use the default prettify format. Otherwise
-            specify a string with the prettifier to use.
-        """
-        import os
-
-        if main_file_name is not None:
-            dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
-        else:
-            dat_filename = 'band_data.dat'
-
-        if prettify_format is None:
-            # Default. Specified like this to allow caller functions to pass 'None'
-            prettify_format = 'gnuplot_seekpath'
-
-        plot_info = self._get_bandplot_data(
-            cartesian=True, prettify_format=prettify_format, join_symbol='|', y_origin=y_origin)
-
-        bands = plot_info['y']
-        x = plot_info['x']
-        labels = plot_info['labels']
-
-        num_labels = len(labels)
-        num_bands = bands.shape[1]
-
-        # axis limits
-        if y_max_lim is None:
-            y_max_lim = bands.max()
-        if y_min_lim is None:
-            y_min_lim = bands.min()
-        x_min_lim = min(x)  # this isn't a numpy array, but a list
-        x_max_lim = max(x)
-
-        # first prepare the xy coordinates of the sets
-        raw_data, _ = self._prepare_dat_blocks(plot_info, comments=comments)
-
-        xtics_string = ', '.join('"{}" {}'.format(label, pos) for pos, label in plot_info['labels'])
-
-        script = []
-        # Start with some useful comments
-
-        if comments:
-            script.append(prepare_header_comment(self.uuid, plot_info=plot_info, comment_char='# '))
-        script.append('')
-
-        script.append(u"""## Uncomment the next two lines to write directly to PDF
-## Note: You need to have gnuplot installed with pdfcairo support!
-#set term pdfcairo
-#set output 'out.pdf'
-
-### Uncomment one of the options below to change font
-### For the LaTeX fonts, you can download them from here:
-### https://sourceforge.net/projects/cm-unicode/
-### And then install them in your system
-## LaTeX Serif font, if installed
-#set termopt font "CMU Serif, 12"
-## LaTeX Sans Serif font, if installed
-#set termopt font "CMU Sans Serif, 12"
-## Classical Times New Roman
-#set termopt font "Times New Roman, 12"
-""")
-
-        # Actual logic
-        script.append('set termopt enhanced')  # Properly deals with e.g. subscripts
-        script.append('set encoding utf8')  # To deal with Greek letters
-        script.append('set xtics ({})'.format(xtics_string))
-
-        script.append('unset key')
-
-
-        script.append('set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
-
-        script.append('set ylabel "{}"'.format('Dispersion ({})'.format(self.units)))
-
-        if title:
-            script.append('set title "{}"'.format(title.replace('"', '\"')))
-
-        # Plot, escaping filename
-        if len(x) > 1:
-            script.append('set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
-            script.append('set grid xtics lt 1 lc rgb "#888888"')
-            script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
-        else:
-            script.append('set xrange [-1.0:1.0]')
-            script.append('plot "{}" using ($1-0.25):($2):(0.5):(0) with vectors nohead lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
-
-        script_data = '\n'.join(script) + '\n'
-        extra_files = {dat_filename: raw_data}
-
-        return script_data.encode('utf-8'), extra_files
 
     def _prepare_agr(self,
                      main_file_name='',

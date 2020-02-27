@@ -1014,8 +1014,6 @@ class BandsData(KpointsData):
         else:
             dat_filename = 'band_data.dat'
 
-        # dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
-
         if prettify_format is None:
             # Default. Specified like this to allow caller functions to pass 'None'
             prettify_format = 'gnuplot_seekpath'

@@ -1009,8 +1009,12 @@ class BandsData(KpointsData):
         """
         import os
 
-        # here the problem
-        dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
+        if main_file_name is not None:
+            dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
+        else:
+            dat_filename = 'band_data.dat'
+
+        # dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
 
         if prettify_format is None:
             # Default. Specified like this to allow caller functions to pass 'None'
@@ -1067,11 +1071,10 @@ class BandsData(KpointsData):
         script.append('set termopt enhanced')  # Properly deals with e.g. subscripts
         script.append('set encoding utf8')  # To deal with Greek letters
         script.append('set xtics ({})'.format(xtics_string))
-        script.append('set grid xtics lt 1 lc rgb "#888888"')
 
         script.append('unset key')
 
-        script.append('set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
+
         script.append('set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
 
         script.append('set ylabel "{}"'.format('Dispersion ({})'.format(self.units)))
@@ -1080,7 +1083,13 @@ class BandsData(KpointsData):
             script.append('set title "{}"'.format(title.replace('"', '\"')))
 
         # Plot, escaping filename
-        script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
+        if len(x) > 1:
+            script.append('set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
+            script.append('set grid xtics lt 1 lc rgb "#888888"')
+            script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
+        else:
+            script.append('set xrange [-1.0:1.0]')
+            script.append('plot "{}" using ($1-0.25):($2):(0.5):(0) with vectors nohead lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
 
         script_data = '\n'.join(script) + '\n'
         extra_files = {dat_filename: raw_data}

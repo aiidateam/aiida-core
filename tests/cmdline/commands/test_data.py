@@ -345,10 +345,8 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         self.assertIn(b'p.scatter', res.stdout_bytes, 'The string p.scatter was not found in the bands mpl export')
 
         # gnuplot
-        options = [str(bands.id), '--format', 'mpl_singlefile']
-        res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
-        self.assertIn(b'p.scatter', res.stdout_bytes, 'The string p.scatter was not found in the bands mpl export')
-
+        res_script, res_dat = bands._prepare_gnuplot()
+        self.assertIn(b'vectors nohead', res_script, 'The string vectors nohead was not found in the gnuplot script')
 
 
 class TestVerdiDataDict(AiidaTestCase):

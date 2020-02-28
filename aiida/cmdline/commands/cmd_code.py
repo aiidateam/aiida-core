@@ -119,8 +119,8 @@ def setup_code(non_interactive, **kwargs):
 @options_code.REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
 @options_code.FOLDER(contextual_default=partial(get_default, 'code_folder'))
 @options_code.REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
-@options.PREPEND_TEXT()
-@options.APPEND_TEXT()
+@options.PREPEND_TEXT(cls=options.ContextualDefaultOption, contextual_default=partial(get_default, 'prepend_text'))
+@options.APPEND_TEXT(cls=options.ContextualDefaultOption, contextual_default=partial(get_default, 'append_text'))
 @options.NON_INTERACTIVE()
 @click.option('--hide-original', is_flag=True, default=False, help='Hide the code being copied.')
 @click.pass_context

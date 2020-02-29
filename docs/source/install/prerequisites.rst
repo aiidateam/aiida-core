@@ -267,15 +267,15 @@ It may be worth considering adding some of these commands to your ``~/.bashrc`` 
 Installation via CONDA
 ========================
 
-To install conda, go to Anaconda `official documentation`_.
+To install conda, follow Anaconda's `official documentation`_.
 
 .. _official documentation: https://www.anaconda.com/distribution/
 
-If you have not installed the packages yet, you can install them using command
+Then, install postgresql and rabbitmq using:
 
 .. code-block:: bash
 
-	conda install -c conda-forge aiida-core.services
+	conda install -y -c conda-forge aiida-core.services
 
 Now install postgresql via conda
 
@@ -285,13 +285,30 @@ Now install postgresql via conda
 
 Now create a base database locally
 
-..code-block:: bash
+.. code-block:: bash
 
 	initdb -D mylocal_db
 
 To start the server
 
-..code-block:: bash
+.. code-block:: bash
 
 	 pg_ctl -D mylocal_db -l logfile start
 
+Installing `rabbitmq-server` from the `conda-forge` channel can be achieved by adding `conda-forge` to your channels with:
+
+.. code-block:: bash
+
+	conda config --add channels conda-forge
+
+Once the `conda-forge` channel has been enabled, `rabbitmq-server` can be installed with:
+
+.. code-block:: bash
+
+	conda install rabbitmq-server
+
+It is possible to list all of the versions of `rabbitmq-server` available on your platform with:
+
+.. code-block:: bash
+
+	conda search rabbitmq-server --channel conda-forge

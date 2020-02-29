@@ -170,9 +170,44 @@ class TestRegisterProcessHandler(AiidaTestCase):
         process = ArithmeticAddBaseWorkChain()
 
         # Loop over all handlers, which should be just the one, and call it with the two different nodes
-        for handler in process._handlers():  # pylint: disable=protected-access
+        for handler in process.get_process_handlers():
             # The `node_match` should match the `exit_codes` filter and so return a report instance
-            assert isinstance(handler(node_match), ProcessHandlerReport)
+            assert isinstance(handler(process, node_match), ProcessHandlerReport)
 
             # The `node_skip` has a wrong exit status and so should get skipped, returning `None`
-            assert handler(node_skip) is None
+            assert handler(process, node_skip) is None
+
+    def test_enabled_keyword_only(self):
+        """The `enabled` should be keyword only."""
+        with self.assertRaises(TypeError):
+
+            class SomeWorkChain(BaseRestartWorkChain):
+
+                @process_handler(True)  # pylint: disable=too-many-function-args
+                def _(self, node):
+                    pass
+
+        class SomeWorkChain(BaseRestartWorkChain):
+
+            @process_handler(enabled=False)
+            def _(self, node):
+                pass
+
+    def test_enabled(self):
+        """The `enabled` should be keyword only."""
+
+        class SomeWorkChain(BaseRestartWorkChain):
+
+            @process_handler
+            def enabled_handler(self, node):
+                pass
+
+        assert SomeWorkChain.enabled_handler.enabled  # pylint: disable=no-member
+
+        class SomeWorkChain(BaseRestartWorkChain):
+
+            @process_handler(enabled=False)
+            def disabled_handler(self, node):
+                pass
+
+        assert not SomeWorkChain.disabled_handler.enabled  # pylint: disable=no-member

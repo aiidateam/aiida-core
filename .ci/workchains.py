@@ -38,6 +38,7 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
             cls.results,
         )
         spec.exit_code(100, 'ERROR_TOO_BIG', message='The sum was too big.')
+        spec.exit_code(110, 'ERROR_ENABLED_DOOM', message='You should not have done that.')
 
     def setup(self):
         """Call the `setup` of the `BaseRestartWorkChain` and then create the inputs dictionary in `self.ctx.inputs`.
@@ -53,6 +54,11 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
         """My puny brain cannot deal with numbers that I cannot count on my hand."""
         if node.is_finished_ok and node.outputs.sum > 10:
             return ProcessHandlerReport(True, self.exit_codes.ERROR_TOO_BIG)
+
+    @process_handler(priority=460, enabled=False)
+    def disabled_handler(self, node):
+        """By default this is not enabled and so should never be called, irrespective of exit codes of sub process."""
+        return ProcessHandlerReport(True, self.exit_codes.ERROR_ENABLED_DOOM)
 
     @process_handler(priority=450, exit_codes=ExitCode(1000, 'Unicorn encountered'))
     def a_magic_unicorn_appeared(self, node):

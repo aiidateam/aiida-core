@@ -106,11 +106,12 @@ def test_no_enabled_disabled(configure_caching):
     }, {
         'enabled': ['aiida.spam:Ni']
     }, {
+        'default': True,
         'enabled': ['aiida.calculations:With:second_separator']
     }, {
         'enabled': ['aiida.sp*:Ni']
     }, {
-        'enabled': ['aiida.sp*!bar']
+        'disabled': ['aiida.sp*!bar']
     }, {
         'enabled': ['startswith.number.2bad']
     }, {
@@ -245,3 +246,22 @@ def test_disable_caching_global(configure_caching):
         with disable_caching():
             assert not get_use_cache(identifier='some_other_ident')
             assert not get_use_cache(identifier=specific_identifier)
+
+
+@pytest.mark.parametrize(
+    'identifier', [
+        'aiida.spam:Ni', 'aiida.calculations:With:second_separator', 'aiida.sp*:Ni', 'aiida.sp*!bar',
+        'startswith.number.2bad', 'some.thing.in.this.is.a.keyword'
+    ]
+)
+def test_enable_disable_invalid(identifier):
+    """
+    Test that the enable and disable context managers raise when given
+    an invalid identifier.
+    """
+    with pytest.raises(ValueError):
+        with enable_caching(identifier=identifier):
+            pass
+    with pytest.raises(ValueError):
+        with disable_caching(identifier=identifier):
+            pass

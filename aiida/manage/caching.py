@@ -253,7 +253,7 @@ def _validate_identifier_pattern(*, identifier):
 
     2. a fully qualified Python name
 
-        this is a column-separated string, where each part satisfies
+        this is a colon-separated string, where each part satisfies
         `part.isidentifier() and not keyword.iskeyword(part)`
 
     This function checks if an identifier _with_ wildcards can possibly

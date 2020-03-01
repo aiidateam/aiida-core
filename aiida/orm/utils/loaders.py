@@ -8,10 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `OrmEntityLoader` and its sub classes that simplify loading entities through their identifiers."""
+from abc import abstractclassmethod
 from enum import Enum
 
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
-from aiida.common.lang import abstractclassmethod, classproperty
+from aiida.common.lang import classproperty
 from aiida.orm.querybuilder import QueryBuilder
 
 __all__ = (

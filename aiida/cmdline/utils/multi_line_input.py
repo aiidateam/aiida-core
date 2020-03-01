@@ -76,7 +76,7 @@ def edit_pre_post(pre=None, post=None, summary=None):
         pre = re.sub(r'(^#=.*$\n)+', '', pre, flags=re.M).strip()
         post = re.sub(r'(^#=.*$\n)+', '', post, flags=re.M).strip()
     else:
-        pre, post = ('', '')
+        pre, post = (pre or '', post or '')
     return pre, post
 
 

@@ -277,8 +277,12 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @options_computer.WORKDIR(contextual_default=partial(get_parameter_default, 'work_dir'))
 @options_computer.MPI_RUN_COMMAND(contextual_default=partial(get_parameter_default, 'mpirun_command'))
 @options_computer.MPI_PROCS_PER_MACHINE(contextual_default=partial(get_parameter_default, 'mpiprocs_per_machine'))
-@options.PREPEND_TEXT()
-@options.APPEND_TEXT()
+@options.PREPEND_TEXT(
+    cls=options.ContextualDefaultOption, contextual_default=partial(get_parameter_default, 'prepend_text')
+)
+@options.APPEND_TEXT(
+    cls=options.ContextualDefaultOption, contextual_default=partial(get_parameter_default, 'append_text')
+)
 @options.NON_INTERACTIVE()
 @click.pass_context
 @with_dbenv()

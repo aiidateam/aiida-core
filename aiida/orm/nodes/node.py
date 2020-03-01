@@ -85,7 +85,7 @@ class Node(Entity, metaclass=AbstractNodeMeta):
     _hash_ignored_attributes = tuple()
 
     # Flag that determines whether the class can be cached.
-    _cachable = True
+    _cachable = False
 
     # Base path within the repository where to put objects by default
     _repository_base_path = 'path'

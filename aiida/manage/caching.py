@@ -11,6 +11,7 @@
 import os
 import re
 import copy
+import keyword
 from enum import Enum
 from collections import namedtuple
 from contextlib import contextmanager, suppress
@@ -20,6 +21,8 @@ from wrapt import decorator
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
+
+from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, entry_point_group_to_module_path_map
 
 __all__ = ('get_use_cache', 'enable_caching', 'disable_caching')
 
@@ -75,6 +78,13 @@ def _get_config(config_file):
         type_check(config[ConfigKeys.DISABLED.value], list)
     except TypeError as exc:
         raise exceptions.ConfigurationError('Invalid type in caching configuration file.') from exc
+
+    # Check validity of enabled and disabled entries
+    try:
+        for identifier in config[ConfigKeys.ENABLED.value] + config[ConfigKeys.DISABLED.value]:
+            _validate_identifier_pattern(identifier=identifier)
+    except ValueError as exc:
+        raise exceptions.ConfigurationError('Invalid identifier pattern in enable or disable list.') from exc
 
     return config
 
@@ -183,8 +193,8 @@ def enable_caching(*, identifier=None):
 
     .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
 
-    :param node_class: Node class for which caching should be enabled.
-    :param identifier: the full entry point string of the process, e.g. `aiida.calculations:arithmetic.add`
+    :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
+    :type identifier: str
     """
 
     type_check(identifier, (type(None), str))
@@ -193,6 +203,7 @@ def enable_caching(*, identifier=None):
             _CONFIG[ConfigKeys.DEFAULT.value] = True
             _CONFIG[ConfigKeys.DISABLED.value] = []
         else:
+            _validate_identifier_pattern(identifier=identifier)
             _CONFIG[ConfigKeys.ENABLED.value].append(identifier)
             with suppress(ValueError):
                 _CONFIG[ConfigKeys.DISABLED.value].remove(identifier)
@@ -205,8 +216,8 @@ def disable_caching(*, identifier=None):
 
     .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
 
-    :param node_class: Node class for which caching should be disabled.
-    :param identifier: the full entry point string of the process, e.g. `aiida.calculations:arithmetic.add`
+    :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
+    :type identifier: str
     """
     type_check(identifier, (type(None), str))
 
@@ -215,6 +226,7 @@ def disable_caching(*, identifier=None):
             _CONFIG[ConfigKeys.DEFAULT.value] = False
             _CONFIG[ConfigKeys.ENABLED.value] = []
         else:
+            _validate_identifier_pattern(identifier=identifier)
             _CONFIG[ConfigKeys.DISABLED.value].append(identifier)
             with suppress(ValueError):
                 _CONFIG[ConfigKeys.ENABLED.value].remove(identifier)
@@ -228,3 +240,71 @@ def _match_wildcard(*, string, pattern):
     """
     regexp = '.*'.join(re.escape(part) for part in pattern.split('*'))
     return re.fullmatch(pattern=regexp, string=string) is not None
+
+
+def _validate_identifier_pattern(*, identifier):
+    """
+    The identifier (without wildcards) can have one of two forms:
+
+    1.  <group_name><ENTRY_POINT_STRING_SEPARATOR><tail>
+
+        where `group_name` is one of the keys in `entry_point_group_to_module_path_map`
+        and `tail` can be anything _except_ `ENTRY_POINT_STRING_SEPARATOR`.
+
+    2. a fully qualified Python name
+
+        this is a column-separated string, where each part satisfies
+        `part.isidentifier() and not keyword.iskeyword(part)`
+
+    This function checks if an identifier _with_ wildcards can possibly
+    match one of these two forms. If it can not, a `ValueError` is raised.
+
+    :param identifier: Process type string, or a pattern with '*' wildcard that matches it.
+    :type identifier: str
+    """
+    common_error_msg = "Invalid identifier pattern '{}': ".format(identifier)
+    assert ENTRY_POINT_STRING_SEPARATOR not in '.*'  # The logic of this function depends on this
+    # Check if it can be an entry point string
+    if identifier.count(ENTRY_POINT_STRING_SEPARATOR) > 1:
+        raise ValueError(
+            common_error_msg +
+            "Can contain at most one entry point string separator '{}'".format(ENTRY_POINT_STRING_SEPARATOR)
+        )
+    # If there is one separator, it must be and entry point string.
+    # Check if the left hand side is a matching pattern
+    if ENTRY_POINT_STRING_SEPARATOR in identifier:
+        group_pattern, _ = identifier.split(ENTRY_POINT_STRING_SEPARATOR)
+        if not any(
+            _match_wildcard(string=group_name, pattern=group_pattern)
+            for group_name in entry_point_group_to_module_path_map
+        ):
+            raise ValueError(
+                common_error_msg + "Group name pattern '{}' does not match any of the AiiDA entry point group names.".
+                format(group_pattern)
+            )
+        # The group name pattern matches, and there are no further
+        # entry point string separators in the identifier, hence it is
+        # a valid pattern.
+        return
+    # The separator might be swallowed in a wildcard
+    if '*' in identifier:
+        group_part, _ = identifier.split('*', 1)
+        if any(group_name.startswith(group_part) for group_name in entry_point_group_to_module_path_map):
+            return
+    # Finally, check if it could be a fully qualified Python name
+    for identifier_part in identifier.split('.'):
+        # If it contains a wildcard, we can not check for keywords.
+        # Replacing all wildcards with a single letter must give an
+        # identifier - this checks for invalid characters, and that it
+        # does not start with a number.
+        if '*' in identifier_part:
+            if not identifier_part.replace('*', 'a').isidentifier():
+                raise ValueError(
+                    common_error_msg +
+                    "Identifier part '{}' can not match a fully qualified Python name.".format(identifier_part)
+                )
+        else:
+            if not identifier_part.isidentifier():
+                raise ValueError(common_error_msg + "'{}' is not a valid Python identifier.".format(identifier_part))
+            if keyword.iskeyword(identifier_part):
+                raise ValueError(common_error_msg + "'{}' is a reserved Python keyword.".format(identifier_part))

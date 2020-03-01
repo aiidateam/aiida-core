@@ -94,7 +94,29 @@ def test_no_enabled_disabled(configure_caching):
         assert not get_use_cache(identifier='aiida.calculations:templatereplacer')
 
 
-@pytest.mark.parametrize('config_dict', [{'wrong_key': ['foo']}, {'default': 2}, {'enabled': 4}, {'default': 'string'}])
+@pytest.mark.parametrize(
+    'config_dict', [{
+        'wrong_key': ['foo']
+    }, {
+        'default': 2
+    }, {
+        'enabled': 4
+    }, {
+        'default': 'string'
+    }, {
+        'enabled': ['aiida.spam:Ni']
+    }, {
+        'enabled': ['aiida.calculations:With:second_separator']
+    }, {
+        'enabled': ['aiida.sp*:Ni']
+    }, {
+        'enabled': ['aiida.sp*!bar']
+    }, {
+        'enabled': ['startswith.number.2bad']
+    }, {
+        'enabled': ['some.thing.in.this.is.a.keyword']
+    }]
+)
 def test_invalid_configuration_dict(configure_caching, config_dict):
     """Test that `configure` raises for invalid configurations."""
 
@@ -129,6 +151,10 @@ def test_default(use_default_configuration):  # pylint: disable=unused-argument
     ({
         'default': False,
         'enabled': ['aiida.calculations:*'],
+    }, ['aiida.calculations:templatereplacer', 'aiida.calculations:arithmetic.add'], ['some_identifier']),
+    ({
+        'default': False,
+        'enabled': ['aiida.calcul*'],
     }, ['aiida.calculations:templatereplacer', 'aiida.calculations:arithmetic.add'], ['some_identifier']),
     ({
         'default': False,

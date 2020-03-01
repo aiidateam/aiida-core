@@ -114,7 +114,7 @@ def get_use_cache(*, identifier=None):
     :raises: `~aiida.common.exceptions.ConfigurationError` if the configuration is invalid, either due to a general
         configuration error, or by defining the class both enabled and disabled
     """
-    type_check(identifier, (type(None), str))
+    type_check(identifier, str, allow_none=True)
 
     if identifier is not None:
         type_check(identifier, str)

@@ -77,9 +77,6 @@ def test_empty_enabled_disabled(configure_caching):
     which is not unlikely to occurr in the wild.
     """
     with configure_caching(config_dict={'default': True, 'enabled': None, 'disabled': None}):
-        from aiida.manage.caching import _CONFIG
-        print(_CONFIG)
-
         # Check that `get_use_cache` also does not except, and works as expected
         assert get_use_cache(identifier='aiida.calculations:templatereplacer')
 

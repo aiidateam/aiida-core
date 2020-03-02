@@ -152,6 +152,8 @@ class TestVerdiCodeCommands(AiidaTestCase):
             )
             code.label = 'code'
             code.description = 'desc'
+            code.set_prepend_text('text to prepend')
+            code.set_append_text('text to append')
             code.store()
         self.code = code
 
@@ -237,7 +239,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertTrue(str(self.code.pk) in result.output)
 
     def test_code_duplicate_interactive(self):
-        """Test code duplication interacgtive."""
+        """Test code duplication interactive."""
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'code_duplicate_interactive'
@@ -252,7 +254,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertEqual(self.code.get_append_text(), new_code.get_append_text())
 
     def test_code_duplicate_non_interactive(self):
-        """Test code duplication non-interacgtive."""
+        """Test code duplication non-interactive."""
         label = 'code_duplicate_noninteractive'
         result = self.cli_runner.invoke(code_duplicate, ['--non-interactive', '--label=' + label, str(self.code.pk)])
         self.assertIsNone(result.exception, result.output)

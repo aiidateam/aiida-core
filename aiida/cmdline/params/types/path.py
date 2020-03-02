@@ -9,7 +9,9 @@
 ###########################################################################
 """Click parameter types for paths."""
 import os
-import urllib
+# See https://stackoverflow.com/a/41217363/1069467
+import urllib.request
+import urllib.error
 
 import click
 
@@ -53,10 +55,11 @@ class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
 class ImportPath(click.Path):
     """AiiDA extension of Click's Path-type to include URLs
     An ImportPath can either be a `click.Path`-type or a URL.
+
     :param timeout_seconds: Timeout time in seconds that a URL response is expected.
     :value timeout_seconds: Must be an int in the range [0;60], extrema included.
-    If an int outside the range [0;60] is given, the value will be set to the respective extremum value.
-    If any other type than int is given a TypeError will be raised.
+      If an int outside the range [0;60] is given, the value will be set to the respective extremum value.
+      If any other type than int is given a TypeError will be raised.
     """
 
     # pylint: disable=protected-access

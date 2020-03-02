@@ -270,7 +270,7 @@ def _validate_identifier_pattern(*, identifier):
             common_error_msg +
             "Can contain at most one entry point string separator '{}'".format(ENTRY_POINT_STRING_SEPARATOR)
         )
-    # If there is one separator, it must be and entry point string.
+    # If there is one separator, it must be an entry point string.
     # Check if the left hand side is a matching pattern
     if ENTRY_POINT_STRING_SEPARATOR in identifier:
         group_pattern, _ = identifier.split(ENTRY_POINT_STRING_SEPARATOR)

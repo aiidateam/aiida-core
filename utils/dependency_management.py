@@ -72,33 +72,7 @@ def _setuptools_to_conda(req):
 
 @click.group()
 def cli():
-    """Utility to update dependency requirements for `aiida-core`.
-
-    Since `aiida-core` fixes the versions of almost all of its dependencies, once in a while these need to be updated.
-    This is a manual process, but this CLI attempts to simplify it somewhat. The idea is to remote all explicit version
-    restrictions from the `setup.json`, except for those packages where it is known that a upper limit is necessary.
-    This is accomplished by the command:
-
-        python dependency_management.py unrestrict
-
-    The command will update the `setup.json` to remove all explicit limits, except for those packages specified by the
-    `--exclude` option. After this step, install `aiida-core` through pip with the `[all]` flag to install all optional
-    extra requirements as well. Since there are no explicit version requirements anymore, pip should install the latest
-    available version for each dependency.
-
-    Once all the tests complete successfully, run the following command:
-
-        pip freeze > requirements.txt
-
-    This will now capture the exact versions of the packages installed in the virtual environment. Since the tests run
-    for this setup, we can now set those versions as the new requirements in the `setup.json`. Note that this is why a
-    clean virtual environment should be used for this entire procedure. Now execute the command:
-
-        python dependency_management.py update requirements.txt
-
-    This will now update the `setup.json` to reinstate the exact version requirements for all dependencies. Commit the
-    changes to `setup.json` and make a pull request.
-    """
+    """Manage dependencies of the aiida-core package."""
 
 
 @cli.command('generate-environment-yml')

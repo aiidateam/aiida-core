@@ -197,7 +197,7 @@ def enable_caching(*, identifier=None):
     :type identifier: str
     """
 
-    type_check(identifier, (type(None), str))
+    type_check(identifier, str, allow_none=True)
     with _reset_config():
         if identifier is None:
             _CONFIG[ConfigKeys.DEFAULT.value] = True
@@ -219,7 +219,7 @@ def disable_caching(*, identifier=None):
     :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
     :type identifier: str
     """
-    type_check(identifier, (type(None), str))
+    type_check(identifier, str, allow_none=True)
 
     with _reset_config():
         if identifier is None:
@@ -286,7 +286,8 @@ def _validate_identifier_pattern(*, identifier):
         # entry point string separators in the identifier, hence it is
         # a valid pattern.
         return
-    # The separator might be swallowed in a wildcard
+    # The separator might be swallowed in a wildcard, for example
+    # aiida.* or aiida.calculations*
     if '*' in identifier:
         group_part, _ = identifier.split('*', 1)
         if any(group_name.startswith(group_part) for group_name in entry_point_group_to_module_path_map):

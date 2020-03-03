@@ -46,7 +46,7 @@ jobs:
     - name: Create conda environment
       run: |
         conda env create -f environment.yml -n test-environment
-        source activate test-environment
+        conda activate test-environment
 
     - name: Install AiiDA in conda environment
       run:

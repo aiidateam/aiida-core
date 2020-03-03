@@ -1,8 +1,30 @@
 # Changelog
 
+## v1.1.1
+
+### Changes
+- Emit a warning when input port specifies a node instance as default [[#3466]](https://github.com/aiidateam/aiida-core/pull/3466)
+- `BaseRestartWorkChain`: require process handlers to be instance methods [[#3782]](https://github.com/aiidateam/aiida-core/pull/3782)
+- `BaseRestartWorkChain`: add method to enable/disable process handlers [[#3786]](https://github.com/aiidateam/aiida-core/pull/3786)
+- Docker container: remove conda activation from configure-aiida.sh script [[#3791]](https://github.com/aiidateam/aiida-core/pull/3791)
+- Add fixtures to clear the database before or after tests [[#3783]](https://github.com/aiidateam/aiida-core/pull/3783)
+- `verdi status`: add the configuration directory path to the output [[#3587]](https://github.com/aiidateam/aiida-core/pull/3587)
+- `QueryBuilder`: add support for `datetime.date` objects in filters [[#3796]](https://github.com/aiidateam/aiida-core/pull/3796)
+
+### Bug fixes
+- Fix bugs in `Node._store_from_cache` and `Node.repository.erase` that could result in calculations not being reused [[#3777]](https://github.com/aiidateam/aiida-core/pull/3777)
+- Caching: fix configuration spec and validation [[#3785]](https://github.com/aiidateam/aiida-core/pull/3785)
+- Write migrated config to disk in `Config.from_file` [[#3797]](https://github.com/aiidateam/aiida-core/pull/3797)
+- Validate label string at code setup stage [[#3793]](https://github.com/aiidateam/aiida-core/pull/3793)
+- Reuse `prepend_text` and `append_text` in `verdi computer/code duplicate` [[#3788]](https://github.com/aiidateam/aiida-core/pull/3788)
+- Fix broken imports of `urllib` in various locations including `verdi import` [[#3767]](https://github.com/aiidateam/aiida-core/pull/3767)
+- Match headers with actual output for `verdi data structure list` [[#3756]](https://github.com/aiidateam/aiida-core/pull/3756)
+- Disable caching for the `Data` node subclass (this should not affect usual caching behavior) [[#3807]](https://github.com/aiidateam/aiida-core/pull/3807)
+
+
 ## v1.1.0
 
-**Note Bene:** although this is a minor version release, the support for python 2 is dropped [(#3566)](https://github.com/aiidateam/aiida-core/pull/3566) following the reasoning outlined in the corresponding [AEP001](https://github.com/aiidateam/AEP/tree/master/001_drop_python2).
+**Nota Bene:** although this is a minor version release, the support for python 2 is dropped [(#3566)](https://github.com/aiidateam/aiida-core/pull/3566) following the reasoning outlined in the corresponding [AEP001](https://github.com/aiidateam/AEP/tree/master/001_drop_python2).
 Critical bug fixes for python 2 will be supported until July 1 2020 on the `v1.0.*` release series.
 With the addition of python 3.8 [(#3719)](https://github.com/aiidateam/aiida-core/pull/3719), this version is now compatible with all current python versions that are not end-of-life:
  * 3.5

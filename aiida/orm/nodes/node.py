@@ -85,7 +85,7 @@ class Node(Entity, metaclass=AbstractNodeMeta):
     _hash_ignored_attributes = tuple()
 
     # Flag that determines whether the class can be cached.
-    _cachable = True
+    _cachable = False
 
     # Base path within the repository where to put objects by default
     _repository_base_path = 'path'
@@ -1090,6 +1090,11 @@ class Node(Entity, metaclass=AbstractNodeMeta):
             if key != Sealable.SEALED_KEY:
                 self.set_attribute(key, value)
 
+        # The erase() removes the current content of the sandbox folder.
+        # If this was not done, the content of the sandbox folder could
+        # become mangled when copying over the content of the cache
+        # source repository folder.
+        self._repository.erase()
         self.put_object_from_tree(cache_node._repository._get_base_folder().abspath)  # pylint: disable=protected-access
 
         self._store(with_transaction=with_transaction, clean=False)

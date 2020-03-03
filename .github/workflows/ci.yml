@@ -4,10 +4,30 @@ on: [push, pull_request]
 
 jobs:
 
-  conda:
+  install-with-pip:
 
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Pip install
+      env:
+        PYTHON_VERSION: 3.7
+      run: |
+        python -m pip install -e .
+        python -m pip freeze
+
+  install-with-conda:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
     - uses: actions/checkout@v1

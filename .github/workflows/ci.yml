@@ -182,11 +182,14 @@ jobs:
         file: ./coverage.xml
         fail_ci_if_error: false
 
-    - name: Show test environment
-      env:
-        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
-      run:
-        python -m pip freeze
+    - name: Freeze test environment
+      run: |
+        pip freeze | tee requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
+
+    - uses: actions/upload-artifact@v1
+      with:
+        name: requirements.txt
+        path: requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
 
   verdi:
 

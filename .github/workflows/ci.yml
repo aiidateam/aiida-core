@@ -18,11 +18,13 @@ jobs:
         python-version: 3.7
 
     - name: Pip install
-      env:
-        PYTHON_VERSION: 3.7
       run: |
         python -m pip install -e .
         python -m pip freeze
+
+    - name: Test package import
+      run:
+        python -c "import aiida"
 
   install-with-conda:
 
@@ -37,11 +39,22 @@ jobs:
       with:
         python-version: 3.7
 
-    - name: Conda install
-      env:
-        PYTHON_VERSION: 3.7
+    - name: Install conda
       run:
-        .github/workflows/conda.sh
+        .github/workflows/install-conda.sh
+
+    - name: Create conda environment
+      run: |
+        conda env create -f environment.yml -n test-environment
+        source activate test-environment
+
+    - name: Install AiiDA in conda environment
+      run:
+        python -m pip install --no-deps -e .
+
+    - name: Test package import
+      run:
+        python -c "import aiida"
 
   docs:
 

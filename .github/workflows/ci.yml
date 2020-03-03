@@ -52,7 +52,8 @@ jobs:
         python -m pip install --no-deps -e .
 
     - name: Test package import
-      run:
+      run: |
+        source activate test-environment
         python -c "import aiida"
 
   docs:

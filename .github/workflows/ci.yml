@@ -29,13 +29,9 @@ jobs:
   install-with-conda:
 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.6, 3.7, 3.8]
+    name: install-with-conda
 
-    name: install-with-conda-py-${{ matrix.python-version }}
-
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
     - uses: actions/checkout@v1
@@ -44,17 +40,15 @@ jobs:
       uses: s-weigand/setup-conda@v1
       with:
         update-conda: true
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.7
     - run: conda --version
+    - run: python --version
     - run: which python
 
     - name: Create conda environment
       run: |
-        conda env create -f environment.yml -n test-environment-py-${{ matrix.python-version }}
-        conda activate test-environment-py-${{ matrix.python-version }}
-
-    - name: Install AiiDA in conda environment
-      run:
+        conda env create -f environment.yml -n test-environment
+        source activate test-environment
         python -m pip install --no-deps -e .
 
     - name: Test package import

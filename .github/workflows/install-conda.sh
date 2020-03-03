@@ -9,9 +9,3 @@ conda config --set always_yes yes --set changeps1 no
 
 conda update -q conda
 conda info -a
-conda env create -f environment.yml -n test-environment
-
-# Test installation
-source activate test-environment
-python -m pip install --no-deps -e .
-python -c 'import aiida'  # import check

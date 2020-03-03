@@ -29,24 +29,29 @@ jobs:
   install-with-conda:
 
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+
+    name: install-with-conda-py-${{ matrix.python-version }}
+
+    timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@v1
 
-    - name: Set up Python 3.7
-      uses: actions/setup-python@v1
+    - name: Setup Conda
+      uses: s-weigand/setup-conda@v1
       with:
-        python-version: 3.7
-
-    - name: Install conda
-      run:
-        .github/workflows/install-conda.sh
+        update-conda: true
+        python-version: ${{ matrix.python-version }}
+    - run: conda --version
+    - run: which python
 
     - name: Create conda environment
       run: |
-        conda env create -f environment.yml -n test-environment
-        conda activate test-environment
+        conda env create -f environment.yml -n test-environment-py-${{ matrix.python-version }}
+        conda activate test-environment-py-${{ matrix.python-version }}
 
     - name: Install AiiDA in conda environment
       run:

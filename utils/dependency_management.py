@@ -10,9 +10,11 @@
 ###########################################################################
 """Utility CLI to update dependency version requirements of the `setup.json`."""
 
+import sys
 import re
 import json
 import copy
+import subprocess
 from pathlib import Path
 from collections import OrderedDict
 from pkg_resources import Requirement
@@ -303,6 +305,25 @@ def validate_all(ctx):
     ctx.invoke(validate_environment_yml)
     ctx.invoke(validate_requirements_for_rtd)
     ctx.invoke(validate_pyproject_toml)
+
+
+@cli.command()
+@click.argument('extras', nargs=-1)
+def pip_install_extras(extras):
+    """Install extra requirements.
+
+    Install extra requirements in isolation without triggering the installlation
+    of other installation requirements of the core package.
+    """
+    # Read the requirements from 'setup.json'
+    setup_cfg = _load_setup_cfg()
+
+    to_install = set()
+    for key in extras:
+        to_install.update(Requirement.parse(r) for r in setup_cfg['extras_require'][key])
+
+    cmd = [sys.executable, '-m', 'pip', 'install'] + [str(r) for r in to_install]
+    subprocess.run(cmd, check=True)
 
 
 @cli.command('unrestrict')

@@ -2,9 +2,7 @@
   rev: v2.2.3
   hooks:
   - id: trailing-whitespace
-    exclude: utils/toml/*
   - id: double-quote-string-fixer
-    exclude: utils/toml/*
 
 - repo: local
   hooks:
@@ -88,7 +86,6 @@
         aiida/tools/dbimporters/plugins/pcod.py|
         docs/.*|
         examples/.*|
-        utils/toml/.*|
         tests/engine/test_work_chain.py|
         tests/schedulers/test_direct.py|
         tests/schedulers/test_lsf.py|

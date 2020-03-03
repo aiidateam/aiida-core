@@ -118,6 +118,7 @@ jobs:
 
   tests:
 
+    needs: [install-with-pip, install-with-conda]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

@@ -158,6 +158,12 @@ jobs:
       run:
         .github/workflows/tests.sh
 
+    - name: Show test environment
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run:
+        python -m pip freeze
+
   verdi:
 
     runs-on: ubuntu-latest

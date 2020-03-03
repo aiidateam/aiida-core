@@ -12,6 +12,6 @@ conda info -a
 conda env create -f environment.yml -n test-environment
 
 # Test installation
-conda activate test-environment
+source activate test-environment
 python -m pip install --no-deps -e .
 python -c 'import aiida'  # import check

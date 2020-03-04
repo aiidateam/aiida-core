@@ -122,7 +122,7 @@ To start the server and add it as a self-starting service, run:
     brew services start rabbitmq
 
 
-You can check whether it is running by checking the status through the command:
+After a few seconds, check whether it is running by checking the status through the command:
 
 .. code-block:: bash
 
@@ -157,7 +157,7 @@ To start the ``rabbitmq`` server, run:
 
     sudo launchctl load -w /Library/LaunchDaemons/org.macports.rabbitmq-server.plist
 
-You can check whether it is running as follows:
+After a few seconds, check whether it is running as follows:
 
 .. code-block:: bash
 

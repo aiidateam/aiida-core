@@ -151,9 +151,6 @@ jobs:
 
       - name: Prepare requirements.txt
         run: |
-          ls
-          ls *
-          ls tmp/
           mv tmp/requirements-django-py-3.8.txt requirements.txt
           sed -i '1d' requirements.txt
           rm -r tmp/
@@ -164,5 +161,5 @@ jobs:
           commit-message: "Update requirements.txt"
           token: ${{ secrets.GITHUB_TOKEN }}
           title: "Update requirements.txt"
-          reviewers: aiidateam/dependency-manager
+          team-reviewers: aiidateam/dependency-manager
           branch: "dm/update-requirements.txt"

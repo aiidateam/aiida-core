@@ -2,11 +2,15 @@ name: aiida-core-dependency-management
 
 on:
   push:
+    branch:
+      - develop
+      - misc/update-dependency-management   # TODO: Remove before merge
     paths:
       - 'setup.*'
       - 'environment.yml'
       - 'requirements*.txt'
       - 'pyproject.toml'
+      - '.github/workflows/*'
   schedule:
     - cron: '30 02 * * *'  # nightly build
 
@@ -124,7 +128,24 @@ jobs:
       run: |
         pip freeze | tee requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
 
-    - uses: actions/upload-artifact@v1
+    - name: Upload requirements.txt
+      uses: actions/upload-artifact@v1
       with:
         name: requirements.txt
         path: requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
+
+    - name: Update requirements.txt
+      if: matrix.backend == 'django' && matrix.python-version == '3.8'
+      run: |
+        sed '1d' requirements-django-py-3.8.txt > requirements.txt
+        git add requirements.txt
+
+    - name: Create Pull Request for updated requirements.txt
+      if: matrix.backend == 'django' && matrix.python-version == '3.8'
+      uses: peter-evans/create-pull-request@v2.4.4
+      with:
+        commit-message: "Update requirements.txt"
+        token: ${{ secrets.GITHUB_TOKEN }}
+        title: "Update requirements.txt"
+        reviewers: csadorf
+        branch: "dm/update-requirements.txt"

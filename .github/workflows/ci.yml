@@ -130,6 +130,16 @@ jobs:
         name: requirements.txt
         path: requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
 
+    - name: Upload coverage report
+      if: matrix.python-version == 3.5
+      uses: codecov/codecov-action@v1.0.5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: aiida-pytests-py3.5-${{ matrix.backend }}
+        flags: ${{ matrix.backend }}
+        file: ./coverage.xml
+        fail_ci_if_error: false
+
   verdi:
 
     runs-on: ubuntu-latest

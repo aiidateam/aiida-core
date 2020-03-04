@@ -135,7 +135,7 @@ jobs:
         name: requirements.txt
         path: requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
 
- update-requirements:
+  update-requirements:
 
     needs: tests
     runs-on: ubuntu-latest

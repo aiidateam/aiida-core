@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Set up Python 3.7
       uses: actions/setup-python@v1
@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Setup Conda
       uses: s-weigand/setup-conda@v1
@@ -82,7 +82,7 @@ jobs:
         backend: ['django', 'sqlalchemy']
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: CasperWA/postgresql-action@v1.2
       with:
         postgresql version: '10'

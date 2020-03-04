@@ -133,15 +133,17 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
     :rtype: object
     """
 
-    def get_code(entry_point, executable, computer=aiida_localhost, append=None, prepend=None):
+    def get_code(entry_point, executable, computer=aiida_localhost, prepend_text=None, append_text=None):
         """Get local code.
         Sets up code for given entry point on given computer.
 
         :param entry_point: Entry point of calculation plugin
         :param executable: name of executable; will be searched for in local system PATH.
         :param computer: (local) AiiDA computer
-        :param append: Append text for code setup
-        :param append: Prepend text for code setup
+        :param prepend: a string of code that will be put in the scheduler script before the
+            execution of the code.
+        :param append: a string of code that will be put in the scheduler script after the
+            execution of the code.
         :return: The code node
         :rtype: :py:class:`aiida.orm.Code`
         """
@@ -160,10 +162,10 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
             input_plugin_name=entry_point,
             remote_computer_exec=[computer, executable_path],
         )
-        if append is not None:
-            code.set_append_text(append)
-        if prepend is not None:
-            code.set_prepend_text(prepend)
+        if prepend_text is not None:
+            code.set_prepend_text(prepend_text)
+        if append_text is not None:
+            code.set_append_text(append_text)
         code.label = executable
         return code.store()
 

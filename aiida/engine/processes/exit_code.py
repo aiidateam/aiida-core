@@ -8,49 +8,66 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A namedtuple and namespace for ExitCodes that can be used to exit from Processes."""
-
-from collections import namedtuple
-
 from aiida.common.extendeddicts import AttributeDict
 
 __all__ = ('ExitCode', 'ExitCodesNamespace')
 
-ExitCode = namedtuple('ExitCode', ['status', 'message', 'invalidates_cache'])
-ExitCode.__new__.__defaults__ = (0, None, False)
-"""
-A namedtuple to define an exit code for a :class:`~aiida.engine.processes.process.Process`.
 
-When this namedtuple is returned from a Process._run() call, it will be interpreted that the Process
-should be terminated and that the exit status and message of the namedtuple should be set to the
-corresponding attributes of the node.
+class ExitCode:
+    """A simple data class to define an exit code for a :class:`~aiida.engine.processes.process.Process`.
 
-:param status: positive integer exit status, where a non-zero value indicated the process failed, default is `0`
-:type status: int
+    When an instance of this clas is returned from a `Process._run()` call, it will be interpreted that the `Process`
+    should be terminated and that the exit status and message of the namedtuple should be set to the corresponding
+    attributes of the node.
 
-:param message: optional message with more details about the failure mode
-:type message: str
+    :param status: positive integer exit status, where a non-zero value indicated the process failed, default is `0`
+    :type status: int
 
-:param invalidates_cache: optional flag, indicating that a process should not be used in caching
-:type invalidates_cache: bool
-"""
+    :param message: optional message with more details about the failure mode
+    :type message: str
+
+    :param invalidates_cache: optional flag, indicating that a process should not be used in caching
+    :type invalidates_cache: bool
+    """
+
+    def __init__(self, status=0, message=None, invalidates_cache=False):
+        self.status = status
+        self.message = message
+        self.invalidates_cache = invalidates_cache
+
+    def __call__(self, **kwargs):
+        """Create a clone of this exit code where the template message is replaced by the keyword arguments.
+
+        :param kwargs: replacement parameters for the template message
+        :return: `ExitCode`
+        """
+        try:
+            message = self.message.format(**kwargs)
+        except KeyError:
+            template = 'insufficient or incorrect format parameters `{}` for the message template `{}`.'
+            raise ValueError(template.format(kwargs, self.message))
+
+        return ExitCode(self.status, message, self.invalidates_cache)
+
+    def __eq__(self, other):
+        return all(getattr(self, attr) == getattr(other, attr) for attr in ['status', 'message', 'invalidates_cache'])
 
 
 class ExitCodesNamespace(AttributeDict):
-    """
-    A namespace of ExitCode tuples that can be accessed through getattr as well as getitem.
-    Additionally, the collection can be called with an identifier, that can either reference
-    the integer `status` of the ExitCode that needs to be retrieved or the key in the collection
+    """A namespace of `ExitCode` instances that can be accessed through getattr as well as getitem.
+
+    Additionally, the collection can be called with an identifier, that can either reference the integer `status` of the
+    `ExitCode` that needs to be retrieved or the key in the collection.
     """
 
     def __call__(self, identifier):
-        """
-        Return a specific exit code identified by either its exit status or label
+        """Return a specific exit code identified by either its exit status or label.
 
-        :param identifier: the identifier of the exit code. If the type is integer, it will be interpreted as
-            the exit code status, otherwise it be interpreted as the exit code label
+        :param identifier: the identifier of the exit code. If the type is integer, it will be interpreted as the exit
+            code status, otherwise it be interpreted as the exit code label
         :type identifier: str
 
-        :returns: an ExitCode named tuple
+        :returns: an `ExitCode` instance
         :rtype: :class:`aiida.engine.ExitCode`
 
         :raises ValueError: if no exit code with the given label is defined for this process

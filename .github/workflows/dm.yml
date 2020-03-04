@@ -150,7 +150,10 @@ jobs:
 
       - name: Prepare requirements.txt
         run: |
-          mv tmp/requirements.txt/requirements-django-py-3.8.txt requirements.txt
+          ls
+          ls *
+          ls tmp/
+          mv tmp/requirements-django-py-3.8.txt requirements.txt
           sed -i '1d' requirements.txt
           rm -r tmp/
 

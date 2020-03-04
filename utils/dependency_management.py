@@ -13,7 +13,6 @@
 import sys
 import re
 import json
-import copy
 import subprocess
 from pathlib import Path
 from collections import OrderedDict
@@ -22,8 +21,6 @@ from pkg_resources import Requirement
 import click
 import yaml
 import toml
-
-from validate_consistency import write_setup_json
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
@@ -324,90 +321,6 @@ def pip_install_extras(extras):
 
     cmd = [sys.executable, '-m', 'pip', 'install'] + [str(r) for r in to_install]
     subprocess.run(cmd, check=True)
-
-
-@cli.command('unrestrict')
-@click.option('--exclude', multiple=True, help='List of package names to exclude from updating.')
-def unrestrict_requirements(exclude):
-    """Remove all explicit dependency version restrictions from `setup.json`.
-
-    Warning, this currently only works for dependency requirements that use the `==` operator. Statements with different
-    operators, additional filters after a semicolon, or with extra requirements (using `[]`) are not supported. The
-    limits for these statements will have to be updated manually.
-    """
-    setup = _load_setup_cfg()
-    clone = copy.deepcopy(setup)
-    clone['install_requires'] = []
-
-    if exclude:
-        exclude = list(exclude).extend(DEFAULT_EXCLUDE_LIST)
-    else:
-        exclude = DEFAULT_EXCLUDE_LIST
-
-    for requirement in setup['install_requires']:
-        if requirement in exclude or ';' in requirement or '==' not in requirement:
-            clone['install_requires'].append(requirement)
-        else:
-            package = requirement.split('==')[0]
-            clone['install_requires'].append(package)
-
-    for extra, requirements in setup['extras_require'].items():
-        clone['extras_require'][extra] = []
-
-        for requirement in requirements:
-            if requirement in exclude or ';' in requirement or '==' not in requirement:
-                clone['extras_require'][extra].append(requirement)
-            else:
-                package = requirement.split('==')[0]
-                clone['extras_require'][extra].append(package)
-
-    write_setup_json(clone)
-
-
-@cli.command('update')
-@click.argument('requirements', type=click.File(mode='r'))
-def update_requirements(requirements):
-    """Apply version restrictions from REQUIREMENTS.
-
-    The REQUIREMENTS file should contain the output of `pip freeze`.
-    """
-    setup = _load_setup_cfg()
-
-    package_versions = []
-
-    for requirement in requirements.readlines():
-        try:
-            package, version = requirement.strip().split('==')
-            package_versions.append((package, version))
-        except ValueError:
-            continue
-
-    requirements = set()
-
-    for requirement in setup['install_requires']:
-        for package, version in package_versions:
-            if requirement.lower() == package.lower():
-                requirements.add('{}=={}'.format(package.lower(), version))
-                break
-        else:
-            requirements.add(requirement)
-
-    setup['install_requires'] = sorted(requirements)
-
-    for extra, extra_requirements in setup['extras_require'].items():
-        requirements = set()
-
-        for requirement in extra_requirements:
-            for package, version in package_versions:
-                if requirement.lower() == package.lower():
-                    requirements.add('{}=={}'.format(package.lower(), version))
-                    break
-            else:
-                requirements.add(requirement)
-
-        setup['extras_require'][extra] = sorted(requirements)
-
-    write_setup_json(setup)
 
 
 if __name__ == '__main__':

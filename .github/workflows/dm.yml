@@ -135,19 +135,30 @@ jobs:
         name: requirements.txt
         path: requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
 
-    - name: Update requirements.txt
-      if: matrix.backend == 'django' && matrix.python-version == '3.8'
-      run: |
-        sed '1d' requirements-django-py-3.8.txt > requirements.txt
-        git add requirements.txt
-        git clean -f   # remove all untracked files
+ update-requirements:
 
-    - name: Create Pull Request for updated requirements.txt
-      if: matrix.backend == 'django' && matrix.python-version == '3.8'
-      uses: peter-evans/create-pull-request@v2
-      with:
-        commit-message: "Update requirements.txt"
-        token: ${{ secrets.GITHUB_TOKEN }}
-        title: "Update requirements.txt"
-        reviewers: csadorf
-        branch: "dm/update-requirements.txt"
+    needs: tests
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Download requirements.txt
+        uses: actions/download-artifact@v1
+        with:
+          name: requirements.txt
+          path: requirements-django-py-38.txt
+
+      - name: Update requirements.txt
+        run: |
+          mv requirements-django-py-3.8.txt requirements.txt
+          sed -i '1d' requirements.txt
+
+      - name: Create Pull Request
+        if: matrix.backend == 'django' && matrix.python-version == '3.8'
+        uses: peter-evans/create-pull-request@v2
+        with:
+          commit-message: "Update requirements.txt"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Update requirements.txt"
+          reviewers: csadorf
+          branch: "dm/update-requirements.txt"

@@ -78,8 +78,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8]  # TODO: Change to all supported Python versions before merge
-        backend: ['django'] # TODO: Add 'sqlalchemy' before merge
+        python-version: [3.5, 3.6, 3.7, 3.8]
+        backend: ['django', 'sqlalchemy']
 
     steps:
     - uses: actions/checkout@v2

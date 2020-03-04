@@ -4,6 +4,7 @@ on:
   push:
     branch:
       - develop
+      - dm/*
       - misc/update-dependency-management   # TODO: Remove before merge
     paths:
       - 'setup.*'

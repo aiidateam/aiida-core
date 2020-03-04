@@ -131,7 +131,6 @@ jobs:
 
     - name: Upload requirements.txt
       uses: actions/upload-artifact@v1
-      if: matrix.backend == 'django' && matrix.python-version == '3.8'
       with:
         name: requirements.txt
         path: requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
@@ -143,14 +142,17 @@ jobs:
 
     steps:
 
-      - name: Download requirements.txt
+      - name: Download requirements.txt files
         uses: actions/download-artifact@v1
         with:
           name: requirements.txt
+          path: tmp
 
-      - name: Remove first line
+      - name: Prepare requirements.txt
         run: |
+          mv tmp/requirements.txt/requirements-django-py-3.8.txt requirements.txt
           sed -i '1d' requirements.txt
+          rm -r tmp/
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v2

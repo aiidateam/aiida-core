@@ -1,6 +1,8 @@
 name: aiida-core
 
 on: [push, pull_request]
+  branch:
+    - develop  # TODO: Remove before merge
 
 jobs:
 

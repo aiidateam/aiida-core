@@ -1,0 +1,17 @@
+asn1crypto==0.24.0
+chardet==3.0.4
+crcmod==1.7
+cryptography==2.1.4
+enum34==1.1.6
+httplib2==0.11.3
+idna==2.6
+ipaddress==1.0.17
+Jinja2==2.10
+MarkupSafe==1.0
+mercurial==4.5.3
+paramiko==2.0.0
+pyasn1==0.4.2
+pycrypto==2.6.1
+Pygments==2.2.0
+PyYAML==3.12
+six==1.11.0

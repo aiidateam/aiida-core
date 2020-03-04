@@ -140,6 +140,7 @@ jobs:
       run: |
         sed '1d' requirements-django-py-3.8.txt > requirements.txt
         git add requirements.txt
+        git clean -f   # remove all untracked files
 
     - name: Create Pull Request for updated requirements.txt
       if: matrix.backend == 'django' && matrix.python-version == '3.8'

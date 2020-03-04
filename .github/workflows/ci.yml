@@ -4,58 +4,6 @@ on: [push, pull_request]
 
 jobs:
 
-  install-with-pip:
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-    - uses: actions/checkout@v1
-
-    - name: Set up Python 3.7
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.7
-
-    - name: Pip install
-      run: |
-        python -m pip install -e .
-        python -m pip freeze
-
-    - name: Test package import
-      run:
-        python -c "import aiida"
-
-  install-with-conda:
-
-    runs-on: ubuntu-latest
-    name: install-with-conda
-
-    timeout-minutes: 5
-
-    steps:
-    - uses: actions/checkout@v1
-
-    - name: Setup Conda
-      uses: s-weigand/setup-conda@v1
-      with:
-        update-conda: true
-        python-version: 3.7
-    - run: conda --version
-    - run: python --version
-    - run: which python
-
-    - name: Create conda environment
-      run: |
-        conda env create -f environment.yml -n test-environment
-        source activate test-environment
-        python -m pip install --no-deps -e .
-
-    - name: Test package import
-      run: |
-        source activate test-environment
-        python -c "import aiida"
-
   docs:
 
     runs-on: ubuntu-latest
@@ -118,7 +66,6 @@ jobs:
 
   tests:
 
-    needs: [install-with-pip, install-with-conda]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

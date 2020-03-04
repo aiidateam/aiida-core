@@ -171,7 +171,7 @@ To start the ``rabbitmq`` server, run:
 
     sudo launchctl load -w /Library/LaunchDaemons/org.macports.rabbitmq-server.plist
 
-You can check whether it is running as follows:
+You can check, whether it is running as follows:
 
 .. code-block:: bash
 

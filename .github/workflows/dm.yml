@@ -146,15 +146,14 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: requirements.txt
-          path: requirements-django-py-38.txt
 
       - name: Update requirements.txt
         run: |
-          mv requirements-django-py-3.8.txt requirements.txt
+          mv requirements.txt/requirements-django-py-3.8.txt requirements.txt
+          rm -r requirements.txt
           sed -i '1d' requirements.txt
 
       - name: Create Pull Request
-        if: matrix.backend == 'django' && matrix.python-version == '3.8'
         uses: peter-evans/create-pull-request@v2
         with:
           commit-message: "Update requirements.txt"

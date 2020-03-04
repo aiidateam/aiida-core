@@ -161,5 +161,5 @@ jobs:
           commit-message: "Update requirements.txt"
           token: ${{ secrets.GITHUB_TOKEN }}
           title: "Update requirements.txt"
-          team-reviewers: aiidateam/dependency-manager
+          team-reviewers: dependency-manager
           branch: "dm/update-requirements.txt"

@@ -5,7 +5,7 @@ hostname: localhost
 transport: local
 scheduler: direct
 shebang: '#!/usr/bin/env bash'
-work_dir: PLACEHOLDER_WORK_DIR
+work_dir: /home/runner/work/aiida-core/aiida-core
 mpirun_command: ' '
 mpiprocs_per_machine: 1
 prepend_text: ' '

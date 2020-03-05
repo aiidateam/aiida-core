@@ -17,6 +17,26 @@ on:
 
 jobs:
 
+  validate-dependency-specification:
+    # Note: The specification is also validated by the pre-commit hook.
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install dm-script dependencies
+      run: pip install click~=7.0 pyyaml~=5.1 toml
+
+    - name: Validate
+      run: python ./utils/dependency_management.py validate-all
+
   install-with-pip:
 
     runs-on: ubuntu-latest

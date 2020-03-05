@@ -8,7 +8,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Utility CLI to update dependency version requirements of the `setup.json`."""
+"""Utility CLI to manage dependencies for aiida-core."""
 
 import sys
 import re
@@ -61,6 +61,12 @@ def _load_environment_yml():
 
 
 def _setuptools_to_conda(req):
+    """Map package names from setuptools to conda where necessary.
+
+    In case that the same underlying dependency is listed under different names
+    on PyPI and conda-forge.
+    """
+
     for pattern, replacement in SETUPTOOLS_CONDA_MAPPINGS.items():
         if re.match(pattern, str(req)):
             return Requirement.parse(re.sub(pattern, replacement, str(req)))
@@ -155,14 +161,8 @@ def generate_all(ctx):
 
 @cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
 def validate_environment_yml():  # pylint: disable=too-many-branches
-    """Validate consistency of the requirements specification of the package.
+    """Validate that 'environment.yml' is consistent with 'setup.json'."""
 
-    Validates that the specification of requirements/dependencies is consistent across
-    the following files:
-
-    - setup.json
-    - environment.yml
-    """
     # Read the requirements from 'setup.json' and 'environment.yml'.
     setup_cfg = _load_setup_cfg()
     install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
@@ -234,7 +234,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
 
 @cli.command('validate-rtd-reqs', help="Validate 'docs/requirements_for_rtd.txt'.")
 def validate_requirements_for_rtd():
-    """Validate consistency of the specification of 'docs/requirements_for_rtd.txt'."""
+    """Validate that 'docs/requirements_for_rtd.txt' is consistent with 'setup.json'."""
 
     # Read the requirements from 'setup.json'
     setup_cfg = _load_setup_cfg()
@@ -253,7 +253,7 @@ def validate_requirements_for_rtd():
 
 @cli.command('validate-pyproject-toml', help="Validate 'pyproject.toml'.")
 def validate_pyproject_toml():
-    """Validate consistency of the specification of 'pyprojec.toml'."""
+    """Validate that 'pyproject.toml' is consistent with 'setup.json'."""
 
     # Read the requirements from 'setup.json'
     setup_cfg = _load_setup_cfg()

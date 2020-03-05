@@ -24,8 +24,6 @@ import toml
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
-DEFAULT_EXCLUDE_LIST = ['django', 'circus', 'numpy', 'pymatgen', 'ase', 'monty', 'pyyaml']
-
 SETUPTOOLS_CONDA_MAPPINGS = {
     'psycopg2-binary': 'psycopg2',
     'graphviz': 'python-graphviz',

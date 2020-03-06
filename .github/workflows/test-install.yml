@@ -134,6 +134,8 @@ jobs:
         pip install -e .[atomic_tools,docs,notebook,rest,testing]
         reentry scan
 
+    - run: pip freeze
+
     - name: Setup environment
       env:
         AIIDA_TEST_BACKEND: ${{ matrix.backend }}

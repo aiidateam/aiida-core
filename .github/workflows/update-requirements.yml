@@ -57,11 +57,11 @@ jobs:
       run:
         .github/workflows/setup.sh
 
-    - name: Run test suite
-      env:
-        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
-      run:
-        .github/workflows/tests.sh
+    #- name: Run test suite
+    #  env:
+    #    AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+    #  run:
+    #    .github/workflows/tests.sh
 
     - name: Freeze test environment
       run: pip freeze | sed '1d' | tee requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt

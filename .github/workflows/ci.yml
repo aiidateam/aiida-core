@@ -113,21 +113,21 @@ jobs:
       run:
         .github/workflows/setup.sh
 
-    - name: Run test suite
-      env:
-        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
-      run:
-        .github/workflows/tests.sh
+    #- name: Run test suite
+    #  env:
+    #    AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+    #  run:
+    #    .github/workflows/tests.sh
 
-    - name: Upload coverage report
-      if: matrix.python-version == 3.5
-      uses: codecov/codecov-action@v1.0.5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        name: aiida-pytests-py3.5-${{ matrix.backend }}
-        flags: ${{ matrix.backend }}
-        file: ./coverage.xml
-        fail_ci_if_error: false
+    #- name: Upload coverage report
+    #  if: matrix.python-version == 3.5
+    #  uses: codecov/codecov-action@v1.0.5
+    #  with:
+    #    token: ${{ secrets.CODECOV_TOKEN }}
+    #    name: aiida-pytests-py3.5-${{ matrix.backend }}
+    #    flags: ${{ matrix.backend }}
+    #    file: ./coverage.xml
+    #    fail_ci_if_error: false
 
     - name: Freeze test environment
       run: pip freeze

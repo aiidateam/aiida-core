@@ -29,9 +29,7 @@ SETUPTOOLS_CONDA_MAPPINGS = {
     'graphviz': 'python-graphviz',
 }
 
-CONDA_IGNORE = [
-    'pyblake2',
-]
+CONDA_IGNORE = ['pyblake2', r'.*python_version == \"3\.5\"']
 
 
 class DependencySpecificationError(click.ClickException):
@@ -69,8 +67,14 @@ def _setuptools_to_conda(req):
 
     for pattern, replacement in SETUPTOOLS_CONDA_MAPPINGS.items():
         if re.match(pattern, str(req)):
-            return Requirement.parse(re.sub(pattern, replacement, str(req)))
-    return req  # did not match any of the replacement patterns, just return original
+            req = Requirement.parse(re.sub(pattern, replacement, str(req)))
+            break
+
+    # markers are not supported by conda
+    req.marker = None
+
+    # We need to parse the modified required again, to ensure consistency.
+    return Requirement.parse(str(req))
 
 
 @click.group()

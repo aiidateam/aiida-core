@@ -1,4 +1,4 @@
-name: aiida-core-dependency-management
+name: test-install
 
 on:
   push:
@@ -145,13 +145,3 @@ jobs:
         AIIDA_TEST_BACKEND: ${{ matrix.backend }}
       run:
         .github/workflows/tests.sh
-
-    - name: Freeze test environment
-      run: |
-        pip freeze | tee requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
-
-    - name: Upload requirements.txt
-      uses: actions/upload-artifact@v1
-      with:
-        name: requirements.txt
-        path: requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt

@@ -145,7 +145,12 @@ def generate_pyproject_toml():
     else:
         raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
 
-    pyproject = {'build-system': {'requires': ['setuptools', 'wheel', str(reentry_requirement)]}}
+    pyproject = {
+        'build-system': {
+            'requires': ['setuptools>=40.8.0', 'wheel', str(reentry_requirement)],
+            'build-backend': 'setuptools.build_meta:__legacy__',
+        }
+    }
     with open(ROOT / 'pyproject.toml', 'w') as file:
         toml.dump(pyproject, file)
 

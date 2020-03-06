@@ -303,12 +303,12 @@ def validate_all(ctx):
 
 
 @cli.command()
-@click.argument('extras', nargs=-1)
+@click.argument('extras', nargs=-1, help="extra requirements, e.g. 'atomic_tools'")
 def pip_install_extras(extras):
     """Install extra requirements.
 
-    Install extra requirements in isolation without triggering the installlation
-    of other installation requirements of the core package.
+    Install *only* extra requirements without triggering the installation of
+    of the main installation requirements of the aiida-core package.
     """
     # Read the requirements from 'setup.json'
     setup_cfg = _load_setup_cfg()

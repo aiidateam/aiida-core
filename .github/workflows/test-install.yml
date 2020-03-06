@@ -130,7 +130,7 @@ jobs:
     - name: Install python dependencies
       run: |
         pip install --upgrade pip
-        pip install numpy==1.17.4
+        #pip install numpy==1.17.4
         pip install -e .[atomic_tools,docs,notebook,rest,testing]
         reentry scan
 

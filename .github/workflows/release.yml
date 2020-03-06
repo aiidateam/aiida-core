@@ -1,0 +1,95 @@
+name: aiida-core-release
+
+on:
+  push:
+    branch:
+      - release/*
+
+jobs:
+
+  test:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: CasperWA/postgresql-action@v1.2
+      with:
+        postgresql version: '10'
+        postgresql db: test_django
+        postgresql user: postgres
+        postgresql password: ''
+        postgresql auth: trust
+
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+
+    - name: Install system dependencies
+      run: |
+        wget -O - "https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc" | sudo apt-key add -
+        echo 'deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
+        echo 'deb https://dl.bintray.com/rabbitmq/debian bionic main' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
+        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
+        sudo apt update
+        sudo apt install postgresql-10 rabbitmq-server graphviz
+        sudo systemctl status rabbitmq-server.service
+
+    - name: Install python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install numpy==1.17.4
+        pip install -e .[atomic_tools,docs,notebook,rest,testing]
+        reentry scan
+
+    - name: Setup environment
+      env:
+        AIIDA_TEST_BACKEND: django
+      run:
+        .github/workflows/setup.sh
+
+    - name: Run test suite
+      env:
+        AIIDA_TEST_BACKEND: django
+      run:
+        .github/workflows/tests.sh
+
+    - name: Freeze test environment
+      run: pip freeze | tee requirements.txt
+
+    - name: Upload requirements.txt
+      uses: actions/upload-artifact@v1
+      with:
+        name: requirements.txt
+        path: requirements.txt
+
+  update-requirements:
+
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download requirements.txt files
+        uses: actions/download-artifact@v1
+        with:
+          name: requirements.txt
+          path: tmp
+
+      - name: Prepare requirements.txt
+        run: |
+          mv tmp/requirements.txt requirements.txt
+          sed -i '1d' requirements.txt
+          rm -r tmp/
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v2
+        with:
+          commit-message: "Update requirements.txt"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Update requirements.txt"
+          team-reviewers: dependency-manager
+          branch: "dm/update-requirements.txt"

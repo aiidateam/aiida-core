@@ -3,7 +3,9 @@ name: aiida-core-dependency-management
 on:
   push:
     branch:
+      - master
       - develop
+      - release/*
       - dm/*
     paths:
       - 'setup.*'
@@ -153,32 +155,3 @@ jobs:
       with:
         name: requirements.txt
         path: requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
-
-  update-requirements:
-
-    needs: tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Download requirements.txt files
-        uses: actions/download-artifact@v1
-        with:
-          name: requirements.txt
-          path: tmp
-
-      - name: Prepare requirements.txt
-        run: |
-          mv tmp/requirements-django-py-3.8.txt requirements.txt
-          sed -i '1d' requirements.txt
-          rm -r tmp/
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v2
-        with:
-          commit-message: "Update requirements.txt"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "Update requirements.txt"
-          team-reviewers: dependency-manager
-          branch: "dm/update-requirements.txt"

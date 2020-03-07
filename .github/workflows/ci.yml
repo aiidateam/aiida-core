@@ -103,6 +103,7 @@ jobs:
     - name: Install python dependencies
       run: |
         pip install --upgrade pip
+        pip --version
         pip install -r requirements/requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
         pip install --no-deps -e .
         reentry scan

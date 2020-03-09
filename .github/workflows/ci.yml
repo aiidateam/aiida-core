@@ -139,14 +139,13 @@ jobs:
         .github/workflows/tests.sh
 
     - name: Upload coverage report
-      if: matrix.python-version == 3.5
-      uses: codecov/codecov-action@v1.0.5
+      if: matrix.python-version == 3.5 && github.repository == 'aiidateam/aiida-core'
+      uses: codecov/codecov-action@v1
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
         name: aiida-pytests-py3.5-${{ matrix.backend }}
         flags: ${{ matrix.backend }}
         file: ./coverage.xml
-        fail_ci_if_error: false
+        fail_ci_if_error: true
 
   verdi:
 

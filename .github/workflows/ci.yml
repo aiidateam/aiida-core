@@ -111,7 +111,7 @@ jobs:
 
     - name: Install aiida-core
       run: |
-        pip install -r requirements/requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
+        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
         pip install --no-deps -e .
         reentry scan
         pip freeze

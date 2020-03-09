@@ -146,8 +146,8 @@ jobs:
       run:
         .github/workflows/setup.sh
 
-    #- name: Run test suite
-    #  env:
-    #    AIIDA_TEST_BACKEND: ${{ matrix.backend }}
-    #  run:
-    #    .github/workflows/tests.sh
+    - name: Run test suite
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run:
+        .github/workflows/tests.sh

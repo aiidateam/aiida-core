@@ -100,9 +100,14 @@ jobs:
         sudo apt install postgresql-10 rabbitmq-server graphviz
         sudo systemctl status rabbitmq-server.service
 
-    - name: Install python dependencies
+    - run: pip install --upgrade pip
+
+    - name: upgrade setuptools [py35]
+      if: matrix.python-version == 3.5
+      run: pip install -I setuptools==38.2.0
+
+    - name: Install aiida-core
       run: |
-        pip install --upgrade pip
         pip --version
         pip install -r requirements/requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
         pip install --no-deps -e .

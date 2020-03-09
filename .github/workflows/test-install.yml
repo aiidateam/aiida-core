@@ -7,6 +7,7 @@ on:
       - develop
       - release/*
       - dm/*
+      - misc/dependency-management  # TODO: REMOVE AFTER TESTING
     paths:
       - 'setup.*'
       - 'environment.yml'

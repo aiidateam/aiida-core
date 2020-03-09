@@ -1,0 +1,31 @@
+name: Test workflow
+
+on: [push, pull_request]
+
+jobs:
+
+  test_if:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.5, 3.8]
+
+    steps:
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Get GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo "$GITHUB_CONTEXT"
+
+    - name: Upload coverage report - TEST - will NOT upload
+      if: matrix.python-version == 3.5 && ( github.event_name == 'pull_request' || ( github.event_name == 'push' && github.repository == 'CasperWA/aiida_core' ) )
+      run: echo "We did it well, thank you Casper"

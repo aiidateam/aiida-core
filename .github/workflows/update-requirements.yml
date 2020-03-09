@@ -4,7 +4,6 @@ on:
   push:
     branch:
       - release/*
-      - misc/dependency-management  # TODO: REMOVE AFTER TESTING
     paths:
       - 'setup.json'
       - '.github/workflows/update-requirements.yml'

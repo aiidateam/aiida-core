@@ -57,7 +57,7 @@ jobs:
         python -m pip install -e .
         python -m pip freeze
 
-    - name: Test package import
+    - name: Test importing aiida
       run:
         python -c "import aiida"
 
@@ -86,7 +86,7 @@ jobs:
         source activate test-environment
         python -m pip install --no-deps -e .
 
-    - name: Test package import
+    - name: Test importing aiida
       run: |
         source activate test-environment
         python -c "import aiida"
@@ -141,7 +141,7 @@ jobs:
 
     - run: pip freeze
 
-    - name: Setup environment
+    - name: Setup AiiDA environment
       env:
         AIIDA_TEST_BACKEND: ${{ matrix.backend }}
       run:

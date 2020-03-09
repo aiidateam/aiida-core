@@ -100,18 +100,21 @@ jobs:
         sudo apt install postgresql-10 rabbitmq-server graphviz
         sudo systemctl status rabbitmq-server.service
 
-    - run: pip install --upgrade pip
+    - name: Upgrade pip
+      run: |
+        pip install --upgrade pip
+        pip --version
 
     - name: upgrade setuptools [py35]
       if: matrix.python-version == 3.5
-      run: pip install -I setuptools==38.2.0
+      run: pip install -I setuptools==38.2.0  # Minimally required version for Python 3.5.
 
     - name: Install aiida-core
       run: |
-        pip --version
         pip install -r requirements/requirements-${{ matrix.backend }}-py-${{ matrix.python-version }}.txt
         pip install --no-deps -e .
         reentry scan
+        pip freeze
 
     - name: Setup environment
       env:
@@ -133,9 +136,6 @@ jobs:
         flags: ${{ matrix.backend }}
         file: ./coverage.xml
         fail_ci_if_error: true
-
-    - name: Freeze test environment
-      run: pip freeze
 
   verdi:
 

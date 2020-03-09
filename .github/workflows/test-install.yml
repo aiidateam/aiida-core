@@ -12,7 +12,7 @@ on:
       - 'environment.yml'
       - 'requirements*.txt'
       - 'pyproject.toml'
-      - '.github/workflows/*'
+      - '.github/workflows/test-install.sh'
   schedule:
     - cron: '30 02 * * *'  # nightly build
 

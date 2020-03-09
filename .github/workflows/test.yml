@@ -27,5 +27,5 @@ jobs:
       run: echo "$GITHUB_CONTEXT"
 
     - name: Upload coverage report - TEST - will NOT upload
-      if: matrix.python-version == 3.5 && ( github.event_name == 'pull_request' || ( github.event_name == 'push' && github.repository == 'CasperWA/aiida_core' ) )
+      if: matrix.python-version == 3.5 && ( github.event_name == 'pull_request' || ( github.event_name == 'push' && github.repository == 'aiidateam/aiida-core' ) )
       run: echo "We did it well, thank you Casper"

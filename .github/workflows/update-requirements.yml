@@ -2,11 +2,12 @@ name: update-requirements
 
 on:
   push:
-    branch:
-      - release/*
     paths:
-      - 'setup.json'
+      - 'setup.*'
       - '.github/workflows/update-requirements.yml'
+  pull_request:
+    branches:
+      - master
 
 jobs:
 
@@ -94,10 +95,24 @@ jobs:
           name: requirements.txt
           path: requirements
 
-      - name: Create Pull Request
+      - name: Commit requirements files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add requirements/*
+          git commit -m "Update requirements files." -a || echo "Nothing to update."
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.5.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+
+      - name: Create Pull Request (since update via push failed)
+        if: failure() && github.repository == 'aiidateam/aiida-core'
         uses: peter-evans/create-pull-request@v2
         with:
-          commit-message: "Update requirements.txt"
+          commit-message: "Update requirements files."
           token: ${{ secrets.GITHUB_TOKEN }}
           title: "Update requirements.txt"
           team-reviewers: dependency-manager

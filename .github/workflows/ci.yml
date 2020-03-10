@@ -93,52 +93,52 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install system dependencies
-      run: |
-        wget -O - "https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc" | sudo apt-key add -
-        echo 'deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
-        echo 'deb https://dl.bintray.com/rabbitmq/debian bionic main' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
-        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
-        sudo apt update
-        sudo apt install postgresql-10 rabbitmq-server graphviz
-        sudo systemctl status rabbitmq-server.service
+    #- name: Install system dependencies
+    #  run: |
+    #    wget -O - "https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc" | sudo apt-key add -
+    #    echo 'deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
+    #    echo 'deb https://dl.bintray.com/rabbitmq/debian bionic main' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
+    #    sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
+    #    sudo apt update
+    #    sudo apt install postgresql-10 rabbitmq-server graphviz
+    #    sudo systemctl status rabbitmq-server.service
 
-    - name: Upgrade pip
-      run: |
-        pip install --upgrade pip
-        pip --version
+    #- name: Upgrade pip
+    #  run: |
+    #    pip install --upgrade pip
+    #    pip --version
 
-    - name: upgrade setuptools [py35]
-      if: matrix.python-version == 3.5
-      run: pip install -I setuptools==38.2.0  # Minimally required version for Python 3.5.
+    #- name: upgrade setuptools [py35]
+    #  if: matrix.python-version == 3.5
+    #  run: pip install -I setuptools==38.2.0  # Minimally required version for Python 3.5.
 
-    - name: Install aiida-core
-      run: |
-        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
-        pip install --no-deps -e .
-        reentry scan
-        pip freeze
+    #- name: Install aiida-core
+    #  run: |
+    #    pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
+    #    pip install --no-deps -e .
+    #    reentry scan
+    #    pip freeze
 
-    - name: Setup environment
-      env:
-        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
-      run:
-        .github/workflows/setup.sh
+    #- name: Setup environment
+    #  env:
+    #    AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+    #  run:
+    #    .github/workflows/setup.sh
 
-    - name: Run test suite
-      env:
-        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
-      run:
-        .github/workflows/tests.sh
+    #- name: Run test suite
+    #  env:
+    #    AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+    #  run:
+    #    .github/workflows/tests.sh
 
-    - name: Upload coverage report
-      if: matrix.python-version == 3.5 && github.repository == 'aiidateam/aiida-core'
-      uses: codecov/codecov-action@v1
-      with:
-        name: aiida-pytests-py3.5-${{ matrix.backend }}
-        flags: ${{ matrix.backend }}
-        file: ./coverage.xml
-        fail_ci_if_error: true
+    #- name: Upload coverage report
+    #  if: matrix.python-version == 3.5 && github.repository == 'aiidateam/aiida-core'
+    #  uses: codecov/codecov-action@v1
+    #  with:
+    #    name: aiida-pytests-py3.5-${{ matrix.backend }}
+    #    flags: ${{ matrix.backend }}
+    #    file: ./coverage.xml
+    #    fail_ci_if_error: true
 
   verdi:
 

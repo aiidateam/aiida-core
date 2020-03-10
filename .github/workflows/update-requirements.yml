@@ -95,6 +95,7 @@ jobs:
           path: requirements
 
       - name: Create Pull Request
+        if: github.repository == 'aiidateam/aiida-core'
         uses: peter-evans/create-pull-request@v2
         with:
           commit-message: "Update requirements.txt"

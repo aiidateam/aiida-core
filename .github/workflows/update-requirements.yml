@@ -4,9 +4,6 @@ on:
   push:
     branch:
       - release/*
-    paths:
-      - 'setup.json'
-      - '.github/workflows/update-requirements.yml'
 
 jobs:
 

@@ -2,11 +2,12 @@ name: update-requirements
 
 on:
   push:
-    branches:
-      - release/*
     paths:
-      - 'setup.json'
+      - 'setup.*'
       - '.github/workflows/update-requirements.yml'
+  pull_request:
+    branches:
+      - master
 
 jobs:
 
@@ -95,6 +96,7 @@ jobs:
           path: requirements
 
       - name: Create Pull Request
+        if: github.repository == 'aiidateam/aiida-core'
         uses: peter-evans/create-pull-request@v2
         with:
           commit-message: "Update requirements.txt"

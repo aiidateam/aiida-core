@@ -1,6 +1,9 @@
 name: continuous-integration
 
-on: [push, pull_request]
+on:
+  - push
+  - repository_dispatch:
+      types: [run-ci-command]
 
 jobs:
 

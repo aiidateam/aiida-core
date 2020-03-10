@@ -2,7 +2,7 @@ name: update-requirements
 
 on:
   push:
-    branch:
+    branches:
       - release/*
     paths:
       - 'setup.json'

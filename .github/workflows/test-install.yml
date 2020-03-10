@@ -2,7 +2,7 @@ name: test-install
 
 on:
   push:
-    branch:
+    branches:
       - master
       - develop
       - release/*

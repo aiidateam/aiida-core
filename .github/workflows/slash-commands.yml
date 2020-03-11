@@ -12,3 +12,4 @@ jobs:
         with:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
           commands: run-ci
+          reaction-type: hooray

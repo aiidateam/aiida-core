@@ -16,7 +16,8 @@ import json
 import subprocess
 from pathlib import Path
 from collections import OrderedDict
-from pkg_resources import Requirement
+from pkg_resources import Requirement, parse_requirements
+from packaging.utils import canonicalize_name
 
 import click
 import yaml
@@ -75,6 +76,24 @@ def _setuptools_to_conda(req):
 
     # We need to parse the modified required again, to ensure consistency.
     return Requirement.parse(str(req))
+
+
+class _Entry:
+    """Helper class to check whether a given distribution fulfills a requirement."""
+
+    def __init__(self, requirement):
+        self._req = requirement
+
+    def fulfills(self, requirement):
+        """Returns True if this entry fullfills the requirement."""
+
+        return canonicalize_name(self._req.name) == canonicalize_name(requirement.name) \
+            and self._req.specs[0][1] in requirement.specifier
+
+
+def _parse_working_set(entries):
+    for req in parse_requirements(entries):
+        yield _Entry(req)
 
 
 @click.group()
@@ -309,6 +328,46 @@ def validate_all(ctx):
     ctx.invoke(validate_environment_yml)
     ctx.invoke(validate_requirements_for_rtd)
     ctx.invoke(validate_pyproject_toml)
+
+
+@cli.command()
+@click.argument('extras', nargs=-1)
+def check_requirements(extras):
+    """Check the 'requirements/*.txt' files.
+
+    Checks that the environments specified in the requirements files
+    match all the dependencies specified in 'setup.json.
+
+    The arguments allow to specify which 'extra' requirements to expect.
+    Use DEFAULT to expect all extra requirements that are to be expected
+    by default.
+
+    """
+
+    if len(extras) == 1 and extras[0] == 'DEFAULT':
+        extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'testing']
+
+    # Read the requirements from 'setup.json'
+    setup_cfg = _load_setup_cfg()
+    install_requires = setup_cfg['install_requires']
+    for extra in extras:
+        install_requires.extend(setup_cfg['extras_require'][extra])
+    install_requires = set(parse_requirements(install_requires))
+
+    for fn_req in (ROOT / 'requirements').iterdir():
+        env = {'python_version': re.match(r'.*-py-(.*)\.txt', str(fn_req)).groups()[0]}
+        required = {r for r in install_requires if r.marker is None or r.marker.evaluate(env)}
+
+        with open(fn_req) as req_file:
+            working_set = list(_parse_working_set(req_file))
+            installed = {req for req in required for entry in working_set if entry.fulfills(req)}
+
+        not_installed = required.difference(installed)
+        if not_installed:  # switch to assignment expression after yapf supports 3.8
+            raise DependencySpecificationError(
+                f"Environment specified in '{fn_req.relative_to(ROOT)}' misses matches for:\n" +
+                '\n'.join(' - ' + str(f) for f in not_installed)
+            )
 
 
 @cli.command()

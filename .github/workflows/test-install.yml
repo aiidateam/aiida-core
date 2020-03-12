@@ -29,7 +29,7 @@ jobs:
         python-version: 3.7
 
     - name: Install dm-script dependencies
-      run: pip install click~=7.0 pyyaml~=5.1 toml
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
 
     - name: Validate
       run: python ./utils/dependency_management.py validate-all

@@ -369,6 +369,8 @@ def check_requirements(extras):
                 '\n'.join(' - ' + str(f) for f in not_installed)
             )
 
+    click.secho("Requirements files appear to be in sync with specifications in 'setup.json'.", fg='green')
+
 
 @cli.command()
 @click.argument('extras', nargs=-1)

@@ -98,6 +98,7 @@
     ],
     "dev_precommit": [
       "astroid==2.3.3",
+      "packaging==20.3",
       "pre-commit==1.18.3",
       "prospector==1.2.0",
       "pylint==2.4.4",

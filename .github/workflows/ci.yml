@@ -97,8 +97,7 @@ jobs:
           If this commit is part of a pull request, you can automatically update the requirements by
           commenting with '/update-requirements'.
 
-          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for
-          more information.
+          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information.
 
   tests:
 

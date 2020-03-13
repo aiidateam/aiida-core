@@ -1,13 +1,8 @@
 name: update-requirements
 
 on:
-  push:
-    paths:
-      - 'setup.*'
-      - '.github/workflows/update-requirements.yml'
-  pull_request:
-    branches:
-      - master
+  repository_dispatch:
+    types: [update-requirements-command]
 
 jobs:
 

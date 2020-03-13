@@ -339,8 +339,7 @@ def check_requirements(extras):
     match all the dependencies specified in 'setup.json.
 
     The arguments allow to specify which 'extra' requirements to expect.
-    Use DEFAULT to expect all extra requirements that are to be expected
-    by default.
+    Use 'DEFAULT' to select 'atomic_tools', 'docs', 'notebook', 'rest', and 'testing'.
 
     """
 

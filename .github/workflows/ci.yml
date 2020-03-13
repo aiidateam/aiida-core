@@ -92,7 +92,7 @@ jobs:
         body: |
           It appears that at least one of the environments defined in the requirements files
           ('requirements/*.txt') is not meeting the dependencies specified in the 'setup.json' file.
-          These files are used for testing, so it is important that they are updated.
+          These files define the environment for continuous integration tests, so it is important that they are updated.
 
           If this commit is part of a pull request, you can automatically update the requirements by
           commenting with '/update-requirements'.

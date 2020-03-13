@@ -1,13 +1,8 @@
 name: update-requirements
 
 on:
-  push:
-    paths:
-      - 'setup.*'
-      - '.github/workflows/update-requirements.yml'
-  pull_request:
-    branches:
-      - master
+  repository_dispatch:
+    types: [update-requirements-command]
 
 jobs:
 
@@ -23,7 +18,9 @@ jobs:
         python-version: [3.5, 3.6, 3.7, 3.8]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ github.event.client_payload.head_ref }}
     - uses: CasperWA/postgresql-action@v1.2
       with:
         postgresql version: '10'
@@ -88,6 +85,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.client_payload.head_ref }}
 
       - name: Download requirements.txt files
         uses: actions/download-artifact@v1
@@ -106,7 +105,7 @@ jobs:
         uses: ad-m/github-push-action@v0.5.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+          branch: ${{ github.event.client_payload.head_ref }}
 
       - name: Create Pull Request (since update via push failed)
         if: failure() && github.repository == 'aiidateam/aiida-core'

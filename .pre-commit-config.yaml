@@ -110,6 +110,18 @@
     description: "This hook runs Prospector: https://github.com/landscapeio/prospector"
     entry: prospector
 
+  - id: dm-generate-all
+    name: Update all requirements files
+    entry: python ./utils/dependency_management.py generate-all
+    language: system
+    files: >-
+      (?x)^(
+        setup.py|
+        setup.json|
+        utils/dependency_management.py
+        )$
+    pass_filenames: false
+
   - id: rtd-requirements
     name: Validate docs/requirements_for_rtd.txt
     entry: python ./utils/dependency_management.py validate-rtd-reqs

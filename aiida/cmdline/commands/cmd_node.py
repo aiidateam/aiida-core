@@ -434,6 +434,7 @@ def graph_generate(
 
     echo.echo_info('Initiating graphviz engine: {}'.format(engine))
     graph = Graph(engine=engine, node_id_type=identifier)
+    graph.add_node(root_node, style_override={'color': 'red'})
     echo.echo_info('Recursing ancestors, max depth={}'.format(ancestor_depth))
     graph.recurse_ancestors(
         root_node,

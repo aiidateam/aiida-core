@@ -66,18 +66,23 @@ class TestVerdiCodeSetup(AiidaTestCase):
         self.assertIsInstance(Code.get_from_string('{}'.format(label)), Code)
 
     def test_noninteractive_remote(self):
-        """Test non-interactive remote code setup."""
+        """Test non-interactive remote code setup.
+
+        Test selecting computer both via computer label and via computer uuid.
+        """
 
         from aiida.orm import Code
-        label = 'noninteractive_remote'
-        options = [
-            '--non-interactive', '--label={}'.format(label), '--description=description',
-            '--input-plugin=arithmetic.add', '--on-computer', '--computer={}'.format(self.comp.name),
-            '--remote-abs-path=/remote/abs/path'
-        ]
-        result = self.cli_runner.invoke(setup_code, options)
-        self.assertClickResultNoException(result)
-        self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
+
+        for index, computer in enumerate([self.comp.name, self.comp.uuid]):
+            label = 'noninteractive_remote_' + str(index)
+            options = [
+                '--non-interactive', '--label={}'.format(label), '--description=description',
+                '--input-plugin=arithmetic.add', '--on-computer', '--computer={}'.format(computer),
+                '--remote-abs-path=/remote/abs/path'
+            ]
+            result = self.cli_runner.invoke(setup_code, options)
+            self.assertClickResultNoException(result)
+            self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
 
     def test_noninteractive_upload(self):
         """Test non-interactive code setup."""

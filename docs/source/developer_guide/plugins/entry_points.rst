@@ -15,14 +15,14 @@ the entry point specifications are written to a file inside the distribution's
 can find these entry points by distribution, group and/or name and load the
 data structure to which it points.
 
-This is the way AiiDA finds and loads classes provided by plugins.
+This is the way AiiDA finds plugins and and loads the functionality they provide.
 
 .. _Entry points: https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
 
 AiiDA Entry Points
 -------------------
 
-.. _aiida plugin template: https://github.com/aiidateam/aiida-plugin-template
+.. _aiida-diff: https://github.com/aiidateam/aiida-diff
 
 This document contains a list of entry point groups AiiDA uses, with an example
 usage for each.
@@ -52,10 +52,10 @@ In the following, we assume the following folder structure::
       ...
 
 
-For a plugin that uses this folder structure, see the  `aiida plugin template`_.
+For a plugin package that uses this folder structure, see the  `aiida-diff`_ demo plugin.
 
 Note, however, that the folder structure inside ``aiida-mycode/`` is entirely up to you.
-A very simple plugin might look like::
+A very simple plugin package might look like::
 
    aiida-mysimple/
       aiida_mysimple/
@@ -65,7 +65,7 @@ A very simple plugin might look like::
       setup.json
 
 
-The plugin has to tell AiiDA where to look for the classes to be used as
+The plugin package has to tell AiiDA where to look for the classes to be used as
 calculations, parsers, transports, etc. This is done inside ``setup.json`` by way
 of the ``entry_points`` keyword::
 
@@ -83,12 +83,13 @@ A specification in turn is given as a string and consists of two parts, a name a
 
    "mycode.mydat = aiida_mycode.data.mydat:MyData"
 
-We *strongly* suggest to start the name of each entry point with the name of
-the plugin, ommitting the leading 'aiida-'.
+We *strongly* suggest to start the name of each entry point with the name of the plugin package, ommitting the leading 'aiida-'.
 In our example this leads to entry specifications like ``"mycode.<any.you.want> = <module.path:class>"``, just like the above example.
-Exceptions to this rule are schedulers, transports and potentially data ones. Further exceptions can be tolerated in order to provide backwards compatibility if the plugin was in use before aiida-0.9 and its modules were installed in locations which does not make it possible to follow this rule.
+Exceptions to this rule can be tolerated if required for backwards compatibility.
 
-Below, a list of valid entry points recognized by AiiDA follows.
+Below, we list the entry point groups defined and searched by AiiDA.
+
+.. _plugins.entry_point_list:
 
 ``aiida.calculations``
 ----------------------
@@ -165,7 +166,7 @@ Usage::
 ``aiida.workflows``
 -------------------
 
-For AiiDA workflows. Instead of putting a workflow somewhere under the ``aiida.workflows`` package, it can now be packaged as a plugin and exposed to aiida as follows:
+Package AiiDA workflows as follows:
 
 Spec::
 
@@ -194,8 +195,7 @@ Usage::
 ``aiida.cmdline``
 -----------------
 
-For subcommands to verdi commands like ``verdi data mydata``.
-Plugin support for commands is possible due to using `click`_.
+``verdi`` uses the `click_` framework, which makes it possible to add new subcommands to existing verdi commands, such as ``verdi data mydata``.
 AiiDA expects each entry point to be either a ``click.Command`` or ``click.CommandGroup``.
 
 
@@ -230,7 +230,7 @@ Usage:
 ``aiida.tools.dbexporters``
 ---------------------------
 
-If your plugin adds support for exporting to an external database, use this entry point to have aiida find the module where you define the necessary functions.
+If your plugin package adds support for exporting to an external database, use this entry point to have aiida find the module where you define the necessary functions.
 
 .. Not sure how dbexporters work
 .. .. Spec::
@@ -244,7 +244,7 @@ If your plugin adds support for exporting to an external database, use this entr
 ``aiida.tools.dbimporters``
 ---------------------------
 
-If your plugin adds support for importing from an external database, use this entry point to have aiida find the module where you define the necessary functions.
+If your plugin package adds support for importing from an external database, use this entry point to have aiida find the module where you define the necessary functions.
 
 .. .. Spec::
 ..
@@ -259,7 +259,8 @@ If your plugin adds support for importing from an external database, use this en
 ``aiida.schedulers``
 --------------------
 
-For scheduler plugins. Note that the entry point name is not prefixed by the plugin name. This is because typically a scheduler should be distributed in a plugin on its own, and only one plugin per scheduler should be necessary.
+For scheduler plugins.
+We recommend naming the plugin package after the scheduler (e.g. ``aiida-myscheduler``), so that the entry point name can simply equal the name of the scheduler:
 
 Spec::
 
@@ -280,7 +281,8 @@ Usage: The scheduler is used in the familiar way by entering 'myscheduler' as th
 ``aiida.transports``
 --------------------
 
-Like schedulers, transports are supposed to be distributed in a separate plugin. Therefore we will again omit the plugin's name in the entry point name.
+``aiida-core`` ships with two modes of transporting files and folders to remote computers: ``ssh`` and ``local`` (stub for when the remote computer is actually the same).
+We recommend naming the plugin package after the mode of transport (e.g. ``aiida-mytransport``), so that the entry point name can simply equal the name of the transport:
 
 Spec::
 
@@ -301,7 +303,7 @@ Usage::
    from aiida.plugins import TransportFactory
    transport = TransportFactory('mytransport')
 
-Jus like one would expect, when a computer is setup, ``mytransport`` can be given as the transport option.
+When setting up a new computer, specify ``mytransport`` as the transport mode.
 
 .. _click: https://click.pocoo.org/6/
 .. _aiida-verdi: https://github.com/DropD/aiida-verdi

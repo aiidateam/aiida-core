@@ -239,7 +239,7 @@ Likewise, you should not load any existing data from the database through the AP
 A similar problem occurs when importing other python code.
 Practically, it is almost impossible to never import code into process functions, as this would force massive code duplication.
 However, there is still a difference between importing code from the ``aiida-core`` library or the repository in which the process function is hosted, and the importing of a local python file.
-Even though for both cases there can no be guarantee of reproducibility, the former stands a better chance by far, as the version number of the plugin should be recorded.
+Even though for both cases there can no be guarantee of reproducibility, the former stands a better chance by far, as the version number of the plugin package should be recorded.
 The rule of thumb then is to keep the importing of code to a minimum, but if you have to, make sure to make it part of a plugin package with a well-defined version number.
 
 Finally, as mentioned in the introduction, the source file of a process function is stored as a file in the repository for *each execution*.

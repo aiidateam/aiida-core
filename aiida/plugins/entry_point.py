@@ -258,10 +258,12 @@ def get_entry_point(group, name):
     entry_points = [ep for ep in get_entry_points(group) if ep.name == name]
 
     if not entry_points:
-        raise MissingEntryPointError("Entry point '{}' not found in group '{}'".format(name, group))
+        raise MissingEntryPointError("Entry point '{}' not found in group '{}'.".format(name, group) +
+        'Try running `reentry scan` to update the entry point cache.')
 
     if len(entry_points) > 1:
-        raise MultipleEntryPointError("Multiple entry points '{}' found in group".format(name, group))
+        raise MultipleEntryPointError("Multiple entry points '{}' found in group '{}'. ".format(name, group) +
+                                      'Try running `reentry scan` to repopulate the entry point cache.')
 
     return entry_points[0]
 

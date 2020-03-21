@@ -123,6 +123,7 @@ def group_description(group, description):
 
 @verdi_group.command('show')
 @options.RAW(help='Show only a space-separated list of PKs of the calculations in the group')
+@options.LIMIT()
 @click.option(
     '-u',
     '--uuid',
@@ -132,18 +133,23 @@ def group_description(group, description):
 )
 @arguments.GROUP()
 @with_dbenv()
-def group_show(group, raw, uuid):
+def group_show(group, raw, limit, uuid):
     """Show information for a given group."""
     from tabulate import tabulate
 
     from aiida.common.utils import str_timedelta
     from aiida.common import timezone
 
+    if limit:
+        node_iterator = group.nodes[:limit]
+    else:
+        node_iterator = group.nodes
+
     if raw:
         if uuid:
-            echo.echo(' '.join(str(_.uuid) for _ in group.nodes))
+            echo.echo(' '.join(str(_.uuid) for _ in node_iterator))
         else:
-            echo.echo(' '.join(str(_.pk) for _ in group.nodes))
+            echo.echo(' '.join(str(_.pk) for _ in node_iterator))
     else:
         type_string = group.type_string
         desc = group.description

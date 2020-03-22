@@ -7,7 +7,7 @@ Basics
 Nomenclature
 ------------
 
-An AiiDA plugin is an extension of AiiDA, usually announcing itself to ``aiida-core`` by means of a new :ref:`entry point <plugins.entry_points>`.
+An AiiDA plugin is an extension of AiiDA, announcing itself to ``aiida-core`` by means of a new :ref:`entry point <plugins.entry_points>`.
 
 AiiDA plugins can be bundled and distributed in a `python package <packages>`_ that provides a set of extensions to AiiDA.
 
@@ -22,7 +22,7 @@ AiiDA plugins can be bundled and distributed in a `python package <packages>`_ t
 What a plugin can do
 --------------------
 
-* Add a new class to AiiDA's :ref:`entry point groups <plugins.entry_point_list>`, including:: calculations, parsers, workflows, data types, verdi commands, schedulers, transports and importers/exporters from external databases.
+* Add a new class to AiiDA's :ref:`entry point groups <plugins.aiida_entry_points>`, including:: calculations, parsers, workflows, data types, verdi commands, schedulers, transports and importers/exporters from external databases.
   This typically involves subclassing the respective base class AiiDA provides for that purpose.
 * Install new commandline and/or GUI executables
 * Depend on, and build on top of any number of other plugins (as long as their requirements do not clash)
@@ -77,3 +77,42 @@ In order to wrap an external simulation code for use in AiiDA, you will need to 
    | AiiDA's :ref:`public python API<python_api_public_list>` includes anything that you can import via  ``from aiida.module import thing``.
    | Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, forcing you to update your plugin.
 
+Folder structure
+................
+
+While it is up to you to decide the folder structure for your plugin, here is how a typical AiiDA plugin package may look like (see also the `aiida-diff`_ demo plugin)::
+
+   aiida-mycode/           - distribution folder
+      aiida_mycode/        - toplevel package (from aiida_code import ..)
+         __init__.py
+         calcs/
+            __init__.py
+            mycode.py      - contains MycodeCalculation
+         parsers/
+            __init__.py
+            mycode.py      - contains MycodeParser
+         data/
+            __init__.py
+            mydat.py       - contains MyData (supports code specific format)
+         commands/
+            __init__.py
+            mydat.py       - contains visualization subcommand for MyData
+         workflows/
+            __init__.py
+            mywf.py        - contains a basic workflow using mycode
+         ...
+      setup.py             - install script
+      setup.json           - install configuration
+      ...
+
+A minimal plugin package instead might look like::
+
+   aiida-minimal/
+      aiida_minimal/
+         __init__.py
+         simpledata.py
+      setup.py
+      setup.json
+
+
+.. _aiida-diff: https://github.com/aiidateam/aiida-diff

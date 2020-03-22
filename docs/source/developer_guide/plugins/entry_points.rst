@@ -19,55 +19,18 @@ This is the way AiiDA finds plugins and and loads the functionality they provide
 
 .. _Entry points: https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
 
+.. _plugins.aiida_entry_points:
+
 AiiDA Entry Points
 -------------------
 
-.. _aiida-diff: https://github.com/aiidateam/aiida-diff
+AiiDA defines a set of entry point groups that it will search for new functionality provided by plugins.
+You can list those groups and their contents via::
 
-This document contains a list of entry point groups AiiDA uses, with an example
-usage for each.
-In the following, we assume the following folder structure::
+    verdi plugin list  # list all groups
+    verdi plugin list aiida.calculations  # show contents of one group
 
-   aiida-mycode/           - distribution folder
-      aiida_mycode/        - toplevel package (from aiida_myplug import ..)
-         __init__.py
-         calcs/
-            __init__.py
-            mycode.py      - contains MycodeCalculation
-         parsers/
-            __init__.py
-            mycode.py      - contains MycodeParser
-         data/
-            __init__.py
-            mydat.py       - contains MyData (supports code specific format)
-         commands/
-            __init__.py
-            mydat.py       - contains visualization subcommand for MyData
-         workflows/
-            __init__.py
-            mywf.py        - contains a basic workflow using mycode
-         ...
-      setup.py             - install script
-      setup.json           - install configuration
-      ...
-
-
-For a plugin package that uses this folder structure, see the  `aiida-diff`_ demo plugin.
-
-Note, however, that the folder structure inside ``aiida-mycode/`` is entirely up to you.
-A very simple plugin package might look like::
-
-   aiida-mysimple/
-      aiida_mysimple/
-         __init__.py
-         simpledata.py
-      setup.py
-      setup.json
-
-
-The plugin package has to tell AiiDA where to look for the classes to be used as
-calculations, parsers, transports, etc. This is done inside ``setup.json`` by way
-of the ``entry_points`` keyword::
+Plugin packages can add new entry points through the ``entry_points`` field in the ``setup.json`` file::
 
       ...
       entry_points={
@@ -77,19 +40,16 @@ of the ``entry_points`` keyword::
          ],
       ...
 
-It is given as a dictionary containing entry point group names as keywords. The list for each entry point group contains entry point specifications.
-
-A specification in turn is given as a string and consists of two parts, a name and an import path describing where the class is to be imported from. The two parts are sparated by an `=` sign::
+Here, ``<Entry Point Group>`` can be any of the groups shown in the output of ``verdi plugin list``, and the ``<Entry Point Specification>`` contains the entry point name and the path to the Python object it points to::
 
    "mycode.mydat = aiida_mycode.data.mydat:MyData"
 
-We *strongly* suggest to start the name of each entry point with the name of the plugin package, ommitting the leading 'aiida-'.
-In our example this leads to entry specifications like ``"mycode.<any.you.want> = <module.path:class>"``, just like the above example.
+We *strongly* suggest to start the name of each entry point with the name of the plugin package (omitting the 'aiida-' prefix).
+For a package ``aiida-mycode``, this leads to specifications like ``"mycode.<something> = <module.path:class>"``.
 Exceptions to this rule can be tolerated if required for backwards compatibility.
 
 Below, we list the entry point groups defined and searched by AiiDA.
 
-.. _plugins.entry_point_list:
 
 ``aiida.calculations``
 ----------------------
@@ -259,7 +219,6 @@ If your plugin package adds support for importing from an external database, use
 ``aiida.schedulers``
 --------------------
 
-For scheduler plugins.
 We recommend naming the plugin package after the scheduler (e.g. ``aiida-myscheduler``), so that the entry point name can simply equal the name of the scheduler:
 
 Spec::

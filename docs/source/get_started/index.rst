@@ -20,7 +20,7 @@ If no PyPI package is available for a plugin, you can install the plugin package
     pip install aiida-diff  # install 'aiida-diff' plugin from local folder
     reentry scan -r aiida   # notify aiida of new entry points
 
-After installing new plugin packages, **restart the daemon**  using ``verdi daemon restart`` and update the reentry cache using ``reentry scan``.
+After installing new plugin packages, update the reentry cache using ``reentry scan`` and **restart the daemon**  using ``verdi daemon restart``.
 
 .. note::
     The reentry cache can also be updated from python when access to the commandline is not available (e.g. in jupyter notebooks).

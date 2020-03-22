@@ -16,12 +16,12 @@ The naming convention for AiiDA plugin packages is ``aiida-mycode`` for the plug
 **Note:** Python packages cannot contain dashes, thus the underscore.
 
 
-2. Register your plugin
------------------------
+2. Add to plugin registry
+-------------------------
 
-AiiDA plugins packages should be listed on the AiiDA plugin `registry`_ to avoid name-clashes with other plugins.
+AiiDA plugin packages should be listed on the AiiDA plugin `registry`_ to avoid name-clashes with other plugins.
 
-If you wish to get your plugin listed on the official plugin registry, please provide the following keyword arguments as key-value pairs in a ``setup.json`` or ``setup.yaml`` file.
+If you wish to get your plugin package listed on the official plugin registry, please provide the following keyword arguments as key-value pairs in a ``setup.json`` or ``setup.yaml`` file.
 
 * ``name``
 * ``author``
@@ -45,8 +45,8 @@ It is recommended to have your ``setup.py`` file simply read the keyword argumen
 
 Now, fork the plugin `registry`_ repository, fill in the information for your plugin package, and create a pull request.
 
-3. Upload your plugin on PyPI
------------------------------
+3. Upload to PyPI
+-----------------
 
 For packaging and distributing AiiDA plugins, we recommend to follow existing `guidelines for packaging python <packaging>`_, which include making the plugin available on the `python package index <PyPI>`_.
 This makes it possible for users to simply ``pip install aiida-myplugin``.

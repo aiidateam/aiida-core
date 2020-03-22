@@ -83,9 +83,9 @@ Folder structure
 While it is up to you to decide the folder structure for your plugin, here is how a typical AiiDA plugin package may look like (see also the `aiida-diff`_ demo plugin)::
 
    aiida-mycode/           - distribution folder
-      aiida_mycode/        - toplevel package (from aiida_code import ..)
+      aiida_mycode/        - toplevel package (from aiida_mycode import ..)
          __init__.py
-         calcs/
+         calculations/
             __init__.py
             mycode.py      - contains MycodeCalculation
          parsers/

@@ -52,7 +52,7 @@ class TestProcessFunction(AiidaTestCase):
             return data_a
 
         @workfunction
-        def function_args_with_default(data_a=orm.Int(DEFAULT_INT)):
+        def function_args_with_default(data_a=lambda: orm.Int(DEFAULT_INT)):
             return data_a
 
         @calcfunction
@@ -72,12 +72,12 @@ class TestProcessFunction(AiidaTestCase):
             return result
 
         @workfunction
-        def function_args_and_default(data_a, data_b=orm.Int(DEFAULT_INT)):
+        def function_args_and_default(data_a, data_b=lambda: orm.Int(DEFAULT_INT)):
             return {'data_a': data_a, 'data_b': data_b}
 
         @workfunction
         def function_defaults(
-            data_a=orm.Int(DEFAULT_INT), metadata={
+            data_a=lambda: orm.Int(DEFAULT_INT), metadata={
                 'label': DEFAULT_LABEL,
                 'description': DEFAULT_DESCRIPTION
             }

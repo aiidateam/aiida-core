@@ -1,27 +1,8 @@
-name: aiida-core
+name: continuous-integration
 
 on: [push, pull_request]
 
 jobs:
-
-  conda:
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v1
-
-    - name: Set up Python 3.7
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.7
-
-    - name: Conda install
-      env:
-        PYTHON_VERSION: 3.7
-      run:
-        .github/workflows/conda.sh
 
   docs:
 
@@ -29,7 +10,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Set up Python 3.7
       uses: actions/setup-python@v1
@@ -60,7 +41,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Set up Python 3.7
       uses: actions/setup-python@v1
@@ -83,6 +64,41 @@ jobs:
       run:
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
+  check-requirements:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+
+    - name: Install dm-script dependencies
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
+
+    - name: Check requirements files
+      run: python ./utils/dependency_management.py check-requirements DEFAULT
+
+    - name: Create commit comment
+      if: failure()
+      uses: peter-evans/commit-comment@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        path: setup.json
+        body: |
+          It appears that at least one of the environments defined in the requirements files
+          ('requirements/*.txt') is not meeting the dependencies specified in the 'setup.json' file.
+          These files define the environment for continuous integration tests, so it is important that they are updated.
+
+          If this commit is part of a pull request, you can automatically update the requirements by
+          commenting with '/update-requirements'.
+
+          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information.
+
   tests:
 
     runs-on: ubuntu-latest
@@ -91,11 +107,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.5, 3.8]
         backend: ['django', 'sqlalchemy']
+        python-version: [3.5, 3.8]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: CasperWA/postgresql-action@v1.2
       with:
         postgresql version: '10'
@@ -119,12 +135,21 @@ jobs:
         sudo apt install postgresql-10 rabbitmq-server graphviz
         sudo systemctl status rabbitmq-server.service
 
-    - name: Install python dependencies
+    - name: Upgrade pip
       run: |
         pip install --upgrade pip
-        pip install numpy==1.17.4
-        pip install -e .[atomic_tools,docs,notebook,rest,testing]
+        pip --version
+
+    - name: upgrade setuptools [py35]
+      if: matrix.python-version == 3.5
+      run: pip install -I setuptools==38.2.0  # Minimally required version for Python 3.5.
+
+    - name: Install aiida-core
+      run: |
+        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        pip install --no-deps -e .
         reentry scan
+        pip freeze
 
     - name: Setup environment
       env:
@@ -138,13 +163,22 @@ jobs:
       run:
         .github/workflows/tests.sh
 
+    - name: Upload coverage report
+      if: matrix.python-version == 3.5 && github.repository == 'aiidateam/aiida-core'
+      uses: codecov/codecov-action@v1
+      with:
+        name: aiida-pytests-py3.5-${{ matrix.backend }}
+        flags: ${{ matrix.backend }}
+        file: ./coverage.xml
+        fail_ci_if_error: true
+
   verdi:
 
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Set up Python 3.7
       uses: actions/setup-python@v1
@@ -166,7 +200,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Install docker
       run: |

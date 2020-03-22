@@ -1,6 +1,6 @@
 {
   "name": "aiida-core",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "url": "http://www.aiida.net/",
   "license": "MIT License",
   "author": "The AiiDA team",
@@ -26,7 +26,7 @@
     "click-completion~=0.5.1",
     "click-config-file~=0.5.0",
     "click-spinner~=0.1.8",
-    "click~=7.0",
+    "click==7.0",
     "django~=2.2",
     "ete3~=3.1",
     "graphviz~=0.13",
@@ -92,10 +92,13 @@
       "pgtest~=1.3,>=1.3.1",
       "pytest~=5.3",
       "pytest-timeout~=1.3",
+      "pytest-cov~=2.7",
+      "coverage<5.0",
       "sqlalchemy-diff~=0.1.3"
     ],
     "dev_precommit": [
       "astroid==2.3.3",
+      "packaging==20.3",
       "pre-commit==1.18.3",
       "prospector==1.2.0",
       "pylint==2.4.4",

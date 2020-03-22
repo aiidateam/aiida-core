@@ -17,7 +17,6 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, LinkType
 from aiida.orm import Data, Node, User, CalculationNode, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
-from aiida.manage.caching import enable_caching
 
 
 class TestNode(AiidaTestCase):
@@ -749,7 +748,10 @@ def test_store_from_cache(clear_database_before_test):  # pylint: disable=unused
         data.put_object_from_tree(tmpdir)
 
     data.store()
-    with enable_caching():
-        clone = data.clone().store()
+
+    clone = data.clone()
+    clone._store_from_cache(data, with_transaction=True)  # pylint: disable=protected-access
+
+    assert clone.is_stored
     assert clone.get_cache_source() == data.uuid
     assert data.get_hash() == clone.get_hash()

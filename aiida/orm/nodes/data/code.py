@@ -160,9 +160,6 @@ class Code(Data):
         """Return a string description of this Code instance.
 
         :return: string description of this Code instance
-
-        .. deprecated:: 1.2.0
-            Will be removed in `v2.0.0`. Use `.description` property instead
         """
         return '{}'.format(self.description)
 

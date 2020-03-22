@@ -12,4 +12,3 @@ Plugin development
    plugins/documenting
    plugins/plugin_tests
    plugins/publish
-   plugins/update_plugin

@@ -3,8 +3,23 @@
 Testing AiiDA plugins
 =====================
 
-When developing a plugin it is important to write tests.
-We recommend using the `pytest`_ framework, while the `unittest`_ framework is also supported.
+We highly recommend writing tests for your AiiDA plugins and running continous integration tests using free platforms like `GitHub Actions <ghactions>`_.
+
+We recommend the following folder structure for AiiDA plugin packages::
+
+   aiida-mycode/           - distribution folder
+      aiida_mycode/        - plugin package
+      tests/               - tests directory (possibly with subdirectories)
+
+.. note::
+    Keeping the tests outside the plugin package keeps the distribution of your plugin package light.
+
+.. _ghactions: https://github.com/features/actions
+
+Using the pytest framework
+--------------------------
+
+We recommend the `pytest`_ framework for testing AiiDA plugins.
 
 One concern when running tests for AiiDA plugins is to separate the test environment from your production environment.
 Depending on the kind of test, each should even be run against a fresh AiiDA database.
@@ -33,15 +48,9 @@ If you prefer to run tests on an existing profile, say ``test_profile``, simply 
    In order to prevent accidental data loss, AiiDA only allows to run tests on profiles whose name starts with ``test_``.
 
 
-
 .. _pytest: https://pytest.org
 .. _unittest: https://docs.python.org/library/unittest.html
 .. _fixture: https://docs.pytest.org/en/latest/fixture.html
-
-Using the pytest framework
---------------------------
-
-We recommend the `pytest`_ framework for testing AiiDA plugins.
 
 AiiDA's fixtures
 ^^^^^^^^^^^^^^^^
@@ -58,9 +67,9 @@ For example:
   * The :py:func:`~aiida.manage.tests.pytest_fixtures.clear_database` fixture depends on the :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture and tells the received :py:class:`~aiida.manage.tests.TestManager` instance to reset the database.
     This fixture lets each test start in a fresh AiiDA environment.
   * The :py:func:`~aiida.manage.tests.pytest_fixtures.temp_dir` fixture returns a temporary directory for file operations and deletes it after the test is finished.
-  * ... you may want to add your own fixtures tailored for your plugin to set up specific ``Data`` nodes & more.
+  * ... you may want to add your own fixtures tailored for your plugins to set up specific ``Data`` nodes & more.
 
-In order to make these fixtures available to your tests, add them to your ``conftest.py`` file at the root level of your plugin as follows::
+In order to make these fixtures available to your tests, add them to your ``conftest.py`` file at the root level of your plugin package as follows::
 
    import pytest
    pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
@@ -92,7 +101,7 @@ You can now start writing tests e.g. in a ``test_calculations.py`` file::
           # check outputs of calculation
           assert result['...'] == ...
 
-Feel free to check out the tests of the `aiida-diff`_ demo plugin.
+Feel free to check out the tests of the `aiida-diff`_ demo plugin package.
 
 .. _conftest: https://docs.pytest.org/en/stable/fixture.html?highlight=conftest#conftest-py-sharing-fixture-functions
 .. _aiida-diff: https://github.com/aiidateam/aiida-diff/
@@ -115,7 +124,6 @@ Using the unittest framework
 
 
 The ``unittest`` package is included in the python standard library and is widely used despite its limitations.
-It is also still used for testing ``aiida-core``.
 
 In analogy to the fixtures of ``pytest``, for ``unittest`` we provide a :py:class:`aiida.manage.tests.unittest_classes.PluginTestCase` class that your test cases can inherit from.
 

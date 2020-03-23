@@ -53,3 +53,16 @@ def test_exit_code_template_message():
 
     assert exit_code_base != exit_code_called  # Calling the exit code should return a new instance
     assert exit_code_called.message == message_template.format(parameter=parameter_name)
+
+
+def test_exit_code_expand_tuple():
+    """Test that an exit code instance can be expanded in its attributes like a tuple."""
+    status = 418
+    message = 'I am a teapot'
+    invalidates_cache = True
+
+    status_exp, message_exp, invalidates_cache_exp = ExitCode(418, message, True)
+
+    assert status == status_exp
+    assert message == message_exp
+    assert invalidates_cache == invalidates_cache_exp

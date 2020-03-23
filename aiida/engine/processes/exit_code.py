@@ -8,17 +8,21 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A namedtuple and namespace for ExitCodes that can be used to exit from Processes."""
+from collections import namedtuple
 from aiida.common.extendeddicts import AttributeDict
 
 __all__ = ('ExitCode', 'ExitCodesNamespace')
 
 
-class ExitCode:
+class ExitCode(namedtuple('ExitCode', ['status', 'message', 'invalidates_cache'])):
     """A simple data class to define an exit code for a :class:`~aiida.engine.processes.process.Process`.
 
     When an instance of this clas is returned from a `Process._run()` call, it will be interpreted that the `Process`
     should be terminated and that the exit status and message of the namedtuple should be set to the corresponding
     attributes of the node.
+
+    .. note:: this class explicitly sub-classes a namedtuple to not break backwards compatibility and to have it behave
+        exactly as a tuple.
 
     :param status: positive integer exit status, where a non-zero value indicated the process failed, default is `0`
     :type status: int
@@ -29,11 +33,6 @@ class ExitCode:
     :param invalidates_cache: optional flag, indicating that a process should not be used in caching
     :type invalidates_cache: bool
     """
-
-    def __init__(self, status=0, message=None, invalidates_cache=False):
-        self.status = status
-        self.message = message
-        self.invalidates_cache = invalidates_cache
 
     def format(self, **kwargs):
         """Create a clone of this exit code where the template message is replaced by the keyword arguments.
@@ -51,6 +50,10 @@ class ExitCode:
 
     def __eq__(self, other):
         return all(getattr(self, attr) == getattr(other, attr) for attr in ['status', 'message', 'invalidates_cache'])
+
+
+# Set the defaults for the `ExitCode` attributes
+ExitCode.__new__.__defaults__ = (0, None, False)
 
 
 class ExitCodesNamespace(AttributeDict):

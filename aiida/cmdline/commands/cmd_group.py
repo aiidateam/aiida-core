@@ -235,11 +235,13 @@ def user_defined_group():
     default=None,
     help='add a filter to show only groups for which the name contains STRING'
 )
+@options.ORDER_BY(type=click.Choice(['id', 'label', 'ctime']), default='id')
+@options.ORDER_DIRECTION()
 @options.NODE(help='Show only the groups that contain the node')
 @with_dbenv()
 def group_list(
     all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith, contains,
-    node
+    order_by, order_dir, node
 ):
     """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments, too-many-locals
@@ -290,7 +292,7 @@ def group_list(
         from aiida.orm import Node
         query.append(Node, filters={'id': {'==': node.id}}, with_group='group')
 
-    query.order_by({Group: {'id': 'asc'}})
+    query.order_by({Group: {order_by: order_dir}})
     result = query.all()
 
     projection_lambdas = {

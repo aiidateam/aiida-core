@@ -41,15 +41,15 @@ def test_exit_code_template_message():
     parameter_name = 'some_parameter'
 
     exit_code_base = ExitCode(418, message_template)
-    exit_code_called = exit_code_base(parameter=parameter_name)
+    exit_code_called = exit_code_base.format(parameter=parameter_name)
 
     # Incorrect placeholder
     with pytest.raises(ValueError):
-        exit_code_base(non_existing_parameter=parameter_name)
+        exit_code_base.format(non_existing_parameter=parameter_name)
 
     # Missing placeholders
     with pytest.raises(ValueError):
-        exit_code_base()
+        exit_code_base.format()
 
     assert exit_code_base != exit_code_called  # Calling the exit code should return a new instance
     assert exit_code_called.message == message_template.format(parameter=parameter_name)

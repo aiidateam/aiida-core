@@ -493,12 +493,12 @@ Returning this exit code, which will be an instance of the :py:class:`~aiida.eng
 
 The ``message`` attribute of an ``ExitCode`` can also be a string that contains placeholders.
 This is useful when the exit code's message is generic enough to a host of situations, but one would just like to parameterize the exit message.
-To concretize the template message of an exit code, simply call it and pass the parameters as keyword arguments::
+To concretize the template message of an exit code, simply call the :meth:`~aiida.engine.processes.exit_code.ExitCode.format` method and pass the parameters as keyword arguments::
 
 .. code:: python
 
     exit_code_template = ExitCode(450, 'the parameter {parameter} is invalid.')
-    exit_code_concrete = exit_code_template(parameter='some_specific_key')
+    exit_code_concrete = exit_code_template.format(parameter='some_specific_key')
 
 This concept can also be applied within the scope of a process.
 In the process spec, we can declare a generic exit code whose exact message should depend on one or multiple parameters::
@@ -512,9 +512,9 @@ Through the ``self.exit_codes`` collection of a ``WorkChain``, this generic can 
 .. code:: python
 
     def inspect_calculation(self):
-        return self.exit_codes.ERROR_INVALID_PARAMETER(parameter='some_specific_key')
+        return self.exit_codes.ERROR_INVALID_PARAMETER.format(parameter='some_specific_key')
 
-This is no different than the example before, because ``self.exit_codes.ERROR_INVALID_PARAMETER`` simply returns an instance of ``ExitCode``, which we then call with the substitution parameters.
+This is no different than the example before, because ``self.exit_codes.ERROR_INVALID_PARAMETER`` simply returns an instance of ``ExitCode``, which we then call ``format`` on with the substitution parameters.
 
 In conclusion, the best part about using exit codes to abort a work chain's execution, is that the exit status can now be used programmatically, by for example a parent work chain.
 Imagine that a parent work chain submitted this work chain.

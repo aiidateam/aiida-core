@@ -35,7 +35,7 @@ class ExitCode:
         self.message = message
         self.invalidates_cache = invalidates_cache
 
-    def __call__(self, **kwargs):
+    def format(self, **kwargs):
         """Create a clone of this exit code where the template message is replaced by the keyword arguments.
 
         :param kwargs: replacement parameters for the template message

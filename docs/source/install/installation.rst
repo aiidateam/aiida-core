@@ -79,13 +79,12 @@ There are additional optional packages that you may want to install, which are g
     * ``ssh_kerberos``: adds support for ssh transport authentication through Kerberos
     * ``REST``: allows a REST server to be ran locally to serve AiiDA data
     * ``docs``: tools to build the documentation
-    * ``advanced_plotting``: tools for advanced plotting
     * ``notebook``: jupyter notebook - to allow it to import AiiDA modules
     * ``testing``: python modules required to run the automatic unit tests
 
 In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command::
 
-    (aiida) $ pip install -e aiida-core[atomic_tools,docs,advanced_plotting]
+    (aiida) $ pip install -e aiida-core[atomic_tools,docs]
 
 .. note:: If you are installing the optional ``ssh_kerberos`` and you are on Ubuntu you might encounter an error related to the ``gss`` package.
   To fix this you need to install the ``libffi-dev`` and ``libkrb5-dev`` packages::

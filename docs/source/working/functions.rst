@@ -177,7 +177,7 @@ In the case of the example above, it would look something like the following:
 However, in this particular example the exception is not so much an unexpected error, but one we could have considered and have seen coming, so it might be more applicable to simply mark the process as failed.
 To accomplish this, there is the concept of an :ref:`exit status<concepts_process_exit_codes>` that can be set on the process, which is an integer that, when non-zero, marks a process in the ``Finished`` state as 'failed'.
 Since the exit status is set as an attribute on the process node, it also makes it very easy to query for failed processes.
-To set a non-zero exit status on a calculation function to indicate it as failed, simply return an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` named tuple.
+To set a non-zero exit status on a calculation function to indicate it as failed, simply return an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` class.
 Time for a demonstration:
 
 .. include:: include/snippets/processes/functions/calcfunction_exit_code.py

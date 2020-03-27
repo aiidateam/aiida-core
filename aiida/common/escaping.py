@@ -38,6 +38,8 @@ def escape_for_bash(str_to_escape):
     if str_to_escape is None:
         return ''
 
+    str_to_escape = str(str_to_escape)
+
     escaped_quotes = str_to_escape.replace("'", """'"'"'""")
     return "'{}'".format(escaped_quotes)
 

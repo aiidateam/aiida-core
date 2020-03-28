@@ -106,7 +106,7 @@ class InteractiveOption(ConditionalOption):
         return None
 
     def _get_default(self, ctx):
-        """provides the functionality of :func:`click.Option.get_default`"""
+        """provides the functionality of :meth:`click.Option.get_default`"""
         if self._contextual_default is not None:
             default = self._contextual_default(ctx)
         else:

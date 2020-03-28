@@ -49,7 +49,11 @@ needs_sphinx = '1.5.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.viewcode', 'IPython.sphinxext.ipython_console_highlighting', 'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext']
+extensions = [
+    'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
+    'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
+    'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext'
+]
 ipython_mplbackend = ''
 
 todo_include_todos = True
@@ -115,6 +119,14 @@ pygments_style = 'sphinx'
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
+intersphinx_mapping = {
+    'click': ('https://click.palletsprojects.com/', None),
+    'flask': ('http://flask.pocoo.org/docs/latest/', None),
+    'flask_restful': ('https://flask-restful.readthedocs.io/en/latest/', None),
+    'kiwipy': ('https://kiwipy.readthedocs.io/en/latest/', None),
+    'plumpy': ('https://plumpy.readthedocs.io/en/latest/', None),
+    'python': ('https://docs.python.org/3', None),
+}
 
 # -- Options for HTML output ---------------------------------------------------
 
@@ -361,17 +373,8 @@ epub_copyright = copyright
 # Allow duplicate toc entries.
 #epub_tocdup = True
 
-# otherwise, readthedocs.org uses their theme by default, so no need
-# to specify it
-
-
 # Warnings to ignore when using the -n (nitpicky) option
-# We should ignore any python built-in exception, for instance
-nitpick_ignore = [('py:class','Warning'), ('py:class', 'exceptions.Warning')]
-
-for line in open('nitpick-exceptions'):
-    if line.strip() == '' or line.startswith('#'):
-        continue
-    dtype, target = line.split(None, 1)
-    target = target.strip()
-    nitpick_ignore.append((dtype, target))
+with open('nitpick-exceptions', 'r') as handle:
+    nitpick_ignore = [
+        tuple(line.strip().split(None, 1)) for line in handle.readlines() if line.strip() and not line.startswith('#')
+    ]

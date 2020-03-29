@@ -178,8 +178,8 @@ The third and final line is extremely important, as it will call the ``define`` 
 Inputs and outputs
 ------------------
 With those formalities out of the way, you can start defining the interesting properties of the work chain through the ``spec``.
-In the example you can see how the method :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.input` is used to define multiple input ports, which document exactly which inputs the work chain expects.
-Similarly, :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.output` is called to instruct that the work chain will produce an output with the label ``result``.
+In the example you can see how the method :py:meth:`~plumpy.ProcessSpec.input` is used to define multiple input ports, which document exactly which inputs the work chain expects.
+Similarly, :py:meth:`~plumpy.ProcessSpec.output` is called to instruct that the work chain will produce an output with the label ``result``.
 These two port creation methods support a lot more functionality, such as adding help string, validation and more, all of which is documented in detail in the section on :ref:`ports and port namespace<working_processes_ports_portnamespaces>`.
 
 
@@ -189,7 +189,7 @@ Outline
 -------
 The outline is what sets the work chain apart from other processes.
 It is a way of defining the higher-level logic that encodes the workflow that the work chain takes.
-The outline is defined in the ``define`` method through the :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.outline`.
+The outline is defined in the ``define`` method through the :py:meth:`~plumpy.WorkChainSpec.outline`.
 It takes a sequence of instructions that the work chain will execute, each of which is implemented as a method of the work chain class.
 In the simple example above, the outline consists of three simple instructions: ``add``, ``multiply``, ``results``.
 Since these are implemented as instance methods, they are prefixed with ``cls.`` to indicate that they are in fact methods of the work chain class.

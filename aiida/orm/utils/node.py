@@ -12,6 +12,7 @@ from abc import ABCMeta
 import logging
 import math
 import numbers
+import warnings
 from collections.abc import Iterable, Mapping
 
 from aiida.common import exceptions
@@ -70,7 +71,14 @@ def load_node_class(type_string):
         entry_point_name = strip_prefix(base_path, 'nodes.')
         return load_entry_point('aiida.node', entry_point_name)
 
-    raise exceptions.EntryPointError('unknown type string {}'.format(type_string))
+    # At this point we really have an anomalous type string. At some point, storing nodes with unresolvable type strings
+    # was allowed, for example by creating a sub class in a shell and then storing an instance. Attempting to load the
+    # node then would fail miserably. This is now no longer allowed, but we need a fallback for existing cases, which
+    # should be rare. We fallback on `Data` and not `Node` because bare node instances are also not storable and so the
+    # logic of the ORM is not well defined for a loaded instance of the base `Node` class.
+    warnings.warn('unknown type string `{}`, falling back onto `Data` class'.format(type_string))  # pylint: disable=no-member
+
+    return Data
 
 
 def get_type_string_from_class(class_module, class_name):
@@ -247,13 +255,9 @@ def clean_value(value):
 
 
 class AbstractNodeMeta(ABCMeta):  # pylint: disable=too-few-public-methods
-    """
-    Some python black magic to set correctly the logger also in subclasses.
-    """
+    """Some python black magic to set correctly the logger also in subclasses."""
 
-    # pylint: disable=arguments-differ,protected-access,too-many-function-args
-
-    def __new__(mcs, name, bases, namespace):
+    def __new__(mcs, name, bases, namespace):  # pylint: disable=arguments-differ,protected-access,too-many-function-args
         newcls = ABCMeta.__new__(mcs, name, bases, namespace)
         newcls._logger = logging.getLogger('{}.{}'.format(namespace['__module__'], name))
 

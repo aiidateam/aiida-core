@@ -58,8 +58,7 @@ class RemoteData(Data):
         Connects to the remote folder and retrieves the content of a file.
 
         :param relpath:  The relative path of the file on the remote to retrieve.
-        :param destpath: The absolute path of the copied/retrieved file on the local machine.
-        :return: a string with the file content
+        :param destpath: The absolute path of where to store the file on the local machine.
         """
         authinfo = self.get_authinfo()
         t = authinfo.get_transport()
@@ -67,7 +66,7 @@ class RemoteData(Data):
         with t:
             try:
                 full_path = os.path.join(self.get_remote_path(), relpath)
-                content = t.getfile(full_path, destpath)
+                t.getfile(full_path, destpath)
             except IOError as e:
                 if e.errno == 2:  # file not existing
                     raise IOError('The required remote file {} on {} does not exist or has been deleted.'.format(
@@ -75,8 +74,6 @@ class RemoteData(Data):
                     ))
                 else:
                     raise
-            else:
-                return content
 
     def listdir(self, relpath='.'):
         """

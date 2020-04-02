@@ -373,19 +373,19 @@ def import_data_sqla(
                                         '==': value['name']
                                     }}, project=['*'], tag='res'
                                 )
-                                dupl = (builder.count() or value['name'] in imported_comp_names)
+                                dupl = builder.count() or value['name'] in imported_comp_names
                                 dupl_counter = 0
                                 orig_name = value['name']
                                 while dupl:
                                     # Rename the new computer
-                                    value['name'] = (orig_name + DUPL_SUFFIX.format(dupl_counter))
+                                    value['name'] = orig_name + DUPL_SUFFIX.format(dupl_counter)
                                     builder = QueryBuilder()
                                     builder.append(
                                         entity, filters={'name': {
                                             '==': value['name']
                                         }}, project=['*'], tag='res'
                                     )
-                                    dupl = (builder.count() or value['name'] in imported_comp_names)
+                                    dupl = builder.count() or value['name'] in imported_comp_names
                                     dupl_counter += 1
                                     if dupl_counter == 100:
                                         raise exceptions.ImportUniquenessError(

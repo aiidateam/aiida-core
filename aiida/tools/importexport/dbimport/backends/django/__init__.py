@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=protected-access,fixme,inconsistent-return-statements,too-many-arguments,too-many-locals,too-many-statements,too-many-branches
+# pylint: disable=protected-access,fixme,too-many-arguments,too-many-locals,too-many-statements,too-many-branches,too-many-nested-blocks
 """ Django-specific import of AiiDA entities """
 
 from distutils.version import StrictVersion
@@ -136,11 +136,7 @@ def import_data_dj(
             if tarfile.is_tarfile(in_path):
                 extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
             elif zipfile.is_zipfile(in_path):
-                try:
-                    extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
-                except ValueError as exc:
-                    print('The following problem occured while processing the provided file: {}'.format(exc))
-                    return
+                extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
             else:
                 raise exceptions.ImportValidationError(
                     'Unable to detect the input file format, it is neither a '
@@ -253,7 +249,18 @@ def import_data_dj(
             new_entries = {}
             existing_entries = {}
 
+            if debug:
+                print('GENERATING LIST OF DATA...')
+
             if not silent:
+                # Instantiate progress bar
+                progress_bar = kwargs.get('progress_bar', tqdm(disable=True))
+                progress_bar.bar_format = BAR_FORMAT
+                progress_bar.total = 1
+                progress_bar.leave = True
+                progress_bar.disable = False
+                pbar_base_str = 'Generating list of data - '
+
                 # Get total entities from data.json
                 # To be used with progress bar
                 number_of_entities = 0
@@ -273,24 +280,78 @@ def import_data_dj(
                 # Not necessarily all models are exported
                 if model_name in data['export_data']:
 
+                    if debug:
+                        print('  {}...'.format(model_name))
+
                     if not silent:
+                        progress_bar.set_description_str(pbar_base_str + model_name, refresh=False)
                         number_of_entities += len(data['export_data'][model_name])
 
                     # skip nodes that are already present in the DB
                     if unique_identifier is not None:
                         import_unique_ids = set(v[unique_identifier] for v in data['export_data'][model_name].values())
 
-                        relevant_db_entries_result = model.objects.filter(
-                            **{'{}__in'.format(unique_identifier): import_unique_ids}
-                        )
-                        # Note: uuids need to be converted to strings
-                        relevant_db_entries = {
-                            str(getattr(n, unique_identifier)): n for n in relevant_db_entries_result
-                        }
+                        relevant_db_entries = {}
+                        if import_unique_ids:
+                            relevant_db_entries_result = model.objects.filter(
+                                **{'{}__in'.format(unique_identifier): import_unique_ids}
+                            )
+
+                            # Note: UUIDs need to be converted to strings
+                            if silent:
+                                relevant_db_entries = {
+                                    str(getattr(n, unique_identifier)): n for n in relevant_db_entries_result
+                                }
+                            elif relevant_db_entries_result.count():
+                                progress_bar.reset(total=relevant_db_entries_result.count())
+                                # Imitating QueryBuilder.iterall() with default settings
+                                for object_ in relevant_db_entries_result.iterator(chunk_size=100):
+                                    progress_bar.update()
+                                    relevant_db_entries.update({str(getattr(object_, unique_identifier)): object_})
 
                         foreign_ids_reverse_mappings[model_name] = {k: v.pk for k, v in relevant_db_entries.items()}
+
+                        if debug:
+                            print('    GOING THROUGH ARCHIVE...')
+
+                        imported_comp_names = set()
                         for key, value in data['export_data'][model_name].items():
-                            if value[unique_identifier] in relevant_db_entries.keys():
+                            if model_name == GROUP_ENTITY_NAME:
+                                # Check if there is already a group with the same name
+                                dupl_counter = 0
+                                orig_label = value['label']
+                                while model.objects.filter(label=value['label']):
+                                    value['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
+                                    dupl_counter += 1
+                                    if dupl_counter == 100:
+                                        raise exceptions.ImportUniquenessError(
+                                            'A group of that label ( {} ) already exists and I could not create a new '
+                                            'one'.format(orig_label)
+                                        )
+
+                            elif model_name == COMPUTER_ENTITY_NAME:
+                                # Check if there is already a computer with the same name in the database
+                                dupl = (
+                                    model.objects.filter(name=value['name']) or value['name'] in imported_comp_names
+                                )
+                                orig_name = value['name']
+                                dupl_counter = 0
+                                while dupl:
+                                    # Rename the new computer
+                                    value['name'] = orig_name + DUPL_SUFFIX.format(dupl_counter)
+                                    dupl = (
+                                        model.objects.filter(name=value['name']) or value['name'] in imported_comp_names
+                                    )
+                                    dupl_counter += 1
+                                    if dupl_counter == 100:
+                                        raise exceptions.ImportUniquenessError(
+                                            'A computer of that name ( {} ) already exists and I could not create a '
+                                            'new one'.format(orig_name)
+                                        )
+
+                                imported_comp_names.add(value['name'])
+
+                            if value[unique_identifier] in relevant_db_entries:
                                 # Already in DB
                                 existing_entries[model_name][key] = value
                             else:
@@ -300,12 +361,8 @@ def import_data_dj(
                         new_entries[model_name] = data['export_data'][model_name]
 
             if not silent:
-                # Instantiate progress bar
-                progress_bar = kwargs.get('progress_bar', tqdm(disable=True))
-                progress_bar.bar_format = BAR_FORMAT
-                progress_bar.total = number_of_entities
-                progress_bar.leave = True
-                progress_bar.disable = False
+                # Reset for import
+                progress_bar.reset(total=number_of_entities)
 
             # I import data from the given model
             for model_name in model_order:
@@ -358,7 +415,6 @@ def import_data_dj(
                 objects_to_create = []
                 # This is needed later to associate the import entry with the new pk
                 import_new_entry_pks = {}
-                imported_comp_names = set()
 
                 # NEW ENTRIES
                 if not silent and new_entries[model_name]:
@@ -378,42 +434,6 @@ def import_data_dj(
                             foreign_ids_reverse_mappings=foreign_ids_reverse_mappings
                         ) for k, v in entry_data.items()
                     )
-
-                    if model is models.DbGroup:
-                        # Check if there is already a group with the same name
-                        dupl_counter = 0
-                        orig_label = import_data['label']
-                        while model.objects.filter(label=import_data['label']):
-                            import_data['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
-                            dupl_counter += 1
-                            if dupl_counter == 100:
-                                raise exceptions.ImportUniquenessError(
-                                    'A group of that label ( {} ) already exists and I could not create a new one'
-                                    ''.format(orig_label)
-                                )
-
-                    elif model is models.DbComputer:
-                        # Check if there is already a computer with the same name in the database
-                        dupl = (
-                            model.objects.filter(name=import_data['name']) or import_data['name'] in imported_comp_names
-                        )
-                        orig_name = import_data['name']
-                        dupl_counter = 0
-                        while dupl:
-                            # Rename the new computer
-                            import_data['name'] = (orig_name + DUPL_SUFFIX.format(dupl_counter))
-                            dupl = (
-                                model.objects.filter(name=import_data['name']) or
-                                import_data['name'] in imported_comp_names
-                            )
-                            dupl_counter += 1
-                            if dupl_counter == 100:
-                                raise exceptions.ImportUniquenessError(
-                                    'A computer of that name ( {} ) already exists and I could not create a new one'
-                                    ''.format(orig_name)
-                                )
-
-                        imported_comp_names.add(import_data['name'])
 
                     objects_to_create.append(model(**import_data))
                     import_new_entry_pks[unique_id] = import_entry_pk

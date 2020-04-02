@@ -351,7 +351,7 @@ def export_tree(
     ##### Start automatic recursive export data generation #####
     ############################################################
     if debug:
-        print('STORING DATABASE ENTRIES...')
+        print('GATHERING DATABASE ENTRIES...')
 
     if not silent and entries_to_add:
         progress_bar.reset(total=len(entries_to_add))
@@ -413,7 +413,7 @@ def export_tree(
 
     # ATTRIBUTES and EXTRAS
     if debug:
-        print('STORING NODE ATTRIBUTES AND EXTRAS...')
+        print('GATHERING NODE ATTRIBUTES AND EXTRAS...')
     node_attributes = {}
     node_extras = {}
 
@@ -437,7 +437,7 @@ def export_tree(
             node_extras[str(node_pk)] = extras
 
     if debug:
-        print('STORING GROUP ELEMENTS...')
+        print('GATHERING GROUP ELEMENTS...')
     groups_uuid = defaultdict(list)
     # If a group is in the exported data, we export the group/node correlation
     if GROUP_ENTITY_NAME in export_data:
@@ -478,7 +478,7 @@ def export_tree(
     nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
 
     if debug:
-        print('STORING DATA...')
+        print('ADDING DATA TO EXPORT ARCHIVE...')
 
     data = {
         'node_attributes': node_attributes,
@@ -514,7 +514,7 @@ def export_tree(
         fhandle.write(json.dumps(metadata))
 
     if debug:
-        print('STORING REPOSITORY FILES...')
+        print('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')
 
     # If there are no nodes, there are no repository files to store
     if all_node_pks:

@@ -291,7 +291,7 @@ def print_header(file_format, outfile, debug, **kwargs):
     call_reversed = kwargs.get('call_reversed', False)
 
     inclusions = [['Include Comments', include_comments], ['Include Logs', include_logs]]
-    result += '\n\n{}'.format(tabulate(inclusions, headers=['Included', '']))
+    result += '\n\n{}'.format(tabulate(inclusions, headers=['Inclusion rules', '']))
 
     traversal_rules = [['Follow INPUT Links forwards',
                         input_forward], ['Follow CREATE Links backwards', create_reversed],

@@ -301,14 +301,11 @@ def import_data_dj(
 
             if not silent:
                 # Instantiate progress bar
-                if 'progress_bar' in kwargs:
-                    progress_bar = kwargs['progress_bar']
-                    progress_bar.bar_format = BAR_FORMAT
-                    progress_bar.total = number_of_entities
-                    progress_bar.leave = True
-                    progress_bar.disable = False
-                else:
-                    progress_bar = tqdm(total=number_of_entities, bar_format=BAR_FORMAT, leave=True)
+                progress_bar = kwargs.get('progress_bar', tqdm(disable=True))
+                progress_bar.bar_format = BAR_FORMAT
+                progress_bar.total = number_of_entities
+                progress_bar.leave = True
+                progress_bar.disable = False
 
             # I import data from the given model
             for model_name in model_order:

@@ -170,7 +170,7 @@ def export_tree(
 
     if not silent:
         # Instantiate progress bar - go through list of "what"
-        pbar_total = len(what) + 2 if what else 2
+        pbar_total = len(what) + 1 if what else 1
         progress_bar = tqdm(total=pbar_total, bar_format=BAR_FORMAT, leave=True)
         progress_bar.set_description_str('Collecting chosen entities', refresh=False)
 
@@ -228,13 +228,14 @@ def export_tree(
     # At the same time, we will create the links_uuid list of dicts to be exported
 
     if debug or not silent:
+        progress_bar.reset(total=1)
         progress_bar.set_description_str('Getting provenance and storing links ...', refresh=True)
 
     traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **kwargs)
     node_ids_to_be_exported = traverse_output['nodes']
     graph_traversal_rules = traverse_output['rules']
 
-    # I create a utility dictionary for mapping pk to uuid.
+    # A utility dictionary for mapping PK to UUID.
     if node_ids_to_be_exported:
         qbuilder = orm.QueryBuilder().append(
             orm.Node,
@@ -260,6 +261,7 @@ def export_tree(
 
     if not silent:
         # Progress bar initialization - Entities
+        progress_bar.reset(total=1)
         progress_bar.set_description_str('Initializing export of all entities', refresh=True)
 
     ## Universal "entities" attributed to all types of nodes
@@ -287,6 +289,9 @@ def export_tree(
         given_entities.add(LOG_ENTITY_NAME)
     if given_comment_entry_ids:
         given_entities.add(COMMENT_ENTITY_NAME)
+
+    if debug or not silent:
+        progress_bar.update()
 
     if not silent and given_entities:
         progress_bar.reset(total=len(given_entities))

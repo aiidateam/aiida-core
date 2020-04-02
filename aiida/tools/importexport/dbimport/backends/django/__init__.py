@@ -297,7 +297,7 @@ def import_data_dj(
                                 # To be added
                                 new_entries[model_name][key] = value
                     else:
-                        new_entries[model_name] = data['export_data'][model_name].copy()
+                        new_entries[model_name] = data['export_data'][model_name]
 
             if not silent:
                 # Instantiate progress bar

@@ -403,8 +403,7 @@ def import_data_sqla(
                                 # To be added
                                 new_entries[entity_name][key] = value
                     else:
-                        # Why the copy:
-                        new_entries[entity_name] = data['export_data'][entity_name].copy()
+                        new_entries[entity_name] = data['export_data'][entity_name]
 
             if not silent:
                 # Progress bar - reset for import

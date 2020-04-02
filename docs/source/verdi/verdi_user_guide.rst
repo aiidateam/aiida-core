@@ -702,21 +702,24 @@ Below is a list with all available subcommands.
       Execute scripts with preloaded AiiDA environment.
 
     Options:
-      --group / --no-group          Enables the autogrouping  [default: True]
-      -l, --group-label TEXT        Specify the label of the auto group
-      -n, --group-name TEXT         Specify the name of the auto group
-                                    [DEPRECATED, USE --group-label instead]
-      -e, --exclude TEXT            Exclude these classes from auto grouping (use
-                                    full entrypoint strings)
-      -i, --include TEXT            Include these classes from auto grouping  (use
-                                    full entrypoint strings or "all")
-      -E, --excludesubclasses TEXT  Exclude these classes and their sub classes
-                                    from auto grouping (use full entrypoint
-                                    strings)
-      -I, --includesubclasses TEXT  Include these classes and their sub classes
-                                    from auto grouping (use full entrypoint
-                                    strings)
-      --help                        Show this message and exit.
+      --group / --no-group           Enables the autogrouping  [default: True]
+      -l, --group-label-prefix TEXT  Specify the prefix of the label of the auto
+                                     group (numbers might be automatically
+                                     appended to generate unique names per run)
+      -n, --group-name TEXT          Specify the name of the auto group
+                                     [DEPRECATED, USE --group-label-prefix
+                                     instead]
+      -e, --exclude TEXT             Exclude these classes from auto grouping (use
+                                     full entrypoint strings)
+      -i, --include TEXT             Include these classes from auto grouping
+                                     (use full entrypoint strings or "all")
+      -E, --excludesubclasses TEXT   Exclude these classes and their sub classes
+                                     from auto grouping (use full entrypoint
+                                     strings)
+      -I, --includesubclasses TEXT   Include these classes and their sub classes
+                                     from auto grouping (use full entrypoint
+                                     strings)
+      --help                         Show this message and exit.
 
 
 .. _verdi_setup:

@@ -22,7 +22,7 @@ from wrapt import decorator
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 
-from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, entry_point_group_to_module_path_map
+from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
 
 __all__ = ('get_use_cache', 'enable_caching', 'disable_caching')
 
@@ -248,7 +248,7 @@ def _validate_identifier_pattern(*, identifier):
 
     1.  <group_name><ENTRY_POINT_STRING_SEPARATOR><tail>
 
-        where `group_name` is one of the keys in `entry_point_group_to_module_path_map`
+        where `group_name` is one of the keys in `ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP`
         and `tail` can be anything _except_ `ENTRY_POINT_STRING_SEPARATOR`.
 
     2. a fully qualified Python name
@@ -276,7 +276,7 @@ def _validate_identifier_pattern(*, identifier):
         group_pattern, _ = identifier.split(ENTRY_POINT_STRING_SEPARATOR)
         if not any(
             _match_wildcard(string=group_name, pattern=group_pattern)
-            for group_name in entry_point_group_to_module_path_map
+            for group_name in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
         ):
             raise ValueError(
                 common_error_msg + "Group name pattern '{}' does not match any of the AiiDA entry point group names.".
@@ -290,7 +290,7 @@ def _validate_identifier_pattern(*, identifier):
     # aiida.* or aiida.calculations*
     if '*' in identifier:
         group_part, _ = identifier.split('*', 1)
-        if any(group_name.startswith(group_part) for group_name in entry_point_group_to_module_path_map):
+        if any(group_name.startswith(group_part) for group_name in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP):
             return
     # Finally, check if it could be a fully qualified Python name
     for identifier_part in identifier.split('.'):

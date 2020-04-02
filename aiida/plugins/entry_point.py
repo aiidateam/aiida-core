@@ -240,7 +240,7 @@ def get_entry_points(group):
     :param group: the entry point group
     :return: a list of entry points
     """
-    return [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group=group)]
+    return list(ENTRYPOINT_MANAGER.iter_entry_points(group=group))
 
 
 @functools.lru_cache(maxsize=None)
@@ -257,12 +257,16 @@ def get_entry_point(group, name):
     entry_points = [ep for ep in get_entry_points(group) if ep.name == name]
 
     if not entry_points:
-        raise MissingEntryPointError("Entry point '{}' not found in group '{}'.".format(name, group) +
-        'Try running `reentry scan` to update the entry point cache.')
+        raise MissingEntryPointError(
+            "Entry point '{}' not found in group '{}'.".format(name, group) +
+            'Try running `reentry scan` to update the entry point cache.'
+        )
 
     if len(entry_points) > 1:
-        raise MultipleEntryPointError("Multiple entry points '{}' found in group '{}'. ".format(name, group) +
-                                      'Try running `reentry scan` to repopulate the entry point cache.')
+        raise MultipleEntryPointError(
+            "Multiple entry points '{}' found in group '{}'. ".format(name, group) +
+            'Try running `reentry scan` to repopulate the entry point cache.'
+        )
 
     return entry_points[0]
 

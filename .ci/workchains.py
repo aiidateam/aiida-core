@@ -68,8 +68,8 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
     @process_handler(priority=400, exit_codes=ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
     def error_negative_sum(self, node):
         """What even is a negative number, how can I have minus three melons?!."""
-        self.ctx.inputs.x = Int(abs(node.inputs.x.value))
-        self.ctx.inputs.y = Int(abs(node.inputs.y.value))
+        self.ctx.inputs.x = Int(abs(node.inputs.x.value))  # pylint: disable=invalid-name
+        self.ctx.inputs.y = Int(abs(node.inputs.y.value))  # pylint: disable=invalid-name
         return ProcessHandlerReport(True)
 
 

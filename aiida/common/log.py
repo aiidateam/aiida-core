@@ -180,6 +180,11 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
 
         for logger in config.get('loggers', {}).values():
             logger.setdefault('handlers', []).append(daemon_handler_name)
+            try:
+                # Remove the `console` stdout stream handler to prevent messages being duplicated in the daemon log file
+                logger['handlers'].remove('console')
+            except ValueError:
+                pass
 
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:

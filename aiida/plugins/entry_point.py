@@ -243,6 +243,7 @@ def get_entry_points(group):
     return list(ENTRYPOINT_MANAGER.iter_entry_points(group=group))
 
 
+
 @functools.lru_cache(maxsize=None)
 def get_entry_point(group, name):
     """
@@ -257,16 +258,12 @@ def get_entry_point(group, name):
     entry_points = [ep for ep in get_entry_points(group) if ep.name == name]
 
     if not entry_points:
-        raise MissingEntryPointError(
-            "Entry point '{}' not found in group '{}'.".format(name, group) +
-            'Try running `reentry scan` to update the entry point cache.'
-        )
+        raise MissingEntryPointError("Entry point '{}' not found in group '{}'. Try running `reentry scan` to update "
+            'the entry point cache.'.format(name, group))
 
     if len(entry_points) > 1:
-        raise MultipleEntryPointError(
-            "Multiple entry points '{}' found in group '{}'. ".format(name, group) +
-            'Try running `reentry scan` to repopulate the entry point cache.'
-        )
+        raise MultipleEntryPointError("Multiple entry points '{}' found in group '{}'.Try running `reentry scan` to "
+            'repopulate the entry point cache.'.format(name, group))
 
     return entry_points[0]
 
@@ -334,3 +331,26 @@ def is_valid_entry_point_string(entry_point_string):
         return False
 
     return group in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
+
+
+@functools.lru_cache(maxsize=None)
+def is_registered_entry_point(class_module, class_name, groups=None):
+    """Verify whether the class with the given module and class name is a registered entry point.
+
+    .. note:: this function only checks whether the class has a registered entry point. It does explicitly not verify
+        if the corresponding class is also importable. Use `load_entry_point` for this purpose instead.
+
+    :param class_module: the module of the class
+    :param class_name: the name of the class
+    :param groups: optionally consider only these entry point groups to look for the class
+    :return: boolean, True if the class is a registered entry point, False otherwise.
+    """
+    if groups is None:
+        groups = list(entry_point_group_to_module_path_map.keys())
+
+    for group in groups:
+        for entry_point in ENTRYPOINT_MANAGER.iter_entry_points(group):
+            if class_module == entry_point.module_name and [class_name] == entry_point.attrs:
+                return True
+    else:
+        return False

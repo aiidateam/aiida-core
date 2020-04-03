@@ -243,7 +243,6 @@ def get_entry_points(group):
     return list(ENTRYPOINT_MANAGER.iter_entry_points(group=group))
 
 
-
 @functools.lru_cache(maxsize=None)
 def get_entry_point(group, name):
     """
@@ -258,12 +257,16 @@ def get_entry_point(group, name):
     entry_points = [ep for ep in get_entry_points(group) if ep.name == name]
 
     if not entry_points:
-        raise MissingEntryPointError("Entry point '{}' not found in group '{}'. Try running `reentry scan` to update "
-            'the entry point cache.'.format(name, group))
+        raise MissingEntryPointError(
+            "Entry point '{}' not found in group '{}'. Try running `reentry scan` to update "
+            'the entry point cache.'.format(name, group)
+        )
 
     if len(entry_points) > 1:
-        raise MultipleEntryPointError("Multiple entry points '{}' found in group '{}'.Try running `reentry scan` to "
-            'repopulate the entry point cache.'.format(name, group))
+        raise MultipleEntryPointError(
+            "Multiple entry points '{}' found in group '{}'.Try running `reentry scan` to "
+            'repopulate the entry point cache.'.format(name, group)
+        )
 
     return entry_points[0]
 
@@ -346,11 +349,10 @@ def is_registered_entry_point(class_module, class_name, groups=None):
     :return: boolean, True if the class is a registered entry point, False otherwise.
     """
     if groups is None:
-        groups = list(entry_point_group_to_module_path_map.keys())
+        groups = list(ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys())
 
     for group in groups:
         for entry_point in ENTRYPOINT_MANAGER.iter_entry_points(group):
             if class_module == entry_point.module_name and [class_name] == entry_point.attrs:
                 return True
-    else:
-        return False
+    return False

@@ -258,7 +258,7 @@ class AbstractNodeMeta(ABCMeta):  # pylint: disable=too-few-public-methods
     """Some python black magic to set correctly the logger also in subclasses."""
 
     def __new__(mcs, name, bases, namespace):  # pylint: disable=arguments-differ,protected-access,too-many-function-args
-        newcls = ABCMeta.__new__(mcs, name, bases, namespace)
+        newcls = ABCMeta.__new__(mcs, name, bases, namespace)  # pylint: disable=too-many-function-args
         newcls._logger = logging.getLogger('{}.{}'.format(namespace['__module__'], name))
 
         # Set the plugin type string and query type string based on the plugin type string

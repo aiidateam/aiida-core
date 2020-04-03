@@ -232,6 +232,8 @@ print(node6.pk)
             calcarithmetic_in_autogroup,
         ) in enumerate([
             [['--exclude', 'aiida.data:array.kpoints'], False, True, True, True, True, True],
+            # Check if % works anywhere - both 'int' and 'array.kpoints' contain an 'i'
+            [['--exclude', 'aiida.data:%i%'], False, True, False, True, True, True],
             [['--exclude', 'aiida.data:int'], True, True, False, True, True, True],
             [['--exclude', 'aiida.data:%'], False, False, False, True, True, True],
             [['--exclude', 'aiida.data:array', 'aiida.data:array.%'], False, False, True, True, True, True],

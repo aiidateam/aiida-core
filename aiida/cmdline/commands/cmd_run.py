@@ -112,7 +112,8 @@ def run(scriptname, varargs, auto_group, auto_group_label_prefix, group_name, ex
         warnings.warn('--group-name is deprecated, use `--auto-group-label-prefix` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
         if auto_group_label_prefix:
             raise click.BadParameter(
-                'You cannot specify both --group-name and --auto-group-label-prefix; use --group-label only'
+                'You cannot specify both --group-name and --auto-group-label-prefix; '
+                'use --auto-group-label-prefix only'
             )
         auto_group_label_prefix = group_name
         # To have the old behavior, with auto-group enabled.

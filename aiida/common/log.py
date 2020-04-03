@@ -175,11 +175,17 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': daemon_log_file,
             'encoding': 'utf8',
-            'maxBytes': 100000,
+            'maxBytes': 10000000,  # 10 MB
+            'backupCount': 10,
         }
 
         for logger in config.get('loggers', {}).values():
             logger.setdefault('handlers', []).append(daemon_handler_name)
+            try:
+                # Remove the `console` stdout stream handler to prevent messages being duplicated in the daemon log file
+                logger['handlers'].remove('console')
+            except ValueError:
+                pass
 
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:

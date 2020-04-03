@@ -220,20 +220,21 @@ class Archive:
             return json.load(fhandle)
 
 
-def update_description(path, progress_bar):
+def update_description(path, progress_bar: tqdm, refresh: bool = False):
     """Update description for a progress bar given path
 
     :param path: path of file or directory
     :type path: str
-
     :param progress_bar: `tqdm` progress bar to have its description updated
+    :param refresh: Whether or not to refresh the progress bar with the new description. Default: False.
+    :type refresh: bool
     """
     (path, description) = os.path.split(path)
     while description == '':
         (path, description) = os.path.split(path)
     description = 'EXTRACTING: {}'.format(description)
 
-    progress_bar.set_description_str(description)
+    progress_bar.set_description_str(description, refresh=refresh)
 
 
 def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, progress_bar=None):

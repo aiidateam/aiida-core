@@ -79,7 +79,7 @@ def inspect(archive, version, data, meta_data):
     show_default=True,
     help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).'
 )
-@click.option('--debug', is_flag=True, default=False, flag_value=True, help='Show debug messages.', hidden=True)
+@options.DEBUG()
 @decorators.with_dbenv()
 def create(
     output_file, codes, computers, groups, nodes, archive_format, force, input_calc_forward, input_work_forward,

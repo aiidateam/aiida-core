@@ -251,7 +251,7 @@ def _get_progress_bar():
     help='Force migration of export file archives, if needed.'
 )
 @options.NON_INTERACTIVE()
-@click.option('--debug', is_flag=True, default=False, flag_value=True, help='Show debug messages.', hidden=True)
+@options.DEBUG()
 @decorators.with_dbenv()
 @click.pass_context
 def cmd_import(

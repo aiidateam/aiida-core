@@ -16,7 +16,7 @@ profiles can be selected at hook-up (-p flag).
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params.options import HOSTNAME, PORT
+from aiida.cmdline.params.options import HOSTNAME, PORT, DEBUG
 from aiida.restapi.common import config
 
 
@@ -30,7 +30,7 @@ from aiida.restapi.common import config
     default=config.CLI_DEFAULTS['CONFIG_DIR'],
     help='Path to the configuration directory'
 )
-@click.option('--debug', 'debug', is_flag=True, default=config.APP_CONFIG['DEBUG'], help='Enable debugging')
+@DEBUG(default=config.APP_CONFIG['DEBUG'])
 @click.option(
     '--wsgi-profile',
     is_flag=True,

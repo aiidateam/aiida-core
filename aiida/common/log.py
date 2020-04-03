@@ -175,7 +175,8 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': daemon_log_file,
             'encoding': 'utf8',
-            'maxBytes': 100000,
+            'maxBytes': 10000000,  # 10 MB
+            'backupCount': 10,
         }
 
         for logger in config.get('loggers', {}).values():

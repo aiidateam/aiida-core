@@ -163,6 +163,20 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         # pylint: disable=no-self-use
         return True
 
+    def validate_storability(self):
+        """Verify that the current node is allowed to be stored.
+
+        :raises `aiida.common.exceptions.StoringNotAllowed`: if the node does not match all requirements for storing
+        """
+        from aiida.plugins.entry_point import is_registered_entry_point
+
+        if not self._storable:
+            raise exceptions.StoringNotAllowed(self._unstorable_message)
+
+        if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
+            msg = 'class `{}:{}` does not have registered entry point'.format(self.__module__, self.__class__.__name__)
+            raise exceptions.StoringNotAllowed(msg)
+
     @classproperty
     def class_node_type(cls):
         """Returns the node type of this node (sub) class."""
@@ -998,11 +1012,10 @@ class Node(Entity, metaclass=AbstractNodeMeta):
                 'the `use_cache` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
             )
 
-        if not self._storable:
-            raise exceptions.StoringNotAllowed(self._unstorable_message)
-
         if not self.is_stored:
 
+            # Call `validate_storability` directly and not in `_validate` in case sub class forgets to call the super.
+            self.validate_storability()
             self._validate()
 
             # Verify that parents are already stored. Raises if this is not the case.

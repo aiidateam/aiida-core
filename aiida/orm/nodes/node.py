@@ -1025,10 +1025,9 @@ class Node(Entity, metaclass=AbstractNodeMeta):
                 self._store(with_transaction=with_transaction, clean=True)
 
             # Set up autogrouping used by verdi run
-            if autogroup.CURRENT_AUTOGROUP is not None:
-                if autogroup.CURRENT_AUTOGROUP.is_to_be_grouped(self.__class__):
-                    group = autogroup.CURRENT_AUTOGROUP.get_or_create_group()
-                    group.add_nodes(self)
+            if autogroup.CURRENT_AUTOGROUP is not None and autogroup.CURRENT_AUTOGROUP.is_to_be_grouped(self):
+                group = autogroup.CURRENT_AUTOGROUP.get_or_create_group()
+                group.add_nodes(self)
 
         return self
 

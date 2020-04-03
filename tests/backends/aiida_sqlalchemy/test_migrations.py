@@ -68,6 +68,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         except Exception:
             # Bring back the DB to the correct state if this setup part fails
             self._reset_database_and_schema()
+            autogroup.CURRENT_AUTOGROUP = self.current_autogroup
             raise
 
     def _perform_actual_migration(self):

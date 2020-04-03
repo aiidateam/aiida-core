@@ -53,7 +53,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
         attribute_key = 'handlers_called'
 
         class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
-            """Implementation of a possible BaseRestartWorkChain for the ArithmeticAdd calculation."""
+            """Implementation of a possible BaseRestartWorkChain for the ``ArithmeticAddCalculation``."""
 
             _process_class = ArithmeticAddCalculation
 
@@ -164,7 +164,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
         node_skip.set_exit_status(200)  # Some other exit status
 
         class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
-            """Minimal base restart workchain ofr the ArithmeticAdd calculation"""
+            """Minimal base restart workchain for the ``ArithmeticAddCalculation``."""
 
             _process_class = ArithmeticAddCalculation
 

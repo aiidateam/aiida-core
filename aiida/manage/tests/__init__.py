@@ -252,10 +252,11 @@ class TemporaryProfileManager(ProfileManager):
         self.postgres = None
         self._profile = None
         self._has_test_db = False
-        self._backup = {}
-        self._backup['config'] = configuration.CONFIG
-        self._backup['config_dir'] = settings.AIIDA_CONFIG_FOLDER
-        self._backup['profile'] = configuration.PROFILE
+        self._backup = {
+            'config': configuration.CONFIG,
+            'config_dir': settings.AIIDA_CONFIG_FOLDER,
+            'profile': configuration.PROFILE,
+        }
 
     @property
     def profile_dictionary(self):
@@ -264,10 +265,10 @@ class TemporaryProfileManager(ProfileManager):
         Used to set up AiiDA profile from self.profile_info dictionary.
         """
         dictionary = {
-            'database_engine': self.profile_info['database_engine'],
-            'database_backend': self.profile_info['database_backend'],
-            'database_port': self.dbinfo.get('port'),
-            'database_hostname': self.dbinfo.get('host'),
+            'database_engine': self.profile_info.get('database_engine'),
+            'database_backend': self.profile_info.get('database_backend'),
+            'database_port': self.profile_info.get('database_port'),
+            'database_hostname': self.profile_info.get('database_hostname'),
             'database_name': self.profile_info.get('database_name'),
             'database_username': self.profile_info.get('database_username'),
             'database_password': self.profile_info.get('database_password'),
@@ -297,9 +298,12 @@ class TemporaryProfileManager(ProfileManager):
         if self.pg_cluster is None:
             self.create_db_cluster()
         self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.dbinfo)
-        self.dbinfo = self.postgres.dbinfo.copy()
+        # note: not using postgres.create_dbuser_db_safe here since we don't want prompts
         self.postgres.create_dbuser(self.profile_info['database_username'], self.profile_info['database_password'])
         self.postgres.create_db(self.profile_info['database_username'], self.profile_info['database_name'])
+        self.dbinfo = self.postgres.dbinfo
+        self.profile_info['database_hostname'] = self.postgres.host_for_psycopg2
+        self.profile_info['database_port'] = self.postgres.port_for_psycopg2
         self._has_test_db = True
 
     def create_profile(self):

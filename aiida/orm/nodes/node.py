@@ -23,6 +23,7 @@ from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.repository import Repository
 from aiida.orm.utils.node import AbstractNodeMeta, validate_attribute_extra_key
+from aiida.orm import autogroup
 
 from ..comments import Comment
 from ..computers import Computer
@@ -1037,18 +1038,9 @@ class Node(Entity, metaclass=AbstractNodeMeta):
                 self._store(with_transaction=with_transaction, clean=True)
 
             # Set up autogrouping used by verdi run
-            from aiida.orm.autogroup import current_autogroup, Autogroup, VERDIAUTOGROUP_TYPE
-            from aiida.orm import Group
-
-            if current_autogroup is not None:
-                if not isinstance(current_autogroup, Autogroup):
-                    raise exceptions.ValidationError('`current_autogroup` is not of type `Autogroup`')
-
-                if current_autogroup.is_to_be_grouped(self):
-                    group_label = current_autogroup.get_group_name()
-                    if group_label is not None:
-                        group = Group.objects.get_or_create(label=group_label, type_string=VERDIAUTOGROUP_TYPE)[0]
-                        group.add_nodes(self)
+            if autogroup.CURRENT_AUTOGROUP is not None and autogroup.CURRENT_AUTOGROUP.is_to_be_grouped(self):
+                group = autogroup.CURRENT_AUTOGROUP.get_or_create_group()
+                group.add_nodes(self)
 
         return self
 

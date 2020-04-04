@@ -22,7 +22,6 @@ from aiida.backends.sqlalchemy import manager
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.utils import Capturing
 from .test_utils import new_database
 
 
@@ -57,21 +56,27 @@ class TestMigrationsSQLA(AiidaTestCase):
         super().setUp()
         from aiida.orm import autogroup
 
-        self.current_autogroup = autogroup.current_autogroup
-        autogroup.current_autogroup = None
+        self.current_autogroup = autogroup.CURRENT_AUTOGROUP
+        autogroup.CURRENT_AUTOGROUP = None
         assert self.migrate_from and self.migrate_to, \
             "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
 
         try:
-            with Capturing():
-                self.migrate_db_down(self.migrate_from)
+            self.migrate_db_down(self.migrate_from)
             self.setUpBeforeMigration()
-            with Capturing():
-                self.migrate_db_up(self.migrate_to)
+            self._perform_actual_migration()
         except Exception:
             # Bring back the DB to the correct state if this setup part fails
             self._reset_database_and_schema()
+            autogroup.CURRENT_AUTOGROUP = self.current_autogroup
             raise
+
+    def _perform_actual_migration(self):
+        """Perform the actual migration (upwards, to migrate_to).
+
+        Must be called after we are properly set to be in migrate_from.
+        """
+        self.migrate_db_up(self.migrate_to)
 
     def migrate_db_up(self, destination):
         """
@@ -99,7 +104,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         """
         from aiida.orm import autogroup
         self._reset_database_and_schema()
-        autogroup.current_autogroup = self.current_autogroup
+        autogroup.CURRENT_AUTOGROUP = self.current_autogroup
         super().tearDown()
 
     def setUpBeforeMigration(self):  # pylint: disable=invalid-name
@@ -116,8 +121,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         of tests.
         """
         self.reset_database()
-        with Capturing():
-            self.migrate_db_up('head')
+        self.migrate_db_up('head')
 
     @property
     def current_rev(self):
@@ -210,29 +214,12 @@ class TestBackwardMigrationsSQLA(TestMigrationsSQLA):
     than the migrate_to revision.
     """
 
-    def setUp(self):
-        """
-        Go to the migrate_from revision, apply setUpBeforeMigration, then
-        run the migration.
-        """
-        AiidaTestCase.setUp(self)  # pylint: disable=bad-super-call
-        from aiida.orm import autogroup
+    def _perform_actual_migration(self):
+        """Perform the actual migration (downwards, to migrate_to).
 
-        self.current_autogroup = autogroup.current_autogroup
-        autogroup.current_autogroup = None
-        assert self.migrate_from and self.migrate_to, \
-            "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
-
-        try:
-            with Capturing():
-                self.migrate_db_down(self.migrate_from)
-            self.setUpBeforeMigration()
-            with Capturing():
-                self.migrate_db_down(self.migrate_to)
-        except Exception:
-            # Bring back the DB to the correct state if this setup part fails
-            self._reset_database_and_schema()
-            raise
+        Must be called after we are properly set to be in migrate_from.
+        """
+        self.migrate_db_down(self.migrate_to)
 
 
 class TestMigrationEngine(TestMigrationsSQLA):
@@ -1003,7 +990,7 @@ class TestDbLogUUIDAddition(TestMigrationsSQLA):
     """
     Test that the UUID column is correctly added to the DbLog table and that the uniqueness
     constraint is added without problems (if the migration arrives until 375c2db70663 then the
-    constraint is added properly.
+    constraint is added properly).
     """
 
     migrate_from = '041a79fc615f'  # 041a79fc615f_dblog_cleaning

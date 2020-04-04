@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Module to manage loading entrypoints."""
 import enum
 import traceback
 import functools
@@ -23,7 +23,6 @@ except ImportError:
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string')
-
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'
@@ -51,7 +50,7 @@ class EntryPointFormat(enum.Enum):
     MINIMAL = 3
 
 
-entry_point_group_to_module_path_map = {
+ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.calculations': 'aiida.orm.nodes.process.calculation.calcjob',
     'aiida.cmdline.data': 'aiida.cmdline.data',
     'aiida.data': 'aiida.orm.nodes.data',
@@ -65,7 +64,7 @@ entry_point_group_to_module_path_map = {
 }
 
 
-def validate_registered_entry_points():
+def validate_registered_entry_points():  # pylint: disable=invalid-name
     """Validate all registered entry points by loading them with the corresponding factory.
 
     :raises EntryPointError: if any of the registered entry points cannot be loaded. This can happen if:
@@ -108,12 +107,11 @@ def format_entry_point_string(group, name, fmt=EntryPointFormat.FULL):
 
     if fmt == EntryPointFormat.FULL:
         return '{}{}{}'.format(group, ENTRY_POINT_STRING_SEPARATOR, name)
-    elif fmt == EntryPointFormat.PARTIAL:
+    if fmt == EntryPointFormat.PARTIAL:
         return '{}{}{}'.format(group[len(ENTRY_POINT_GROUP_PREFIX):], ENTRY_POINT_STRING_SEPARATOR, name)
-    elif fmt == EntryPointFormat.MINIMAL:
+    if fmt == EntryPointFormat.MINIMAL:
         return '{}'.format(name)
-    else:
-        raise ValueError('invalid EntryPointFormat')
+    raise ValueError('invalid EntryPointFormat')
 
 
 def parse_entry_point_string(entry_point_string):
@@ -146,14 +144,13 @@ def get_entry_point_string_format(entry_point_string):
     :rtype: EntryPointFormat
     """
     try:
-        group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
+        group, _ = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
     except ValueError:
         return EntryPointFormat.MINIMAL
     else:
         if group.startswith(ENTRY_POINT_GROUP_PREFIX):
             return EntryPointFormat.FULL
-        else:
-            return EntryPointFormat.PARTIAL
+        return EntryPointFormat.PARTIAL
 
 
 def get_entry_point_from_string(entry_point_string):
@@ -216,7 +213,7 @@ def get_entry_point_groups():
 
     :return: a list of valid entry point groups
     """
-    return entry_point_group_to_module_path_map.keys()
+    return ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys()
 
 
 def get_entry_point_names(group, sort=True):
@@ -243,7 +240,7 @@ def get_entry_points(group):
     :param group: the entry point group
     :return: a list of entry points
     """
-    return [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group=group)]
+    return list(ENTRYPOINT_MANAGER.iter_entry_points(group=group))
 
 
 @functools.lru_cache(maxsize=None)
@@ -260,12 +257,16 @@ def get_entry_point(group, name):
     entry_points = [ep for ep in get_entry_points(group) if ep.name == name]
 
     if not entry_points:
-        raise MissingEntryPointError("Entry point '{}' not found in group '{}'. Try running `reentry scan` to update "
-            'the entry point cache.'.format(name, group))
+        raise MissingEntryPointError(
+            "Entry point '{}' not found in group '{}'. Try running `reentry scan` to update "
+            'the entry point cache.'.format(name, group)
+        )
 
     if len(entry_points) > 1:
-        raise MultipleEntryPointError("Multiple entry points '{}' found in group '{}'.Try running `reentry scan` to "
-            'repopulate the entry point cache.'.format(name, group))
+        raise MultipleEntryPointError(
+            "Multiple entry points '{}' found in group '{}'.Try running `reentry scan` to "
+            'repopulate the entry point cache.'.format(name, group)
+        )
 
     return entry_points[0]
 
@@ -291,7 +292,7 @@ def get_entry_point_from_class(class_module, class_name):
     return None, None
 
 
-def get_entry_point_string_from_class(class_module, class_name):
+def get_entry_point_string_from_class(class_module, class_name):  # pylint: disable=invalid-name
     """
     Given the module and name of a class, attempt to obtain the corresponding entry point if it
     exists and return the entry point string which will be the entry point group and entry point
@@ -313,8 +314,7 @@ def get_entry_point_string_from_class(class_module, class_name):
 
     if group and entry_point:
         return ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point.name])
-    else:
-        return None
+    return None
 
 
 def is_valid_entry_point_string(entry_point_string):
@@ -328,12 +328,12 @@ def is_valid_entry_point_string(entry_point_string):
     :return: True if the string is considered valid, False otherwise
     """
     try:
-        group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
+        group, _ = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
     except (AttributeError, ValueError):
         # Either `entry_point_string` is not a string or it does not contain the separator
         return False
 
-    return group in entry_point_group_to_module_path_map
+    return group in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
 
 
 @functools.lru_cache(maxsize=None)
@@ -349,11 +349,10 @@ def is_registered_entry_point(class_module, class_name, groups=None):
     :return: boolean, True if the class is a registered entry point, False otherwise.
     """
     if groups is None:
-        groups = list(entry_point_group_to_module_path_map.keys())
+        groups = list(ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys())
 
     for group in groups:
         for entry_point in ENTRYPOINT_MANAGER.iter_entry_points(group):
             if class_module == entry_point.module_name and [class_name] == entry_point.attrs:
                 return True
-    else:
-        return False
+    return False

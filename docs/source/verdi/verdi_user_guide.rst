@@ -702,15 +702,19 @@ Below is a list with all available subcommands.
       Execute scripts with preloaded AiiDA environment.
 
     Options:
-      -g, --group                   Enables the autogrouping  [default: True]
-      -n, --group-name TEXT         Specify the name of the auto group
-      -e, --exclude TEXT            Exclude these classes from auto grouping
-      -i, --include TEXT            Include these classes from auto grouping
-      -E, --excludesubclasses TEXT  Exclude these classes and their sub classes
-                                    from auto grouping
-      -I, --includesubclasses TEXT  Include these classes and their sub classes
-                                    from auto grouping
-      --help                        Show this message and exit.
+      --auto-group                    Enables the autogrouping
+      -l, --auto-group-label-prefix TEXT
+                                      Specify the prefix of the label of the auto
+                                      group (numbers might be automatically
+                                      appended to generate unique names per run).
+      -n, --group-name TEXT           Specify the name of the auto group
+                                      [DEPRECATED, USE --auto-group-label-prefix
+                                      instead]. This also enables auto-grouping.
+      -e, --exclude TEXT              Exclude these classes from auto grouping
+                                      (use full entrypoint strings).
+      -i, --include TEXT              Include these classes from auto grouping
+                                      (use full entrypoint strings or "all").
+      --help                          Show this message and exit.
 
 
 .. _verdi_setup:

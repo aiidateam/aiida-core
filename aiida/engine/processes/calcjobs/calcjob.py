@@ -116,6 +116,12 @@ class CalcJob(Process):
         super().define(spec)
         spec.inputs.validator = validate_calc_job
         spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
+        spec.input('remote_folder', valid_type=orm.RemoteData, required=False,
+            help='Remote directory containing the results of an already completed calculation job without AiiDA. The '
+                 'inputs should be passed to the `CalcJob` as normal but instead of launching the actual job, the '
+                 'engine will recreate the input files and then proceed straight to the retrieve step where the files '
+                 'of this `RemoteData` will be retrieved as if it had been actually launched through AiiDA. If a '
+                 'parser is defined in the inputs, the results are parsed and attached as output nodes as usual.')
         spec.input('metadata.dry_run', valid_type=bool, default=False,
             help='When set to `True` will prepare the calculation job for submission but not actually launch it.')
         spec.input('metadata.computer', valid_type=orm.Computer, required=False,
@@ -219,20 +225,12 @@ class CalcJob(Process):
         process in the `Wait` state, waiting for the `UPLOAD` transport task to be started.
         """
         if self.inputs.metadata.dry_run:
-            from aiida.common.folders import SubmitTestFolder
-            from aiida.engine.daemon.execmanager import upload_calculation
-            from aiida.transports.plugins.local import LocalTransport
-
-            with LocalTransport() as transport:
-                with SubmitTestFolder() as folder:
-                    calc_info, script_filename = self.presubmit(folder)
-                    transport.chdir(folder.abspath)
-                    upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
-                    self.node.dry_run_info = {
-                        'folder': folder.abspath,
-                        'script_filename': script_filename
-                    }
+            self._perform_dry_run()
             return plumpy.Stop(None, True)
+
+        if 'remote_folder' in self.inputs:
+            exit_code = self._perform_immigration()
+            return exit_code
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
         # state of `Finished` the cached process will still enter the running state. The process state will have then
@@ -243,6 +241,50 @@ class CalcJob(Process):
 
         # Launch the upload operation
         return plumpy.Wait(msg='Waiting to upload', data=UPLOAD_COMMAND)
+
+    def _perform_dry_run(self):
+        """Perform a dry run.
+
+        Instead of performing the normal sequence of steps, just the `presubmit` is called, which will call the method
+        `prepare_for_submission` of the plugin to generate the input files based on the inputs. Then the upload action
+        is called, but using a normal local transport that will copy the files to a local sandbox folder. The generated
+        input script and the absolute path to the sandbox folder are stored in the `dry_run_info` attribute of the node
+        of this process.
+        """
+        from aiida.common.folders import SubmitTestFolder
+        from aiida.engine.daemon.execmanager import upload_calculation
+        from aiida.transports.plugins.local import LocalTransport
+
+        with LocalTransport() as transport:
+            with SubmitTestFolder() as folder:
+                calc_info, script_filename = self.presubmit(folder)
+                transport.chdir(folder.abspath)
+                upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
+                self.node.dry_run_info = {
+                    'folder': folder.abspath,
+                    'script_filename': script_filename
+                }
+
+    def _perform_immigration(self):
+        """Perform the immigration of an already completed calculation.
+
+        The inputs contained a `RemoteData` under the key `remote_folder` signalling that this is not supposed to be run
+        as a normal calculation job, but rather the results are already computed outside of AiiDA and merely need to be
+        imported.
+        """
+        from aiida.common.datastructures import CalcJobState
+        from aiida.common.folders import SandboxFolder
+        from aiida.engine.daemon.execmanager import retrieve_calculation
+        from aiida.transports.plugins.local import LocalTransport
+
+        with LocalTransport() as transport:
+            with SandboxFolder() as folder:
+                with SandboxFolder() as retrieved_temporary_folder:
+                    self.presubmit(folder)
+                    self.node.set_remote_workdir(self.inputs.remote_folder.get_remote_path())
+                    retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
+                    self.node.set_state(CalcJobState.PARSING)
+                    return self.parse(retrieved_temporary_folder.abspath)
 
     def prepare_for_submission(self, folder):
         """Prepare files for submission of calculation."""

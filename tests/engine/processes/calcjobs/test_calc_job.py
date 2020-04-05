@@ -11,6 +11,7 @@
 from copy import deepcopy
 from functools import partial
 import os
+import tempfile
 from unittest.mock import patch
 
 import pytest
@@ -271,8 +272,6 @@ class TestCalcJob(AiidaTestCase):
 
     def test_provenance_exclude_list(self):
         """Test the functionality of the `CalcInfo.provenance_exclude_list` attribute."""
-        import tempfile
-
         code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
 
         with tempfile.NamedTemporaryFile('w+') as handle:
@@ -315,3 +314,112 @@ class TestCalcJob(AiidaTestCase):
         self.assertIn('base', node.list_object_names())
         self.assertEqual(sorted(['b']), sorted(node.list_object_names(os.path.join('base'))))
         self.assertEqual(['two'], node.list_object_names(os.path.join('base', 'b')))
+
+
+class TestImmigrate(AiidaTestCase):
+    """Test the functionality to immigrate existing calculations completed outside of AiiDA."""
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        super().setUpClass(*args, **kwargs)
+        cls.computer.configure()  # pylint: disable=no-member
+        cls.inputs = {
+            'code': orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store(),
+            'x': orm.Int(1),
+            'y': orm.Int(2),
+            'metadata': {
+                'options': {
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    },
+                }
+            }
+        }
+
+    def test_immigrate_from_valid(self):
+        """Test the immigration of a successfully completed `ArithmeticAddCalculation`."""
+        expected_sum = (self.inputs['x'] + self.inputs['y']).value
+
+        with tempfile.TemporaryDirectory() as directory:
+            filepath = os.path.join(directory, ArithmeticAddCalculation.spec_options['output_filename'].default)
+            with open(filepath, 'w') as handle:
+                handle.write('{}\n'.format(expected_sum))
+
+            remote = orm.RemoteData(directory, computer=self.computer).store()
+            inputs = deepcopy(self.inputs)
+            inputs['remote_folder'] = remote
+
+            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+
+            # Check node attributes
+            assert isinstance(node, orm.CalcJobNode)
+            assert node.is_finished_ok
+            assert node.is_sealed
+
+            # Verify the expected outputs are there
+            assert 'retrieved' in results
+            assert isinstance(results['retrieved'], orm.FolderData)
+            assert 'sum' in results
+            assert isinstance(results['sum'], orm.Int)
+            assert results['sum'].value == expected_sum
+
+    def test_immigrate_from_invalid(self):
+        """Test the immigration of a completed `ArithmeticAddCalculation` where parsing will fail.
+
+        The `ArithmeticParser` will return a non-zero exit code if the output file could not be parsed. Make sure that
+        this is piped through correctly through the infrastructure and will cause the process to be marked as failed.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            filepath = os.path.join(directory, ArithmeticAddCalculation.spec_options['output_filename'].default)
+            with open(filepath, 'w') as handle:
+                handle.write('a\n')  # On purpose write a non-integer to output so the parsing will fail
+
+            remote = orm.RemoteData(directory, computer=self.computer).store()
+            inputs = deepcopy(self.inputs)
+            inputs['remote_folder'] = remote
+
+            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+
+            # Check node attributes
+            assert isinstance(node, orm.CalcJobNode)
+            assert node.is_failed
+            assert node.is_sealed
+            assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
+
+            # Verify the expected outputs are there
+            assert 'retrieved' in results
+            assert isinstance(results['retrieved'], orm.FolderData)
+
+    def test_immigrate_non_default_input_file(self):
+        """Test the immigration of a successfully completed `ArithmeticAddCalculation`
+
+        The only difference of this test with `test_immigrate_from_valid` is that here the name of the output file
+        of the completed calculation differs from the default written by the calculation job class."""
+        expected_sum = (self.inputs['x'] + self.inputs['y']).value
+
+        output_filename = 'non_standard.out'
+
+        with tempfile.TemporaryDirectory() as directory:
+            filepath = os.path.join(directory, output_filename)
+            with open(filepath, 'w') as handle:
+                handle.write('{}\n'.format(expected_sum))
+
+            remote = orm.RemoteData(directory, computer=self.computer).store()
+            inputs = deepcopy(self.inputs)
+            inputs['remote_folder'] = remote
+            inputs['metadata']['options']['output_filename'] = output_filename
+
+            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+
+            # Check node attributes
+            assert isinstance(node, orm.CalcJobNode)
+            assert node.is_finished_ok
+            assert node.is_sealed
+
+            # Verify the expected outputs are there
+            assert 'retrieved' in results
+            assert isinstance(results['retrieved'], orm.FolderData)
+            assert 'sum' in results
+            assert isinstance(results['sum'], orm.Int)
+            assert results['sum'].value == expected_sum

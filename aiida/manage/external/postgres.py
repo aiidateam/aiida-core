@@ -56,7 +56,7 @@ class Postgres(PGSU):
     """
 
     def __init__(self, dbinfo=None, **kwargs):
-        """See documentation of :py:meth:pgsu.PGSU.__init__."""
+        """See documentation of :py:meth:`pgsu.PGSU.__init__`."""
         super().__init__(dsn=dbinfo, **kwargs)
 
     @classmethod

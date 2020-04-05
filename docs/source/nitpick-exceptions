@@ -103,3 +103,6 @@ py:class aldjemy.orm.DbLog
 py:class aldjemy.orm.DbSetting
 
 py:class alembic.config.Config
+
+py:class pgsu.PGSU
+py:meth  pgsu.PGSU.__init__

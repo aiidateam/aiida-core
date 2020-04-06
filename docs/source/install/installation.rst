@@ -119,22 +119,18 @@ and set up the database manually as explained below.
 Database setup
 --------------
 
-AiiDA uses a database to store the nodes, node attributes and other
-information, allowing the end user to perform fast queries of the results.
-Currently, only `PostgreSQL`_ is allowed as a database backend.
+AiiDA uses a database to store the nodes, node attributes and other information, allowing the end user to perform fast queries of the results.
+Currently, the highly performant `PostgreSQL`_ database is supported as a database backend.
 
 .. _PostgreSQL: https://www.postgresql.org/downloads
 
-To manually create the database for AiiDA, you need to run the program ``psql``
-to interact with postgres.
-On most operating systems, you need to do so as the ``postgres`` user that was
-created upon installing the software.
+To manually create the database for AiiDA, you need to run the program ``psql`` to interact with postgres.
+On most operating systems, you need to do so as the ``postgres`` user that was created upon installing the software.
 To assume the role of ``postgres`` run as root::
 
     su - postgres
 
-(or, equivalently, type ``sudo su - postgres``, depending on your distribution)
-and launch the postgres program::
+(or, equivalently, type ``sudo su - postgres``, depending on your distribution) and launch the postgres program::
 
     psql
 
@@ -143,12 +139,13 @@ Create a new database user account for AiiDA by running::
     CREATE USER aiida WITH PASSWORD '<password>';
 
 replacing ``<password>`` with a password of your choice.
-Make sure to remember it, as you will need it again when you configure AiiDA to use this database through ``verdi setup``.
+
+You will need to provide the password again when you configure AiiDA to use this database through ``verdi setup``.
 If you want to change the password you just created use the command::
 
     ALTER USER aiida PASSWORD '<password>';
 
-Next we create the database itself. Keep in mind that we enforce the UTF-8 encoding and specific locales::
+Next, we create the database itself. We enforce the UTF-8 encoding and specific locales::
 
     CREATE DATABASE aiidadb OWNER aiida ENCODING 'UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8' TEMPLATE=template0;
 
@@ -180,44 +177,41 @@ If you use the same names as in the example commands above, then during the ``ve
   instructions :ref:`here<move_postgresql>`.
 
 
-Database setup using Unix sockets
-+++++++++++++++++++++++++++++++++
+Database setup using 'peer' authentication
+++++++++++++++++++++++++++++++++++++++++++
 
-Instead of using passwords to protect access to the database
-(which could be used by other users on the same machine),
-PostgreSQL allows password-less logins via Unix sockets.
+Some PostgreSQL setups provide command-line utilities to simplify creating users and databases compared to issuing the SQL commands directly.
+The following instructions apply to Ubuntu, where PostgreSQL is set up to communicate password-less via UNIX sockets.
+In order to take advantage of this ``peer`` mode, the name of your PostgreSQL database user must match the name of the UNIX user who is running AiiDA.
 
-In this scenario PostgreSQL compares the user connecting to the socket with its
-own database of users and will allow a connection if a matching user exists.
+Assume the role of ``postgres``::
 
-Assume the role of ``postgres`` by running the following as root::
+    sudo su postgres
 
-    su - postgres
-
-Create a database user with the **same name** as the user you are using to run AiiDA (usually your login name)::
+Create a database user with the **same name** as the UNIX user who will be running AiiDA (usually your login name)::
 
     createuser <username>
 
 replacing ``<username>`` with your username.
 
-Next, create the database itself making sure that your user is the owner::
+Next, create the database itself with your user as the owner::
 
     createdb -O <username> aiidadb
 
-To test if the database was created successfully, you can run the following command as your user in a bash terminal::
+Exit the shell to go back to your login user.
+To test if the database was created successfully, try::
 
     psql aiidadb
 
 
-Make sure to leave the host, port and password empty when specifying the parameters during the ``verdi setup`` phase
-and specify your username as the *AiiDA Database user*::
+During the ``verdi setup`` phase, specify your username as the *AiiDA Database user* and simply leave the host, port and password empty (used double quotation marks to signify an empty string).::
 
     Database engine: postgresql_psycopg2
-    PostgreSQL host:
-    PostgreSQL port:
+    PostgreSQL host: ""
+    PostgreSQL port: ""
     AiiDA Database name: aiidadb
     AiiDA Database user: <username>
-    AiiDA Database password:
+    AiiDA Database password: ""
 
 
 Setup instructions

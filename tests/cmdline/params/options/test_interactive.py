@@ -224,7 +224,9 @@ class InteractiveOptionTest(unittest.TestCase):
     def test_default_value_ignore_character(self):
         """
         scenario: InteractiveOption with default value, invoke with ignore default character `!`
-        behaviour: return `None` for the value
+        behaviour: return empty string '' for the value
+
+        Note: It should *not* return None, since
         """
         cmd = self.simple_command(default='default')
         runner = CliRunner()

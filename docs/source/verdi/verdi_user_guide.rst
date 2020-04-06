@@ -617,7 +617,7 @@ Below is a list with all available subcommands.
       -n, --non-interactive           Non-interactive mode: never prompt for
                                       input.
       --profile PROFILE               The name of the new profile.  [required]
-      --email TEXT                    Email address that serves as the user name
+      --email EMAIL                   Email address that serves as the user name
                                       and a way to identify data created by it.
                                       [required]
       --first-name TEXT               First name of the user.  [required]
@@ -627,7 +627,7 @@ Below is a list with all available subcommands.
                                       Engine to use to connect to the database.
       --db-backend [django|sqlalchemy]
                                       Backend type to use to map the database.
-      --db-host TEXT                  Hostname to connect to the database.
+      --db-host HOSTNAME              Hostname to connect to the database.
       --db-port INTEGER               Port to connect to the database.
       --db-name TEXT                  Name of the database to create.
       --db-username TEXT              Name of the database user to create.
@@ -681,14 +681,14 @@ Below is a list with all available subcommands.
           verdi -p <profile_name> restapi --hostname 127.0.0.5 --port 6789
 
     Options:
-      -H, --hostname TEXT     Hostname.
-      -P, --port INTEGER      Port number.
-      -c, --config-dir PATH   Path to the configuration directory
-      --debug                 Enable debugging
-      --wsgi-profile          Whether to enable WSGI profiler middleware for
-                              finding bottlenecks
-      --hookup / --no-hookup  Hookup app to flask server
-      --help                  Show this message and exit.
+      -H, --hostname HOSTNAME  Hostname.
+      -P, --port INTEGER       Port number.
+      -c, --config-dir PATH    Path to the configuration directory
+      --debug                  Enable debugging
+      --wsgi-profile           Whether to enable WSGI profiler middleware for
+                               finding bottlenecks
+      --hookup / --no-hookup   Hookup app to flask server
+      --help                   Show this message and exit.
 
 
 .. _verdi_run:
@@ -733,7 +733,7 @@ Below is a list with all available subcommands.
       -n, --non-interactive           Non-interactive mode: never prompt for
                                       input.
       --profile PROFILE               The name of the new profile.  [required]
-      --email TEXT                    Email address that serves as the user name
+      --email EMAIL                   Email address that serves as the user name
                                       and a way to identify data created by it.
                                       [required]
       --first-name TEXT               First name of the user.  [required]
@@ -743,7 +743,7 @@ Below is a list with all available subcommands.
                                       Engine to use to connect to the database.
       --db-backend [django|sqlalchemy]
                                       Backend type to use to map the database.
-      --db-host TEXT                  Hostname to connect to the database.
+      --db-host HOSTNAME              Hostname to connect to the database.
       --db-port INTEGER               Port to connect to the database.
       --db-name TEXT                  Name of the database to create.  [required]
       --db-username TEXT              Name of the database user to create.

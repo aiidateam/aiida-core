@@ -74,6 +74,7 @@ pathlib2==2.3.5
 pexpect==4.8.0
 pg8000==1.13.2
 pgtest==1.3.2
+pgsu==0.1.0
 pickleshare==0.7.5
 pika==1.1.0
 pluggy==0.13.1

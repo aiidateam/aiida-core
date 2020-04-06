@@ -639,7 +639,7 @@ Below is a list with all available subcommands.
       --repository DIRECTORY          Absolute path for the file system
                                       repository.
       --config FILE                   Load option values from configuration file
-                                      in yaml format.
+                                      in yaml format (local path or URL).
       --help                          Show this message and exit.
 
 
@@ -752,7 +752,7 @@ Below is a list with all available subcommands.
       --repository DIRECTORY          Absolute path for the file system
                                       repository.
       --config FILE                   Load option values from configuration file
-                                      in yaml format.
+                                      in yaml format (local path or URL).
       --help                          Show this message and exit.
 
 

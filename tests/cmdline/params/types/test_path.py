@@ -10,17 +10,17 @@
 """Tests for Path types"""
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.params.types import ImportPath
+from aiida.cmdline.params.types import UrlPath
 
 
 class TestImportPath(AiidaTestCase):
-    """Tests `ImportPath`"""
+    """Tests `UrlPath`"""
 
     def test_default_timeout(self):
         """Test the default timeout_seconds value is correct"""
         from aiida.cmdline.params.types.path import URL_TIMEOUT_SECONDS
 
-        import_path = ImportPath()
+        import_path = UrlPath()
 
         self.assertEqual(import_path.timeout_seconds, URL_TIMEOUT_SECONDS)
 
@@ -30,7 +30,7 @@ class TestImportPath(AiidaTestCase):
         valid_values = [42, '42']
 
         for value in valid_values:
-            import_path = ImportPath(timeout_seconds=value)
+            import_path = UrlPath(timeout_seconds=value)
 
             self.assertEqual(import_path.timeout_seconds, int(value))
 
@@ -38,13 +38,13 @@ class TestImportPath(AiidaTestCase):
         """Test a TypeError is raised when a None value is given for timeout_seconds"""
 
         with self.assertRaises(TypeError):
-            ImportPath(timeout_seconds=None)
+            UrlPath(timeout_seconds=None)
 
     def test_wrong_type_timeout(self):
         """Test a TypeError is raised when wrong type is given for timeout_seconds"""
 
         with self.assertRaises(TypeError):
-            ImportPath(timeout_seconds='test')
+            UrlPath(timeout_seconds='test')
 
     def test_range_timeout(self):
         """Test timeout_seconds defines extrema when out of range
@@ -55,8 +55,8 @@ class TestImportPath(AiidaTestCase):
         lower = range_timeout[0] - 5
         upper = range_timeout[1] + 5
 
-        lower_path = ImportPath(timeout_seconds=lower)
-        upper_path = ImportPath(timeout_seconds=upper)
+        lower_path = UrlPath(timeout_seconds=lower)
+        upper_path = UrlPath(timeout_seconds=upper)
 
         msg_lower = "timeout_seconds should have been corrected to the lower bound: '{}', but instead it is {}".format(
             range_timeout[0], lower_path.timeout_seconds

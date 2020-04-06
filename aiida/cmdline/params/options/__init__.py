@@ -459,7 +459,11 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
     help='Only select objects containing only these and no other elements.'
 )
 
-CONFIG_FILE = ConfigFileOption('--config', help='Load option values from configuration file in yaml format.')
+CONFIG_FILE = ConfigFileOption(
+    '--config',
+    type=types.UrlPath(exists=True, readable=True, dir_okay=False),
+    help='Load option values from configuration file in yaml format (local path or URL).'
+)
 
 IDENTIFIER = OverridableOption(
     '-i',

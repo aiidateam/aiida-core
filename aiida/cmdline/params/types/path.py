@@ -52,20 +52,26 @@ class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
         return 'ABSOLUTEPATHEMPTY'
 
 
-class ImportPath(click.Path):
+class UrlPath(click.Path):
     """AiiDA extension of Click's Path-type to include URLs
-    An ImportPath can either be a `click.Path`-type or a URL.
+    An UrlPath can either be a `click.Path`-type or a URL.
 
-    :param timeout_seconds: Timeout time in seconds that a URL response is expected.
-    :value timeout_seconds: Must be an int in the range [0;60], extrema included.
-      If an int outside the range [0;60] is given, the value will be set to the respective extremum value.
-      If any other type than int is given a TypeError will be raised.
+    :param int timeout_seconds: Maximum timeout accepted for URL response.
+        Must be an integer in the range [0;60].
     """
 
     # pylint: disable=protected-access
 
     def __init__(self, timeout_seconds=URL_TIMEOUT_SECONDS, **kwargs):
         super().__init__(**kwargs)
+
+        try:
+            timeout_seconds = int(timeout_seconds)
+        except ValueError:
+            raise TypeError('timeout_seconds should be an integer but got: {}'.format(type(timeout_seconds)))
+
+        if timeout_seconds < 0 or timeout_seconds > 60:
+            raise ValueError('timeout_seconds needs to be in the range [0;60].')
 
         self.timeout_seconds = timeout_seconds
 
@@ -97,21 +103,3 @@ class ImportPath(click.Path):
             )
 
         return url
-
-    @property
-    def timeout_seconds(self):
-        return self._timeout_seconds
-
-    # pylint: disable=attribute-defined-outside-init
-    @timeout_seconds.setter
-    def timeout_seconds(self, value):
-        try:
-            self._timeout_seconds = int(value)
-        except ValueError:
-            raise TypeError('timeout_seconds should be an integer but got: {}'.format(type(value)))
-
-        if self._timeout_seconds < 0:
-            self._timeout_seconds = 0
-
-        if self._timeout_seconds > 60:
-            self._timeout_seconds = 60

@@ -203,11 +203,11 @@ class TestVerdiImport(AiidaTestCase):
 
     def test_import_url_timeout(self):
         """Test a timeout to valid URL is correctly errored"""
-        from aiida.cmdline.params.types import ImportPath
+        from aiida.cmdline.params.types import UrlPath
 
         timeout_url = 'http://www.google.com:81'
 
-        test_timeout_path = ImportPath(exists=True, readable=True, timeout_seconds=0)
+        test_timeout_path = UrlPath(exists=True, readable=True, timeout_seconds=0)
         with self.assertRaises(BadParameter) as cmd_exc:
             test_timeout_path(timeout_url)
 

@@ -125,7 +125,7 @@ def test_walk_with_invalid_path(clear_database_before_test):
     assert [c.path for c in sorted(group_path.walk())] == expected
 
 
-def test_walk_nodes(clear_database):
+def test_walk_nodes(clear_database_before_test):
     """Test the ``GroupPath.walk_nodes()`` function."""
     group, _ = orm.Group.objects.get_or_create('a')
     node = orm.Data()
@@ -136,7 +136,6 @@ def test_walk_nodes(clear_database):
     assert [(r.group_path.path, r.node.attributes) for r in group_path.walk_nodes()] == [('a', {'i': 1, 'j': 2})]
 
 
-@pytest.mark.skip('Reenable when subclassing in the query builder is implemented (#3902)')
 def test_cls(clear_database_before_test):
     """Test that only instances of `cls` or its subclasses are matched by ``GroupPath``."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g']:
@@ -161,3 +160,27 @@ def test_attr(clear_database_before_test):
     assert not set(group_path.browse.__dir__()).intersection(['bad space', 'bad@char', '_badstart'])
     with pytest.raises(AttributeError):
         group_path.browse.a.c.x  # pylint: disable=pointless-statement
+
+
+def test_cls_label_clashes(clear_database_before_test):
+    """Test behaviour when multiple group classes have the same label."""
+    group_01, _ = orm.Group.objects.get_or_create('a')
+    node_01 = orm.Data().store()
+    group_01.add_nodes(node_01)
+
+    group_02, _ = orm.UpfFamily.objects.get_or_create('a')
+    node_02 = orm.Data().store()
+    group_02.add_nodes(node_02)
+
+    # Requests for non-existing groups should return `None`
+    assert GroupPath('b').get_group() is None
+
+    assert GroupPath('a').group_ids == [group_01.pk]
+    assert GroupPath('a').get_group().pk == group_01.pk
+    expected = [('a', node_01.pk)]
+    assert [(r.group_path.path, r.node.pk) for r in GroupPath('a').walk_nodes()] == expected
+
+    assert GroupPath('a', cls=orm.UpfFamily).group_ids == [group_02.pk]
+    assert GroupPath('a', cls=orm.UpfFamily).get_group().pk == group_02.pk
+    expected = [('a', node_02.pk)]
+    assert [(r.group_path.path, r.node.pk) for r in GroupPath('a', cls=orm.UpfFamily).walk_nodes()] == expected

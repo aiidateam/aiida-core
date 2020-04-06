@@ -28,7 +28,6 @@ def setup_groups(clear_database_before_test):
     yield
 
 
-@pytest.mark.skip('Reenable when subclassing in the query builder is implemented (#3902)')
 def test_with_no_opts(setup_groups):
     """Test ``verdi group path ls``"""
 
@@ -47,7 +46,6 @@ def test_with_no_opts(setup_groups):
     assert result.output == 'a/c/d\na/c/e\n'
 
 
-@pytest.mark.skip('Reenable when subclassing in the query builder is implemented (#3902)')
 def test_recursive(setup_groups):
     """Test ``verdi group path ls --recursive``"""
 
@@ -63,7 +61,6 @@ def test_recursive(setup_groups):
         assert result.output == 'a/c/d\na/c/e\na/c/e/g\n'
 
 
-@pytest.mark.skip('Reenable when subclassing in the query builder is implemented (#3902)')
 @pytest.mark.parametrize('tag', ['-l', '--long'])
 def test_long(setup_groups, tag):
     """Test ``verdi group path ls --long``"""
@@ -109,7 +106,6 @@ def test_long(setup_groups, tag):
     )
 
 
-@pytest.mark.skip('Reenable when subclassing in the query builder is implemented (#3902)')
 @pytest.mark.parametrize('tag', ['--no-virtual'])
 def test_groups_only(setup_groups, tag):
     """Test ``verdi group path ls --no-virtual``"""

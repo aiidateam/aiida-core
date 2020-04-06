@@ -60,10 +60,10 @@ class TestQueryBuilder(AiidaTestCase):
 
         for _cls, classifiers in (
             qb._get_ormclass(orm.Group, None),
-            qb._get_ormclass(None, 'group'),
-            qb._get_ormclass(None, 'Group'),
+            qb._get_ormclass(None, 'group.core'),
+            qb._get_ormclass(None, 'Group.core'),
         ):
-            self.assertEqual(classifiers['ormclass_type_string'], 'group')
+            self.assertTrue(classifiers['ormclass_type_string'].startswith('group'))
 
         for _cls, classifiers in (
             qb._get_ormclass(orm.User, None),

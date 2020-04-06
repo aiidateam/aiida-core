@@ -77,6 +77,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
         super().__init__(max_iterations, track_edges=track_edges)
 
         def get_spec_from_path(queryhelp, idx):
+            from aiida.orm.querybuilder import GROUP_ENTITY_TYPE_PREFIX
+
             if (
                 queryhelp['path'][idx]['entity_type'].startswith('node') or
                 queryhelp['path'][idx]['entity_type'].startswith('data') or
@@ -84,7 +86,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
                 queryhelp['path'][idx]['entity_type'] == ''
             ):
                 result = 'nodes'
-            elif queryhelp['path'][idx]['entity_type'] == 'group':
+            elif queryhelp['path'][idx]['entity_type'].startswith(GROUP_ENTITY_TYPE_PREFIX):
                 result = 'groups'
             else:
                 raise Exception('not understood entity from ( {} )'.format(queryhelp['path'][idx]['entity_type']))

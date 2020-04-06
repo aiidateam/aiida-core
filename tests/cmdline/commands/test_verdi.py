@@ -45,7 +45,7 @@ class TestVerdi(AiidaTestCase):
         """Test that verdi with an invalid command will return matches if somewhat close"""
         result = self.cli_runner.invoke(cmd_verdi.verdi, ['usr'])
         self.assertIn('is not a verdi command', result.output)
-        self.assertIn('The most similar commands are', result.output)
+        self.assertIn('Similar commands are', result.output)
         self.assertIn('user', result.output)
         self.assertNotEqual(result.exit_code, 0)
 

@@ -12,7 +12,7 @@
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments, options
+from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import decorators
 
 
@@ -56,7 +56,6 @@ def verdi_graph():
 )
 @click.option('-o', '--process-out', is_flag=True, help='Show outgoing links for all processes.')
 @click.option('-i', '--process-in', is_flag=True, help='Show incoming links for all processes.')
-@options.VERBOSE(help='Print verbose information of the graph traversal.')
 @click.option(
     '-e',
     '--engine',
@@ -69,7 +68,7 @@ def verdi_graph():
 @click.pass_context
 @decorators.with_dbenv()
 def generate(  # pylint: disable=too-many-arguments, unused-argument
-    ctx, root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
+    ctx, root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine,
     output_format, show
 ):
     """

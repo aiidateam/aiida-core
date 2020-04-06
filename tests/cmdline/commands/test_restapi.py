@@ -13,6 +13,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_restapi import restapi
+from aiida.cmdline.params.options import VERBOSITY
 
 
 class TestVerdiRestapiCommand(AiidaTestCase):
@@ -25,9 +26,11 @@ class TestVerdiRestapiCommand(AiidaTestCase):
     def test_run_restapi(self):
         """Test `verdi restapi`."""
 
-        options = ['--no-hookup', '--hostname', 'localhost', '--port', '6000', '--debug', '--wsgi-profile']
+        cmd = VERBOSITY()(restapi)
 
-        result = self.cli_runner.invoke(restapi, options)
+        options = ['--no-hookup', '--hostname', 'localhost', '--port', '6000', '-v', 'DEBUG', '--wsgi-profile']
+
+        result = self.cli_runner.invoke(cmd, options)
         self.assertIsNone(result.exception, result.output)
         self.assertClickSuccess(result)
 

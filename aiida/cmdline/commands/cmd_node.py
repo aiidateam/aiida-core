@@ -23,6 +23,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 from aiida.common import timezone
 from aiida.common.links import GraphTraversalRules
+from aiida.common.log import VERDI_LOGGER
 
 
 @verdi.group('node')
@@ -297,12 +298,11 @@ def tree(nodes, depth):
 
 @verdi_node.command('delete')
 @arguments.NODES('nodes', required=True)
-@options.VERBOSE()
 @options.DRY_RUN()
 @options.FORCE()
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(nodes, dry_run, verbose, force, **kwargs):
+def node_delete(nodes, dry_run, force, **kwargs):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
@@ -311,15 +311,12 @@ def node_delete(nodes, dry_run, verbose, force, **kwargs):
     """
     from aiida.manage.database.delete.nodes import delete_nodes
 
-    verbosity = 1
     if force:
-        verbosity = 0
-    elif verbose:
-        verbosity = 2
+        VERDI_LOGGER.setLevel('CRITICAL')
 
     node_pks_to_delete = [node.pk for node in nodes]
 
-    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force, **kwargs)
+    delete_nodes(node_pks_to_delete, dry_run=dry_run, force=force, **kwargs)
 
 
 @verdi_node.command('rehash')
@@ -415,7 +412,6 @@ def verdi_graph():
 )
 @click.option('-o', '--process-out', is_flag=True, help='Show outgoing links for all processes.')
 @click.option('-i', '--process-in', is_flag=True, help='Show incoming links for all processes.')
-@options.VERBOSE(help='Print verbose information of the graph traversal.')
 @click.option(
     '-e',
     '--engine',
@@ -436,15 +432,14 @@ def verdi_graph():
 @click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
 @decorators.with_dbenv()
 def graph_generate(
-    root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
-    output_format, highlight_classes, show
+    root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, output_format,
+    highlight_classes, show
 ):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
     """
     # pylint: disable=too-many-arguments
     from aiida.tools.visualization import Graph
-    print_func = echo.echo_info if verbose else None
     link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
 
     echo.echo_info(f'Initiating graphviz engine: {engine}')
@@ -458,7 +453,6 @@ def graph_generate(
         annotate_links='both',
         include_process_outputs=process_out,
         highlight_classes=highlight_classes,
-        print_func=print_func
     )
     echo.echo_info(f'Recursing descendants, max depth={descendant_depth}')
     graph.recurse_descendants(
@@ -468,7 +462,6 @@ def graph_generate(
         annotate_links='both',
         include_process_inputs=process_in,
         highlight_classes=highlight_classes,
-        print_func=print_func
     )
     output_file_name = graph.graphviz.render(
         filename=f'{root_node.pk}.{engine}', format=output_format, view=show, cleanup=True

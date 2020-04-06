@@ -16,7 +16,7 @@ import tempfile
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands import cmd_graph
+from aiida.cmdline.commands import cmd_node
 
 
 def delete_temporary_file(filepath):
@@ -69,7 +69,7 @@ class TestVerdiGraph(AiidaTestCase):
         filename = f'{root_node}.dot.pdf'
         options = [root_node]
         try:
-            result = self.cli_runner.invoke(cmd_graph.generate, options)
+            result = self.cli_runner.invoke(cmd_node.graph_generate, options)
             self.assertIsNone(result.exception, result.output)
             self.assertTrue(os.path.isfile(filename))
         finally:
@@ -88,7 +88,7 @@ class TestVerdiGraph(AiidaTestCase):
             options = [root_node]
             filename = f'{root_node}.dot.pdf'
             try:
-                result = self.cli_runner.invoke(cmd_graph.generate, options)
+                result = self.cli_runner.invoke(cmd_node.graph_generate, options)
                 self.assertIsNotNone(result.exception)
                 self.assertFalse(os.path.isfile(filename))
             finally:
@@ -107,7 +107,7 @@ class TestVerdiGraph(AiidaTestCase):
         try:
             filename = f'{str(root_node)}.dot.pdf'
             options = [str(root_node)]
-            result = self.cli_runner.invoke(cmd_graph.generate, options)
+            result = self.cli_runner.invoke(cmd_node.graph_generate, options)
             self.assertIsNotNone(result.exception)
             self.assertFalse(os.path.isfile(filename))
         finally:
@@ -126,7 +126,7 @@ class TestVerdiGraph(AiidaTestCase):
         for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
             options = [opt, None, root_node]
             try:
-                result = self.cli_runner.invoke(cmd_graph.generate, options)
+                result = self.cli_runner.invoke(cmd_node.graph_generate, options)
                 self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename))
             finally:
@@ -137,7 +137,7 @@ class TestVerdiGraph(AiidaTestCase):
             for value in ['0', '1']:
                 options = [opt, value, root_node]
                 try:
-                    result = self.cli_runner.invoke(cmd_graph.generate, options)
+                    result = self.cli_runner.invoke(cmd_node.graph_generate, options)
                     self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename))
                 finally:
@@ -148,7 +148,7 @@ class TestVerdiGraph(AiidaTestCase):
             for badvalue in ['xyz', '3.14', '-5']:
                 options = [flag, badvalue, root_node]
                 try:
-                    result = self.cli_runner.invoke(cmd_graph.generate, options)
+                    result = self.cli_runner.invoke(cmd_node.graph_generate, options)
                     self.assertIsNotNone(result.exception)
                     self.assertFalse(os.path.isfile(filename))
                 finally:
@@ -164,7 +164,7 @@ class TestVerdiGraph(AiidaTestCase):
         for flag in ['-i', '--process-in', '-o', '--process-out']:
             options = [flag, root_node]
             try:
-                result = self.cli_runner.invoke(cmd_graph.generate, options)
+                result = self.cli_runner.invoke(cmd_node.graph_generate, options)
                 self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename))
             finally:
@@ -186,7 +186,7 @@ class TestVerdiGraph(AiidaTestCase):
                 filename = f'{root_node}.dot.{fileformat}'
                 options = [option, fileformat, root_node]
                 try:
-                    result = self.cli_runner.invoke(cmd_graph.generate, options)
+                    result = self.cli_runner.invoke(cmd_node.graph_generate, options)
                     self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename))
                 finally:
@@ -202,7 +202,7 @@ class TestVerdiGraph(AiidaTestCase):
         for id_label_type in ['uuid', 'pk', 'label']:
             options = ['--identifier', id_label_type, root_node]
             try:
-                result = self.cli_runner.invoke(cmd_graph.generate, options)
+                result = self.cli_runner.invoke(cmd_node.graph_generate, options)
                 self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename))
             finally:

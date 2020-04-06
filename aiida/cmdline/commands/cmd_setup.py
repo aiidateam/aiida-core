@@ -9,6 +9,7 @@
 ###########################################################################
 """The `verdi setup` and `verdi quicksetup` commands."""
 
+import pprint
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -66,36 +67,37 @@ def setup(
     profile.broker_virtual_host = broker_virtual_host
     profile.repository_uri = f'file://{repository}'
 
+    echo.echo_debug('Loading config file')
     config = get_config()
 
-    # Creating the profile
+    echo.echo_debug('Adding profile to config file and setting it as new default')
     config.add_profile(profile)
     config.set_default_profile(profile.name)
 
-    # Load the profile
+    echo.echo_debug('Loading new profile')
     load_profile(profile.name)
-    echo.echo_success(f'created new profile `{profile.name}`.')
+    echo.echo_success(f'Created new profile `{profile.name}`.')
 
     # Migrate the database
-    echo.echo_info('migrating the database.')
+    echo.echo_info('Migrating the database.')
     backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
 
     try:
         backend.migrate()
     except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(
-            f'database migration failed, probably because connection details are incorrect:\n{exception}'
+            f'Database migration failed, probably because connection details are incorrect:\n{exception}'
         )
     else:
-        echo.echo_success('database migration completed.')
+        echo.echo_success('Database migration completed.')
 
-    # Optionally setting configuration default user settings
+    echo.echo_debug('Storing default user settings, if not yet present')
     config.set_option('user.email', email, override=False)
     config.set_option('user.first_name', first_name, override=False)
     config.set_option('user.last_name', last_name, override=False)
     config.set_option('user.institution', institution, override=False)
 
-    # Create the user if it does not yet exist
+    echo.echo_debug('Creating new database user, if not yet present')
     created, user = orm.User.objects.get_or_create(
         email=email, first_name=first_name, last_name=last_name, institution=institution
     )
@@ -103,6 +105,8 @@ def setup(
         user.store()
     profile.default_user = user.email
     config.update_profile(profile)
+
+    echo.echo_debug('Storing config file to disk')
     config.store()
 
 
@@ -155,6 +159,7 @@ def quicksetup(
     if not postgres.is_connected:
         echo.echo_critical('failed to determine the PostgreSQL setup')
 
+    echo.echo_debug('Creating PostgreSQL user and database')
     try:
         db_username, db_name = postgres.create_dbuser_db_safe(dbname=db_name, dbuser=db_username, dbpass=db_password)
     except Exception as exception:
@@ -194,4 +199,5 @@ def quicksetup(
         'broker_virtual_host': broker_virtual_host,
         'repository': repository,
     }
+    echo.echo_debug('Calling `verdi setup` with parameters\n{}'.format(pprint.pformat(setup_parameters)))
     ctx.invoke(setup, **setup_parameters)

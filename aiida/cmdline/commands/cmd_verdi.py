@@ -38,10 +38,16 @@ GIU = (
 )
 
 
-class MostSimilarCommandGroup(click.Group):
-    """
-    Overloads the get_command to display a list of possible command
-    candidates if the command could not be found with an exact match.
+class VerdiCommandGroup(click.Group):
+    """Command group for verdi commands.
+
+    Overloads the get_command to
+
+      * display a list of possible command candidates if the command is not an exact match
+      * adds an option to control verbosity
+
+    Note: click has no built-in support for adding common options to subcommands, that's why we hack it in this way.
+    See https://github.com/pallets/click/issues/108 for discussions on this topic.
     """
 
     def get_command(self, ctx, cmd_name):
@@ -49,11 +55,19 @@ class MostSimilarCommandGroup(click.Group):
         Override the default click.Group get_command with one giving the user
         a selection of possible commands if the exact command name could not be found.
         """
-        cmd = click.Group.get_command(self, ctx, cmd_name)
+        cmd = super().get_command(ctx, cmd_name)
 
         # return the exact match
+
         if cmd is not None:
-            return cmd
+
+            # add verbosity option to all commands (but don't add it twice)
+            # Note: this is needed if `get_command` is called more than once on the same command
+            # within the same cli execution (e.g. `verdi help` does this).
+            if '_has_verbosity' in cmd.__dict__:
+                return cmd
+            cmd._has_verbosity = True  # pylint: disable=protected-access
+            return options.VERBOSITY()(cmd)
 
         if int(cmd_name.lower().encode('utf-8').hex(), 16) == 0x6769757365707065:
             import base64
@@ -72,17 +86,24 @@ class MostSimilarCommandGroup(click.Group):
 
         if matches:
             ctx.fail(
-                "'{cmd}' is not a verdi command.\n\n"
-                'The most similar commands are: \n'
-                '{matches}'.format(cmd=cmd_name, matches='\n'.join('\t{}'.format(m) for m in sorted(matches)))
+                "'{cmd}' is not a {group} command.\n\n"
+                'Similar commands are: \n'
+                '{matches}'.format(
+                    cmd=cmd_name, group=self.name, matches='\n'.join('\t{}'.format(m) for m in sorted(matches))
+                )
             )
         else:
-            ctx.fail(f"'{cmd_name}' is not a verdi command.\n\nNo similar commands found.")
+            ctx.fail(f"'{cmd_name}' is not a {group} command.\n\nNo similar commands found.")
 
         return None
 
+    def group(self, *args, **kwargs):
+        """Propagate VerdiCommandGroup class to subgroups."""
+        kwargs.setdefault('cls', VerdiCommandGroup)
+        return super().group(*args, **kwargs)
 
-@click.command(cls=MostSimilarCommandGroup, context_settings={'help_option_names': ['-h', '--help']})
+
+@click.command(cls=VerdiCommandGroup, context_settings={'help_option_names': ['-h', '--help']})
 @options.PROFILE(type=types.ProfileParamType(load_profile=True))
 @click.version_option(None, '-v', '--version', message='AiiDA version %(version)s')
 @click.pass_context

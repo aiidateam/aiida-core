@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
+import logging
 import click
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
@@ -19,6 +20,7 @@ from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
 from .contextualdefault import ContextualDefaultOption
 from .config import ConfigFileOption
+from .verbosity import VerbosityOption
 
 __all__ = (
     'graph_traversal_rules', 'PROFILE', 'CALCULATION', 'CALCULATIONS', 'CODE', 'CODES', 'COMPUTER', 'COMPUTERS',
@@ -28,8 +30,8 @@ __all__ = (
     'REPOSITORY_PATH', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PREPEND_TEXT', 'APPEND_TEXT', 'LABEL',
     'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE', 'PROCESS_STATE', 'PROCESS_LABEL', 'TYPE_STRING', 'EXIT_STATUS',
     'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS',
-    'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT',
-    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'DEBUG', 'PRINT_TRACEBACK'
+    'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'TIMEOUT', 'FORMULA_MODE',
+    'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'PRINT_TRACEBACK'
 )
 
 TRAVERSAL_RULE_HELP_STRING = {
@@ -503,8 +505,6 @@ PORT = OverridableOption('-P', '--port', 'port', type=click.INT, help='Port numb
 
 FREQUENCY = OverridableOption('-F', '--frequency', 'frequency', type=click.INT)
 
-VERBOSE = OverridableOption('-v', '--verbose', is_flag=True, default=False, help='Be more verbose in printing output.')
-
 TIMEOUT = OverridableOption(
     '-t',
     '--timeout',
@@ -585,8 +585,10 @@ DICT_KEYS = OverridableOption(
     '-k', '--keys', type=click.STRING, cls=MultipleValueOption, help='Filter the output by one or more keys.'
 )
 
-DEBUG = OverridableOption(
-    '--debug', is_flag=True, default=False, help='Show debug messages. Mostly relevant for developers.', hidden=True
+VERBOSITY = VerbosityOption(
+    '-v',
+    '--verbosity',
+    metavar='LEVEL',
 )
 
 PRINT_TRACEBACK = OverridableOption(

@@ -37,8 +37,34 @@ LOG_LEVELS = {
     logging.getLevelName(logging.CRITICAL): logging.CRITICAL,
 }
 
-# The AiiDA logger
+# The AiiDA loggers
 AIIDA_LOGGER = logging.getLogger('aiida')
+VERDI_LOGGER = logging.getLogger('verdi')
+
+
+class ClickHandler(logging.Handler):
+    """Handler for writing to the console using click."""
+
+    def emit(self, record):
+        """Emit log record via click.
+
+        Can make use of special attributes 'nl' (whether to add newline) and 'err' (whether to print to stderr), which
+        can be set via the 'extra' dictionary parameter of the logging methods.
+        """
+        import click
+        try:
+            msg = self.format(record)
+            try:
+                nl = record.nl  # pylint: disable=invalid-name
+            except AttributeError:
+                nl = True  # pylint: disable=invalid-name
+            try:
+                err = record.err
+            except AttributeError:
+                err = False
+            click.echo(msg, err=err, nl=nl)
+        except Exception:  # pylint: disable=broad-except
+            self.handleError(record)
 
 
 # A logging filter that can be used to disable logging
@@ -76,6 +102,11 @@ LOGGING = {
             'formatter': 'halfverbose',
             'filters': ['testing']
         },
+        'click': {
+            'level': 'INFO',
+            'class': 'aiida.common.log.ClickHandler',
+            'filters': [],
+        }
     },
     'loggers': {
         'aiida': {
@@ -117,6 +148,10 @@ LOGGING = {
         'py.warnings': {
             'handlers': ['console'],
         },
+        'verdi': {
+            'level': lambda: get_config_option('logging.verdi_loglevel'),
+            'handlers': ['click']
+        }
     },
 }
 

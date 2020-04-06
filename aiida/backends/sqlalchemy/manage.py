@@ -13,6 +13,8 @@
 import alembic
 import click
 
+from aiida.common.log import VERDI_LOGGER, LOG_LEVELS
+
 from aiida.cmdline.params import options
 
 
@@ -25,6 +27,9 @@ def execute_alembic_command(command_name, **kwargs):
     from aiida.backends.sqlalchemy.manager import SqlaBackendManager
 
     manager = SqlaBackendManager()
+
+    if VERDI_LOGGER.level <= LOG_LEVELS['DEBUG']:
+        kwargs.setdefault('verbose', True)
 
     with manager.alembic_config() as config:
         command = getattr(alembic.command, command_name)
@@ -51,18 +56,18 @@ def alembic_revision(message):
 
 
 @alembic_cli.command('current')
-@options.VERBOSE()
-def alembic_current(verbose):
+@options.VERBOSITY()
+def alembic_current():
     """Show the current revision."""
-    execute_alembic_command('current', verbose=verbose)
+    execute_alembic_command('current')
 
 
 @alembic_cli.command('history')
 @click.option('-r', '--rev-range')
-@options.VERBOSE()
-def alembic_history(rev_range, verbose):
+@options.VERBOSITY()
+def alembic_history(rev_range):
     """Show the history for the given revision range."""
-    execute_alembic_command('history', rev_range=rev_range, verbose=verbose)
+    execute_alembic_command('history', rev_range=rev_range)
 
 
 @alembic_cli.command('upgrade')

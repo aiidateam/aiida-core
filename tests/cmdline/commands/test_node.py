@@ -22,6 +22,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_node
 from aiida.common.utils import Capturing
+from aiida.cmdline.params.options import VERBOSITY
 
 
 def get_result_lines(result):
@@ -625,6 +626,8 @@ class TestVerdiDelete(AiidaTestCase):
         """
         from aiida.common.exceptions import NotExistent
 
+        node_delete = VERBOSITY()(cmd_node.node_delete)
+
         newnode = orm.Data().store()
         newnodepk = newnode.pk
         options_list = []
@@ -632,21 +635,21 @@ class TestVerdiDelete(AiidaTestCase):
         options_list.append(['--call-calc-forward'])
         options_list.append(['--call-work-forward'])
         options_list.append(['--force'])
-        options_list.append(['--verbose'])
-        options_list.append(['--verbose', '--force'])
+        options_list.append(['-v', 'DEBUG'])
+        options_list.append(['--force'])
 
         for options in options_list:
             run_options = [str(newnodepk)]
             run_options.append('--dry-run')
             for an_option in options:
                 run_options.append(an_option)
-            result = self.cli_runner.invoke(cmd_node.node_delete, run_options)
+            result = self.cli_runner.invoke(node_delete, run_options)
             self.assertClickResultNoException(result)
 
         # To delete the created node
         run_options = [str(newnodepk)]
         run_options.append('--force')
-        result = self.cli_runner.invoke(cmd_node.node_delete, run_options)
+        result = self.cli_runner.invoke(node_delete, run_options)
         self.assertClickResultNoException(result)
 
         with self.assertRaises(NotExistent):

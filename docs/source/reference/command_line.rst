@@ -179,7 +179,11 @@ Below is a list with all available subcommands.
       Inspect, create and manage data nodes.
 
     Options:
-      --help  Show this message and exit.
+      -v, --verbosity LEVEL  Control the verbosity of messages emitted by the command by
+                             setting the minimum log level to one of: NOTSET, DEBUG, INFO,
+                             REPORT, WARNING, ERROR, CRITICAL.  [default: INFO]
+
+      --help                 Show this message and exit.
 
 
 .. _reference:command-line:verdi-database:

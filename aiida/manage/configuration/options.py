@@ -81,6 +81,14 @@ CONFIG_OPTIONS = {
         'description': 'Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger',
         'global_only': False,
     },
+    'logging.verdi_loglevel': {
+        'key': 'logging_verdi_log_level',
+        'valid_type': 'string',
+        'valid_values': VALID_LOG_LEVELS,
+        'default': 'INFO',
+        'description': 'Minimum log level for the verdi command line interface',
+        'global_only': False,
+    },
     'logging.db_loglevel': {
         'key': 'logging_db_log_level',
         'valid_type': 'string',

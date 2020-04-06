@@ -19,6 +19,7 @@ from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import InputValidationError
+from aiida.common.log import VERDI_LOGGER, LOG_LEVELS
 
 
 @verdi.group('code')
@@ -145,9 +146,8 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 
 @verdi_code.command()
 @arguments.CODE()
-@options.VERBOSE()
 @with_dbenv()
-def show(code, verbose):
+def show(code):
     """Display detailed information for a code."""
     from aiida.repository import FileType
 
@@ -175,7 +175,7 @@ def show(code, verbose):
     table.append(['Prepend text', code.get_prepend_text()])
     table.append(['Append text', code.get_append_text()])
 
-    if verbose:
+    if VERDI_LOGGER.level <= LOG_LEVELS['DEBUG']:
         table.append(['Calculations', len(code.get_outgoing().all())])
 
     click.echo(tabulate.tabulate(table))
@@ -183,25 +183,21 @@ def show(code, verbose):
 
 @verdi_code.command()
 @arguments.CODES()
-@options.VERBOSE()
 @options.DRY_RUN()
 @options.FORCE()
 @with_dbenv()
-def delete(codes, verbose, dry_run, force):
+def delete(codes, dry_run, force):
     """Delete a code.
 
     Note that codes are part of the data provenance, and deleting a code will delete all calculations using it.
     """
     from aiida.manage.database.delete.nodes import delete_nodes
 
-    verbosity = 1
     if force:
-        verbosity = 0
-    elif verbose:
-        verbosity = 2
+        VERDI_LOGGER.setLevel('CRITICAL')
 
     node_pks_to_delete = [code.pk for code in codes]
-    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force)
+    delete_nodes(node_pks_to_delete, dry_run=dry_run, force=force)
 
 
 @verdi_code.command()

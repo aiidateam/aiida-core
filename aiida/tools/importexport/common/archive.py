@@ -273,26 +273,26 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, progr
                 raise CorruptArchive('no files detected in archive')
 
             if silent:
-                p_bar = json_files
+                file_iterator = json_files
             else:
                 if progress_bar:
                     progress_bar.leave = False
                     progress_bar.close()
-                p_bar = tqdm(json_files, bar_format=BAR_FORMAT, leave=False)
+                file_iterator = tqdm(json_files, bar_format=BAR_FORMAT, leave=False)
 
-            for json_file in p_bar:
+            for json_file in file_iterator:
                 if not silent:
-                    update_description(json_file, p_bar)
+                    update_description(json_file, file_iterator)
 
                 try:
                     handle.extract(path=folder.abspath, member=json_file)
                 except KeyError:
                     raise CorruptArchive('required file `{}` is not included'.format(json_file))
 
-            p_bar = handle.namelist(
+            file_iterator = handle.namelist(
             ) if silent else tqdm(handle.namelist(), unit='files', bar_format=BAR_FORMAT, leave=False)
 
-            for membername in p_bar:
+            for membername in file_iterator:
                 # Check that we are only exporting nodes within the subfolder!
                 # TODO: better check such that there are no .. in the
                 # path; use probably the folder limit checks
@@ -300,7 +300,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, progr
                     continue
 
                 if not silent:
-                    update_description(membername, p_bar)
+                    update_description(membername, file_iterator)
 
                 handle.extract(path=folder.abspath, member=membername)
     except zipfile.BadZipfile:
@@ -343,26 +343,26 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, progr
                 raise CorruptArchive('no files detected in archive')
 
             if silent:
-                p_bar = json_files
+                file_iterator = json_files
             else:
                 if progress_bar:
                     progress_bar.leave = False
                     progress_bar.close()
-                p_bar = tqdm(json_files, bar_format=BAR_FORMAT, leave=False)
+                file_iterator = tqdm(json_files, bar_format=BAR_FORMAT, leave=False)
 
-            for json_file in p_bar:
+            for json_file in file_iterator:
                 if not silent:
-                    update_description(json_file, p_bar)
+                    update_description(json_file, file_iterator)
 
                 try:
                     handle.extract(path=folder.abspath, member=handle.getmember(json_file))
                 except KeyError:
                     raise CorruptArchive('required file `{}` is not included'.format(json_file))
 
-            p_bar = handle.getmembers(
+            file_iterator = handle.getmembers(
             ) if silent else tqdm(handle.getmembers(), unit='files', bar_format=BAR_FORMAT, leave=False)
 
-            for member in p_bar:
+            for member in file_iterator:
                 if member.isdev():
                     # safety: skip if character device, block device or FIFO
                     print('WARNING, device found inside the import file: {}'.format(member.name), file=sys.stderr)
@@ -379,7 +379,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, progr
                     continue
 
                 if not silent:
-                    update_description(member.name, p_bar)
+                    update_description(member.name, file_iterator)
 
                 handle.extract(path=folder.abspath, member=member)
     except tarfile.ReadError:

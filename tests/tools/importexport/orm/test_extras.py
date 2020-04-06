@@ -89,7 +89,8 @@ class TestExtras(AiidaTestCase):
             self.imported_node.get_extra('c')
 
     def test_extras_import_mode_keep_existing(self):
-        """Check if old extras are not modified in case of name collision (keep org, create new, leave org)"""
+        """Check if old extras are not modified in case of name collision
+        (keep original, create new, leave original)"""
         self.import_extras()
         imported_node = self.modify_extras(mode_existing='kcl')
 
@@ -99,7 +100,8 @@ class TestExtras(AiidaTestCase):
         self.assertEqual(imported_node.get_extra('c'), 3)
 
     def test_extras_import_mode_update_existing(self):
-        """Check if old extras are modified in case of name collision (keep org, create new, update org)"""
+        """Check if old extras are modified in case of name collision
+        (keep original, create new, update original)"""
         self.import_extras()
         imported_node = self.modify_extras(mode_existing='kcu')
 
@@ -109,7 +111,8 @@ class TestExtras(AiidaTestCase):
         self.assertEqual(imported_node.get_extra('c'), 3)
 
     def test_extras_import_mode_mirror(self):
-        """Check if old extras are fully overwritten by the imported ones (not keep org, create new, update org)"""
+        """Check if old extras are fully overwritten by the imported ones
+        (not keep original, create new, update original)"""
         self.import_extras()
         imported_node = self.modify_extras(mode_existing='ncu')
 
@@ -122,7 +125,8 @@ class TestExtras(AiidaTestCase):
         self.assertEqual(imported_node.get_extra('c'), 3)
 
     def test_extras_import_mode_none(self):
-        """Check if old extras are fully overwritten by the imported ones (keep org, not create new, leave org)"""
+        """Check if old extras are fully overwritten by the imported ones
+        (keep original, not create new, leave original)"""
         self.import_extras()
         imported_node = self.modify_extras(mode_existing='knl')
 
@@ -134,7 +138,8 @@ class TestExtras(AiidaTestCase):
             imported_node.get_extra('c')
 
     def test_extras_import_mode_strange(self):
-        """Check a mode that probably does not make much sense but is still available (keep org, create new, delete)"""
+        """Check a mode that probably does not make much sense but is still available
+        (keep original, create new, delete)"""
         self.import_extras()
         imported_node = self.modify_extras(mode_existing='kcd')
 

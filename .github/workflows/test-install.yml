@@ -112,6 +112,10 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+      rabbitmq:
+        image: rabbitmq:latest
+        ports:
+          - 5672:5672
 
     steps:
     - uses: actions/checkout@v2
@@ -123,13 +127,9 @@ jobs:
 
     - name: Install system dependencies
       run: |
-        wget -O - "https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc" | sudo apt-key add -
-        echo 'deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
-        echo 'deb https://dl.bintray.com/rabbitmq/debian bionic main' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
         sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt update
-        sudo apt install postgresql-10 rabbitmq-server graphviz
-        sudo systemctl status rabbitmq-server.service
+        sudo apt install postgresql-10 graphviz
 
     - run: pip install --upgrade pip
 

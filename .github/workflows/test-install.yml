@@ -131,8 +131,8 @@ jobs:
         sudo gem install apt-spy2
         sudo apt-spy2 check
         sudo apt-spy2 fix
-        sudo apt update
-        sudo apt install postgresql-10 graphviz
+        sudo apt-get update
+        sudo apt-get install postgresql-10 graphviz
 
     - run: pip install --upgrade pip
 

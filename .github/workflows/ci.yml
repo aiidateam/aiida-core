@@ -21,6 +21,9 @@ jobs:
       # remove occasionally problematic repositories we don't use anyway
       run: |
         sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
+        sudo gem install apt-spy2
+        sudo apt-spy2 check
+        sudo apt-spy2 fix
         sudo apt update
         sudo apt install texlive-base texlive-generic-recommended texlive-fonts-recommended texlive-latex-base texlive-latex-recommended texlive-latex-extra dvipng dvidvi
 
@@ -51,6 +54,9 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
+        sudo gem install apt-spy2
+        sudo apt-spy2 check
+        sudo apt-spy2 fix
         sudo apt update
         sudo apt install libkrb5-dev ruby ruby-dev
 

@@ -72,7 +72,7 @@ class AiidaTestImplementation(ABC):
             label='localhost',
             hostname='localhost',
             transport_type='local',
-            scheduler_type='pbspro',
+            scheduler_type='direct',
             workdir='/tmp/aiida',
             backend=self.backend
         ).store()

@@ -16,7 +16,6 @@ plugin-specific operations.
 import os
 
 from aiida.common import AIIDA_LOGGER, exceptions
-from aiida.common.datastructures import CalcJobState
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.orm import FolderData, Node
@@ -427,71 +426,6 @@ def kill_calculation(calculation, transport):
             execlogger.warning('scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id)
 
     return True
-
-
-def parse_results(process, retrieved_temporary_folder=None):
-    """
-    Parse the results for a given CalcJobNode (job)
-
-    :returns: integer exit code, where 0 indicates success and non-zero failure
-    """
-    from aiida.engine import ExitCode
-
-    assert process.node.get_state() == CalcJobState.PARSING, \
-        'job should be in the PARSING state when calling this function yet it is {}'.format(process.node.get_state())
-
-    parser_class = process.node.get_parser_class()
-    exit_code = ExitCode()
-    logger_extra = get_dblogger_extra(process.node)
-
-    if retrieved_temporary_folder:
-        files = []
-        for root, directories, filenames in os.walk(retrieved_temporary_folder):
-            for directory in directories:
-                files.append('- [D] {}'.format(os.path.join(root, directory)))
-            for filename in filenames:
-                files.append('- [F] {}'.format(os.path.join(root, filename)))
-
-        execlogger.debug(
-            '[parsing of calc {}] '
-            'Content of the retrieved_temporary_folder: \n'
-            '{}'.format(process.node.pk, '\n'.join(files)),
-            extra=logger_extra
-        )
-    else:
-        execlogger.debug(
-            '[parsing of calc {}] '
-            'No retrieved_temporary_folder.'.format(process.node.pk), extra=logger_extra
-        )
-
-    if parser_class is not None:
-
-        parser = parser_class(process.node)
-        parse_kwargs = parser.get_outputs_for_parsing()
-
-        if retrieved_temporary_folder:
-            parse_kwargs['retrieved_temporary_folder'] = retrieved_temporary_folder
-
-        exit_code = parser.parse(**parse_kwargs)
-
-        if exit_code is None:
-            exit_code = ExitCode(0)
-
-        if not isinstance(exit_code, ExitCode):
-            raise ValueError('parse should return an `ExitCode` or None, and not {}'.format(type(exit_code)))
-
-        if exit_code.status:
-            parser.logger.error('parser returned exit code<{}>: {}'.format(exit_code.status, exit_code.message))
-
-        for link_label, node in parser.outputs.items():
-            try:
-                process.out(link_label, node)
-            except ValueError as exception:
-                parser.logger.error('invalid value {} specified with label {}: {}'.format(node, link_label, exception))
-                exit_code = process.exit_codes.ERROR_INVALID_OUTPUT
-                break
-
-    return exit_code
 
 
 def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_extra=None):

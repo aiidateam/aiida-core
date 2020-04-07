@@ -19,6 +19,7 @@ from aiida.common.folders import Folder
 from aiida.common.lang import override, classproperty
 from aiida.common.links import LinkType
 
+from ..exit_code import ExitCode
 from ..process import Process, ProcessState
 from ..process_spec import CalcJobProcessSpec
 from .tasks import Waiting, UPLOAD_COMMAND
@@ -192,6 +193,14 @@ class CalcJob(Process):
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
                  'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
 
+        # Errors caused or returned by the scheduler
+        spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
+            message='The process did not have the required `retrieved` output.')
+        spec.exit_code(110, 'ERROR_SCHEDULER_OUT_OF_MEMORY',
+            message='The job ran out of memory.')
+        spec.exit_code(120, 'ERROR_SCHEDULER_OUT_OF_WALLTIME',
+            message='The job ran out of walltime.')
+
     @classproperty
     def spec_options(cls):  # pylint: disable=no-self-argument
         """Return the metadata options port namespace of the process specification of this process.
@@ -281,21 +290,113 @@ class CalcJob(Process):
         This is called once it's finished waiting for the calculation to be finished and the data has been retrieved.
         """
         import shutil
-        from aiida.engine.daemon import execmanager
 
         try:
-            exit_code = execmanager.parse_results(self, retrieved_temporary_folder)
+            retrieved = self.node.outputs.retrieved
+        except exceptions.NotExistent:
+            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER  # pylint: disable=no-member
+
+        # Call the scheduler output parser
+        exit_code_scheduler = self.parse_scheduler_output(retrieved)
+
+        if exit_code_scheduler is not None and exit_code_scheduler.status > 0:
+            # If an exit code is returned by the scheduler output parser, we log it and set it on the node. This will
+            # allow the actual `Parser` implementation, if defined in the inputs, to inspect it and decide to keep it,
+            # or override it with a more specific exit code, if applicable.
+            args = (exit_code_scheduler.status, exit_code_scheduler.message)
+            self.logger.warning('scheduler parser returned exit code<{}>: {}'.format(*args))
+            self.node.set_exit_status(exit_code_scheduler.status)
+            self.node.set_exit_message(exit_code_scheduler.message)
+
+        # Call the retrieved output parser
+        try:
+            exit_code_retrieved = self.parse_retrieved_output(retrieved_temporary_folder)
         finally:
-            # Delete the temporary folder
-            try:
-                shutil.rmtree(retrieved_temporary_folder)
-            except OSError as exception:
-                if exception.errno != 2:
-                    raise
+            shutil.rmtree(retrieved_temporary_folder, ignore_errors=True)
+
+        if exit_code_retrieved is not None and exit_code_retrieved.status > 0:
+            args = (exit_code_retrieved.status, exit_code_retrieved.message)
+            self.logger.warning('output parser returned exit code<{}>: {}'.format(*args))
+
+        # The final exit code is that of the scheduler, unless the output parser returned one
+        if exit_code_retrieved is not None:
+            exit_code = exit_code_retrieved
+        else:
+            exit_code = exit_code_scheduler
 
         # Finally link up the outputs and we're done
         for entry in self.node.get_outgoing():
             self.out(entry.link_label, entry.node)
+
+        return exit_code or ExitCode(0)
+
+    def parse_scheduler_output(self, retrieved):
+        """Parse the output of the scheduler if that functionality has been implemented for the plugin."""
+        scheduler = self.node.computer.get_scheduler()
+        filename_stderr = self.node.get_option('scheduler_stderr')
+        filename_stdout = self.node.get_option('scheduler_stdout')
+
+        detailed_job_info = self.node.get_detailed_job_info()
+        if detailed_job_info is None:
+            self.logger.warning('could not parse scheduler output: the `detailed_job_info` attribute is missing')
+
+        try:
+            scheduler_stderr = retrieved.get_object_content(filename_stderr)
+        except FileNotFoundError:
+            scheduler_stderr = None
+            self.logger.warning('could not parse scheduler output: the `{}` file is missing'.format(filename_stderr))
+
+        try:
+            scheduler_stdout = retrieved.get_object_content(filename_stdout)
+        except FileNotFoundError:
+            scheduler_stdout = None
+            self.logger.warning('could not parse scheduler output: the `{}` file is missing'.format(filename_stdout))
+
+        # Only attempt to call the scheduler parser if all three resources of information are available
+        if any(entry is None for entry in [detailed_job_info, scheduler_stderr, scheduler_stdout]):
+            return
+
+        try:
+            exit_code = scheduler.parse_output(detailed_job_info, scheduler_stdout, scheduler_stderr)
+        except exceptions.FeatureNotAvailable as exception:
+            self.logger.warning('could not parse scheduler output: {}'.format(exception))
+            return
+        except Exception as exception:  # pylint: disable=broad-except
+            self.logger.warning('the `parse_output` method of the scheduler excepted: {}'.format(exception))
+            return
+
+        if exit_code is not None and not isinstance(exit_code, ExitCode):
+            args = (scheduler.__class__.__name__, type(exit_code))
+            raise ValueError('`{}.parse_output` returned neither an `ExitCode` nor None, but: {}'.format(*args))
+
+        return exit_code
+
+    def parse_retrieved_output(self, retrieved_temporary_folder=None):
+        """Parse the retrieved data by calling the parser plugin if it was defined in the inputs."""
+        parser_class = self.node.get_parser_class()
+
+        if parser_class is None:
+            return
+
+        parser = parser_class(self.node)
+        parse_kwargs = parser.get_outputs_for_parsing()
+
+        if retrieved_temporary_folder:
+            parse_kwargs['retrieved_temporary_folder'] = retrieved_temporary_folder
+
+        exit_code = parser.parse(**parse_kwargs)
+
+        for link_label, node in parser.outputs.items():
+            try:
+                self.out(link_label, node)
+            except ValueError as exception:
+                self.logger.error('invalid value {} specified with label {}: {}'.format(node, link_label, exception))
+                exit_code = self.exit_codes.ERROR_INVALID_OUTPUT  # pylint: disable=no-member
+                break
+
+        if exit_code is not None and not isinstance(exit_code, ExitCode):
+            args = (parser_class.__name__, type(exit_code))
+            raise ValueError('`{}.parse` returned neither an `ExitCode` nor None, but: {}'.format(*args))
 
         return exit_code
 

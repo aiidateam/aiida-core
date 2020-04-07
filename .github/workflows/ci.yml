@@ -116,6 +116,7 @@ jobs:
         env:
           POSTGRES_DB: test_${{ matrix.backend }}
           POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
           --health-cmd pg_isready
           --health-interval 10s

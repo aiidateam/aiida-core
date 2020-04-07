@@ -98,15 +98,23 @@ jobs:
         python-version: [3.5, 3.6, 3.7, 3.8]
         backend: ['django', 'sqlalchemy']
 
+    services:
+      postgres:
+        image: postgres:10
+        env:
+          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
     - uses: actions/checkout@v2
-    - uses: CasperWA/postgresql-action@v1.2
-      with:
-        postgresql version: '10'
-        postgresql db: test_${{ matrix.backend }}
-        postgresql user: postgres
-        postgresql password: ''
-        postgresql auth: trust
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1

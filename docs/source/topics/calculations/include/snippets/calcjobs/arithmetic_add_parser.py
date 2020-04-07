@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from aiida.common import exceptions
 from aiida.orm import Int
 from aiida.parsers.parser import Parser
 
@@ -8,10 +7,7 @@ class ArithmeticAddParser(Parser):
 
     def parse(self, **kwargs):
         """Parse the contents of the output files retrieved in the `FolderData`."""
-        try:
-            output_folder = self.retrieved
-        except exceptions.NotExistent:
-            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
+        output_folder = self.retrieved
 
         try:
             with output_folder.open(self.node.get_option('output_filename'), 'r') as handle:

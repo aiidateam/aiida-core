@@ -466,45 +466,32 @@ The advantage of adding the raw output data in different form as output nodes, i
 This allows one to query for calculations that produced specific outputs with a certain value, which becomes a very powerful approach for post-processing and analyses of big databases.
 
 The ``retrieved`` attribute of the parser will return the ``FolderData`` node that should have been attached by the engine containing all the retrieved files, as specified using the :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>` in the :ref:`preparation step of the calculation job<topics:calculations:usage:calcjobs:prepare>`.
-If this node has not been attached for whatever reason, this call will throw an :py:class:`~aiida.common.exceptions.NotExistent` exception.
-This is why we wrap the ``self.retrieved`` call in a try-catch block:
-
-.. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
-    :language: python
-    :lines: 11-14
-    :linenos:
-    :lineno-start: 11
-
-If the exception is thrown, it means the retrieved files are not available and something must have has gone terribly awry with the calculation.
-In this case, there is nothing to do for the parser and so we return an exit code.
-Specific exit codes can be referenced by their label, such as ``ERROR_NO_RETRIEVED_FOLDER`` in this example, through the ``self.exit_codes`` property.
-This call will retrieve the corresponding exit code defined on the ``CalcJob`` that we are currently parsing.
-Returning this exit code from the parser will stop the parsing immediately and will instruct the engine to set its exit status and exit message on the node of this calculation job.
-This should scenario should however never occur, but it is just here as a safety.
-If the exception would not be caught, the engine will catch the exception instead and set the process state of the corresponding calculation to ``Excepted``.
-Note that this will happen for any exception that occurs during parsing.
-
-Assuming that everything went according to plan during the retrieval, we now have access to those retrieved files and can start to parse them.
+This retrieved folder can be used to open and read the contents of the files it contains.
 In this example, there should be a single output file that was written by redirecting the standard output of the bash script that added the two integers.
 The parser opens this file, reads its content and tries to parse the sum from it:
 
 .. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
-    :lines: 16-20
+    :lines: 12-16
     :linenos:
-    :lineno-start: 16
+    :lineno-start: 12
 
-Note that again we wrap this parsing action in a try-except block.
-If the file cannot be found or cannot be read, we return the appropriate exit code.
+Note that this parsing action is wrapped in a try-except block to catch the exceptions that would be thrown if the output file could not be read.
+If the exception would not be caught, the engine will catch the exception instead and set the process state of the corresponding calculation to ``Excepted``.
+Note that this will happen for any uncaught exception that is thrown during parsing.
+Instead, we catch these exceptions and return an exit code that is retrieved by referencing it by its label, such as ``ERROR_READING_OUTPUT_FILE`` in this example, through the ``self.exit_codes`` property.
+This call will retrieve the corresponding exit code defined on the ``CalcJob`` that we are currently parsing.
+Returning this exit code from the parser will stop the parsing immediately and will instruct the engine to set its exit status and exit message on the node of this calculation job.
+
 The ``parse_stdout`` method is just a small utility function to separate the actual parsing of the data from the main parser code.
 In this case, the parsing is so simple that we might have as well kept it in the main method, but this is just to illustrate that you are completely free to organize the code within the ``parse`` method for clarity.
 If we manage to parse the sum, produced by the calculation, we wrap it in the appropriate :py:class:`~aiida.orm.nodes.data.int.Int` data node class, and register it as an output through the ``out`` method:
 
 .. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
-    :lines: 25-25
+    :lines: 21-21
     :linenos:
-    :lineno-start: 25
+    :lineno-start: 21
 
 Note that if we encountered no problems, we do not have to return anything.
 The engine will interpret this as the calculation having finished successfully.

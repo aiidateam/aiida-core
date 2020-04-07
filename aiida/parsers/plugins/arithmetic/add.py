@@ -21,12 +21,7 @@ class ArithmeticAddParser(Parser):
         from aiida.orm import Int
 
         try:
-            output_folder = self.retrieved
-        except AttributeError:
-            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
-
-        try:
-            with output_folder.open(self.node.get_option('output_filename'), 'r') as handle:
+            with self.retrieved.open(self.node.get_option('output_filename'), 'r') as handle:
                 result = int(handle.read())
         except OSError:
             return self.exit_codes.ERROR_READING_OUTPUT_FILE

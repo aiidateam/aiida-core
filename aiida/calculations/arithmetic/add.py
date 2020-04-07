@@ -33,7 +33,6 @@ class ArithmeticAddCalculation(CalcJob):
         spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
         spec.inputs['metadata']['options']['resources'].default = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
         # start exit codes - marker for docs
-        spec.exit_code(300, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved output node does not exist.')
         spec.exit_code(310, 'ERROR_READING_OUTPUT_FILE', message='The output file could not be read.')
         spec.exit_code(320, 'ERROR_INVALID_OUTPUT', message='The output file contains invalid output.')
         spec.exit_code(410, 'ERROR_NEGATIVE_NUMBER', message='The sum of the operands is a negative number.')

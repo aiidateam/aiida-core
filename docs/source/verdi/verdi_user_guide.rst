@@ -394,7 +394,7 @@ Below is a list with all available subcommands.
     Commands:
       create   Export subsets of the provenance graph to file for sharing.
       inspect  Inspect contents of an exported archive without importing it.
-      migrate  Migrate an old export archive file to the most recent format.
+      migrate  Migrate an export archive to a more recent format version.
 
 
 .. _verdi_graph:

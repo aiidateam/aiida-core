@@ -22,8 +22,7 @@ jobs:
       run: |
         sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo gem install apt-spy2
-        sudo apt-spy2 check
-        sudo apt-spy2 fix
+        sudo apt-spy2 fix --commit
         sudo apt-get update
         sudo apt-get install texlive-base texlive-generic-recommended texlive-fonts-recommended texlive-latex-base texlive-latex-recommended texlive-latex-extra dvipng dvidvi
 
@@ -55,8 +54,7 @@ jobs:
       run: |
         sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo gem install apt-spy2
-        sudo apt-spy2 check
-        sudo apt-spy2 fix
+        sudo apt-spy2 fix --commit
         sudo apt-get update
         sudo apt-get install libkrb5-dev ruby ruby-dev
 
@@ -147,8 +145,7 @@ jobs:
       run: |
         sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo gem install apt-spy2
-        sudo apt-spy2 check
-        sudo apt-spy2 fix
+        sudo apt-spy2 fix --commit
         sudo apt-get update
         sudo apt-get install postgresql-10 graphviz
 

@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for the Group ORM class."""
+import pytest
+
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
@@ -272,3 +274,54 @@ class TestGroups(AiidaTestCase):
         # And that the results are correct
         self.assertEqual(builder.count(), 1)
         self.assertEqual(builder.first()[0], group.id)
+
+
+class TestGroupsSubclasses(AiidaTestCase):
+    """Test rules around creating `Group` subclasses."""
+
+    @staticmethod
+    def test_creation_registered():
+        """Test rules around creating registered `Group` subclasses."""
+        group = orm.AutoGroup('some-label')
+        assert isinstance(group, orm.AutoGroup)
+        assert group.type_string == 'core.auto'
+
+        group, _ = orm.AutoGroup.objects.get_or_create('some-auto-group')
+        assert isinstance(group, orm.AutoGroup)
+        assert group.type_string == 'core.auto'
+
+    @staticmethod
+    def test_creation_unregistered():
+        """Test rules around creating `Group` subclasses without a registered entry point."""
+
+        # Defining an unregistered subclas should issue a warning and its type string should be set to `None`
+        with pytest.warns(UserWarning):
+
+            class SubGroup(orm.Group):
+                pass
+
+        assert SubGroup._type_string is None  # pylint: disable=protected-access
+
+        # Creating an instance is allowed
+        instance = SubGroup(label='subgroup')
+        assert instance._type_string is None  # pylint: disable=protected-access
+
+        # Storing the instance, however, is forbidden and should raise
+        with pytest.raises(exceptions.StoringNotAllowed):
+            instance.store()
+
+    @staticmethod
+    def test_loading_unregistered():
+        """Test rules around loading `Group` subclasses without a registered entry point.
+
+        Storing instances of unregistered subclasses is not allowed so we have to create one sneakily by instantiating
+        a normal group and manipulating the type string directly on the database model.
+        """
+        group = orm.Group(label='group')
+        group.backend_entity.dbmodel.type_string = 'unregistered.subclass'
+        group.store()
+
+        with pytest.warns(UserWarning):
+            loaded = orm.load_group(group.pk)
+
+        assert isinstance(loaded, orm.Group)

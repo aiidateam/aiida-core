@@ -14,21 +14,18 @@ import warnings
 from aiida.common import exceptions, timezone
 from aiida.common.escaping import escape_for_sql_like, get_regex_pattern_from_sql
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.orm import GroupTypeString, Group
+from aiida.orm import AutoGroup
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 
 CURRENT_AUTOGROUP = None
 
-VERDIAUTOGROUP_TYPE = GroupTypeString.VERDIAUTOGROUP_TYPE.value
-
 
 class Autogroup:
-    """
-    An object used for the autogrouping of objects.
-    The autogrouping is checked by the Node.store() method.
-    In the store(), the Node will check if CURRENT_AUTOGROUP is != None.
-    If so, it will call Autogroup.is_to_be_grouped, and decide whether to put it in a group.
-    Such autogroups are going to be of the VERDIAUTOGROUP_TYPE.
+    """Class to create a new `AutoGroup` instance that will, while active, automatically contain all nodes being stored.
+
+    The autogrouping is checked by the `Node.store()` method which, if `CURRENT_AUTOGROUP is not None` the method
+    `Autogroup.is_to_be_grouped` is called to decide whether to put the current node being stored in the current
+    `AutoGroup` instance.
 
     The exclude/include lists are lists of strings like:
     ``aiida.data:int``, ``aiida.calculation:quantumespresso.pw``,
@@ -198,7 +195,7 @@ class Autogroup:
         self._group_label = None
 
     def get_or_create_group(self):
-        """Return the current Autogroup, or create one if None has been set yet.
+        """Return the current `AutoGroup`, or create one if None has been set yet.
 
         This function implements a somewhat complex logic that is however needed
         to make sure that, even if `verdi run` is called at the same time multiple
@@ -219,16 +216,10 @@ class Autogroup:
         # So the group with the same name can be returned quickly in future
         # calls of this method.
         if self._group_label is not None:
-            results = [
-                res[0] for res in QueryBuilder().
-                append(Group, filters={
-                    'label': self._group_label,
-                    'type_string': VERDIAUTOGROUP_TYPE
-                }, project='*').iterall()
-            ]
+            builder = QueryBuilder().append(AutoGroup, filters={'label': self._group_label})
+            results = [res[0] for res in builder.iterall()]
             if results:
-                # If it is not empty, it should have only one result due to the
-                # uniqueness constraints
+                # If it is not empty, it should have only one result due to the uniqueness constraints
                 assert len(results) == 1, 'I got more than one autogroup with the same label!'
                 return results[0]
             # There are no results: probably the group has been deleted.
@@ -239,7 +230,7 @@ class Autogroup:
         # Try to do a preliminary QB query to avoid to do too many try/except
         # if many of the prefix_NUMBER groups already exist
         queryb = QueryBuilder().append(
-            Group,
+            AutoGroup,
             filters={
                 'or': [{
                     'label': {
@@ -274,7 +265,7 @@ class Autogroup:
         while True:
             try:
                 label = label_prefix if counter == 0 else '{}_{}'.format(label_prefix, counter)
-                group = Group(label=label, type_string=VERDIAUTOGROUP_TYPE).store()
+                group = AutoGroup(label=label).store()
                 self._group_label = group.label
             except exceptions.IntegrityError:
                 counter += 1

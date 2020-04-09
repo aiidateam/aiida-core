@@ -54,6 +54,7 @@ ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.calculations': 'aiida.orm.nodes.process.calculation.calcjob',
     'aiida.cmdline.data': 'aiida.cmdline.data',
     'aiida.data': 'aiida.orm.nodes.data',
+    'aiida.groups': 'aiida.orm.groups',
     'aiida.node': 'aiida.orm.nodes',
     'aiida.parsers': 'aiida.parsers.plugins',
     'aiida.schedulers': 'aiida.schedulers.plugins',
@@ -78,6 +79,7 @@ def validate_registered_entry_points():  # pylint: disable=invalid-name
     factory_mapping = {
         'aiida.calculations': factories.CalculationFactory,
         'aiida.data': factories.DataFactory,
+        'aiida.groups': factories.GroupFactory,
         'aiida.parsers': factories.ParserFactory,
         'aiida.schedulers': factories.SchedulerFactory,
         'aiida.transports': factories.TransportFactory,

@@ -17,7 +17,7 @@ import warnings
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 
-__all__ = ('GroupPath', 'InvalidPath')
+__all__ = ('GroupPath', 'InvalidPath', 'GroupNotFoundError', 'GroupNotUniqueError', 'NoGroupsInPathError')
 
 REGEX_ATTR = re.compile('^[a-zA-Z][\\_a-zA-Z0-9]*$')
 
@@ -60,19 +60,20 @@ class GroupPath:
     See tests for usage examples.
     """
 
-    def __init__(self, path='', type_string=orm.GroupTypeString.USER.value, warn_invalid_child=True):
+    def __init__(self, path='', cls=orm.Group, warn_invalid_child=True):
         # type: (str, Optional[str], Optional[GroupPath])
         """Instantiate the class.
 
         :param path: The initial path of the group.
-        :param type_string: Used to query for and instantiate a ``Group`` with.
+        :param cls: The subclass of `Group` to operate on.
         :param warn_invalid_child: Issue a warning, when iterating children, if a child path is invalid.
 
         """
+        if not issubclass(cls, orm.Group):
+            raise TypeError('cls must a subclass of Group: {}'.format(cls))
+
         self._delimiter = '/'
-        if not isinstance(type_string, str):
-            raise TypeError('type_string must a str: {}'.format(type_string))
-        self._type_string = type_string
+        self._cls = cls
         self._path_string = self._validate_path(path)
         self._path_list = self._path_string.split(self._delimiter) if path else []
         self._warn_invalid_child = warn_invalid_child
@@ -90,21 +91,21 @@ class GroupPath:
     def __repr__(self):
         # type: () -> str
         """Represent the instantiated class."""
-        return "{}('{}', type='{}')".format(self.__class__.__name__, self.path, self.type_string)
+        return "{}('{}', cls='{}')".format(self.__class__.__name__, self.path, self.cls)
 
     def __eq__(self, other):
         # type: (Any) -> bool
-        """Compare equality of path and type string to another ``GroupPath`` object."""
+        """Compare equality of path and ``Group`` subclass to another ``GroupPath`` object."""
         if not isinstance(other, GroupPath):
             return NotImplemented
-        return (self.path, self.type_string) == (other.path, other.type_string)
+        return (self.path, self.cls) == (other.path, other.cls)
 
     def __lt__(self, other):
         # type: (Any) -> bool
-        """Compare less-than operator of path and type string to another ``GroupPath`` object."""
+        """Compare less-than operator of path and ``Group`` subclass to another ``GroupPath`` object."""
         if not isinstance(other, GroupPath):
             return NotImplemented
-        return (self.path, self.type_string) < (other.path, other.type_string)
+        return (self.path, self.cls) < (other.path, other.cls)
 
     @property
     def path(self):
@@ -133,10 +134,10 @@ class GroupPath:
         return self._delimiter
 
     @property
-    def type_string(self):
+    def cls(self):
         # type: () -> str
-        """Return the type_string used to query for and instantiate a ``Group`` with."""
-        return self._type_string
+        """Return the cls used to query for and instantiate a ``Group`` with."""
+        return self._cls
 
     @property
     def parent(self):
@@ -144,9 +145,7 @@ class GroupPath:
         """Return the parent path."""
         if self.path_list:
             return GroupPath(
-                self.delimiter.join(self.path_list[:-1]),
-                type_string=self.type_string,
-                warn_invalid_child=self._warn_invalid_child
+                self.delimiter.join(self.path_list[:-1]), cls=self.cls, warn_invalid_child=self._warn_invalid_child
             )
         return None
 
@@ -158,7 +157,7 @@ class GroupPath:
         path = self._validate_path(path)
         child = GroupPath(
             path=self.path + self.delimiter + path if self.path else path,
-            type_string=self.type_string,
+            cls=self.cls,
             warn_invalid_child=self._warn_invalid_child
         )
         return child
@@ -169,10 +168,10 @@ class GroupPath:
         return self.__truediv__(path)
 
     def get_group(self):
-        # type: () -> Optional[orm.Group]
+        # type: () -> Optional[self.cls]
         """Return the concrete group associated with this path."""
         try:
-            return orm.Group.objects.get(label=self.path, type_string=self.type_string)
+            return self.cls.objects.get(label=self.path)
         except NotExistent:
             return None
 
@@ -182,16 +181,14 @@ class GroupPath:
         """Return all the UUID associated with this GroupPath.
 
         :returns: and empty list, if no group associated with this label,
-            or can be multiple if type_string was None
+            or can be multiple if cls was None
 
         This is an efficient method for checking existence,
         which does not require the (slow) loading of the ORM entity.
         """
         query = orm.QueryBuilder()
         filters = {'label': self.path}
-        if self.type_string is not None:
-            filters['type_string'] = self.type_string
-        query.append(orm.Group, filters=filters, project='id')
+        query.append(self.cls, filters=filters, project='id')
         return [r[0] for r in query.all()]
 
     @property
@@ -201,11 +198,9 @@ class GroupPath:
         return len(self.group_ids) == 0
 
     def get_or_create_group(self):
-        # type: () -> (orm.Group, bool)
+        # type: () -> (self.cls, bool)
         """Return the concrete group associated with this path or, create it, if it does not already exist."""
-        if self.type_string is not None:
-            return orm.Group.objects.get_or_create(label=self.path, type_string=self.type_string)
-        return orm.Group.objects.get_or_create(label=self.path)
+        return self.cls.objects.get_or_create(label=self.path)
 
     def delete_group(self):
         """Delete the concrete group associated with this path.
@@ -217,7 +212,7 @@ class GroupPath:
             raise GroupNotFoundError(self)
         if len(ids) > 1:
             raise GroupNotUniqueError(self)
-        orm.Group.objects.delete(ids[0])
+        self.cls.objects.delete(ids[0])
 
     @property
     def children(self):
@@ -227,9 +222,7 @@ class GroupPath:
         filters = {}
         if self.path:
             filters['label'] = {'like': self.path + self.delimiter + '%'}
-        if self.type_string is not None:
-            filters['type_string'] = self.type_string
-        query.append(orm.Group, filters=filters, project='label')
+        query.append(self.cls, filters=filters, project='label')
         if query.count() == 0 and self.is_virtual:
             raise NoGroupsInPathError(self)
 
@@ -242,9 +235,7 @@ class GroupPath:
             if (path_string not in yielded and path[:len(self._path_list)] == self._path_list):
                 yielded.append(path_string)
                 try:
-                    yield GroupPath(
-                        path=path_string, type_string=self.type_string, warn_invalid_child=self._warn_invalid_child
-                    )
+                    yield GroupPath(path=path_string, cls=self.cls, warn_invalid_child=self._warn_invalid_child)
                 except InvalidPath:
                     if self._warn_invalid_child:
                         warnings.warn('invalid path encountered: {}'.format(path_string))  # pylint: disable=no-member
@@ -291,9 +282,7 @@ class GroupPath:
         group_filters = {}
         if self.path:
             group_filters['label'] = {'or': [{'==': self.path}, {'like': self.path + self.delimiter + '%'}]}
-        if self.type_string is not None:
-            group_filters['type_string'] = self.type_string
-        query.append(orm.Group, filters=group_filters, project='label', tag='group')
+        query.append(self.cls, filters=group_filters, project='label', tag='group')
         query.append(
             orm.Node if node_class is None else node_class,
             with_group='group',
@@ -301,7 +290,7 @@ class GroupPath:
             project=['*'],
         )
         for (label, node) in query.iterall(query_batch) if query_batch else query.all():
-            yield WalkNodeResult(GroupPath(label, type_string=self.type_string), node)
+            yield WalkNodeResult(GroupPath(label, cls=self.cls), node)
 
     @property
     def browse(self):
@@ -330,9 +319,7 @@ class GroupAttr:
     def __repr__(self):
         # type: () -> str
         """Represent the instantiated class."""
-        return "{}('{}', type='{}')".format(
-            self.__class__.__name__, self._group_path.path, self._group_path.type_string
-        )
+        return "{}('{}', type='{}')".format(self.__class__.__name__, self._group_path.path, self._group_path.cls)
 
     def __call__(self):
         # type: () -> GroupPath

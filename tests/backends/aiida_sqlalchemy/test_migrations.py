@@ -1642,3 +1642,69 @@ class TestDefaultLinkLabelMigration(TestMigrationsSQLA):
 
             finally:
                 session.close()
+
+
+class TestGroupTypeStringMigration(TestMigrationsSQLA):
+    """Test the migration that renames the DbGroup type strings."""
+
+    migrate_from = '118349c10896'  # 118349c10896_default_link_label.py
+    migrate_to = 'bf591f31dd12'  # bf591f31dd12_dbgroup_type_string.py
+
+    def setUpBeforeMigration(self):
+        """Create the DbGroups with the old type strings."""
+        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+        DbUser = self.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                default_user = DbUser(email='{}@aiida.net'.format(self.id()))
+                session.add(default_user)
+                session.commit()
+
+                # test user group type_string: 'user' -> 'core'
+                group_user = DbGroup(label='01', user_id=default_user.id, type_string='user')
+                session.add(group_user)
+                # test data.upf group type_string: 'data.upf' -> 'core.upf'
+                group_data_upf = DbGroup(label='02', user_id=default_user.id, type_string='data.upf')
+                session.add(group_data_upf)
+                # test auto.import group type_string: 'auto.import' -> 'core.import'
+                group_autoimport = DbGroup(label='03', user_id=default_user.id, type_string='auto.import')
+                session.add(group_autoimport)
+                # test auto.run group type_string: 'auto.run' -> 'core.auto'
+                group_autorun = DbGroup(label='04', user_id=default_user.id, type_string='auto.run')
+                session.add(group_autorun)
+
+                session.commit()
+
+                # Store values for later tests
+                self.group_user_pk = group_user.id
+                self.group_data_upf_pk = group_data_upf.id
+                self.group_autoimport_pk = group_autoimport.id
+                self.group_autorun_pk = group_autorun.id
+
+            finally:
+                session.close()
+
+    def test_group_string_update(self):
+        """Test that the type strings are properly migrated."""
+        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                # test user group type_string: 'user' -> 'core'
+                group_user = session.query(DbGroup).filter(DbGroup.id == self.group_user_pk).one()
+                self.assertEqual(group_user.type_string, 'core')
+
+                # test data.upf group type_string: 'data.upf' -> 'core.upf'
+                group_data_upf = session.query(DbGroup).filter(DbGroup.id == self.group_data_upf_pk).one()
+                self.assertEqual(group_data_upf.type_string, 'core.upf')
+
+                # test auto.import group type_string: 'auto.import' -> 'core.import'
+                group_autoimport = session.query(DbGroup).filter(DbGroup.id == self.group_autoimport_pk).one()
+                self.assertEqual(group_autoimport.type_string, 'core.import')
+
+                # test auto.run group type_string: 'auto.run' -> 'core.auto'
+                group_autorun = session.query(DbGroup).filter(DbGroup.id == self.group_autorun_pk).one()
+                self.assertEqual(group_autorun.type_string, 'core.auto')
+            finally:
+                session.close()

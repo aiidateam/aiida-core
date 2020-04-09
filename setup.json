@@ -159,6 +159,12 @@
       "structure = aiida.orm.nodes.data.structure:StructureData",
       "upf = aiida.orm.nodes.data.upf:UpfData"
     ],
+    "aiida.groups": [
+      "core = aiida.orm.groups:Group",
+      "core.auto = aiida.orm.groups:AutoGroup",
+      "core.import = aiida.orm.groups:ImportGroup",
+      "core.upf = aiida.orm.groups:UpfFamily"
+    ],
     "aiida.node": [
       "data = aiida.orm.nodes.data.data:Data",
       "process = aiida.orm.nodes.process.process:ProcessNode",

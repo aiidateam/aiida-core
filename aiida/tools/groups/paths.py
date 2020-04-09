@@ -171,7 +171,7 @@ class GroupPath:
         # type: () -> Optional[self.cls]
         """Return the concrete group associated with this path."""
         try:
-            return self.cls.objects.get(label=self.path)
+            return orm.QueryBuilder().append(self.cls, subclassing=False, filters={'label': self.path}).one()[0]
         except NotExistent:
             return None
 
@@ -188,7 +188,7 @@ class GroupPath:
         """
         query = orm.QueryBuilder()
         filters = {'label': self.path}
-        query.append(self.cls, filters=filters, project='id')
+        query.append(self.cls, subclassing=False, filters=filters, project='id')
         return [r[0] for r in query.all()]
 
     @property
@@ -222,7 +222,7 @@ class GroupPath:
         filters = {}
         if self.path:
             filters['label'] = {'like': self.path + self.delimiter + '%'}
-        query.append(self.cls, filters=filters, project='label')
+        query.append(self.cls, subclassing=False, filters=filters, project='label')
         if query.count() == 0 and self.is_virtual:
             raise NoGroupsInPathError(self)
 
@@ -282,7 +282,7 @@ class GroupPath:
         group_filters = {}
         if self.path:
             group_filters['label'] = {'or': [{'==': self.path}, {'like': self.path + self.delimiter + '%'}]}
-        query.append(self.cls, filters=group_filters, project='label', tag='group')
+        query.append(self.cls, subclassing=False, filters=group_filters, project='label', tag='group')
         query.append(
             orm.Node if node_class is None else node_class,
             with_group='group',

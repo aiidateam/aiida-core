@@ -9,7 +9,7 @@
 ###########################################################################
 """Tests for the Autogroup functionality."""
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import Group, QueryBuilder
+from aiida.orm import AutoGroup, QueryBuilder
 from aiida.orm.autogroup import Autogroup
 
 
@@ -21,16 +21,9 @@ class TestAutogroup(AiidaTestCase):
         label_prefix = 'test_prefix_TestAutogroup'
 
         # Check that there are no groups to begin with
-        queryb = QueryBuilder().append(Group, filters={'type_string': 'auto.run', 'label': label_prefix}, project='*')
+        queryb = QueryBuilder().append(AutoGroup, filters={'label': label_prefix})
         assert not list(queryb.all())
-        queryb = QueryBuilder().append(
-            Group, filters={
-                'type_string': 'auto.run',
-                'label': {
-                    'like': r'{}\_%'.format(label_prefix)
-                }
-            }, project='*'
-        )
+        queryb = QueryBuilder().append(AutoGroup, filters={'label': {'like': r'{}\_%'.format(label_prefix)}})
         assert not list(queryb.all())
 
         # First group (no existing one)
@@ -64,7 +57,7 @@ class TestAutogroup(AiidaTestCase):
         )
 
         # I create a group with a large integer suffix (9)
-        Group(label='{}_9'.format(label_prefix), type_string='auto.run').store()
+        AutoGroup(label='{}_9'.format(label_prefix), type_string='auto.run').store()
         # The next autogroup should become number 10
         autogroup = Autogroup()
         autogroup.set_group_label_prefix(label_prefix)
@@ -76,7 +69,7 @@ class TestAutogroup(AiidaTestCase):
         )
 
         # I create a group with a non-integer suffix (15a), it should be ignored
-        Group(label='{}_15b'.format(label_prefix), type_string='auto.run').store()
+        AutoGroup(label='{}_15b'.format(label_prefix), type_string='auto.run').store()
         # The next autogroup should become number 11
         autogroup = Autogroup()
         autogroup.set_group_label_prefix(label_prefix)
@@ -93,19 +86,12 @@ class TestAutogroup(AiidaTestCase):
         label_prefix = 'new_test_prefix_TestAutogroup'
         # I create a group with the same prefix, but followed by non-underscore
         # characters. These should be ignored in the logic.
-        Group(label='{}xx'.format(label_prefix), type_string='auto.run').store()
+        AutoGroup(label='{}xx'.format(label_prefix), type_string='auto.run').store()
 
         # Check that there are no groups to begin with
-        queryb = QueryBuilder().append(Group, filters={'type_string': 'auto.run', 'label': label_prefix}, project='*')
+        queryb = QueryBuilder().append(AutoGroup, filters={'label': label_prefix})
         assert not list(queryb.all())
-        queryb = QueryBuilder().append(
-            Group, filters={
-                'type_string': 'auto.run',
-                'label': {
-                    'like': r'{}\_%'.format(label_prefix)
-                }
-            }, project='*'
-        )
+        queryb = QueryBuilder().append(AutoGroup, filters={'label': {'like': r'{}\_%'.format(label_prefix)}})
         assert not list(queryb.all())
 
         # First group (no existing one)

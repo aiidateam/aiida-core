@@ -279,6 +279,11 @@ class TestGroups(AiidaTestCase):
 class TestGroupsSubclasses(AiidaTestCase):
     """Test rules around creating `Group` subclasses."""
 
+    def setUp(self):
+        """Remove all existing Groups."""
+        for group in orm.Group.objects.all():
+            orm.Group.objects.delete(group.id)
+
     @staticmethod
     def test_creation_registered():
         """Test rules around creating registered `Group` subclasses."""
@@ -289,6 +294,17 @@ class TestGroupsSubclasses(AiidaTestCase):
         group, _ = orm.AutoGroup.objects.get_or_create('some-auto-group')
         assert isinstance(group, orm.AutoGroup)
         assert group.type_string == 'core.auto'
+
+    @staticmethod
+    def test_loading():
+        """Test that loading instances from the database returns the correct subclass of `Group`."""
+        group = orm.Group('normal-group').store()
+        loaded = orm.load_group(group.pk)
+        assert isinstance(loaded, orm.Group)
+
+        group = orm.AutoGroup('auto-group').store()
+        loaded = orm.load_group(group.pk)
+        assert isinstance(group, orm.AutoGroup)
 
     @staticmethod
     def test_creation_unregistered():
@@ -325,3 +341,36 @@ class TestGroupsSubclasses(AiidaTestCase):
             loaded = orm.load_group(group.pk)
 
         assert isinstance(loaded, orm.Group)
+
+    @staticmethod
+    def test_querying():
+        """Test querying for groups with and without subclassing."""
+        orm.Group(label='group').store()
+        orm.AutoGroup(label='auto-group').store()
+
+        # Fake a subclass by manually setting the type string
+        group = orm.Group(label='custom-group')
+        group.backend_entity.dbmodel.type_string = 'custom.group'
+        group.store()
+
+        assert orm.QueryBuilder().append(orm.AutoGroup).count() == 1
+        assert orm.QueryBuilder().append(orm.AutoGroup, subclassing=False).count() == 1
+        assert orm.QueryBuilder().append(orm.Group, subclassing=False).count() == 1
+        assert orm.QueryBuilder().append(orm.Group).count() == 3
+        assert orm.QueryBuilder().append(orm.Group, filters={'type_string': 'custom.group'}).count() == 1
+
+    @staticmethod
+    def test_query_with_group():
+        """Docs."""
+        group = orm.Group(label='group').store()
+        data = orm.Data().store()
+
+        group.add_nodes([data])
+
+        builder = orm.QueryBuilder().append(orm.Data, filters={
+            'id': data.pk
+        }, tag='data').append(orm.Group, with_node='data')
+
+        loaded = builder.one()[0]
+
+        assert loaded.pk == group.pk

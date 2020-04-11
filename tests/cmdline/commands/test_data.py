@@ -325,13 +325,13 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
 
     def test_bandslist(self):
         self.data_listing_test(BandsData, 'FeO', self.ids)
-        self.data_listing_test(BandsData, 'NOT FOUND', self.ids)
+        self.data_listing_test(BandsData, '<<NOT FOUND>>', self.ids)
 
     def test_bandslist_with_elements(self):
         options = ['-e', 'Fe']
         res = self.cli_runner.invoke(cmd_bands.bands_list, options, catch_exceptions=False)
         self.assertIn(b'FeO', res.stdout_bytes, 'The string "FeO" was not found in the listing')
-        self.assertNotIn(b'NOT FOUND', res.stdout_bytes, 'The string "NOT FOUND" should not in the listing')
+        self.assertNotIn(b'<<NOT FOUND>>', res.stdout_bytes, 'The string "<<NOT FOUND>>" should not in the listing')
 
     def test_bandexporthelp(self):
         output = sp.check_output(['verdi', 'data', 'bands', 'export', '--help'])

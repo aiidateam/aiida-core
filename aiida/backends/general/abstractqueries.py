@@ -120,8 +120,19 @@ class AbstractQueryManager(abc.ABC):
         return statistics
 
     @staticmethod
-    def _extract_formula(args, akinds, asites):
-        """Extract formula from the structure object."""
+    def _extract_formula(akinds, asites, args):
+        """
+        Extract formula from the structure object.
+
+        :param akinds: list of kinds, e.g. [{'mass': 55.845, 'name': 'Fe', 'symbols': ['Fe'], 'weights': [1.0]},
+                                            {'mass': 15.9994, 'name': 'O', 'symbols': ['O'], 'weights': [1.0]}]
+        :param asites: list of structure sites e.g. [{'position': [0.0, 0.0, 0.0], 'kind_name': 'Fe'},
+                                                        {'position': [2.0, 2.0, 2.0], 'kind_name': 'O'}]
+        :param args: a namespace with parsed command line parameters, here only 'element' and 'element_only' are used
+        :type args: dict
+
+        :return: a string with formula if the formula is found
+        """
         from aiida.orm.nodes.data.structure import (get_formula, get_symbols_string)
 
         if args.element is not None:
@@ -227,12 +238,12 @@ class AbstractQueryManager(abc.ABC):
 
             if strct is not None:
                 akinds, asites = strct
-                formula = self._extract_formula(args, akinds, asites)
+                formula = self._extract_formula(akinds, asites, args)
             else:
                 if args.element is not None or args.element_only is not None:
                     formula = None
                 else:
-                    formula = 'NOT FOUND'
+                    formula = '<<NOT FOUND>>'
 
             if formula is None:
                 continue

@@ -149,12 +149,12 @@ class DjangoQueryManager(AbstractQueryManager):
                 if struc_pk is not None:
                     strct = res_attr[struc_pk]
                     akinds, asites = strct['kinds'], strct['sites']
-                    formula = self._extract_formula(args, akinds, asites)
+                    formula = self._extract_formula(akinds, asites, args)
                 else:
                     if args.element is not None or args.element_only is not None:
                         formula = None
                     else:
-                        formula = 'NOT FOUND'
+                        formula = '<<NOT FOUND>>'
 
                 if formula is None:
                     continue

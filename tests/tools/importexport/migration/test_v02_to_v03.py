@@ -7,79 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test export file migration from export version 0.2 to 0.3"""
 # pylint: disable=too-many-branches
-
-from aiida.backends.testbase import AiidaTestCase
-from aiida.tools.importexport.migration.utils import verify_metadata_version
+"""Test export file migration from export version 0.2 to 0.3"""
 from aiida.tools.importexport.migration.v02_to_v03 import migrate_v2_to_v3
 
 from tests.utils.archives import get_json_files
+from . import ArchiveMigrationTest
 
 
-class TestMigrateV02toV03(AiidaTestCase):
-    """Test migration of export files from export version 0.2 to 0.3"""
+class TestMigrate(ArchiveMigrationTest):
+    """Tests specific for this archive migration."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
+    def test_migrate_external(self):
+        """Test the migration on the test archive provided by the external test package."""
+        metadata, data = self.migrate('export_v0.2.aiida', '0.2', '0.3', migrate_v2_to_v3)
 
-        # Utility helpers
-        cls.external_archive = {'filepath': 'archives', 'external_module': 'aiida-export-migration-tests'}
-        cls.core_archive = {'filepath': 'export/migrate'}
-
-    def test_migrate_v2_to_v3(self):
-        """Test function migrate_v2_to_v3"""
-        from aiida import get_version
-
-        # Get metadata.json and data.json as dicts from v0.2 file archive
-        metadata_v2, data_v2 = get_json_files('export_v0.2_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v2, version='0.2')
-
-        # Get metadata.json and data.json as dicts from v0.3 file archive
-        metadata_v3, data_v3 = get_json_files('export_v0.3_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v3, version='0.3')
-
-        # Migrate to v0.3
-        migrate_v2_to_v3(metadata_v2, data_v2)
-        verify_metadata_version(metadata_v2, version='0.3')
-
-        # Remove AiiDA version, since this may change irregardless of the migration function
-        metadata_v2.pop('aiida_version')
-        metadata_v3.pop('aiida_version')
-
-        # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
-        conversion_message = 'Converted from version 0.2 to 0.3 with AiiDA v{}'.format(get_version())
-        self.assertEqual(
-            metadata_v2.pop('conversion_info')[-1],
-            conversion_message,
-            msg='The conversion message after migration is wrong'
-        )
-        metadata_v3.pop('conversion_info')
-
-        # Assert changes were performed correctly
-        self.maxDiff = None  # pylint: disable=invalid-name
-        self.assertDictEqual(
-            metadata_v2,
-            metadata_v3,
-            msg='After migration, metadata.json should equal intended metadata.json from archives'
-        )
-        self.assertDictEqual(
-            data_v2, data_v3, msg='After migration, data.json should equal intended data.json from archives'
-        )
-
-    def test_migrate_v2_to_v3_complete(self):
-        """Test migration for file containing complete v0.2 era possibilities"""
-
-        # Get metadata.json and data.json as dicts from v0.2 file archive
-        metadata, data = get_json_files('export_v0.2.aiida', **self.external_archive)
-        verify_metadata_version(metadata, version='0.2')
-
-        # Migrate to v0.3
-        migrate_v2_to_v3(metadata, data)
-        verify_metadata_version(metadata, version='0.3')
-
-        self.maxDiff = None  # pylint: disable=invalid-name
         # Check link types
         legal_link_types = {'unspecified', 'createlink', 'returnlink', 'inputlink', 'calllink'}
         for link in data['links_uuid']:
@@ -137,7 +79,6 @@ class TestMigrateV02toV03(AiidaTestCase):
         metadata_v3.pop('aiida_version')
         self.assertDictEqual(metadata_v2, metadata_v3)
 
-        self.maxDiff = None
         # Compare 'data.json'
         self.assertEqual(len(data_v2), len(data_v3))
 

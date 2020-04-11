@@ -8,78 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test export file migration from export version 0.6 to 0.7"""
+from aiida.tools.importexport.migration.v06_to_v07 import migrate_v6_to_v7
 
-from aiida.backends.testbase import AiidaTestCase
-from aiida.tools.importexport.migration.utils import verify_metadata_version
-from aiida.tools.importexport.migration.v06_to_v07 import (
-    migrate_v6_to_v7, migration_data_migration_legacy_process_attributes
-)
-
-from tests.utils.archives import get_json_files
+from . import ArchiveMigrationTest
 
 
-class TestMigrateV06toV07(AiidaTestCase):
-    """Test migration of export files from export version 0.6 to 0.7"""
+class TestMigrate(ArchiveMigrationTest):
+    """Tests specific for this archive migration."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
+    def test_migrate_external(self):
+        """Test the migration on the test archive provided by the external test package."""
+        metadata, data = self.migrate('export_v0.6_manual.aiida', '0.6', '0.7', migrate_v6_to_v7)
 
-        # Utility helpers
-        cls.external_archive = {'filepath': 'archives', 'external_module': 'aiida-export-migration-tests'}
-        cls.core_archive = {'filepath': 'export/migrate'}
-
-    def test_migrate_v6_to_v7(self):
-        """Test migration for file containing complete v0.6 era possibilities"""
-        from aiida import get_version
-
-        # Get metadata.json and data.json as dicts from v0.6 file archive
-        metadata_v6, data_v6 = get_json_files('export_v0.6_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v6, version='0.6')
-
-        # Get metadata.json and data.json as dicts from v0.7 file archive
-        metadata_v7, data_v7 = get_json_files('export_v0.7_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v7, version='0.7')
-
-        # Migrate to v0.7
-        migrate_v6_to_v7(metadata_v6, data_v6)
-        verify_metadata_version(metadata_v6, version='0.7')
-
-        # Remove AiiDA version, since this may change irregardless of the migration function
-        metadata_v6.pop('aiida_version')
-        metadata_v7.pop('aiida_version')
-
-        # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
-        self.maxDiff = None  # pylint: disable=invalid-name
-        conversion_message = 'Converted from version 0.6 to 0.7 with AiiDA v{}'.format(get_version())
-        self.assertEqual(
-            metadata_v6.pop('conversion_info')[-1],
-            conversion_message,
-            msg='The conversion message after migration is wrong'
-        )
-        metadata_v7.pop('conversion_info')
-
-        # Assert changes were performed correctly
-        self.assertDictEqual(
-            metadata_v6,
-            metadata_v7,
-            msg='After migration, metadata.json should equal intended metadata.json from archives'
-        )
-        self.assertDictEqual(
-            data_v6, data_v7, msg='After migration, data.json should equal intended data.json from archives'
-        )
-
-    def test_migrate_v6_to_v7_complete(self):
-        """Test migration for file containing complete v0.6 era possibilities"""
-        # Get metadata.json and data.json as dicts from v0.6 file archive
-        metadata, data = get_json_files('export_v0.6_manual.aiida', **self.external_archive)
-        verify_metadata_version(metadata, version='0.6')
-
-        # Migrate to v0.7
-        migrate_v6_to_v7(metadata, data)
-        verify_metadata_version(metadata, version='0.7')
-
-        self.maxDiff = None  # pylint: disable=invalid-name
         # Check attributes of process.* nodes
         illegal_attrs = {'_sealed', '_finished', '_failed', '_aborted', '_do_abort'}
         new_attrs = {'sealed': True}
@@ -119,6 +59,7 @@ class TestMigrateV06toV07(AiidaTestCase):
     def test_migration_0040_corrupt_archive(self):
         """Check CorruptArchive is raised for different cases during migration 0040"""
         from aiida.tools.importexport.common.exceptions import CorruptArchive
+        from aiida.tools.importexport.migration.v06_to_v07 import migration_data_migration_legacy_process_attributes
 
         # data has one "valid" entry, in the form of Node <PK=42>.
         # At least it has the needed key `node_type`.
@@ -180,6 +121,7 @@ class TestMigrateV06toV07(AiidaTestCase):
 
     def test_migration_0040_no_process_state(self):
         """Check old ProcessNodes without a `process_state` can be migrated"""
+        from aiida.tools.importexport.migration.v06_to_v07 import migration_data_migration_legacy_process_attributes
         # data has one "new" entry, in the form of Node <PK=52>.
         # data also has one "old" entry, in form of Node <PK=42>.
         # It doesn't have a `process_state` attribute (nor a `sealed` or `_sealed`)

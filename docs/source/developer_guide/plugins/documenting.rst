@@ -1,8 +1,8 @@
-====================
-Documenting a plugin
-====================
+===========================
+Documenting plugin packages
+===========================
 
-If you used the `AiiDA plugin cutter`_,  your plugin already comes with a basic
+If you used the `AiiDA plugin cutter`_,  your plugin package already comes with a basic
 documentation that just needs to be adjusted to your needs.
 
  #. Install the ``docs`` extra::
@@ -29,7 +29,7 @@ documentation that just needs to be adjusted to your needs.
     requirements file ``docs/requirements_for_rtd.txt`` and the Python
     configuration file ``docs/source/conf.py`` in Admin => Advanced settings.
 
-Note: When updating the plugin to a new version, remember to update the
+Note: When updating the plugin package to a new version, remember to update the
 version number both in ``setup.json`` and ``aiida_mycode/__init__.py``.
 
 .. _aiida plugin cutter: https://github.com/aiidateam/aiida-plugin-cutter

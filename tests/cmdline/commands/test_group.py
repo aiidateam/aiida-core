@@ -17,16 +17,18 @@ from aiida.cmdline.commands import cmd_group
 class TestVerdiGroup(AiidaTestCase):
     """Tests for the `verdi group` command."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        for group in ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4']:
-            orm.Group(label=group).store()
-
     def setUp(self):
         """Create runner object to run tests."""
         from click.testing import CliRunner
         self.cli_runner = CliRunner()
+
+        for group in ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4']:
+            orm.Group(label=group).store()
+
+    def tearDown(self):
+        """Delete all created group objects."""
+        for group in orm.Group.objects.all():
+            orm.Group.objects.delete(group.pk)
 
     def test_help(self):
         """Tests help text for all group sub commands."""
@@ -96,6 +98,28 @@ class TestVerdiGroup(AiidaTestCase):
         for grp in ['dummygroup1', 'dummygroup2']:
             self.assertIn(grp, result.output)
 
+    def test_list_order(self):
+        """Test `verdi group list` command with ordering options."""
+        orm.Group(label='agroup').store()
+
+        options = []
+        result = self.cli_runner.invoke(cmd_group.group_list, options)
+        self.assertClickResultNoException(result)
+        group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
+        self.assertEqual(['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4', 'agroup'], group_ordering)
+
+        options = ['--order-by', 'label']
+        result = self.cli_runner.invoke(cmd_group.group_list, options)
+        self.assertClickResultNoException(result)
+        group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
+        self.assertEqual(['agroup', 'dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4'], group_ordering)
+
+        options = ['--order-by', 'id', '--order-direction', 'desc']
+        result = self.cli_runner.invoke(cmd_group.group_list, options)
+        self.assertClickResultNoException(result)
+        group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
+        self.assertEqual(['agroup', 'dummygroup4', 'dummygroup3', 'dummygroup2', 'dummygroup1'], group_ordering)
+
     def test_copy(self):
         """Test `verdi group copy` command."""
         result = self.cli_runner.invoke(cmd_group.group_copy, ['dummygroup1', 'dummygroup2'])
@@ -141,7 +165,7 @@ class TestVerdiGroup(AiidaTestCase):
         self.assertClickResultNoException(result)
 
         for grpline in [
-            'Group label', 'dummygroup1', 'Group type_string', 'user', 'Group description', '<no description>'
+            'Group label', 'dummygroup1', 'Group type_string', 'core', 'Group description', '<no description>'
         ]:
             self.assertIn(grpline, result.output)
 

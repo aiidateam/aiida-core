@@ -239,7 +239,6 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
 
     # Check that all requirements specified in the setup.json file are found in the
     # conda environment specification.
-    missing_from_env = set()
     for req in install_requirements:
         if any(re.match(ignore, str(req)) for ignore in CONDA_IGNORE):
             continue  # skip explicitly ignored packages
@@ -251,7 +250,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
 
     # The only dependency left should be the one for Python itself, which is not part of
     # the install_requirements for setuptools.
-    if len(conda_dependencies) > 0:
+    if conda_dependencies:
         raise DependencySpecificationError(
             "The 'environment.yml' file contains dependencies that are missing "
             "in 'setup.json':\n- {}".format('\n- '.join(map(str, conda_dependencies)))
@@ -304,7 +303,7 @@ def validate_pyproject_toml():
                 "Missing requirement '{}' in 'pyproject.toml'.".format(reentry_requirement)
             )
 
-    except FileNotFoundError as error:
+    except FileNotFoundError:
         raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
 
     click.secho('Pyproject.toml dependency specification is consistent.', fg='green')

@@ -22,7 +22,10 @@ verdi daemon stop
 pytest --noconftest .ci/test_test_manager.py
 pytest --noconftest .ci/test_profile_manager.py
 python .ci/test_plugin_testcase.py  # uses custom unittest test runner
-AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest .ci/pytest
+
+# Until the `.ci/pytest` tests are moved within `tests` we have to run them separately and pass in the path to the
+# `conftest.py` explicitly, because otherwise it won't be able to find the fixtures it provides
+AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest tests/conftest.py .ci/pytest
 
 # main aiida-core tests
 AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest tests

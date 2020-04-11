@@ -10,13 +10,16 @@
 """`verdi run` command."""
 import contextlib
 import os
+import functools
 import sys
+import warnings
 
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.utils import decorators, echo
+from aiida.common.warnings import AiidaDeprecationWarning
 
 
 @contextlib.contextmanager
@@ -37,31 +40,56 @@ def update_environment(argv):
         sys.path = _path
 
 
+def validate_entrypoint_string(ctx, param, value):  # pylint: disable=unused-argument,invalid-name
+    """Validate that `value` is a valid entrypoint string."""
+    from aiida.orm import autogroup
+
+    try:
+        autogroup.Autogroup.validate(value)
+    except Exception as exc:
+        raise click.BadParameter(str(exc) + ' ({})'.format(value))
+
+    return value
+
+
 @verdi.command('run', context_settings=dict(ignore_unknown_options=True,))
 @click.argument('scriptname', type=click.STRING)
 @click.argument('varargs', nargs=-1, type=click.UNPROCESSED)
-@click.option('-g', '--group', is_flag=True, default=True, show_default=True, help='Enables the autogrouping')
-@click.option('-n', '--group-name', type=click.STRING, required=False, help='Specify the name of the auto group')
-@click.option('-e', '--exclude', cls=MultipleValueOption, default=[], help='Exclude these classes from auto grouping')
+@click.option('--auto-group', is_flag=True, help='Enables the autogrouping')
 @click.option(
-    '-i', '--include', cls=MultipleValueOption, default=['all'], help='Include these classes from auto grouping'
+    '-l',
+    '--auto-group-label-prefix',
+    type=click.STRING,
+    required=False,
+    help='Specify the prefix of the label of the auto group (numbers might be automatically '
+    'appended to generate unique names per run).'
 )
 @click.option(
-    '-E',
-    '--excludesubclasses',
-    cls=MultipleValueOption,
-    default=[],
-    help='Exclude these classes and their sub classes from auto grouping'
+    '-n',
+    '--group-name',
+    type=click.STRING,
+    required=False,
+    help='Specify the name of the auto group [DEPRECATED, USE --auto-group-label-prefix instead]. '
+    'This also enables auto-grouping.'
 )
 @click.option(
-    '-I',
-    '--includesubclasses',
+    '-e',
+    '--exclude',
     cls=MultipleValueOption,
-    default=[],
-    help='Include these classes and their sub classes from auto grouping'
+    default=None,
+    help='Exclude these classes from auto grouping (use full entrypoint strings).',
+    callback=functools.partial(validate_entrypoint_string)
+)
+@click.option(
+    '-i',
+    '--include',
+    cls=MultipleValueOption,
+    default=None,
+    help='Include these classes from auto grouping  (use full entrypoint strings or "all").',
+    callback=validate_entrypoint_string
 )
 @decorators.with_dbenv()
-def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, include, includesubclasses):
+def run(scriptname, varargs, auto_group, auto_group_label_prefix, group_name, exclude, include):
     # pylint: disable=too-many-arguments,exec-used
     """Execute scripts with preloaded AiiDA environment."""
     from aiida.cmdline.utils.shell import DEFAULT_MODULES_LIST
@@ -80,22 +108,27 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
     for app_mod, model_name, alias in DEFAULT_MODULES_LIST:
         globals_dict['{}'.format(alias)] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
 
-    if group:
-        automatic_group_name = group_name
-        if automatic_group_name is None:
-            from aiida.common import timezone
+    if group_name:
+        warnings.warn('--group-name is deprecated, use `--auto-group-label-prefix` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+        if auto_group_label_prefix:
+            raise click.BadParameter(
+                'You cannot specify both --group-name and --auto-group-label-prefix; '
+                'use --auto-group-label-prefix only'
+            )
+        auto_group_label_prefix = group_name
+        # To have the old behavior, with auto-group enabled.
+        auto_group = True
 
-            automatic_group_name = 'Verdi autogroup on ' + timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-
+    if auto_group:
         aiida_verdilib_autogroup = autogroup.Autogroup()
+        # Set the ``group_label_prefix`` if defined, otherwise a default prefix will be used
+        if auto_group_label_prefix is not None:
+            aiida_verdilib_autogroup.set_group_label_prefix(auto_group_label_prefix)
         aiida_verdilib_autogroup.set_exclude(exclude)
         aiida_verdilib_autogroup.set_include(include)
-        aiida_verdilib_autogroup.set_exclude_with_subclasses(excludesubclasses)
-        aiida_verdilib_autogroup.set_include_with_subclasses(includesubclasses)
-        aiida_verdilib_autogroup.set_group_name(automatic_group_name)
 
         # Note: this is also set in the exec environment! This is the intended behavior
-        autogroup.current_autogroup = aiida_verdilib_autogroup
+        autogroup.CURRENT_AUTOGROUP = aiida_verdilib_autogroup
 
     # Initialize the variable here, otherwise we get UnboundLocalError in the finally clause if it fails to open
     handle = None
@@ -117,5 +150,6 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
             # Re-raise the exception to have the error code properly returned at the end
             raise
     finally:
+        autogroup.current_autogroup = None
         if handle:
             handle.close()

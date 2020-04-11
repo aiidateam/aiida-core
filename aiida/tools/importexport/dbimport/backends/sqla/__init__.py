@@ -20,13 +20,13 @@ from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_object_from_string
-from aiida.orm import QueryBuilder, Node, Group, WorkflowNode, CalculationNode, Data
+from aiida.orm import QueryBuilder, Node, Group, ImportGroup
 from aiida.orm.utils.links import link_triple_exists, validate_link
 from aiida.orm.utils.repository import Repository
 
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
-from aiida.tools.importexport.common.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
@@ -664,7 +664,7 @@ def import_data_sqla(
                                 "Overflow of import groups (more than 100 import groups exists with basename '{}')"
                                 ''.format(basename)
                             )
-                    group = Group(label=group_label, type_string=IMPORTGROUP_TYPE)
+                    group = ImportGroup(label=group_label)
                     session.add(group.backend_entity._dbmodel)
 
                 # Adding nodes to group avoiding the SQLA ORM to increase speed

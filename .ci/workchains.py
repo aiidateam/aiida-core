@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name
 from aiida.common import AttributeDict
 from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_, while_, ExitCode
 from aiida.engine import BaseRestartWorkChain, process_handler, ProcessHandlerReport
@@ -68,8 +69,8 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
     @process_handler(priority=400, exit_codes=ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
     def error_negative_sum(self, node):
         """What even is a negative number, how can I have minus three melons?!."""
-        self.ctx.inputs.x = Int(abs(node.inputs.x.value))
-        self.ctx.inputs.y = Int(abs(node.inputs.y.value))
+        self.ctx.inputs.x = Int(abs(node.inputs.x.value))  # pylint: disable=invalid-name
+        self.ctx.inputs.y = Int(abs(node.inputs.y.value))  # pylint: disable=invalid-name
         return ProcessHandlerReport(True)
 
 

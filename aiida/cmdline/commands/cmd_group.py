@@ -13,7 +13,7 @@ import click
 
 from aiida.common.exceptions import UniquenessError
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments, types
+from aiida.cmdline.params import options, arguments
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 
@@ -178,18 +178,6 @@ def group_show(group, raw, limit, uuid):
         echo.echo(tabulate(table, headers=header))
 
 
-@with_dbenv()
-def valid_group_type_strings():
-    from aiida.orm import GroupTypeString
-    return tuple(i.value for i in GroupTypeString)
-
-
-@with_dbenv()
-def user_defined_group():
-    from aiida.orm import GroupTypeString
-    return GroupTypeString.USER.value
-
-
 @verdi_group.command('list')
 @options.ALL_USERS(help='Show groups for all users, rather than only for the current user')
 @click.option(
@@ -204,8 +192,7 @@ def user_defined_group():
     '-t',
     '--type',
     'group_type',
-    type=types.LazyChoice(valid_group_type_strings),
-    default=user_defined_group,
+    default='core',
     help='Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to '
     'specify aiida-internal type'
 )
@@ -235,11 +222,13 @@ def user_defined_group():
     default=None,
     help='add a filter to show only groups for which the name contains STRING'
 )
+@options.ORDER_BY(type=click.Choice(['id', 'label', 'ctime']), default='id')
+@options.ORDER_DIRECTION()
 @options.NODE(help='Show only the groups that contain the node')
 @with_dbenv()
 def group_list(
     all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith, contains,
-    node
+    order_by, order_dir, node
 ):
     """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments, too-many-locals
@@ -290,7 +279,7 @@ def group_list(
         from aiida.orm import Node
         query.append(Node, filters={'id': {'==': node.id}}, with_group='group')
 
-    query.order_by({Group: {'id': 'asc'}})
+    query.order_by({Group: {order_by: order_dir}})
     result = query.all()
 
     projection_lambdas = {
@@ -328,9 +317,8 @@ def group_list(
 def group_create(group_label):
     """Create an empty group with a given name."""
     from aiida import orm
-    from aiida.orm import GroupTypeString
 
-    group, created = orm.Group.objects.get_or_create(label=group_label, type_string=GroupTypeString.USER.value)
+    group, created = orm.Group.objects.get_or_create(label=group_label)
 
     if created:
         echo.echo_success("Group created with PK = {} and name '{}'".format(group.id, group.label))
@@ -349,7 +337,7 @@ def group_copy(source_group, destination_group):
     Note that the destination group may not exist."""
     from aiida import orm
 
-    dest_group, created = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)
+    dest_group, created = orm.Group.objects.get_or_create(label=destination_group)
 
     # Issue warning if destination group is not empty and get user confirmation to continue
     if not created and not dest_group.is_empty:
@@ -359,3 +347,72 @@ def group_copy(source_group, destination_group):
     # Copy nodes
     dest_group.add_nodes(list(source_group.nodes))
     echo.echo_success('Nodes copied from group<{}> to group<{}>'.format(source_group.label, dest_group.label))
+
+
+@verdi_group.group('path')
+def verdi_group_path():
+    """Inspect groups of nodes, with delimited label paths."""
+
+
+@verdi_group_path.command('ls')
+@click.argument('path', type=click.STRING, required=False)
+@click.option('-R', '--recursive', is_flag=True, default=False, help='Recursively list sub-paths encountered')
+@click.option('-l', '--long', 'as_table', is_flag=True, default=False, help='List as a table, with sub-group count')
+@click.option(
+    '-d', '--with-description', 'with_description', is_flag=True, default=False, help='Show also the group description'
+)
+@click.option(
+    '--no-virtual',
+    'no_virtual',
+    is_flag=True,
+    default=False,
+    help='Only show paths that fully correspond to an existing group'
+)
+@click.option(
+    '-t',
+    '--type',
+    'group_type',
+    default='core',
+    help='Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to '
+    'specify aiida-internal type'
+)
+@click.option('--no-warn', is_flag=True, default=False, help='Do not issue a warning if any paths are invalid.')
+@with_dbenv()
+def group_path_ls(path, recursive, as_table, no_virtual, group_type, with_description, no_warn):
+    # pylint: disable=too-many-arguments
+    """Show a list of existing group paths."""
+    from aiida.plugins import GroupFactory
+    from aiida.tools.groups.paths import GroupPath, InvalidPath
+
+    try:
+        path = GroupPath(path or '', cls=GroupFactory(group_type), warn_invalid_child=not no_warn)
+    except InvalidPath as err:
+        echo.echo_critical(str(err))
+
+    if recursive:
+        children = path.walk()
+    else:
+        children = path.children
+
+    if as_table or with_description:
+        from tabulate import tabulate
+        headers = ['Path', 'Sub-Groups']
+        if with_description:
+            headers.append('Description')
+        rows = []
+        for child in sorted(children):
+            if no_virtual and child.is_virtual:
+                continue
+            row = [
+                child.path if child.is_virtual else click.style(child.path, bold=True),
+                len([c for c in child.walk() if not c.is_virtual])
+            ]
+            if with_description:
+                row.append('-' if child.is_virtual else child.get_group().description)
+            rows.append(row)
+        echo.echo(tabulate(rows, headers=headers))
+    else:
+        for child in sorted(children):
+            if no_virtual and child.is_virtual:
+                continue
+            echo.echo(child.path, bold=not child.is_virtual)

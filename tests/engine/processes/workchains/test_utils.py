@@ -53,6 +53,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
         attribute_key = 'handlers_called'
 
         class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
+            """Implementation of a possible BaseRestartWorkChain for the ``ArithmeticAddCalculation``."""
 
             _process_class = ArithmeticAddCalculation
 
@@ -61,6 +62,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
             # This can then be checked after invoking `inspect_process` to ensure they were called in the right order
             @process_handler(priority=100)
             def handler_01(self, node):
+                """Example handler returing ExitCode 100."""
                 handlers_called = node.get_attribute(attribute_key, default=[])
                 handlers_called.append('handler_01')
                 node.set_attribute(attribute_key, handlers_called)
@@ -68,6 +70,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
 
             @process_handler(priority=300)
             def handler_03(self, node):
+                """Example handler returing ExitCode 300."""
                 handlers_called = node.get_attribute(attribute_key, default=[])
                 handlers_called.append('handler_03')
                 node.set_attribute(attribute_key, handlers_called)
@@ -75,6 +78,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
 
             @process_handler(priority=200)
             def handler_02(self, node):
+                """Example handler returing ExitCode 200."""
                 handlers_called = node.get_attribute(attribute_key, default=[])
                 handlers_called.append('handler_02')
                 node.set_attribute(attribute_key, handlers_called)
@@ -82,6 +86,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
 
             @process_handler(priority=400)
             def handler_04(self, node):
+                """Example handler returing ExitCode 400."""
                 handlers_called = node.get_attribute(attribute_key, default=[])
                 handlers_called.append('handler_04')
                 node.set_attribute(attribute_key, handlers_called)
@@ -159,6 +164,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
         node_skip.set_exit_status(200)  # Some other exit status
 
         class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
+            """Minimal base restart workchain for the ``ArithmeticAddCalculation``."""
 
             _process_class = ArithmeticAddCalculation
 
@@ -170,9 +176,44 @@ class TestRegisterProcessHandler(AiidaTestCase):
         process = ArithmeticAddBaseWorkChain()
 
         # Loop over all handlers, which should be just the one, and call it with the two different nodes
-        for handler in process._handlers():  # pylint: disable=protected-access
+        for handler in process.get_process_handlers():
             # The `node_match` should match the `exit_codes` filter and so return a report instance
-            assert isinstance(handler(node_match), ProcessHandlerReport)
+            assert isinstance(handler(process, node_match), ProcessHandlerReport)
 
             # The `node_skip` has a wrong exit status and so should get skipped, returning `None`
-            assert handler(node_skip) is None
+            assert handler(process, node_skip) is None
+
+    def test_enabled_keyword_only(self):
+        """The `enabled` should be keyword only."""
+        with self.assertRaises(TypeError):
+
+            class SomeWorkChain(BaseRestartWorkChain):
+
+                @process_handler(True)  # pylint: disable=too-many-function-args
+                def _(self, node):
+                    pass
+
+        class SomeWorkChain(BaseRestartWorkChain):
+
+            @process_handler(enabled=False)
+            def _(self, node):
+                pass
+
+    def test_enabled(self):
+        """The `enabled` should be keyword only."""
+
+        class SomeWorkChain(BaseRestartWorkChain):
+
+            @process_handler
+            def enabled_handler(self, node):
+                pass
+
+        assert SomeWorkChain.enabled_handler.enabled  # pylint: disable=no-member
+
+        class SomeWorkChain(BaseRestartWorkChain):
+
+            @process_handler(enabled=False)
+            def disabled_handler(self, node):
+                pass
+
+        assert not SomeWorkChain.disabled_handler.enabled  # pylint: disable=no-member

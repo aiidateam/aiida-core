@@ -10,7 +10,6 @@
 """
 This module contains tests for UpfData and UpfData related functions.
 """
-
 import errno
 import tempfile
 import shutil
@@ -95,8 +94,8 @@ class TestUpfParser(AiidaTestCase):
 
     def tearDown(self):
         """Delete all groups and destroy the temporary directory created."""
-        for group in orm.Group.objects.find(filters={'type_string': orm.GroupTypeString.UPFGROUP_TYPE.value}):
-            orm.Group.objects.delete(group.pk)
+        for group in orm.UpfFamily.objects.find():
+            orm.UpfFamily.objects.delete(group.pk)
 
         try:
             shutil.rmtree(self.temp_dir)
@@ -122,32 +121,31 @@ class TestUpfParser(AiidaTestCase):
         """Test the `UpfData.get_upf_family_names` method."""
         label = 'family'
 
-        family, _ = orm.Group.objects.get_or_create(label=label, type_string=orm.GroupTypeString.UPFGROUP_TYPE.value)
+        family, _ = orm.UpfFamily.objects.get_or_create(label=label)
         family.add_nodes([self.pseudo_barium])
         family.store()
 
-        self.assertEqual({group.label for group in orm.UpfData.get_upf_groups()}, {label})
+        self.assertEqual({group.label for group in orm.UpfFamily.objects.all()}, {label})
         self.assertEqual(self.pseudo_barium.get_upf_family_names(), [label])
 
     def test_get_upf_groups(self):
         """Test the `UpfData.get_upf_groups` class method."""
-        type_string = orm.GroupTypeString.UPFGROUP_TYPE.value
         label_01 = 'family_01'
         label_02 = 'family_02'
 
         user = orm.User(email='alternate@localhost').store()
 
-        self.assertEqual(orm.UpfData.get_upf_groups(), [])
+        self.assertEqual(orm.UpfFamily.objects.all(), [])
 
         # Create group with default user and add `Ba` pseudo
-        family_01, _ = orm.Group.objects.get_or_create(label=label_01, type_string=type_string)
+        family_01, _ = orm.UpfFamily.objects.get_or_create(label=label_01)
         family_01.add_nodes([self.pseudo_barium])
         family_01.store()
 
         self.assertEqual({group.label for group in orm.UpfData.get_upf_groups()}, {label_01})
 
         # Create group with different user and add `O` pseudo
-        family_02, _ = orm.Group.objects.get_or_create(label=label_02, type_string=type_string, user=user)
+        family_02, _ = orm.UpfFamily.objects.get_or_create(label=label_02, user=user)
         family_02.add_nodes([self.pseudo_oxygen])
         family_02.store()
 

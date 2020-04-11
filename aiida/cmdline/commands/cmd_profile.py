@@ -52,10 +52,11 @@ def profile_list():
 @arguments.PROFILE(default=defaults.get_default_profile)
 def profile_show(profile):
     """Show details for a profile."""
+
     if profile is None:
         echo.echo_critical('no profile to show')
 
-    echo.echo_info('Configuration for: {}'.format(profile.name))
+    echo.echo_info('Profile: {}'.format(profile.name))
     data = sorted([(k.lower(), v) for k, v in profile.dictionary.items()])
     echo.echo(tabulate.tabulate(data))
 

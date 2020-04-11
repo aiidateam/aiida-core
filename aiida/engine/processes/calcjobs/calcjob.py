@@ -64,7 +64,7 @@ def validate_calc_job(inputs, ctx):
         )
 
 
-def validate_parser(parser_name, ctx):
+def validate_parser(parser_name, ctx):  # pylint: disable=unused-argument
     """Validate the parser.
 
     :raises InputValidationError: if the parser name does not correspond to a loadable `Parser` class.
@@ -78,7 +78,7 @@ def validate_parser(parser_name, ctx):
             raise exceptions.InputValidationError('invalid parser specified: {}'.format(exception))
 
 
-def validate_resources(resources, ctx):
+def validate_resources(resources, ctx):  # pylint: disable=unused-argument
     """Validate the resources.
 
     :raises InputValidationError: if `num_machines` is not specified or is not an integer.
@@ -148,12 +148,12 @@ class CalcJob(Process):
             help='Set the quality of service to use in for the queue on the remote computer')
         spec.input('metadata.options.withmpi', valid_type=bool, default=False,
             help='Set the calculation to use mpi',)
-        spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), default=[],
+        spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), default=lambda: [],
             help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
                  'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',)
         spec.input('metadata.options.import_sys_environment', valid_type=bool, default=True,
             help='If set to true, the submission script will load the system environment variables',)
-        spec.input('metadata.options.environment_variables', valid_type=dict, default={},
+        spec.input('metadata.options.environment_variables', valid_type=dict, default=lambda: {},
             help='Set a dictionary of custom environment variables for this calculation',)
         spec.input('metadata.options.priority', valid_type=str, required=False,
             help='Set the priority of the job to be queued')

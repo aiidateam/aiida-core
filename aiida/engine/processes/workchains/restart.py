@@ -8,16 +8,45 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Base implementation of `WorkChain` class that implements a simple automated restart mechanism for sub processes."""
-import inspect
+import functools
 
 from aiida import orm
 from aiida.common import AttributeDict
 
 from .context import ToContext, append_
 from .workchain import WorkChain
-from .utils import ProcessHandlerReport
+from .utils import ProcessHandlerReport, process_handler
 
 __all__ = ('BaseRestartWorkChain',)
+
+
+def validate_handler_overrides(process_class, handler_overrides, ctx):  # pylint: disable=inconsistent-return-statements,unused-argument
+    """Validator for the `handler_overrides` input port of the `BaseRestartWorkChain.
+
+    The `handler_overrides` should be a dictionary where keys are strings that are the name of a process handler, i.e. a
+    instance method of the `process_class` that has been decorated with the `process_handler` decorator. The values
+    should be boolean.
+
+    .. note:: the normal signature of a port validator is `(value, ctx)` but since for the validation here we need a
+        reference to the process class, we add it and the class is bound to the method in the port declaration in the
+        `define` method.
+
+    :param process_class: the `BaseRestartWorkChain` (sub) class
+    :param handler_overrides: the input `Dict` node
+    :param ctx: the `PortNamespace` in which the port is embedded
+    """
+    if not handler_overrides:
+        return
+
+    for handler, override in handler_overrides.get_dict().items():
+        if not isinstance(handler, str):
+            return 'The key `{}` is not a string.'.format(handler)
+
+        if not process_class.is_process_handler(handler):
+            return 'The key `{}` is not a process handler of {}'.format(handler, process_class)
+
+        if not isinstance(override, bool):
+            return 'The value of key `{}` is not a boolean.'.format(handler)
 
 
 class BaseRestartWorkChain(WorkChain):
@@ -84,6 +113,11 @@ class BaseRestartWorkChain(WorkChain):
             help='Maximum number of iterations the work chain will restart the process to finish successfully.')
         spec.input('clean_workdir', valid_type=orm.Bool, default=lambda: orm.Bool(False),
             help='If `True`, work directories of all called calculation jobs will be cleaned at the end of execution.')
+        spec.input('handler_overrides',
+            valid_type=orm.Dict, required=False, validator=functools.partial(validate_handler_overrides, cls),
+            help='Mapping where keys are process handler names and the values are a boolean, where `True` will enable '
+                 'the corresponding handler and `False` will disable it. This overrides the default value set by the '
+                 '`enabled` keyword of the `process_handler` decorator with which the method is decorated.')
         spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED',
             message='The sub process excepted.')
         spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED',
@@ -95,6 +129,8 @@ class BaseRestartWorkChain(WorkChain):
 
     def setup(self):
         """Initialize context variables that are used during the logical flow of the `BaseRestartWorkChain`."""
+        overrides = self.inputs.handler_overrides.get_dict() if 'handler_overrides' in self.inputs else {}
+        self.ctx.handler_overrides = overrides
         self.ctx.process_name = self._process_class.__name__
         self.ctx.unhandled_failure = False
         self.ctx.is_finished = False
@@ -166,10 +202,16 @@ class BaseRestartWorkChain(WorkChain):
         last_report = None
 
         # Sort the handlers with a priority defined, based on their priority in reverse order
-        for handler in sorted(self._handlers(), key=lambda handler: handler.priority, reverse=True):
+        for handler in sorted(self.get_process_handlers(), key=lambda handler: handler.priority, reverse=True):
 
-            # Always pass the `node` as args because the `process_handler` decorator relies on this behavior
-            report = handler(node)
+            # Skip if the handler is enabled, either explicitly through `handler_overrides` or by default
+            if not self.ctx.handler_overrides.get(handler.__name__, handler.enabled):
+                continue
+
+            # Even though the `handler` is an instance method, the `get_process_handlers` method returns unbound methods
+            # so we have to pass in `self` manually. Also, always pass the `node` as an argument because the
+            # `process_handler` decorator with which the handler is decorated relies on this behavior.
+            report = handler(self, node)
 
             if report is not None and not isinstance(report, ProcessHandlerReport):
                 name = handler.__name__
@@ -251,20 +293,25 @@ class BaseRestartWorkChain(WorkChain):
         if self._process_class is None or not issubclass(self._process_class, Process):
             raise ValueError('no valid Process class defined for `_process_class` attribute')
 
-    def _handlers(self):
-        """Return the list of all methods decorated with the `process_handler` decorator.
+    @classmethod
+    def is_process_handler(cls, process_handler_name):
+        """Return whether the given method name corresponds to a process handler of this class.
 
-        :return: list of process handler methods
+        :param process_handler_name: string name of the instance method
+        :return: boolean, True if corresponds to process handler, False otherwise
         """
-        from .utils import process_handler
+        # pylint: disable=comparison-with-callable
+        if isinstance(process_handler_name, str):
+            handler = getattr(cls, process_handler_name, {})
+        else:
+            handler = process_handler_name
 
-        handlers = []
+        return getattr(handler, 'decorator', None) == process_handler
 
-        for method in inspect.getmembers(self, predicate=inspect.ismethod):
-            if hasattr(method[1], 'decorator') and method[1].decorator == process_handler:  # pylint: disable=comparison-with-callable
-                handlers.append(method[1])
-
-        return handlers
+    @classmethod
+    def get_process_handlers(cls):
+        from inspect import getmembers
+        return [method[1] for method in getmembers(cls) if cls.is_process_handler(method[1])]
 
     def on_terminated(self):
         """Clean the working directories of all child calculation jobs if `clean_workdir=True` in the inputs."""

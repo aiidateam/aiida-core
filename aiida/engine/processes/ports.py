@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
-
 import collections
 import re
+import warnings
 
 from plumpy import ports
 
@@ -95,6 +95,22 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
     Sub class of plumpy.InputPort which mixes in the WithSerialize and WithNonDb mixins to support automatic
     value serialization to database storable types and support non database storable input types as well.
     """
+
+    def __init__(self, *args, **kwargs):
+        """Override the constructor to check the type of the default if set and warn if not immutable."""
+        # pylint: disable=redefined-builtin,too-many-arguments
+        from aiida.orm import Node
+
+        if 'default' in kwargs:
+            default = kwargs['default']
+            # If the default is specified and it is a node instance, raise a warning. This is to try and prevent that
+            # people set node instances as defaults which can cause various problems.
+            if default is not ports.UNSPECIFIED and isinstance(default, Node):
+                message = 'default of input port `{}` is a `Node` instance, which can lead to unexpected side effects.'\
+                    ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'.format(args[0])
+                warnings.warn(UserWarning(message))  # pylint: disable=no-member
+
+        super(InputPort, self).__init__(*args, **kwargs)
 
     def get_description(self):
         """

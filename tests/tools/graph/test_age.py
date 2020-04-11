@@ -494,7 +494,7 @@ class TestAiidaGraphExplorer(AiidaTestCase):
         # Rule that only gets nodes connected by the same group
         queryb = orm.QueryBuilder()
         queryb.append(orm.Node, tag='nodes_in_set')
-        queryb.append(orm.Group, with_node='nodes_in_set', tag='groups_considered', filters={'type_string': 'user'})
+        queryb.append(orm.Group, with_node='nodes_in_set', tag='groups_considered')
         queryb.append(orm.Data, with_group='groups_considered')
 
         initial_node = [node2.id]
@@ -513,7 +513,7 @@ class TestAiidaGraphExplorer(AiidaTestCase):
         # But two rules chained should get both nodes and groups...
         queryb = orm.QueryBuilder()
         queryb.append(orm.Node, tag='nodes_in_set')
-        queryb.append(orm.Group, with_node='nodes_in_set', filters={'type_string': 'user'})
+        queryb.append(orm.Group, with_node='nodes_in_set')
         rule1 = UpdateRule(queryb)
 
         queryb = orm.QueryBuilder()
@@ -569,7 +569,7 @@ class TestAiidaGraphExplorer(AiidaTestCase):
 
         qb1 = orm.QueryBuilder()
         qb1.append(orm.Node, tag='nodes_in_set')
-        qb1.append(orm.Group, with_node='nodes_in_set', filters={'type_string': 'user'})
+        qb1.append(orm.Group, with_node='nodes_in_set')
         rule1 = UpdateRule(qb1, track_edges=True)
 
         qb2 = orm.QueryBuilder()

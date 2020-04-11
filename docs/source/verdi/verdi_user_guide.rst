@@ -394,7 +394,7 @@ Below is a list with all available subcommands.
     Commands:
       create   Export subsets of the provenance graph to file for sharing.
       inspect  Inspect contents of an exported archive without importing it.
-      migrate  Migrate an old export archive file to the most recent format.
+      migrate  Migrate an export archive to a more recent format version.
 
 
 .. _verdi_graph:
@@ -436,6 +436,7 @@ Below is a list with all available subcommands.
       delete        Delete a group.
       description   Change the description of a group.
       list          Show a list of existing groups.
+      path          Inspect groups of nodes, with delimited label paths.
       relabel       Change the label of a group.
       remove-nodes  Remove nodes from a group.
       show          Show information for a given group.
@@ -677,17 +678,16 @@ Below is a list with all available subcommands.
 
       Example Usage:
 
-              verdi -p <profile_name> restapi --hostname 127.0.0.5 --port 6789 --config-dir <location of the config.py file>
-              --debug --wsgi-profile --hookup
+          verdi -p <profile_name> restapi --hostname 127.0.0.5 --port 6789
 
     Options:
       -H, --hostname TEXT     Hostname.
       -P, --port INTEGER      Port number.
-      -c, --config-dir PATH   the path of the configuration directory
-      --debug                 run app in debug mode
-      --wsgi-profile          to use WSGI profiler middleware for finding
-                              bottlenecks in web application
-      --hookup / --no-hookup  to hookup app
+      -c, --config-dir PATH   Path to the configuration directory
+      --debug                 Enable debugging
+      --wsgi-profile          Whether to enable WSGI profiler middleware for
+                              finding bottlenecks
+      --hookup / --no-hookup  Hookup app to flask server
       --help                  Show this message and exit.
 
 
@@ -703,15 +703,19 @@ Below is a list with all available subcommands.
       Execute scripts with preloaded AiiDA environment.
 
     Options:
-      -g, --group                   Enables the autogrouping  [default: True]
-      -n, --group-name TEXT         Specify the name of the auto group
-      -e, --exclude TEXT            Exclude these classes from auto grouping
-      -i, --include TEXT            Include these classes from auto grouping
-      -E, --excludesubclasses TEXT  Exclude these classes and their sub classes
-                                    from auto grouping
-      -I, --includesubclasses TEXT  Include these classes and their sub classes
-                                    from auto grouping
-      --help                        Show this message and exit.
+      --auto-group                    Enables the autogrouping
+      -l, --auto-group-label-prefix TEXT
+                                      Specify the prefix of the label of the auto
+                                      group (numbers might be automatically
+                                      appended to generate unique names per run).
+      -n, --group-name TEXT           Specify the name of the auto group
+                                      [DEPRECATED, USE --auto-group-label-prefix
+                                      instead]. This also enables auto-grouping.
+      -e, --exclude TEXT              Exclude these classes from auto grouping
+                                      (use full entrypoint strings).
+      -i, --include TEXT              Include these classes from auto grouping
+                                      (use full entrypoint strings or "all").
+      --help                          Show this message and exit.
 
 
 .. _verdi_setup:

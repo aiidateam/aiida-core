@@ -120,23 +120,39 @@ class Code(Data):
         """
         return '{}@{}'.format(self.label, self.get_computer_name())
 
+    @property
+    def label(self):
+        """Return the node label.
+
+        :return: the label
+        """
+        return super().label
+
+    @label.setter
+    def label(self, value):
+        """Set the label.
+
+        :param value: the new value to set
+        """
+        if '@' in str(value):
+            msg = "Code labels must not contain the '@' symbol"
+            raise InputValidationError(msg)
+
+        super(Code, self.__class__).label.fset(self, value)
+
     def relabel(self, new_label, raise_error=True):
         """Relabel this code.
 
         :param new_label: new code label
         :param raise_error: Set to False in order to return a list of errors
             instead of raising them.
+
+        .. deprecated:: 1.2.0
+            Will remove raise_error in `v2.0.0`. Use `try/except` instead.
         """
         suffix = '@{}'.format(self.get_computer_name())
         if new_label.endswith(suffix):
             new_label = new_label[:-len(suffix)]
-
-        if '@' in new_label:
-            msg = "Code labels must not contain the '@' symbol"
-            if raise_error:
-                raise InputValidationError(msg)
-            else:
-                return InputValidationError(msg)
 
         self.label = new_label
 
@@ -145,7 +161,7 @@ class Code(Data):
 
         :return: string description of this Code instance
         """
-        return '{}'.format(self.label)
+        return '{}'.format(self.description)
 
     @classmethod
     def get_code_helper(cls, label, machinename=None):

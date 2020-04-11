@@ -16,6 +16,7 @@ from ...utils import defaults, echo
 from .. import types
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
+from .contextualdefault import ContextualDefaultOption
 from .config import ConfigFileOption
 
 __all__ = (

@@ -22,9 +22,11 @@ class TestVisGraph(AiidaTestCase):
     """Tests for verdi graph"""
 
     def setUp(self):
+        super().setUp()
         self.reset_database()
 
     def tearDown(self):
+        super().tearDown()
         self.reset_database()
 
     def create_provenance(self):

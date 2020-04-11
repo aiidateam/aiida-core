@@ -11,6 +11,7 @@
 from collections import namedtuple
 from functools import partial
 from inspect import getfullargspec
+from types import FunctionType  # pylint: disable=no-name-in-module
 from wrapt import decorator
 
 from ..exit_code import ExitCode
@@ -35,7 +36,7 @@ returning a non-zero exit code from any work chain step will instruct the engine
 """
 
 
-def process_handler(wrapped=None, *, priority=None, exit_codes=None):
+def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
     """Decorator to register a :class:`~aiida.engine.BaseRestartWorkChain` instance method as a process handler.
 
     The decorator will validate the `priority` and `exit_codes` optional keyword arguments and then add itself as an
@@ -56,25 +57,32 @@ def process_handler(wrapped=None, *, priority=None, exit_codes=None):
 
     :param cls: the work chain class to register the process handler with
     :param priority: optional integer that defines the order in which registered handlers will be called during the
-        handling of a finished process. Higher priorities will be handled first.
+        handling of a finished process. Higher priorities will be handled first. Default value is `0`. Multiple handlers
+        with the same priority is allowed, but the order of those is not well defined.
     :param exit_codes: single or list of `ExitCode` instances. If defined, the handler will return `None` if the exit
         code set on the `node` does not appear in the `exit_codes`. This is useful to have a handler called only when
         the process failed with a specific exit code.
+    :param enabled: boolean, by default True, which will cause the handler to be called during `inspect_process`. When
+        set to `False`, the handler will be skipped. This static value can be overridden on a per work chain instance
+        basis through the input `handler_overrides`.
     """
     if wrapped is None:
-        return partial(process_handler, priority=priority, exit_codes=exit_codes)
+        return partial(process_handler, priority=priority, exit_codes=exit_codes, enabled=enabled)
 
-    if priority is None:
-        priority = 0
+    if not isinstance(wrapped, FunctionType):
+        raise TypeError('first argument can only be an instance method, use keywords for decorator arguments.')
 
     if not isinstance(priority, int):
-        raise TypeError('the `priority` should be an integer.')
+        raise TypeError('the `priority` keyword should be an integer.')
 
     if exit_codes is not None and not isinstance(exit_codes, list):
         exit_codes = [exit_codes]
 
     if exit_codes and any([not isinstance(exit_code, ExitCode) for exit_code in exit_codes]):
-        raise TypeError('`exit_codes` should be an instance of `ExitCode` or list thereof.')
+        raise TypeError('`exit_codes` keyword should be an instance of `ExitCode` or list thereof.')
+
+    if not isinstance(enabled, bool):
+        raise TypeError('the `enabled` keyword should be a boolean.')
 
     handler_args = getfullargspec(wrapped)[0]
 
@@ -82,7 +90,8 @@ def process_handler(wrapped=None, *, priority=None, exit_codes=None):
         raise TypeError('process handler `{}` has invalid signature: should be (self, node)'.format(wrapped.__name__))
 
     wrapped.decorator = process_handler
-    wrapped.priority = priority if priority else 0
+    wrapped.priority = priority
+    wrapped.enabled = enabled
 
     @decorator
     def wrapper(wrapped, instance, args, kwargs):

@@ -1723,12 +1723,14 @@ class QueryBuilder:
         :param joining_value: the tag of the nodes to be joined
         """
         # Set the calling entity - to allow for the correct join relation to be set
-        if self._path[index]['entity_type'].startswith(GROUP_ENTITY_TYPE_PREFIX):
+        entity_type = self._path[index]['entity_type']
+
+        if isinstance(entity_type, str) and entity_type.startswith(GROUP_ENTITY_TYPE_PREFIX):
             calling_entity = 'group'
-        elif self._path[index]['entity_type'] not in ['computer', 'user', 'comment', 'log']:
+        elif entity_type not in ['computer', 'user', 'comment', 'log']:
             calling_entity = 'node'
         else:
-            calling_entity = self._path[index]['entity_type']
+            calling_entity = entity_type
 
         if joining_keyword == 'direction':
             if joining_value > 0:

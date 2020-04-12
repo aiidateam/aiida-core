@@ -825,10 +825,7 @@ class BandsData(KpointsData):
 
         s_header = matplotlib_header_template.substitute()
         s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
-        if len(all_data['paths']) == 1:
-            s_body = matplotlib_body_template.substitute(plot_code=single_kp)
-        else:
-            s_body = matplotlib_body_template.substitute(plot_code=multi_kp)
+        s_body = self._get_mpl_body_template(all_data['paths'])
         s_footer = matplotlib_footer_template_show.substitute()
 
         s = s_header + s_import + s_body + s_footer
@@ -857,18 +854,138 @@ class BandsData(KpointsData):
 
         s_header = matplotlib_header_template.substitute()
         s_import = matplotlib_import_data_fromfile_template.substitute(json_fname=json_fname)
-        if len(all_data['paths']) == 1:
-            s_body = matplotlib_body_template.substitute(plot_code=single_kp)
-        else:
-            s_body = matplotlib_body_template.substitute(plot_code=multi_kp)
+        s_body = self._get_mpl_body_template(all_data['paths'])
         s_footer = matplotlib_footer_template_show.substitute()
 
         s = s_header + s_import + s_body + s_footer
 
         return s.encode('utf-8'), ext_files
 
+    def _prepare_mpl_pdf(self, main_file_name='', *args, **kwargs):
+        """
+        Prepare a python script using matplotlib to plot the bands, with the JSON
+        returned as an independent file.
+
+        For the possible parameters, see documentation of
+        :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
+        """
+        import os
+        import tempfile
+        import subprocess
+        import sys
+
+        from aiida.common import json
+
+        all_data = self._matplotlib_get_dict(*args, **kwargs)
+
+        # Use the Agg backend
+        s_header = matplotlib_header_agg_template.substitute()
+        s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
+        s_body = self._get_mpl_body_template(all_data['paths'])
+
+        # I get a temporary file name
+        handle, filename = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(filename)
+
+        escaped_fname = filename.replace('"', '\"')
+
+        s_footer = matplotlib_footer_template_exportfile.substitute(fname=escaped_fname, format='pdf')
+
+        s = s_header + s_import + s_body + s_footer
+
+        # I don't exec it because I might mess up with the matplotlib backend etc.
+        # I run instead in a different process, with the same executable
+        # (so it should work properly with virtualenvs)
+        #exec s
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
+            f.write(s)
+            f.flush()
+
+            subprocess.check_output([sys.executable, f.name])
+
+        if not os.path.exists(filename):
+            raise RuntimeError('Unable to generate the PDF...')
+
+        with open(filename, 'rb', encoding=None) as f:
+            imgdata = f.read()
+        os.remove(filename)
+
+        return imgdata, {}
+
+    def _prepare_mpl_png(self, main_file_name='', *args, **kwargs):
+        """
+        Prepare a python script using matplotlib to plot the bands, with the JSON
+        returned as an independent file.
+
+        For the possible parameters, see documentation of
+        :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
+        """
+        import json
+        import os
+        import tempfile
+        import subprocess
+        import sys
+
+        all_data = self._matplotlib_get_dict(*args, **kwargs)
+
+        # Use the Agg backend
+        s_header = matplotlib_header_agg_template.substitute()
+        s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
+        s_body = self._get_mpl_body_template(all_data['paths'])
+
+        # I get a temporary file name
+        handle, filename = tempfile.mkstemp()
+        os.close(handle)
+        os.remove(filename)
+
+        escaped_fname = filename.replace('"', '\"')
+
+        s_footer = matplotlib_footer_template_exportfile_with_dpi.substitute(fname=escaped_fname, format='png', dpi=300)
+
+        s = s_header + s_import + s_body + s_footer
+
+        # I don't exec it because I might mess up with the matplotlib backend etc.
+        # I run instead in a different process, with the same executable
+        # (so it should work properly with virtualenvs)
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
+            f.write(s)
+            f.flush()
+
+            subprocess.check_output([sys.executable, f.name])
+
+        if not os.path.exists(filename):
+            raise RuntimeError('Unable to generate the PNG...')
+
+        with open(filename, 'rb', encoding=None) as f:
+            imgdata = f.read()
+        os.remove(filename)
+
+        return imgdata, {}
+
+    @staticmethod
+    def _get_mpl_body_template(paths):
+        """
+        :param paths: paths of k-points
+        """
+        if len(paths) == 1:
+            s_body = matplotlib_body_template.substitute(plot_code=single_kp)
+        else:
+            s_body = matplotlib_body_template.substitute(plot_code=multi_kp)
+        return s_body
+
+    def show_mpl(self, **kwargs):
+        """
+        Call a show() command for the band structure using matplotlib.
+        This uses internally the 'mpl_singlefile' format, with empty
+        main_file_name.
+
+        Other kwargs are passed to self._exportcontent.
+        """
+        exec(*self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs))  # pylint: disable=exec-used
+
     def _prepare_gnuplot(self,
-                         main_file_name='',
+                         main_file_name=None,
                          title='',
                          comments=True,
                          prettify_format=None,
@@ -891,10 +1008,8 @@ class BandsData(KpointsData):
         """
         import os
 
-        if main_file_name is not None:
-            dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
-        else:
-            dat_filename = 'band_data.dat'
+        main_file_name = main_file_name or 'band.dat'
+        dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
 
         if prettify_format is None:
             # Default. Specified like this to allow caller functions to pass 'None'
@@ -975,124 +1090,6 @@ class BandsData(KpointsData):
         extra_files = {dat_filename: raw_data}
 
         return script_data.encode('utf-8'), extra_files
-
-    def _prepare_mpl_pdf(self, main_file_name='', *args, **kwargs):
-        """
-        Prepare a python script using matplotlib to plot the bands, with the JSON
-        returned as an independent file.
-
-        For the possible parameters, see documentation of
-        :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
-        """
-        import os
-        import tempfile
-        import subprocess
-        import sys
-
-        from aiida.common import json
-
-        all_data = self._matplotlib_get_dict(*args, **kwargs)
-
-        # Use the Agg backend
-        s_header = matplotlib_header_agg_template.substitute()
-        s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
-        if len(all_data['paths']) == 1:
-            s_body = matplotlib_body_template.substitute(plot_code=single_kp)
-        else:
-            s_body = matplotlib_body_template.substitute(plot_code=multi_kp)
-
-        # I get a temporary file name
-        handle, filename = tempfile.mkstemp()
-        os.close(handle)
-        os.remove(filename)
-
-        escaped_fname = filename.replace('"', '\"')
-
-        s_footer = matplotlib_footer_template_exportfile.substitute(fname=escaped_fname, format='pdf')
-
-        s = s_header + s_import + s_body + s_footer
-
-        # I don't exec it because I might mess up with the matplotlib backend etc.
-        # I run instead in a different process, with the same executable
-        # (so it should work properly with virtualenvs)
-        #exec s
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write(s)
-            f.flush()
-
-            subprocess.check_output([sys.executable, f.name])
-
-        if not os.path.exists(filename):
-            raise RuntimeError('Unable to generate the PDF...')
-
-        with open(filename, 'rb', encoding=None) as f:
-            imgdata = f.read()
-        os.remove(filename)
-
-        return imgdata, {}
-
-    def _prepare_mpl_png(self, main_file_name='', *args, **kwargs):
-        """
-        Prepare a python script using matplotlib to plot the bands, with the JSON
-        returned as an independent file.
-
-        For the possible parameters, see documentation of
-        :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
-        """
-        import json
-        import os
-        import tempfile
-        import subprocess
-        import sys
-
-        all_data = self._matplotlib_get_dict(*args, **kwargs)
-
-        # Use the Agg backend
-        s_header = matplotlib_header_agg_template.substitute()
-        s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
-        if len(all_data['paths']) == 1:
-            s_body = matplotlib_body_template.substitute(plot_code=single_kp)
-        else:
-            s_body = matplotlib_body_template.substitute(plot_code=multi_kp)
-
-        # I get a temporary file name
-        handle, filename = tempfile.mkstemp()
-        os.close(handle)
-        os.remove(filename)
-
-        escaped_fname = filename.replace('"', '\"')
-
-        s_footer = matplotlib_footer_template_exportfile_with_dpi.substitute(fname=escaped_fname, format='png', dpi=300)
-
-        s = s_header + s_import + s_body + s_footer
-
-        # I don't exec it because I might mess up with the matplotlib backend etc.
-        # I run instead in a different process, with the same executable
-        # (so it should work properly with virtualenvs)
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write(s)
-            f.flush()
-
-            subprocess.check_output([sys.executable, f.name])
-
-        if not os.path.exists(filename):
-            raise RuntimeError('Unable to generate the PNG...')
-
-        with open(filename, 'rb', encoding=None) as f:
-            imgdata = f.read()
-        os.remove(filename)
-
-        return imgdata, {}
-
-    def show_mpl(self, **kwargs):
-        """
-        Call a show() command for the band structure using matplotlib.
-        This uses internally the 'mpl_singlefile' format, with empty
-        main_file_name.
-
-        Other kwargs are passed to self._exportcontent.
-        """
-        exec(*self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs))  # pylint: disable=exec-used
 
     def _prepare_agr(self,
                      main_file_name='',

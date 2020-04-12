@@ -344,51 +344,16 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         self.assertIn(b'[1.0, 3.0]', res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands' 'export')
 
     def test_bandsexport_single_kp(self):
-        """ test issue #2462 """
+        """
+        Plot band for single k-point (issue #2462).
+        """
+        kpnts = KpointsData()
+        kpnts.set_kpoints([[0., 0., 0.]])
 
-        # Create bands structure object.
-        alat = 4.  # angstrom
-        cell = [
-            [
-                alat,
-                0.,
-                0.,
-            ],
-            [
-                0.,
-                alat,
-                0.,
-            ],
-            [
-                0.,
-                0.,
-                alat,
-            ],
-        ]
-        strct = StructureData(cell=cell)
-        strct.append_atom(position=(0., 0., 0.), symbols='Fe')
-        strct.append_atom(position=(alat / 2., alat / 2., alat / 2.), symbols='O')
-        strct.store()
-
-        @calcfunction
-        def connect_structure_bands(strct):  # pylint: disable=unused-argument
-            alat = 4.
-            cell = np.array([
-                [alat, 0., 0.],
-                [0., alat, 0.],
-                [0., 0., alat],
-            ])
-
-            kpnts = KpointsData()
-            kpnts.set_cell(cell)
-            kpnts.set_kpoints([[0., 0., 0.]])
-
-            bands = BandsData()
-            bands.set_kpointsdata(kpnts)
-            bands.set_bands([[1.0, 2.0]])
-            return bands
-
-        bands = connect_structure_bands(strct)
+        bands = BandsData()
+        bands.set_kpointsdata(kpnts)
+        bands.set_bands([[1.0, 2.0]])
+        bands.store()
 
         # matplotlib
         options = [str(bands.id), '--format', 'mpl_singlefile']
@@ -399,9 +364,9 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         with self.cli_runner.isolated_filesystem():
             options = [str(bands.id), '--format', 'gnuplot', '-o', 'bands.gnu']
             self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
-            with open('bands.gnu', 'r') as f:
-                res = f.read()
-                self.assertIn('vectors nohead', res, 'The string vectors nohead was not found in the gnuplot script')
+            with open('bands.gnu', 'r') as gnu_file:
+                res = gnu_file.read()
+                self.assertIn('vectors nohead', res, 'The string "vectors nohead" was not found in the gnuplot script')
 
 
 class TestVerdiDataDict(AiidaTestCase):

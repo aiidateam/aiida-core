@@ -360,6 +360,25 @@ class TestGroupsSubclasses(AiidaTestCase):
         assert orm.QueryBuilder().append(orm.Group, filters={'type_string': 'custom.group'}).count() == 1
 
     @staticmethod
+    def test_querying_node_subclasses():
+        """Test querying for groups with multiple types for nodes it contains."""
+        group = orm.Group(label='group').store()
+        data_int = orm.Int().store()
+        data_str = orm.Str().store()
+        data_bool = orm.Bool().store()
+
+        group.add_nodes([data_int, data_str, data_bool])
+
+        builder = orm.QueryBuilder().append(orm.Group, tag='group')
+        builder.append((orm.Int, orm.Str), with_group='group', project='id')
+        results = [entry[0] for entry in builder.iterall()]
+
+        assert len(results) == 2
+        assert data_int.pk in results
+        assert data_str.pk in results
+        assert data_bool.pk not in results
+
+    @staticmethod
     def test_query_with_group():
         """Docs."""
         group = orm.Group(label='group').store()

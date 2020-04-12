@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member
+# pylint: disable=no-member, too-many-lines
 """Test data-related verdi commands."""
 
 import io
@@ -342,6 +342,31 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
         self.assertIn(b'[1.0, 3.0]', res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands' 'export')
+
+    def test_bandsexport_single_kp(self):
+        """
+        Plot band for single k-point (issue #2462).
+        """
+        kpnts = KpointsData()
+        kpnts.set_kpoints([[0., 0., 0.]])
+
+        bands = BandsData()
+        bands.set_kpointsdata(kpnts)
+        bands.set_bands([[1.0, 2.0]])
+        bands.store()
+
+        # matplotlib
+        options = [str(bands.id), '--format', 'mpl_singlefile']
+        res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
+        self.assertIn(b'p.scatter', res.stdout_bytes, 'The string p.scatter was not found in the bands mpl export')
+
+        # gnuplot
+        with self.cli_runner.isolated_filesystem():
+            options = [str(bands.id), '--format', 'gnuplot', '-o', 'bands.gnu']
+            self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
+            with open('bands.gnu', 'r') as gnu_file:
+                res = gnu_file.read()
+                self.assertIn('vectors nohead', res, 'The string "vectors nohead" was not found in the gnuplot script')
 
 
 class TestVerdiDataDict(AiidaTestCase):

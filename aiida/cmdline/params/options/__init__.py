@@ -27,10 +27,10 @@ __all__ = (
     'EXPORT_FORMAT', 'ARCHIVE_FORMAT', 'NON_INTERACTIVE', 'DRY_RUN', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_LAST_NAME',
     'USER_INSTITUTION', 'DB_BACKEND', 'DB_ENGINE', 'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME',
     'REPOSITORY_PATH', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PREPEND_TEXT', 'APPEND_TEXT', 'LABEL',
-    'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE', 'PROCESS_STATE', 'EXIT_STATUS', 'FAILED', 'LIMIT', 'PROJECT',
-    'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS', 'GROUP_CLEAR', 'RAW', 'HOSTNAME',
-    'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT', 'FORMULA_MODE', 'TRAJECTORY_INDEX',
-    'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE'
+    'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE', 'PROCESS_STATE', 'PROCESS_LABEL', 'TYPE_STRING', 'EXIT_STATUS',
+    'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS',
+    'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT',
+    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE'
 )
 
 TRAVERSAL_RULE_HELP_STRING = {
@@ -331,6 +331,16 @@ PROCESS_LABEL = OverridableOption(
     type=click.STRING,
     required=False,
     help='Only include entries whose process label matches this filter.'
+)
+
+TYPE_STRING = OverridableOption(
+    '-T',
+    '--type-string',
+    'type_string',
+    type=click.STRING,
+    required=False,
+    help='Only include entries whose type string matches this filter. Can include `_` to match a single arbitrary '
+    'character or `%` to match any number of characters.'
 )
 
 EXIT_STATUS = OverridableOption(

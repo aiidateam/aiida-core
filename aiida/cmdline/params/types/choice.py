@@ -43,7 +43,6 @@ class LazyChoice(click.ParamType):
         """
         if self.__click_choice is None:
             self.__click_choice = click.Choice(self._get_choices())
-            # self._get_choices = None
         return self.__click_choice
 
     @property

@@ -456,15 +456,19 @@ class CodeEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
+        from aiida.common.escaping import escape_for_sql_like
         from aiida.orm import Computer
 
         try:
-            label, _, machinename = identifier.partition('@')
+            identifier, _, machinename = identifier.partition('@')
         except AttributeError:
             raise ValueError('the identifier needs to be a string')
 
+        if operator == 'like':
+            identifier = escape_for_sql_like(identifier) + '%'
+
         builder = QueryBuilder()
-        builder.append(cls=classes, tag='code', project=project, filters={'label': {'==': label}})
+        builder.append(cls=classes, tag='code', project=project, filters={'label': {operator: identifier}})
 
         if machinename:
             builder.append(Computer, filters={'name': {'==': machinename}}, with_node='code')

@@ -11,7 +11,7 @@
 import click
 
 from aiida.common.lang import type_check
-from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils import decorators
 
 from .identifier import IdentifierParamType
 
@@ -56,7 +56,15 @@ class GroupParamType(IdentifierParamType):
         from aiida.orm.utils.loaders import GroupEntityLoader
         return GroupEntityLoader
 
-    @with_dbenv()
+    @decorators.with_dbenv()
+    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument
+        """Return possible completions based on an incomplete value.
+
+        :returns: list of tuples of valid entry points (matching incomplete) and a description
+        """
+        return [(option, '') for option, in self.orm_class_loader.get_options(incomplete, project='label')]
+
+    @decorators.with_dbenv()
     def convert(self, value, param, ctx):
         try:
             group = super().convert(value, param, ctx)

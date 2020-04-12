@@ -131,3 +131,15 @@ def test_sub_classes(setup_groups, sub_classes, expected):
             results.append(True)
 
     assert tuple(results) == expected
+
+
+def test_complete(setup_groups, parameter_type):
+    """Test the `complete` method that provides auto-complete functionality."""
+    entity_01, entity_02, entity_03 = setup_groups
+    entity_04 = Group(label='xavier').store()
+
+    options = [item[0] for item in parameter_type.complete(None, '')]
+    assert sorted(options) == sorted([entity_01.label, entity_02.label, entity_03.label, entity_04.label])
+
+    options = [item[0] for item in parameter_type.complete(None, 'xa')]
+    assert sorted(options) == sorted([entity_04.label])

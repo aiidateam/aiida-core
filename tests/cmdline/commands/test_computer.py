@@ -317,7 +317,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         with tempfile.NamedTemporaryFile('w') as handle:
             handle.write("""---
 label: {l}
-hostname: {l}
+hostname: myhost
 transport: local
 scheduler: direct
 """.format(l=label))

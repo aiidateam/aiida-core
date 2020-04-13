@@ -617,28 +617,29 @@ Below is a list with all available subcommands.
       -n, --non-interactive           Non-interactive mode: never prompt for
                                       input.
       --profile PROFILE               The name of the new profile.  [required]
-      --email TEXT                    Email address that serves as the user name
-                                      and a way to identify data created by it.
+      --email EMAIL                   Email address associated with the data you
+                                      generate. The email address is exported
+                                      along with the data, when sharing it.
                                       [required]
-      --first-name TEXT               First name of the user.  [required]
-      --last-name TEXT                Last name of the user.  [required]
-      --institution TEXT              Institution of the user.  [required]
+      --first-name NONEMPTYSTRING     First name of the user.  [required]
+      --last-name NONEMPTYSTRING      Last name of the user.  [required]
+      --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
       --db-backend [django|sqlalchemy]
-                                      Backend type to use to map the database.
-      --db-host TEXT                  Hostname to connect to the database.
-      --db-port INTEGER               Port to connect to the database.
-      --db-name TEXT                  Name of the database to create.
-      --db-username TEXT              Name of the database user to create.
-      --db-password TEXT              Password to connect to the database.
+                                      Database backend to use.
+      --db-host HOSTNAME              Database server host. Leave empty for "peer"
+                                      authentication.
+      --db-port INTEGER               Database server port.
+      --db-name NONEMPTYSTRING        Name of the database to create.
+      --db-username NONEMPTYSTRING    Name of the database user to create.
+      --db-password TEXT              Password of the database user.
       --su-db-name TEXT               Name of the template database to connect to
                                       as the database superuser.
       --su-db-username TEXT           User name of the database super user.
       --su-db-password TEXT           Password to connect as the database
                                       superuser.
-      --repository DIRECTORY          Absolute path for the file system
-                                      repository.
+      --repository DIRECTORY          Absolute path to the file repository.
       --config FILE                   Load option values from configuration file
                                       in yaml format.
       --help                          Show this message and exit.
@@ -681,14 +682,14 @@ Below is a list with all available subcommands.
           verdi -p <profile_name> restapi --hostname 127.0.0.5 --port 6789
 
     Options:
-      -H, --hostname TEXT     Hostname.
-      -P, --port INTEGER      Port number.
-      -c, --config-dir PATH   Path to the configuration directory
-      --debug                 Enable debugging
-      --wsgi-profile          Whether to enable WSGI profiler middleware for
-                              finding bottlenecks
-      --hookup / --no-hookup  Hookup app to flask server
-      --help                  Show this message and exit.
+      -H, --hostname HOSTNAME  Hostname.
+      -P, --port INTEGER       Port number.
+      -c, --config-dir PATH    Path to the configuration directory
+      --debug                  Enable debugging
+      --wsgi-profile           Whether to enable WSGI profiler middleware for
+                               finding bottlenecks
+      --hookup / --no-hookup   Hookup app to flask server
+      --help                   Show this message and exit.
 
 
 .. _verdi_run:
@@ -733,25 +734,25 @@ Below is a list with all available subcommands.
       -n, --non-interactive           Non-interactive mode: never prompt for
                                       input.
       --profile PROFILE               The name of the new profile.  [required]
-      --email TEXT                    Email address that serves as the user name
-                                      and a way to identify data created by it.
+      --email EMAIL                   Email address associated with the data you
+                                      generate. The email address is exported
+                                      along with the data, when sharing it.
                                       [required]
-      --first-name TEXT               First name of the user.  [required]
-      --last-name TEXT                Last name of the user.  [required]
-      --institution TEXT              Institution of the user.  [required]
+      --first-name NONEMPTYSTRING     First name of the user.  [required]
+      --last-name NONEMPTYSTRING      Last name of the user.  [required]
+      --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
       --db-backend [django|sqlalchemy]
-                                      Backend type to use to map the database.
-      --db-host TEXT                  Hostname to connect to the database.
-      --db-port INTEGER               Port to connect to the database.
-      --db-name TEXT                  Name of the database to create.  [required]
-      --db-username TEXT              Name of the database user to create.
+                                      Database backend to use.
+      --db-host HOSTNAME              Database server host. Leave empty for "peer"
+                                      authentication.
+      --db-port INTEGER               Database server port.
+      --db-name NONEMPTYSTRING        Name of the database to create.  [required]
+      --db-username NONEMPTYSTRING    Name of the database user to create.
                                       [required]
-      --db-password TEXT              Password to connect to the database.
-                                      [required]
-      --repository DIRECTORY          Absolute path for the file system
-                                      repository.
+      --db-password TEXT              Password of the database user.  [required]
+      --repository DIRECTORY          Absolute path to the file repository.
       --config FILE                   Load option values from configuration file
                                       in yaml format.
       --help                          Show this message and exit.

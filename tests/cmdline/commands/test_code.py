@@ -240,6 +240,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
 
     def test_code_duplicate_interactive(self):
         """Test code duplication interactive."""
+        from aiida.orm import Code
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'code_duplicate_interactive'
@@ -247,11 +248,20 @@ class TestVerdiCodeCommands(AiidaTestCase):
         result = self.cli_runner.invoke(code_duplicate, [str(self.code.pk)], input=user_input, catch_exceptions=False)
         self.assertIsNone(result.exception, result.output)
 
-        from aiida.orm import Code
         new_code = Code.get_from_string(label)
         self.assertEqual(self.code.description, new_code.description)
         self.assertEqual(self.code.get_prepend_text(), new_code.get_prepend_text())
         self.assertEqual(self.code.get_append_text(), new_code.get_append_text())
+
+        # test that providing "!" to description leads to empty description
+        # https://github.com/aiidateam/aiida-core/issues/3770
+        label = 'code_duplicate_interactive2'
+        user_input = label + '\n!\n\n\n\n\n'
+        result = self.cli_runner.invoke(code_duplicate, [str(self.code.pk)], input=user_input, catch_exceptions=False)
+        self.assertIsNone(result.exception, result.output)
+
+        new_code = Code.get_from_string(label)
+        self.assertEqual('', new_code.description)
 
     def test_code_duplicate_non_interactive(self):
         """Test code duplication non-interactive."""

@@ -86,6 +86,8 @@ class IdentifierParamType(click.ParamType, ABC):
         from aiida.common import exceptions
         from aiida.orm.utils.loaders import OrmEntityLoader
 
+        value = super().convert(value, param, ctx)
+
         if not value:
             raise click.BadParameter('the value for the identifier cannot be empty')
 

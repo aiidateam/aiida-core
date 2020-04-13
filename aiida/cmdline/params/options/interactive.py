@@ -186,7 +186,7 @@ class InteractiveOption(ConditionalOption):
 
         if value is self.CHARACTER_IGNORE_DEFAULT:
             # The ignore default character signifies that the user wants to "not" set the value.
-            # We first set it to an empty string for further processing (e.g. if a value is actually required).
+            # Replace value by an empty string for further processing (e.g. if a non-empty value is required).
             value = ''
 
         try:

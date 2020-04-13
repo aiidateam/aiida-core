@@ -617,10 +617,10 @@ Below is a list with all available subcommands.
       -n, --non-interactive           Non-interactive mode: never prompt for
                                       input.
       --profile PROFILE               The name of the new profile.  [required]
-      --email EMAIL                   Email address that will be associated with
-                                      data you generate and will be exported along
-                                      with it, should you choose to share any of
-                                      your work.  [required]
+      --email EMAIL                   Email address associated with the data you
+                                      generate. The email address is exported
+                                      along with the data, when sharing it.
+                                      [required]
       --first-name NONEMPTYSTRING     First name of the user.  [required]
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
@@ -628,10 +628,9 @@ Below is a list with all available subcommands.
                                       Engine to use to connect to the database.
       --db-backend [django|sqlalchemy]
                                       Database backend to use.
-      --db-host HOSTNAME              Database server host. Leave empty for "Peer
-                                      Authentication".
-      --db-port INTEGER               Database server port. Leave empty to
-                                      communicate via UNIX sockets.
+      --db-host HOSTNAME              Database server host. Leave empty for "peer"
+                                      authentication.
+      --db-port INTEGER               Database server port.
       --db-name NONEMPTYSTRING        Name of the database to create.
       --db-username NONEMPTYSTRING    Name of the database user to create.
       --db-password TEXT              Password of the database user.
@@ -735,10 +734,10 @@ Below is a list with all available subcommands.
       -n, --non-interactive           Non-interactive mode: never prompt for
                                       input.
       --profile PROFILE               The name of the new profile.  [required]
-      --email EMAIL                   Email address that will be associated with
-                                      data you generate and will be exported along
-                                      with it, should you choose to share any of
-                                      your work.  [required]
+      --email EMAIL                   Email address associated with the data you
+                                      generate. The email address is exported
+                                      along with the data, when sharing it.
+                                      [required]
       --first-name NONEMPTYSTRING     First name of the user.  [required]
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
@@ -746,10 +745,9 @@ Below is a list with all available subcommands.
                                       Engine to use to connect to the database.
       --db-backend [django|sqlalchemy]
                                       Database backend to use.
-      --db-host HOSTNAME              Database server host. Leave empty for "Peer
-                                      Authentication".
-      --db-port INTEGER               Database server port. Leave empty to
-                                      communicate via UNIX sockets.
+      --db-host HOSTNAME              Database server host. Leave empty for "peer"
+                                      authentication.
+      --db-port INTEGER               Database server port.
       --db-name NONEMPTYSTRING        Name of the database to create.  [required]
       --db-username NONEMPTYSTRING    Name of the database user to create.
                                       [required]

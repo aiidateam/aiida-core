@@ -10,7 +10,8 @@
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
 import click
-from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # Note: importing from aiida.manage.postgres leads to circular imports
+# Note: importing from aiida.manage.postgres leads to circular imports
+from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from ...utils import defaults, echo
@@ -213,8 +214,8 @@ USER_EMAIL = OverridableOption(
     '--email',
     'email',
     type=types.EmailType(),
-    help='Email address that will be associated with data you generate and will be exported along with it, '
-    'should you choose to share any of your work.'
+    help='Email address associated with the data you generate. The email address is exported along with the data, '
+    'when sharing it.'
 )
 
 USER_FIRST_NAME = OverridableOption(
@@ -244,14 +245,14 @@ DB_BACKEND = OverridableOption(
 DB_HOST = OverridableOption(
     '--db-host',
     type=types.HostnameType(),
-    help='Database server host. Leave empty for "Peer Authentication".',
+    help='Database server host. Leave empty for "peer" authentication.',
     default=DEFAULT_DBINFO['host']
 )
 
 DB_PORT = OverridableOption(
     '--db-port',
     type=click.INT,
-    help='Database server port. Leave empty to communicate via UNIX sockets.',
+    help='Database server port.',
     default=DEFAULT_DBINFO['port'],
 )
 

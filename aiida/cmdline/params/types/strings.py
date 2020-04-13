@@ -42,7 +42,7 @@ class LabelStringType(NonEmptyStringParamType):
     """
     name = 'validstring'
 
-    ALPHABET = r'\w._-'
+    ALPHABET = r'\w\._\-'
 
     def convert(self, value, param, ctx):
         newval = super().convert(value, param, ctx)

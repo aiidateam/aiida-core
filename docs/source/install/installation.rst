@@ -164,8 +164,8 @@ If everything worked well, you should get no error and see the prompt of the ``p
 If you use the same names as in the example commands above, then during the ``verdi setup`` phase the following parameters will apply to the newly created database::
 
     Database engine: postgresql_psycopg2
-    PostgreSQL host: localhost
-    PostgreSQL port: 5432
+    Database host: localhost
+    Database port: 5432
     AiiDA Database name: aiidadb
     AiiDA Database user: aiida
     AiiDA Database password: <password>
@@ -180,9 +180,13 @@ If you use the same names as in the example commands above, then during the ``ve
 Database setup using 'peer' authentication
 ++++++++++++++++++++++++++++++++++++++++++
 
-Some PostgreSQL setups provide command-line utilities to simplify creating users and databases compared to issuing the SQL commands directly.
-The following instructions apply to Ubuntu, where PostgreSQL is set up to communicate password-less via UNIX sockets.
-In order to take advantage of this ``peer`` mode, the name of your PostgreSQL database user must match the name of the UNIX user who is running AiiDA.
+On Ubuntu Linux, the default PostgreSQL setup is configured to use ``peer`` authentication, which allows password-less login via local Unix sockets.
+In this mode, PostgreSQL compares the Unix user connecting to the socket with its own database of users and allows a connection if a matching user exists.
+
+.. note::
+    This is an alternative route to set up your database - the standard approach will work on Ubuntu just as well.
+
+Below we are going to take advantage of the command-line utilities shipped on Ubuntu to simplify creating users and databases compared to issuing the SQL commands directly.
 
 Assume the role of ``postgres``::
 
@@ -204,11 +208,11 @@ To test if the database was created successfully, try::
     psql aiidadb
 
 
-During the ``verdi setup`` phase, specify your username as the *AiiDA Database user* and simply leave the host, port and password empty (used double quotation marks to signify an empty string).::
+During the ``verdi setup`` phase, use ``!`` to leave host empty and specify your Unix user name as the *AiiDA Database user*.::
 
     Database engine: postgresql_psycopg2
-    PostgreSQL host: ""
-    PostgreSQL port: ""
+    Database host: !
+    Database port: 5432
     AiiDA Database name: aiidadb
     AiiDA Database user: <username>
     AiiDA Database password: ""

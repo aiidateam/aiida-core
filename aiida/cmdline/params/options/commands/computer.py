@@ -52,7 +52,6 @@ HOSTNAME = options.HOSTNAME.clone(
     cls=InteractiveOption,
     required=True,
     help='The fully qualified hostname of the computer; use "localhost" for local transports.',
-    type=types.HostnameType(),
 )
 
 DESCRIPTION = options.DESCRIPTION.clone(

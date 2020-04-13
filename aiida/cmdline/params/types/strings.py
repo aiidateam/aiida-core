@@ -38,40 +38,25 @@ class NonEmptyStringParamType(StringParamType):
 class LabelStringType(NonEmptyStringParamType):
     """Parameter accepting valid label strings.
 
-    Any word character, plus dashes, underscores and dots.
+    Non-empty string, made up of word characters (includes underscores [1]), dashes, and dots.
+
+    [1] See https://docs.python.org/3/library/re.html
     """
-    name = 'validstring'
+    name = 'labelstring'
 
-    ALPHABET = r'\w\._\-'
-
-    def convert(self, value, param, ctx):
-        newval = super().convert(value, param, ctx)
-
-        if not re.match('^[{}]*$'.format(self.ALPHABET), newval):
-            self.fail('Please use only the following characters: {}'.format(self.ALPHABET))
-
-        return newval
-
-    def __repr__(self):
-        return 'VALIDSTRING'
-
-
-class AlphanumericStringType(StringParamType):
-    """Parameter taking strings with only of alphanumeric characters, dashes and or underscores."""
-    name = 'validstring'
-
-    ALPHABET = 'A-Za-z0-9_-'
+    ALPHABET = r'\w\.\-'
 
     def convert(self, value, param, ctx):
         newval = super().convert(value, param, ctx)
 
         if not re.match('^[{}]*$'.format(self.ALPHABET), newval):
-            self.fail('Please use only the following characters: {}'.format(self.ALPHABET))
+            self.fail('Please use only alphanumeric characters, dashes, underscores or dots')
 
         return newval
 
     def __repr__(self):
-        return 'VALIDSTRING'
+        return 'LABELSTRING'
+
 
 HOSTNAME_REGEX = \
 r'^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$'

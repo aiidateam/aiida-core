@@ -120,8 +120,19 @@ class AbstractQueryManager(abc.ABC):
         return statistics
 
     @staticmethod
-    def _extract_formula(args, akinds, asites):
-        """Extract formula from the structure object."""
+    def _extract_formula(akinds, asites, args):
+        """
+        Extract formula from the structure object.
+
+        :param akinds: list of kinds, e.g. [{'mass': 55.845, 'name': 'Fe', 'symbols': ['Fe'], 'weights': [1.0]},
+                                            {'mass': 15.9994, 'name': 'O', 'symbols': ['O'], 'weights': [1.0]}]
+        :param asites: list of structure sites e.g. [{'position': [0.0, 0.0, 0.0], 'kind_name': 'Fe'},
+                                                        {'position': [2.0, 2.0, 2.0], 'kind_name': 'O'}]
+        :param args: a namespace with parsed command line parameters, here only 'element' and 'element_only' are used
+        :type args: dict
+
+        :return: a string with formula if the formula is found
+        """
         from aiida.orm.nodes.data.structure import (get_formula, get_symbols_string)
 
         if args.element is not None:
@@ -136,7 +147,7 @@ class AbstractQueryManager(abc.ABC):
 
         # We want only the StructureData that have attributes
         if akinds is None or asites is None:
-            return None
+            return '<<UNKNOWN>>'
 
         symbol_dict = {}
         for k in akinds:
@@ -161,7 +172,9 @@ class AbstractQueryManager(abc.ABC):
 
         :returns:
             A list of sublists, each latter containing (in order):
-                pk as string, formula as string, creation date, bandsdata-label"""
+                pk as string, formula as string, creation date, bandsdata-label
+        """
+        # pylint: disable=too-many-locals
 
         import datetime
         from aiida.common import timezone
@@ -173,22 +186,23 @@ class AbstractQueryManager(abc.ABC):
         else:
             q_build.append(orm.User, tag='creator')
 
-        bdata_filters = {}
-        if args.past_days is not None:
-            bdata_filters.update({'ctime': {'>=': timezone.now() - datetime.timedelta(days=args.past_days)}})
-
-        q_build.append(
-            orm.BandsData, tag='bdata', with_user='creator', filters=bdata_filters, project=['id', 'label', 'ctime']
-        )
-
         group_filters = {}
 
         if args.group_name is not None:
             group_filters.update({'name': {'in': args.group_name}})
         if args.group_pk is not None:
             group_filters.update({'id': {'in': args.group_pk}})
-        if group_filters:
-            q_build.append(orm.Group, tag='group', filters=group_filters, with_node='bdata')
+
+        q_build.append(orm.Group, tag='group', filters=group_filters, with_user='creator')
+
+        bdata_filters = {}
+        if args.past_days is not None:
+            bdata_filters.update({'ctime': {'>=': timezone.now() - datetime.timedelta(days=args.past_days)}})
+
+        q_build.append(
+            orm.BandsData, tag='bdata', with_group='group', filters=bdata_filters, project=['id', 'label', 'ctime']
+        )
+        bands_list_data = q_build.all()
 
         q_build.append(
             orm.StructureData,
@@ -200,12 +214,15 @@ class AbstractQueryManager(abc.ABC):
 
         q_build.order_by({orm.StructureData: {'ctime': 'desc'}})
 
-        list_data = q_build.distinct()
+        structure_dict = dict()
+        list_data = q_build.distinct().all()
+        for bid, _, _, _, akinds, asites in list_data:
+            structure_dict[bid] = (akinds, asites)
 
         entry_list = []
         already_visited_bdata = set()
 
-        for [bid, blabel, bdate, _, akinds, asites] in list_data.all():
+        for [bid, blabel, bdate] in bands_list_data:
 
             # We process only one StructureData per BandsData.
             # We want to process the closest StructureData to
@@ -217,7 +234,17 @@ class AbstractQueryManager(abc.ABC):
             if already_visited_bdata.__contains__(bid):
                 continue
             already_visited_bdata.add(bid)
-            formula = self._extract_formula(args, akinds, asites)
+            strct = structure_dict.get(bid, None)
+
+            if strct is not None:
+                akinds, asites = strct
+                formula = self._extract_formula(akinds, asites, args)
+            else:
+                if args.element is not None or args.element_only is not None:
+                    formula = None
+                else:
+                    formula = '<<NOT FOUND>>'
+
             if formula is None:
                 continue
             entry_list.append([str(bid), str(formula), bdate.strftime('%d %b %Y'), blabel])

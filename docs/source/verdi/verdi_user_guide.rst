@@ -617,28 +617,30 @@ Below is a list with all available subcommands.
       -n, --non-interactive           Non-interactive mode: never prompt for
                                       input.
       --profile PROFILE               The name of the new profile.  [required]
-      --email EMAIL                   Email address that serves as the user name
-                                      and a way to identify data created by it.
-                                      [required]
-      --first-name TEXT               First name of the user.  [required]
-      --last-name TEXT                Last name of the user.  [required]
-      --institution TEXT              Institution of the user.  [required]
+      --email EMAIL                   Email address that will be associated with
+                                      data you generate and will be exported along
+                                      with it, should you choose to share any of
+                                      your work.  [required]
+      --first-name NONEMPTYSTRING     First name of the user.  [required]
+      --last-name NONEMPTYSTRING      Last name of the user.  [required]
+      --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
       --db-backend [django|sqlalchemy]
-                                      Backend type to use to map the database.
-      --db-host HOSTNAME              Hostname to connect to the database.
-      --db-port INTEGER               Port to connect to the database.
-      --db-name TEXT                  Name of the database to create.
-      --db-username TEXT              Name of the database user to create.
-      --db-password TEXT              Password to connect to the database.
+                                      Database backend to use.
+      --db-host HOSTNAME              Database server host. Leave empty for "Peer
+                                      Authentication".
+      --db-port INTEGER               Database server port. Leave empty to
+                                      communicate via UNIX sockets.
+      --db-name NONEMPTYSTRING        Name of the database to create.
+      --db-username NONEMPTYSTRING    Name of the database user to create.
+      --db-password TEXT              Password of the database user.
       --su-db-name TEXT               Name of the template database to connect to
                                       as the database superuser.
       --su-db-username TEXT           User name of the database super user.
       --su-db-password TEXT           Password to connect as the database
                                       superuser.
-      --repository DIRECTORY          Absolute path for the file system
-                                      repository.
+      --repository DIRECTORY          Absolute path to the file repository.
       --config FILE                   Load option values from configuration file
                                       in yaml format.
       --help                          Show this message and exit.
@@ -733,25 +735,26 @@ Below is a list with all available subcommands.
       -n, --non-interactive           Non-interactive mode: never prompt for
                                       input.
       --profile PROFILE               The name of the new profile.  [required]
-      --email EMAIL                   Email address that serves as the user name
-                                      and a way to identify data created by it.
-                                      [required]
-      --first-name TEXT               First name of the user.  [required]
-      --last-name TEXT                Last name of the user.  [required]
-      --institution TEXT              Institution of the user.  [required]
+      --email EMAIL                   Email address that will be associated with
+                                      data you generate and will be exported along
+                                      with it, should you choose to share any of
+                                      your work.  [required]
+      --first-name NONEMPTYSTRING     First name of the user.  [required]
+      --last-name NONEMPTYSTRING      Last name of the user.  [required]
+      --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
       --db-backend [django|sqlalchemy]
-                                      Backend type to use to map the database.
-      --db-host HOSTNAME              Hostname to connect to the database.
-      --db-port INTEGER               Port to connect to the database.
-      --db-name TEXT                  Name of the database to create.  [required]
-      --db-username TEXT              Name of the database user to create.
+                                      Database backend to use.
+      --db-host HOSTNAME              Database server host. Leave empty for "Peer
+                                      Authentication".
+      --db-port INTEGER               Database server port. Leave empty to
+                                      communicate via UNIX sockets.
+      --db-name NONEMPTYSTRING        Name of the database to create.  [required]
+      --db-username NONEMPTYSTRING    Name of the database user to create.
                                       [required]
-      --db-password TEXT              Password to connect to the database.
-                                      [required]
-      --repository DIRECTORY          Absolute path for the file system
-                                      repository.
+      --db-password TEXT              Password of the database user.  [required]
+      --repository DIRECTORY          Absolute path to the file repository.
       --config FILE                   Load option values from configuration file
                                       in yaml format.
       --help                          Show this message and exit.

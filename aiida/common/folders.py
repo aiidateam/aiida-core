@@ -356,7 +356,6 @@ class Folder:
             if False, an IOError is raised if the folder already exists.
             Whatever the value of this flag, parent directories will be created, if needed.
         :type overwrite: bool
-        :param silent: print a progress bar (using `tqdm`) or not. Default: Do *not* print.
 
         :raises IOError: in case of problems accessing or writing the files.
         :raises OSError: in case of problems accessing or writing the files (from ``shutil`` module).

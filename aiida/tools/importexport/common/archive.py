@@ -15,14 +15,15 @@ import sys
 import tarfile
 import zipfile
 
-from tqdm import tqdm
 from wrapt import decorator
 
 from aiida.common import json
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
 from aiida.common.folders import SandboxFolder
-from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER, BAR_FORMAT
+
+from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.exceptions import CorruptArchive
+from aiida.tools.importexport.common.progress_bar import get_progress_bar, close_progress_bar
 
 __all__ = ('Archive', 'extract_zip', 'extract_tar', 'extract_tree')
 
@@ -221,12 +222,11 @@ class Archive:
             return json.load(fhandle)
 
 
-def update_description(path, progress_bar: tqdm, refresh: bool = False):
+def update_description(path, refresh: bool = False):
     """Update description for a progress bar given path
 
     :param path: path of file or directory
     :type path: str
-    :param progress_bar: `tqdm` progress bar to have its description updated
     :param refresh: Whether or not to refresh the progress bar with the new description. Default: False.
     :type refresh: bool
     """
@@ -235,10 +235,11 @@ def update_description(path, progress_bar: tqdm, refresh: bool = False):
         (path, description) = os.path.split(path)
     description = 'EXTRACTING: {}'.format(description)
 
+    progress_bar = get_progress_bar()
     progress_bar.set_description_str(description, refresh=refresh)
 
 
-def get_file_iterator(file_handle, folderpath, silent=False, progress_bar=None, **kwargs):  # pylint: disable=unused-argument
+def get_file_iterator(file_handle, folderpath, silent, **kwargs):  # pylint: disable=unused-argument
     """Go through JSON files and then return new file_iterator
 
     :param file_handle: A file handle returned from `with open() as file_handle:`.
@@ -247,11 +248,8 @@ def get_file_iterator(file_handle, folderpath, silent=False, progress_bar=None, 
     :param folderpath: Path to folder.
     :type folderpath: str
 
-    :param silent: suppress progress bar
+    :param silent: suppress progress bar.
     :type silent: bool
-
-    :param progress_bar: Possible instantiated tqdm progress bar
-    :type progress_bar: `tqdm.tqdm`
 
     :return: List of filenames in the archive.
     :rtype: list
@@ -265,17 +263,11 @@ def get_file_iterator(file_handle, folderpath, silent=False, progress_bar=None, 
     else:
         raise TypeError('Can only handle Tar or Zip files.')
 
-    if silent:
-        file_iterator = json_files
-    else:
-        if progress_bar:
-            progress_bar.leave = False
-            progress_bar.close()
-        file_iterator = tqdm(json_files, bar_format=BAR_FORMAT, leave=False)
+    close_progress_bar(leave=False)
+    file_iterator = get_progress_bar(iterable=json_files, leave=False, disable=silent)
 
     for json_file in file_iterator:
-        if not silent:
-            update_description(json_file, file_iterator)
+        update_description(json_file, file_iterator)
 
         try:
             if file_format == 'tar':
@@ -286,11 +278,9 @@ def get_file_iterator(file_handle, folderpath, silent=False, progress_bar=None, 
             raise CorruptArchive('required file `{}` is not included'.format(json_file))
 
     if file_format == 'tar':
-        return file_handle.getmembers(
-        ) if silent else tqdm(file_handle.getmembers(), unit='files', bar_format=BAR_FORMAT, leave=False)
+        return get_progress_bar(iterable=file_handle.getmembers(), unit='files', leave=False, disable=silent)
     # zip
-    return file_handle.namelist(
-    ) if silent else tqdm(file_handle.namelist(), unit='files', bar_format=BAR_FORMAT, leave=False)
+    return get_progress_bar(iterable=file_handle.namelist(), unit='files', leave=False, disable=silent)
 
 
 def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, **kwargs):
@@ -334,8 +324,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, **kwa
                 if not membername.startswith(nodes_export_subfolder + os.sep):
                     continue
 
-                if not silent:
-                    update_description(membername, file_iterator)
+                update_description(membername, file_iterator)
 
                 handle.extract(path=folder.abspath, member=membername)
     except zipfile.BadZipfile:
@@ -393,8 +382,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, **kwa
                 if not member.name.startswith(nodes_export_subfolder + os.sep):
                     continue
 
-                if not silent:
-                    update_description(member.name, file_iterator)
+                update_description(member.name, file_iterator)
 
                 handle.extract(path=folder.abspath, member=member)
     except tarfile.ReadError:

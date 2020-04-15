@@ -9,12 +9,9 @@
 ###########################################################################
 # pylint: disable=fixme,too-many-branches,too-many-locals,too-many-statements,too-many-arguments
 """Provides export functionalities."""
-
 import os
 import tarfile
 import time
-
-from tqdm import tqdm
 
 from aiida import get_version, orm
 from aiida.common import json
@@ -22,8 +19,8 @@ from aiida.common.exceptions import LicensingException
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.orm.utils.repository import Repository
 
-from aiida.tools.importexport.common import exceptions
-from aiida.tools.importexport.common.config import EXPORT_VERSION, NODES_EXPORT_SUBFOLDER, BAR_FORMAT
+from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar
+from aiida.tools.importexport.common.config import EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
@@ -56,7 +53,7 @@ def export(entities, filename=None, file_format=None, overwrite=False, silent=Fa
         :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError` if the output file already exists.
     :type overwrite: bool
 
-    :param silent: suppress prints.
+    :param silent: suppress progress bar.
     :type silent: bool
 
     :param use_compression: Whether or not to compress the archive file (only valid for the zip file format).
@@ -203,7 +200,7 @@ def export_tree(
         otherwise.
     :type forbidden_licenses: list
 
-    :param silent: suppress prints.
+    :param silent: suppress progress bar.
     :type silent: bool
 
     :param include_comments: In-/exclude export of comments for given node(s) in ``what``.
@@ -235,16 +232,14 @@ def export_tree(
     given_log_entry_ids = set()
     given_comment_entry_ids = set()
 
-    if not silent:
-        # Instantiate progress bar - go through list of "what"
-        pbar_total = len(what) + 1 if what else 1
-        progress_bar = tqdm(total=pbar_total, bar_format=BAR_FORMAT, leave=True)
-        progress_bar.set_description_str('Collecting chosen entities', refresh=False)
+    # Instantiate progress bar - go through list of "what"
+    pbar_total = len(what) + 1 if what else 1
+    progress_bar = get_progress_bar(total=pbar_total, leave=True, disable=silent)
+    progress_bar.set_description_str('Collecting chosen entities', refresh=False)
 
     # I store a list of the actual dbnodes
     for entry in what:
-        if not silent:
-            progress_bar.update()
+        progress_bar.update()
 
         # This returns the class name (as in imports). E.g. for a model node:
         # aiida.backends.djsite.db.models.DbNode
@@ -266,8 +261,7 @@ def export_tree(
     # Add all the nodes contained within the specified groups
     if GROUP_ENTITY_NAME in entities_starting_set:
 
-        if not silent:
-            progress_bar.set_description_str('Retrieving Nodes from Groups ...', refresh=True)
+        progress_bar.set_description_str('Retrieving Nodes from Groups ...', refresh=True)
 
         # Use single query instead of given_group.nodes iterator for performance.
         qh_groups = orm.QueryBuilder().append(
@@ -288,15 +282,13 @@ def export_tree(
             given_node_entry_ids.update(pks)
             del node_results, pks, uuids
 
-        if not silent:
-            progress_bar.update()
+        progress_bar.update()
 
     # We will iteratively explore the AiiDA graph to find further nodes that should also be exported.
     # At the same time, we will create the links_uuid list of dicts to be exported
 
-    if not silent:
-        progress_bar.reset(total=1)
-        progress_bar.set_description_str('Getting provenance and storing links ...', refresh=True)
+    progress_bar = get_progress_bar(total=1, disable=silent)
+    progress_bar.set_description_str('Getting provenance and storing links ...', refresh=True)
 
     traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **kwargs)
     node_ids_to_be_exported = traverse_output['nodes']
@@ -323,13 +315,11 @@ def export_tree(
         'type': link.link_type
     } for link in traverse_output['links']]
 
-    if not silent:
-        progress_bar.update()
+    progress_bar.update()
 
-    if not silent:
-        # Progress bar initialization - Entities
-        progress_bar.reset(total=1)
-        progress_bar.set_description_str('Initializing export of all entities', refresh=True)
+    # Progress bar initialization - Entities
+    progress_bar = get_progress_bar(total=1, disable=silent)
+    progress_bar.set_description_str('Initializing export of all entities', refresh=True)
 
     ## Universal "entities" attributed to all types of nodes
     # Logs
@@ -357,18 +347,16 @@ def export_tree(
     if given_comment_entry_ids:
         given_entities.add(COMMENT_ENTITY_NAME)
 
-    if not silent:
-        progress_bar.update()
+    progress_bar.update()
 
-    if not silent and given_entities:
-        progress_bar.reset(total=len(given_entities))
+    if given_entities:
+        progress_bar = get_progress_bar(total=len(given_entities), disable=silent)
         pbar_base_str = 'Preparing entities'
 
     entries_to_add = dict()
     for given_entity in given_entities:
-        if not silent:
-            progress_bar.set_description_str(pbar_base_str + ' - {}s'.format(given_entity), refresh=False)
-            progress_bar.update()
+        progress_bar.set_description_str(pbar_base_str + ' - {}s'.format(given_entity), refresh=False)
+        progress_bar.update()
 
         project_cols = ['id']
         # The following gets a list of fields that we need,
@@ -424,16 +412,15 @@ def export_tree(
     ############################################################
     EXPORT_LOGGER.debug('GATHERING DATABASE ENTRIES...')
 
-    if not silent and entries_to_add:
-        progress_bar.reset(total=len(entries_to_add))
+    if entries_to_add:
+        progress_bar = get_progress_bar(total=len(entries_to_add), disable=silent)
 
     export_data = defaultdict(dict)
     entity_separator = '_'
     for entity_name, partial_query in entries_to_add.items():
 
-        if not silent:
-            progress_bar.set_description_str('Exporting {}s'.format(entity_name), refresh=False)
-            progress_bar.update()
+        progress_bar.set_description_str('Exporting {}s'.format(entity_name), refresh=False)
+        progress_bar.update()
 
         foreign_fields = {k: v for k, v in all_fields_info[entity_name].items() if 'requires' in v}
 
@@ -458,10 +445,8 @@ def export_tree(
                     )
                 })
 
-    if not silent:
-        # Close progress up until this point in order to print properly
-        progress_bar.leave = False
-        progress_bar.close()
+    # Close progress up until this point in order to print properly
+    close_progress_bar(leave=False)
 
     #######################################
     # Manually manage attributes and extras
@@ -482,9 +467,8 @@ def export_tree(
         print(msg)
     EXPORT_LOGGER.debug(msg)
 
-    if not silent:
-        # Instantiate new progress bar
-        progress_bar = tqdm(total=1, bar_format=BAR_FORMAT, leave=True)
+    # Instantiate new progress bar
+    progress_bar = get_progress_bar(total=1, leave=True, disable=silent)
 
     # ATTRIBUTES and EXTRAS
     EXPORT_LOGGER.debug('GATHERING NODE ATTRIBUTES AND EXTRAS...')
@@ -499,13 +483,11 @@ def export_tree(
             }}, project=['id', 'attributes', 'extras']
         )
 
-        if not silent:
-            progress_bar.reset(total=all_nodes_query.count())
-            progress_bar.set_description_str('Exporting Attributes and Extras', refresh=False)
+        progress_bar = get_progress_bar(total=all_nodes_query.count(), disable=silent)
+        progress_bar.set_description_str('Exporting Attributes and Extras', refresh=False)
 
         for node_pk, attributes, extras in all_nodes_query.iterall():
-            if not silent:
-                progress_bar.update()
+            progress_bar.update()
 
             node_attributes[str(node_pk)] = attributes
             node_extras[str(node_pk)] = extras
@@ -522,15 +504,14 @@ def export_tree(
             }, project='uuid', tag='groups'
         ).append(orm.Node, project='uuid', with_group='groups')
 
-        if not silent:
-            total_node_uuids_for_groups = group_uuids_with_node_uuids.count()
-            if total_node_uuids_for_groups:
-                progress_bar.reset(total=total_node_uuids_for_groups)
-                progress_bar.set_description_str('Exporting Groups ...', refresh=False)
+        # This part is _only_ for the progress bar
+        total_node_uuids_for_groups = group_uuids_with_node_uuids.count()
+        if total_node_uuids_for_groups:
+            progress_bar = get_progress_bar(total=total_node_uuids_for_groups, disable=silent)
+            progress_bar.set_description_str('Exporting Groups ...', refresh=False)
 
         for group_uuid, node_uuid in group_uuids_with_node_uuids.iterall():
-            if not silent:
-                progress_bar.update()
+            progress_bar.update()
 
             groups_uuid[group_uuid].append(node_uuid)
 
@@ -591,16 +572,14 @@ def export_tree(
     if all_node_pks:
         all_node_uuids = {node_pk_2_uuid_mapping[_] for _ in all_node_pks}
 
-        if not silent:
-            progress_bar.reset(total=len(all_node_uuids))
-            pbar_base_str = 'Exporting repository - '
+        progress_bar = get_progress_bar(total=len(all_node_uuids), disable=silent)
+        pbar_base_str = 'Exporting repository - '
 
         for uuid in all_node_uuids:
             sharded_uuid = export_shard_uuid(uuid)
 
-            if not silent:
-                progress_bar.set_description_str(pbar_base_str + 'UUID={}'.format(uuid.split('-')[0]), refresh=False)
-                progress_bar.update()
+            progress_bar.set_description_str(pbar_base_str + 'UUID={}'.format(uuid.split('-')[0]), refresh=False)
+            progress_bar.update()
 
             # Important to set create=False, otherwise creates twice a subfolder. Maybe this is a bug of insert_path?
             thisnodefolder = nodesubfolder.get_subfolder(sharded_uuid, create=False, reset_limit=True)
@@ -615,6 +594,4 @@ def export_tree(
             # In this way, I copy the content of the folder, and not the folder itself
             thisnodefolder.insert_path(src=src.abspath, dest_name='.')
 
-    if not silent:
-        progress_bar.leave = False
-        progress_bar.close()
+    close_progress_bar(leave=False)

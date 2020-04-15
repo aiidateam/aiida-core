@@ -20,6 +20,7 @@ from aiida.cmdline.params import options
 from aiida.cmdline.params.types import GroupParamType, ImportPath
 from aiida.cmdline.utils import decorators, echo
 
+from aiida.tools.importexport.common import close_progress_bar
 from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
@@ -38,7 +39,7 @@ class ExtrasImportCode(Enum):
 
 
 def _echo_error(  # pylint: disable=unused-argument
-    message, non_interactive, more_archives, raised_exception, progress_bar=None, **kwargs
+    message, non_interactive, more_archives, raised_exception, **kwargs
 ):
     """Utility function to help write an error message for ``verdi import``
 
@@ -50,12 +51,9 @@ def _echo_error(  # pylint: disable=unused-argument
     :type more_archives: bool
     :param raised_exception: Exception raised during error.
     :type raised_exception: `Exception`
-    :param progress_bar: A tqdm progress bar instance.
     """
     # Close progress bar, if it exists
-    if progress_bar:
-        progress_bar.leave = False
-        progress_bar.close()
+    close_progress_bar(leave=False)
 
     IMPORT_LOGGER.debug('%s', traceback.format_exc())
 
@@ -116,9 +114,6 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
                 **kwargs
             )
         else:
-            progress_bar = kwargs.get('progress_bar')
-            progress_bar.close()
-
             # Migration has not yet been tried.
             if migration:
                 # Confirm migration
@@ -188,11 +183,6 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
         echo.echo_info('proceeding with import')
 
         return temp_folder.get_abs_path(temp_out_file)
-
-
-def _get_progress_bar():
-    from tqdm import tqdm
-    return tqdm(total=1, leave=False)
 
 
 @verdi.command('import')
@@ -311,7 +301,6 @@ def cmd_import(
         import_opts['archive'] = archive
         import_opts['file_to_import'] = import_opts['archive']
         import_opts['more_archives'] = archive != archives_file[-1] or archives_url
-        import_opts['progress_bar'] = _get_progress_bar()
 
         # First attempt to import archive
         migrate_archive = _try_import(migration_performed=False, **import_opts)
@@ -345,7 +334,6 @@ def cmd_import(
 
             # First attempt to import archive
             import_opts['file_to_import'] = temp_folder.get_abs_path(temp_file)
-            import_opts['progress_bar'] = _get_progress_bar()
             migrate_archive = _try_import(migration_performed=False, **import_opts)
 
             # Migrate archive if needed and desired

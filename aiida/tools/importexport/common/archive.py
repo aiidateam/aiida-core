@@ -238,9 +238,63 @@ def update_description(path, progress_bar: tqdm, refresh: bool = False):
     progress_bar.set_description_str(description, refresh=refresh)
 
 
-def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, progress_bar=None):
+def get_file_iterator(file_handle, folderpath, silent=False, progress_bar=None):
+    """Go through JSON files and then return new file_iterator
+
+    :param file_handle: A file handle returned from `with open() as file_handle:`.
+    :type file_handle: `tarfile.TarFile`, `zipfile.ZipFile`
+
+    :param folderpath: Path to folder.
+    :type folderpath: str
+
+    :param silent: suppress debug print
+    :type silent: bool
+
+    :param progress_bar: Possible instantiated tqdm progress bar
+    :type progress_bar: `tqdm.tqdm`
+
+    :return: List of filenames in the archive.
+    :rtype: list
     """
-    Extract the nodes to be imported from a zip file.
+    json_files = {'metadata.json', 'data.json'}
+
+    if isinstance(file_handle, tarfile.TarFile):
+        file_format = 'tar'
+    elif isinstance(file_handle, zipfile.ZipFile):
+        file_format = 'zip'
+    else:
+        raise TypeError('Can only handle Tar or Zip files.')
+
+    if silent:
+        file_iterator = json_files
+    else:
+        if progress_bar:
+            progress_bar.leave = False
+            progress_bar.close()
+        file_iterator = tqdm(json_files, bar_format=BAR_FORMAT, leave=False)
+
+    for json_file in file_iterator:
+        if not silent:
+            update_description(json_file, file_iterator)
+
+        try:
+            if file_format == 'tar':
+                file_handle.extract(path=folderpath, member=file_handle.getmember(json_file))
+            else:
+                file_handle.extract(path=folderpath, member=json_file)
+        except KeyError:
+            raise CorruptArchive('required file `{}` is not included'.format(json_file))
+
+    if file_format == 'tar':
+        return file_handle.getmembers(
+        ) if silent else tqdm(file_handle.getmembers(), unit='files', bar_format=BAR_FORMAT, leave=False)
+    # zip
+    return file_handle.namelist(
+    ) if silent else tqdm(file_handle.namelist(), unit='files', bar_format=BAR_FORMAT, leave=False)
+
+
+def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, **kwargs):
+    """Extract the nodes to be imported from a zip file.
 
     :param infile: file path
     :type infile: str
@@ -259,8 +313,6 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, progr
         incorrect formats
     """
     # pylint: disable=fixme
-    json_files = {'metadata.json', 'data.json'}
-
     if nodes_export_subfolder:
         if not isinstance(nodes_export_subfolder, str):
             raise TypeError('nodes_export_subfolder must be a string')
@@ -273,25 +325,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, progr
             if not handle.namelist():
                 raise CorruptArchive('no files detected in archive')
 
-            if silent:
-                file_iterator = json_files
-            else:
-                if progress_bar:
-                    progress_bar.leave = False
-                    progress_bar.close()
-                file_iterator = tqdm(json_files, bar_format=BAR_FORMAT, leave=False)
-
-            for json_file in file_iterator:
-                if not silent:
-                    update_description(json_file, file_iterator)
-
-                try:
-                    handle.extract(path=folder.abspath, member=json_file)
-                except KeyError:
-                    raise CorruptArchive('required file `{}` is not included'.format(json_file))
-
-            file_iterator = handle.namelist(
-            ) if silent else tqdm(handle.namelist(), unit='files', bar_format=BAR_FORMAT, leave=False)
+            file_iterator = get_file_iterator(file_handle=handle, folderpath=folder.abspath, silent=silent, **kwargs)
 
             for membername in file_iterator:
                 # Check that we are only exporting nodes within the subfolder!
@@ -308,7 +342,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, progr
         raise ValueError('The input file format for import is not valid (not a zip file)')
 
 
-def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, progress_bar=None):
+def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, **kwargs):
     """
     Extract the nodes to be imported from a (possibly zipped) tar file.
 
@@ -329,8 +363,6 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, progr
         incorrect formats
     """
     # pylint: disable=fixme
-    json_files = {'metadata.json', 'data.json'}
-
     if nodes_export_subfolder:
         if not isinstance(nodes_export_subfolder, str):
             raise TypeError('nodes_export_subfolder must be a string')
@@ -343,25 +375,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, progr
             if len(handle.getmembers()) == 1 and handle.getmembers()[0].size == 0:
                 raise CorruptArchive('no files detected in archive')
 
-            if silent:
-                file_iterator = json_files
-            else:
-                if progress_bar:
-                    progress_bar.leave = False
-                    progress_bar.close()
-                file_iterator = tqdm(json_files, bar_format=BAR_FORMAT, leave=False)
-
-            for json_file in file_iterator:
-                if not silent:
-                    update_description(json_file, file_iterator)
-
-                try:
-                    handle.extract(path=folder.abspath, member=handle.getmember(json_file))
-                except KeyError:
-                    raise CorruptArchive('required file `{}` is not included'.format(json_file))
-
-            file_iterator = handle.getmembers(
-            ) if silent else tqdm(handle.getmembers(), unit='files', bar_format=BAR_FORMAT, leave=False)
+            file_iterator = get_file_iterator(file_handle=handle, folderpath=folder.abspath, silent=silent, **kwargs)
 
             for member in file_iterator:
                 if member.isdev():

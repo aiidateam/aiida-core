@@ -272,8 +272,8 @@ def check_process_nodes_sealed(nodes):
         )
 
 
-def print_header(file_format, outfile, debug, **kwargs):
-    """Print header for export"""
+def summary(file_format, outfile, debug, **kwargs):
+    """Print summary for export"""
     from tabulate import tabulate
     from aiida.cmdline.utils import echo
     from aiida.tools.importexport.common.config import EXPORT_VERSION

@@ -34,7 +34,7 @@ from aiida.tools.importexport.common.config import (
 from aiida.tools.importexport.common.config import entity_names_to_signatures
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbimport.utils import (
-    deserialize_field, merge_comment, merge_extras, start_header, finish_header
+    deserialize_field, merge_comment, merge_extras, start_summary, result_summary
 )
 
 
@@ -169,7 +169,7 @@ def import_data_dj(
             raise exceptions.IncompatibleArchiveVersionError(msg)
 
         if not silent:
-            start_header(in_path, comment_mode, extras_mode_new, extras_mode_existing, debug)
+            start_summary(in_path, comment_mode, extras_mode_new, extras_mode_existing, debug)
 
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
@@ -811,6 +811,6 @@ def import_data_dj(
         progress_bar.close()
 
         # Summarize import
-        finish_header(ret_dict, getattr(group, 'label', None))
+        result_summary(ret_dict, getattr(group, 'label', None))
 
     return ret_dict

@@ -9,12 +9,15 @@
 ###########################################################################
 """ Utility functions for import of AiiDA entities """
 # pylint: disable=inconsistent-return-statements,too-many-branches
-import click
+import os
 
+import click
 from tabulate import tabulate
 
-from aiida.orm import QueryBuilder, Comment
+from aiida.cmdline.utils import echo
 from aiida.common.utils import get_new_uuid
+from aiida.orm import QueryBuilder, Comment
+
 from aiida.tools.importexport.common import exceptions
 
 
@@ -245,29 +248,24 @@ def deserialize_field(key, value, fields_info, import_unique_ids_mappings, forei
     return ('{}_id'.format(key), None)
 
 
-def start_header(archive, comment_mode, extras_mode_new, extras_mode_existing, debug):
-    """Print header for import"""
-    import os
-    from aiida.cmdline.utils import echo
-
+def start_summary(archive, comment_mode, extras_mode_new, extras_mode_existing, debug):
+    """Print starting summary for import"""
     archive = os.path.basename(archive)
     title = 'IMPORT - !!! DEBUG MODE !!!' if debug else 'IMPORT'
     result = '\n{}'.format(tabulate([['Archive', archive]], headers=[title, '']))
 
     parameters = [
-        ['Comment mode', comment_mode],
-        ['New Node Extras mode', extras_mode_new],
-        ['Existing Node Extras mode', extras_mode_existing],
+        ['Comment rules', comment_mode],
+        ['New Node Extras rules', extras_mode_new],
+        ['Existing Node Extras rules', extras_mode_existing],
     ]
     result += '\n\n{}'.format(tabulate(parameters, headers=['Parameters', '']))
 
     echo.echo(result)
 
 
-def finish_header(results, import_group_label):
-    """Summarize import results in header"""
-    from aiida.cmdline.utils import echo
-
+def result_summary(results, import_group_label):
+    """Summarize import results"""
     title = None
 
     if results or import_group_label:

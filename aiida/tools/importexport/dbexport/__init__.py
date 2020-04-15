@@ -31,7 +31,7 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
-    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, print_header
+    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, summary
 )
 
 from .zip import ZipFolder
@@ -91,7 +91,7 @@ def export_zip(what, outfile='testzip', overwrite=False, silent=False, debug=Fal
 
     if not silent:
         file_format = 'Zip (compressed)' if use_compression else 'Zip (uncompressed)'
-        print_header(file_format, outfile, debug, **kwargs)
+        summary(file_format, outfile, debug, **kwargs)
 
     if debug:
         time_start = time.time()
@@ -605,7 +605,7 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
 
     if not silent:
         file_format = 'Gzipped tarball (compressed)'
-        print_header(file_format, outfile, debug, **kwargs)
+        summary(file_format, outfile, debug, **kwargs)
 
     folder = SandboxFolder()
     if debug:

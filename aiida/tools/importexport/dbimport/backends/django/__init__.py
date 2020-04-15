@@ -762,6 +762,7 @@ def import_data_dj(
                 progress_bar.update()
                 nodes.append(entry[0])
             group.add_nodes(nodes)
+            progress_bar.set_description_str('Done', refresh=True)
         else:
             IMPORT_LOGGER.debug('No Nodes to import, so no Group created, if it did not already exist')
 

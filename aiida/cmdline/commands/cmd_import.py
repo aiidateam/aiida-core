@@ -10,13 +10,17 @@
 """`verdi import` command."""
 # pylint: disable=broad-except,too-many-arguments,too-many-locals,too-many-branches
 from enum import Enum
+import traceback
 import urllib.request
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types import GroupParamType, ImportPath
 from aiida.cmdline.utils import decorators, echo
+
+from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
 EXTRAS_MODE_NEW = ['import', 'none']
@@ -34,7 +38,7 @@ class ExtrasImportCode(Enum):
 
 
 def _echo_error(  # pylint: disable=unused-argument
-    message, non_interactive, more_archives, raised_exception, progress_bar=None, debug=False, **kwargs
+    message, non_interactive, more_archives, raised_exception, progress_bar=None, **kwargs
 ):
     """Utility function to help write an error message for ``verdi import``
 
@@ -47,21 +51,15 @@ def _echo_error(  # pylint: disable=unused-argument
     :param raised_exception: Exception raised during error.
     :type raised_exception: `Exception`
     :param progress_bar: A tqdm progress bar instance.
-    :param debug: Whether or not debug mode was on. [Default: False]
-    :type debug: bool
     """
     # Close progress bar, if it exists
     if progress_bar:
-        if not debug:
-            progress_bar.leave = False
+        progress_bar.leave = False
         progress_bar.close()
 
-    if debug:
-        import traceback
+    IMPORT_LOGGER.debug('%s', traceback.format_exc())
 
-        exception = traceback.format_exc()
-    else:
-        exception = '{}: {}'.format(raised_exception.__class__.__name__, str(raised_exception))
+    exception = '{}: {}'.format(raised_exception.__class__.__name__, str(raised_exception))
 
     echo.echo_error(message)
     echo.echo(exception)
@@ -249,12 +247,10 @@ def _get_progress_bar():
     help='Force migration of export file archives, if needed.'
 )
 @options.NON_INTERACTIVE()
-@options.DEBUG()
 @decorators.with_dbenv()
 @click.pass_context
 def cmd_import(
-    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive,
-    debug
+    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive
 ):
     """Import data from an AiiDA archive file.
 
@@ -303,8 +299,7 @@ def cmd_import(
         'extras_mode_existing': ExtrasImportCode[extras_mode_existing].value,
         'extras_mode_new': extras_mode_new,
         'comment_mode': comment_mode,
-        'non_interactive': non_interactive,
-        'debug': debug
+        'non_interactive': non_interactive
     }
 
     # Import local archives

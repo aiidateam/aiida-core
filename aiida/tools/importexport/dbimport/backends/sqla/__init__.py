@@ -38,7 +38,7 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbimport.utils import (
-    deserialize_field, merge_comment, merge_extras, start_summary, result_summary
+    deserialize_field, merge_comment, merge_extras, start_summary, result_summary, IMPORT_LOGGER
 )
 from aiida.tools.importexport.dbimport.backends.sqla.utils import validate_uuid
 
@@ -51,7 +51,6 @@ def import_data_sqla(
     extras_mode_new='import',
     comment_mode='newest',
     silent=False,
-    debug=False,
     **kwargs
 ):
     """Import exported AiiDA archive to the AiiDA database and repository.
@@ -94,9 +93,6 @@ def import_data_sqla(
 
     :param silent: suppress prints.
     :type silent: bool
-
-    :param debug: Whether or not to print helpful debug messages (will mess up the progress bar a bit).
-    :type debug: bool
 
     :return: New and existing Nodes and Links.
     :rtype: dict
@@ -149,13 +145,11 @@ def import_data_sqla(
         if not folder.get_content_list():
             raise exceptions.CorruptArchive('The provided file/folder ({}) is empty'.format(in_path))
         try:
-            if debug:
-                print('CACHING metadata.json')
+            IMPORT_LOGGER.debug('CACHING metadata.json')
             with open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
 
-            if debug:
-                print('CACHING data.json')
+            IMPORT_LOGGER.debug('CACHING data.json')
             with open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
                 data = json.load(fhandle)
         except IOError as error:
@@ -178,14 +172,13 @@ def import_data_sqla(
             raise exceptions.IncompatibleArchiveVersionError(msg)
 
         if not silent:
-            start_summary(in_path, comment_mode, extras_mode_new, extras_mode_existing, debug)
+            start_summary(in_path, comment_mode, extras_mode_new, extras_mode_existing)
 
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
         #              I HAVE ALL NODES FOR THE LINKS                     #
         ###################################################################
-        if debug:
-            print('CHECKING IF NODES FROM LINKS ARE IN DB OR ARCHIVE...')
+        IMPORT_LOGGER.debug('CHECKING IF NODES FROM LINKS ARE IN DB OR ARCHIVE...')
 
         linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
         group_nodes = set(chain.from_iterable(data['groups_uuid'].values()))
@@ -250,8 +243,7 @@ def import_data_sqla(
         #           2363: 'ef04aa5d-99e7-4bfd-95ef-fe412a6a3524', 2364: '1dc59576-af21-4d71-81c2-bac1fc82a84a'},
         # 'User': {1: 'aiida@localhost'}
         # }
-        if debug:
-            print('CREATING PK-2-UUID/EMAIL MAPPING...')
+        IMPORT_LOGGER.debug('CREATING PK-2-UUID/EMAIL MAPPING...')
         import_unique_ids_mappings = {}
         # Export data since v0.3 contains the keys entity_name
         for entity_name, import_data in data['export_data'].items():
@@ -274,8 +266,7 @@ def import_data_sqla(
             new_entries = {}
             existing_entries = {}
 
-            if debug:
-                print('GENERATING LIST OF DATA...')
+            IMPORT_LOGGER.debug('GENERATING LIST OF DATA...')
 
             if not silent:
                 # Instantiate progress bar
@@ -304,8 +295,7 @@ def import_data_sqla(
                 # Not necessarily all models are exported
                 if entity_name in data['export_data']:
 
-                    if debug:
-                        print('  {}...'.format(entity_name))
+                    IMPORT_LOGGER.debug('  %s...', entity_name)
 
                     if not silent:
                         progress_bar.set_description_str(pbar_base_str + entity_name, refresh=False)
@@ -332,8 +322,7 @@ def import_data_sqla(
                                 k: v.pk for k, v in relevant_db_entries.items()
                             }
 
-                        if debug:
-                            print('    GOING THROUGH ARCHIVE...')
+                        IMPORT_LOGGER.debug('    GOING THROUGH ARCHIVE...')
 
                         imported_comp_names = set()
                         for key, value in data['export_data'][entity_name].items():
@@ -453,8 +442,9 @@ def import_data_sqla(
                     if entity_name not in ret_dict:
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['existing'].append((import_entry_pk, existing_entry_pk))
-                    if debug:
-                        print('existing %s: %s (%s->%s)' % (entity_name, unique_id, import_entry_pk, existing_entry_pk))
+                    IMPORT_LOGGER.debug(
+                        'Existing %s: %s (%s->%s)', entity_name, unique_id, import_entry_pk, existing_entry_pk
+                    )
 
                 # Store all objects for this model in a list, and store them
                 # all in once at the end.
@@ -512,8 +502,7 @@ def import_data_sqla(
                     import_new_entry_pks[unique_id] = import_entry_pk
 
                 if entity_name == NODE_ENTITY_NAME:
-                    if debug:
-                        print('STORING NEW NODE REPOSITORY FILES & ATTRIBUTES...')
+                    IMPORT_LOGGER.debug('STORING NEW NODE REPOSITORY FILES & ATTRIBUTES...')
 
                     # NEW NODES
                     for object_ in objects_to_create:
@@ -543,8 +532,7 @@ def import_data_sqla(
                         destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
                         # For Nodes, we also have to store Attributes!
-                        if debug:
-                            print('STORING NEW NODE ATTRIBUTES...')
+                        IMPORT_LOGGER.debug('STORING NEW NODE ATTRIBUTES...')
                         if not silent:
                             progress_bar.set_description_str(pbar_node_base_str + 'Attributes', refresh=True)
 
@@ -558,8 +546,7 @@ def import_data_sqla(
 
                         # For DbNodes, we also have to store extras
                         if extras_mode_new == 'import':
-                            if debug:
-                                print('STORING NEW NODE EXTRAS...')
+                            IMPORT_LOGGER.debug('STORING NEW NODE EXTRAS...')
                             if not silent:
                                 progress_bar.set_description_str(pbar_node_base_str + 'Extras', refresh=True)
 
@@ -578,8 +565,7 @@ def import_data_sqla(
                             # till here
                             object_.extras = extras
                         elif extras_mode_new == 'none':
-                            if debug:
-                                print('SKIPPING NEW NODE EXTRAS...')
+                            IMPORT_LOGGER.debug('SKIPPING NEW NODE EXTRAS...')
                         else:
                             raise exceptions.ImportValidationError(
                                 "Unknown extras_mode_new value: {}, should be either 'import' or 'none'"
@@ -587,8 +573,7 @@ def import_data_sqla(
                             )
 
                     # EXISTING NODES (Extras)
-                    if debug:
-                        print('UPDATING EXISTING NODE EXTRAS...')
+                    IMPORT_LOGGER.debug('UPDATING EXISTING NODE EXTRAS...')
 
                     import_existing_entry_pks = {
                         entry_data[unique_identifier]: import_entry_pk
@@ -678,11 +663,9 @@ def import_data_sqla(
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['new'].append((import_entry_pk, new_pk))
 
-                    if debug:
-                        print('NEW %s: %s (%s->%s)' % (entity_name, unique_id, import_entry_pk, new_pk))
+                    IMPORT_LOGGER.debug('N %s: %s (%s->%s)', entity_name, unique_id, import_entry_pk, new_pk)
 
-            if debug:
-                print('STORING NODE LINKS...')
+            IMPORT_LOGGER.debug('STORING NODE LINKS...')
 
             import_links = data['links_uuid']
 
@@ -728,11 +711,9 @@ def import_data_sqla(
                     ret_dict['Link'] = {'new': []}
                 ret_dict['Link']['new'].append((in_id, out_id))
 
-            if debug:
-                print('   ({} new links...)'.format(len(ret_dict.get('Link', {}).get('new', []))))
+            IMPORT_LOGGER.debug('   (%d new links...)', len(ret_dict.get('Link', {}).get('new', [])))
 
-            if debug:
-                print('STORING GROUP ELEMENTS...')
+            IMPORT_LOGGER.debug('STORING GROUP ELEMENTS...')
 
             import_groups = data['groups_uuid']
 
@@ -808,17 +789,14 @@ def import_data_sqla(
                         nodes.append(entry[0].backend_entity)
                 group.backend_entity.add_nodes(nodes, skip_orm=True)
             else:
-                if debug:
-                    print('No Nodes to import, so no Group created, if it did not already exist')
+                IMPORT_LOGGER.debug('No Nodes to import, so no Group created, if it did not already exist')
 
-            if debug:
-                print('COMMITTING EVERYTHING...')
+            IMPORT_LOGGER.debug('COMMITTING EVERYTHING...')
             session.commit()
 
             if not silent:
                 # Finalize Progress bar
-                if not debug:
-                    progress_bar.leave = False
+                progress_bar.leave = False
                 progress_bar.close()
 
                 # Summarize import
@@ -827,14 +805,12 @@ def import_data_sqla(
         except:
             if not silent:
                 # Finalize Progress bar
-                if not debug:
-                    progress_bar.leave = False
+                progress_bar.leave = False
                 progress_bar.close()
 
                 result_summary({}, None)
 
-            if debug:
-                print('Rolling back')
+            IMPORT_LOGGER.debug('Rolling back')
             session.rollback()
             raise
 

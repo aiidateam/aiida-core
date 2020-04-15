@@ -9,12 +9,15 @@
 ###########################################################################
 """ Utility functions for export of AiiDA entities """
 # pylint: disable=too-many-locals,too-many-branches,too-many-nested-blocks
-
 from aiida.orm import QueryBuilder, ProcessNode
+from aiida.common.log import AIIDA_LOGGER
+
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.config import (
     file_fields_to_model_fields, entity_names_to_entities, get_all_fields_info
 )
+
+EXPORT_LOGGER = AIIDA_LOGGER.getChild('export')
 
 
 def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag_suffixes=None, entity_separator='_'):
@@ -272,16 +275,15 @@ def check_process_nodes_sealed(nodes):
         )
 
 
-def summary(file_format, outfile, debug, **kwargs):
+def summary(file_format, outfile, **kwargs):
     """Print summary for export"""
     from tabulate import tabulate
     from aiida.cmdline.utils import echo
     from aiida.tools.importexport.common.config import EXPORT_VERSION
 
-    title = 'EXPORT - !!! DEBUG MODE !!!' if debug else 'EXPORT'
     parameters = [['Archive', outfile], ['Format', file_format], ['Export version', EXPORT_VERSION]]
 
-    result = '\n{}'.format(tabulate(parameters, headers=[title, '']))
+    result = '\n{}'.format(tabulate(parameters, headers=['EXPORT', '']))
 
     include_comments = kwargs.get('include_comments', True)
     include_logs = kwargs.get('include_logs', True)

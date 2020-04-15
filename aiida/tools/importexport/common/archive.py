@@ -238,7 +238,7 @@ def update_description(path, progress_bar: tqdm, refresh: bool = False):
     progress_bar.set_description_str(description, refresh=refresh)
 
 
-def get_file_iterator(file_handle, folderpath, silent=False, progress_bar=None):
+def get_file_iterator(file_handle, folderpath, silent=False, progress_bar=None, **kwargs):  # pylint: disable=unused-argument
     """Go through JSON files and then return new file_iterator
 
     :param file_handle: A file handle returned from `with open() as file_handle:`.
@@ -247,7 +247,7 @@ def get_file_iterator(file_handle, folderpath, silent=False, progress_bar=None):
     :param folderpath: Path to folder.
     :type folderpath: str
 
-    :param silent: suppress debug print
+    :param silent: suppress progress bar
     :type silent: bool
 
     :param progress_bar: Possible instantiated tqdm progress bar
@@ -305,7 +305,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, **kwa
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
     :type nodes_export_subfolder: str
 
-    :param silent: suppress debug print
+    :param silent: suppress progress bar
     :type silent: bool
 
     :raises TypeError: if parameter types are not respected
@@ -355,7 +355,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, **kwa
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
     :type nodes_export_subfolder: str
 
-    :param silent: suppress debug print
+    :param silent: suppress progress bar
     :type silent: bool
 
     :raises TypeError: if parameter types are not respected

@@ -18,6 +18,7 @@ from tqdm import tqdm
 
 from aiida import get_version, orm
 from aiida.common import json
+from aiida.common.exceptions import LicensingException
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.orm.utils.repository import Repository
 
@@ -31,7 +32,7 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
-    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, summary
+    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, summary, EXPORT_LOGGER
 )
 
 from .zip import ZipFolder
@@ -39,16 +40,7 @@ from .zip import ZipFolder
 __all__ = ('export',)
 
 
-def export(
-    entities,
-    filename=None,
-    file_format=None,
-    overwrite=False,
-    silent=False,
-    debug=False,
-    use_compression=True,
-    **kwargs
-):
+def export(entities, filename=None, file_format=None, overwrite=False, silent=False, use_compression=True, **kwargs):
     """Export AiiDA data
 
     :param entities: a list of entity instances; they can belong to different models/entities.
@@ -66,9 +58,6 @@ def export(
 
     :param silent: suppress prints.
     :type silent: bool
-
-    :param debug: Whether or not to print helpful debug messages (will mess up the progress bar a bit).
-    :type debug: bool
 
     :param use_compression: Whether or not to compress the archive file (only valid for the zip file format).
     :type use_compression: bool
@@ -117,26 +106,31 @@ def export(
             file_format_verbose = 'Zip (compressed)'
         else:
             file_format_verbose = 'Zip (uncompressed)'
-        summary(file_format_verbose, filename, debug, **kwargs)
+        summary(file_format_verbose, filename, **kwargs)
 
-    if file_format == 'tar':
-        times = export_tar(what=entities, outfile=filename, silent=silent, debug=debug, **kwargs)
-    else:  # zip
-        times = export_zip(
-            what=entities, outfile=filename, use_compression=use_compression, silent=silent, debug=debug, **kwargs
-        )
-
-    if debug:
-        if len(times) == 2:
-            export_start, export_end = times
-            print('Exported in {:6.2g}s.'.format(export_end - export_start))
-        elif len(times) == 4:
-            export_start, export_end, compress_start, compress_end = times
-            print(
-                'Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.'.format(
-                    export_end - export_start, compress_end - compress_start, compress_end - export_start
-                )
+    try:
+        if file_format == 'tar':
+            times = export_tar(what=entities, outfile=filename, silent=silent, **kwargs)
+        else:  # zip
+            times = export_zip(
+                what=entities, outfile=filename, use_compression=use_compression, silent=silent, **kwargs
             )
+    except (exceptions.ArchiveExportError, LicensingException) as exc:
+        if os.path.exists(filename):
+            os.remove(filename)
+        raise exc
+
+    if len(times) == 2:
+        export_start, export_end = times
+        EXPORT_LOGGER.debug('Exported in %6.2g s.', export_end - export_start)
+    elif len(times) == 4:
+        export_start, export_end, compress_start, compress_end = times
+        EXPORT_LOGGER.debug(
+            'Exported in %6.2g s, compressed in %6.2g s, total: %6.2g s.', export_end - export_start,
+            compress_end - compress_start, compress_end - export_start
+        )
+    else:
+        EXPORT_LOGGER.debug('No information about the timing of the export.')
 
 
 def export_zip(what, outfile, use_compression=True, **kwargs):
@@ -187,7 +181,6 @@ def export_tree(
     allowed_licenses=None,
     forbidden_licenses=None,
     silent=False,
-    debug=False,
     include_comments=True,
     include_logs=True,
     **kwargs
@@ -213,9 +206,6 @@ def export_tree(
     :param silent: suppress prints.
     :type silent: bool
 
-    :param debug: Whether or not to print helpful debug messages (will mess up the progress bar a bit).
-    :type debug: bool
-
     :param include_comments: In-/exclude export of comments for given node(s) in ``what``.
         Default: True, *include* comments in export (as well as relevant users).
     :type include_comments: bool
@@ -234,8 +224,7 @@ def export_tree(
     from collections import defaultdict
     from aiida.tools.graph.graph_traversers import get_nodes_export
 
-    if debug:
-        print('STARTING EXPORT...')
+    EXPORT_LOGGER.debug('STARTING EXPORT...')
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
@@ -277,7 +266,7 @@ def export_tree(
     # Add all the nodes contained within the specified groups
     if GROUP_ENTITY_NAME in entities_starting_set:
 
-        if debug or not silent:
+        if not silent:
             progress_bar.set_description_str('Retrieving Nodes from Groups ...', refresh=True)
 
         # Use single query instead of given_group.nodes iterator for performance.
@@ -299,13 +288,13 @@ def export_tree(
             given_node_entry_ids.update(pks)
             del node_results, pks, uuids
 
-        if debug or not silent:
+        if not silent:
             progress_bar.update()
 
     # We will iteratively explore the AiiDA graph to find further nodes that should also be exported.
     # At the same time, we will create the links_uuid list of dicts to be exported
 
-    if debug or not silent:
+    if not silent:
         progress_bar.reset(total=1)
         progress_bar.set_description_str('Getting provenance and storing links ...', refresh=True)
 
@@ -334,7 +323,7 @@ def export_tree(
         'type': link.link_type
     } for link in traverse_output['links']]
 
-    if debug or not silent:
+    if not silent:
         progress_bar.update()
 
     if not silent:
@@ -368,7 +357,7 @@ def export_tree(
     if given_comment_entry_ids:
         given_entities.add(COMMENT_ENTITY_NAME)
 
-    if debug or not silent:
+    if not silent:
         progress_bar.update()
 
     if not silent and given_entities:
@@ -433,8 +422,7 @@ def export_tree(
     ############################################################
     ##### Start automatic recursive export data generation #####
     ############################################################
-    if debug:
-        print('GATHERING DATABASE ENTRIES...')
+    EXPORT_LOGGER.debug('GATHERING DATABASE ENTRIES...')
 
     if not silent and entries_to_add:
         progress_bar.reset(total=len(entries_to_add))
@@ -483,20 +471,23 @@ def export_tree(
 
     model_data = sum(len(model_data) for model_data in export_data.values())
     if not model_data:
-        if not silent or debug:
-            print('Nothing to store, exiting...')
+        msg = 'Nothing to store, exiting...'
+        if not silent:
+            print(msg)
+        EXPORT_LOGGER.debug(msg)
         return
 
-    if not silent or debug:
-        print('Exporting a total of {} database entries, of which {} are Nodes.'.format(model_data, len(all_node_pks)))
+    msg = 'Exporting a total of {} database entries, of which {} are Nodes.'.format(model_data, len(all_node_pks))
+    if not silent:
+        print(msg)
+    EXPORT_LOGGER.debug(msg)
 
     if not silent:
         # Instantiate new progress bar
         progress_bar = tqdm(total=1, bar_format=BAR_FORMAT, leave=True)
 
     # ATTRIBUTES and EXTRAS
-    if debug:
-        print('GATHERING NODE ATTRIBUTES AND EXTRAS...')
+    EXPORT_LOGGER.debug('GATHERING NODE ATTRIBUTES AND EXTRAS...')
     node_attributes = {}
     node_extras = {}
 
@@ -519,8 +510,7 @@ def export_tree(
             node_attributes[str(node_pk)] = attributes
             node_extras[str(node_pk)] = extras
 
-    if debug:
-        print('GATHERING GROUP ELEMENTS...')
+    EXPORT_LOGGER.debug('GATHERING GROUP ELEMENTS...')
     groups_uuid = defaultdict(list)
     # If a group is in the exported data, we export the group/node correlation
     if GROUP_ENTITY_NAME in export_data:
@@ -560,8 +550,7 @@ def export_tree(
     # subfolder inside the export package
     nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
 
-    if debug:
-        print('ADDING DATA TO EXPORT ARCHIVE...')
+    EXPORT_LOGGER.debug('ADDING DATA TO EXPORT ARCHIVE...')
 
     data = {
         'node_attributes': node_attributes,
@@ -596,8 +585,7 @@ def export_tree(
     with folder.open('metadata.json', 'w') as fhandle:
         fhandle.write(json.dumps(metadata))
 
-    if debug:
-        print('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')
+    EXPORT_LOGGER.debug('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')
 
     # If there are no nodes, there are no repository files to store
     if all_node_pks:

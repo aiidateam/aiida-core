@@ -105,7 +105,7 @@ class TestSimple(AiidaTestCase):
             struct.store()
 
             filename = os.path.join(export_file_tmp_folder, 'export.aiida')
-            export([struct], filename=filename, silent=True)
+            export([struct], filename=filename, file_format='tar', silent=True)
 
             with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack_tmp_folder)

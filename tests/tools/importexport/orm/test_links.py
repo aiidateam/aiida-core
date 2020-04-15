@@ -46,7 +46,7 @@ class TestLinks(AiidaTestCase):
         struct_uuid = struct.uuid
 
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([struct], filename=filename, silent=True)
+        export([struct], filename=filename, file_format='tar', silent=True)
 
         unpack = SandboxFolder()
         with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
@@ -628,7 +628,7 @@ class TestLinks(AiidaTestCase):
         calc_uuid = calc.uuid
 
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([struct], filename=filename, silent=True)
+        export([struct], filename=filename, file_format='tar', silent=True)
 
         unpack = SandboxFolder()
         with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:

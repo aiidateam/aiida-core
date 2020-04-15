@@ -15,10 +15,13 @@ import click
 from tabulate import tabulate
 
 from aiida.cmdline.utils import echo
+from aiida.common.log import AIIDA_LOGGER
 from aiida.common.utils import get_new_uuid
 from aiida.orm import QueryBuilder, Comment
 
 from aiida.tools.importexport.common import exceptions
+
+IMPORT_LOGGER = AIIDA_LOGGER.getChild('import')
 
 
 def merge_comment(incoming_comment, comment_mode):
@@ -248,11 +251,10 @@ def deserialize_field(key, value, fields_info, import_unique_ids_mappings, forei
     return ('{}_id'.format(key), None)
 
 
-def start_summary(archive, comment_mode, extras_mode_new, extras_mode_existing, debug):
+def start_summary(archive, comment_mode, extras_mode_new, extras_mode_existing):
     """Print starting summary for import"""
     archive = os.path.basename(archive)
-    title = 'IMPORT - !!! DEBUG MODE !!!' if debug else 'IMPORT'
-    result = '\n{}'.format(tabulate([['Archive', archive]], headers=[title, '']))
+    result = '\n{}'.format(tabulate([['Archive', archive]], headers=['IMPORT', '']))
 
     parameters = [
         ['Comment rules', comment_mode],

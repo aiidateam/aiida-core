@@ -10,6 +10,7 @@
 """Tests for `verdi export`."""
 import errno
 import os
+import shutil
 import tempfile
 import tarfile
 import traceback
@@ -69,7 +70,7 @@ class TestVerdiExport(AiidaTestCase):
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
         os.chdir(cls.old_cwd)
-        os.rmdir(cls.cwd)
+        shutil.rmtree(cls.cwd, ignore_errors=True)
 
     def setUp(self):
         self.cli_runner = CliRunner()

@@ -234,7 +234,7 @@ class TestSpecificImport(AiidaTestCase):
 
         # Export and reset db
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([node], filename=filename, silent=True)
+        export([node], filename=filename, file_format='tar', silent=True)
         self.reset_database()
 
         # Untar export file, remove repository folder, re-tar
@@ -256,7 +256,7 @@ class TestSpecificImport(AiidaTestCase):
                 msg="The Node's repository folder should now have been removed in the export file"
             )
 
-            filename_corrupt = os.path.join(temp_dir, 'export_corrupt.tar.gz')
+            filename_corrupt = os.path.join(temp_dir, 'export_corrupt.aiida')
             with tarfile.open(filename_corrupt, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
                 tar.add(folder.abspath, arcname='')
 

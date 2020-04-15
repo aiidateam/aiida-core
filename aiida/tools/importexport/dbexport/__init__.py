@@ -234,7 +234,7 @@ def export_tree(
 
     # Instantiate progress bar - go through list of "what"
     pbar_total = len(what) + 1 if what else 1
-    progress_bar = get_progress_bar(total=pbar_total, leave=True, disable=silent)
+    progress_bar = get_progress_bar(total=pbar_total, leave=False, disable=silent)
     progress_bar.set_description_str('Collecting chosen entities', refresh=False)
 
     # I store a list of the actual dbnodes
@@ -468,7 +468,7 @@ def export_tree(
     EXPORT_LOGGER.debug(msg)
 
     # Instantiate new progress bar
-    progress_bar = get_progress_bar(total=1, leave=True, disable=silent)
+    progress_bar = get_progress_bar(total=1, leave=False, disable=silent)
 
     # ATTRIBUTES and EXTRAS
     EXPORT_LOGGER.debug('GATHERING NODE ATTRIBUTES AND EXTRAS...')

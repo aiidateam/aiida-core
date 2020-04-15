@@ -239,7 +239,7 @@ def update_description(path, refresh: bool = False):
     progress_bar.set_description_str(description, refresh=refresh)
 
 
-def get_file_iterator(file_handle, folderpath, silent, **kwargs):  # pylint: disable=unused-argument
+def get_file_iterator(file_handle, folderpath, silent=False, **kwargs):  # pylint: disable=unused-argument
     """Go through JSON files and then return new file_iterator
 
     :param file_handle: A file handle returned from `with open() as file_handle:`.
@@ -277,6 +277,7 @@ def get_file_iterator(file_handle, folderpath, silent, **kwargs):  # pylint: dis
         except KeyError:
             raise CorruptArchive('required file `{}` is not included'.format(json_file))
 
+    close_progress_bar(leave=False)
     if file_format == 'tar':
         return get_progress_bar(iterable=file_handle.getmembers(), unit='files', leave=False, disable=silent)
     # zip
@@ -329,6 +330,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, **kwa
                 handle.extract(path=folder.abspath, member=membername)
     except zipfile.BadZipfile:
         raise ValueError('The input file format for import is not valid (not a zip file)')
+    close_progress_bar(leave=False)
 
 
 def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, **kwargs):
@@ -387,6 +389,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, **kwa
                 handle.extract(path=folder.abspath, member=member)
     except tarfile.ReadError:
         raise ValueError('The input file format for import is not valid (not a tar file)')
+    close_progress_bar(leave=False)
 
 
 def extract_tree(infile, folder):

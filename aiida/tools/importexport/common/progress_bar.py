@@ -47,6 +47,9 @@ def get_progress_bar(iterable=None, total=None, leave=None, **kwargs):
         # We leave it up to the caller/creator to properly have set leave before we close the current progress bar
         if leave is None:
             leave = PROGRESS_BAR.leave if PROGRESS_BAR.leave is not None else leave_default
+        for attribute in ('desc', 'disable'):
+            if getattr(PROGRESS_BAR, attribute, None) is not None:
+                kwargs[attribute] = getattr(PROGRESS_BAR, attribute)
         close_progress_bar()
         PROGRESS_BAR = tqdm(bar_format=BAR_FORMAT, leave=leave, **kwargs)
     else:

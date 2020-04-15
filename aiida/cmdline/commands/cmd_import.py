@@ -33,7 +33,9 @@ class ExtrasImportCode(Enum):
     ask = 'kca'
 
 
-def _echo_error(message, non_interactive, more_archives, progress_bar=None, debug=False, **kwargs):  # pylint: disable=unused-argument
+def _echo_error(  # pylint: disable=unused-argument
+    message, non_interactive, more_archives, raised_exception, progress_bar=None, debug=False, **kwargs
+):
     """Utility function to help write an error message for ``verdi import``
 
     :param message: Message following red-colored, bold "Error:".
@@ -42,12 +44,12 @@ def _echo_error(message, non_interactive, more_archives, progress_bar=None, debu
     :type non_interactive: bool
     :param more_archives: Whether or not there are more archives to import.
     :type more_archives: bool
+    :param raised_exception: Exception raised during error.
+    :type raised_exception: `Exception`
     :param progress_bar: A tqdm progress bar instance.
     :param debug: Whether or not debug mode was on. [Default: False]
     :type debug: bool
     """
-    import traceback
-
     # Close progress bar, if it exists
     if progress_bar:
         if not debug:
@@ -55,13 +57,11 @@ def _echo_error(message, non_interactive, more_archives, progress_bar=None, debu
         progress_bar.close()
 
     if debug:
+        import traceback
+
         exception = traceback.format_exc()
     else:
-        exception = traceback.format_exc(limit=0).splitlines()[-1]
-        exception_type = exception.split(':')[0].split('.')
-        if len(exception_type) > 1:
-            exception = ' '.join(exception.split(':')[1:])
-            exception = ':'.join([exception_type[-1], exception])
+        exception = '{}: {}'.format(raised_exception.__class__.__name__, str(raised_exception))
 
     echo.echo_error(message)
     echo.echo(exception)
@@ -79,9 +79,7 @@ def _echo_error(message, non_interactive, more_archives, progress_bar=None, debu
         click.Abort()
 
 
-def _try_import(
-    migration_performed, file_to_import, archive, group, migration, non_interactive, more_archives, **kwargs
-):
+def _try_import(migration_performed, file_to_import, archive, group, migration, non_interactive, **kwargs):
     """Utility function for `verdi import` to try to import archive
 
     :param migration_performed: Boolean to determine the exception message to throw for
@@ -91,7 +89,6 @@ def _try_import(
     :param group: AiiDA Group into which the import will be associated.
     :param migration: Whether or not to force migration of archive, if needed.
     :param non_interactive: Whether or not the user should be asked for input for any reason.
-    :param more_archives: Whether or not there are more archives to be imported.
     :param kwargs: Key-word-arguments that _must_ contain:
         * `'extras_mode_existing'`: `import_data`'s `'extras_mode_existing'` keyword, determining import rules for
         Extras.
@@ -117,7 +114,7 @@ def _try_import(
             _echo_error(
                 '{} has been migrated, but it still cannot be imported'.format(archive),
                 non_interactive=non_interactive,
-                more_archives=more_archives,
+                raised_exception=exception,
                 **kwargs
             )
         else:
@@ -140,11 +137,11 @@ def _try_import(
             else:
                 # Abort
                 echo.echo_critical(str(exception))
-    except Exception:
+    except Exception as exception:
         _echo_error(
             'an exception occurred while importing the archive {}'.format(archive),
             non_interactive=non_interactive,
-            more_archives=more_archives,
+            raised_exception=exception,
             **kwargs
         )
     else:
@@ -180,12 +177,13 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
         ctx.invoke(
             migrate, input_file=file_to_import, output_file=temp_folder.get_abs_path(temp_out_file), silent=False
         )
-    except Exception:
+    except Exception as exception:
         _echo_error(
             'an exception occurred while migrating the archive {}.\n'
             "Use 'verdi export migrate' to update this export file.".format(archive),
             non_interactive=non_interactive,
-            more_archives=more_archives
+            more_archives=more_archives,
+            raised_exception=exception
         )
     else:
         # Success
@@ -281,11 +279,12 @@ def cmd_import(
             try:
                 echo.echo_info('retrieving archive URLS from {}'.format(webpage))
                 urls = get_valid_import_links(webpage)
-            except Exception:
+            except Exception as exception:
                 _echo_error(
                     'an exception occurred while trying to discover archives at URL {}'.format(webpage),
                     non_interactive=non_interactive,
-                    more_archives=webpage != webpages[-1] or archives_file or archives_url
+                    more_archives=webpage != webpages[-1] or archives_file or archives_url,
+                    raised_exception=exception
                 )
             else:
                 echo.echo_success('{} archive URLs discovered and added'.format(len(urls)))
@@ -339,8 +338,8 @@ def cmd_import(
 
         try:
             response = urllib.request.urlopen(archive)
-        except Exception:
-            _echo_error('downloading archive {} failed'.format(archive), **import_opts)
+        except Exception as exception:
+            _echo_error('downloading archive {} failed'.format(archive), raised_exception=exception, **import_opts)
 
         with SandboxFolder() as temp_folder:
             temp_file = 'importfile.tar.gz'

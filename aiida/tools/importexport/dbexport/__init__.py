@@ -500,7 +500,7 @@ def export_tree(
     node_attributes = {}
     node_extras = {}
 
-    # Anoter QueryBuilder query to get the attributes and extras. TODO: See if this can be optimized
+    # Another QueryBuilder query to get the attributes and extras. TODO: See if this can be optimized
     if all_node_pks:
         all_nodes_query = orm.QueryBuilder().append(
             orm.Node, filters={'id': {

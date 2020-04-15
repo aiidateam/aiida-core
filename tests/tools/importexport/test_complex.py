@@ -157,12 +157,12 @@ class TestComplex(AiidaTestCase):
         size = 10
         grouplabel = 'test-group'
 
-        nparr = np.random.random((4, 3, 2))
+        nparr = np.random.random((4, 3, 2))  # pylint: disable=no-member
         trial_dict = {}
         # give some integers:
         trial_dict.update({str(k): np.random.randint(100) for k in range(10)})
         # give some floats:
-        trial_dict.update({str(k): np.random.random() for k in range(10, 20)})
+        trial_dict.update({str(k): np.random.random() for k in range(10, 20)})  # pylint: disable=no-member
         # give some booleans:
         trial_dict.update({str(k): bool(np.random.randint(1)) for k in range(20, 30)})
         # give some text:

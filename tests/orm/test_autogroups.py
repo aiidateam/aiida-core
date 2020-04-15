@@ -57,7 +57,7 @@ class TestAutogroup(AiidaTestCase):
         )
 
         # I create a group with a large integer suffix (9)
-        AutoGroup(label='{}_9'.format(label_prefix), type_string='auto.run').store()
+        AutoGroup(label='{}_9'.format(label_prefix)).store()
         # The next autogroup should become number 10
         autogroup = Autogroup()
         autogroup.set_group_label_prefix(label_prefix)
@@ -69,7 +69,7 @@ class TestAutogroup(AiidaTestCase):
         )
 
         # I create a group with a non-integer suffix (15a), it should be ignored
-        AutoGroup(label='{}_15b'.format(label_prefix), type_string='auto.run').store()
+        AutoGroup(label='{}_15b'.format(label_prefix)).store()
         # The next autogroup should become number 11
         autogroup = Autogroup()
         autogroup.set_group_label_prefix(label_prefix)
@@ -86,7 +86,7 @@ class TestAutogroup(AiidaTestCase):
         label_prefix = 'new_test_prefix_TestAutogroup'
         # I create a group with the same prefix, but followed by non-underscore
         # characters. These should be ignored in the logic.
-        AutoGroup(label='{}xx'.format(label_prefix), type_string='auto.run').store()
+        AutoGroup(label='{}xx'.format(label_prefix)).store()
 
         # Check that there are no groups to begin with
         queryb = QueryBuilder().append(AutoGroup, filters={'label': label_prefix})

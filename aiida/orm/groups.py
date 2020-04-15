@@ -142,8 +142,13 @@ class Group(entities.Entity, metaclass=GroupMeta):
             raise ValueError('Group label must be provided')
 
         if type_string is not None:
-            message = '`type_string` is deprecated because it is determined automatically, using default `core`'
+            message = '`type_string` is deprecated because it is determined automatically'
             warnings.warn(message)  # pylint: disable=no-member
+
+        # If `type_string` is explicitly defined, override automatically determined `self._type_string`. This is
+        # necessary for backwards compatibility.
+        if type_string is not None:
+            self._type_string = type_string
 
         type_string = self._type_string
 

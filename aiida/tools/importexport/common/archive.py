@@ -42,8 +42,9 @@ class Archive:
     FILENAME_DATA = 'data.json'
     FILENAME_METADATA = 'metadata.json'
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, silent=True):
         self._filepath = filepath
+        self._silent = silent
         self._folder = None
         self._unpacked = False
         self._data = None
@@ -81,9 +82,9 @@ class Archive:
         if os.path.isdir(self.filepath):
             extract_tree(self.filepath, self.folder)
         elif tarfile.is_tarfile(self.filepath):
-            extract_tar(self.filepath, self.folder, silent=False, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+            extract_tar(self.filepath, self.folder, silent=self._silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
         elif zipfile.is_zipfile(self.filepath):
-            extract_zip(self.filepath, self.folder, silent=False, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+            extract_zip(self.filepath, self.folder, silent=self._silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
         else:
             raise CorruptArchive('unrecognized archive format')
 

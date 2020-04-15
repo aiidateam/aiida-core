@@ -33,7 +33,7 @@ class TestExtras(AiidaTestCase):
         data.set_extra_many({'b': 2, 'c': 3})
         cls.tmp_folder = tempfile.mkdtemp()
         cls.export_file = os.path.join(cls.tmp_folder, 'export.aiida')
-        export([data], outfile=cls.export_file, silent=True)
+        export([data], filename=cls.export_file, silent=True)
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):

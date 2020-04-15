@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 from aiida import get_version, orm
 from aiida.common import json
-from aiida.common.folders import RepositoryFolder
+from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.orm.utils.repository import Repository
 
 from aiida.tools.importexport.common import exceptions
@@ -36,17 +36,29 @@ from aiida.tools.importexport.dbexport.utils import (
 
 from .zip import ZipFolder
 
-__all__ = ('export', 'export_zip')
+__all__ = ('export',)
 
 
-def export_zip(what, outfile='testzip', overwrite=False, silent=False, debug=False, use_compression=True, **kwargs):
-    """Export in a zipped folder
+def export(
+    entities,
+    filename=None,
+    file_format=None,
+    overwrite=False,
+    silent=False,
+    debug=False,
+    use_compression=True,
+    **kwargs
+):
+    """Export AiiDA data
 
-    :param what: a list of entity instances; they can belong to different models/entities.
-    :type what: list
+    :param entities: a list of entity instances; they can belong to different models/entities.
+    :type entities: list
 
-    :param outfile: the filename (possibly including the absolute path) of the file on which to export.
-    :type outfile: str
+    :param filename: the filename (possibly including the absolute path) of the file on which to export.
+    :type filename: str
+
+    :param file_format: Can be either 'zip' or 'tar' (Default: 'zip').
+    :type file_format: str
 
     :param overwrite: if True, overwrite the output file without asking, if it exists. If False, raise an
         :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError` if the output file already exists.
@@ -58,7 +70,7 @@ def export_zip(what, outfile='testzip', overwrite=False, silent=False, debug=Fal
     :param debug: Whether or not to print helpful debug messages (will mess up the progress bar a bit).
     :type debug: bool
 
-    :param use_compression: Whether or not to compress the zip file.
+    :param use_compression: Whether or not to compress the archive file (only valid for the zip file format).
     :type use_compression: bool
 
     :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
@@ -71,11 +83,11 @@ def export_zip(what, outfile='testzip', overwrite=False, silent=False, debug=Fal
         otherwise.
     :type forbidden_licenses: list
 
-    :param include_comments: In-/exclude export of comments for given node(s) in ``what``.
+    :param include_comments: In-/exclude export of comments for given node(s) in ``entities``.
         Default: True, *include* comments in export (as well as relevant users).
     :type include_comments: bool
 
-    :param include_logs: In-/exclude export of logs for given node(s) in ``what``.
+    :param include_logs: In-/exclude export of logs for given node(s) in ``entities``.
         Default: True, *include* logs in export.
     :type include_logs: bool
 
@@ -86,21 +98,87 @@ def export_zip(what, outfile='testzip', overwrite=False, silent=False, debug=Fal
         exporting.
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
-    if not overwrite and os.path.exists(outfile):
-        raise exceptions.ArchiveExportError("the output file '{}' already exists".format(outfile))
+    if file_format is None:
+        file_format = 'zip'
+    elif file_format not in ('tar', 'zip'):
+        raise exceptions.ArchiveExportError(
+            'Can only export in either "tar" or "zip" format, please specify either for "file_format".'
+        )
+
+    filename = filename if filename is not None and isinstance(filename, str) else 'export_data.aiida'
+
+    if not overwrite and os.path.exists(filename):
+        raise exceptions.ArchiveExportError("The output file '{}' already exists".format(filename))
 
     if not silent:
-        file_format = 'Zip (compressed)' if use_compression else 'Zip (uncompressed)'
-        summary(file_format, outfile, debug, **kwargs)
+        if file_format == 'tar':
+            file_format_verbose = 'Gzipped tarball (compressed)'
+        elif use_compression:
+            file_format_verbose = 'Zip (compressed)'
+        else:
+            file_format_verbose = 'Zip (uncompressed)'
+        summary(file_format_verbose, filename, debug, **kwargs)
+
+    if file_format == 'tar':
+        times = export_tar(what=entities, outfile=filename, silent=silent, debug=debug, **kwargs)
+    else:  # zip
+        times = export_zip(
+            what=entities, outfile=filename, use_compression=use_compression, silent=silent, debug=debug, **kwargs
+        )
 
     if debug:
-        time_start = time.time()
+        if len(times) == 2:
+            export_start, export_end = times
+            print('Exported in {:6.2g}s.'.format(export_end - export_start))
+        elif len(times) == 4:
+            export_start, export_end, compress_start, compress_end = times
+            print(
+                'Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.'.format(
+                    export_end - export_start, compress_end - compress_start, compress_end - export_start
+                )
+            )
 
+
+def export_zip(what, outfile, use_compression=True, **kwargs):
+    """Export in a zipped folder
+
+    :param what: a list of entity instances; they can belong to different models/entities.
+    :type what: list
+
+    :param outfile: the filename (possibly including the absolute path) of the file on which to export.
+    :type outfile: str
+
+    :param use_compression: Whether or not to compress the zip file.
+    :type use_compression: bool
+    """
     with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
-        export_tree(what, folder=folder, silent=silent, debug=debug, **kwargs)
+        time_start = time.time()
+        export_tree(what, folder=folder, **kwargs)
+        time_end = time.time()
 
-    if debug:
-        print('File written in {:10.3g} s.'.format(time.time() - time_start))
+    return (time_start, time_end)
+
+
+def export_tar(what, outfile, **kwargs):
+    """Export the entries passed in the 'what' list to a tar file.
+
+    :param what: a list of entity instances; they can belong to different models/entities.
+    :type what: list
+
+    :param outfile: the filename (possibly including the absolute path) of the file on which to export.
+    :type outfile: str
+    """
+    with SandboxFolder() as folder:
+        time_export_start = time.time()
+        export_tree(what, folder=folder, **kwargs)
+        time_export_end = time.time()
+
+        with tarfile.open(outfile, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
+            time_compress_start = time.time()
+            tar.add(folder.abspath, arcname='')
+            time_compress_end = time.time()
+
+    return (time_export_start, time_export_end, time_compress_start, time_compress_end)
 
 
 def export_tree(
@@ -552,83 +630,3 @@ def export_tree(
     if not silent:
         progress_bar.leave = False
         progress_bar.close()
-
-
-def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=False, debug=False, **kwargs):
-    """Export the entries passed in the 'what' list to a file tree.
-
-    :param what: a list of entity instances; they can belong to different models/entities.
-    :type what: list
-
-    :param outfile: the filename (possibly including the absolute path) of the file on which to export.
-    :type outfile: str
-
-    :param overwrite: if True, overwrite the output file without asking, if it exists. If False, raise an
-        :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError` if the output file already exists.
-    :type overwrite: bool
-
-    :param silent: suppress prints.
-    :type silent: bool
-
-    :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
-        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
-        otherwise.
-    :type allowed_licenses: list
-
-    :param forbidden_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
-        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
-        otherwise.
-    :type forbidden_licenses: list
-
-    :param include_comments: In-/exclude export of comments for given node(s) in ``what``.
-        Default: True, *include* comments in export (as well as relevant users).
-    :type include_comments: bool
-
-    :param include_logs: In-/exclude export of logs for given node(s) in ``what``.
-        Default: True, *include* logs in export.
-    :type include_logs: bool
-
-    :param kwargs: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
-        are toggleable and what the defaults are.
-
-    :param debug: Whether or not to print helpful debug messages (will mess up the progress bar a bit).
-    :type debug: bool
-
-    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
-        exporting.
-    :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
-    """
-    from aiida.common.folders import SandboxFolder
-
-    if not overwrite and os.path.exists(outfile):
-        raise exceptions.ArchiveExportError("the output file '{}' already exists".format(outfile))
-
-    if not silent:
-        file_format = 'Gzipped tarball (compressed)'
-        summary(file_format, outfile, debug, **kwargs)
-
-    folder = SandboxFolder()
-    if debug:
-        time_export_start = time.time()
-    export_tree(what, folder=folder, silent=silent, debug=debug, **kwargs)
-
-    if debug:
-        time_export_end = time.time()
-        print('COMPRESSING...')
-        time_compress_start = time.time()
-
-    with tarfile.open(outfile, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
-        tar.add(folder.abspath, arcname='')
-
-    if debug:
-        time_compress_end = time.time()
-        filecr_time = time_export_end - time_export_start
-        filecomp_time = time_compress_end - time_compress_start
-        print(
-            'Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.'.format(
-                filecr_time, filecomp_time, filecr_time + filecomp_time
-            )
-        )
-
-    if debug:
-        print('DONE. ( from export-func )')

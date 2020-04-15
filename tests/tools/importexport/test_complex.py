@@ -88,8 +88,8 @@ class TestComplex(AiidaTestCase):
             fd1.uuid: fd1.label
         }
 
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([fd1], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([fd1], filename=filename, silent=True)
 
         self.clean_db()
         self.create_user()
@@ -196,12 +196,12 @@ class TestComplex(AiidaTestCase):
         # I export and reimport 3 times in a row:
         for i in range(3):
             # Always new filename:
-            filename = os.path.join(temp_dir, 'export-{}.zip'.format(i))
+            filename = os.path.join(temp_dir, 'export-{}.aiida'.format(i))
             # Loading the group from the string
             group = orm.Group.get(label=grouplabel)
             # exporting based on all members of the group
             # this also checks if group memberships are preserved!
-            export([group] + list(group.nodes), outfile=filename, silent=True)
+            export([group] + list(group.nodes), filename=filename, silent=True)
             # cleaning the DB!
             self.clean_db()
             self.create_user()

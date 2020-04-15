@@ -94,7 +94,7 @@ def create(
     their provenance, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
-    from aiida.tools.importexport import export, export_zip
+    from aiida.tools.importexport import export
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
 
     entities = []
@@ -125,16 +125,16 @@ def create(
     }
 
     if archive_format == 'zip':
-        export_function = export_zip
+        export_format = 'zip'
         kwargs.update({'use_compression': True})
     elif archive_format == 'zip-uncompressed':
-        export_function = export_zip
+        export_format = 'zip'
         kwargs.update({'use_compression': False})
     elif archive_format == 'tar.gz':
-        export_function = export
+        export_format = 'tar'
 
     try:
-        export_function(entities, outfile=output_file, **kwargs)
+        export(entities, filename=output_file, file_format=export_format, **kwargs)
     except ArchiveExportError as exception:
         echo.echo_critical('failed to write the archive file. Exception: {}'.format(exception))
     else:

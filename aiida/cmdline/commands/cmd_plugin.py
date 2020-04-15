@@ -13,7 +13,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
-from aiida.plugins.entry_point import entry_point_group_to_module_path_map
+from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
 
 
 @verdi.group('plugin')
@@ -22,7 +22,7 @@ def verdi_plugin():
 
 
 @verdi_plugin.command('list')
-@click.argument('entry_point_group', type=click.Choice(entry_point_group_to_module_path_map.keys()), required=False)
+@click.argument('entry_point_group', type=click.Choice(ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys()), required=False)
 @click.argument('entry_point', type=click.STRING, required=False)
 @decorators.with_dbenv()
 def plugin_list(entry_point_group, entry_point):
@@ -34,7 +34,7 @@ def plugin_list(entry_point_group, entry_point):
 
     if entry_point_group is None:
         echo.echo_info('Available entry point groups:')
-        for group in sorted(entry_point_group_to_module_path_map.keys()):
+        for group in sorted(ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys()):
             echo.echo('* {}'.format(group))
 
         echo.echo('')

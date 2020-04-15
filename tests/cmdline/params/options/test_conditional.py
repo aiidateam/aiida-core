@@ -66,7 +66,7 @@ class ConditionalOptionTest(unittest.TestCase):
         runner = CliRunner()
         result = runner.invoke(cmd, ['--on'])
         self.assertIsNotNone(result.exception)
-        self.assertIn('Error: Missing option "--opt".', result.output)
+        self.assertTrue('Error: Missing option' in result.output and '--opt' in result.output)
 
     def test_flag_off(self):
         """
@@ -89,7 +89,7 @@ class ConditionalOptionTest(unittest.TestCase):
         runner = CliRunner()
         result = runner.invoke(cmd, ['--on'])
         self.assertIsNotNone(result.exception)
-        self.assertIn('Error: Missing option "--opt".', result.output)
+        self.assertTrue('Error: Missing option' in result.output and '--opt' in result.output)
 
     def setup_multi_non_eager(self):
         """
@@ -139,11 +139,11 @@ class ConditionalOptionTest(unittest.TestCase):
         runner, cmd = self.setup_multi_non_eager()
         result = runner.invoke(cmd, ['--a', '--opt-b=Bla'])
         self.assertIsNotNone(result.exception)
-        self.assertIn('Error: Missing option "--opt-a".', result.output)
+        self.assertTrue('Error: Missing option' in result.output and '--opt-a' in result.output)
 
         result_rev = runner.invoke(cmd, ['--opt-b=Bla', '--a'])
         self.assertIsNotNone(result_rev.exception)
-        self.assertIn('Error: Missing option "--opt-a".', result_rev.output)
+        self.assertTrue('Error: Missing option' in result.output and '--opt-a' in result.output)
 
     def test_ba(self):
         """
@@ -154,11 +154,11 @@ class ConditionalOptionTest(unittest.TestCase):
         runner, cmd = self.setup_multi_non_eager()
         result = runner.invoke(cmd, ['--b', '--opt-a=Bla'])
         self.assertIsNotNone(result.exception)
-        self.assertIn('Error: Missing option "--opt-b".', result.output)
+        self.assertTrue('Error: Missing option' in result.output and '--opt-b' in result.output)
 
         result_rev = runner.invoke(cmd, ['--opt-a=Bla', '--b'])
         self.assertIsNotNone(result_rev.exception)
-        self.assertIn('Error: Missing option "--opt-b".', result_rev.output)
+        self.assertTrue('Error: Missing option' in result.output and '--opt-b' in result.output)
 
     @staticmethod
     def user_callback(_ctx, param, value):
@@ -181,9 +181,8 @@ class ConditionalOptionTest(unittest.TestCase):
         @click.option('--flag', is_flag=True)
         @click.option('--opt-a', required_fn=lambda c: c.params.get('flag'), cls=ConditionalOption, **kwargs)
         def cmd(flag, opt_a):
-            """ A command with a flag and customizable options that dependon it """
+            """A command with a flag and customizable options that depend on it."""
             # pylint: disable=unused-argument
-
             click.echo('{}'.format(opt_a))
 
         return cmd

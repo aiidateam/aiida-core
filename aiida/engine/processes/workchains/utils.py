@@ -11,6 +11,7 @@
 from collections import namedtuple
 from functools import partial
 from inspect import getfullargspec
+from types import FunctionType  # pylint: disable=no-name-in-module
 from wrapt import decorator
 
 from ..exit_code import ExitCode
@@ -67,6 +68,9 @@ def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
     """
     if wrapped is None:
         return partial(process_handler, priority=priority, exit_codes=exit_codes, enabled=enabled)
+
+    if not isinstance(wrapped, FunctionType):
+        raise TypeError('first argument can only be an instance method, use keywords for decorator arguments.')
 
     if not isinstance(priority, int):
         raise TypeError('the `priority` keyword should be an integer.')

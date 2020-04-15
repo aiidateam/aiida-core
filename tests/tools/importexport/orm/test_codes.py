@@ -24,9 +24,11 @@ class TestCode(AiidaTestCase):
     """Test ex-/import cases related to Codes"""
 
     def setUp(self):
+        super().setUp()
         self.reset_database()
 
     def tearDown(self):
+        super().tearDown()
         self.reset_database()
 
     @with_temp_dir

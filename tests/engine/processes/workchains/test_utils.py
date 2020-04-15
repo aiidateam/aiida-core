@@ -53,6 +53,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
         attribute_key = 'handlers_called'
 
         class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
+            """Implementation of a possible BaseRestartWorkChain for the ``ArithmeticAddCalculation``."""
 
             _process_class = ArithmeticAddCalculation
 
@@ -61,6 +62,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
             # This can then be checked after invoking `inspect_process` to ensure they were called in the right order
             @process_handler(priority=100)
             def handler_01(self, node):
+                """Example handler returing ExitCode 100."""
                 handlers_called = node.get_attribute(attribute_key, default=[])
                 handlers_called.append('handler_01')
                 node.set_attribute(attribute_key, handlers_called)
@@ -68,6 +70,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
 
             @process_handler(priority=300)
             def handler_03(self, node):
+                """Example handler returing ExitCode 300."""
                 handlers_called = node.get_attribute(attribute_key, default=[])
                 handlers_called.append('handler_03')
                 node.set_attribute(attribute_key, handlers_called)
@@ -75,6 +78,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
 
             @process_handler(priority=200)
             def handler_02(self, node):
+                """Example handler returing ExitCode 200."""
                 handlers_called = node.get_attribute(attribute_key, default=[])
                 handlers_called.append('handler_02')
                 node.set_attribute(attribute_key, handlers_called)
@@ -82,6 +86,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
 
             @process_handler(priority=400)
             def handler_04(self, node):
+                """Example handler returing ExitCode 400."""
                 handlers_called = node.get_attribute(attribute_key, default=[])
                 handlers_called.append('handler_04')
                 node.set_attribute(attribute_key, handlers_called)
@@ -159,6 +164,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
         node_skip.set_exit_status(200)  # Some other exit status
 
         class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
+            """Minimal base restart workchain for the ``ArithmeticAddCalculation``."""
 
             _process_class = ArithmeticAddCalculation
 

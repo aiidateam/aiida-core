@@ -1,5 +1,48 @@
 # Changelog
 
+## v1.2.0
+
+### Features
+- `ExitCode`: make the exit message parameterizable through templates [[#3824]](https://github.com/aiidateam/aiida-core/pull/3824)
+- `GroupPath`: a utility to work with virtual `Group` hierarchies [[#3613]](https://github.com/aiidateam/aiida-core/pull/3613)
+- Make `Group` sub classable through entry points [[#3882]](https://github.com/aiidateam/aiida-core/pull/3882)[[#3903]](https://github.com/aiidateam/aiida-core/pull/3903)[[#3926]](https://github.com/aiidateam/aiida-core/pull/3926)
+- Add auto-complete support for `CodeParamType` and `GroupParamType` [[#3926]](https://github.com/aiidateam/aiida-core/pull/3926)
+- Add export archive migration for `Group` type strings [[#3912]](https://github.com/aiidateam/aiida-core/pull/3912)
+- Add the `-v/--version` option to `verdi export migrate` [[#3910]](https://github.com/aiidateam/aiida-core/pull/3910)
+- Add the `-l/--limit` option to `verdi group show` [[#3857]](https://github.com/aiidateam/aiida-core/pull/3857)
+- Add the `--order-by/--order-direction` options to `verdi group list` [[#3858]](https://github.com/aiidateam/aiida-core/pull/3858)
+- Add `prepend_text` and `append_text` to `aiida_local_code_factory` pytest fixture [[#3831]](https://github.com/aiidateam/aiida-core/pull/3831)
+- REST API: make it easier to call `run_api` in wsgi scripts [[#3875]](https://github.com/aiidateam/aiida-core/pull/3875)
+- Plot bands with only one kpoint [[#3798]](https://github.com/aiidateam/aiida-core/pull/3798)
+
+### Bug fixes
+- Improved validation for CLI parameters [[#3894]](https://github.com/aiidateam/aiida-core/pull/3894)
+- Ensure unicity when creating instances of `Autogroup` [[#3650]](https://github.com/aiidateam/aiida-core/pull/3650)
+- Prevent nodes without registered entry points from being stored [[#3886]](https://github.com/aiidateam/aiida-core/pull/3886)
+- Fix the `RotatingFileHandler` configuration of the daemon logger[[#3891]](https://github.com/aiidateam/aiida-core/pull/3891)
+- Ensure log messages are not duplicated in daemon log file [[#3890]](https://github.com/aiidateam/aiida-core/pull/3890)
+- Convert argument to `str` in `aiida.common.escaping.escape_for_bash` [[#3873]](https://github.com/aiidateam/aiida-core/pull/3873)
+- Remove the return statement of `RemoteData.getfile()` [[#3742]](https://github.com/aiidateam/aiida-core/pull/3742)
+- Support for `BandsData` nodes without `StructureData` ancestors [[#3817]](https://github.com/aiidateam/aiida-core/pull/3817)
+
+### Deprecations
+- Deprecate `--group-type` option in favor of `--type-string` for `verdi group list` [[#3926]](https://github.com/aiidateam/aiida-core/pull/3926)
+
+### Documentation
+- Docs: link to documentation of other libraries via `intersphinx` mapping [[#3876]](https://github.com/aiidateam/aiida-core/pull/3876)
+- Docs: remove extra `advanced_plotting` from install instructions [[#3860]](https://github.com/aiidateam/aiida-core/pull/3860)
+- Docs: consistent use of "plugin" vs "plugin package" terminology [[#3799]](https://github.com/aiidateam/aiida-core/pull/3799)
+
+### Developers
+- Deduplicate code for tests of archive migration code [[#3924]](https://github.com/aiidateam/aiida-core/pull/3924)
+- CI: use GitHub Actions services for PostgreSQL and RabbitMQ [[#3901]](https://github.com/aiidateam/aiida-core/pull/3901)
+- Move `aiida.manage.external.pgsu` to external package `pgsu` [[#3892]](https://github.com/aiidateam/aiida-core/pull/3892)
+- Cleanup the top-level directory of the repository [[#3738]](https://github.com/aiidateam/aiida-core/pull/3738)
+- Remove unused `orm.implementation.utils` module [[#3877]](https://github.com/aiidateam/aiida-core/pull/3877)
+- Revise dependency management workflow [[#3771]](https://github.com/aiidateam/aiida-core/pull/3771)
+- Re-add support for Coverage reports through codecov.io [[#3618]](https://github.com/aiidateam/aiida-core/pull/3618)
+
+
 ## v1.1.1
 
 ### Changes

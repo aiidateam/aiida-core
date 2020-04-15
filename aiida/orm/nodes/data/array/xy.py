@@ -43,10 +43,10 @@ class XyData(ArrayData):
     def _arrayandname_validator(self, array, name, units):
         """
         Validates that the array is an numpy.ndarray and that the name is
-        of type basestring. Raises InputValidationError if this not the case.
+        of type str. Raises InputValidationError if this not the case.
         """
         if not isinstance(name, str):
-            raise InputValidationError('The name must always be an instance of basestring.')
+            raise InputValidationError('The name must always be a str.')
 
         if not isinstance(array, np.ndarray):
             raise InputValidationError('The input array must always be a numpy array')
@@ -55,7 +55,7 @@ class XyData(ArrayData):
         except ValueError:
             raise InputValidationError('The input array must only contain floats')
         if not isinstance(units, str):
-            raise InputValidationError('The units must always be an instance of basestring.')
+            raise InputValidationError('The units must always be a str.')
 
     def set_x(self, x_array, x_name, x_units):
         """

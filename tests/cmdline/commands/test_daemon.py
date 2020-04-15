@@ -10,6 +10,7 @@
 """Tests for `verdi daemon`."""
 
 from click.testing import CliRunner
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_daemon
@@ -42,6 +43,7 @@ class TestVerdiDaemon(AiidaTestCase):
         finally:
             self.daemon_client.stop_daemon(wait=True)
 
+    @pytest.mark.skip(reason='Test fails non-deterministically; see issue #3051.')
     def test_daemon_start_number(self):
         """Test `verdi daemon start` with a specific number of workers."""
 

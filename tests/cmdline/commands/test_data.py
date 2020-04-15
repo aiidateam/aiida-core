@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member
+# pylint: disable=no-member, too-many-lines
 """Test data-related verdi commands."""
 
 import io
@@ -141,7 +141,6 @@ class DummyVerdiDataListable:
 
         # Check that the past days filter works as expected
         past_days_flags = ['-p', '--past-days']
-        # past_days_flags = ['-p']
         for flag in past_days_flags:
             options = [flag, '1']
             res = self.cli_runner.invoke(listing_cmd, options, catch_exceptions=False)
@@ -158,6 +157,7 @@ class DummyVerdiDataListable:
             )
 
         # Check that the group filter works as expected
+        # if ids is not None:
         group_flags = ['-G', '--groups']
         for flag in group_flags:
             # Non empty group
@@ -289,10 +289,14 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
 
         bands = connect_structure_bands(strct)
 
+        bands_isolated = BandsData()
+        bands_isolated.store()
+
         # Create 2 groups and add the data to one of them
         g_ne = Group(label='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(bands)
+        g_ne.add_nodes(bands_isolated)
 
         g_e = Group(label='empty_group')
         g_e.store()
@@ -321,6 +325,13 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
 
     def test_bandslist(self):
         self.data_listing_test(BandsData, 'FeO', self.ids)
+        self.data_listing_test(BandsData, '<<NOT FOUND>>', self.ids)
+
+    def test_bandslist_with_elements(self):
+        options = ['-e', 'Fe']
+        res = self.cli_runner.invoke(cmd_bands.bands_list, options, catch_exceptions=False)
+        self.assertIn(b'FeO', res.stdout_bytes, 'The string "FeO" was not found in the listing')
+        self.assertNotIn(b'<<NOT FOUND>>', res.stdout_bytes, 'The string "<<NOT FOUND>>" should not in the listing')
 
     def test_bandexporthelp(self):
         output = sp.check_output(['verdi', 'data', 'bands', 'export', '--help'])
@@ -331,6 +342,31 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
         self.assertIn(b'[1.0, 3.0]', res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands' 'export')
+
+    def test_bandsexport_single_kp(self):
+        """
+        Plot band for single k-point (issue #2462).
+        """
+        kpnts = KpointsData()
+        kpnts.set_kpoints([[0., 0., 0.]])
+
+        bands = BandsData()
+        bands.set_kpointsdata(kpnts)
+        bands.set_bands([[1.0, 2.0]])
+        bands.store()
+
+        # matplotlib
+        options = [str(bands.id), '--format', 'mpl_singlefile']
+        res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
+        self.assertIn(b'p.scatter', res.stdout_bytes, 'The string p.scatter was not found in the bands mpl export')
+
+        # gnuplot
+        with self.cli_runner.isolated_filesystem():
+            options = [str(bands.id), '--format', 'gnuplot', '-o', 'bands.gnu']
+            self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
+            with open('bands.gnu', 'r') as gnu_file:
+                res = gnu_file.read()
+                self.assertIn('vectors nohead', res, 'The string "vectors nohead" was not found in the gnuplot script')
 
 
 class TestVerdiDataDict(AiidaTestCase):

@@ -7,13 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module for custom click param type group
-"""
-
+"""Module for custom click param type group."""
 import click
 
-from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common.lang import type_check
+from aiida.cmdline.utils import decorators
 
 from .identifier import IdentifierParamType
 
@@ -23,29 +21,58 @@ class GroupParamType(IdentifierParamType):
 
     name = 'Group'
 
-    def __init__(self, create_if_not_exist=False):
+    def __init__(self, create_if_not_exist=False, sub_classes=('aiida.groups:core',)):
+        """Construct the parameter type.
+
+        The `sub_classes` argument can be used to narrow the set of subclasses of `Group` that should be matched. By
+        default all subclasses of `Group` will be matched, otherwise it is restricted to the subclasses that correspond
+        to the entry point names in the tuple of `sub_classes`.
+
+        To prevent having to load the database environment at import time, the actual loading of the entry points is
+        deferred until the call to `convert` is made. This is to keep the command line autocompletion light and
+        responsive. The entry point strings will be validated, however, to see if they correspond to known entry points.
+
+        :param create_if_not_exist: boolean, if True, will create the group if it does not yet exist. By default the
+            group created will be of class `Group`, unless another subclass is specified through `sub_classes`. Note
+            that in this case, only a single entry point name can be specified
+        :param sub_classes: a tuple of entry point strings from the `aiida.groups` entry point group.
+        """
+        type_check(sub_classes, tuple, allow_none=True)
+
+        if create_if_not_exist and len(sub_classes) > 1:
+            raise ValueError('`sub_classes` can at most contain one entry point if `create_if_not_exist=True`')
+
         self._create_if_not_exist = create_if_not_exist
-        super().__init__()
+        super().__init__(sub_classes=sub_classes)
 
     @property
     def orm_class_loader(self):
-        """
-        Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
-        to be used to load the entity for a given identifier
+        """Return the orm entity loader class, which should be a subclass of `OrmEntityLoader`.
 
-        :return: the orm entity loader class for this ParamType
+        This class is supposed to be used to load the entity for a given identifier.
+
+        :return: the orm entity loader class for this `ParamType`
         """
         from aiida.orm.utils.loaders import GroupEntityLoader
         return GroupEntityLoader
 
-    @with_dbenv()
+    @decorators.with_dbenv()
+    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument
+        """Return possible completions based on an incomplete value.
+
+        :returns: list of tuples of valid entry points (matching incomplete) and a description
+        """
+        return [(option, '') for option, in self.orm_class_loader.get_options(incomplete, project='label')]
+
+    @decorators.with_dbenv()
     def convert(self, value, param, ctx):
-        from aiida.orm import Group, GroupTypeString
         try:
             group = super().convert(value, param, ctx)
         except click.BadParameter:
             if self._create_if_not_exist:
-                group = Group(label=value, type_string=GroupTypeString.USER.value)
+                # The particular subclass to load will be stored in `_sub_classes` as loaded by `convert` of the super.
+                cls = self._sub_classes[0]
+                group = cls(label=value)
             else:
                 raise
 

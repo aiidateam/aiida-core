@@ -1,0 +1,157 @@
+name: test-install
+
+on:
+  pull_request:
+    paths:
+      - 'setup.*'
+      - 'environment.yml'
+      - '**/requirements*.txt'
+      - 'pyproject.toml'
+      - 'util/dependency_management.py'
+      - '.github/workflows/test-install.yml'
+  schedule:
+    - cron: '30 02 * * *'  # nightly build
+
+jobs:
+
+  validate-dependency-specification:
+    # Note: The specification is also validated by the pre-commit hook.
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install dm-script dependencies
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
+
+    - name: Validate
+      run: python ./utils/dependency_management.py validate-all
+
+  install-with-pip:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Pip install
+      run: |
+        python -m pip install -e .
+        python -m pip freeze
+
+    - name: Test importing aiida
+      run:
+        python -c "import aiida"
+
+  install-with-conda:
+
+    runs-on: ubuntu-latest
+    name: install-with-conda
+
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Conda
+      uses: s-weigand/setup-conda@v1
+      with:
+        update-conda: true
+        python-version: 3.7
+    - run: conda --version
+    - run: python --version
+    - run: which python
+
+    - name: Create conda environment
+      run: |
+        conda env create -f environment.yml -n test-environment
+        source activate test-environment
+        python -m pip install --no-deps -e .
+
+    - name: Test importing aiida
+      run: |
+        source activate test-environment
+        python -c "import aiida"
+
+  tests:
+
+    needs: [install-with-pip, install-with-conda]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8]
+        backend: ['django', 'sqlalchemy']
+
+    services:
+      postgres:
+        image: postgres:10
+        env:
+          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      rabbitmq:
+        image: rabbitmq:latest
+        ports:
+          - 5672:5672
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies
+      run: |
+        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
+        sudo apt update
+        sudo apt install postgresql-10 graphviz
+
+    - run: pip install --upgrade pip
+
+    - name: upgrade setuptools [py35]
+      if: matrix.python-version == 3.5
+      run: pip install -I setuptools==38.2.0
+
+    - name: Install aiida-core
+      run: |
+        pip install -e .[atomic_tools,docs,notebook,rest,testing]
+        reentry scan
+
+    - run: pip freeze
+
+    - name: Setup AiiDA environment
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run:
+        .github/workflows/setup.sh
+
+    - name: Run test suite
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run:
+        .github/workflows/tests.sh

@@ -2,7 +2,7 @@ Caching: implementation details
 +++++++++++++++++++++++++++++++
 
 This section covers some details of the caching mechanism which are not discussed in the :ref:`user guide <caching>`.
-If you are developing a plugin and want to modify the caching behavior of your classes, we recommend you read :ref:`this section <caching_matches>` first.
+If you are developing plugins and want to modify the caching behavior of your classes, we recommend you read :ref:`this section <caching_matches>` first.
 
 .. _devel_controlling_hashing:
 

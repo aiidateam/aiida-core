@@ -7,13 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test export file migration from export version 0.3 to 0.4"""
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-
+"""Test export file migration from export version 0.3 to 0.4"""
 import tarfile
 import zipfile
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import NotExistent
 from aiida.common.folders import SandboxFolder
 from aiida.common.json import load as jsonload
@@ -22,79 +20,13 @@ from aiida.tools.importexport.migration.utils import verify_metadata_version
 from aiida.tools.importexport.migration.v03_to_v04 import migrate_v3_to_v4
 
 from tests.utils.archives import get_archive_file, get_json_files
+from . import ArchiveMigrationTest
 
 
-class TestMigrateV03toV04(AiidaTestCase):
-    """Test migration of export files from export version 0.3 to 0.4"""
+class TestMigrate(ArchiveMigrationTest):
+    """Tests specific for this archive migration."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-
-        # Utility helpers
-        cls.external_archive = {'filepath': 'archives', 'external_module': 'aiida-export-migration-tests'}
-        cls.core_archive = {'filepath': 'export/migrate'}
-
-    def test_migrate_v3_to_v4(self):
-        """Test function migrate_v3_to_v4"""
-        from aiida import get_version
-
-        # Get metadata.json and data.json as dicts from v0.4 file archive
-        metadata_v4, data_v4 = get_json_files('export_v0.4_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v4, version='0.4')
-
-        # Get metadata.json and data.json as dicts from v0.3 file archive
-        # Cannot use 'get_json_files' for 'export_v0.3_simple.aiida',
-        # because we need to pass the SandboxFolder to 'migrate_v3_to_v4'
-        dirpath_archive = get_archive_file('export_v0.3_simple.aiida', **self.core_archive)
-
-        with SandboxFolder(sandbox_in_repo=False) as folder:
-            if zipfile.is_zipfile(dirpath_archive):
-                extract_zip(dirpath_archive, folder, silent=True)
-            elif tarfile.is_tarfile(dirpath_archive):
-                extract_tar(dirpath_archive, folder, silent=True)
-            else:
-                raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
-
-            try:
-                with open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                    data_v3 = jsonload(fhandle)
-                with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                    metadata_v3 = jsonload(fhandle)
-            except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
-
-            verify_metadata_version(metadata_v3, version='0.3')
-
-            # Migrate to v0.4
-            migrate_v3_to_v4(metadata_v3, data_v3, folder)
-            verify_metadata_version(metadata_v3, version='0.4')
-
-        # Remove AiiDA version, since this may change irregardless of the migration function
-        metadata_v3.pop('aiida_version')
-        metadata_v4.pop('aiida_version')
-
-        # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
-        self.maxDiff = None  # pylint: disable=invalid-name
-        conversion_message = 'Converted from version 0.3 to 0.4 with AiiDA v{}'.format(get_version())
-        self.assertEqual(
-            metadata_v3.pop('conversion_info')[-1],
-            conversion_message,
-            msg='The conversion message after migration is wrong'
-        )
-        metadata_v4.pop('conversion_info')
-
-        # Assert changes were performed correctly
-        self.assertDictEqual(
-            metadata_v3,
-            metadata_v4,
-            msg='After migration, metadata.json should equal intended metadata.json from archives'
-        )
-        self.assertDictEqual(
-            data_v3, data_v4, msg='After migration, data.json should equal intended data.json from archives'
-        )
-
-    def test_migrate_v3_to_v4_complete(self):
+    def test_migrate_external(self):
         """Test migration for file containing complete v0.3 era possibilities"""
 
         # Get metadata.json and data.json as dicts from v0.3 file archive
@@ -138,7 +70,6 @@ class TestMigrateV03toV04(AiidaTestCase):
         ## Following checks are based on the archive-file
         ## Which means there are more legal entities, they are simply not relevant here.
 
-        self.maxDiff = None  # pylint: disable=invalid-name
         # Check schema-changes
         new_node_attrs = {'node_type', 'process_type'}
         for change in new_node_attrs:
@@ -331,13 +262,11 @@ class TestMigrateV03toV04(AiidaTestCase):
         metadata_v4, data_v4 = get_json_files('export_v0.4.aiida', **self.external_archive)
 
         # Compare 'metadata.json'
-        self.maxDiff = None
         metadata_v3.pop('conversion_info')
         metadata_v3.pop('aiida_version')
         metadata_v4.pop('aiida_version')
         self.assertDictEqual(metadata_v3, metadata_v4)
 
-        self.maxDiff = None
         # Compare 'data.json'
         self.assertEqual(len(data_v3), len(data_v4))
 

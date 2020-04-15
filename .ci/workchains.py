@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name
 from aiida.common import AttributeDict
 from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_, while_, ExitCode
 from aiida.engine import BaseRestartWorkChain, process_handler, ProcessHandlerReport

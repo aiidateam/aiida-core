@@ -101,7 +101,7 @@ class BackendGroup(backends.BackendEntity):
         :return: (group, created) where group is the group (new or existing,
           in any case already stored) and created is a boolean saying
         """
-        res = cls.query(name=kwargs.get('name'), type_string=kwargs.get('type_string'))
+        res = cls.query(name=kwargs.get('name'))
 
         if not res:
             return cls.create(*args, **kwargs), True

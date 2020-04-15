@@ -64,7 +64,7 @@ def validate_calc_job(inputs, ctx):
         )
 
 
-def validate_parser(parser_name, ctx):
+def validate_parser(parser_name, ctx):  # pylint: disable=unused-argument
     """Validate the parser.
 
     :raises InputValidationError: if the parser name does not correspond to a loadable `Parser` class.
@@ -78,7 +78,7 @@ def validate_parser(parser_name, ctx):
             raise exceptions.InputValidationError('invalid parser specified: {}'.format(exception))
 
 
-def validate_resources(resources, ctx):
+def validate_resources(resources, ctx):  # pylint: disable=unused-argument
     """Validate the resources.
 
     :raises InputValidationError: if `num_machines` is not specified or is not an integer.

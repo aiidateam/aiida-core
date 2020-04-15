@@ -7,8 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Configuration file for pytest tests."""
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+# pylint: disable=wildcard-import,undefined-variable
+"""Provides tools for interacting with AiiDA Groups."""
+from .paths import *
 
-import pytest  # pylint: disable=unused-import
-
-pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name
+__all__ = paths.__all__

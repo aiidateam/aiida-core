@@ -321,6 +321,9 @@ class Waiting(plumpy.Waiting):
     """The waiting state for the `CalcJob` process."""
 
     def __init__(self, process, done_callback, msg=None, data=None):
+        """
+        :param :class:`~plumpy.base.state_machine.StateMachine` process: The process this state belongs to
+        """
         super().__init__(process, done_callback, msg, data)
         self._task = None
         self._killing = None

@@ -34,8 +34,8 @@ Usage
    In [2]: %aiida
 """
 
-from IPython import version_info
-from IPython.core import magic
+from IPython import version_info  # pylint: disable=no-name-in-module
+from IPython.core import magic  # pylint: disable=no-name-in-module,import-error
 
 from aiida.common import json
 

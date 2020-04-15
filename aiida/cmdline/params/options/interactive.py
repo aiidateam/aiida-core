@@ -21,8 +21,8 @@ from .conditional import ConditionalOption
 
 class InteractiveOption(ConditionalOption):
     """
-    Intercepts certain keyword arguments to circumvent :mod:`click`'s prompting
-    behaviour and define a more feature-rich one
+    Prompts for input, intercepting certain keyword arguments to replace :mod:`click`'s prompting
+    behaviour with a more feature-rich one.
 
     .. note:: This class has a parameter ``required_fn`` that can be passed to its ``__init__`` (inherited
         from the superclass :py:class:`~aiida.cmdline.params.options.conditional.ConditionalOption`) and a
@@ -106,7 +106,7 @@ class InteractiveOption(ConditionalOption):
         return None
 
     def _get_default(self, ctx):
-        """provides the functionality of :func:`click.Option.get_default`"""
+        """provides the functionality of :meth:`click.Option.get_default`"""
         if self._contextual_default is not None:
             default = self._contextual_default(ctx)
         else:
@@ -185,8 +185,9 @@ class InteractiveOption(ConditionalOption):
         successful = False
 
         if value is self.CHARACTER_IGNORE_DEFAULT:
-            # The ignore default character signifies that the user wants to "not" set the value, so we return `None`
-            return True, None
+            # The ignore default character signifies that the user wants to "not" set the value.
+            # Replace value by an empty string for further processing (e.g. if a non-empty value is required).
+            value = ''
 
         try:
             value = self.type.convert(value, param, ctx)

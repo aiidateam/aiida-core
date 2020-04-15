@@ -255,13 +255,13 @@ O 0.5 0.5 0.5
             c = CifData(file=tmpf.name)
 
         ase = c.get_structure(converter='ase', primitive_cell=False).get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 15)
+        self.assertEqual(ase.get_global_number_of_atoms(), 15)
 
         ase = c.get_structure(converter='ase').get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 15)
+        self.assertEqual(ase.get_global_number_of_atoms(), 15)
 
         ase = c.get_structure(converter='ase', primitive_cell=True, subtrans_included=False).get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 5)
+        self.assertEqual(ase.get_global_number_of_atoms(), 5)
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
@@ -310,13 +310,13 @@ Te2 0.00000 0.00000 0.79030 0.01912
             c = CifData(file=tmpf.name)
 
         ase = c.get_structure(converter='pymatgen', primitive_cell=False).get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 15)
+        self.assertEqual(ase.get_global_number_of_atoms(), 15)
 
         ase = c.get_structure(converter='pymatgen').get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 15)
+        self.assertEqual(ase.get_global_number_of_atoms(), 15)
 
         ase = c.get_structure(converter='pymatgen', primitive_cell=True).get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 5)
+        self.assertEqual(ase.get_global_number_of_atoms(), 5)
 
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_pycifrw_from_datablocks(self):

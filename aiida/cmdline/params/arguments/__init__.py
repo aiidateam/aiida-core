@@ -18,7 +18,7 @@ from .overridable import OverridableArgument
 __all__ = (
     'PROFILE', 'PROFILES', 'CALCULATION', 'CALCULATIONS', 'CODE', 'CODES', 'COMPUTER', 'COMPUTERS', 'DATUM', 'DATA',
     'GROUP', 'GROUPS', 'NODE', 'NODES', 'PROCESS', 'PROCESSES', 'WORKFLOW', 'WORKFLOWS', 'INPUT_FILE', 'OUTPUT_FILE',
-    'LABEL', 'USER', 'PROFILE_NAME', 'CONFIG_OPTION'
+    'LABEL', 'USER', 'CONFIG_OPTION'
 )
 
 
@@ -62,10 +62,8 @@ INPUT_FILE = OverridableArgument('input_file', metavar='INPUT_FILE', type=click.
 
 OUTPUT_FILE = OverridableArgument('output_file', metavar='OUTPUT_FILE', type=click.Path())
 
-LABEL = OverridableArgument('label')
+LABEL = OverridableArgument('label', type=click.STRING)
 
 USER = OverridableArgument('user', metavar='USER', type=types.UserParamType())
-
-PROFILE_NAME = OverridableArgument('profile_name', type=click.STRING)
 
 CONFIG_OPTION = OverridableArgument('option', type=types.ConfigOptionParamType())

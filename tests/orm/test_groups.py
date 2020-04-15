@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for the Group ORM class."""
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -273,3 +274,149 @@ class TestGroups(AiidaTestCase):
         # And that the results are correct
         self.assertEqual(builder.count(), 1)
         self.assertEqual(builder.first()[0], group.id)
+
+
+class TestGroupsSubclasses(AiidaTestCase):
+    """Test rules around creating `Group` subclasses."""
+
+    def setUp(self):
+        """Remove all existing Groups."""
+        for group in orm.Group.objects.all():
+            orm.Group.objects.delete(group.id)
+
+    @staticmethod
+    def test_creation_registered():
+        """Test rules around creating registered `Group` subclasses."""
+        group = orm.AutoGroup('some-label')
+        assert isinstance(group, orm.AutoGroup)
+        assert group.type_string == 'core.auto'
+
+        group, _ = orm.AutoGroup.objects.get_or_create('some-auto-group')
+        assert isinstance(group, orm.AutoGroup)
+        assert group.type_string == 'core.auto'
+
+    @staticmethod
+    def test_loading():
+        """Test that loading instances from the database returns the correct subclass of `Group`."""
+        group = orm.Group('normal-group').store()
+        loaded = orm.load_group(group.pk)
+        assert isinstance(loaded, orm.Group)
+
+        group = orm.AutoGroup('auto-group').store()
+        loaded = orm.load_group(group.pk)
+        assert isinstance(group, orm.AutoGroup)
+
+    @staticmethod
+    def test_creation_unregistered():
+        """Test rules around creating `Group` subclasses without a registered entry point."""
+
+        # Defining an unregistered subclas should issue a warning and its type string should be set to `None`
+        with pytest.warns(UserWarning):
+
+            class SubGroup(orm.Group):
+                pass
+
+        assert SubGroup._type_string is None  # pylint: disable=protected-access
+
+        # Creating an instance is allowed
+        instance = SubGroup(label='subgroup')
+        assert instance._type_string is None  # pylint: disable=protected-access
+
+        # Storing the instance, however, is forbidden and should raise
+        with pytest.raises(exceptions.StoringNotAllowed):
+            instance.store()
+
+    @staticmethod
+    def test_loading_unregistered():
+        """Test rules around loading `Group` subclasses without a registered entry point.
+
+        Storing instances of unregistered subclasses is not allowed so we have to create one sneakily by instantiating
+        a normal group and manipulating the type string directly on the database model.
+        """
+        group = orm.Group(label='group')
+        group.backend_entity.dbmodel.type_string = 'unregistered.subclass'
+        group.store()
+
+        with pytest.warns(UserWarning):
+            loaded = orm.load_group(group.pk)
+
+        assert isinstance(loaded, orm.Group)
+
+    @staticmethod
+    def test_explicit_type_string():
+        """Test that passing explicit `type_string` to `Group` constructor is still possible despite being deprecated.
+
+        Both constructing a group while passing explicit `type_string` as well as loading a group with unregistered
+        type string should emit a warning, but it should be possible.
+        """
+        type_string = 'data.potcar'  # An unregistered custom type string
+
+        with pytest.warns(UserWarning):
+            group = orm.Group(label='group', type_string=type_string)
+
+        group.store()
+        assert group.type_string == type_string
+
+        with pytest.warns(UserWarning):
+            loaded = orm.Group.get(label=group.label, type_string=type_string)
+
+        assert isinstance(loaded, orm.Group)
+        assert loaded.pk == group.pk
+        assert loaded.type_string == group.type_string
+
+        queried = orm.QueryBuilder().append(orm.Group, filters={'id': group.pk, 'type_string': type_string}).one()[0]
+        assert isinstance(queried, orm.Group)
+        assert queried.pk == group.pk
+        assert queried.type_string == group.type_string
+
+    @staticmethod
+    def test_querying():
+        """Test querying for groups with and without subclassing."""
+        orm.Group(label='group').store()
+        orm.AutoGroup(label='auto-group').store()
+
+        # Fake a subclass by manually setting the type string
+        group = orm.Group(label='custom-group')
+        group.backend_entity.dbmodel.type_string = 'custom.group'
+        group.store()
+
+        assert orm.QueryBuilder().append(orm.AutoGroup).count() == 1
+        assert orm.QueryBuilder().append(orm.AutoGroup, subclassing=False).count() == 1
+        assert orm.QueryBuilder().append(orm.Group, subclassing=False).count() == 1
+        assert orm.QueryBuilder().append(orm.Group).count() == 3
+        assert orm.QueryBuilder().append(orm.Group, filters={'type_string': 'custom.group'}).count() == 1
+
+    @staticmethod
+    def test_querying_node_subclasses():
+        """Test querying for groups with multiple types for nodes it contains."""
+        group = orm.Group(label='group').store()
+        data_int = orm.Int().store()
+        data_str = orm.Str().store()
+        data_bool = orm.Bool().store()
+
+        group.add_nodes([data_int, data_str, data_bool])
+
+        builder = orm.QueryBuilder().append(orm.Group, tag='group')
+        builder.append((orm.Int, orm.Str), with_group='group', project='id')
+        results = [entry[0] for entry in builder.iterall()]
+
+        assert len(results) == 2
+        assert data_int.pk in results
+        assert data_str.pk in results
+        assert data_bool.pk not in results
+
+    @staticmethod
+    def test_query_with_group():
+        """Docs."""
+        group = orm.Group(label='group').store()
+        data = orm.Data().store()
+
+        group.add_nodes([data])
+
+        builder = orm.QueryBuilder().append(orm.Data, filters={
+            'id': data.pk
+        }, tag='data').append(orm.Group, with_node='data')
+
+        loaded = builder.one()[0]
+
+        assert loaded.pk == group.pk

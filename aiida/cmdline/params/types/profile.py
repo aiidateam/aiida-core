@@ -9,10 +9,10 @@
 ###########################################################################
 """Profile param type for click."""
 
-import click
+from .strings import LabelStringType
 
 
-class ProfileParamType(click.ParamType):
+class ProfileParamType(LabelStringType):
     """The profile parameter type for click."""
 
     name = 'profile'
@@ -30,6 +30,8 @@ class ProfileParamType(click.ParamType):
         """Attempt to match the given value to a valid profile."""
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
         from aiida.manage.configuration import get_config, load_profile, Profile
+
+        value = super().convert(value, param, ctx)
 
         try:
             config = get_config(create=True)

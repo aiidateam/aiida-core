@@ -48,9 +48,6 @@ class ExitCode(namedtuple('ExitCode', ['status', 'message', 'invalidates_cache']
 
         return ExitCode(self.status, message, self.invalidates_cache)
 
-    def __eq__(self, other):
-        return all(getattr(self, attr) == getattr(other, attr) for attr in ['status', 'message', 'invalidates_cache'])
-
 
 # Set the defaults for the `ExitCode` attributes
 ExitCode.__new__.__defaults__ = (0, None, False)

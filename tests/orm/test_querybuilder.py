@@ -629,6 +629,32 @@ class TestQueryBuilder(AiidaTestCase):
         res2 = {item[1] for item in qb.all()}
         self.assertEqual(res2, {d2.id, d4.id})
 
+    @staticmethod
+    def test_flat():
+        """Test the `flat` keyword for the `QueryBuilder.all()` method."""
+        from itertools import chain
+
+        pks = []
+        uuids = []
+        for _ in range(10):
+            node = orm.Data().store()
+            pks.append(node.pk)
+            uuids.append(node.uuid)
+
+        # Single projected property
+        builder = orm.QueryBuilder().append(orm.Data, project='id').order_by({orm.Data: 'id'})
+        result = builder.all(flat=True)
+        assert isinstance(result, list)
+        assert len(result) == 10
+        assert result == pks
+
+        # Mutltiple projections
+        builder = orm.QueryBuilder().append(orm.Data, project=['id', 'uuid']).order_by({orm.Data: 'id'})
+        result = builder.all(flat=True)
+        assert isinstance(result, list)
+        assert len(result) == 20
+        assert result == list(chain.from_iterable(zip(pks, uuids)))
+
 
 class TestMultipleProjections(AiidaTestCase):
     """Unit tests for the QueryBuilder ORM class."""

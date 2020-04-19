@@ -256,7 +256,7 @@ def export_tree(
         # Get related log(s) - universal for all nodes
         builder = orm.QueryBuilder()
         builder.append(orm.Log, filters={'dbnode_id': {'in': to_be_exported}}, project='id')
-        res = {_[0] for _ in builder.all()}
+        res = set(builder.all(flat=True))
         given_log_entry_ids.update(res)
 
     # Comments
@@ -264,7 +264,7 @@ def export_tree(
         # Get related log(s) - universal for all nodes
         builder = orm.QueryBuilder()
         builder.append(orm.Comment, filters={'dbnode_id': {'in': to_be_exported}}, project='id')
-        res = {_[0] for _ in builder.all()}
+        res = set(builder.all(flat=True))
         given_comment_entry_ids.update(res)
 
     # Here we get all the columns that we plan to project per entity that we

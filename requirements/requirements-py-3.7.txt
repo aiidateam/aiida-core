@@ -117,7 +117,7 @@ shortuuid==1.0.1
 simplejson==3.17.0
 six==1.14.0
 snowballstemmer==2.0.0
-spglib==1.14.1.post0
+spglib==1.15.0
 Sphinx==2.4.4
 sphinx-rtd-theme==0.4.3
 sphinxcontrib-applehelp==1.0.2

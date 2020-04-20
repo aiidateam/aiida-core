@@ -29,15 +29,23 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
-    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, summary, EXPORT_LOGGER
+    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, summary, EXPORT_LOGGER, ExportFileFormat
 )
 
 from .zip import ZipFolder
 
-__all__ = ('export',)
+__all__ = ('export', 'ExportFileFormat')
 
 
-def export(entities, filename=None, file_format=None, overwrite=False, silent=False, use_compression=True, **kwargs):
+def export(
+    entities,
+    filename=None,
+    file_format=ExportFileFormat.ZIP,
+    overwrite=False,
+    silent=False,
+    use_compression=True,
+    **kwargs
+):
     """Export AiiDA data
 
     :param entities: a list of entity instances; they can belong to different models/entities.
@@ -46,8 +54,8 @@ def export(entities, filename=None, file_format=None, overwrite=False, silent=Fa
     :param filename: the filename (possibly including the absolute path) of the file on which to export.
     :type filename: str
 
-    :param file_format: Can be either 'zip' or 'tar' (Default: 'zip').
-    :type file_format: str
+    :param file_format: See `ExportFileFormat` for complete list of valid values (default: 'zip').
+    :type file_format: str, `ExportFileFormat`
 
     :param overwrite: if True, overwrite the output file without asking, if it exists. If False, raise an
         :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError` if the output file already exists.
@@ -84,11 +92,11 @@ def export(entities, filename=None, file_format=None, overwrite=False, silent=Fa
         exporting.
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
-    if file_format is None:
-        file_format = 'zip'
-    elif file_format not in ('tar', 'zip'):
+    if file_format not in list(ExportFileFormat):
         raise exceptions.ArchiveExportError(
-            'Can only export in either "tar" or "zip" format, please specify either for "file_format".'
+            'Can only export in the formats: {}, please specify one for "file_format".'.format(
+                tuple(_.value for _ in ExportFileFormat)
+            )
         )
 
     filename = filename if filename is not None and isinstance(filename, str) else 'export_data.aiida'
@@ -97,8 +105,9 @@ def export(entities, filename=None, file_format=None, overwrite=False, silent=Fa
         raise exceptions.ArchiveExportError("The output file '{}' already exists".format(filename))
 
     if not silent:
-        if file_format == 'tar':
+        if file_format == ExportFileFormat.TAR_GZIPPED:
             file_format_verbose = 'Gzipped tarball (compressed)'
+        # Must be a zip then
         elif use_compression:
             file_format_verbose = 'Zip (compressed)'
         else:
@@ -106,7 +115,7 @@ def export(entities, filename=None, file_format=None, overwrite=False, silent=Fa
         summary(file_format_verbose, filename, **kwargs)
 
     try:
-        if file_format == 'tar':
+        if file_format == ExportFileFormat.TAR_GZIPPED:
             times = export_tar(what=entities, outfile=filename, silent=silent, **kwargs)
         else:  # zip
             times = export_zip(

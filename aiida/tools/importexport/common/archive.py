@@ -251,8 +251,8 @@ def get_file_iterator(file_handle, folderpath, silent=False, **kwargs):  # pylin
     :param silent: suppress progress bar.
     :type silent: bool
 
-    :return: List of filenames in the archive.
-    :rtype: list
+    :return: List of filenames in the archive, wrapped in the `tqdm` progress bar.
+    :rtype: `tqdm.tqdm`
     """
     json_files = {'metadata.json', 'data.json'}
 

@@ -9,6 +9,8 @@
 ###########################################################################
 """ Utility functions for export of AiiDA entities """
 # pylint: disable=too-many-locals,too-many-branches,too-many-nested-blocks
+from enum import Enum
+
 from aiida.orm import QueryBuilder, ProcessNode
 from aiida.common.log import AIIDA_LOGGER
 
@@ -18,6 +20,12 @@ from aiida.tools.importexport.common.config import (
 )
 
 EXPORT_LOGGER = AIIDA_LOGGER.getChild('export')
+
+
+class ExportFileFormat(str, Enum):
+    """Export file formats"""
+    ZIP = 'zip'
+    TAR_GZIPPED = 'tar.gz'
 
 
 def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag_suffixes=None, entity_separator='_'):

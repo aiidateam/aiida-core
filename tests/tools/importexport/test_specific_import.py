@@ -234,7 +234,7 @@ class TestSpecificImport(AiidaTestCase):
 
         # Export and reset db
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([node], filename=filename, file_format='tar', silent=True)
+        export([node], filename=filename, file_format='tar.gz', silent=True)
         self.reset_database()
 
         # Untar export file, remove repository folder, re-tar
@@ -302,7 +302,7 @@ class TestSpecificImport(AiidaTestCase):
         }
 
         export_tree([node], folder=Folder(archive_variants['archive folder']), silent=True)
-        export([node], filename=archive_variants['tar archive'], file_format='tar', silent=True)
+        export([node], filename=archive_variants['tar archive'], file_format='tar.gz', silent=True)
         export([node], filename=archive_variants['zip archive'], file_format='zip', silent=True)
 
         for variant, filename in archive_variants.items():

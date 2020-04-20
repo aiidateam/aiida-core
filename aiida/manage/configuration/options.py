@@ -14,6 +14,7 @@ import collections
 __all__ = ('get_option', 'get_option_names', 'parse_option')
 
 NO_DEFAULT = ()
+DEFAULT_DAEMON_WORKERS = 1
 DEFAULT_DAEMON_TIMEOUT = 20  # Default timeout in seconds for circus client calls
 VALID_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'REPORT', 'INFO', 'DEBUG']
 
@@ -28,6 +29,14 @@ CONFIG_OPTIONS = {
         'valid_values': None,
         'default': 1,
         'description': 'The polling interval in seconds to be used by process runners',
+        'global_only': False,
+    },
+    'daemon.default_workers': {
+        'key': 'daemon_default_workers',
+        'valid_type': 'int',
+        'valid_values': None,
+        'default': DEFAULT_DAEMON_WORKERS,
+        'description': 'The default number of workers to be launched by `verdi daemon start`',
         'global_only': False,
     },
     'daemon.timeout': {

@@ -269,13 +269,11 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         remotedata.store()
 
 
-def submit_calculation(calculation, transport, calc_info, script_filename):
+def submit_calculation(calculation, transport):
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
     :param transport: an already opened transport to use to submit the calculation.
-    :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
-    :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     :return: the job id as returned by the scheduler `submit_from_script` call
     """
     job_id = calculation.get_job_id()
@@ -291,8 +289,9 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
 
+    submit_script_filename = calculation.get_option('submit_script_filename')
     workdir = calculation.get_remote_workdir()
-    job_id = scheduler.submit_from_script(workdir, script_filename)
+    job_id = scheduler.submit_from_script(workdir, submit_script_filename)
     calculation.set_job_id(job_id)
 
     return job_id

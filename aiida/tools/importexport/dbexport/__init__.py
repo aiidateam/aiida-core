@@ -34,7 +34,7 @@ from aiida.tools.importexport.dbexport.utils import (
 
 from .zip import ZipFolder
 
-__all__ = ('export', 'ExportFileFormat')
+__all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat')
 
 
 def export(

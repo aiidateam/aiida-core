@@ -20,9 +20,6 @@ from aiida.cmdline.params import options
 from aiida.cmdline.params.types import GroupParamType, ImportPath
 from aiida.cmdline.utils import decorators, echo
 
-from aiida.tools.importexport.common import close_progress_bar
-from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
-
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
 EXTRAS_MODE_NEW = ['import', 'none']
 COMMENT_MODE = ['newest', 'overwrite']
@@ -52,6 +49,8 @@ def _echo_error(  # pylint: disable=unused-argument
     :param raised_exception: Exception raised during error.
     :type raised_exception: `Exception`
     """
+    from aiida.tools.importexport import close_progress_bar, IMPORT_LOGGER
+
     # Close progress bar, if it exists
     close_progress_bar(leave=False)
 

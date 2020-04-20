@@ -10,7 +10,7 @@
 """Provides import functionalities."""
 from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
 
-__all__ = ('import_data',)
+__all__ = ('import_data', 'IMPORT_LOGGER')
 
 
 def import_data(in_path, group=None, silent=False, **kwargs):

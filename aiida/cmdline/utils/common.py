@@ -490,13 +490,14 @@ def check_worker_load(active_slots):
 
     :param active_slots: the number of currently active worker slots
     """
-    from aiida.common.exceptions import CircusCallError
     from aiida.cmdline.utils import echo
-    from aiida.manage.external.rmq import _RMQ_TASK_PREFETCH_COUNT
+    from aiida.common.exceptions import CircusCallError
+    from aiida.manage.configuration import get_config
 
     warning_threshold = 0.9  # 90%
 
-    slots_per_worker = _RMQ_TASK_PREFETCH_COUNT
+    config = get_config()
+    slots_per_worker = config.get_option('daemon.worker_process_slots', config.current_profile.name)
 
     try:
         active_workers = get_num_workers()

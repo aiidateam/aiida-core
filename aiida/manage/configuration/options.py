@@ -16,6 +16,7 @@ __all__ = ('get_option', 'get_option_names', 'parse_option')
 NO_DEFAULT = ()
 DEFAULT_DAEMON_WORKERS = 1
 DEFAULT_DAEMON_TIMEOUT = 20  # Default timeout in seconds for circus client calls
+DEFAULT_DAEMON_WORKER_PROCESS_SLOTS = 200
 VALID_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'REPORT', 'INFO', 'DEBUG']
 
 Option = collections.namedtuple(
@@ -45,6 +46,14 @@ CONFIG_OPTIONS = {
         'valid_values': None,
         'default': DEFAULT_DAEMON_TIMEOUT,
         'description': 'The timeout in seconds for calls to the circus client',
+        'global_only': False,
+    },
+    'daemon.worker_process_slots': {
+        'key': 'daemon_worker_process_slots',
+        'valid_type': 'int',
+        'valid_values': None,
+        'default': DEFAULT_DAEMON_WORKER_PROCESS_SLOTS,
+        'description': 'The maximum number of concurrent process tasks that each daemon worker can handle',
         'global_only': False,
     },
     'db.batch_size': {

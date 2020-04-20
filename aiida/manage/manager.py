@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """AiiDA manager for global settings"""
-
 import functools
 
 __all__ = ('get_manager', 'reset_manager')
@@ -32,6 +31,17 @@ class Manager:
     Future plans:
       * reset manager cache when loading a new profile
     """
+
+    @staticmethod
+    def get_config():
+        """Return the current config.
+
+        :return: current loaded config instance
+        :rtype: :class:`~aiida.manage.configuration.config.Config`
+        :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
+        """
+        from .configuration import get_config
+        return get_config()
 
     @staticmethod
     def get_profile():
@@ -166,10 +176,11 @@ class Manager:
         """
         from aiida.manage.external import rmq
         import kiwipy.rmq
+
         profile = self.get_profile()
 
         if task_prefetch_count is None:
-            task_prefetch_count = rmq._RMQ_TASK_PREFETCH_COUNT  # pylint: disable=protected-access
+            task_prefetch_count = self.get_config().get_option('daemon.worker_process_slots', profile.name)
 
         url = rmq.get_rmq_url()
         prefix = profile.rmq_prefix
@@ -261,11 +272,10 @@ class Manager:
         :rtype: :class:`aiida.engine.runners.Runner`
         """
         from aiida.engine import runners
-        from .configuration import get_config
 
-        config = get_config()
+        config = self.get_config()
         profile = self.get_profile()
-        poll_interval = 0.0 if profile.is_test_profile else config.get_option('runner.poll.interval')
+        poll_interval = 0.0 if profile.is_test_profile else config.get_option('runner.poll.interval', profile.name)
 
         settings = {'rmq_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)

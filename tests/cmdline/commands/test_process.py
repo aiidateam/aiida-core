@@ -384,7 +384,7 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         aiida.cmdline.utils.common.get_num_workers = lambda: 1
 
     def tearDown(self):
-        # Reset the redifined function
+        # Reset the redefined function
         import aiida.cmdline.utils.common
         aiida.cmdline.utils.common.get_num_workers = self.real_get_num_workers
         super().tearDown()
@@ -395,10 +395,12 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         that the warning message is displayed to the user when running `verdi process list`
         """
         from aiida.engine import ProcessState
+        from aiida.manage.configuration import get_config
 
         # Get the number of allowed processes per worker:
-        from aiida.manage.external.rmq import _RMQ_TASK_PREFETCH_COUNT
-        limit = int(_RMQ_TASK_PREFETCH_COUNT * 0.9)
+        config = get_config()
+        worker_process_slots = config.get_option('daemon.worker_process_slots', config.current_profile.name)
+        limit = int(worker_process_slots * 0.9)
 
         # Create additional active nodes such that we have 90% of the active slot limit
         for _ in range(limit):

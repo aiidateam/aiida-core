@@ -65,7 +65,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
     app.config.update(**config_module.APP_CONFIG)
 
     # Allow cross-origin resource sharing
-    cors_prefix = r'{}/*'.format(config_module)
+    cors_prefix = r'{}/*'.format(config_module.API_CONFIG['PREFIX'])
     CORS(app, resources={cors_prefix: {'origins': '*'}})
 
     # Configure the serializer

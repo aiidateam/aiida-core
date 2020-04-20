@@ -11,12 +11,13 @@
 """Unittests for REST API."""
 
 import tempfile
+from flask_cors.core import ACL_ORIGIN
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import json
 from aiida.common.links import LinkType
-from aiida.restapi.api import App, AiidaApi
+from aiida.restapi.run_api import configure_api
 
 
 class RESTApiTestCase(AiidaTestCase):
@@ -42,9 +43,10 @@ class RESTApiTestCase(AiidaTestCase):
         # order, api.__init__)
         kwargs = dict(PREFIX=cls._url_prefix, PERPAGE_DEFAULT=cls._PERPAGE_DEFAULT, LIMIT_DEFAULT=cls._LIMIT_DEFAULT)
 
-        cls.app = App(__name__)
+        app, _api = configure_api(catch_internal_server=True)
+
+        cls.app = app
         cls.app.config['TESTING'] = True
-        AiidaApi(cls.app, **kwargs)
 
         # create test inputs
         cell = ((2., 0., 0.), (0., 2., 0.), (0., 0., 2.))
@@ -339,6 +341,35 @@ class RESTApiTestSuite(RESTApiTestCase):
     """
     Define unittests for rest api
     """
+
+    ############### generic endpoints ########################
+
+    def test_server(self):
+        """
+        Test that /server endpoint returns AiiDA version
+        """
+        url = self.get_url_prefix() + '/server'
+        from aiida import __version__
+
+        with self.app.test_client() as client:
+            response = client.get(url)
+            data = json.loads(response.data)['data']
+
+            self.assertEqual(__version__, data['AiiDA_version'])
+            self.assertEqual(self.get_url_prefix(), data['API_prefix'])
+
+    def test_cors_headers(self):
+        """
+        Test that REST API sets cross-origin resource sharing headers
+        """
+        url = self.get_url_prefix() + '/server'
+
+        with self.app.test_client() as client:
+            response = client.get(url)
+            headers = response.headers
+            self.assertEqual(headers.get(ACL_ORIGIN), '*')
+
+    ############### computers endpoint ########################
 
     def test_computers_details(self):
         """

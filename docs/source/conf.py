@@ -31,6 +31,8 @@ from aiida.manage.configuration import load_documentation_profile
 # default profile of the AiiDA installation does not use a Django backend.
 load_documentation_profile()
 
+ON_RTD = os.environ.get('READTHEDOCS', None)
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -48,6 +50,8 @@ extensions = [
     'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton'
 ]
+if ON_RTD:
+    extensions.append('sphinx_search.extension')
 ipython_mplbackend = ''
 
 todo_include_todos = False
@@ -144,6 +148,7 @@ intersphinx_mapping = {
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 # html_theme = 'default'
+
 
 # Enable labeling for figures
 numfig = True

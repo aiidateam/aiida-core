@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi daemon`."""
-
 from click.testing import CliRunner
 import pytest
 

@@ -196,27 +196,48 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
 
 def parse_formula(formula):
     """
-    Parses the Hill formulae, written with spaces for separators.
+    Parses the Hill formulae. Does not need spaces as separators.
+    Works also for partial occupancies and for chemical groups enclosed in round/square/curly brackets.
+    Elements are counted and a dictionary is returned.
+    e.g.  'C[NH2]3NO3'  -->  {'C': 1, 'N': 4, 'H': 6, 'O': 3}
     """
     import re
 
-    contents = {}
-    for part in re.split(r'\s+', formula):
-        m = re.match(r'(\D+)([\.\d]+)?', part)
-
-        if m is None:
-            continue
-
-        specie = m.group(1)
-        quantity = m.group(2)
-        if quantity is None:
+    def chemcount_str_to_number(string):
+        if (string is None) or (len(string) == 0):
             quantity = 1
         else:
-            if re.match(r'^\d+$', quantity):
-                quantity = int(quantity)
+            if re.match(r'^\d+$', string):  # check if it is an integer number
+                quantity = int(string)
             else:
-                quantity = float(quantity)
-        contents[specie] = quantity
+                quantity = float(string)
+        return quantity
+
+    contents = {}
+
+    # split blocks with parentheses
+    for block in re.split(r'(\([^\)]*\)[^A-Z\(\[\{]*|\[[^\]]*\][^A-Z\(\[\{]*|\{[^\}]*\}[^A-Z\(\[\{]*)', formula):
+        if not block:  # block is void
+            continue
+
+        # get molecular formula (within parentheses) & count
+        g = re.search(r'[\{\[\(](.+)[\}\]\)]([\.\d]*)', block)  # pylint: disable=invalid-name
+        if g is None:  # block does not contain parentheses
+            molformula = block
+            molcount = 1
+        else:
+            molformula = g.group(1)
+            molcount = chemcount_str_to_number(g.group(2))
+
+        for part in re.findall(r'[A-Z][^A-Z\s]*', molformula.replace(' ', '')):  # split at uppercase letters
+            m = re.match(r'(\D+)([\.\d]+)?', part)  # separates element and count  # pylint: disable=invalid-name
+
+            if m is None:
+                continue
+
+            specie = m.group(1)
+            quantity = chemcount_str_to_number(m.group(2)) * molcount
+            contents[specie] = contents.get(specie, 0) + quantity
     return contents
 
 

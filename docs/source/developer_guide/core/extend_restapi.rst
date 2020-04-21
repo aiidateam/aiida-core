@@ -108,8 +108,6 @@ Let's assume you've put the code in the file ``example.py``, reading:
         help='run app in debug mode')
     @click.option('--wsgi-profile', 'wsgi_profile', is_flag=True, default=False,
         help='to use WSGI profiler middleware for finding bottlenecks in web application')
-    @click.option('--hookup/--no-hookup', 'hookup', is_flag=True, default=True,
-            help='to hookup app')
     def newendpoint(**kwargs):
         """
         runs the REST api
@@ -263,8 +261,7 @@ Finally, the ``main`` code configures and runs the API:
         help='run app in debug mode')
     @click.option('--wsgi-profile', 'wsgi_profile', is_flag=True, default=False,
         help='to use WSGI profiler middleware for finding bottlenecks in web application')
-    @click.option('--hookup/--no-hookup', 'hookup', is_flag=True, default=True,
-            help='to hookup app')
+
     def newendpoint(**kwargs):
         """
         runs the REST api
@@ -308,9 +305,6 @@ You should know few more things before using the script:
     - If you want to customize further the error handling, you can take inspiration
       by looking at the definition of ``App`` and create your derived class ``NewApp(App)``.
 
-    - The option ``hookup`` of the configuration dictionary must be set to
-      ``True`` to use the script  to start the API from command line.
-      Below, we will show when it is appropriate to set ``hookup=False``.
 
     - the supported command line options are identical to those of ``verdi restapi``.
       Use ``verdi restapi --help`` for their full documentation.
@@ -373,26 +367,18 @@ Now, let us create a node through the POST method, and check it again through GE
 The POST request triggers the creation of a new ``Dict`` node,
 as confirmed by the response to the GET request.
 
-As a final remark, there might be circumstances in which you do not want to hook up
-the API from command line. For example, you might want to expose the API through Apache
-for production, rather than the built-in Flask server.
-In this case, you can invoke ``run_api`` to return two custom objects ``app`` and ``api``:
+As a final remark, there might be circumstances in which you do not want to use the internal werkzeug-based server.
+For example, you might want to run the app through Apache using a wsgi script.
+In this case, simply use ``configure_api`` to return two custom objects ``app`` and ``api``:
 
 .. code-block:: python
 
-    (app, api) = run_api(App, MycloudApi, **kwargs)
+    (app, api) = configure_api(App, MycloudApi, **kwargs)
 
-Additionally, set ``hookup=False`` and create an additional click option for the variable
-``catch_internal_server`` to be ``False``.
-This snippet of code becomes the fundamental block of a *wsgi* file used by Apache as
-documented in  :ref:`restapi_apache`.
-Moreover, we recommend to consult the documentation of
-`mod_wsgi <https://modwsgi.readthedocs.io/>`_.
 
-The hookup value is set to ``False``, as the app is no longer required to be hooked up,
-i.e. Apache will do the job for us.
-The second option, instead, is not mandatory but potentially useful;
-it lets the exceptions thrown during the execution of the apps propagate all the way through
-until they reach the logger of Apache.
-Especially when the app is not entirely stable yet, one would like to read the full python
-error traceback in the Apache error log.
+This snippet of code becomes the fundamental block of a *wsgi* file used by Apache as documented in  :ref:`restapi_apache`.
+Moreover, we recommend to consult the documentation of `mod_wsgi <https://modwsgi.readthedocs.io/>`_.
+
+.. note::
+    Optionally, create a click option for the variable ``catch_internal_server`` to be ``False`` in order to let exceptions (including python tracebacks) bubble up to the apache error log.
+    This can be particularly useful when the app is still under heavy development.

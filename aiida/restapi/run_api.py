@@ -14,10 +14,14 @@ It defines the method with all required parameters to run restapi locally.
 """
 import importlib
 import os
+import warnings
 
 from flask_cors import CORS
+from aiida.common.warnings import AiidaDeprecationWarning
 from .common.config import CLI_DEFAULTS, APP_CONFIG, API_CONFIG
 from . import api as api_classes
+
+__all__ = ('run_api', 'configure_api')
 
 
 def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs):
@@ -28,27 +32,62 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
     :type flask_app: :py:class:`flask.Flask`
     :param flask_api: flask_restful API class to be used to wrap the app
     :type flask_api: :py:class:`flask_restful.Api`
-
-    List of valid keyword arguments:
     :param hostname: hostname to run app on (only when using built-in server)
     :param port: port to run app on (only when using built-in server)
     :param config: directory containing the config.py file used to configure the RESTapi
     :param catch_internal_server:  If true, catch and print all inter server errors
     :param debug: enable debugging
     :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in web application
-    :param hookup: If true, hook up application to built-in server - else just return it
-    """
-    # pylint: disable=too-many-locals
+    :param hookup: If true, hook up application to built-in server, else just return it. This parameter
+        is deprecated as of AiiDA 1.2.1. If you don't intend to run the API (hookup=False) use `configure_api` instead.
 
-    # Unpack parameters
+    :returns: tuple (app, api) if hookup==False or runs app if hookup==True
+    """
+    hookup = kwargs.pop('hookup', None)
+    if hookup is None:
+        hookup = CLI_DEFAULTS['HOOKUP_APP']
+    else:
+        warnings.warn(  # pylint: disable=no-member
+            'Using the `hookup` parameter is deprecated since `v1.2.1` and will stop working in `v2.0.0`. '
+            'To configure the app without running it, use `configure_api` instead.', AiidaDeprecationWarning
+        )
+
     hostname = kwargs.pop('hostname', CLI_DEFAULTS['HOST_NAME'])
     port = kwargs.pop('port', CLI_DEFAULTS['PORT'])
-    config = kwargs.pop('config', CLI_DEFAULTS['CONFIG_DIR'])
-
-    catch_internal_server = kwargs.pop('catch_internal_server', CLI_DEFAULTS['CATCH_INTERNAL_SERVER'])
     debug = kwargs.pop('debug', APP_CONFIG['DEBUG'])
+
+    app, api = configure_api(flask_app, flask_api, **kwargs)
+
+    if hookup:
+        # Run app through built-in werkzeug server
+        print(' * REST API running on http://{}:{}{}'.format(hostname, port, API_CONFIG['PREFIX']))
+        api.app.run(debug=debug, host=hostname, port=int(port), threaded=True)
+
+    else:
+        # Return the app & api without specifying port/host to be handled by an external server (e.g. apache).
+        # Some of the user-defined configuration of the app is ineffective (only affects built-in server).
+        return (app, api)
+
+
+def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs):
+    """
+    Configures a flask.Flask instance and returns it.
+
+    :param flask_app: Class inheriting from flask app class
+    :type flask_app: :py:class:`flask.Flask`
+    :param flask_api: flask_restful API class to be used to wrap the app
+    :type flask_api: :py:class:`flask_restful.Api`
+    :param config: directory containing the config.py file used to configure the RESTapi
+    :param catch_internal_server:  If true, catch and print all inter server errors
+    :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in web application
+
+    :returns: tuple (app, api)
+    """
+
+    # Unpack parameters
+    config = kwargs.pop('config', CLI_DEFAULTS['CONFIG_DIR'])
+    catch_internal_server = kwargs.pop('catch_internal_server', CLI_DEFAULTS['CATCH_INTERNAL_SERVER'])
     wsgi_profile = kwargs.pop('wsgi_profile', CLI_DEFAULTS['WSGI_PROFILE'])
-    hookup = kwargs.pop('hookup', CLI_DEFAULTS['HOOKUP_APP'])
 
     if kwargs:
         raise ValueError('Unknown keyword arguments: {}'.format(kwargs))
@@ -65,7 +104,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
     app.config.update(**config_module.APP_CONFIG)
 
     # Allow cross-origin resource sharing
-    cors_prefix = r'{}/*'.format(config_module)
+    cors_prefix = r'{}/*'.format(config_module.API_CONFIG['PREFIX'])
     CORS(app, resources={cors_prefix: {'origins': '*'}})
 
     # Configure the serializer
@@ -73,7 +112,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
         from aiida.restapi.common.utils import CustomJSONEncoder
         app.json_encoder = CustomJSONEncoder
 
-    # Set up WSGI profile if requested
+    # Set up WSGI profiler if requested
     if wsgi_profile:
         from werkzeug.middleware.profiler import ProfilerMiddleware
 
@@ -82,13 +121,4 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
 
     # Instantiate an Api by associating its app
     api = flask_api(app, **API_CONFIG)
-
-    if hookup:
-        # Run app through built-in werkzeug server
-        print(' * REST API running on http://{}:{}{}'.format(hostname, port, API_CONFIG['PREFIX']))
-        api.app.run(debug=debug, host=hostname, port=int(port), threaded=True)
-
-    else:
-        # Return the app & api without specifying port/host to be handled by an external server (e.g. apache).
-        # Some of the user-defined configuration of the app is ineffective (only affects built-in server).
-        return (app, api)
+    return (app, api)

@@ -72,9 +72,6 @@ class HostnameType(StringParamType):
     def convert(self, value, param, ctx):
         newval = super().convert(value, param, ctx)
 
-        import click
-        click.echo(newval)
-
         if newval and not re.match(HOSTNAME_REGEX, newval):
             self.fail('Please enter a valid hostname.')
 

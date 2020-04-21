@@ -37,13 +37,7 @@ from aiida.restapi.common import config
     default=config.CLI_DEFAULTS['WSGI_PROFILE'],
     help='Whether to enable WSGI profiler middleware for finding bottlenecks'
 )
-@click.option(
-    '--hookup/--no-hookup',
-    'hookup',
-    is_flag=True,
-    default=config.CLI_DEFAULTS['HOOKUP_APP'],
-    help='Hookup app to flask server'
-)
+@click.option('--hookup/--no-hookup', 'hookup', is_flag=True, default=None, help='Hookup app to flask server')
 def restapi(hostname, port, config_dir, debug, wsgi_profile, hookup):
     """
     Run the AiiDA REST API server.
@@ -53,7 +47,6 @@ def restapi(hostname, port, config_dir, debug, wsgi_profile, hookup):
         verdi -p <profile_name> restapi --hostname 127.0.0.5 --port 6789
     """
     from aiida.restapi.run_api import run_api
-
     # Invoke the runner
     run_api(
         hostname=hostname,

@@ -122,13 +122,15 @@ class CalcJob(Process):
             help='When using a "local" code, set the computer on which the calculation should be run.')
         spec.input_namespace('{}.{}'.format(spec.metadata_key, spec.options_key), required=False)
         spec.input('metadata.options.input_filename', valid_type=str, required=False,
-            help='Filename to which the input for the code that is to be run will be written.')
+            help='Filename to which the input for the code that is to be run is written.')
         spec.input('metadata.options.output_filename', valid_type=str, required=False,
-            help='Filename to which the content of stdout of the code that is to be run will be written.')
+            help='Filename to which the content of stdout of the code that is to be run is written.')
+        spec.input('metadata.options.submit_script_filename', valid_type=str, default='_aiidasubmit.sh',
+            help='Filename to which the job submission script is written.')
         spec.input('metadata.options.scheduler_stdout', valid_type=str, default='_scheduler-stdout.txt',
-            help='Filename to which the content of stdout of the scheduler will be written.')
+            help='Filename to which the content of stdout of the scheduler is written.')
         spec.input('metadata.options.scheduler_stderr', valid_type=str, default='_scheduler-stderr.txt',
-            help='Filename to which the content of stderr of the scheduler will be written.')
+            help='Filename to which the content of stderr of the scheduler is written.')
         spec.input('metadata.options.resources', valid_type=dict, required=True, validator=validate_resources,
             help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
                  'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
@@ -225,12 +227,12 @@ class CalcJob(Process):
 
             with LocalTransport() as transport:
                 with SubmitTestFolder() as folder:
-                    calc_info, script_filename = self.presubmit(folder)
+                    calc_info = self.presubmit(folder)
                     transport.chdir(folder.abspath)
                     upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
                     self.node.dry_run_info = {
                         'folder': folder.abspath,
-                        'script_filename': script_filename
+                        'script_filename': self.node.get_option('submit_script_filename')
                     }
             return plumpy.Stop(None, True)
 
@@ -463,9 +465,9 @@ class CalcJob(Process):
         if max_memory_kb is not None:
             job_tmpl.max_memory_kb = max_memory_kb
 
-        script_filename = '_aiidasubmit.sh'
+        submit_script_filename = self.node.get_option('submit_script_filename')
         script_content = scheduler.get_submit_script(job_tmpl)
-        folder.create_file_from_filelike(io.StringIO(script_content), script_filename, 'w', encoding='utf8')
+        folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')
 
         subfolder = folder.get_subfolder('.aiida', create=True)
         subfolder.create_file_from_filelike(io.StringIO(json.dumps(job_tmpl)), 'job_tmpl.json', 'w', encoding='utf8')
@@ -506,4 +508,4 @@ class CalcJob(Process):
                                           'The destination path of the remote copy '
                                           'is absolute! ({})'.format(this_pk, dest_rel_path))
 
-        return calc_info, script_filename
+        return calc_info

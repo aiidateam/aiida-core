@@ -677,7 +677,7 @@ def import_data_dj(
 
             # Add all the nodes to the new group
             # TODO: decide if we want to return the group label
-            nodes = [entry[0] for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
+            nodes = QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all(flat=True)
             group.add_nodes(nodes)
 
             if not silent:

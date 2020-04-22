@@ -2189,21 +2189,24 @@ class QueryBuilder:
 
             yield item
 
-    def all(self, batch_size=None):
-        """
-        Executes the full query with the order of the rows as returned by the backend.
-        the order inside each row is given by the order of the vertices in the path
-        and the order of the projections for each vertice in the path.
+    def all(self, batch_size=None, flat=False):
+        """Executes the full query with the order of the rows as returned by the backend.
 
-        :param int batch_size:
-            The size of the batches to ask the backend to batch results in subcollections.
-            You can optimize the speed of the query by tuning this parameter.
-            Leave the default (*None*) if speed is not critical or if you don't know
-            what you're doing!
+        The order inside each row is given by the order of the vertices in the path and the order of the projections for
+        each vertex in the path.
 
+        :param int batch_size: the size of the batches to ask the backend to batch results in subcollections. You can
+            optimize the speed of the query by tuning this parameter. Leave the default `None` if speed is not critical
+            or if you don't know what you're doing.
+        :param bool flat: return the result as a flat list of projected entities without sub lists.
         :returns: a list of lists of all projected entities.
         """
-        return list(self.iterall(batch_size=batch_size))
+        matches = list(self.iterall(batch_size=batch_size))
+
+        if not flat:
+            return matches
+
+        return [projection for entry in matches for projection in entry]
 
     def dict(self, batch_size=None):
         """

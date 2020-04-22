@@ -10,6 +10,7 @@
 ###########################################################################
 """Utility CLI to manage dependencies for aiida-core."""
 
+import os
 import sys
 import re
 import json
@@ -31,6 +32,8 @@ SETUPTOOLS_CONDA_MAPPINGS = {
 }
 
 CONDA_IGNORE = ['pyblake2', r'.*python_version == \"3\.5\"']
+
+GITHUB_ACTIONS = os.environ.get('GITHUB_ACTIONS') == 'true'
 
 
 class DependencySpecificationError(click.ClickException):
@@ -352,6 +355,7 @@ def check_requirements(extras):
         install_requires.extend(setup_cfg['extras_require'][extra])
     install_requires = set(parse_requirements(install_requires))
 
+    not_installed = dict()
     for fn_req in (ROOT / 'requirements').iterdir():
         env = {'python_version': re.match(r'.*-py-(.*)\.txt', str(fn_req)).groups()[0]}
         required = {r for r in install_requires if r.marker is None or r.marker.evaluate(env)}
@@ -360,12 +364,32 @@ def check_requirements(extras):
             working_set = list(_parse_working_set(req_file))
             installed = {req for req in required for entry in working_set if entry.fulfills(req)}
 
-        not_installed = required.difference(installed)
-        if not_installed:  # switch to assignment expression after yapf supports 3.8
-            raise DependencySpecificationError(
-                f"Environment specified in '{fn_req.relative_to(ROOT)}' misses matches for:\n" +
-                '\n'.join(' - ' + str(f) for f in not_installed)
+        not_installed[fn_req] = required.difference(installed)
+
+    # Output context-sensitive warnings in case that this script is
+    # executed as part of a GitHub actions workflow.
+    if GITHUB_ACTIONS:
+        with open(ROOT / 'setup.json') as setup_json_file:
+            lines = list(setup_json_file)
+
+        for fn_req, not_installed_ in not_installed.items():
+            for dependency in not_installed_:
+                for lineno, line in enumerate(lines):
+                    if str(dependency) in line:
+                        print(
+                            f'::warning file=setup.json,line={lineno+1}::'
+                            f"No match for this dependency in '{fn_req.relative_to(ROOT)}'!"
+                        )
+
+    if any(not_installed.values()):
+        raise DependencySpecificationError(
+            "At least one dependency specified in the 'setup.json' file is missing from the requirements/ files.\n" +
+            '\n'.join(
+                f'{fn_req.relative_to(ROOT)}:\n' + '\n'.join(' - ' + str(dep)
+                                                             for dep in ni)
+                for fn_req, ni in not_installed.items()
             )
+        )
 
     click.secho("Requirements files appear to be in sync with specifications in 'setup.json'.", fg='green')
 

@@ -369,13 +369,14 @@ as confirmed by the response to the GET request.
 
 As a final remark, there might be circumstances in which you do not want to use the internal werkzeug-based server.
 For example, you might want to run the app through Apache using a wsgi script.
-In this case, simply use ``configure_api`` to return two custom objects ``app`` and ``api``:
+In this case, simply use ``configure_api`` to return a custom object ``api``:
 
 .. code-block:: python
 
-    (app, api) = configure_api(App, MycloudApi, **kwargs)
+    api = configure_api(App, MycloudApi, **kwargs)
 
 
+The ``app`` can be retrieved by ``api.app``.
 This snippet of code becomes the fundamental block of a *wsgi* file used by Apache as documented in  :ref:`restapi_apache`.
 Moreover, we recommend to consult the documentation of `mod_wsgi <https://modwsgi.readthedocs.io/>`_.
 

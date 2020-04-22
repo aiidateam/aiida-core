@@ -43,9 +43,9 @@ class RESTApiTestCase(AiidaTestCase):
         # order, api.__init__)
         kwargs = dict(PREFIX=cls._url_prefix, PERPAGE_DEFAULT=cls._PERPAGE_DEFAULT, LIMIT_DEFAULT=cls._LIMIT_DEFAULT)
 
-        app, _api = configure_api(catch_internal_server=True)
+        api = configure_api(catch_internal_server=True)
 
-        cls.app = app
+        cls.app = api.app
         cls.app.config['TESTING'] = True
 
         # create test inputs
@@ -286,7 +286,7 @@ class RESTApiTestCase(AiidaTestCase):
         """
         Check whether response matches expected values.
 
-        :param entity_type: url requested fot the type of the node
+        :param entity_type: url requested for the type of the node
         :param url: web url
         :param full_list: if url is requested to get full list
         :param empty_list: if the response list is empty

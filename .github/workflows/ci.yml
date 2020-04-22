@@ -87,15 +87,10 @@ jobs:
       if: failure()
       uses: peter-evans/commit-comment@v1
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
         path: setup.json
         body: |
-          It appears that at least one of the environments defined in the requirements files
-          ('requirements/*.txt') is not meeting the dependencies specified in the 'setup.json' file.
-          These files define the environment for continuous integration tests, so it is important that they are updated.
-
-          If this commit is part of a pull request, you can automatically update the requirements by
-          commenting with '/update-requirements'.
+          It appears that at least one of the environments defined in the requirements/
+          files is inconsistent with the dependencies specified in the 'setup.json' file.
 
           Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information.
 

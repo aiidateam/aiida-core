@@ -316,7 +316,7 @@ Below is a list with all available subcommands.
       incr     Add NUMBER [default=1] workers to the running daemon.
       logshow  Show the log of the daemon, press CTRL+C to quit.
       restart  Restart the daemon.
-      start    Start the daemon with NUMBER workers [default=1].
+      start    Start the daemon with NUMBER workers.
       status   Print the status of the current daemon or all daemons.
       stop     Stop the daemon.
 

@@ -82,7 +82,7 @@ class TestRunner(unittest.runner.TextTestRunner):
         import warnings
         from aiida.common.warnings import AiidaDeprecationWarning
         warnings.warn(  # pylint: disable=no-member
-            'Please use "pytest" for testing AiiDA plugins. Support for "unittest" be removed in `v2.0.0`',
+            'Please use "pytest" for testing AiiDA plugins. Support for "unittest" will be removed in `v2.0.0`',
             AiidaDeprecationWarning
         )
 

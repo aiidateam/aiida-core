@@ -56,7 +56,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
     port = kwargs.pop('port', CLI_DEFAULTS['PORT'])
     debug = kwargs.pop('debug', APP_CONFIG['DEBUG'])
 
-    app, api = configure_api(flask_app, flask_api, **kwargs)
+    api = configure_api(flask_app, flask_api, **kwargs)
 
     if hookup:
         # Run app through built-in werkzeug server
@@ -66,7 +66,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
     else:
         # Return the app & api without specifying port/host to be handled by an external server (e.g. apache).
         # Some of the user-defined configuration of the app is ineffective (only affects built-in server).
-        return (app, api)
+        return api.app, api
 
 
 def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs):
@@ -81,7 +81,8 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     :param catch_internal_server:  If true, catch and print all inter server errors
     :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in web application
 
-    :returns: tuple (app, api)
+    :returns: Flask RESTful API
+    :rtype: :py:class:`flask_restful.Api`
     """
 
     # Unpack parameters
@@ -119,6 +120,5 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
         app.config['PROFILE'] = True
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
-    # Instantiate an Api by associating its app
-    api = flask_api(app, **API_CONFIG)
-    return (app, api)
+    # Instantiate and return a Flask RESTful API by associating its app
+    return flask_api(app, **API_CONFIG)

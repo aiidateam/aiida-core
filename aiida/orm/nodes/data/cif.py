@@ -10,6 +10,7 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-statements
 """Tools for handling Crystallographic Information Files (CIF)"""
 
+import re
 from aiida.common.utils import Capturing
 
 from .singlefile import SinglefileData
@@ -201,16 +202,14 @@ def parse_formula(formula):
     Elements are counted and a dictionary is returned.
     e.g.  'C[NH2]3NO3'  -->  {'C': 1, 'N': 4, 'H': 6, 'O': 3}
     """
-    import re
 
     def chemcount_str_to_number(string):
-        if (string is None) or (len(string) == 0):
+        if not string:
             quantity = 1
         else:
-            if re.match(r'^\d+$', string):  # check if it is an integer number
-                quantity = int(string)
-            else:
-                quantity = float(string)
+            quantity = float(string)
+            if quantity.is_integer():
+                quantity = int(quantity)
         return quantity
 
     contents = {}
@@ -221,23 +220,23 @@ def parse_formula(formula):
             continue
 
         # get molecular formula (within parentheses) & count
-        g = re.search(r'[\{\[\(](.+)[\}\]\)]([\.\d]*)', block)  # pylint: disable=invalid-name
-        if g is None:  # block does not contain parentheses
+        group = re.search(r'[\{\[\(](.+)[\}\]\)]([\.\d]*)', block)
+        if group is None:  # block does not contain parentheses
             molformula = block
             molcount = 1
         else:
-            molformula = g.group(1)
-            molcount = chemcount_str_to_number(g.group(2))
+            molformula = group.group(1)
+            molcount = chemcount_str_to_number(group.group(2))
 
         for part in re.findall(r'[A-Z][^A-Z\s]*', molformula.replace(' ', '')):  # split at uppercase letters
-            m = re.match(r'(\D+)([\.\d]+)?', part)  # separates element and count  # pylint: disable=invalid-name
+            match = re.match(r'(\D+)([\.\d]+)?', part)  # separates element and count
 
-            if m is None:
+            if match is None:
                 continue
 
-            specie = m.group(1)
-            quantity = chemcount_str_to_number(m.group(2)) * molcount
-            contents[specie] = contents.get(specie, 0) + quantity
+            species = match.group(1)
+            quantity = chemcount_str_to_number(match.group(2)) * molcount
+            contents[species] = contents.get(species, 0) + quantity
     return contents
 
 
@@ -598,8 +597,6 @@ class CifData(SinglefileData):
 
         :return: True if there are partial occupancies, False otherwise
         """
-        import re
-
         tag = '_atom_site_occupancy'
 
         epsilon = 1e-6
@@ -649,8 +646,6 @@ class CifData(SinglefileData):
         :return: boolean, True if no atomic sites are defined or if any of the defined sites contain undefined positions
             and False otherwise
         """
-        import re
-
         tag_x = '_atom_site_fract_x'
         tag_y = '_atom_site_fract_y'
         tag_z = '_atom_site_fract_z'

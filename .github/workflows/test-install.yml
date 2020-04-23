@@ -199,7 +199,7 @@ jobs:
     - name: Check consistency of requirements/ files
       id: check_reqs
       continue-on-error: true
-      run: python ./utils/dependency_management.py check-requirements DEFAULT
+      run: python ./utils/dependency_management.py check-requirements DEFAULT --no-github-annotate
 
 #
 # The following steps are only executed if the consistency check failed.

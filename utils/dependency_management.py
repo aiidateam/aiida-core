@@ -16,7 +16,7 @@ import re
 import json
 import subprocess
 from pathlib import Path
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from pkg_resources import Requirement, parse_requirements
 from packaging.utils import canonicalize_name
 
@@ -79,6 +79,26 @@ def _setuptools_to_conda(req):
 
     # We need to parse the modified required again, to ensure consistency.
     return Requirement.parse(str(req))
+
+
+def _find_linenos_of_requirements_in_setup_json(requirements):
+    """Determine the line numbers of requirements specified in 'setup.json'.
+
+    Returns a dict that maps a requirement, e.g., `numpy~=1.15.0` to the
+    line numbers at which said requirement is defined within the 'setup.json'
+    file.
+    """
+    linenos = defaultdict(list)
+
+    with open(ROOT / 'setup.json') as setup_json_file:
+        lines = list(setup_json_file)
+
+    # Determine the lines that correspond to affected requirements in setup.json.
+    for requirement in requirements:
+        for lineno, line in enumerate(lines):
+            if str(requirement) in line:
+                linenos[requirement].append(lineno)
+    return linenos
 
 
 class _Entry:
@@ -355,7 +375,7 @@ def check_requirements(extras):
         install_requires.extend(setup_cfg['extras_require'][extra])
     install_requires = set(parse_requirements(install_requires))
 
-    not_installed = dict()
+    not_installed = defaultdict(list)
     for fn_req in (ROOT / 'requirements').iterdir():
         env = {'python_version': re.match(r'.*-py-(.*)\.txt', str(fn_req)).groups()[0]}
         required = {r for r in install_requires if r.marker is None or r.marker.evaluate(env)}
@@ -364,32 +384,35 @@ def check_requirements(extras):
             working_set = list(_parse_working_set(req_file))
             installed = {req for req in required for entry in working_set if entry.fulfills(req)}
 
-        not_installed[fn_req] = required.difference(installed)
-
-    # Output context-sensitive warnings in case that this script is
-    # executed as part of a GitHub actions workflow.
-    if GITHUB_ACTIONS:
-        with open(ROOT / 'setup.json') as setup_json_file:
-            lines = list(setup_json_file)
-
-        for fn_req, not_installed_ in not_installed.items():
-            for dependency in not_installed_:
-                for lineno, line in enumerate(lines):
-                    if str(dependency) in line:
-                        print(
-                            f'::warning file=setup.json,line={lineno+1}::'
-                            f"No match for this dependency in '{fn_req.relative_to(ROOT)}'!"
-                        )
+        for dependency in required.difference(installed):
+            not_installed[dependency].append(fn_req)
 
     if any(not_installed.values()):
-        raise DependencySpecificationError(
-            "At least one dependency specified in the 'setup.json' file is missing from the requirements/ files.\n" +
-            '\n'.join(
-                f'{fn_req.relative_to(ROOT)}:\n' + '\n'.join(' - ' + str(dep)
-                                                             for dep in ni)
-                for fn_req, ni in not_installed.items()
-            )
-        )
+        setup_json_linenos = _find_linenos_of_requirements_in_setup_json(not_installed)
+
+        # Format error message to be presented to user.
+        error_msg = ["The requirements/ files are missing dependencies specified in the 'setup.json' file.", '']
+        for dependency, fn_reqs in not_installed.items():
+            src = 'setup.json:' + ','.join(str(lineno) for lineno in setup_json_linenos[dependency])
+            error_msg.append(f'{src}: No match for dependency `{dependency}` in:')
+            for fn_req in sorted(fn_reqs):
+                error_msg.append(f' - {fn_req.relative_to(ROOT)}')
+
+        if GITHUB_ACTIONS:
+
+            # Set the step ouput error message which can be used, e.g., for display as part of an issue comment.
+            print('::set-output name=error::' + '%0A'.join(error_msg))
+
+            # Annotate the setup.json file with specific warnings.
+            for dependency, fn_reqs in not_installed.items():
+                for lineno in setup_json_linenos[dependency]:
+                    print(
+                        f'::warning file=setup.json,line={lineno+1}::'
+                        f"No match for dependency '{dependency}' in: " +
+                        ','.join(str(fn_req.relative_to(ROOT)) for fn_req in fn_reqs)
+                    )
+
+        raise DependencySpecificationError('\n'.join(error_msg))
 
     click.secho("Requirements files appear to be in sync with specifications in 'setup.json'.", fg='green')
 

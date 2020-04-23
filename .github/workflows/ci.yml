@@ -81,6 +81,7 @@ jobs:
       run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
 
     - name: Check requirements files
+      id: check_reqs
       run: python ./utils/dependency_management.py check-requirements DEFAULT
 
     - name: Create commit comment
@@ -89,10 +90,9 @@ jobs:
       with:
         path: setup.json
         body: |
-          It appears that at least one of the environments defined in the requirements/
-          files is inconsistent with the dependencies specified in the 'setup.json' file.
+          ${{ steps.check_reqs.outputs.error }}
 
-          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information.
+          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information on dependency management.
 
   tests:
 

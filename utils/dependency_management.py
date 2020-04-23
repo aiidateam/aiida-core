@@ -354,7 +354,15 @@ def validate_all(ctx):
 
 @cli.command()
 @click.argument('extras', nargs=-1)
-def check_requirements(extras):
+@click.option(
+    '--github-annotate/--no-github-annotate',
+    default=True,
+    hidden=True,
+    help='Control whether to annotate files with context-specific warnings '
+    'as part of a GitHub actions workflow. Note: Requires environment '
+    'variable GITHUB_ACTIONS=true .'
+)
+def check_requirements(extras, github_annotate):  # pylint disable: too-many-locals-too-many-branches
     """Check the 'requirements/*.txt' files.
 
     Checks that the environments specified in the requirements files
@@ -399,10 +407,10 @@ def check_requirements(extras):
                 error_msg.append(f' - {fn_req.relative_to(ROOT)}')
 
         if GITHUB_ACTIONS:
-
             # Set the step ouput error message which can be used, e.g., for display as part of an issue comment.
             print('::set-output name=error::' + '%0A'.join(error_msg))
 
+        if GITHUB_ACTIONS and github_annotate:
             # Annotate the setup.json file with specific warnings.
             for dependency, fn_reqs in not_installed.items():
                 for lineno in setup_json_linenos[dependency]:

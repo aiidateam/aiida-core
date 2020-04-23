@@ -1,5 +1,24 @@
 # Changelog
 
+
+## v1.2.1
+
+In the fixing of three bugs, three minor features have been added along the way.
+
+### Features
+- Add config option `daemon.worker_process_slots` to configure the maximum number of concurrent tasks each daemon worker can handle [[#3949]](https://github.com/aiidateam/aiida-core/pull/3949)
+- Add config option `daemon.default_workers` to set the default number of workers to be started by `verdi daemon start` [[#3949]](https://github.com/aiidateam/aiida-core/pull/3949)
+- `CalcJob`: make submit script filename configurable through the `metadata.options` [[#3948]](https://github.com/aiidateam/aiida-core/pull/3948)
+
+### Bug fixes
+- `CalcJob`: fix bug in idempotency check of upload transport task [[#3948]](https://github.com/aiidateam/aiida-core/pull/3948)
+- REST API: reintroduce CORS headers, the lack of which was breaking the Materials Cloud provenance explorer [[#3951]](https://github.com/aiidateam/aiida-core/pull/3951)
+- Remove the equality operator of `ExitCode` which caused the serialization of workchains to fail if put in the workchain context [[#3940]](https://github.com/aiidateam/aiida-core/pull/3940)
+
+### Deprecations
+- The `hookup` argument of `aiida.restapi.run_api` and the `--hookup` option of `verdi restapi` are deprecated [[#3951]](https://github.com/aiidateam/aiida-core/pull/3951)
+
+
 ## v1.2.0
 
 ### Features

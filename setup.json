@@ -5,6 +5,7 @@
   "license": "MIT License",
   "author": "The AiiDA team",
   "author_email": "developers@aiida.net",
+  "description": "AiiDA is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.",
   "include_package_data": true,
   "python_requires": ">=3.5",
   "classifiers": [

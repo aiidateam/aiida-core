@@ -160,23 +160,17 @@ jobs:
       run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt
 
     # Add python-version specific requirements/ file to the requirements.txt artifact.
-    # The requirements/ files in the artifact can be used to update the repository in case
-    # that they are inconsistent with the dependency specification in the setup.json file.
-    # The consistency is checked as part of the next job within this workflow and an attempt
-    # to automatically create a pull request to update the requirements/* files is created
-    # in case that they are determined to be inconsistent.
+    # This artifact can be used in the next step to automatically create a pull request
+    # updating the requirements (in case they are  inconsistent with the setup.json file).
     - uses: actions/upload-artifact@v1
       if: matrix.backend == 'django'  # The requirements are identical between backends.
       with:
         name: requirements.txt
         path: requirements-py-${{ matrix.python-version }}.txt
 
-# The check-requirements job checks whether the requirements/ files are consistent
-# with the dependency specification in the setup.json file. If the check fails,
-# the user is warned via a commit comment and a warning as part of this actions
-# workflow. Furthermore, an attempt is made to automatically create a pull request
-# to update the files. This is only possible if this workflow is not run on a pull
-# request from a fork.
+# Check whether the requirements/ files are consistent with the dependency specification in the setup.json file.
+# If the check fails, warn the user via a comment and try to automatically create a pull request to update the files
+# (does not work on pull requests from forks).
 
   check-requirements:
 

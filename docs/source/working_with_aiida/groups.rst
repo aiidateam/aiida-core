@@ -253,7 +253,7 @@ Groups can be created and destroyed::
     In [15]: path["base1/sub_group1"].is_virtual
     Out[15]: False
 
-To traverse paths, the `children` attribute can be used, or for recursive traversal::
+To traverse paths, use the `children` attribute - for recursive traversal, use `walk`::
 
     In [16]: for subpath in path.walk(return_virtual=False):
         ...:     print(subpath)

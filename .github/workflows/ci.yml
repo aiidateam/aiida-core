@@ -85,7 +85,7 @@ jobs:
       run: python ./utils/dependency_management.py check-requirements DEFAULT
 
     - name: Create commit comment
-      if: failure()
+      if: failure() && steps.check_reqs.outputs.error
       uses: peter-evans/commit-comment@v1
       with:
         path: setup.json

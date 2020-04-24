@@ -385,7 +385,10 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
 
     not_installed = defaultdict(list)
     for fn_req in (ROOT / 'requirements').iterdir():
-        env = {'python_version': re.match(r'.*-py-(.*)\.txt', str(fn_req)).groups()[0]}
+        match = re.match(r'.*-py-(.*)\.txt', str(fn_req))
+        if not match:
+            continue
+        env = {'python_version': match.groups()[0]}
         required = {r for r in install_requires if r.marker is None or r.marker.evaluate(env)}
 
         with open(fn_req) as req_file:

@@ -255,9 +255,8 @@ jobs:
       with:
         issue-number: ${{ github.event.number }}
         body: |
-          I automatically created a pull request (#${{ steps.create_update_requirements_pr.outputs.pr_number }}) to update the
-          requirements/ files to ensure that they are consistent with
-          dependencies specified in the 'setup.json' file.
+          I automatically created a pull request (#${{ steps.create_update_requirements_pr.outputs.pr_number }}) that adapts the
+          requirements/ files according to the dependencies specified in the 'setup.json' file.
 
     - name: Create PR comment on failure
       if: steps.create_update_requirements_pr.outcome == 'Failure'
@@ -265,5 +264,5 @@ jobs:
       with:
         issue-number: ${{ github.event.number }}
         body: |
-          Please update the requirements/ files to ensure that they comply
+          Please update the requirements/ files to ensure that they
           are consistent with the dependencies specified in the 'setup.json' file.

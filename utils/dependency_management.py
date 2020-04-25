@@ -404,7 +404,7 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
         # Format error message to be presented to user.
         error_msg = ["The requirements/ files are missing dependencies specified in the 'setup.json' file.", '']
         for dependency, fn_reqs in not_installed.items():
-            src = 'setup.json:' + ','.join(str(lineno) for lineno in setup_json_linenos[dependency])
+            src = 'setup.json:' + ','.join(str(lineno + 1) for lineno in setup_json_linenos[dependency])
             error_msg.append(f'{src}: No match for dependency `{dependency}` in:')
             for fn_req in sorted(fn_reqs):
                 error_msg.append(f' - {fn_req.relative_to(ROOT)}')

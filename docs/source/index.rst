@@ -101,6 +101,7 @@ Welcome to AiiDA's documentation!
    Saw a typo in the documentation? Want to improve existing functionalities?
    The contributing guidelines are hosted on the `aiida-core wiki <https://github.com/aiidateam/aiida-core/wiki>`__ and will guide you through the process of improving AiiDA.
 
+
 .. toctree::
    :maxdepth: 2
    :caption: Getting Started
@@ -128,6 +129,7 @@ Welcome to AiiDA's documentation!
    howto/data
    howto/installation
    howto/plugins
+   howto/faq
 
 .. toctree::
    :maxdepth: 1

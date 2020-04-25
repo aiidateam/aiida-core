@@ -258,9 +258,12 @@ Here are a few general tips that might improve the AiiDA performance:
 Updating your installation
 ==========================
 
+Whenever updating your AiiDA installation, make sure you follow these instructions **very carefully**, even when merely upgrading the patch version!
+Failing to do so, may leave your installation in a broken state, or worse may even damage your data, potentially irreperably.
+
 1. Activate the Python environment where AiiDA is installed.
-2. Finish all running calculations.
-   All finished calculations will be automatically migrated, but it is not possible to resume unfinished calculations.
+2. Finish all running processes.
+   All finished processes will be automatically migrated, but it is not possible to resume unfinished processes.
 3. Stop the daemon using ``verdi daemon stop``.
 4. :ref:`Create a backup of your database and repository<how-to:installation:backup>`.
 
@@ -274,7 +277,9 @@ Updating your installation
     * If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``.
     * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch with ``git pull``.
 
-6. Migrate your database with ``verdi -p <profile_name> database migrate``.
+6. Run `reentry scan` to update the cache of registered entry points.
+
+7. Migrate your database with ``verdi -p <profile_name> database migrate``.
    Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
 
 After the database migration finishes, you will be able to continue working with your existing data.

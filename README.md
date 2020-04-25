@@ -45,6 +45,10 @@ Small improvements of the documentation or minor bug fixes are always welcome.
 
 Please see the [Contributor wiki](https://github.com/aiidateam/aiida-core/wiki) on how to get started.
 
+## Frequently Asked Questions
+
+If you are experiencing problems with your AiiDA installation, please refer to the [FAQ page of the documentation](https://aiida-core.readthedocs.io/en/latest/howto/faq.html).
+
 ## How to cite
 
 If you use AiiDA in your research, please consider citing the AiiDA paper:

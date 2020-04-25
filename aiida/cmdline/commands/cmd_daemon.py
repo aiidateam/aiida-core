@@ -71,7 +71,7 @@ def start(foreground, number):
         subprocess.check_output(command, env=currenv, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
     except subprocess.CalledProcessError as exception:
         click.secho('FAILED', fg='red', bold=True)
-        echo.echo_critical(exception.output)
+        echo.echo_critical(str(exception))
 
     # We add a small timeout to give the pid-file a chance to be created
     with spinner():

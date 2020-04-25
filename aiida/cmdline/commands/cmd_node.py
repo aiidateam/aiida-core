@@ -60,8 +60,8 @@ def repo_ls(node, relative_path, color):
 
     try:
         list_repository_contents(node, relative_path, color)
-    except ValueError as exception:
-        echo.echo_critical(exception)
+    except FileNotFoundError:
+        echo.echo_critical('the path `{}` does not exist for the given node'.format(relative_path))
 
 
 @verdi_node_repo.command('dump')

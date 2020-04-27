@@ -190,7 +190,7 @@ def migrate(input_file, output_file, force, silent, archive_format, version):
         try:
             new_version = migration.migrate_recursively(metadata, data, folder, version)
         except ArchiveMigrationError as exception:
-            echo.echo_critical(exception)
+            echo.echo_critical(str(exception))
 
         with open(folder.get_abs_path('data.json'), 'wb') as fhandle:
             json.dump(data, fhandle, indent=4)

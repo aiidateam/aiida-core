@@ -63,6 +63,29 @@ class TestVerdiDaemon(AiidaTestCase):
         finally:
             self.daemon_client.stop_daemon(wait=True)
 
+    def test_daemon_restart(self):
+        """Test `verdi daemon restart` both with and without `--reset` flag."""
+        try:
+            result = self.cli_runner.invoke(cmd_daemon.start, [])
+            self.assertClickResultNoException(result)
+
+            result = self.cli_runner.invoke(cmd_daemon.restart, [])
+            self.assertClickResultNoException(result)
+
+            result = self.cli_runner.invoke(cmd_daemon.restart, ['--reset'])
+            self.assertClickResultNoException(result)
+
+            daemon_response = self.daemon_client.get_daemon_info()
+            worker_response = self.daemon_client.get_worker_info()
+
+            self.assertIn('status', daemon_response, daemon_response)
+            self.assertEqual(daemon_response['status'], 'ok', daemon_response)
+
+            self.assertIn('info', worker_response, worker_response)
+            self.assertEqual(len(worker_response['info']), 1, worker_response)
+        finally:
+            self.daemon_client.stop_daemon(wait=True)
+
     @pytest.mark.skip(reason='Test fails non-deterministically; see issue #3051.')
     def test_daemon_start_number(self):
         """Test `verdi daemon start` with a specific number of workers."""

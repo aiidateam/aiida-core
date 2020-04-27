@@ -1,0 +1,10 @@
+codecov:
+  notify:
+    after_n_builds: 2
+    wait_for_ci: yes
+  require_ci_to_pass: yes
+
+coverage:
+  precision: 2
+  round: up
+  range: "60...90"

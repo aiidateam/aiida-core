@@ -575,24 +575,6 @@ _tag   {}
         with self.assertRaises(ValueError):
             ret_dict = refine_inline(c)
 
-    @unittest.skipIf(not has_ase(), 'Unable to import ase')
-    @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
-    @unittest.skipIf(not has_spglib(), 'Unable to import spglib')
-    def test_parse_formula(self):
-        from aiida.orm.nodes.data.cif import parse_formula
-
-        self.assertEqual(parse_formula('C H'), {'C': 1, 'H': 1})
-        self.assertEqual(parse_formula('C5 H1'), {'C': 5, 'H': 1})
-        self.assertEqual(parse_formula('Ca5 Ho'), {'Ca': 5, 'Ho': 1})
-        self.assertEqual(parse_formula('H0.5 O'), {'H': 0.5, 'O': 1})
-        self.assertEqual(parse_formula('C0 O0'), {'C': 0, 'O': 0})
-        self.assertEqual(parse_formula('C1 H1 '), {'C': 1, 'H': 1})  # Trailing spaces should be accepted
-        self.assertEqual(parse_formula(' C1 H1'), {'C': 1, 'H': 1})  # Leading spaces should be accepted
-
-        # Invalid literal for float()
-        with self.assertRaises(ValueError):
-            parse_formula('H0.5.2 O')
-
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_scan_type(self):
         """Check that different scan_types of PyCifRW produce the same result."""

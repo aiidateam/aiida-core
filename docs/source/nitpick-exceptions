@@ -34,6 +34,7 @@ py:class click.types.Choice
 py:class click.types.IntParamType
 py:class click.types.StringParamType
 py:class click.types.Path
+py:class click.types.File
 py:meth  click.Option.get_default
 
 py:class concurrent.futures._base.TimeoutError

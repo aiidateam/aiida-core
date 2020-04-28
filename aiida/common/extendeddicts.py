@@ -15,7 +15,7 @@ from . import exceptions
 __all__ = ('AttributeDict', 'FixedFieldsAttributeDict', 'DefaultFieldsAttributeDict')
 
 
-class AttributeDict(dict):
+class AttributeDict(dict):  # pylint: disable=too-many-instance-attributes
     """
     This class internally stores values in a dictionary, but exposes
     the keys also as attributes, i.e. asking for attrdict.key

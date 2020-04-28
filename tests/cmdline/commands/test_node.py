@@ -184,6 +184,18 @@ class TestVerdiNode(AiidaTestCase):
                 result = self.cli_runner.invoke(cmd_node.extras, options)
                 self.assertIsNone(result.exception, result.output)
 
+    def test_node_repo_ls(self):
+        """Test 'verdi node repo ls' command."""
+        options = [str(self.folder_node.pk), 'some/nested/folder']
+        result = self.cli_runner.invoke(cmd_node.repo_ls, options, catch_exceptions=False)
+        self.assertClickResultNoException(result)
+        self.assertIn('filename.txt', result.output)
+
+        options = [str(self.folder_node.pk), 'some/non-existing-folder']
+        result = self.cli_runner.invoke(cmd_node.repo_ls, options, catch_exceptions=False)
+        self.assertIsNotNone(result.exception)
+        self.assertIn('does not exist for the given node', result.output)
+
     def test_node_repo_dump(self):
         """Test 'verdi node repo dump' command."""
 

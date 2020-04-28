@@ -628,6 +628,7 @@ class Node(Entity, metaclass=AbstractNodeMeta):
 
         :param key: fully qualified identifier for the object within the repository
         :return: a list of `File` named tuples representing the objects present in directory with the given key
+        :raises FileNotFoundError: if the `path` does not exist in the repository of this node
         """
         return self._repository.list_objects(key)
 

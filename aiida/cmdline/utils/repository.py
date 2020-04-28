@@ -17,6 +17,7 @@ def list_repository_contents(node, path, color):
 
     :param node: the node
     :param path: directory path
+    :raises FileNotFoundError: if the `path` does not exist in the repository of the given node
     """
     from aiida.orm.utils.repository import FileType
 

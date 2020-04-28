@@ -5,10 +5,10 @@ codecov:
   require_ci_to_pass: yes
 
 coverage:
-  precision: 2
+  precision: 2  # default, here for transparency
   round: up
-  range: "60...90"
+  range: "70...100"  # default, here for transparency
   status:
     project:
       default:
-        threshold: 1%
+        threshold: 0.02%

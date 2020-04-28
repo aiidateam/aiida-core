@@ -547,7 +547,7 @@ class CifData(SinglefileData):
         else:
             raise ValueError('Got unknown parse_policy {}'.format(parse_policy))
 
-    def get_formulae(self, mode='sum'):
+    def get_formulae(self, mode='sum', custom_tags=None):
         """
         Return chemical formulae specified in CIF file.
 
@@ -556,12 +556,19 @@ class CifData(SinglefileData):
         """
         # note: If formulae are not None, they could be returned
         # directly (but the function is very cheap anyhow).
-        formula_tag = '_chemical_formula_{}'.format(mode)
+        formula_tags = ['_chemical_formula_{}'.format(mode)]
+        if custom_tags:
+            if not isinstance(custom_tags, (list, tuple)):
+                custom_tags = [custom_tags]
+            formula_tags.extend(custom_tags)
+
         formulae = []
         for datablock in self.values.keys():
             formula = None
-            if formula_tag in self.values[datablock].keys():
-                formula = self.values[datablock][formula_tag]
+            for formula_tag in formula_tags:
+                if formula_tag in self.values[datablock].keys():
+                    formula = self.values[datablock][formula_tag]
+                    break
             formulae.append(formula)
 
         return formulae

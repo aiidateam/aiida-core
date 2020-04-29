@@ -195,7 +195,7 @@ For example say we have the groups::
     2     base1/sub_group2         core           user@email.com
     3     base2/other/sub_group3   core           user@email.com
 
-We can also access them as from the command-line as::
+We can also access them from the command-line as::
 
     $ verdi group path ls -l
     Path         Sub-Groups
@@ -275,10 +275,21 @@ optionally filtering by node class and any other filters allowed by the `QueryBu
     Out[21]: WalkNodeResult(group_path=GroupPath('base1/sub_group1', cls='<class 'aiida.orm.groups.Group'>'),
     node=<Data: uuid: 0adb5224-585d-4fd4-99ae-20a071972ddd (pk: 1)>)
 
-Finally, you can also specify the `Group` subclasses (discussed above),
-in which case only groups of that subclass will be recognised::
+Finally, you can also specify the `Group` subclasses (as discussed above)::
 
     In [22]: from aiida.orm import UpfFamily
     In [23]: path2 = GroupPath(cls=UpfFamily)
     In [24]: path2["base1"].get_or_create_group()
     Out[24]: (<UpfFamily: "base1" [type core.upf], of user user@email.com>, True)
+
+.. important::
+
+    A `GroupPath` instance will only recognise groups of the instantiated ``cls`` type.
+    The default ``cls`` is ``aiida.orm.Group``::
+
+        In [25]: orm.UpfFamily(label="a").store()
+        Out[25]: <UpfFamily: "a" [type core.upf], of user user@email.com>
+        In [26]: GroupPath("a").is_virtual
+        Out[26]: True
+        In [27]: GroupPath("a", cls=orm.UpfFamily).is_virtual
+        Out[27]: False

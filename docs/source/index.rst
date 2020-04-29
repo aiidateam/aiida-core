@@ -41,8 +41,9 @@ See also the `AiiDA home page`_.
    :caption: Getting Started
 
    intro/about
+   intro/get_started
    intro/installation
-   intro/quickstart
+   intro/troubleshooting
 
 .. toctree::
    :maxdepth: 2

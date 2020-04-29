@@ -52,7 +52,7 @@ needs_sphinx = '1.5.0'
 extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
     'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext'
+    'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext', 'sphinx_togglebutton'
 ]
 ipython_mplbackend = ''
 

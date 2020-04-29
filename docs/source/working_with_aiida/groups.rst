@@ -238,8 +238,8 @@ or the group can be retrieved with the `get_group()` method::
     Out[8]: True
     In [9]: path.get_group() is None
     Out[9]: True
-    In [10]: path["base1/sub_group1"].get_group() is None
-    Out[10]: True
+    In [10]: path["base1/sub_group1"].is_virtual
+    Out[10]: False
     In [11]: path["base1/sub_group1"].get_group()
     Out[11]: <Group: "base1/sub_group1" [type core], of user user@email.com>
 

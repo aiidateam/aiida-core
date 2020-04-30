@@ -16,4 +16,17 @@ var initAccordion = (button) => {
     }
 }
 
-sphinxToggleRunWhenDOMLoaded(initAccordion)
+// Helper function to run when the DOM is finished
+const sphinxAccordionRunWhenDOMLoaded = cb => {
+    if (document.readyState != 'loading') {
+        cb()
+    } else if (document.addEventListener) {
+        document.addEventListener('DOMContentLoaded', cb)
+    } else {
+        document.attachEvent('onreadystatechange', function () {
+            if (document.readyState == 'complete') cb()
+        })
+    }
+}
+
+sphinxAccordionRunWhenDOMLoaded(initAccordion)

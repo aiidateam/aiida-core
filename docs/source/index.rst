@@ -66,19 +66,17 @@ See also the `AiiDA home page`_.
    :maxdepth: 2
    :caption: Reference
 
-   reference/placeholder
+   reference/command_line
+   reference/python_api
+   reference/rest_api
 
 .. toctree::
    :maxdepth: 2
-   :caption: Plugins
+   :caption: Core Development
 
-   plugins/placeholder
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Development
-
-   development/placeholder
+   development/export_format
+   development/database_schema
+   development/file_repository
 
 ***********
 How to cite

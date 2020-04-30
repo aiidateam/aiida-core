@@ -20,7 +20,7 @@ I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) source
 .PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext all default
 
 default:
-	$(SPHINXBUILD) -b html -nW $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	$(SPHINXBUILD) -b html -n $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
 # Same as 'default' but does not exit at the first warning
 debug:

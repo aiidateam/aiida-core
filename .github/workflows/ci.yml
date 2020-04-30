@@ -33,7 +33,7 @@ jobs:
       env:
         READTHEDOCS: 'True'
       run:
-        SPHINXOPTS='-nW' make -C docs html
+        SPHINXOPTS='-n' make -C docs html
 
   pre-commit:
 

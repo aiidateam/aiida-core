@@ -118,3 +118,77 @@ Next Steps
 
     links to tutorials
 
+.. panels::
+
+    **Getting started**
+
+    New to pandas? Check out the getting started guides.
+    They contain an introduction to pandas' main concepts and links to additional tutorials.
+
+    .. container:: custom-button
+
+        To the getting started guide
+
+    ---
+
+    **User guide**
+
+    The user guide provides in-depth information on the key concepts of pandas with useful background information and explanation.
+
+    .. container:: custom-button
+
+        To the user guide
+
+    ---
+
+    **API reference**
+
+    The reference guide contains a detailed description of the pandas API.
+    The reference describes how the methods work and which parameters can be used.
+    It assumes that you have an understanding of the key concepts.
+
+    .. container:: custom-button
+
+        To the api guide
+
+    ---
+
+    **Developer guide**
+
+    Saw a typo in the documentation? Want to improve existing functionalities?
+    The contributing guidelines will guide you through the process of improving pandas.
+
+    .. container:: custom-button
+
+        To the development guide
+
+.. raw:: html
+
+    <style>
+        .custom-button {
+            background-color: #dcdcdc;
+            border: none;
+            color: #484848;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.9rem;
+            border-radius: 0.5rem;
+            max-width: 220px;
+            padding: 0.5rem 0rem;
+            margin-right: auto;
+            margin-left: auto;
+            width: 100%;
+        }
+
+        .custom-button a {
+        color: #484848;
+        }
+
+        .custom-button p {
+        margin-top: 0;
+        margin-bottom: 0rem;
+        color: #484848;
+        }
+
+    </style>

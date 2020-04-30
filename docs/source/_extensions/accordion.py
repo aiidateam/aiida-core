@@ -13,6 +13,7 @@ def visit_button_node(self, node):
     self.body.append(self.starttag(node, 'button', CLASS=' '.join(node['classes'])))
     self.body.append('<span class="indicator">+</span>')
 
+
 def depart_button_node(self, _):
     # type: (nodes.Element) -> None
     self.body.append('</button>\n\n')
@@ -29,7 +30,7 @@ class Accordion(SphinxDirective):
         title_text = self.arguments[0]
         textnodes, _ = self.state.inline_text(title_text, self.lineno)
         button = ButtonNode(title_text, '', *textnodes, classes=['accordion'])
-        panel = nodes.container(classes=['panel'])
+        panel = nodes.container(classes=['accordion-content'])
         self.state.nested_parse(self.content, self.content_offset, panel)
         return [button, panel]
 

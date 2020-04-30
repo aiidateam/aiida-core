@@ -25,7 +25,7 @@
   font-size: x-large;
 }
 
-.panel {
+.accordion-content {
   padding: 10px 18px;
   display: none;
   background-color: white;

@@ -1,0 +1,40 @@
+/*  */
+
+.sphinx-panels {
+    display:-ms-flexbox;
+    display:flex;
+    -ms-flex-wrap:wrap;
+    flex-wrap:wrap;
+    margin-right:-15px;
+    margin-left:-15px
+}
+
+.sphinx-panel {
+    display:-ms-flexbox!important;
+    display:flex!important;
+    position:relative;
+    width:100%;
+    padding-right:15px;
+    padding-left:15px;
+}
+
+.sphinx-panel.width50 {
+    -ms-flex:0 0 50%;
+    flex:0 0 50%;
+    max-width:50%
+}
+
+.sphinx-panel-content {
+    flex-grow: 1;
+    background:#FFF;
+    border-radius:3px;
+    padding: 20px 20px 20px 20px;
+    margin: 10px 0px;
+    border-color: rgba(105, 105, 105, 0.13);
+    background-color: rgb(223, 221, 215);
+    word-wrap: break-word;
+    }
+
+.sphinx-panel-content.text-center {
+    text-align: center !important;
+}

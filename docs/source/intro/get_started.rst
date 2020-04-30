@@ -100,23 +100,21 @@ Finally, to power down the services, you can run:
 Next Steps
 ==========
 
-.. container::
+.. accordion:: Run pure Python lightweight computations
 
-    .. accordion:: Run pure Python lightweight computations
+    blah blah blah
 
-        blah blah blah
+    links to tutorials
 
-        links to tutorials
+.. accordion:: Run compute-intensive codes
 
-    .. accordion:: Run compute-intensive codes
+    blah blah blah
 
-        blah blah blah
+    links to tutorials
 
-        links to tutorials
+.. accordion:: Run computations on High Performance Computers
 
-    .. accordion:: Run computations on High Performance Computers
+    blah blah blah
 
-        blah blah blah
-
-        links to tutorials
+    links to tutorials
 

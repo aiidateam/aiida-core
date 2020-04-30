@@ -7,10 +7,13 @@ var initAccordion = (button) => {
         acc[i].addEventListener("click", function () {
             this.classList.toggle("active");
             var panel = this.nextElementSibling;
+            var indicator = this.firstElementChild;
             if (panel.style.display === "block") {
                 panel.style.display = "none";
+                indicator.textContent = "+";
             } else {
                 panel.style.display = "block";
+                indicator.textContent = "–"
             }
         });
     }

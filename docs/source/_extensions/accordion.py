@@ -11,7 +11,7 @@ class ButtonNode(nodes.TextElement):
 def visit_button_node(self, node):
     # type: (nodes.Element) -> None
     self.body.append(self.starttag(node, 'button', CLASS=' '.join(node['classes'])))
-
+    self.body.append('<span class="indicator">+</span>')
 
 def depart_button_node(self, _):
     # type: (nodes.Element) -> None

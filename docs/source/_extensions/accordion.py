@@ -1,4 +1,17 @@
-"""Add an ``accordian`` directive."""
+"""Add an ``accordian`` directive.
+
+This directive creates "heading" button which, when pressed,
+will expose the directives contents::
+
+    .. accordion:: Click here to get more info
+
+        Here's some more information.
+
+The title and content can be any valid rST.
+
+This follows very closely to:
+https://www.w3schools.com/howto/howto_js_collapsible.asp
+"""
 import os
 from docutils import nodes
 from sphinx.util.docutils import SphinxDirective
@@ -11,7 +24,6 @@ class ButtonNode(nodes.TextElement):
 def visit_button_node(self, node):
     # type: (nodes.Element) -> None
     self.body.append(self.starttag(node, 'button', CLASS=' '.join(node['classes'])))
-    self.body.append('<span class="indicator">+</span>')
 
 
 def depart_button_node(self, _):

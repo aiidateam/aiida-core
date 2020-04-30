@@ -5,13 +5,10 @@ Getting Started
 Installation
 ============
 
-There are numerous routes to setting up the full AiiDA environment,
-depending on your use case.
+There are numerous routes to setting up the full AiiDA environment, depending on your use case.
 Here we first provide the simplest approach for installation on your local computer.
 
-`Conda <https://docs.conda.io>`_  provides a cross-platform package management system,
-from which we can install the basic components of the AiiDA infrastructure in an
-isolated environment:
+`Conda <https://docs.conda.io>`_  provides a cross-platform package management system, from which we can install the basic components of the AiiDA infrastructure in an isolated environment:
 
 .. code-block:: console
 
@@ -59,8 +56,7 @@ At this point you now have a working AiiDA environment, from which you can add a
 
         $ eval "$(_VERDI_COMPLETE=source verdi)"
 
-In order to run computations, one additional step is required to start the services
-which manage these background processes:
+In order to run computations, one additional step is required to start the services that manage these background processes:
 
 .. code-block:: console
 
@@ -119,15 +115,16 @@ Next Steps
     links to tutorials
 
 .. panels::
+    :centred:
 
     **Getting started**
 
     New to pandas? Check out the getting started guides.
     They contain an introduction to pandas' main concepts and links to additional tutorials.
 
-    .. container:: custom-button
+    .. container:: link-box
 
-        To the getting started guide
+        To the getting started guide.
 
     ---
 
@@ -135,7 +132,7 @@ Next Steps
 
     The user guide provides in-depth information on the key concepts of pandas with useful background information and explanation.
 
-    .. container:: custom-button
+    .. container:: link-box
 
         To the user guide
 
@@ -147,9 +144,13 @@ Next Steps
     The reference describes how the methods work and which parameters can be used.
     It assumes that you have an understanding of the key concepts.
 
-    .. container:: custom-button
+    .. container:: link-box
 
-        To the api guide
+        To the api
+
+    .. container:: link-box
+
+        To the api
 
     ---
 
@@ -158,37 +159,6 @@ Next Steps
     Saw a typo in the documentation? Want to improve existing functionalities?
     The contributing guidelines will guide you through the process of improving pandas.
 
-    .. container:: custom-button
+    .. container:: link-box
 
         To the development guide
-
-.. raw:: html
-
-    <style>
-        .custom-button {
-            background-color: #dcdcdc;
-            border: none;
-            color: #484848;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 0.9rem;
-            border-radius: 0.5rem;
-            max-width: 220px;
-            padding: 0.5rem 0rem;
-            margin-right: auto;
-            margin-left: auto;
-            width: 100%;
-        }
-
-        .custom-button a {
-        color: #484848;
-        }
-
-        .custom-button p {
-        margin-top: 0;
-        margin-bottom: 0rem;
-        color: #484848;
-        }
-
-    </style>

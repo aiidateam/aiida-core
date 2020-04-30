@@ -1,4 +1,7 @@
-/*  */
+/* CSS for the `panels` directive.
+Note these settings mainly imitate those of the `row` and `col` classes
+defined in bootstrap.min.css (see https://getbootstrap.com/docs/3.4/css/#grid)
+*/
 
 .sphinx-panels {
     display:-ms-flexbox;
@@ -9,6 +12,7 @@
     margin-left:-15px
 }
 
+@media (min-width:768px) {
 .sphinx-panel {
     display:-ms-flexbox!important;
     display:flex!important;
@@ -16,6 +20,7 @@
     width:100%;
     padding-right:15px;
     padding-left:15px;
+}
 }
 
 .sphinx-panel.width50 {

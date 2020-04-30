@@ -18,16 +18,23 @@
   background-color: #ccc;
 }
 
-.accordion span.indicator {
-  width: 25px;
-  display: inline-block;
-  font-weight: bolder;
-  font-size: x-large;
+.accordion:after {
+  content: '\02795'; /* Unicode character for "plus" sign (+) */
+  font-size: 13px;
+  color: white;
+  float: right;
+  margin-left: 5px;
+}
+
+.accordion.active:after {
+  content: "\2796"; /* Unicode character for "minus" sign (-) */
 }
 
 .accordion-content {
   padding: 10px 18px;
-  display: none;
+  max-height: 0;
   background-color: white;
   overflow: hidden;
+  display: none;
+  transition: max-height 0.2s ease-in-out;
 }

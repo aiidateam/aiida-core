@@ -1,5 +1,29 @@
+"""Add a ``panels`` directive.
+
+This directive creates panels of content in a 2 x N layout.
+The panels are separated by `---`::
+
+    .. panels::
+
+        Content of the top-left panel
+
+        ---
+
+        Content of the top-right panel
+
+        ---
+
+        Content of the bottom-left panel
+
+        ---
+
+        Content of the bottom-right panel
+
+The content can be any valid rST.
+"""
 import os
 from docutils import nodes
+from docutils.parsers.rst import directives
 from sphinx.util.docutils import SphinxDirective
 
 
@@ -7,6 +31,7 @@ class Panels(SphinxDirective):
     """Two Column Panels."""
 
     has_content = True
+    option_spec = {'centred': directives.flag}
 
     def run(self):
 
@@ -26,7 +51,9 @@ class Panels(SphinxDirective):
         for content, offset in panel_blocks:
             panel = nodes.container(classes=['sphinx-panel', 'width50'])
             parent += panel
-            content_box = nodes.container(classes=['sphinx-panel-content', 'text-center'])
+            content_box = nodes.container(
+                classes=['sphinx-panel-content'] + (['text-center'] if 'centred' in self.options else [])
+            )
             self.state.nested_parse(content, self.content_offset + offset, content_box)
             panel += content_box
         return [parent]

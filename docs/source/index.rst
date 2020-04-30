@@ -54,7 +54,11 @@ See also the `AiiDA home page`_.
    :maxdepth: 2
    :caption: How-To Guides
 
-   howto/placeholder
+   howto/codes
+   howto/workflows
+   howto/data
+   howto/installation
+   howto/plugins
 
 .. toctree::
    :maxdepth: 2

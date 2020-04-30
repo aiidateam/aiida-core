@@ -184,8 +184,7 @@ Group hierarchies with `GroupPath`
 Groups in AiiDA are inherently "flat", in that groups may only contain nodes and not other groups.
 However, the `GroupPath` utility allows one to construct *virtual* group hierarchies based on delimited group labels.
 
-`GroupPath` is designed to work in much the same way as python's `pathlib.Path`,
-whereby paths are denoted by forward slash characters '/' in group labels.
+`GroupPath` is designed to work in much the same way as python's `pathlib.Path`, whereby paths are denoted by forward slash characters '/' in group labels.
 For example say we have the groups::
 
     $ verdi group list
@@ -231,8 +230,7 @@ To check the existence of a path element::
     In [7]: "base1" in path
     Out[7]: True
 
-A group may be "virtual", in which case its label does not directly relate to a group,
-or the group can be retrieved with the `get_group()` method::
+A group may be "virtual", in which case its label does not directly relate to a group, or the group can be retrieved with the `get_group()` method::
 
     In [8]: path.is_virtual
     Out[8]: True
@@ -262,8 +260,7 @@ To traverse paths, use the `children` attribute - for recursive traversal, use `
     GroupPath('base1/sub_group2', cls='<class 'aiida.orm.groups.Group'>')
     GroupPath('base2/other/sub_group3', cls='<class 'aiida.orm.groups.Group'>')
 
-You can also traverse directly through the nodes of a path,
-optionally filtering by node class and any other filters allowed by the `QueryBuilder`::
+You can also traverse directly through the nodes of a path, optionally filtering by node class and any other filters allowed by the `QueryBuilder`::
 
     In [17]: from aiida.orm import Data
     In [18]: data = Data()

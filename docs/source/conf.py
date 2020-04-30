@@ -23,6 +23,8 @@ import sys
 
 # Add `aiida` to the path so it can be imported without installing it
 sys.path.append(os.path.join(os.path.split(__file__)[0], os.pardir, os.pardir))
+# Add custom extensions to path
+sys.path.append(os.path.abspath('./_extensions'))
 
 import aiida
 from aiida.manage.configuration import load_documentation_profile
@@ -52,7 +54,8 @@ needs_sphinx = '1.5.0'
 extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
     'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext', 'sphinx_togglebutton'
+    'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext',
+    'accordion'
 ]
 ipython_mplbackend = ''
 
@@ -291,6 +294,7 @@ def run_apidoc(_):
     env = os.environ.copy()
     env['SPHINX_APIDOC_OPTIONS'] = 'members,special-members,private-members,undoc-members,show-inheritance'
     subprocess.check_call([cmd_path] + options, env=env)
+
 
 def setup(app):
     if os.environ.get('RUN_APIDOC', None) != 'False':

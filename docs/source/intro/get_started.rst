@@ -27,7 +27,7 @@ This installs the three core components of AiiDA:
 
 * ``aiida-core``: The main python package and associated CLI ``verdi``.
 * `PostgreSQL <https://www.postgresql.org>`_: A service which manages the database where we store generated data.
-* `RabbitMQ <https://www.rabbitmq.com>`_: A service which manages communication with the processes that we run. 
+* `RabbitMQ <https://www.rabbitmq.com>`_: A service which manages communication with the processes that we run.
 
 To initialise a database cluster with PostgreSQL and start the service:
 
@@ -56,7 +56,7 @@ At this point you now have a working AiiDA environment, from which you can add a
     Enable tab completion of ``verdi`` commands in the terminal with:
 
     .. code-block:: console
-    
+
         $ eval "$(_VERDI_COMPLETE=source verdi)"
 
 In order to run computations, one additional step is required to start the services
@@ -90,32 +90,33 @@ Finally, to power down the services, you can run:
 
 .. admonition:: Having problems?
 
-    See the :ref:`troubleshooting section <troubleshooting>`.
+    See the :ref:`troubleshooting section <intro/troubleshooting>`.
 
 .. admonition:: In-depth instructions
 
     Installing from source? Install into a VM?
-    Check the :ref:`advanced installation section <install_advanced>`.
+    Check the :ref:`advanced installation section <intro/install_advanced>`.
 
 Next Steps
 ==========
 
+.. container::
 
-.. toggle:: Run pure Python lightweight computations
+    .. accordion:: Run pure Python lightweight computations
 
-    blah blah blah
+        blah blah blah
 
-    links to tutorials
+        links to tutorials
 
-.. toggle:: Run compute-intensive codes
+    .. accordion:: Run compute-intensive codes
 
-    blah blah blah
+        blah blah blah
 
-    links to tutorials
+        links to tutorials
 
-.. toggle:: Run computations on High Performance Computers
+    .. accordion:: Run computations on High Performance Computers
 
-    blah blah blah
+        blah blah blah
 
-    links to tutorials
-    
+        links to tutorials
+

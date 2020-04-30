@@ -1,4 +1,4 @@
-.. _install_advanced:
+.. _intro/install_advanced:
 
 *********************
 Advanced Installation

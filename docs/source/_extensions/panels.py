@@ -4,6 +4,7 @@ This directive creates panels of content in a 2 x N layout.
 The panels are separated by `---`::
 
     .. panels::
+        :centred:
 
         Content of the top-left panel
 
@@ -20,6 +21,7 @@ The panels are separated by `---`::
         Content of the bottom-right panel
 
 The content can be any valid rST.
+`:centred:` indicates that the panel contents should be horizontally centred.
 """
 import os
 from docutils import nodes

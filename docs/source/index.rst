@@ -131,13 +131,6 @@ Welcome to AiiDA's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Plugins
-   :hidden:
-
-   plugins/placeholder
-
-.. toctree::
-   :maxdepth: 2
    :caption: Development
    :hidden:
 

@@ -54,7 +54,7 @@ Welcome to AiiDA's documentation!
 
    **Topics**
 
-   Background information for those who are already familiar with the AiiDA basics and want to know more about the underlying concepts and design decisions.
+   Comprehensive background information for those who want to learn more about AiiDA's underlying concepts.
 
    .. container:: link-box bottom
 

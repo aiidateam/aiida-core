@@ -96,7 +96,7 @@ Welcome to AiiDA's documentation!
    :caption: Tutorial
    :hidden:
 
-   tutorial/placeholder
+   tutorial/basic
 
 .. toctree::
    :maxdepth: 1

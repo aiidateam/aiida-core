@@ -55,7 +55,7 @@ extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
     'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext',
-    'accordion', 'panels'
+    'sphinx_panels', 'accordion'
 ]
 ipython_mplbackend = ''
 

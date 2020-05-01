@@ -51,7 +51,7 @@ See also the `AiiDA home page`_.
    tutorial/placeholder
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: How-To Guides
 
    howto/codes
@@ -61,10 +61,16 @@ See also the `AiiDA home page`_.
    howto/plugins
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Topics
 
-   topics/placeholder
+   topics/cli
+   topics/daemon
+   topics/provenance
+   topics/database
+   topics/repository
+   topics/processes
+   topics/plugins
 
 .. toctree::
    :maxdepth: 2

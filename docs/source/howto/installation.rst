@@ -10,7 +10,7 @@ How to manage your installation
 Managing profiles
 =================
 
-#4000
+`#4000`_
 
 
 .. _how-to:installation:configure:
@@ -18,7 +18,7 @@ Managing profiles
 Configuring your installation
 =============================
 
-#4001
+`#4001`_
 
 
 .. _how-to:installation:performance:
@@ -26,7 +26,7 @@ Configuring your installation
 Tuning performance
 ==================
 
-#4002
+`#4002`_
 
 
 .. _how-to:installation:update:
@@ -34,7 +34,7 @@ Tuning performance
 Updating your installation
 ==========================
 
-#4003
+`#4003`_
 
 
 .. _how-to:installation:backup:
@@ -42,7 +42,7 @@ Updating your installation
 Backing up your installation
 ============================
 
-#4004
+`#4004`_
 
 
 .. _how-to:installation:multi-user:
@@ -50,4 +50,13 @@ Backing up your installation
 Managing multiple users
 =======================
 
-#4005
+`#4005`_
+
+
+
+.. _#4000: https://github.com/aiidateam/aiida-core/issues/4000
+.. _#4001: https://github.com/aiidateam/aiida-core/issues/4001
+.. _#4002: https://github.com/aiidateam/aiida-core/issues/4002
+.. _#4003: https://github.com/aiidateam/aiida-core/issues/4003
+.. _#4004: https://github.com/aiidateam/aiida-core/issues/4004
+.. _#4005: https://github.com/aiidateam/aiida-core/issues/4005

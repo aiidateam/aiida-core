@@ -4,9 +4,9 @@
 Advanced Installation
 *********************
 
-
 TODO:
 
+- All info from current `docs/source/install/`
 - Pip + Link to how to install services
 - In-depth/alternative installation methods
 - Services for various systems

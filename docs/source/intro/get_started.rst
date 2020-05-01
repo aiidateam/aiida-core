@@ -1,3 +1,5 @@
+.. _intro/get_started:
+
 ****************
 Getting Started
 ****************
@@ -100,65 +102,22 @@ Next Steps
 
     blah blah blah
 
-    links to tutorials
+    .. container:: link-box
+
+        links to tutorials
 
 .. accordion:: Run compute-intensive codes
 
     blah blah blah
 
-    links to tutorials
+    .. container:: link-box
+
+        links to tutorials
 
 .. accordion:: Run computations on High Performance Computers
 
     blah blah blah
 
-    links to tutorials
-
-.. panels::
-    :centred:
-
-    **Getting started**
-
-    New to pandas? Check out the getting started guides.
-    They contain an introduction to pandas' main concepts and links to additional tutorials.
-
     .. container:: link-box
 
-        To the getting started guide.
-
-    ---
-
-    **User guide**
-
-    The user guide provides in-depth information on the key concepts of pandas with useful background information and explanation.
-
-    .. container:: link-box
-
-        To the user guide
-
-    ---
-
-    **API reference**
-
-    The reference guide contains a detailed description of the pandas API.
-    The reference describes how the methods work and which parameters can be used.
-    It assumes that you have an understanding of the key concepts.
-
-    .. container:: link-box
-
-        To the api
-
-    .. container:: link-box
-
-        To the api
-
-    ---
-
-    **Developer guide**
-
-    Saw a typo in the documentation? Want to improve existing functionalities?
-    The contributing guidelines will guide you through the process of improving pandas.
-
-    .. container:: link-box
-
-        To the development guide
+        links to tutorials

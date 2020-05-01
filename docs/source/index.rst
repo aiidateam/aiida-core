@@ -15,69 +15,120 @@
 Welcome to AiiDA's documentation!
 #################################
 
-`AiiDA`_ is a python framework that aims to help researchers with managing complex workflows and making them fully reproducible.
+`AiiDA`_ is an open-source framework implemented in Python that aims to help researchers with managing simple to complex workflows and making them fully reproducible.
 
-.. _AiiDA: http://www.aiida.net
+.. _AiiDA: https://www.aiida.net
 
+.. panels::
+   :centred:
 
-************
-Features
-************
+   **Getting Started**
 
- * **Workflows:** Write complex, auto-documenting workflows in python, linked to arbitrary executables on local and remote computers. The event-based workflow engine supports tens of thousands of processes per hour with full checkpointing.
- * **Data provenance:** Automatically track inputs, outpus & metadata of all calculations in a provenance graph for full reproducibility. Perform fast queries on graphs containing millions of nodes.
- * **HPC interface:** Move your calculations to a different computer by changing one line of code. AiiDA is compatible with schedulers like `SLURM <https://slurm.schedmd.com>`_, `PBS Pro <https://www.pbspro.org/>`_, `torque <http://www.adaptivecomputing.com/products/torque/>`_, `SGE <http://gridscheduler.sourceforge.net/>`_ or `LSF <https://www.ibm.com/support/knowledgecenter/SSETD4/product_welcome_platform_lsf.html>`_ out of the box.
- * **Plugin interface:** Extend AiiDA with `plugins <https://aiidateam.github.io/aiida-registry/>`_ for new simulation codes (input generation & parsing), data types, schedulers, transport modes and more.
- * **Open Science:** Export subsets of your provenance graph and share them with peers or make them available online for everyone on the `Materials Cloud <https://www.materialscloud.org>`_.
- * **Open source:** AiiDA is released under the `MIT open source license <https://github.com/aiidateam/aiida-core/blob/develop/LICENSE.txt>`_.
+   New to AiiDA? Check out the getting started guides.
 
-See also the `AiiDA home page`_.
+   .. container:: link-box bottom
 
-.. _AiiDA home page: http://www.aiida.net
+      :ref:`To the getting started guides <intro/get_started>`
+
+   ---
+
+   **Tutorial**
+
+   The tutorials are aimed at new users, that means users who have never worked with AiiDA before or who have only very limited experience using AiiDA in their own problem space.
+
+   .. container:: link-box bottom
+
+      :ref:`To the tutorials <tutorials>`
+
+   ---
+
+   **How-To Guides**
+
+   The how-to guides provide concrete goal-oriented recipes for how to achieve certain tasks with AiiDA.
+
+   .. container:: link-box bottom
+
+      :ref:`To the how-to guides <how-to>`
+
+   ---
+
+   **Topics**
+
+   The topics section is understanding-oriented and aimed at users who are generally familiar with AiiDA and provides more in-depth explanations on concepts and design decisions for AiiDA.
+
+   .. container:: link-box bottom
+
+      :ref:`To the topics <topics>`
+
+   ---
+
+   **API Reference**
+
+   The reference section is information-oriented and provides a comprehensive description of all components of AiiDAs API, that includes the CLI, the Python API, the RESTful API, and all other APIs which may be implemented in the future.
+
+   .. container:: link-box bottom
+
+      :ref:`To the reference guide <api>`
+
+   ---
+
+   **Development**
+
+   Saw a typo in the documentation? Want to improve existing functionalities? The contributing guidelines will guide you through the process of improving AiiDA.
+
+   .. container:: link-box bottom
+
+      :ref:`To the development guide <development>`
 
 
 .. toctree::
    :maxdepth: 2
    :caption: Getting Started
+   :hidden:
 
    intro/about
-   intro/get_started
    intro/installation
-   intro/troubleshooting
+   intro/quickstart
 
 .. toctree::
    :maxdepth: 2
    :caption: Tutorial
+   :hidden:
 
    tutorial/placeholder
 
 .. toctree::
    :maxdepth: 2
    :caption: How-To Guides
+   :hidden:
 
    howto/placeholder
 
 .. toctree::
    :maxdepth: 2
    :caption: Topics
+   :hidden:
 
    topics/placeholder
 
 .. toctree::
    :maxdepth: 2
    :caption: Reference
+   :hidden:
 
    reference/placeholder
 
 .. toctree::
    :maxdepth: 2
    :caption: Plugins
+   :hidden:
 
    plugins/placeholder
 
 .. toctree::
    :maxdepth: 2
    :caption: Development
+   :hidden:
 
    development/placeholder
 

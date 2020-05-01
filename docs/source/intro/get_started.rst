@@ -4,6 +4,8 @@
 Getting Started
 ****************
 
+`#4026 <https://github.com/aiidateam/aiida-core/issues/4026>`_
+
 .. admonition:: Want to jump straight to the tutorials?
 
     .. container:: link-box

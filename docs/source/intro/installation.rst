@@ -4,7 +4,7 @@
 Advanced Installation
 *********************
 
-TODO:
+`#4021 <https://github.com/aiidateam/aiida-core/issues/4021>`_
 
 - All info from current `docs/source/install/`
 - Pip + Link to how to install services

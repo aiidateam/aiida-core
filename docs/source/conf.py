@@ -23,6 +23,8 @@ import sys
 
 # Add `aiida` to the path so it can be imported without installing it
 sys.path.append(os.path.join(os.path.split(__file__)[0], os.pardir, os.pardir))
+# Add custom extensions to path
+sys.path.append(os.path.join(os.path.split(__file__)[0], '_extensions'))
 
 import aiida
 from aiida.manage.configuration import load_documentation_profile
@@ -52,7 +54,8 @@ needs_sphinx = '1.5.0'
 extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
     'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext'
+    'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext',
+    'sphinx_panels', 'accordion'
 ]
 ipython_mplbackend = ''
 
@@ -166,8 +169,8 @@ numfig = True
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# TEMPORARILY DISABLED
-#html_static_path = ['_static']
+html_static_path = ['_static']
+html_css_files = ['link-box.css']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.

@@ -87,8 +87,9 @@ Welcome to AiiDA's documentation!
    :hidden:
 
    intro/about
+   intro/get_started
    intro/installation
-   intro/quickstart
+   intro/troubleshooting
 
 .. toctree::
    :maxdepth: 2

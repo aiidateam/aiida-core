@@ -1,4 +1,4 @@
-"""Add an ``accordian`` directive.
+"""Add an ``accordion`` directive.
 
 This directive creates "heading" button which, when pressed,
 will expose the directives contents::
@@ -59,8 +59,8 @@ def setup(app):
     app.add_directive('accordion', Accordion)
 
     app.connect('builder-inited', add_static_path)
-    app.add_js_file('accordian.js')
-    app.add_css_file('accordian.css')
+    app.add_js_file('accordion.js')
+    app.add_css_file('accordion.css')
 
     return {
         'version': '0.1',

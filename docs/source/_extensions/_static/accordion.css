@@ -1,0 +1,40 @@
+/* Accordions */
+
+.accordion {
+  background-color: #eee;
+  color: #444;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border-radius: 5px;
+  border-color: #ccc;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+  transition: 0.4s ease-in-out;
+}
+
+.active, .accordion:hover {
+  background-color: #ccc;
+}
+
+.accordion:after {
+  content: '\02795'; /* Unicode character for "plus" sign (+) */
+  font-size: 13px;
+  color: white;
+  float: right;
+  margin-left: 5px;
+}
+
+.accordion.active:after {
+  content: "\2796"; /* Unicode character for "minus" sign (-) */
+}
+
+.accordion-content {
+  padding: 10px 18px;
+  max-height: 0;
+  background-color: white;
+  overflow: hidden;
+  display: none;
+  transition: max-height 0.2s ease-in-out;
+}

@@ -4,29 +4,51 @@
 Getting Started
 ****************
 
+.. admonition:: Want to jump straight to the tutorials?
+
+    .. container:: link-box
+    
+        Launch AiiDA with MyBinder
+
+
 Installation
 ============
 
-There are numerous routes to setting up the full AiiDA environment, depending on your use case.
-Here we first provide the simplest approach for installation on your local computer.
-
-`Conda <https://docs.conda.io>`_  provides a cross-platform package management system, from which we can install the basic components of the AiiDA infrastructure in an isolated environment:
-
-.. code-block:: console
-
-    $ conda create -n aiida -c conda-forge aiida-core aiida-core.services
-    $ conda activate aiida
-    $ reentry scan
-
-.. note::
-
-    You can also install ``aiida-core`` from `PyPi <https://pypi.org/project/aiida-core>`_
-
-This installs the three core components of AiiDA:
+A working AiiDA installation consists of three core components:
 
 * ``aiida-core``: The main python package and associated CLI ``verdi``.
 * `PostgreSQL <https://www.postgresql.org>`_: A service which manages the database where we store generated data.
 * `RabbitMQ <https://www.rabbitmq.com>`_: A service which manages communication with the processes that we run.
+
+Each component may be installed separately, depending on your use case.
+Here we first provide the simplest approaches for installation on your local computer.
+
+.. panels::
+
+    **Install from Conda**
+    
+    `Conda <https://docs.conda.io>`_ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
+
+    .. code-block:: console
+
+        $ conda create -n aiida -c conda-forge aiida-core aiida-core.services
+        $ conda activate aiida
+
+    ---
+
+    **Install with pip**
+
+    ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`_.
+
+    .. code-block:: console
+
+        pip install aiida-core
+
+    You will then need to install PostgreSQL and RabbitMQ depending on your operating system.
+
+    .. container:: link-box
+
+        :ref:`advanced installation <intro/install_advanced>`.
 
 To initialise a database cluster with PostgreSQL and start the service:
 
@@ -39,6 +61,7 @@ We can then use the `quicksetup` command, to set up an AiiDA configuration profi
 
 .. code-block:: console
 
+    $ reentry scan
     $ verdi quicksetup
     Info: enter "?" for help
     Info: enter "!" to ignore the default and set no value

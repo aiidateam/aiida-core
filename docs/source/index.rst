@@ -24,7 +24,7 @@ Welcome to AiiDA's documentation!
 
    **Getting Started**
 
-   New to AiiDA? Check out the getting started guides.
+   First time user or are looking for installation instructions? Start here!
 
    .. container:: link-box bottom
 
@@ -34,7 +34,7 @@ Welcome to AiiDA's documentation!
 
    **Tutorial**
 
-   The tutorials are aimed at new users, that means users who have never worked with AiiDA before or who have only very limited experience using AiiDA in their own problem space.
+   Get your feet wet with a brief introduction to the basics of AiiDA.
 
    .. container:: link-box bottom
 
@@ -44,7 +44,7 @@ Welcome to AiiDA's documentation!
 
    **How-To Guides**
 
-   The how-to guides provide concrete goal-oriented recipes for how to achieve certain tasks with AiiDA.
+   Learn how to use AiiDA to power your own work.
 
    .. container:: link-box bottom
 
@@ -54,7 +54,7 @@ Welcome to AiiDA's documentation!
 
    **Topics**
 
-   The topics section is understanding-oriented and aimed at users who are generally familiar with AiiDA and provides more in-depth explanations on concepts and design decisions for AiiDA.
+   Background information for those who are already familiar with the AiiDA basics and want to know more about the underlying concepts and design decisions.
 
    .. container:: link-box bottom
 
@@ -64,7 +64,7 @@ Welcome to AiiDA's documentation!
 
    **API Reference**
 
-   The reference section is information-oriented and provides a comprehensive description of all components of AiiDAs API, that includes the CLI, the Python API, the RESTful API, and all other APIs which may be implemented in the future.
+   Comprehensive description of all AiiDA components and APIs, including the command-line-interface, the Python interface, and the RESTful API.
 
    .. container:: link-box bottom
 

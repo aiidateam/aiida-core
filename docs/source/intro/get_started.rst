@@ -77,7 +77,7 @@ We can check that all services are running as expected using:
     ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
     ✓ daemon:      Daemon is running as PID 16430 since 2020-04-29 12:17:31
 
-You now have a fully operational installation from which to take the next steps!
+Awesome! You now have a fully operational installation from which to take the next steps!
 
 Finally, to power down the services, you can run:
 

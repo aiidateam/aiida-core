@@ -7,7 +7,7 @@ Getting Started
 .. admonition:: Want to jump straight to the tutorials?
 
     .. container:: link-box
-    
+
         Launch AiiDA with MyBinder
 
 
@@ -26,7 +26,7 @@ Here we first provide the simplest approaches for installation on your local com
 .. panels::
 
     **Install from Conda**
-    
+
     `Conda <https://docs.conda.io>`_ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
 
     .. code-block:: console

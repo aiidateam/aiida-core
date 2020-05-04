@@ -1,37 +1,36 @@
-.. _working_workflows:
+.. _topics:workflows:usage:
 
-***********
-Application
-***********
+=====
+Usage
+=====
 
-A workflow in AiiDA is a process (see the :ref:`process section<concepts_processes>` for details) that calls other workflows and calculations and optionally *returns* data and as such can encode the logic of a typical scientific workflow.
+.. note:: This chapter assumes knowledge of the :ref:`basic concept<topics:workflows:concepts>` and difference between work functions and work chains is known and when one should use on or the other.
+
+A workflow in AiiDA is a process (see the :ref:`process section<topics:processes:concepts>` for details) that calls other workflows and calculations and optionally *returns* data and as such can encode the logic of a typical scientific workflow.
 Currently, there are two ways of implementing a workflow process:
 
- * :ref:`work function<working_workfunctions>`
- * :ref:`work chain<working_workchains>`
+ * :ref:`work function<topics:workflows:usage:workfunctions>`
+ * :ref:`work chain<topics:workflows:usage:workchains>`
 
 This section will provide detailed information and best practices on how to implement these two workflow types.
 
-.. warning::
-    This chapter assumes that the basic concept and difference between work functions and work chains is known and when one should use on or the other.
-    It is therefore crucial that, before you continue, you have read and understood the basic concept of :ref:`workflow processes<concepts_workflows>`.
 
-.. _working_workfunctions:
+.. _topics:workflows:usage:workfunctions:
 
 Work functions
 ==============
 
 The concept of work functions and the basic rules of implementation are documented in detail elsewhere:
 
-  * :ref:`concept of work functions<concepts_workfunctions>`
-  * :ref:`implementation of process functions<working_process_functions>`
+  * :ref:`concept of work functions<topics:workflows:concepts:workfunctions>`
+  * :ref:`implementation of process functions<topics:processes:functions>`
 
 Since work functions are a sub type of process functions, just like calculation functions, their implementation rules are as good as identical.
 However, their intended aim and heuristics are very different.
-Where :ref:`calculation functions<working_calcfunctions>` are 'calculation'-like processes that *create* new data, work functions behave like 'workflow'-like processes and can only *return* data.
+Where :ref:`calculation functions<topics:calculations:usage:calcfunctions>` are 'calculation'-like processes that *create* new data, work functions behave like 'workflow'-like processes and can only *return* data.
 What this entails in terms of intended usage and limitations for work functions is the scope of this section.
 
-.. _working_workfunctions_returning_data:
+.. _topics:workflows:usage:workfunctions:returning_data:
 
 Returning data
 --------------
@@ -42,7 +41,7 @@ The calculation process was responsable for *creating* the data node and the wor
 
 This is then exactly what the workfunction function does.
 It takes one or more data nodes as inputs, calls other processes to which it passes those inputs and optionally returns some or all of the outputs created by the calculation processes it called.
-As explained in the :ref:`technical section<working_process_functions>`, outputs are recorded as 'returned' nodes simply by returning the nodes from the function.
+As explained in the :ref:`technical section<topics:processes:functions>`, outputs are recorded as 'returned' nodes simply by returning the nodes from the function.
 The engine will inspect the return value from the function and attach the output nodes to the node that represents the work function.
 To verify that the output nodes are in fact not 'created', the engine will check that the nodes are stored.
 Therefore, it is very important that you **do not store the nodes you create yourself**, or the engine will raise an exception, as shown in the following example:
@@ -61,13 +60,13 @@ Because the returned node is a newly created node and not stored, the engine wil
 Note that you could of course circumvent this check by calling ``store`` yourself on the node, but that misses the point.
 The problem with using a ``workfunction`` to 'create' new data, is that the provenance is lost.
 To illustrate this problem, let's go back to the simple problem of implementing a workflow to add two integer and multiply the result with a third.
-The :ref:`correct implementation<concepts_workfunctions>` has a resulting provenance graph that clearly captures the addition and the multiplication as separate calculation nodes, as shown in :numref:`fig_work_functions_provenance_add_multiply_full`.
+The :ref:`correct implementation<topics:workflows:concepts:workfunctions>` has a resulting provenance graph that clearly captures the addition and the multiplication as separate calculation nodes, as shown in :numref:`fig_work_functions_provenance_add_multiply_full`.
 To illustrate what would happen if one does does not call calculation functions to perform the computations, but instead directly perform them in the work function itself and return the result, consider the following example:
 
 .. include:: include/snippets/workflows/workfunctions/workfunction_add_multiply_internal.py
     :code: python
 
-.. warning:: For the documentation skimmers: this is an explicit example on **how not to use** work functions. The :ref:`correct implementation<concepts_workfunctions>` calls calculation functions to perform the computation
+.. warning:: For the documentation skimmers: this is an explicit example on **how not to use** work functions. The :ref:`correct implementation<topics:workflows:concepts:workfunctions>` calls calculation functions to perform the computation
 
 Note that in this example implementation we explicitly had to call ``store`` on the result before returning it to avoid the exception thrown by the engine.
 The resulting provenance would look like the following:
@@ -86,7 +85,7 @@ But a halfway solution may make the problem more apparent, as demonstrated by th
 .. include:: include/snippets/workflows/workfunctions/workfunction_add_multiply_halfway.py
     :code: python
 
-.. warning:: For the documentation skimmers: this is an explicit example on **how not to use** work functions. The :ref:`correct implementation<concepts_workfunctions>` calls calculation functions to perform the computation
+.. warning:: For the documentation skimmers: this is an explicit example on **how not to use** work functions. The :ref:`correct implementation<topics:workflows:concepts:workfunctions>` calls calculation functions to perform the computation
 
 This time around the addition is correctly performed by a calculation function as it should, however, its result is multiplied by the work function itself and returned.
 Note that once again ``store`` had to be called explicitly on ``product`` to avoid the engine throwing a ``ValueError``, which is only for the purpose of this example **and should not be done in practice**.
@@ -103,12 +102,12 @@ That is to say, there is no direct link between the sum `D4` and the final resul
 This is a direct cause of the work function 'creating' new data and illustrates how, in doing so, the provenance of data creation is lost.
 
 
-.. _working_workfunctions_exit_codes:
+.. _topics:workflows:usage:workfunctions:exit_codes:
 
 Exit codes
 ----------
 
-To terminate the execution of a work function and mark it as failed, one simply has to return an :ref:`exit code<working_processes_exit_codes>`.
+To terminate the execution of a work function and mark it as failed, one simply has to return an :ref:`exit code<topics:processes:usage:exit_codes>`.
 The :py:class:`~aiida.engine.processes.exit_code.ExitCode` class is constructed with an integer, to denote the desired exit status and an optional message
 When such as exit code is returned, the engine will mark the node of the work function as ``Finished`` and set the exit status and message to the value of the exit code.
 Consider the following example:
@@ -124,18 +123,18 @@ The execution of the work function will be immediately terminated as soon as the
 Since no output nodes are returned, the ``WorkFunctionNode`` node will have no outputs and the value returned from the function call will be an empty dictionary.
 
 
-.. _working_workchains:
+.. _topics:workflows:usage:workchains:
 
 Work chains
 ===========
 
-The :ref:`basic concept of the work chain<concepts_workchains>` has been explained elsewhere.
+The :ref:`basic concept of the work chain<topics:workflows:concepts:workchains>` has been explained elsewhere.
 This section will provide details on how a work chain can and should be implemented.
 A work chain is implemented by the :py:class:`~aiida.engine.processes.workchains.workchain.WorkChain` class.
 Since it is a sub class of the :py:class:`~aiida.engine.processes.process.Process` class, it shares all its properties.
-It will be very valuable to have read the section on working with :ref:`generic processes<working_processes>` before continuing, because all the concepts explained there will apply also to work chains.
+It will be very valuable to have read the section on working with :ref:`generic processes<topics:processes:usage>` before continuing, because all the concepts explained there will apply also to work chains.
 
-Let's continue with the example presented in the section on the :ref:`concept of workchains<concepts_workchains>`, where we sum two integers and multiply the result with a third.
+Let's continue with the example presented in the section on the :ref:`concept of workchains<topics:workflows:concepts:workchains>`, where we sum two integers and multiply the result with a third.
 We provided a very simple implementation in a code snippet, whose generated provenance graph, when executed, is shown in :numref:`fig_work_chains_provenance_add_multiply_workchain_full`.
 For convenience we copy the snippet here once more:
 
@@ -145,7 +144,7 @@ For convenience we copy the snippet here once more:
 We will now got through the implementation step-by-step and go into more detail on the interface and best practices.
 
 
-.. _working_workchains_define:
+.. _topics:workflows:usage:workchains:define:
 
 Define
 ------
@@ -173,17 +172,17 @@ The third and final line is extremely important, as it will call the ``define`` 
     If you forget to call ``super`` in the ``define`` method, your work chain will fail miserably!
 
 
-.. _working_workchains_define_inputs_outputs:
+.. _topics:workflows:usage:workchains:define_inputs_outputs:
 
 Inputs and outputs
 ------------------
 With those formalities out of the way, you can start defining the interesting properties of the work chain through the ``spec``.
 In the example you can see how the method :py:meth:`~plumpy.ProcessSpec.input` is used to define multiple input ports, which document exactly which inputs the work chain expects.
 Similarly, :py:meth:`~plumpy.ProcessSpec.output` is called to instruct that the work chain will produce an output with the label ``result``.
-These two port creation methods support a lot more functionality, such as adding help string, validation and more, all of which is documented in detail in the section on :ref:`ports and port namespace<working_processes_ports_portnamespaces>`.
+These two port creation methods support a lot more functionality, such as adding help string, validation and more, all of which is documented in detail in the section on :ref:`ports and port namespace<topics:processes:usage:ports_portnamespaces>`.
 
 
-.. _working_workchains_define_outline:
+.. _topics:workflows:usage:workchains:define_outline:
 
 Outline
 -------
@@ -268,12 +267,12 @@ Once the goal is clear, draw a schematic block diagram of the necessary steps an
 Converting the resulting flow diagram in a one-to-one fashion into an outline, often results in very reasonable outline designs.
 
 
-.. _working_workchains_define_exit_codes:
+.. _topics:workflows:usage:workchains:define_exit_codes:
 
 Exit codes
 ----------
 There is one more property of a work chain that is specified through its process specification, in addition to its inputs, outputs and outline.
-Any work chain may have one to multiple failure modes, which are modeled by :ref:`exit codes<working_processes_exit_codes>`.
+Any work chain may have one to multiple failure modes, which are modeled by :ref:`exit codes<topics:processes:usage:exit_codes>`.
 A work chain can be stopped at any time, simply by returning an exit code from an outline method.
 To retrieve an exit code that is defined on the spec, one can use the :py:meth:`~aiida.engine.processes.process.Process.exit_codes` property.
 This returns an attribute dictionary where the exit code labels map to their corresponding exit code.
@@ -284,15 +283,15 @@ For example, with the following process spec:
     spec = ProcessSpec()
     spec.exit_code(418, 'ERROR_I_AM_A_TEAPOT', 'the process had an identity crisis')
 
-To see how exit codes can be used to terminate the execution of work chains gracefully, refer to the section :ref:`working_workchains_aborting_and_exit_codes`.
+To see how exit codes can be used to terminate the execution of work chains gracefully, refer to the section :ref:`topics:workflows:usage:workchains:aborting_and_exit_codes`.
 
 
-.. _working_workchains_launching_workchains:
+.. _topics:workflows:usage:workchains:launching_workchains:
 
 Launching work chains
 ---------------------
 
-The rules for launching work chains are the same as those for any other process, which are detailed in :ref:`this section<working_processes_launching>`.
+The rules for launching work chains are the same as those for any other process, which are detailed in :ref:`this section<topics:processes:usage:launching>`.
 On top of those basic rules, there is one peculiarity in the case of work chains when submitting to the daemon.
 When you submit a ``WorkChain`` over the daemon, or any other process for that matter, you need to make sure that the daemon can find the class when it needs to load it.
 Registering your class through the plugin system with a designated entry point is one way to make sure that the daemon will be able to find it.
@@ -300,7 +299,7 @@ If, however, you simply have a test class and do not want to go through the effo
 Additionally, make sure that the definition of the work chain **is not in the same file from which you submit it**, or the engine won't be able to load it.
 
 
-.. _working_workchains_context:
+.. _topics:workflows:usage:workchains:context:
 
 Context
 -------
@@ -329,12 +328,12 @@ This was just a simple example to introduce the concept of the context, however,
 The context really becomes crucial when you want to submit a calculation or another work chain from within the work chain.
 How this is accomplished, we will show in the next section.
 
-.. _working_workchains_submitting_sub_processes:
+.. _topics:workflows:usage:workchains:submitting_sub_processes:
 
 Submitting sub processes
 ------------------------
 One of the main tasks of a ``WorkChain`` will be to launch other processes, such as a ``CalcJob`` or another ``WorkChain``.
-How to submit processes was explained in :ref:`another section<working_processes_launch>` and is accomplished by using the :py:func:`~aiida.engine.launch.submit` launch function.
+How to submit processes was explained in :ref:`another section<topics:processes:usage:launch>` and is accomplished by using the :py:func:`~aiida.engine.launch.submit` launch function.
 However, when submitting a sub process from within a work chain, **this should not be used**.
 Instead, the :py:class:`~aiida.engine.processes.process.Process` class provides its own :py:meth:`~aiida.engine.processes.process.Process.submit` method.
 If you do, you will be greeted with the exception:
@@ -367,7 +366,7 @@ To illustrate how this works, consider the following minimal example:
     :code: python
 
 As explained in the previous section, calling ``self.submit`` for a given process that you want to submit, will return a future.
-To add this future to the context, we can not access the context directly as explained in the :ref:`context section<working_workchains_context>`, but rather we need to use the class :py:class:`~aiida.engine.processes.workchains.context.ToContext`.
+To add this future to the context, we can not access the context directly as explained in the :ref:`context section<topics:workflows:usage:workchains:context>`, but rather we need to use the class :py:class:`~aiida.engine.processes.workchains.context.ToContext`.
 This class has to be imported from the ``aiida.engine`` module.
 To add the future to the context, simply construct an instance of ``ToContext``, passing the future as a keyword argument, and returning it from the outline step.
 The keyword used, ``workchain`` in this example, will be the key used under which to store the node in the context once its execution has terminated.
@@ -425,7 +424,7 @@ The ``self.ctx.workchains`` now contains a list with the nodes of the completed 
 Note that the use of ``append_`` is not just limited to the ``to_context`` method.
 You can also use it in exactly the same way with ``ToContext`` to append a process to a list in the context in multiple outline steps.
 
-.. _working_workchains_reporting:
+.. _topics:workflows:usage:workchains:reporting:
 
 Reporting
 ---------
@@ -446,13 +445,13 @@ This information will show up in the output of ``verdi process report``, so you 
 It is important to note that the report system is a form of logging and as such has been designed to be read by humans only.
 That is to say, the report system is not designed to pass information programmatically by parsing the log messages.
 
-.. _working_workchains_aborting_and_exit_codes:
+.. _topics:workflows:usage:workchains:aborting_and_exit_codes:
 
 Aborting and exit codes
 -----------------------
 At the end of every outline step, the return value will be inspected by the engine.
 If a non-zero integer value is detected, the engine will interpret this as an exit code and will stop the execution of the work chain, while setting its process state to ``Finished``.
-In addition, the integer return value will be set as the ``exit_status`` of the work chain, which combined with the ``Finished`` process state will denote that the worchain is considered to be ``Failed``, as explained in the section on the :ref:`process state <concepts_process_state>`.
+In addition, the integer return value will be set as the ``exit_status`` of the work chain, which combined with the ``Finished`` process state will denote that the worchain is considered to be ``Failed``, as explained in the section on the :ref:`process state <topics:processes:concepts:state>`.
 This is useful because it allows a workflow designer to easily exit from a work chain and use the return value to communicate programmatically the reason for the work chain stopping.
 
 We assume that you have read the `section on how to define exit code <exit_codes>`_ through the process specification of the work chain.
@@ -519,7 +518,7 @@ This is no different than the example before, because ``self.exit_codes.ERROR_IN
 In conclusion, the best part about using exit codes to abort a work chain's execution, is that the exit status can now be used programmatically, by for example a parent work chain.
 Imagine that a parent work chain submitted this work chain.
 After it has terminated its execution, the parent work chain will want to know what happened to the child work chain.
-As already noted in the :ref:`report<working_workchains_reporting>` section, the report messages of the work chain should not be used.
+As already noted in the :ref:`report<topics:workflows:usage:workchains:reporting>` section, the report messages of the work chain should not be used.
 The exit status, however, is a perfect way.
 The parent work chain can easily request the exit status of the child work chain through the ``exit_status`` property, and based on its value determine how to proceed.
 
@@ -533,7 +532,7 @@ These workflows can then be wrapped together by a "parent" workflow to create a 
 In order to make this approach manageable, it needs to be as simple as possible to glue together multiple workflows in a larger parent workflow.
 One of the tools that AiiDA provides to simplify this is the ability to *expose* the ports of another work chain.
 
-.. _working_workchains_expose_inputs_outputs:
+.. _topics:workflows:usage:workchains:expose_inputs_outputs:
 
 Exposing inputs and outputs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

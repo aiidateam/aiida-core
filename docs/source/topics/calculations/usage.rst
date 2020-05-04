@@ -1,28 +1,26 @@
-.. _working_calculations:
+.. _topics:calculations:usage:
 
-***********
-Application
-***********
+=====
+Usage
+=====
 
-A calculation is a process (see the :ref:`process section<concepts_processes>` for details) that *creates* new data.
+.. note:: This chapter assumes knowledge of the :ref:`basic concept<topics:calculations:concepts>` and difference between calculation functions and calculation jobs is known and when one should use on or the other.
+
+A calculation is a process (see the :ref:`process section<topics:processes:concepts>` for details) that *creates* new data.
 Currently, there are two ways of implementing a calculation process:
 
- * :ref:`calculation function<working_calcfunctions>`
- * :ref:`calculation job<working_calcjobs>`
+ * :ref:`calculation function<topics:calculations:usage:calcfunctions>`
+ * :ref:`calculation job<topics:calculations:usage:calcjobs>`
 
 This section will provide detailed information and best practices on how to implement these two calculation types.
 
-.. warning::
-    This chapter assumes that the basic concept and difference between calculation functions and calculation jobs is known and when one should use on or the other.
-    It is therefore crucial that, before you continue, you have read and understood the basic concept of :ref:`calculation processes<concepts_calculations>`.
-
-.. _working_calcfunctions:
+.. _topics:calculations:usage:calcfunctions:
 
 Calculation functions
 =====================
 
-The section on the :ref:`concept of calculation functions<concepts_calcfunctions>` already addressed their aim: automatic recording of their execution with their inputs and outputs in the provenance graph.
-The :ref:`section on process functions<working_process_functions>` subsequently detailed the rules that apply when implementing them, all of which to calculation functions, which are a sub type, just like work functions.
+The section on the :ref:`concept of calculation functions<topics:calculations:concepts:calcfunctions>` already addressed their aim: automatic recording of their execution with their inputs and outputs in the provenance graph.
+The :ref:`section on process functions<topics:processes:functions>` subsequently detailed the rules that apply when implementing them, all of which to calculation functions, which are a sub type, just like work functions.
 However, there are some differences given that calculation functions are 'calculation'-like processes and work function behave like 'workflow'-like processes.
 What this entails in terms of intended usage and limitations for calculation functions is the scope of this section.
 
@@ -33,12 +31,12 @@ In this context, the term 'create' is not intended to refer to the simple creati
 But rather it indicates the creation of a new piece of data from some other data through a computation implemented by a process.
 This is then exactly what the calculation function does.
 It takes one or more data nodes as inputs and returns one or more data nodes as outputs, whose content is based on those inputs.
-As explained in the :ref:`technical section<working_process_functions>`, outputs are created simply by returning the nodes from the function.
+As explained in the :ref:`technical section<topics:processes:functions>`, outputs are created simply by returning the nodes from the function.
 The engine will inspect the return value from the function and attach the output nodes to the calculation node that represents the calculation function.
 To verify that the output nodes are in fact 'created', the engine will check that the nodes are not stored.
 Therefore, it is very important that you **do not store the nodes you create yourself**, or the engine will raise an exception, as shown in the following example:
 
-.. include:: include/snippets/calculations/calcfunctions/add_calcfunction_store.py
+.. include:: include/snippets/calcfunctions/add_calcfunction_store.py
     :code: python
 
 Because the returned node is already stored, the engine will raise the following exception:
@@ -51,27 +49,27 @@ Because the returned node is already stored, the engine will raise the following
 
 The reason for this strictness is that a node that was stored after being created in the function body, is indistinguishable from a node that was already stored and had simply been loaded in the function body and returned, e.g.:
 
-.. include:: include/snippets/calculations/calcfunctions/add_calcfunction_load_node.py
+.. include:: include/snippets/calcfunctions/add_calcfunction_load_node.py
     :code: python
 
 The loaded node would also have gotten a `create` link from the calculation function, even though it was not really created by it at all.
 It is exactly to prevent this ambiguity that calculation functions require all returned output nodes to be *unstored*.
 
 Note that work functions have exactly the opposite required and all the outputs that it returns **have to be stored**, because as a 'workflow'-like process, it *cannot* create new data.
-For more details refer to the :ref:`work function section<working_workfunctions>`.
+For more details refer to the :ref:`work function section<topics:workflows:usage:workfunctions>`.
 
-.. _working_calcjobs:
+.. _topics:calculations:usage:calcjobs:
 
 Calculation jobs
 ================
 
-To explain how a calculation job can be implemented, we will continue with the example presented in the section on the :ref:`concept of the calculation job<concepts_calcjobs>`.
+To explain how a calculation job can be implemented, we will continue with the example presented in the section on the :ref:`concept of the calculation job<topics:calculations:concepts:calcjobs>`.
 There we described a code that adds two integers, implemented as a simple bash script, and how the :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` class can be used to run this code through AiiDA.
 Since it is a sub class of the :py:class:`~aiida.engine.processes.process.Process` class, it shares all its properties.
-It will be very valuable to have read the section on working with :ref:`generic processes<working_processes>` before continuing, because all the concepts explained there will apply also to calculation jobs.
+It will be very valuable to have read the section on working with :ref:`generic processes<topics:processes:usage>` before continuing, because all the concepts explained there will apply also to calculation jobs.
 
 
-.. _working_calcjobs_define:
+.. _topics:calculations:usage:calcjobs:define:
 
 Define
 ------
@@ -80,7 +78,7 @@ You can pick any name that is a valid python class name.
 The most important method of the ``CalcJob`` class, is the ``define`` class method.
 Here you define, what inputs it takes and what outputs it will generate.
 
-.. include:: include/snippets/calculations/calcjobs/arithmetic_add_spec_inputs.py
+.. include:: include/snippets/calcjobs/arithmetic_add_spec_inputs.py
     :code: python
 
 As the snippet above demonstrates, the class method takes two arguments:
@@ -109,17 +107,17 @@ Since we expect integers, we specify that the valid type is the database storabl
 
 Next we should define what outputs we expect the calculation to produce:
 
-.. include:: include/snippets/calculations/calcjobs/arithmetic_add_spec_outputs.py
+.. include:: include/snippets/calcjobs/arithmetic_add_spec_outputs.py
     :code: python
 
 Just as for the inputs, one can specify what node type each output should have.
 By default a defined output will be 'required', which means that if the calculation job terminates and the output has not been attached, the process will be marked as failed.
 To indicate that an output is optional, one can use ``required=False`` in the ``spec.output`` call.
 Note that the process spec, and its :py:meth:`~plumpy.ProcessSpec.input` and :py:meth:`~plumpy.ProcessSpec.output` methods provide a lot more functionality.
-Fore more details, please refer to the section on :ref:`process specifications<working_processes_spec>`.
+Fore more details, please refer to the section on :ref:`process specifications<topics:processes:usage:spec>`.
 
 
-.. _working_calcjobs_prepare:
+.. _topics:calculations:usage:calcjobs:prepare:
 
 Prepare
 -------
@@ -135,7 +133,7 @@ So all we need to do now is instruct the engine how to accomplish these things f
 Since these instructions will be calculation dependent, we will implement this with the :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submission` method.
 The implementation of the ``ArithmeticAddCalculation`` that we are considering in the example looks like the following:
 
-.. include:: include/snippets/calculations/calcjobs/arithmetic_add_spec_prepare_for_submission.py
+.. include:: include/snippets/calcjobs/arithmetic_add_spec_prepare_for_submission.py
     :code: python
 
 Before we go into the code line-by-line, let's describe the big picture of what is happening here.
@@ -148,7 +146,7 @@ The raw input files that are required can be written to a sandbox folder that is
     After the ``prepare_for_submission`` method returns, the engine will take those contents and copy them to the working directory where the calculation will be run.
     On top of that, these files will also be written to the file repository of the node that represents the calculation as an additional measure of provenance.
     Even though the information written there should be a derivation of the contents of the nodes that were passed as input nodes, since it is a derived form we store this explicitly nonetheless.
-    Sometimes, this behavior is undesirable, for example for efficiency or data privacy reasons, so it can be controlled with various lists such as :ref:`local_copy_list <working_calcjobs_file_lists_local_copy>` and :ref:`provenance_exclude_list <working_calcjobs_file_lists_provenance_exclude>`.
+    Sometimes, this behavior is undesirable, for example for efficiency or data privacy reasons, so it can be controlled with various lists such as :ref:`local_copy_list <topics:calculations:usage:calcjobs:file_lists_local_copy>` and :ref:`provenance_exclude_list <topics:calculations:usage:calcjobs:file_lists_provenance_exclude>`.
 
 All the other required information, such as the directives of which files to copy and what command line options to use are defined through the :py:class:`~aiida.common.datastructures.CalcInfo` datastructure, which should be returned from the method as the only value.
 In principle, this is what one **should do** in the ``prepare_for_submission`` method:
@@ -174,7 +172,7 @@ We accomplish this by opening a filehandle to the input file in the sandbox fold
 
 .. note::
 
-    The format of this input file just so happens to be the format that the :ref:`bash script<concepts_calcjobs>` expects that we are using in this example.
+    The format of this input file just so happens to be the format that the :ref:`bash script<topics:calculations:concepts:calcjobs>` expects that we are using in this example.
     The exact number of input files and their content will of course depend on the code for which the calculation job is being written.
 
 With the input file written, we now have to create an instance of :py:class:`~aiida.common.datastructures.CalcInfo` that should be returned from the method.
@@ -190,7 +188,7 @@ In this example we only need to run a single code, so the ``codes_info`` list ha
 This datastructure needs to define which code it needs to run, which is one of the inputs passed to the ``CalcJob``, and does so by means of its UUID.
 Through the ``stdout_name`` attribute, we tell the engine where the output of the executable should be redirected to.
 In this example this is set to the value of the  ``output_filename`` option.
-What options are available in calculation jobs, what they do and how they can be set will be explained in the :ref:`section on options<working_calcjobs_options>`.
+What options are available in calculation jobs, what they do and how they can be set will be explained in the :ref:`section on options<topics:calculations:usage:calcjobs:options>`.
 Finally, the ``cmdline_params`` attribute takes a list with command line parameters that will be placed *after* the executable in the launch script.
 Here we use it to explicitly instruct the executable to read its input from the filename stored in the option ``input_filename``.
 
@@ -200,7 +198,7 @@ Here we use it to explicitly instruct the executable to read its input from the 
 
 Finally, we have to define the various "file lists" that tell what files to copy from where to where and what files to retrieve.
 Here we will briefly describe their intended goals.
-The implementation details will be described in full in the :ref:`file lists section<working_calcjobs_file_lists>`.
+The implementation details will be described in full in the :ref:`file lists section<topics:calculations:usage:calcjobs:file_lists>`.
 
 The local copy list is useful to instruct the engine to copy over files that you might already have stored in your database, such as instances of :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData` nodes, that you can define and pass as inputs of the ``CalcJob``.
 You could have of course many copied their content to the ``folder`` sandbox folder, which will also have caused them to be written to the working directory.
@@ -222,12 +220,12 @@ These files will be downloaded to the local machine, stored in a :py:class:`~aii
     Just as the ``code`` input, the ``retrieved`` output is common for all calculation job implementations.
 
 
-.. _working_calcjobs_file_lists:
+.. _topics:calculations:usage:calcjobs:file_lists:
 
 File lists
 ----------
 
-.. _working_calcjobs_file_lists_local_copy:
+.. _topics:calculations:usage:calcjobs:file_lists_local_copy:
 
 Local copy list
 ~~~~~~~~~~~~~~~
@@ -259,11 +257,11 @@ Since in this case it is merely a direct one-to-one copy of the file that is alr
 Using the ``local_copy_list`` prevents this unnecessary duplication of file content.
 It can also be used if the content of a particular input node is privacy sensitive and cannot be duplicated in the repository.
 
-.. _working_calcjobs_file_lists_provenance_exclude:
+.. _topics:calculations:usage:calcjobs:file_lists_provenance_exclude:
 
 Provenance exclude list
 ~~~~~~~~~~~~~~~~~~~~~~~
-The :ref:`local_copy_list <working_calcjobs_file_lists_local_copy>`  allows one to instruct the engine to write files from the input files to the working directory, without them *also* being copied to the file repository of the calculation node.
+The :ref:`local_copy_list <topics:calculations:usage:calcjobs:file_lists_local_copy>`  allows one to instruct the engine to write files from the input files to the working directory, without them *also* being copied to the file repository of the calculation node.
 As discussed in the corresponding section, this is useful in order to avoid duplication or in case where the data of the nodes is proprietary or privacy sensitive and cannot be duplicated arbitrarily everywhere in the file repository.
 However, the limitation of the ``local_copy_list`` is that the it can only target single files in its entirety and cannot be used for arbitrary files that are written to the ``folder`` sandbox folder.
 To provide full control over what files from the ``folder`` are stored permanently in the calculation node file repository, the ``provenance_exclude_list`` is introduced.
@@ -294,7 +292,7 @@ With this specification, the final contents of the repository of the calculation
     │  └─ file_b.txt
     └─ file_a.txt
 
-.. _working_calcjobs_file_lists_remote_copy:
+.. _topics:calculations:usage:calcjobs:file_lists_remote_copy:
 
 Remote copy list
 ~~~~~~~~~~~~~~~~
@@ -310,7 +308,7 @@ The remote copy list takes tuples of length three, each of which represents a fi
 
 Note that the source path can point to a directory, in which case its contents will be recursively copied in its entirety.
 
-.. _working_calcjobs_file_lists_retrieve:
+.. _topics:calculations:usage:calcjobs:file_lists_retrieve:
 
 Retrieve list
 ~~~~~~~~~~~~~
@@ -350,20 +348,20 @@ In this example, all files matching the globbing pattern will be copied in the d
 
 Retrieve temporary list
 ~~~~~~~~~~~~~~~~~~~~~~~
-Recall that, as explained in the :ref:`'prepare' section<working_calcjobs_prepare>`, all the files that are retrieved by the engine following the 'retrieve list', are stored in the ``retrieved`` folder data node.
+Recall that, as explained in the :ref:`'prepare' section<topics:calculations:usage:calcjobs:prepare>`, all the files that are retrieved by the engine following the 'retrieve list', are stored in the ``retrieved`` folder data node.
 This means that any file you retrieve for a completed calculation job will be stored in your repository.
 If you are retrieving big files, this can cause your repository to grow significantly.
 Often, however, you might only need a part of the information contained in these retrieved files.
 To solve this common issue, there is the concept of the 'retrieve temporary list'.
-The specification of the retrieve temporary list is identical to that of the normal :ref:`retrieve list<working_calcjobs_file_lists_retrieve>`.
+The specification of the retrieve temporary list is identical to that of the normal :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>`.
 The only difference is that, unlike the files of the retrieve list which will be permanently stored in the retrieved :py:class:`~aiida.orm.nodes.data.folder.FolderData` node, the files of the retrieve temporary list will be stored in a temporary sandbox folder.
-This folder is then passed to the :ref:`parser<working_calcjobs_parsers>`, if one was specified for the calculation job.
+This folder is then passed to the :ref:`parser<topics:calculations:usage:calcjobs:parsers>`, if one was specified for the calculation job.
 The parser implementation can then parse these files and store the relevant information as output nodes.
 After the parser terminates, the engine will take care to automatically clean up the sandbox folder with the temporarily retrieved files.
 The contract of the 'retrieve temporary list' is essentially that the files will be available during parsing and will be destroyed immediately afterwards.
 
 
-.. _working_calcjobs_options:
+.. _topics:calculations:usage:calcjobs:options:
 
 Options
 -------
@@ -376,20 +374,20 @@ The full list of available options are documented below as part of the ``CalcJob
     :expand-namespaces:
 
 
-.. _working_calcjobs_launch:
+.. _topics:calculations:usage:calcjobs:launch:
 
 Launch
 ------
 
-Launching a calculation job is no different from launching any other process class, so please refer to the section on :ref:`launching processes<working_processes_launch>`.
+Launching a calculation job is no different from launching any other process class, so please refer to the section on :ref:`launching processes<topics:processes:usage:launch>`.
 The only caveat that we should place is that calculation jobs typically tend to take quite a bit of time.
 The trivial example we used above of course will run very fast, but a typical calculation job that will be submitted to a scheduler will most likely take longer than just a few seconds.
 For that reason it is highly advisable to **submit** calculation jobs instead of running them.
-By submitting them to the daemon, you free up your interpreter straight away and the process will be checkpointed between the various :ref:`transport tasks<concepts_calcjobs_transport_tasks>` that will have to be performed.
+By submitting them to the daemon, you free up your interpreter straight away and the process will be checkpointed between the various :ref:`transport tasks<topics:calculations:concepts:calcjobs_transport_tasks>` that will have to be performed.
 The exception is of course when you want to run a calculation job locally for testing or demonstration purposes.
 
 
-.. _working_calcjobs_dry_run:
+.. _topics:calculations:usage:calcjobs:dry_run:
 
 Dry run
 -------
@@ -435,20 +433,20 @@ Moreover, the following applies:
     If you do not want any nodes to be created during a dry run, simply set the metadata input ``store_provenance`` to ``False``.
 
 
-.. _working_calcjobs_parsers:
+.. _topics:calculations:usage:calcjobs:parsers:
 
 Parsing
 -------
 The previous sections explained in detail how the execution of an external executable is wrapped by the ``CalcJob`` class to make it runnable by AiiDA's engine.
 From the first steps of preparing the input files on the remote machine, to retrieving the relevant files and storing them in a :py:class:`~aiida.orm.nodes.data.folder.FolderData` node, that is attached as the ``retrieved`` output.
 This is the last *required* step for a ``CalcJob`` to terminate, but often we would *like* to parse the raw output and attach them as queryable output nodes to the calculation job node.
-To automatically trigger the parsing of a calculation job after its output has been retrieved, is to specify the :ref:`parser name option<working_calcjobs_options>`.
+To automatically trigger the parsing of a calculation job after its output has been retrieved, is to specify the :ref:`parser name option<topics:calculations:usage:calcjobs:options>`.
 If the engine find this option specified, it will load the corresponding parser class, which should be a sub class of :py:class:`~aiida.parsers.parser.Parser` and calls its :py:meth:`~aiida.parsers.parser.Parser.parse` method.
 
 To explain the interface of the ``Parser`` class and the ``parse`` method, let's take the :py:class:`~aiida.parsers.plugins.arithmetic.add.ArithmeticAddParser` as an example.
 This parser is designed to parse the output produced by the simple bash script that is wrapped by the ``ArithmeticAddCalculation`` discussed in the previous sections.
 
-.. literalinclude:: include/snippets/calculations/calcjobs/arithmetic_add_parser.py
+.. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
     :linenos:
 
@@ -462,16 +460,16 @@ The goal of the ``parse`` method is very simple:
     * Open and load the content of the output files generated by the calculation job and have been retrieved by the engine
     * Create data nodes out of this raw data that are attached as output nodes
     * Log human-readable warning messages in the case of worrying output
-    * Optionally return an :ref:`exit code<concepts_process_exit_codes>` to indicate that the results of the calculation was not successful
+    * Optionally return an :ref:`exit code<topics:processes:concepts:exit_codes>` to indicate that the results of the calculation was not successful
 
 The advantage of adding the raw output data in different form as output nodes, is that in that form the content becomes queryable.
 This allows one to query for calculations that produced specific outputs with a certain value, which becomes a very powerful approach for post-processing and analyses of big databases.
 
-The ``retrieved`` attribute of the parser will return the ``FolderData`` node that should have been attached by the engine containing all the retrieved files, as specified using the :ref:`retrieve list<working_calcjobs_file_lists_retrieve>` in the :ref:`preparation step of the calculation job<working_calcjobs_prepare>`.
+The ``retrieved`` attribute of the parser will return the ``FolderData`` node that should have been attached by the engine containing all the retrieved files, as specified using the :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>` in the :ref:`preparation step of the calculation job<topics:calculations:usage:calcjobs:prepare>`.
 If this node has not been attached for whatever reason, this call will throw an :py:class:`~aiida.common.exceptions.NotExistent` exception.
 This is why we wrap the ``self.retrieved`` call in a try-catch block:
 
-.. literalinclude:: include/snippets/calculations/calcjobs/arithmetic_add_parser.py
+.. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
     :lines: 10-13
     :linenos:
@@ -490,7 +488,7 @@ Assuming that everything went according to plan during the retrieval, we now hav
 In this example, there should be a single output file that was written by redirecting the standard output of the bash script that added the two integers.
 The parser opens this file, reads its content and tries to parse the sum from it:
 
-.. literalinclude:: include/snippets/calculations/calcjobs/arithmetic_add_parser.py
+.. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
     :lines: 15-19
     :linenos:
@@ -502,7 +500,7 @@ The ``parse_stdout`` method is just a small utility function to separate the act
 In this case, the parsing is so simple that we might have as well kept it in the main method, but this is just to illustrate that you are completely free to organize the code within the ``parse`` method for clarity.
 If we manage to parse the sum, produced by the calculation, we wrap it in the appropriate :py:class:`~aiida.orm.nodes.data.int.Int` data node class, and register it as an output through the ``out`` method:
 
-.. literalinclude:: include/snippets/calculations/calcjobs/arithmetic_add_parser.py
+.. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
     :lines: 24-24
     :linenos:

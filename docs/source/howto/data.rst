@@ -52,6 +52,8 @@ Deleting data
 
 `#3999`_
 
+Serving your data to others
+===========================
 
 .. _#3994: https://github.com/aiidateam/aiida-core/issues/3994
 .. _#3995: https://github.com/aiidateam/aiida-core/issues/3995

@@ -128,6 +128,7 @@ Welcome to AiiDA's documentation!
    :hidden:
 
    reference/command_line
+   reference/apidoc/aiida.rst
    reference/rest_api
 
 .. toctree::

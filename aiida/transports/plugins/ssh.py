@@ -254,7 +254,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         Return a suggestion for the specific field.
         """
         config = parse_sshconfig(computer.hostname)
-        return convert_to_bool(str(config.get('allow_agent', 'no')))
+        return convert_to_bool(str(config.get('allow_agent', 'yes')))
 
     @classmethod
     def _get_look_for_keys_suggestion_string(cls, computer):
@@ -262,7 +262,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         Return a suggestion for the specific field.
         """
         config = parse_sshconfig(computer.hostname)
-        return convert_to_bool(str(config.get('look_for_keys', 'no')))
+        return convert_to_bool(str(config.get('look_for_keys', 'yes')))
 
     @classmethod
     def _get_proxy_command_suggestion_string(cls, computer):
@@ -405,6 +405,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             raise InvalidOperation('Cannot open the transport twice')
         # Open a SSHClient
         connection_arguments = self._connect_args
+        if 'key_filename' in connection_arguments and not connection_arguments['key_filename']:
+            connection_arguments.pop('key_filename')
         proxystring = connection_arguments.pop('proxy_command', None)
         if proxystring:
             self._proxy = _DetachedProxyCommand(proxystring)

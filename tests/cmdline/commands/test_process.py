@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi process`."""
-
 import datetime
 import subprocess
 import sys
@@ -41,13 +40,19 @@ class TestVerdiProcessDaemon(AiidaTestCase):
 
     def setUp(self):
         super().setUp()
-        from aiida.manage.configuration import get_config
+        from aiida.cmdline.utils.common import get_env_with_venv_bin
         from aiida.engine.daemon.client import DaemonClient
+        from aiida.manage.configuration import get_config
+
+        # Add the current python path to the environment that will be used for the daemon sub process. This is necessary
+        # to guarantee the daemon can also import all the classes that are defined in this `tests` module.
+        env = get_env_with_venv_bin()
+        env['PYTHONPATH'] = ':'.join(sys.path)
 
         profile = get_config().current_profile
         self.daemon_client = DaemonClient(profile)
         self.daemon_pid = subprocess.Popen(
-            self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout
+            self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout, env=env
         ).pid
         self.runner = get_manager().create_runner(rmq_submit=True)
         self.cli_runner = CliRunner()

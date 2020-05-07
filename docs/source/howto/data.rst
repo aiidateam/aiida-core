@@ -10,7 +10,73 @@ How to work with data
 Importing data
 ==============
 
-`#3994`_
+AiiDA allows users to export data from their database into an export archive file, which can be imported in any other AiiDA database.
+If you have an AiiDA export archive that you would like to import, you can use the ``verdi import`` command (see :ref:`the reference section<reference:command-line:verdi-import>` for details).
+
+.. note:: More detailed information on exporting and importing data from AiiDA databases can be found in :ref:`"How to share data"<how-to:data:share>`.
+
+If, instead, you have existing data that are not yet part of an AiiDA export archive, such as files, folders, tabular data, arrays or any other kind of data, this how-to guide will show you how to import them into AiiDA.
+
+To store any piece of data in AiiDA, it needs to be wrapped in a :py:class:`~aiida.orm.nodes.data.Data` node, such that it can be represented in the :ref:`provenance graph <topics:provenance>`.
+There are different varieties, or subclasses, of this ``Data`` class that are suited for different types of data.
+AiiDA ships with a number of built-in data types.
+You can list these using the :ref:`verdi plugin<reference:command-line:verdi-plugin>` command.
+Executing ``verdi plugin list aiida.data`` should display something like::
+
+    Registered entry points for aiida.data:
+    * array
+    * bool
+    * code
+    * dict
+    * float
+    * folder
+    * list
+    * singlefile
+
+    Info: Pass the entry point as an argument to display detailed information
+
+As the output suggests, you can get more information about each type by appending the name to the command, for example, ``verdi plugin list aiida.data singlefile``::
+
+    Description:
+
+    The ``singlefile`` data type is designed to store a single file in its entirety.
+    A ``singlefile`` node can be created from an existing file on the local filesystem in two ways.
+    By passing the absolute path of the file:
+
+        singlefile = SinglefileData(file='/absolute/path/to/file.txt')
+
+    or by passing a filelike object:
+
+        with open('/absolute/path/to/file.txt', 'rb') as handle:
+            singlefile = SinglefileData(file=handle)
+
+    The filename of the resulting file in the database will be based on the filename passed in the ``file`` argument.
+    This default can be overridden by passing an explicit name for the ``filename`` argument to the constructor.
+
+As you can see, the ``singlefile`` type corresponds to the :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData` class and is designed to wrap a single file that is stored on your local filesystem.
+If you have such a file that you would like to store in AiiDA, you can use the ``verdi shell`` to create it:
+
+.. code:: python
+
+    SinglefileData = DataFactory('singlefile')
+    singlefile = SinglefileData(file='/absolute/path/to/file.txt')
+    singlefile.store()
+
+The first step is to load the class that corresponds to the data type, which you do by passing the name (listed by ``verdi plugin list aiida.data``) to the :py:class:`~aiida.plugins.factories.DataFactory`.
+Then we just construct an instance of that class, passing the file of interest as an argument.
+
+.. note:: The exact manner of constructing an instance of any particular data type is type dependent.
+    Use the ``verdi plugin list aiida.data <ENTRY_POINT>`` command to get more information for any specific type.
+
+Note that after construction, you will get an *unstored* node.
+This means that at this point your data is not yet stored in the database and you can first inspect it and optionally modify it.
+If you are happy with the results, you can store the new data permanently by calling the :py:meth:`~aiida.orm.nodes.node.Node.store` method.
+Every node is assigned a Universal Unique Identifer (UUID) upon creation and once stored it is also assigned a primary key (PK), which can be retrieved through the ``node.uuid`` and ``node.pk`` properties, respectively.
+You can use these identifiers to reference and or retrieve a node.
+Ways to find and retrieve data that have previously been imported are described in section :ref:`"How to find data"<how-to:data:find>`.
+
+If none of the currently available data types, as listed by ``verdi plugin list``, seem to fit your needs, you can also create your own custom type.
+For details refer to the next section :ref:`"How to add support for custom data types"<how-to:data:plugin>`.
 
 
 .. _how-to:data:plugin:

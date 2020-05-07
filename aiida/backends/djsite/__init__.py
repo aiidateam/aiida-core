@@ -31,7 +31,7 @@ def reset_session():
     SESSION_FACTORY = None
 
 
-def get_scoped_session():
+def get_scoped_session(**kwargs):
     """Return a scoped session for the given profile that is exclusively to be used for the `QueryBuilder`.
 
     Since the `QueryBuilder` implementation uses SqlAlchemy to map the query onto the models in order to generate the
@@ -43,7 +43,11 @@ def get_scoped_session():
     Django implementation of the `QueryBuilder` should keep its own SqlAlchemy engine and scoped session factory
     instances that are used to provide the query builder with a session.
 
-    :param profile: :class:`aiida.manage.configuration.profile.Profile` for which to configure the engine.
+    :param kwargs: keyword arguments that will be passed on to :py:func:`aiida.backends.utils.create_sqlalchemy_engine`,
+        opening the possibility to change QueuePool time outs and more.
+        See https://docs.sqlalchemy.org/en/13/core/engines.html?highlight=create_engine#sqlalchemy.create_engine for
+        more info.
+
     :return: :class:`sqlalchemy.orm.session.Session` instance with engine configured for the given profile.
     """
     from aiida.manage.configuration import get_profile
@@ -56,7 +60,7 @@ def get_scoped_session():
         return session
 
     if ENGINE is None:
-        ENGINE = create_sqlalchemy_engine(get_profile())
+        ENGINE = create_sqlalchemy_engine(get_profile(), **kwargs)
 
     SESSION_FACTORY = create_scoped_session_factory(ENGINE)
 

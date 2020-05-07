@@ -33,10 +33,19 @@ class DjangoBackendManager(BackendManager):
 
         return self._settings_manager
 
-    def _load_backend_environment(self):
-        """Load the backend environment."""
+    def _load_backend_environment(self, **kwargs):
+        """Load the backend environment.
+
+        The scoped session is needed for the QueryBuilder only.
+
+        :param kwargs: keyword arguments that will be passed on to :py:func:`aiida.backends.djsite.get_scoped_session`.
+        """
         os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings'
         django.setup()  # pylint: disable=no-member
+
+        # For QueryBuilder only
+        from . import get_scoped_session
+        get_scoped_session(**kwargs)
 
     def reset_backend_environment(self):
         """Reset the backend environment."""

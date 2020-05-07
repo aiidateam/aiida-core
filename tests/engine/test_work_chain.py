@@ -7,12 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 import inspect
 import unittest
 
 import plumpy
 import plumpy.test_utils
+import pytest
 from tornado import gen
 
 from aiida import orm
@@ -87,8 +87,8 @@ class Wf(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('value', default=Str('A'))
-        spec.input('n', default=Int(3))
+        spec.input('value', default=lambda: Str('A'))
+        spec.input('n', default=lambda: Int(3))
         spec.outputs.dynamic = True
         spec.outline(
             cls.s1,
@@ -155,8 +155,8 @@ class PotentialFailureWorkChain(WorkChain):
     def define(cls, spec):
         super().define(spec)
         spec.input('success', valid_type=Bool)
-        spec.input('through_return', valid_type=Bool, default=Bool(False))
-        spec.input('through_exit_code', valid_type=Bool, default=Bool(False))
+        spec.input('through_return', valid_type=Bool, default=lambda: Bool(False))
+        spec.input('through_exit_code', valid_type=Bool, default=lambda: Bool(False))
         spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
         spec.outline(if_(cls.should_return_out_of_outline)(return_(cls.EXIT_STATUS)), cls.failure, cls.success)
         spec.output(cls.OUTPUT_LABEL, required=False)
@@ -943,7 +943,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         @classmethod
         def define(cls, spec):
             super().define(spec)
-            spec.input('kill', default=Bool(False))
+            spec.input('kill', default=lambda: Bool(False))
             spec.outline(cls.begin, cls.check)
 
         def begin(self):
@@ -961,7 +961,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         @classmethod
         def define(cls, spec):
             super().define(spec)
-            spec.input('kill', default=Bool(False))
+            spec.input('kill', default=lambda: Bool(False))
             spec.outline(cls.submit_child, cls.check)
 
         def submit_child(self):
@@ -1275,7 +1275,7 @@ class TestWorkChainExpose(AiidaTestCase):
                 }
             })
 
-    @unittest.skip('Reenable when issue #2515 is solved: references to deleted ORM instances')
+    @unittest.skip('Functionality of `WorkChain.exposed_outputs` is broken.')
     def test_nested_expose(self):
         res = launch.run(
             GrandParentExposeWorkChain,
@@ -1312,17 +1312,22 @@ class TestWorkChainExpose(AiidaTestCase):
                 }
             })
 
+    @pytest.mark.filterwarnings('ignore::UserWarning')
     def test_issue_1741_expose_inputs(self):
-        """Test that expose inputs works correctly when copying a stored default value"""
+        """Test that expose inputs works correctly when copying a stored default value.
 
-        stored_a = Int(5).store()
+        .. note:: a node instance is used for a port default, which is normally not advisable, but given that this
+            regression test relies on the default being a stored node, we cannot change it. Given that the default is
+            only used within this test, it should not pose any problems.
+
+        """
 
         class Parent(WorkChain):
 
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.input('a', default=stored_a)
+                spec.input('a', default=Int(5).store())
                 spec.outline(cls.step1)
 
             def step1(self):
@@ -1401,7 +1406,7 @@ class TestDefaultUniqueness(AiidaTestCase):
         @classmethod
         def define(cls, spec):
             super().define(spec)
-            spec.input('a', valid_type=Bool, default=Bool(True))
+            spec.input('a', valid_type=Bool, default=lambda: Bool(True))
 
         def run(self):
             pass

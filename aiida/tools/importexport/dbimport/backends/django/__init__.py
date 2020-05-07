@@ -21,16 +21,17 @@ from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType, validate_link_label
 from aiida.common.utils import grouper, get_object_from_string
 from aiida.orm.utils.repository import Repository
-from aiida.orm import QueryBuilder, Node, Group
+from aiida.orm import QueryBuilder, Node, Group, ImportGroup
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
-from aiida.tools.importexport.common.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
 from aiida.tools.importexport.common.config import entity_names_to_signatures
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbimport.backends.utils import deserialize_field, merge_comment, merge_extras
+from aiida.manage.configuration import get_config_option
 
 
 def import_data_dj(
@@ -229,6 +230,10 @@ def import_data_dj(
         # IMPORT DATA #
         ###############
         # DO ALL WITH A TRANSACTION
+
+        # batch size for bulk create operations
+        batch_size = get_config_option('db.batch_size')
+
         with transaction.atomic():
             foreign_ids_reverse_mappings = {}
             new_entries = {}
@@ -471,9 +476,9 @@ def import_data_dj(
                 if 'mtime' in [field.name for field in model._meta.local_fields]:
                     with models.suppress_auto_now([(model, ['mtime'])]):
                         # Store them all in once; however, the PK are not set in this way...
-                        model.objects.bulk_create(objects_to_create)
+                        model.objects.bulk_create(objects_to_create, batch_size=batch_size)
                 else:
-                    model.objects.bulk_create(objects_to_create)
+                    model.objects.bulk_create(objects_to_create, batch_size=batch_size)
 
                 # Get back the just-saved entries
                 just_saved_queryset = model.objects.filter(
@@ -625,7 +630,7 @@ def import_data_dj(
                 if not silent:
                     print('   ({} new links...)'.format(len(links_to_store)))
 
-                models.DbLink.objects.bulk_create(links_to_store)
+                models.DbLink.objects.bulk_create(links_to_store, batch_size=batch_size)
             else:
                 if not silent:
                     print('   (0 new links...)')
@@ -668,11 +673,11 @@ def import_data_dj(
                             "Overflow of import groups (more than 100 import groups exists with basename '{}')"
                             ''.format(basename)
                         )
-                group = Group(label=group_label, type_string=IMPORTGROUP_TYPE).store()
+                group = ImportGroup(label=group_label).store()
 
             # Add all the nodes to the new group
             # TODO: decide if we want to return the group label
-            nodes = [entry[0] for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
+            nodes = QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all(flat=True)
             group.add_nodes(nodes)
 
             if not silent:

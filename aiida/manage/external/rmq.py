@@ -31,7 +31,6 @@ CommunicationTimeout = communications.TimeoutError  # pylint: disable=invalid-na
 # know how to avoid warnings. For more info see
 # https://github.com/aiidateam/aiida-core/issues/1142
 _RMQ_URL = 'amqp://127.0.0.1'
-_RMQ_TASK_PREFETCH_COUNT = 100  # This value should become configurable per profile at some point
 _RMQ_HEARTBEAT_TIMEOUT = 600  # Maximum that can be set by client, with default RabbitMQ server configuration
 _LAUNCH_QUEUE = 'process.queue'
 _MESSAGE_EXCHANGE = 'messages'
@@ -54,18 +53,6 @@ def get_rmq_url(heartbeat_timeout=None):
         url += '?heartbeat={}'.format(heartbeat_timeout)
 
     return url
-
-
-def get_rmq_config(prefix):
-    """
-    Get the RabbitMQ configuration dictionary for a given prefix. If the prefix is not
-    specified, the prefix will be retrieved from the currently loaded profile configuration
-
-    :param prefix: a string prefix for the RabbitMQ communication queues and exchanges
-    :returns: the configuration dictionary for the RabbitMQ communicators
-    """
-    rmq_config = {'url': get_rmq_url(), 'prefix': prefix, 'task_prefetch_count': _RMQ_TASK_PREFETCH_COUNT}
-    return rmq_config
 
 
 def get_launch_queue_name(prefix=None):

@@ -53,7 +53,6 @@
         aiida/common/datastructures.py|
         aiida/engine/daemon/execmanager.py|
         aiida/engine/processes/calcjobs/tasks.py|
-        aiida/orm/autogroup.py|
         aiida/orm/querybuilder.py|
         aiida/orm/nodes/data/array/bands.py|
         aiida/orm/nodes/data/array/projection.py|
@@ -66,7 +65,6 @@
         aiida/parsers/plugins/arithmetic/add.py|
         aiida/parsers/plugins/templatereplacer/doubler.py|
         aiida/parsers/plugins/templatereplacer/__init__.py|
-        aiida/plugins/entry_point.py|
         aiida/plugins/entry.py|
         aiida/plugins/info.py|
         aiida/plugins/registry.py|
@@ -110,39 +108,52 @@
     description: "This hook runs Prospector: https://github.com/landscapeio/prospector"
     entry: prospector
 
+  - id: dm-generate-all
+    name: Update all requirements files
+    entry: python ./utils/dependency_management.py generate-all
+    language: system
+    files: >-
+      (?x)^(
+        setup.py|
+        setup.json|
+        utils/dependency_management.py
+        )$
+    pass_filenames: false
+
   - id: rtd-requirements
-    name: Requirements for RTD
-    entry: python ./docs/update_req_for_rtd.py --pre-commit
+    name: Validate docs/requirements_for_rtd.txt
+    entry: python ./utils/dependency_management.py validate-rtd-reqs
     language: system
     files: >-
       (?x)^(
         setup.json|
         setup.py|
+        utils/dependency_management.py|
         docs/requirements_for_rtd.txt|
-        docs/update_req_for_rtd.py|
       )$
     pass_filenames: false
 
   - id: pyproject
-    name: Validating pyproject.toml
-    entry: python ./utils/validate_consistency.py toml
+    name: Validate pyproject.toml
+    entry: python ./utils/dependency_management.py validate-pyproject-toml
     language: system
     files: >-
       (?x)^(
         setup.json|
         setup.py|
-        utils/validate_consistency.py|
+        utils/dependency_management.py|
+        pyproject.toml
       )$
     pass_filenames: false
-  - id: conda
-    name: Validating environment.yml
-    entry: python ./utils/validate_consistency.py conda
+  - id: dependencies
+    name: Validate environment.yml
+    entry: python ./utils/dependency_management.py validate-environment-yml
     language: system
     files: >-
       (?x)^(
         setup.json|
         setup.py|
-        utils/validate_consistency.py|
+        utils/dependency_management.py|
         environment.yml|
       )$
     pass_filenames: false
@@ -154,6 +165,7 @@
     files: >-
       (?x)^(
         aiida/cmdline/commands/.*|
+        aiida/cmdline/params/.*|
         utils/validate_consistency.py|
       )$
     pass_filenames: false

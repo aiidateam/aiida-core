@@ -64,22 +64,13 @@ def upf_listfamilies(elements, with_description):
     """
     from aiida import orm
     from aiida.plugins import DataFactory
-    from aiida.orm.nodes.data.upf import UPFGROUP_TYPE
 
     UpfData = DataFactory('upf')  # pylint: disable=invalid-name
     query = orm.QueryBuilder()
     query.append(UpfData, tag='upfdata')
     if elements is not None:
         query.add_filter(UpfData, {'attributes.element': {'in': elements}})
-    query.append(
-        orm.Group,
-        with_node='upfdata',
-        tag='group',
-        project=['label', 'description'],
-        filters={'type_string': {
-            '==': UPFGROUP_TYPE
-        }}
-    )
+    query.append(orm.UpfFamily, with_node='upfdata', tag='group', project=['label', 'description'])
 
     query.distinct()
     if query.count() > 0:

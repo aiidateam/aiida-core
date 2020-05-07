@@ -145,17 +145,26 @@ def create(
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
 @options.SILENT()
-def migrate(input_file, output_file, force, silent, archive_format):
+@click.option(
+    '-v',
+    '--version',
+    type=click.STRING,
+    required=False,
+    metavar='VERSION',
+    help='Specify an exact archive version to migrate to. By default the most recent version is taken.'
+)
+def migrate(input_file, output_file, force, silent, archive_format, version):
     # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-    """
-    Migrate an old export archive file to the most recent format.
-    """
+    """Migrate an export archive to a more recent format version."""
     import tarfile
     import zipfile
 
     from aiida.common import json
     from aiida.common.folders import SandboxFolder
-    from aiida.tools.importexport import migration, extract_zip, extract_tar
+    from aiida.tools.importexport import EXPORT_VERSION, migration, extract_zip, extract_tar, ArchiveMigrationError
+
+    if version is None:
+        version = EXPORT_VERSION
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')
@@ -178,7 +187,10 @@ def migrate(input_file, output_file, force, silent, archive_format):
             echo.echo_critical('export archive does not contain the required file {}'.format(fhandle.filename))
 
         old_version = migration.verify_metadata_version(metadata)
-        new_version = migration.migrate_recursively(metadata, data, folder)
+        try:
+            new_version = migration.migrate_recursively(metadata, data, folder, version)
+        except ArchiveMigrationError as exception:
+            echo.echo_critical(str(exception))
 
         with open(folder.get_abs_path('data.json'), 'wb') as fhandle:
             json.dump(data, fhandle, indent=4)

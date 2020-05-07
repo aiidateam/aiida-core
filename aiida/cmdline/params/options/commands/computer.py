@@ -45,15 +45,13 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
     return job_resource_cls.accepts_default_mpiprocs_per_machine()
 
 
-LABEL = options.LABEL.clone(
-    prompt='Computer label', cls=InteractiveOption, required=True, type=types.NonEmptyStringParamType()
-)
+LABEL = options.LABEL.clone(prompt='Computer label', cls=InteractiveOption, required=True)
 
 HOSTNAME = options.HOSTNAME.clone(
     prompt='Hostname',
     cls=InteractiveOption,
     required=True,
-    help='The fully qualified hostname of this computer; for local transports, use localhost.'
+    help='The fully qualified hostname of the computer; use "localhost" for local transports.',
 )
 
 DESCRIPTION = options.DESCRIPTION.clone(

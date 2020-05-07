@@ -136,22 +136,15 @@ def quicksetup(
         echo.echo_critical('failed to determine the PostgreSQL setup')
 
     try:
-        create = True
-        if not postgres.dbuser_exists(db_username):
-            postgres.create_dbuser(db_username, db_password)
-        else:
-            db_name, create = postgres.check_db_name(db_name)
-
-        if create:
-            postgres.create_db(db_username, db_name)
+        db_username, db_name = postgres.create_dbuser_db_safe(dbname=db_name, dbuser=db_username, dbpass=db_password)
     except Exception as exception:
         echo.echo_error(
             '\n'.join([
                 'Oops! quicksetup was unable to create the AiiDA database for you.',
-                'For AiiDA to work, please either create the database yourself as follows:',
-                manual_setup_instructions(dbuser=su_db_username, dbname=su_db_name), '',
-                'Alternatively, give your (operating system) user permission to create postgresql databases' +
-                'and run quicksetup again.', ''
+                'See `verdi quicksetup -h` for how to specify non-standard parameters for the postgresql connection.\n'
+                'Alternatively, create the AiiDA database yourself: ',
+                manual_setup_instructions(dbuser=su_db_username,
+                                          dbname=su_db_name), '', 'and then use `verdi setup` instead', ''
             ])
         )
         raise exception
@@ -169,8 +162,8 @@ def quicksetup(
         'db_backend': db_backend,
         'db_name': db_name,
         # from now on we connect as the AiiDA DB user, which may be forbidden when going via sockets
-        'db_host': db_host or 'localhost',
-        'db_port': db_port,
+        'db_host': postgres.host_for_psycopg2,
+        'db_port': postgres.port_for_psycopg2,
         'db_username': db_username,
         'db_password': db_password,
         'repository': repository,

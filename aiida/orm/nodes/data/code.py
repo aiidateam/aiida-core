@@ -120,23 +120,39 @@ class Code(Data):
         """
         return '{}@{}'.format(self.label, self.get_computer_name())
 
+    @property
+    def label(self):
+        """Return the node label.
+
+        :return: the label
+        """
+        return super().label
+
+    @label.setter
+    def label(self, value):
+        """Set the label.
+
+        :param value: the new value to set
+        """
+        if '@' in str(value):
+            msg = "Code labels must not contain the '@' symbol"
+            raise InputValidationError(msg)
+
+        super(Code, self.__class__).label.fset(self, value)
+
     def relabel(self, new_label, raise_error=True):
         """Relabel this code.
 
         :param new_label: new code label
         :param raise_error: Set to False in order to return a list of errors
             instead of raising them.
+
+        .. deprecated:: 1.2.0
+            Will remove raise_error in `v2.0.0`. Use `try/except` instead.
         """
         suffix = '@{}'.format(self.get_computer_name())
         if new_label.endswith(suffix):
             new_label = new_label[:-len(suffix)]
-
-        if '@' in new_label:
-            msg = "Code labels must not contain the '@' symbol"
-            if raise_error:
-                raise InputValidationError(msg)
-            else:
-                return InputValidationError(msg)
 
         self.label = new_label
 
@@ -145,7 +161,7 @@ class Code(Data):
 
         :return: string description of this Code instance
         """
-        return '{}'.format(self.label)
+        return '{}'.format(self.description)
 
     @classmethod
     def get_code_helper(cls, label, machinename=None):
@@ -157,7 +173,7 @@ class Code(Data):
         :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
-        from aiida.common.exceptions import (NotExistent, MultipleObjectsError, InputValidationError)
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
 
@@ -169,7 +185,7 @@ class Code(Data):
         if qb.count() == 0:
             raise NotExistent("'{}' is not a valid code name.".format(label))
         elif qb.count() > 1:
-            codes = [_ for [_] in qb.all()]
+            codes = qb.all(flat=True)
             retstr = ("There are multiple codes with label '{}', having IDs: ".format(label))
             retstr += ', '.join(sorted([str(c.pk) for c in codes])) + '.\n'
             retstr += ('Relabel them (using their ID), or refer to them with their ID.')
@@ -196,7 +212,7 @@ class Code(Data):
         from aiida.orm.utils import load_code
 
         # first check if code pk is provided
-        if (pk):
+        if pk:
             code_int = int(pk)
             try:
                 return load_code(pk=code_int)
@@ -206,7 +222,7 @@ class Code(Data):
                 raise MultipleObjectsError("More than one code in the DB with pk='{}'!".format(pk))
 
         # check if label (and machinename) is provided
-        elif (label != None):
+        elif label is not None:
             return cls.get_code_helper(label, machinename)
 
         else:
@@ -260,7 +276,7 @@ class Code(Data):
         from aiida.orm.querybuilder import QueryBuilder
         qb = QueryBuilder()
         qb.append(cls, filters={'attributes.input_plugin': {'==': plugin}})
-        valid_codes = [_ for [_] in qb.all()]
+        valid_codes = qb.all(flat=True)
 
         if labels:
             return [c.label for c in valid_codes]

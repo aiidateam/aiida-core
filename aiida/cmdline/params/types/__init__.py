@@ -20,7 +20,7 @@ from .identifier import IdentifierParamType
 from .multiple import MultipleValueParamType
 from .node import NodeParamType
 from .process import ProcessParamType
-from .nonemptystring import NonEmptyStringParamType
+from .strings import (NonEmptyStringParamType, EmailType, HostnameType, EntryPointType, LabelStringType)
 from .path import AbsolutePathParamType, ImportPath
 from .plugin import PluginParamType
 from .profile import ProfileParamType

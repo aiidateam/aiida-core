@@ -34,7 +34,9 @@ class Config:  # pylint: disable=too-many-public-methods
     def from_file(cls, filepath):
         """Instantiate a configuration object from the contents of a given file.
 
-        .. note:: if the filepath does not exist an empty file will be created with the default configuration.
+        .. note:: if the filepath does not exist an empty file will be created with the current default configuration
+            and will be written to disk. If the filepath does already exist but contains a configuration with an
+            outdated schema, the content will be migrated and then written to disk.
 
         :param filepath: the absolute path to the configuration file
         :return: `Config` instance
@@ -56,6 +58,7 @@ class Config:  # pylint: disable=too-many-public-methods
                 echo.echo_warning('original backed up to `{}`'.format(filepath_backup))
 
             config = Config(filepath, check_and_migrate_config(config))
+            config.store()
 
         return config
 

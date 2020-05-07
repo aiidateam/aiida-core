@@ -115,7 +115,7 @@ Next we should define what outputs we expect the calculation to produce:
 Just as for the inputs, one can specify what node type each output should have.
 By default a defined output will be 'required', which means that if the calculation job terminates and the output has not been attached, the process will be marked as failed.
 To indicate that an output is optional, one can use ``required=False`` in the ``spec.output`` call.
-Note that the process spec, and its :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.input` and :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.output` methods provide a lot more functionality.
+Note that the process spec, and its :py:meth:`~plumpy.ProcessSpec.input` and :py:meth:`~plumpy.ProcessSpec.output` methods provide a lot more functionality.
 Fore more details, please refer to the section on :ref:`process specifications<working_processes_spec>`.
 
 

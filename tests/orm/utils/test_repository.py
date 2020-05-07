@@ -14,8 +14,9 @@ import shutil
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import Node
+from aiida.orm import Node, Data
 from aiida.orm.utils.repository import File, FileType
+from aiida.common.exceptions import ModificationNotAllowed
 
 
 class TestRepository(AiidaTestCase):
@@ -147,3 +148,46 @@ class TestRepository(AiidaTestCase):
         key = os.path.join(basepath, 'subdir', 'a.txt')
         content = self.get_file_content(os.path.join('subdir', 'a.txt'))
         self.assertEqual(node.get_object_content(key), content)
+
+    def test_erase_unstored(self):
+        """
+        Test that _repository.erase removes the content of an unstored
+        node.
+        """
+        node = Node()
+        node.put_object_from_tree(self.tempdir, '')
+
+        self.assertEqual(sorted(node.list_object_names()), ['c.txt', 'subdir'])
+        self.assertEqual(sorted(node.list_object_names('subdir')), ['a.txt', 'b.txt', 'nested'])
+
+        node._repository.erase()  # pylint: disable=protected-access
+        self.assertEqual(node.list_object_names(), [])
+
+    def test_erase_stored_force(self):
+        """
+        Test that _repository.erase removes the content of an stored
+        Data node when passing force=True.
+        """
+        node = Data()
+        node.put_object_from_tree(self.tempdir, '')
+        node.store()
+
+        self.assertEqual(sorted(node.list_object_names()), ['c.txt', 'subdir'])
+        self.assertEqual(sorted(node.list_object_names('subdir')), ['a.txt', 'b.txt', 'nested'])
+
+        node._repository.erase(force=True)  # pylint: disable=protected-access
+        self.assertEqual(node.list_object_names(), [])
+
+    def test_erase_stored_raise(self):
+        """
+        Test that trying to erase the repository content of a stored
+        Data node without the force flag raises.
+        """
+        node = Data()
+        node.put_object_from_tree(self.tempdir, '')
+        node.store()
+
+        self.assertEqual(sorted(node.list_object_names()), ['c.txt', 'subdir'])
+        self.assertEqual(sorted(node.list_object_names('subdir')), ['a.txt', 'b.txt', 'nested'])
+
+        self.assertRaises(ModificationNotAllowed, node._repository.erase)  # pylint: disable=protected-access

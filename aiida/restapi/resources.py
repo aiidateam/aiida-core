@@ -48,20 +48,20 @@ class ServerInfo(Resource):
 
         response = {}
 
-        import aiida.restapi.common.config as conf
+        from aiida.restapi.common.config import API_CONFIG
         from aiida import __version__
 
         if resource_type == 'info':
             response = {}
 
             # Add Rest API version
-            api_version = conf.VERSION.split('.')
+            api_version = API_CONFIG['VERSION'].split('.')
             response['API_major_version'] = api_version[0]
             response['API_minor_version'] = api_version[1]
             response['API_revision_version'] = api_version[2]
 
             # Add Rest API prefix
-            response['API_prefix'] = conf.PREFIX
+            response['API_prefix'] = API_CONFIG['PREFIX']
 
             # Add AiiDA version
             response['AiiDA_version'] = __version__

@@ -8,65 +8,25 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test export file migration from export version 0.5 to 0.6"""
-
 from aiida.backends.general.migrations.calc_state import STATE_MAPPING
-from aiida.backends.testbase import AiidaTestCase
 from aiida.tools.importexport.migration.utils import verify_metadata_version
 from aiida.tools.importexport.migration.v05_to_v06 import migrate_v5_to_v6
 
 from tests.utils.archives import get_json_files
+from . import ArchiveMigrationTest
 
 
-class TestMigrateV05toV06(AiidaTestCase):
-    """Test migration of export files from export version 0.5 to 0.6"""
+class TestMigrate(ArchiveMigrationTest):
+    """Tests specific for this archive migration."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
+    def test_migrate_external(self):
+        """Test the migration on the test archive provided by the external test package."""
+        _, data = self.migrate('export_v0.5_manual.aiida', '0.5', '0.6', migrate_v5_to_v6)
 
-        # Utility helpers
-        cls.external_archive = {'filepath': 'archives', 'external_module': 'aiida-export-migration-tests'}
-        cls.core_archive = {'filepath': 'export/migrate'}
-
-    def test_migrate_v5_to_v6(self):
-        """Test migration for file containing complete v0.5 era possibilities"""
-        from aiida import get_version
-
-        # Get metadata.json and data.json as dicts from v0.5 file archive
-        metadata_v5, data_v5 = get_json_files('export_v0.5_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v5, version='0.5')
-
-        # Get metadata.json and data.json as dicts from v0.6 file archive
-        metadata_v6, data_v6 = get_json_files('export_v0.6_simple.aiida', **self.core_archive)
-        verify_metadata_version(metadata_v6, version='0.6')
-
-        # Migrate to v0.6
-        migrate_v5_to_v6(metadata_v5, data_v5)
-        verify_metadata_version(metadata_v5, version='0.6')
-
-        # Remove AiiDA version, since this may change irregardless of the migration function
-        metadata_v5.pop('aiida_version')
-        metadata_v6.pop('aiida_version')
-
-        # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
-        self.maxDiff = None  # pylint: disable=invalid-name
-        conversion_message = 'Converted from version 0.5 to 0.6 with AiiDA v{}'.format(get_version())
-        self.assertEqual(
-            metadata_v5.pop('conversion_info')[-1],
-            conversion_message,
-            msg='The conversion message after migration is wrong'
-        )
-        metadata_v6.pop('conversion_info')
-
-        # Assert changes were performed correctly
-        self.assertDictEqual(
-            metadata_v5,
-            metadata_v6,
-            msg='After migration, metadata.json should equal intended metadata.json from archives'
-        )
-        self.assertDictEqual(
-            data_v5, data_v6, msg='After migration, data.json should equal intended data.json from archives'
-        )
+        # Explicitly check that conversion dictionaries were removed
+        illegal_data_dicts = {'node_attributes_conversion', 'node_extras_conversion'}
+        for dict_ in illegal_data_dicts:
+            self.assertNotIn(dict_, data, msg="dictionary '{}' should have been removed from data.json".format(dict_))
 
     def test_migrate_v5_to_v6_calc_states(self):
         """Test the data migration of legacy `JobCalcState` attributes.
@@ -141,19 +101,3 @@ class TestMigrateV05toV06(AiidaTestCase):
                 'the archive `export_v0.5_simple.aiida` did not contain a node with the attribute '
                 '`scheduler_lastchecktime` which is required for this test.'
             )
-
-    def test_migrate_v5_to_v6_complete(self):
-        """Test migration for file containing complete v0.5 era possibilities"""
-        # Get metadata.json and data.json as dicts from v0.5 file archive
-        metadata, data = get_json_files('export_v0.5_manual.aiida', **self.external_archive)
-        verify_metadata_version(metadata, version='0.5')
-
-        # Migrate to v0.6
-        migrate_v5_to_v6(metadata, data)
-        verify_metadata_version(metadata, version='0.6')
-
-        self.maxDiff = None  # pylint: disable=invalid-name
-        # Explicitly check that conversion dictionaries were removed
-        illegal_data_dicts = {'node_attributes_conversion', 'node_extras_conversion'}
-        for dict_ in illegal_data_dicts:
-            self.assertNotIn(dict_, data, msg="dictionary '{}' should have been removed from data.json".format(dict_))

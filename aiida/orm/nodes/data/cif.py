@@ -342,9 +342,9 @@ class CifData(SinglefileData):
             otherwise the CIF file will not be found.
         """
         from aiida.orm.querybuilder import QueryBuilder
-        qb = QueryBuilder()
-        qb.append(cls, filters={'attributes.md5': {'==': md5}})
-        return [_ for [_] in qb.all()]
+        builder = QueryBuilder()
+        builder.append(cls, filters={'attributes.md5': {'==': md5}})
+        return builder.all(flat=True)
 
     @classmethod
     def get_or_create(cls, filename, use_first=False, store_cif=True):

@@ -304,6 +304,14 @@ def run_base_restart_workchain():
     assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_TOO_BIG.status, node.exit_status  # pylint: disable=no-member
     assert len(node.called) == 1
 
+    # Check that overriding default handler enabled status works
+    inputs['add']['y'] = Int(1)
+    inputs['handler_overrides'] = Dict(dict={'disabled_handler': True})
+    results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
+    assert not node.is_finished_ok, node.process_state
+    assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_ENABLED_DOOM.status, node.exit_status  # pylint: disable=no-member
+    assert len(node.called) == 1
+
 
 def main():
     """Launch a bunch of calculation jobs and workchains."""

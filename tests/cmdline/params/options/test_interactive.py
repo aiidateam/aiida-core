@@ -223,15 +223,17 @@ class InteractiveOptionTest(unittest.TestCase):
 
     def test_default_value_ignore_character(self):
         """
-        scenario: InteractiveOption with default value, invoke with ignore default character `!`
-        behaviour: return `None` for the value
+        scenario: InteractiveOption with default value, invoke with "ignore default character" `!`
+        behaviour: return empty string '' for the value
+
+        Note: It should *not* return None, since this is indistinguishable from the option not being prompted for.
         """
         cmd = self.simple_command(default='default')
         runner = CliRunner()
 
         # Check the interactive mode, by not specifying the input on the command line and then enter `!` at the prompt
         result = runner.invoke(cmd, [], input='!\n')
-        expected = 'None'
+        expected = ''
         self.assertIsNone(result.exception)
         self.assertIn(expected, result.output.split('\n')[3])  # Fourth line should be parsed value printed to stdout
 

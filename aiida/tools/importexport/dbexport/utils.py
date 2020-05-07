@@ -263,8 +263,7 @@ def check_process_nodes_sealed(nodes):
         raise exceptions.ExportValidationError('nodes must be either an int or set/list of ints')
 
     filters = {'id': {'in': nodes}, 'attributes.sealed': True}
-    sealed_nodes = QueryBuilder().append(ProcessNode, filters=filters, project=['id']).all()
-    sealed_nodes = {_[0] for _ in sealed_nodes}
+    sealed_nodes = set(QueryBuilder().append(ProcessNode, filters=filters, project=['id']).all(flat=True))
 
     if sealed_nodes != nodes:
         raise exceptions.ExportValidationError(

@@ -16,9 +16,10 @@ from aiida.common import exceptions
 from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, ENTRY_POINT_GROUP_PREFIX, EntryPointFormat
 from aiida.plugins.entry_point import format_entry_point_string, get_entry_point_string_format
 from aiida.plugins.entry_point import get_entry_point, get_entry_points, get_entry_point_groups
+from ..types import EntryPointType
 
 
-class PluginParamType(click.ParamType):
+class PluginParamType(EntryPointType):
     """
     AiiDA Plugin name parameter type.
 
@@ -203,6 +204,8 @@ class PluginParamType(click.ParamType):
         Convert the string value to an entry point instance, if the value can be successfully parsed
         into an actual entry point. Will raise click.BadParameter if validation fails.
         """
+        value = super().convert(value, param, ctx)
+
         if not value:
             raise click.BadParameter('plugin name cannot be empty')
 

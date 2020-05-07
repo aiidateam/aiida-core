@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ AiiDA Group entites"""
-
+from abc import ABCMeta
 from enum import Enum
 import warnings
 
@@ -21,19 +21,63 @@ from . import convert
 from . import entities
 from . import users
 
-__all__ = ('Group', 'GroupTypeString')
+__all__ = ('Group', 'GroupTypeString', 'AutoGroup', 'ImportGroup', 'UpfFamily')
+
+
+def load_group_class(type_string):
+    """Load the sub class of `Group` that corresponds to the given `type_string`.
+
+    .. note:: will fall back on `aiida.orm.groups.Group` if `type_string` cannot be resolved to loadable entry point.
+
+    :param type_string: the entry point name of the `Group` sub class
+    :return: sub class of `Group` registered through an entry point
+    """
+    from aiida.common.exceptions import EntryPointError
+    from aiida.plugins.entry_point import load_entry_point
+
+    try:
+        group_class = load_entry_point('aiida.groups', type_string)
+    except EntryPointError:
+        message = 'could not load entry point `{}`, falling back onto `Group` base class.'.format(type_string)
+        warnings.warn(message)  # pylint: disable=no-member
+        group_class = Group
+
+    return group_class
+
+
+class GroupMeta(ABCMeta):
+    """Meta class for `aiida.orm.groups.Group` to automatically set the `type_string` attribute."""
+
+    def __new__(mcs, name, bases, namespace, **kwargs):
+        from aiida.plugins.entry_point import get_entry_point_from_class
+
+        newcls = ABCMeta.__new__(mcs, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
+
+        entry_point_group, entry_point = get_entry_point_from_class(namespace['__module__'], name)
+
+        if entry_point_group is None or entry_point_group != 'aiida.groups':
+            newcls._type_string = None
+            message = 'no registered entry point for `{}` so its instances will not be storable.'.format(name)
+            warnings.warn(message)  # pylint: disable=no-member
+        else:
+            newcls._type_string = entry_point.name  # pylint: disable=protected-access
+
+        return newcls
 
 
 class GroupTypeString(Enum):
-    """A simple enum of allowed group type strings."""
+    """A simple enum of allowed group type strings.
 
+    .. deprecated:: 1.2.0
+        This enum is deprecated and will be removed in `v2.0.0`.
+    """
     UPFGROUP_TYPE = 'data.upf'
     IMPORTGROUP_TYPE = 'auto.import'
     VERDIAUTOGROUP_TYPE = 'auto.run'
     USER = 'user'
 
 
-class Group(entities.Entity):
+class Group(entities.Entity, metaclass=GroupMeta):
     """An AiiDA ORM implementation of group of nodes."""
 
     class Collection(entities.Collection):
@@ -54,21 +98,10 @@ class Group(entities.Entity):
             if not label:
                 raise ValueError('Group label must be provided')
 
-            filters = {'label': label}
-
-            if 'type_string' in kwargs:
-                if not isinstance(kwargs['type_string'], str):
-                    raise exceptions.ValidationError(
-                        'type_string must be {}, you provided an object of type '
-                        '{}'.format(str, type(kwargs['type_string']))
-                    )
-
-                filters['type_string'] = kwargs['type_string']
-
-            res = self.find(filters=filters)
+            res = self.find(filters={'label': label})
 
             if not res:
-                return Group(label, backend=self.backend, **kwargs).store(), True
+                return self.entity_type(label, backend=self.backend, **kwargs).store(), True
 
             if len(res) > 1:
                 raise exceptions.MultipleObjectsError('More than one groups found in the database')
@@ -83,11 +116,14 @@ class Group(entities.Entity):
             """
             self._backend.groups.delete(id)
 
-    def __init__(self, label=None, user=None, description='', type_string=GroupTypeString.USER.value, backend=None):
+    def __init__(self, label=None, user=None, description='', type_string=None, backend=None):
         """
         Create a new group. Either pass a dbgroup parameter, to reload
         a group from the DB (and then, no further parameters are allowed),
         or pass the parameters for the Group creation.
+
+        .. deprecated:: 1.2.0
+            The parameter `type_string` will be removed in `v2.0.0` and is now determined automatically.
 
         :param label: The group label, required on creation
         :type label: str
@@ -105,12 +141,16 @@ class Group(entities.Entity):
         if not label:
             raise ValueError('Group label must be provided')
 
-        # Check that chosen type_string is allowed
-        if not isinstance(type_string, str):
-            raise exceptions.ValidationError(
-                'type_string must be {}, you provided an object of type '
-                '{}'.format(str, type(type_string))
-            )
+        if type_string is not None:
+            message = '`type_string` is deprecated because it is determined automatically'
+            warnings.warn(message)  # pylint: disable=no-member
+
+        # If `type_string` is explicitly defined, override automatically determined `self._type_string`. This is
+        # necessary for backwards compatibility.
+        if type_string is not None:
+            self._type_string = type_string
+
+        type_string = self._type_string
 
         backend = backend or get_manager().get_backend()
         user = user or users.User.objects(backend).get_default()
@@ -129,6 +169,13 @@ class Group(entities.Entity):
             return '"{}" [type {}], of user {}'.format(self.label, self.type_string, self.user.email)
 
         return '"{}" [user-defined], of user {}'.format(self.label, self.user.email)
+
+    def store(self):
+        """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""
+        if self._type_string is None:
+            raise exceptions.StoringNotAllowed('`type_string` is `None` so the group cannot be stored.')
+
+        return super().store()
 
     @property
     def label(self):
@@ -293,25 +340,12 @@ class Group(entities.Entity):
         """
         from aiida.orm import QueryBuilder
 
-        filters = {}
         if 'type_string' in kwargs:
-            if not isinstance(kwargs['type_string'], str):
-                raise exceptions.ValidationError(
-                    'type_string must be {}, you provided an object of type '
-                    '{}'.format(str, type(kwargs['type_string']))
-                )
+            message = '`type_string` is deprecated because it is determined automatically'
+            warnings.warn(message)  # pylint: disable=no-member
+            type_check(kwargs['type_string'], str)
 
-        query = QueryBuilder()
-        for key, val in kwargs.items():
-            filters[key] = val
-
-        query.append(cls, filters=filters)
-        results = query.all()
-        if len(results) > 1:
-            raise exceptions.MultipleObjectsError("Found {} groups matching criteria '{}'".format(len(results), kwargs))
-        if not results:
-            raise exceptions.NotExistent("No group found matching criteria '{}'".format(kwargs))
-        return results[0][0]
+        return QueryBuilder().append(cls, filters=kwargs).one()[0]
 
     def is_user_defined(self):
         """
@@ -382,3 +416,15 @@ class Group(entities.Entity):
                 'type': 'unicode'
             }
         }
+
+
+class AutoGroup(Group):
+    """Group to be used to contain selected nodes generated while `aiida.orm.autogroup.CURRENT_AUTOGROUP` is set."""
+
+
+class ImportGroup(Group):
+    """Group to be used to contain all nodes from an export archive that has been imported."""
+
+
+class UpfFamily(Group):
+    """Group that represents a pseudo potential family containing `UpfData` nodes."""

@@ -8,19 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module of `Data` sub class to represent a pseudopotential single file in UPF format and related utilities."""
-
 import json
 import re
 
 from upf_to_json import upf_to_json
-
-from aiida.common.lang import classproperty
-from aiida.orm import GroupTypeString
 from .singlefile import SinglefileData
 
 __all__ = ('UpfData',)
-
-UPFGROUP_TYPE = GroupTypeString.UPFGROUP_TYPE.value
 
 REGEX_UPF_VERSION = re.compile(r"""
     \s*<UPF\s+version\s*="
@@ -107,9 +101,7 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
     nfiles = len(filenames)
 
     automatic_user = orm.User.objects.get_default()
-    group, group_created = orm.Group.objects.get_or_create(
-        label=group_label, type_string=UPFGROUP_TYPE, user=automatic_user
-    )
+    group, group_created = orm.UpfFamily.objects.get_or_create(label=group_label, user=automatic_user)
 
     if group.user.email != automatic_user.email:
         raise UniquenessError(
@@ -312,12 +304,6 @@ class UpfData(SinglefileData):
 
         return (pseudos[0], False)
 
-    @classproperty
-    def upffamily_type_string(cls):
-        """Return the type string used for UPF family groups."""
-        # pylint: disable=no-self-argument,no-self-use
-        return UPFGROUP_TYPE
-
     def store(self, *args, **kwargs):
         """Store the node, reparsing the file so that the md5 and the element are correctly reset."""
         # pylint: disable=arguments-differ
@@ -356,7 +342,7 @@ class UpfData(SinglefileData):
         from aiida.orm.querybuilder import QueryBuilder
         builder = QueryBuilder()
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
-        return [upf for upf, in builder.all()]
+        return builder.all(flat=True)
 
     def set_file(self, file, filename=None):
         """Store the file in the repository and parse it to set the `element` and `md5` attributes.
@@ -388,13 +374,13 @@ class UpfData(SinglefileData):
 
     def get_upf_family_names(self):
         """Get the list of all upf family names to which the pseudo belongs."""
-        from aiida.orm import Group
+        from aiida.orm import UpfFamily
         from aiida.orm import QueryBuilder
 
         query = QueryBuilder()
-        query.append(Group, filters={'type_string': {'==': self.upffamily_type_string}}, tag='group', project='label')
+        query.append(UpfFamily, tag='group', project='label')
         query.append(UpfData, filters={'id': {'==': self.id}}, with_group='group')
-        return [label for label, in query.all()]
+        return query.all(flat=True)
 
     @property
     def element(self):
@@ -465,9 +451,9 @@ class UpfData(SinglefileData):
         :param group_label: the family group label
         :return: the `Group` with the given label, if it exists
         """
-        from aiida.orm import Group
+        from aiida.orm import UpfFamily
 
-        return Group.get(label=group_label, type_string=cls.upffamily_type_string)
+        return UpfFamily.get(label=group_label)
 
     @classmethod
     def get_upf_groups(cls, filter_elements=None, user=None):
@@ -480,12 +466,12 @@ class UpfData(SinglefileData):
             If defined, it should be either a `User` instance or the user email.
         :return: list of `Group` entities of type UPF.
         """
-        from aiida.orm import Group
+        from aiida.orm import UpfFamily
         from aiida.orm import QueryBuilder
         from aiida.orm import User
 
         builder = QueryBuilder()
-        builder.append(Group, filters={'type_string': {'==': cls.upffamily_type_string}}, tag='group', project='*')
+        builder.append(UpfFamily, tag='group', project='*')
 
         if user:
             builder.append(User, filters={'email': {'==': user}}, with_group='group')
@@ -496,9 +482,9 @@ class UpfData(SinglefileData):
         if filter_elements is not None:
             builder.append(UpfData, filters={'attributes.element': {'in': filter_elements}}, with_group='group')
 
-        builder.order_by({Group: {'id': 'asc'}})
+        builder.order_by({UpfFamily: {'id': 'asc'}})
 
-        return [group for group, in builder.all()]
+        return builder.all(flat=True)
 
     # pylint: disable=unused-argument
     def _prepare_json(self, main_file_name=''):

@@ -10,24 +10,27 @@
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
 import click
+# Note: importing from aiida.manage.postgres leads to circular imports
+from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from ...utils import defaults, echo
 from .. import types
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
+from .contextualdefault import ContextualDefaultOption
 from .config import ConfigFileOption
 
 __all__ = (
     'graph_traversal_rules', 'PROFILE', 'CALCULATION', 'CALCULATIONS', 'CODE', 'CODES', 'COMPUTER', 'COMPUTERS',
     'DATUM', 'DATA', 'GROUP', 'GROUPS', 'NODE', 'NODES', 'FORCE', 'SILENT', 'VISUALIZATION_FORMAT', 'INPUT_FORMAT',
     'EXPORT_FORMAT', 'ARCHIVE_FORMAT', 'NON_INTERACTIVE', 'DRY_RUN', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_LAST_NAME',
-    'USER_INSTITUTION', 'BACKEND', 'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME', 'REPOSITORY_PATH',
-    'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PREPEND_TEXT', 'APPEND_TEXT', 'LABEL', 'DESCRIPTION', 'INPUT_PLUGIN',
-    'CALC_JOB_STATE', 'PROCESS_STATE', 'EXIT_STATUS', 'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS',
-    'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS', 'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER',
-    'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT', 'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS',
-    'WITH_ELEMENTS_EXCLUSIVE'
+    'USER_INSTITUTION', 'DB_BACKEND', 'DB_ENGINE', 'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME',
+    'REPOSITORY_PATH', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PREPEND_TEXT', 'APPEND_TEXT', 'LABEL',
+    'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE', 'PROCESS_STATE', 'PROCESS_LABEL', 'TYPE_STRING', 'EXIT_STATUS',
+    'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS',
+    'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT',
+    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE'
 )
 
 TRAVERSAL_RULE_HELP_STRING = {
@@ -209,41 +212,65 @@ DRY_RUN = OverridableOption('-n', '--dry-run', is_flag=True, help='Perform a dry
 
 USER_EMAIL = OverridableOption(
     '--email',
-    type=click.STRING,
-    prompt='Email Address (identifies your data when sharing)',
-    help='Email address that will be associated with your data and will be exported along with it, '
-    'should you choose to share any of your work.'
+    'email',
+    type=types.EmailType(),
+    help='Email address associated with the data you generate. The email address is exported along with the data, '
+    'when sharing it.'
 )
 
 USER_FIRST_NAME = OverridableOption(
-    '--first-name', type=click.STRING, prompt='First name', help='First name of the user.'
+    '--first-name', type=types.NonEmptyStringParamType(), help='First name of the user.'
 )
 
-USER_LAST_NAME = OverridableOption('--last-name', type=click.STRING, prompt='Last name', help='Last name of the user.')
+USER_LAST_NAME = OverridableOption('--last-name', type=types.NonEmptyStringParamType(), help='Last name of the user.')
 
 USER_INSTITUTION = OverridableOption(
-    '--institution', type=click.STRING, prompt='Institution', help='Institution name of the user.'
+    '--institution', type=types.NonEmptyStringParamType(), help='Institution of the user.'
 )
 
-BACKEND = OverridableOption(
-    '--backend',
+DB_ENGINE = OverridableOption(
+    '--db-engine',
+    help='Engine to use to connect to the database.',
+    default='postgresql_psycopg2',
+    type=click.Choice(['postgresql_psycopg2'])
+)
+
+DB_BACKEND = OverridableOption(
+    '--db-backend',
     type=click.Choice([BACKEND_DJANGO, BACKEND_SQLA]),
     default=BACKEND_DJANGO,
     help='Database backend to use.'
 )
 
-DB_HOST = OverridableOption('--db-host', type=click.STRING, help='Database server host.')
+DB_HOST = OverridableOption(
+    '--db-host',
+    type=types.HostnameType(),
+    help='Database server host. Leave empty for "peer" authentication.',
+    default=DEFAULT_DBINFO['host']
+)
 
-DB_PORT = OverridableOption('--db-port', type=click.INT, help='Database server port.')
+DB_PORT = OverridableOption(
+    '--db-port',
+    type=click.INT,
+    help='Database server port.',
+    default=DEFAULT_DBINFO['port'],
+)
 
-DB_USERNAME = OverridableOption('--db-username', type=click.STRING, help='Database user name.')
+DB_USERNAME = OverridableOption(
+    '--db-username', type=types.NonEmptyStringParamType(), help='Name of the database user.'
+)
 
-DB_PASSWORD = OverridableOption('--db-password', type=click.STRING, help='Database user password.')
+DB_PASSWORD = OverridableOption(
+    '--db-password',
+    type=click.STRING,
+    help='Password of the database user.',
+    hide_input=True,
+)
 
-DB_NAME = OverridableOption('--db-name', type=click.STRING, help='Database name.')
+DB_NAME = OverridableOption('--db-name', type=types.NonEmptyStringParamType(), help='Database name.')
 
 REPOSITORY_PATH = OverridableOption(
-    '--repository', type=click.Path(file_okay=False), help='Absolute path for the file system repository.'
+    '--repository', type=click.Path(file_okay=False), help='Absolute path to the file repository.'
 )
 
 PROFILE_ONLY_CONFIG = OverridableOption(
@@ -304,6 +331,16 @@ PROCESS_LABEL = OverridableOption(
     type=click.STRING,
     required=False,
     help='Only include entries whose process label matches this filter.'
+)
+
+TYPE_STRING = OverridableOption(
+    '-T',
+    '--type-string',
+    'type_string',
+    type=click.STRING,
+    required=False,
+    help='Only include entries whose type string matches this filter. Can include `_` to match a single arbitrary '
+    'character or `%` to match any number of characters.'
 )
 
 EXIT_STATUS = OverridableOption(
@@ -388,7 +425,7 @@ RAW = OverridableOption(
     help='Display only raw query results, without any headers or footers.'
 )
 
-HOSTNAME = OverridableOption('-H', '--hostname', help='Hostname.')
+HOSTNAME = OverridableOption('-H', '--hostname', type=types.HostnameType(), help='Hostname.')
 
 TRANSPORT = OverridableOption(
     '-T', '--transport', type=types.PluginParamType(group='transports'), required=True, help='Transport type.'
@@ -458,7 +495,11 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
     help='Only select objects containing only these and no other elements.'
 )
 
-CONFIG_FILE = ConfigFileOption('--config', help='Load option values from configuration file in yaml format.')
+CONFIG_FILE = ConfigFileOption(
+    '--config',
+    type=click.Path(exists=True, dir_okay=False),
+    help='Load option values from configuration file in yaml format.'
+)
 
 IDENTIFIER = OverridableOption(
     '-i',

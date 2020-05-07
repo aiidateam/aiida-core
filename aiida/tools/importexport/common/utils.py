@@ -10,7 +10,8 @@
 """ Utility functions for import/export of AiiDA entities """
 # pylint: disable=inconsistent-return-statements,too-many-branches,too-many-return-statements
 # pylint: disable=too-many-nested-blocks,too-many-locals
-import urllib
+import urllib.request
+import urllib.parse
 from html.parser import HTMLParser
 
 from aiida.tools.importexport.common.config import (

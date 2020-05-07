@@ -52,6 +52,7 @@ and the following people for code contributions, bug fixes, improvements of the 
 * Marco Dorigo
 * Y.-W. Fang
 * Marco Gibertini
+* Davide Grassano
 * Daniel Hollas
 * Eric Hontz
 * Jianxing Huang
@@ -70,6 +71,7 @@ and the following people for code contributions, bug fixes, improvements of the 
 * Daniele Tomerini
 * Nicola Varini
 * Jason Yu
+* Austin Zadoks
 * Bonan Zhu
 * Mario Zic
 

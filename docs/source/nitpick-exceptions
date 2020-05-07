@@ -1,243 +1,86 @@
-# built-in python exceptions
-py:exc  ArithmeticError
-py:exc  AssertionError
-py:exc  AttributeError
-py:exc  BaseException
-py:exc  BufferError
-py:exc  DeprecationWarning
-py:exc  EOFError
-py:exc  EnvironmentError
-py:exc  Exception
-py:exc  FloatingPointError
-py:exc  FutureWarning
-py:exc  GeneratorExit
-py:exc  IOError
-py:exc  ImportError
-py:exc  ImportWarning
-py:exc  IndentationError
-py:exc  IndexError
-py:exc  KeyError
-py:exc  KeyboardInterrupt
-py:exc  LookupError
-py:exc  MemoryError
-py:exc  NameError
-py:exc  NotImplementedError
-py:exc  OSError
-py:exc  OverflowError
-py:exc  PendingDeprecationWarning
-py:exc  ReferenceError
-py:exc  RuntimeError
-py:exc  RuntimeWarning
-py:exc  StandardError
-py:exc  StopIteration
-py:exc  SyntaxError
-py:exc  SyntaxWarning
-py:exc  SystemError
-py:exc  SystemExit
-py:exc  TabError
-py:exc  TypeError
-py:exc  UnboundLocalError
-py:exc  UnicodeDecodeError
-py:exc  UnicodeEncodeError
-py:exc  UnicodeError
-py:exc  UnicodeTranslateError
-py:exc  UnicodeWarning
-py:exc  UserWarning
-py:exc  VMSError
-py:exc  ValueError
-py:exc  Warning
-py:exc  WindowsError
-py:exc  ZeroDivisionError
+### python builtins
 
-# python builtins
-py:class  classmethod
-py:class  dict
-py:class  callable
-py:class  filter
-py:class  list
-py:class  object
-py:class  unittest.case.TestCase
-py:class  unittest.runner.TextTestRunner
-py:class  unittest2.case.TestCase
-py:meth   unittest.TestLoader.discover
-py:meth   copy.copy
-py:class  abc.ABC
-py:class  exceptions.Exception
-py:class  exceptions.ValueError
-py:class  exceptions.BaseException
-# repeat for Python 3
-py:class  Exception
-py:class  ValueError
-py:class  BaseException
-py:class  str
-py:class  bytes
-py:class  tuple
-py:class  int
-py:class  float
-py:class  bool
-py:class  basestring
-py:class  None
-py:class  type
-py:class  typing.Final
-# this is required for metaclasses(?)
-py:class  __builtin__.bool
-py:class  __builtin__.float
-py:class  __builtin__.int
-py:class  __builtin__.object
-py:class  __builtin__.str
-py:class  __builtin__.dict
-# ... and the same for Python 3
-py:class  builtins.bool
-py:class  builtins.float
-py:class  builtins.int
-py:class  builtins.object
-py:class  builtins.str
-py:class  builtins.dict
-py:class  set
+# note: there doesn't seem to be a standard way of indicating a callable in python3
+# https://stackoverflow.com/questions/23571253/how-to-define-a-callable-parameter-in-a-python-docstring
+py:class callable
 
-# python builtin objects
-py:obj basestring
-py:obj bool
-py:obj float
-py:obj int
-py:obj str
-py:obj string
-py:obj tuple
-py:obj None
-py:obj bool
+# For some reason, "filter" does not seem to be found
+py:class filter
 
-# python packages
-# Note: These are needed, if they are provided, e.g.
-# as types or rtypes without actually being imported
-py:class  abc.ABCMeta
+py:class unittest.case.TestCase
+py:class unittest.runner.TextTestRunner
 
-py:exc    click.BadParameter
-py:exc    click.UsageError
-py:class  click.ParamType
-py:class  click.core.Group
-py:class  click.core.Option
-py:class  click.Command
-py:class  click.Group
-py:class  click.Option
-py:class  click.types.ParamType
-py:class  click.types.Choice
-py:class  click.types.IntParamType
-py:class  click.types.StringParamType
-py:class  click.types.Path
+# required for metaclasses(?)
+py:class builtins.bool
+py:class builtins.float
+py:class builtins.int
+py:class builtins.object
+py:class builtins.str
+py:class builtins.dict
 
-py:class  concurrent.futures._base.TimeoutError
+### AiiDA
 
-py:class  distutils.version.Version
+# not quite clear why necessary...
+py:class WorkChainSpec
 
-py:class  docutils.parsers.rst.Directive
+### python packages
+# Note: These exceptions are needed if
+# * the objects are referenced e.g. as param/return types types in method docstrings (without intersphinx mapping)
+# * the documentation linked via intersphinx lists the objects at a different (usually lower) import hierarchy
+py:class click.core.Group
+py:class click.core.Option
+py:class click.types.ParamType
+py:class click.types.Choice
+py:class click.types.IntParamType
+py:class click.types.StringParamType
+py:class click.types.Path
+py:meth  click.Option.get_default
 
-py:class  enum.Enum
-py:class  enum.IntEnum
+py:class concurrent.futures._base.TimeoutError
 
-py:class  flask.app.Flask
-py:class  flask.json.JSONEncoder
-py:class  flask_restful.Api
-py:class  flask_restful.Resource
+py:class docutils.parsers.rst.Directive
 
-py:class  frozenset
+py:class frozenset
 
-py:class  logging.Filter
-py:class  logging.Handler
-py:class  logging.record
-py:class  logging.Logger
-py:class  logging.LoggerAdapter
+py:class paramiko.proxy.ProxyCommand
 
-py:class  paramiko.proxy.ProxyCommand
+# These can be removed once they are properly included in the `__all__` in `plumpy`
+py:class plumpy.ports.PortNamespace
+py:class plumpy.utils.AttributesDict
 
-py:class  StateMachine
-py:class  plumpy.futures.Future
-py:class  plumpy.processes.Process
-py:class  plumpy.process_comms.ProcessLauncher
-py:class  plumpy.process_spec.ProcessSpec
-py:class  plumpy.Port
-py:class  plumpy.Process
-py:class  plumpy.Communicator
-py:class  plumpy.RemoteProcessThreadController
-py:class  plumpy.Bundle
-py:class  plumpy.workchains.WorkChainSpec
-py:class  plumpy.WorkChainSpec
-py:class  plumpy.Persister
-py:class  plumpy.persistence.Persister
-py:class  plumpy.PersistenceError
-py:class  plumpy.ports.Port
-py:class  plumpy.ports.InputPort
-py:class  plumpy.ports.OutputPort
-py:class  plumpy.ports.PortNamespace
-py:class  plumpy.utils.AttributesDict
-py:class  plumpy.loaders.DefaultObjectLoader
-py:class  plumpy.ObjectLoader
-py:class  plumpy.process_states.Waiting
-py:class  plumpy.process_comms.RemoteProcessThreadController
-py:exc    plumpy.TaskRejected
-py:meth   plumpy.ProcessSpec.output
-py:meth   plumpy.process_spec.ProcessSpec.expose_inputs
-py:meth   plumpy.process_spec.ProcessSpec.expose_outputs
+py:class topika.Connection
 
-py:class  kiwipy.futures.Future
-py:class  kiwipy.communications.TimeoutError
-py:class  kiwipy.Communicator
-py:class  kiwipy.rmq.communicator.RmqThreadCommunicator
+py:class tornado.ioloop.IOLoop
+py:class tornado.concurrent.Future
 
-py:class  topika.Connection
+py:class IPython.core.magic.Magics
 
-py:class  tornado.ioloop.IOLoop
-py:class  tornado.concurrent.Future
+py:class HTMLParser.HTMLParser
+py:class html.parser.HTMLParser
 
-py:class  IPython.core.magic.Magics
+py:class django.contrib.auth.base_user.AbstractBaseUser
+py:class django.contrib.auth.base_user.BaseUserManager
+py:class django.contrib.auth.models.AbstractBaseUser
+py:class django.contrib.auth.models.BaseUserManager
+py:class django.contrib.auth.models.PermissionsMixin
+py:class django.core.exceptions.MultipleObjectsReturned
+py:class django.core.exceptions.ObjectDoesNotExist
+py:class django.db.models.base.Model
+py:class django.db.models.manager.Manager
+py:class django.db.models.query.QuerySet
+py:class django.db.migrations.migration.Migration
 
-py:class  HTMLParser.HTMLParser
-py:class  html.parser.HTMLParser
+py:class flask.app.Flask
 
-py:class  tuple
+py:class sqlalchemy.ext.declarative.api.Base
+py:class sqlalchemy.ext.declarative.api.Model
+py:class sqlalchemy.sql.functions.FunctionElement
+py:class sqlalchemy.orm.query.Query
+py:class sqlalchemy.orm.util.AliasedClass
+py:class sqlalchemy.orm.session.Session
+py:exc sqlalchemy.orm.exc.MultipleResultsFound
 
-py:class  staticmethod
-
-py:class  django.contrib.auth.base_user.AbstractBaseUser
-py:class  django.contrib.auth.base_user.BaseUserManager
-py:class  django.contrib.auth.models.AbstractBaseUser
-py:class  django.contrib.auth.models.BaseUserManager
-py:class  django.contrib.auth.models.PermissionsMixin
-py:class  django.core.exceptions.MultipleObjectsReturned
-py:class  django.core.exceptions.ObjectDoesNotExist
-py:class  django.db.models.base.Model
-py:class  django.db.models.manager.Manager
-py:class  django.db.models.query.QuerySet
-py:class  django.db.migrations.migration.Migration
-
-py:class  sqlalchemy.ext.declarative.api.Base
-py:class  sqlalchemy.ext.declarative.api.Model
-py:class  sqlalchemy.sql.functions.FunctionElement
-py:class  sqlalchemy.orm.query.Query
-py:class  sqlalchemy.orm.util.AliasedClass
-py:class  sqlalchemy.orm.session.Session
-py:exc    sqlalchemy.orm.exc.MultipleResultsFound
-
-py:class  sphinx.ext.autodoc.ClassDocumenter
-
-py:class  collections.abc.Mapping
-py:class  collections.abc.MutableMapping
-py:class  collections.abc.MutableSequence
-py:class  collections.abc.Iterator
-py:class  collections.abc.Sized
-
-# backend-dependent implementation
-py:class  WorkChainSpec
-py:class  aiida.orm.nodes.Node
-py:meth   aiida.engine.processes.process_spec.ProcessSpec.input
-py:meth   aiida.engine.processes.process_spec.ProcessSpec.output
-py:meth   aiida.engine.processes.process_spec.ProcessSpec.outline
-
-# This comes from ABCMeta
-py:meth   aiida.orm.groups.Group.get_from_string
-
-py:mod    click
-py:class  click.Choice
-py:func   click.Option.get_default
+py:class sphinx.ext.autodoc.ClassDocumenter
 
 py:class yaml.Dumper
 py:class yaml.Loader
@@ -245,21 +88,10 @@ py:class yaml.dumper.Dumper
 py:class yaml.loader.Loader
 py:class yaml.FullLoader
 py:class yaml.loader.FullLoader
-
 py:class uuid.UUID
 
-# typing
-py:class typing.Generic
-py:class typing.TypeVar
-
-# Python 3 complains about this because of orm.Entity.Collection inner class (no idea why)
-py:class Collection
-
-
-# psychopg2
 py:class psycopg2.extensions.cursor
 
-# Aldjemy exceptions
 py:class aldjemy.orm.DbNode
 py:class aldjemy.orm.DbLink
 py:class aldjemy.orm.DbComputer
@@ -270,5 +102,7 @@ py:class aldjemy.orm.DbComment
 py:class aldjemy.orm.DbLog
 py:class aldjemy.orm.DbSetting
 
-# Alembic
 py:class alembic.config.Config
+
+py:class pgsu.PGSU
+py:meth  pgsu.PGSU.__init__

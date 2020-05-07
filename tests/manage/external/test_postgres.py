@@ -9,14 +9,8 @@
 ###########################################################################
 """Unit tests for postgres database maintenance functionality"""
 from unittest import TestCase
-from unittest.mock import patch
 
 from aiida.manage.external.postgres import Postgres
-
-
-def _try_connect_always_fail(**kwargs):  # pylint: disable=unused-argument
-    """Always return False"""
-    return False
 
 
 class PostgresTest(TestCase):
@@ -38,30 +32,17 @@ class PostgresTest(TestCase):
         return Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
 
     def test_determine_setup_fail(self):
+        """Check that setup fails, if bad port is provided.
+
+        Note: In interactive mode, this would prompt for the connection details.
+        """
         postgres = Postgres(interactive=False, quiet=True, dbinfo={'port': '11111'})
         self.assertFalse(postgres.is_connected)
 
     def test_determine_setup_success(self):
+        """Check that setup works with default parameters."""
         postgres = self._setup_postgres()
         self.assertTrue(postgres.is_connected)
-
-    def test_setup_fail_callback(self):
-        """Make sure `determine_setup` works despite wrong initial values in case of correct callback"""
-
-        def correct_setup(interactive, dbinfo):  # pylint: disable=unused-argument
-            return self.pg_test.dsn
-
-        postgres = Postgres(interactive=False, quiet=True, dbinfo={'port': '11111'}, determine_setup=False)
-        postgres.set_setup_fail_callback(correct_setup)
-        setup_success = postgres.determine_setup()
-        self.assertTrue(setup_success)
-
-    @patch('aiida.manage.external.pgsu._try_connect_psycopg', new=_try_connect_always_fail)
-    @patch('aiida.manage.external.pgsu._try_subcmd')
-    def test_fallback_on_subcmd(self, try_subcmd):
-        """Ensure that accessing postgres via subcommand is tried if psycopg does not work."""
-        self._setup_postgres()
-        self.assertTrue(try_subcmd.call_count >= 1)
 
     def test_create_drop_db_user(self):
         """Check creating and dropping a user works"""

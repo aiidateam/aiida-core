@@ -15,7 +15,7 @@ import hashlib
 
 import click
 
-from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.backends import BACKEND_DJANGO
 from aiida.cmdline.params import options, types
 from aiida.manage.configuration import get_config, get_config_option, Profile
 from aiida.manage.external.postgres import DEFAULT_DBINFO
@@ -157,102 +157,58 @@ SETUP_PROFILE = options.OverridableOption(
     cls=options.interactive.InteractiveOption
 )
 
-SETUP_USER_EMAIL = options.OverridableOption(
-    '--email',
-    'email',
-    prompt='User email',
-    help='Email address that serves as the user name and a way to identify data created by it.',
+SETUP_USER_EMAIL = options.USER_EMAIL.clone(
+    prompt='Email Address (for sharing data)',
     default=get_config_option('user.email'),
     required_fn=lambda x: get_config_option('user.email') is None,
     required=True,
     cls=options.interactive.InteractiveOption
 )
 
-SETUP_USER_FIRST_NAME = options.OverridableOption(
-    '--first-name',
-    'first_name',
+SETUP_USER_FIRST_NAME = options.USER_FIRST_NAME.clone(
     prompt='First name',
-    help='First name of the user.',
-    type=click.STRING,
     default=get_config_option('user.first_name'),
     required_fn=lambda x: get_config_option('user.first_name') is None,
     required=True,
     cls=options.interactive.InteractiveOption
 )
 
-SETUP_USER_LAST_NAME = options.OverridableOption(
-    '--last-name',
-    'last_name',
+SETUP_USER_LAST_NAME = options.USER_LAST_NAME.clone(
     prompt='Last name',
-    help='Last name of the user.',
-    type=click.STRING,
     default=get_config_option('user.last_name'),
     required_fn=lambda x: get_config_option('user.last_name') is None,
     required=True,
     cls=options.interactive.InteractiveOption
 )
 
-SETUP_USER_INSTITUTION = options.OverridableOption(
-    '--institution',
-    'institution',
+SETUP_USER_INSTITUTION = options.USER_INSTITUTION.clone(
     prompt='Institution',
-    help='Institution of the user.',
-    type=click.STRING,
     default=get_config_option('user.institution'),
     required_fn=lambda x: get_config_option('user.institution') is None,
     required=True,
     cls=options.interactive.InteractiveOption
 )
 
-SETUP_USER_PASSWORD = options.OverridableOption(
-    '--password',
-    'password',
-    prompt='Password',
-    help='Optional password to connect to REST API.',
-    hide_input=True,
-    type=click.STRING,
-    default=PASSWORD_UNCHANGED,
-    confirmation_prompt=True,
-    cls=options.interactive.InteractiveOption
-)
+QUICKSETUP_DATABASE_ENGINE = options.DB_ENGINE
 
-QUICKSETUP_DATABASE_ENGINE = options.OverridableOption(
-    '--db-engine',
-    help='Engine to use to connect to the database.',
-    default='postgresql_psycopg2',
-    type=click.Choice(['postgresql_psycopg2'])
-)
+QUICKSETUP_DATABASE_BACKEND = options.DB_BACKEND
 
-QUICKSETUP_DATABASE_BACKEND = options.OverridableOption(
-    '--db-backend',
-    help='Backend type to use to map the database.',
-    default=BACKEND_DJANGO,
-    type=click.Choice([BACKEND_DJANGO, BACKEND_SQLA])
-)
+QUICKSETUP_DATABASE_HOSTNAME = options.DB_HOST
 
-QUICKSETUP_DATABASE_HOSTNAME = options.OverridableOption(
-    '--db-host', help='Hostname to connect to the database.', default=DEFAULT_DBINFO['host'], type=click.STRING
-)
-
-QUICKSETUP_DATABASE_PORT = options.OverridableOption(
-    '--db-port', help='Port to connect to the database.', default=DEFAULT_DBINFO['port'], type=click.INT
-)
+QUICKSETUP_DATABASE_PORT = options.DB_PORT
 
 QUICKSETUP_DATABASE_NAME = options.OverridableOption(
-    '--db-name', help='Name of the database to create.', type=click.STRING, callback=get_quicksetup_database_name
+    '--db-name',
+    help='Name of the database to create.',
+    type=types.NonEmptyStringParamType(),
+    callback=get_quicksetup_database_name
 )
 
-QUICKSETUP_DATABASE_USERNAME = options.OverridableOption(
-    '--db-username', help='Name of the database user to create.', type=click.STRING, callback=get_quicksetup_username
+QUICKSETUP_DATABASE_USERNAME = options.DB_USERNAME.clone(
+    help='Name of the database user to create.', callback=get_quicksetup_username
 )
 
-QUICKSETUP_DATABASE_PASSWORD = options.OverridableOption(
-    '--db-password',
-    help='Password to connect to the database.',
-    type=click.STRING,
-    hide_input=True,
-    callback=get_quicksetup_password
-)
+QUICKSETUP_DATABASE_PASSWORD = options.DB_PASSWORD.clone(callback=get_quicksetup_password)
 
 QUICKSETUP_SUPERUSER_DATABASE_USERNAME = options.OverridableOption(
     '--su-db-username', help='User name of the database super user.', type=click.STRING, default=DEFAULT_DBINFO['user']
@@ -270,13 +226,10 @@ QUICKSETUP_SUPERUSER_DATABASE_PASSWORD = options.OverridableOption(
     help='Password to connect as the database superuser.',
     type=click.STRING,
     hide_input=True,
-    default=DEFAULT_DBINFO['password']
+    default=DEFAULT_DBINFO['password'],
 )
 
-QUICKSETUP_REPOSITORY_URI = options.OverridableOption(
-    '--repository',
-    help='Absolute path for the file system repository.',
-    type=click.Path(file_okay=False),
+QUICKSETUP_REPOSITORY_URI = options.REPOSITORY_PATH.clone(
     callback=get_quicksetup_repository_uri  # Cannot use `default` because `ctx` is needed to determine the default
 )
 
@@ -293,14 +246,14 @@ SETUP_DATABASE_BACKEND = QUICKSETUP_DATABASE_BACKEND.clone(
 )
 
 SETUP_DATABASE_HOSTNAME = QUICKSETUP_DATABASE_HOSTNAME.clone(
-    prompt='Database hostname',
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_hostname', 'localhost')),
+    prompt='Database host',
+    contextual_default=functools.partial(get_profile_attribute_default, ('database_hostname', DEFAULT_DBINFO['host'])),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_PORT = QUICKSETUP_DATABASE_PORT.clone(
     prompt='Database port',
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_port', 5432)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('database_port', DEFAULT_DBINFO['port'])),
     cls=options.interactive.InteractiveOption
 )
 

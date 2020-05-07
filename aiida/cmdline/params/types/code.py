@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to define the custom click type for code."""
-
 import click
+
+from aiida.cmdline.utils import decorators
 from .identifier import IdentifierParamType
 
 
@@ -39,6 +40,14 @@ class CodeParamType(IdentifierParamType):
         """
         from aiida.orm.utils.loaders import CodeEntityLoader
         return CodeEntityLoader
+
+    @decorators.with_dbenv()
+    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument
+        """Return possible completions based on an incomplete value.
+
+        :returns: list of tuples of valid entry points (matching incomplete) and a description
+        """
+        return [(option, '') for option, in self.orm_class_loader.get_options(incomplete, project='label')]
 
     def convert(self, value, param, ctx):
         code = super().convert(value, param, ctx)

@@ -60,7 +60,7 @@ def task_upload_job(process, transport_queue, cancellable):
 
     if node.get_state() == CalcJobState.SUBMITTING:
         logger.warning('CalcJob<{}> already marked as SUBMITTING, skipping task_update_job'.format(node.pk))
-        raise Return(True)
+        raise Return
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
@@ -75,13 +75,13 @@ def task_upload_job(process, transport_queue, cancellable):
             with SandboxFolder() as folder:
                 # Any exception thrown in `presubmit` call is not transient so we circumvent the exponential backoff
                 try:
-                    calc_info, script_filename = process.presubmit(folder)
+                    calc_info = process.presubmit(folder)
                 except Exception as exception:  # pylint: disable=broad-except
                     raise PreSubmitException('exception occurred in presubmit call') from exception
                 else:
                     execmanager.upload_calculation(node, transport, calc_info, folder)
 
-            raise Return((calc_info, script_filename))
+            raise Return
 
     try:
         logger.info('scheduled request to upload CalcJob<{}>'.format(node.pk))
@@ -102,7 +102,7 @@ def task_upload_job(process, transport_queue, cancellable):
 
 
 @coroutine
-def task_submit_job(node, transport_queue, calc_info, script_filename, cancellable):
+def task_submit_job(node, transport_queue, cancellable):
     """Transport task that will attempt to submit a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -112,8 +112,6 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
 
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
-    :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
-    :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
     :raises: Return if the tasks was successfully completed
@@ -133,7 +131,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
     def do_submit():
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
-            raise Return(execmanager.submit_calculation(node, transport, calc_info, script_filename))
+            raise Return(execmanager.submit_calculation(node, transport))
 
     try:
         logger.info('scheduled request to submit CalcJob<{}>'.format(node.pk))
@@ -229,7 +227,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     """
     if node.get_state() == CalcJobState.PARSING:
         logger.warning('CalcJob<{}> already marked as PARSING, skipping task_retrieve_job'.format(node.pk))
-        raise Return(True)
+        raise Return
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
@@ -269,7 +267,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     else:
         node.set_state(CalcJobState.PARSING)
         logger.info('retrieving CalcJob<{}> successful'.format(node.pk))
-        raise Return(result)
+        raise Return
 
 
 @coroutine
@@ -321,6 +319,9 @@ class Waiting(plumpy.Waiting):
     """The waiting state for the `CalcJob` process."""
 
     def __init__(self, process, done_callback, msg=None, data=None):
+        """
+        :param :class:`~plumpy.base.state_machine.StateMachine` process: The process this state belongs to
+        """
         super().__init__(process, done_callback, msg, data)
         self._task = None
         self._killing = None
@@ -335,12 +336,7 @@ class Waiting(plumpy.Waiting):
 
         node = self.process.node
         transport_queue = self.process.runner.transport
-
-        if isinstance(self.data, tuple):
-            command = self.data[0]
-            args = self.data[1:]
-        else:
-            command = self.data
+        command = self.data
 
         process_status = 'Waiting for transport task: {}'.format(command)
 
@@ -348,12 +344,12 @@ class Waiting(plumpy.Waiting):
 
             if command == UPLOAD_COMMAND:
                 node.set_process_status(process_status)
-                calc_info, script_filename = yield self._launch_task(task_upload_job, self.process, transport_queue)
-                raise Return(self.submit(calc_info, script_filename))
+                yield self._launch_task(task_upload_job, self.process, transport_queue)
+                raise Return(self.submit())
 
             elif command == SUBMIT_COMMAND:
                 node.set_process_status(process_status)
-                yield self._launch_task(task_submit_job, node, transport_queue, *args)
+                yield self._launch_task(task_submit_job, node, transport_queue)
                 raise Return(self.update())
 
             elif self.data == UPDATE_COMMAND:
@@ -405,15 +401,15 @@ class Waiting(plumpy.Waiting):
         finally:
             self._task = None
 
-    def upload(self, calc_info, script_filename):
+    def upload(self):
         """Return the `Waiting` state that will `upload` the `CalcJob`."""
         msg = 'Waiting for calculation folder upload'
         return self.create_state(ProcessState.WAITING, None, msg=msg, data=UPLOAD_COMMAND)
 
-    def submit(self, calc_info, script_filename):
+    def submit(self):
         """Return the `Waiting` state that will `submit` the `CalcJob`."""
         msg = 'Waiting for scheduler submission'
-        return self.create_state(ProcessState.WAITING, None, msg=msg, data=(SUBMIT_COMMAND, calc_info, script_filename))
+        return self.create_state(ProcessState.WAITING, None, msg=msg, data=SUBMIT_COMMAND)
 
     def update(self):
         """Return the `Waiting` state that will `update` the `CalcJob`."""

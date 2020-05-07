@@ -14,8 +14,8 @@ from inspect import isclass
 from aiida.common.exceptions import InvalidEntryPointTypeError
 
 __all__ = (
-    'BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'OrbitalFactory', 'ParserFactory',
-    'SchedulerFactory', 'TransportFactory', 'WorkflowFactory'
+    'BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'GroupFactory', 'OrbitalFactory',
+    'ParserFactory', 'SchedulerFactory', 'TransportFactory', 'WorkflowFactory'
 )
 
 
@@ -102,6 +102,25 @@ def DbImporterFactory(entry_point_name):
     valid_classes = (DbImporter,)
 
     if isclass(entry_point) and issubclass(entry_point, DbImporter):
+        return entry_point
+
+    raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
+
+
+def GroupFactory(entry_point_name):
+    """Return the `Group` sub class registered under the given entry point.
+
+    :param entry_point_name: the entry point name
+    :return: sub class of :py:class:`~aiida.orm.groups.Group`
+    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    """
+    from aiida.orm import Group
+
+    entry_point_group = 'aiida.groups'
+    entry_point = BaseFactory(entry_point_group, entry_point_name)
+    valid_classes = (Group,)
+
+    if isclass(entry_point) and issubclass(entry_point, Group):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)

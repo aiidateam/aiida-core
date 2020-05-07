@@ -188,7 +188,7 @@ The addition of the instance property ``value`` makes retrieving the value of a 
     value = node.value
 
 As said before, in addition to their attributes, data types can also store their properties in the file repository.
-Imagine a data type that needs to wrap a single text file.
+Here is an example for a custom data type that needs to wrap a single text file:
 
 .. code:: python
 
@@ -228,7 +228,7 @@ To create a new instance of this data type and get its content:
 This example is a simplified version of the :class:`~aiida.orm.nodes.data.singlefile.SinglefileData` data class that ships with ``aiida-core``.
 If this happens to be your use case (or very close to it), it is of course better to use that class, or you can sub class it and adapt it where needed.
 
-The two new data types we have just implemented are of course trivial and not very useful, but the concepts are flexible and can easily be applied to more complex use-cases.
+The just presented examples for new data types are of course trivial, but the concept is always the same and can easily be extended to more complex custom data types.
 The following section will provide useful guidelines on how to optimally design new data types.
 
 
@@ -237,13 +237,14 @@ The following section will provide useful guidelines on how to optimally design 
 Database or repository?
 -----------------------
 
-When deciding where to store a property of a data type, one has to choose between the database and the file repository.
-The database will make it possible to search in the provenance graph based on criteria based on the property, e.g. all ``NewData`` nodes where the property is greater than 0.
-The downside is that storing too much information in the database can make it sluggish.
+When deciding where to store a property of a data type, one has the option to choose between the database and the file repository.
+All node properties that are stored in the database (such as the attributes), are directly searchable as part of a database query, whereas data stored in the file repository cannot be queried for.
+What this means is that, for example, it is possible to search for all nodes where a particular database-stored integer attribute falls into a certain value range, but the same value stored in a file within the file repository would not be directly searchable in this way.
+However, storing large amounts of data within the database comes at the cost of slowing down database queries.
 Therefore, big data (think large files), whose content does not necessarily need to be queried for, is better stored in the file repository.
-Of course a data type may need to store multiple properties of varying character, but both storage locations can safely be used in parellel.
-When choosing the database as the storage location, the properties should be stored using the node *attributes*.
-To set and retrieve them, use the attribute methods of the :class:`~aiida.orm.nodes.node.Node` class.
+A data type may safely use both the database and file repository in parallel for individual properties.
+Properties stored in the database are stored as *attributes* of the node.
+The node class has various methods to set these attributes, such as :py:`~aiida.orm.node.Node.set_attribute` and :py:`~aiida.orm.node.Node.set_attribute_many`.
 
 
 .. _how-to:data:find:

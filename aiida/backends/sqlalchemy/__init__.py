@@ -31,11 +31,16 @@ def reset_session():
     SESSION_FACTORY = None
 
 
-def get_scoped_session():
+def get_scoped_session(**kwargs):
     """Return a scoped session
 
     According to SQLAlchemy docs, this returns always the same object within a thread, and a different object in a
     different thread. Moreover, since we update the session class upon forking, different session objects will be used.
+
+    :param kwargs: keyword argument that will be passed on to :py:func:`aiida.backends.utils.create_sqlalchemy_engine`,
+        opening the possibility to change QueuePool time outs and more.
+        See https://docs.sqlalchemy.org/en/13/core/engines.html?highlight=create_engine#sqlalchemy.create_engine for
+        more info.
     """
     from aiida.manage.configuration import get_profile
 
@@ -47,7 +52,7 @@ def get_scoped_session():
         return session
 
     if ENGINE is None:
-        ENGINE = create_sqlalchemy_engine(get_profile())
+        ENGINE = create_sqlalchemy_engine(get_profile(), **kwargs)
 
     SESSION_FACTORY = create_scoped_session_factory(ENGINE, expire_on_commit=True)
 

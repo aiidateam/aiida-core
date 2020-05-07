@@ -60,9 +60,13 @@ class SqlaBackendManager(BackendManager):
 
         return self._settings_manager
 
-    def _load_backend_environment(self):
-        """Load the backend environment."""
-        get_scoped_session()
+    def _load_backend_environment(self, **kwargs):
+        """Load the backend environment.
+
+        :param kwargs: keyword arguments that will be passed on to
+            :py:func:`aiida.backends.sqlalchemy.get_scoped_session`.
+        """
+        get_scoped_session(**kwargs)
 
     def reset_backend_environment(self):
         """Reset the backend environment."""

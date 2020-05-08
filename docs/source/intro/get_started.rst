@@ -19,8 +19,8 @@ Installation
 A working AiiDA installation consists of three core components:
 
 * ``aiida-core``: The main python package and associated CLI ``verdi``.
-* `PostgreSQL <https://www.postgresql.org>`_: A service which manages the database where we store generated data.
-* `RabbitMQ <https://www.rabbitmq.com>`_: A service which manages communication with the processes that we run.
+* |PostgreSQL|: A service which manages the database where we store generated data.
+* |RabbitMQ|: A service which manages communication with the processes that we run.
 
 Each component may be installed separately, depending on your use case.
 Here we first provide the simplest approaches for installation on your local computer.
@@ -34,6 +34,7 @@ Here we first provide the simplest approaches for installation on your local com
 
         $ conda create -n aiida -c conda-forge aiida-core aiida-core.services
         $ conda activate aiida
+        $ reentry scan
 
     `Conda <https://docs.conda.io>`_ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
 
@@ -44,29 +45,41 @@ Here we first provide the simplest approaches for installation on your local com
     .. code-block:: console
 
         $ pip install aiida-core
+        $ reentry scan
 
     ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`_.
 
-    You will then need to install PostgreSQL and RabbitMQ depending on your operating system.
+    You will then need to install |PostgreSQL| and |RabbitMQ| depending on your operating system.
 
     .. container:: link-box
 
         :ref:`advanced installation <intro/install_advanced>`.
 
-
-
-To initialise a database cluster with PostgreSQL and start the service:
+Before working with AiiDA, you must first initialize a database storage area on disk.
 
 .. code-block:: console
 
     $ initdb -D mylocal_db
-    $ pg_ctl -D mylocal_db -l logfile start
 
-We can then use the `quicksetup` command, to set up an AiiDA configuration profile and related data storage.
+.. seealso::
+
+    `Creating a Database Cluster <https://www.postgresql.org/docs/12/creating-cluster.html>`_
+
+This *database cluster* may contain a collection of databases (one per profile) that is managed by a single running server process.
+We start this process with:
 
 .. code-block:: console
 
-    $ reentry scan
+    $ pg_ctl -D mylocal_db -l logfile start
+
+.. seealso::
+
+    `Starting the Database Server <https://www.postgresql.org/docs/12/server-start.html>`_
+
+To set up an AiiDA configuration profile and related data storage, we can then use the `quicksetup` command.
+
+.. code-block:: console
+
     $ verdi quicksetup
     Info: enter "?" for help
     Info: enter "!" to ignore the default and set no value
@@ -86,14 +99,20 @@ At this point you now have a working AiiDA environment, from which you can add a
 
         $ eval "$(_VERDI_COMPLETE=source verdi)"
 
-In order to run computations, one additional step is required to start the services that manage these background processes:
+In order to run computations, some additional steps are required to start the services that manage these background processes.
+The |RabbitMQ| service is started, to manage communication between processes and remember process states, even when you shut down your computer:
 
 .. code-block:: console
 
     $ rabbitmq-server -detached
-    $ verdi daemon start
 
-We can check that all services are running as expected using:
+We can then start a one or more "daemon" processes, which handle starting and monitoring all submitted computations.
+
+.. code-block:: console
+
+    $ verdi daemon start 2
+
+Finally, to check that all services are running as expected use:
 
 .. code-block:: console
 
@@ -107,12 +126,12 @@ We can check that all services are running as expected using:
 
 Awesome! You now have a fully operational installation from which to take the next steps!
 
-Finally, to power down the services, you can run:
+.. Finally, to power down the services, you can run:
 
-.. code-block:: console
+.. .. code-block:: console
 
-    $ verdi daemon stop
-    $ pg_ctl stop
+..     $ verdi daemon stop
+..     $ pg_ctl stop
 
 .. admonition:: Having problems?
 
@@ -149,3 +168,7 @@ Next Steps
     .. container:: link-box
 
         links to tutorials
+
+
+.. |PostgreSQL| replace:: `PostgreSQL <https://www.postgresql.org>`__
+.. |RabbitMQ| replace:: `RabbitMQ <https://www.rabbitmq.com>`__

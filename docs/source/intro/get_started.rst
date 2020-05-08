@@ -26,31 +26,34 @@ Each component may be installed separately, depending on your use case.
 Here we first provide the simplest approaches for installation on your local computer.
 
 .. panels::
+    :column: col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
 
     **Install from Conda**
-
-    `Conda <https://docs.conda.io>`_ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
 
     .. code-block:: console
 
         $ conda create -n aiida -c conda-forge aiida-core aiida-core.services
         $ conda activate aiida
 
-    ---
+    `Conda <https://docs.conda.io>`_ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
+
+    ..................................................................................
 
     **Install with pip**
 
-    ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`_.
-
     .. code-block:: console
 
-        pip install aiida-core
+        $ pip install aiida-core
+
+    ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`_.
 
     You will then need to install PostgreSQL and RabbitMQ depending on your operating system.
 
     .. container:: link-box
 
         :ref:`advanced installation <intro/install_advanced>`.
+
+
 
 To initialise a database cluster with PostgreSQL and start the service:
 

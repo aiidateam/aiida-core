@@ -122,7 +122,7 @@ Any entity in AiiDA can be addressed via three identifiers:
 Any ``verdi`` command that expects an identifier as a paramter will accept PKs, UUIDs and labels.
 
 In almost all cases, this will work out of the box.
-Since command line parameters are passed as strings, AiiDA needs to deduce the type of identifier from its content, which can fail in edge cases (see :ref:`cli_identifier_resolution` for details).
+Since command line parameters are passed as strings, AiiDA needs to deduce the type of identifier from its content, which can fail in edge cases (see :ref:`topics:cli:identifier_resolution` for details).
 You can take the following precautions in order to avoid such edge cases:
 
   * PK: no precautions needed

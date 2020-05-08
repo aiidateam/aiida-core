@@ -447,7 +447,7 @@ However, it is perfectly possible to use the same builder in scripts where you s
 Monitoring processes
 ====================
 When you have launched a process, you may want to investigate its status, progression and the results.
-The :ref:`verdi<verdi_overview>` command line tool provides various commands to do just this.
+The :ref:`verdi<reference:command-line>` command line tool provides various commands to do just this.
 
 
 .. _topics:processes:usage:monitoring_list:
@@ -509,7 +509,7 @@ To query for a specific exit status, one can use ``verdi process list -E 0``:
     Total results: 2
 
 This simple tool should give you a good idea of the current status of running processes and the status of terminated ones.
-For a complete list of all the available options, please refer to the documentation of :ref:`verdi process<verdi_process>`.
+For a complete list of all the available options, please refer to the documentation of :ref:`verdi process<reference:command-line:verdi-process>`.
 
 If you are looking for information about a specific process node, the following three commands are at your disposal:
 

@@ -118,8 +118,8 @@ Welcome to AiiDA's documentation!
    topics/processes/index
    topics/calculations/index
    topics/workflows/index
-   topics/daemon
    topics/provenance
+   topics/daemon
    topics/database
    topics/repository
    topics/plugins

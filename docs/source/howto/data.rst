@@ -84,7 +84,7 @@ For details refer to the next section :ref:`"How to add support for custom data 
 Adding support for custom data types
 ====================================
 
-The nodes in the :ref:`provenance graph<concepts_provenance>` that are the inputs and outputs of processes are referred to as `data` and are represented by :class:`~aiida.orm.nodes.data.data.Data` nodes.
+The nodes in the :ref:`provenance graph<topics:provenance>` that are the inputs and outputs of processes are referred to as `data` and are represented by :class:`~aiida.orm.nodes.data.data.Data` nodes.
 Since data can come in all shapes and forms, the :class:`~aiida.orm.nodes.data.data.Data` class can be sub classed.
 AiiDA ships with some basic data types such as the :class:`~aiida.orm.nodes.data.int.Int` which represents a simple integer and the :class:`~aiida.orm.nodes.data.dict.Dict`, representing a dictionary of key-value pairs.
 There are also more complex data types such as the :class:`~aiida.orm.nodes.data.array.array.ArrayData` which can store multidimensional arrays of numbers.
@@ -360,8 +360,6 @@ The first (second) request will be handled by the app ``django`` (``sqlalchemy``
 Notice that we haven't specified any port in the URLs since Apache listens conventionally to port 80, where any request lacking the port is automatically redirected.
 
 
-
-.. _#3994: https://github.com/aiidateam/aiida-core/issues/3994
 .. _#3996: https://github.com/aiidateam/aiida-core/issues/3996
 .. _#3997: https://github.com/aiidateam/aiida-core/issues/3997
 .. _#3998: https://github.com/aiidateam/aiida-core/issues/3998

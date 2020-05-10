@@ -706,7 +706,7 @@ class TestNodeLinks(AiidaTestCase):
         # .inputs for calculations
         self.assertEqual(calc1.inputs.input_value.pk, input1.pk)
         self.assertEqual(calc2.inputs.input_value.pk, input2.pk)
-        with self.assertRaises(exceptions.NotExistent):
+        with self.assertRaises(AttributeError):
             _ = calc1.inputs.some_label
 
         # .inputs for workflows
@@ -714,13 +714,13 @@ class TestNodeLinks(AiidaTestCase):
         self.assertEqual(top_workflow.inputs.b.pk, input2.pk)
         self.assertEqual(workflow.inputs.a.pk, input1.pk)
         self.assertEqual(workflow.inputs.b.pk, input2.pk)
-        with self.assertRaises(exceptions.NotExistent):
+        with self.assertRaises(AttributeError):
             _ = workflow.inputs.some_label
 
         # .outputs for calculations
         self.assertEqual(calc1.outputs.result.pk, output1.pk)
         self.assertEqual(calc2.outputs.result.pk, output2.pk)
-        with self.assertRaises(exceptions.NotExistent):
+        with self.assertRaises(AttributeError):
             _ = calc1.outputs.some_label
 
         # .outputs for workflows
@@ -728,7 +728,7 @@ class TestNodeLinks(AiidaTestCase):
         self.assertEqual(top_workflow.outputs.result_b.pk, output2.pk)
         self.assertEqual(workflow.outputs.result_a.pk, output1.pk)
         self.assertEqual(workflow.outputs.result_b.pk, output2.pk)
-        with self.assertRaises(exceptions.NotExistent):
+        with self.assertRaises(AttributeError):
             _ = workflow.outputs.some_label
 
 

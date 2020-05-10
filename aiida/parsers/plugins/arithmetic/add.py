@@ -7,18 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.common import exceptions
 from aiida.orm import Int
 from aiida.parsers.parser import Parser
 
 
 class ArithmeticAddParser(Parser):
+    """Parser for an ArithmeticAdd calculation."""
 
-    def parse(self, **kwargs):
+    def parse(self, **kwargs):  # pylint: disable=inconsistent-return-statements
         """Parse the contents of the output files retrieved in the `FolderData`."""
         try:
             output_folder = self.retrieved
-        except exceptions.NotExistent:
+        except AttributeError:
             return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
         try:
@@ -32,7 +32,7 @@ class ArithmeticAddParser(Parser):
 
         try:
             allow_negative = self.node.inputs.settings.get_attribute('allow_negative', True)
-        except exceptions.NotExistent:
+        except AttributeError:
             allow_negative = True
 
         if not allow_negative and result < 0:

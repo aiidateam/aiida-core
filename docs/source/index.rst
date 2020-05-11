@@ -118,7 +118,7 @@ Welcome to AiiDA's documentation!
    topics/processes/index
    topics/calculations/index
    topics/workflows/index
-   topics/provenance
+   topics/provenance/index
    topics/daemon
    topics/database
    topics/repository

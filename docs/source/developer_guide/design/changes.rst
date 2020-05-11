@@ -64,7 +64,7 @@ Unlike the ``WorkChain``, however, the ``CalcJob`` does not have an outline, but
 This method takes a single argument ``folder`` which will point to a temporary folder to which the required input files for the calculation can be written.
 From a plugin developer standpoint, the rest works exactly as before, and the ``prepare_for_submission`` method should return a ``CalcInfo`` object, containing information for the engine on what files to copy over and to retrieve.
 
-A more detailed explanation about the new ``CalcJob`` and best practices for writing ``Parser`` implementations can be found :ref:`here <working_calcjobs>`.
+A more detailed explanation about the new ``CalcJob`` and best practices for writing ``Parser`` implementations can be found :ref:`here <topics:calculations:usage:calcjobs>`.
 
 
 .. _design_changes_1_0_0_module_hierarchy:

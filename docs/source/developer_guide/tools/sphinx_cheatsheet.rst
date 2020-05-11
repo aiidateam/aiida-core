@@ -45,7 +45,7 @@ Code Download
 
 Code can be downloaded like this.
 
-Download: :download:`this example script <../../concepts/include/snippets/calculations/calcfunctions/add_multiply_plain_python.py>`
+Download: :download:`this example script </topics/calculations/include/snippets/calcfunctions/add_multiply_plain_python.py>`
 
 Code Display
 ============
@@ -54,7 +54,7 @@ Can be done like this.
 This entire document can be seen unformatted at :ref:`this-page` using the keyword ``literalinclude``.
 For more details, see the `Sphinx documentation <https://www.sphinx-doc.org/en/latest/usage/restructuredtext/directives.html#directive-literalinclude>`_.
 
-.. literalinclude:: ../../concepts/include/snippets/calculations/calcfunctions/add_multiply_plain_python.py
+.. literalinclude:: /topics/calculations/include/snippets/calcfunctions/add_multiply_plain_python.py
 
 .. _self-reference:
 

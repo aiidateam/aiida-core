@@ -1,9 +1,8 @@
-.. _concepts_processes:
+.. _topics:processes:concepts:
 
-
-*******
-Concept
-*******
+========
+Concepts
+========
 
 Anything that runs in AiiDA is an instance of the :py:class:`~aiida.engine.processes.process.Process` class.
 The ``Process`` class contains all the information and logic to tell, whoever is handling it, how to run it to completion.
@@ -19,7 +18,7 @@ It is very important to understand this division of labor.
 A ``Process`` describes how something should be run, and the ``ProcessNode`` serves as a mere record in the database of what actually happened during execution.
 A good thing to remember is that while it is running, we are dealing with the ``Process`` and when it is finished we interact with the ``ProcessNode``.
 
-.. _concepts_process_types:
+.. _topics:processes:concepts:types:
 
 Process types
 =============
@@ -45,13 +44,13 @@ Process class                                                         Node class
 :py:class:`~aiida.engine.processes.functions.FunctionProcess`         :py:class:`~aiida.orm.nodes.process.workflow.workfunction.WorkFunctionNode`     Python functions decorated with the ``@workfunction`` decorator
 ===================================================================   ==============================================================================  ===============================================================
 
-For basic information on the concept of a ``CalcJob`` or ``calcfunction``, refer to the :ref:`calculations concept<concepts_calculations>` and the same for the ``WorkChain`` and ``workfunction`` is described in the :ref:`workflows concept<concepts_workflows>`.
-After having read and understood the basic concept of calculation and workflow processes, detailed information on how to implement and use them can be found in the dedicated developing sections for :ref:`calculations<working_calculations>` and :ref:`workflows<working_workflows>`, respectively.
+For basic information on the concept of a ``CalcJob`` or ``calcfunction``, refer to the :ref:`calculations concept<topics:calculations:concepts>` and the same for the ``WorkChain`` and ``workfunction`` is described in the :ref:`workflows concept<topics:workflows:concepts>`.
+After having read and understood the basic concept of calculation and workflow processes, detailed information on how to implement and use them can be found in the dedicated developing sections for :ref:`calculations<topics:calculations:usage>` and :ref:`workflows<topics:workflows:usage>`, respectively.
 
 .. note:: A ``FunctionProcess`` is never explicitly implemented but will be generated dynamically by the engine when a python function decorated with a :py:func:`~aiida.engine.processes.functions.calcfunction` or :py:func:`~aiida.engine.processes.functions.workfunction` is run.
 
 
-.. _concepts_process_state:
+.. _topics:processes:concepts:state:
 
 Process state
 =============
@@ -79,7 +78,7 @@ The ``Excepted`` state indicates that during execution an exception occurred tha
 The final option is the ``Finished`` state, which means that the process was successfully executed, and the execution was nominal.
 Note that this does not automatically mean that the result of the process can also be considered to be successful, it was just executed without any problems.
 
-To distinguish between a successful and a failed execution, there is the :ref:`exit status<concepts_process_exit_codes>`.
+To distinguish between a successful and a failed execution, there is the :ref:`exit status<topics:processes:concepts:exit_codes>`.
 This is another attribute that is stored in the node of the process and is an integer that can be set by the process.
 A ``0`` (zero) means that the result of the process was successful, and a non-zero value indicates a failure.
 All the process nodes used by the various processes are sub-classes of :py:class:`~aiida.orm.nodes.process.ProcessNode`, which defines handy properties to query the process state and exit status.
@@ -101,7 +100,7 @@ Property              Meaning
 When you load a calculation node from the database, you can use these property methods to inquire about its state and exit status.
 
 
-.. _concepts_process_exit_codes:
+.. _topics:processes:concepts:exit_codes:
 
 Process exit codes
 ==================
@@ -112,21 +111,21 @@ The `exit status is a common concept in programming <https://en.wikipedia.org/wi
 By default a process that terminates nominally will get a ``0`` (zero) exit status.
 To mark a process as failed, one can return an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` named tuple, which allows to set an integer ``exit_status`` and a string message as ``exit_message``.
 When the engine receives such an ``ExitCode`` as the return value from a process, it will set the exit status and message on the corresponding attributes of the process node representing the process in the provenance graph.
-How exit codes can be defined and returned depends on the process type and will be documented in detail in the respective :ref:`calculation<working_calculations>` and :ref:`workflow<working_workflows>` development sections.
+How exit codes can be defined and returned depends on the process type and will be documented in detail in the respective :ref:`calculation<topics:calculations:usage>` and :ref:`workflow<topics:workflows:usage>` development sections.
 
 
-.. _concepts_process_lifetime:
+.. _topics:processes:concepts:lifetime:
 
 Process lifetime
 ================
 
-The lifetime of a process is defined as the time from the moment it is launched until it reaches a :ref:`terminal state<concepts_process_state>`.
+The lifetime of a process is defined as the time from the moment it is launched until it reaches a :ref:`terminal state<topics:processes:concepts:state>`.
 
-.. _concepts_process_node_distinction:
+.. _topics:processes:concepts:node_distinction:
 
 Process and node distinction
 ----------------------------
-As explained in the :ref:`introduction of this section<concepts_processes>`, there is a clear and important distinction between the 'process' and the 'node' that represents its execution in the provenance graph.
+As explained in the :ref:`introduction of this section<topics:processes:concepts>`, there is a clear and important distinction between the 'process' and the 'node' that represents its execution in the provenance graph.
 When a process is launched, an instance of the ``Process`` class is created in memory which will be propagated to completion by the responsible runner.
 This 'process' instance only exists in the memory of the python interpreter that it is running in, for example that of a daemon runner, and so we cannot directly inspect its state.
 That is why the process will write any of its state changes to the corresponding node representing it in the provenance graph.
@@ -136,10 +135,10 @@ This means that the output of many of the ``verdi`` commands, such as ``verdi pr
 Process tasks
 -------------
 The previous section explained how launching a process means creating an instance of the ``Process`` class in memory.
-When the process is being 'ran' (see the section on :ref:`launching processes<working_processes_launch>` for more details) that is to say in a local interpreter, the particular process instance will die as soon as the interpreter dies.
+When the process is being 'ran' (see the section on :ref:`launching processes<topics:processes:usage:launch>` for more details) that is to say in a local interpreter, the particular process instance will die as soon as the interpreter dies.
 This is what often makes 'submitting' the preferred method of launching a process.
 When a process is 'submitted', an instance of the ``Process`` is created, along with the node that represents it in the database, and its state is then persisted to the database.
-This is called a 'process checkpoint', more information on which :ref:`will follow later<concepts_process_checkpoints>`.
+This is called a 'process checkpoint', more information on which :ref:`will follow later<topics:processes:concepts:checkpoints>`.
 Subsequently, the process instance is shutdown and a 'continuation task' is sent to the process queue of RabbitMQ.
 This task is simply a small message that just contains an identifier for the process.
 
@@ -156,7 +155,7 @@ While a process is not actually being run, i.e. it is not in memory with a runne
 Similarly, as soon as the task disappears, either because the process was intentionally terminated (or unintentionally), the process will never continue running again.
 
 
-.. _concepts_process_checkpoints:
+.. _topics:processes:concepts:checkpoints:
 
 Process checkpoints
 -------------------
@@ -166,7 +165,7 @@ At any state transition of a process, a checkpoint will be created, by serializi
 This mechanism is the final cog in the machine, together with the persisted process queue of RabbitMQ as explained in the previous section, that allows processes to continue after the machine they were running on, has been shutdown and restarted.
 
 
-.. _concepts_process_sealing:
+.. _topics:processes:concepts:sealing:
 
 Process sealing
 ===============

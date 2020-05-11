@@ -1,24 +1,21 @@
-.. _working_process_functions:
+.. _topics:processes:functions:
 
-About
-=====
+=================
+Process functions
+=================
 
-A process function is a process (see the :ref:`process section<concepts_processes>` for details) that is implemented as a decorated python function.
+A process function is a process (see the :ref:`concepts<topics:processes:concepts>` for a definition and explanation) that is implemented as a decorated python function.
 Currently, there are two types of process functions:
 
- * :ref:`calculation function<concepts_calcfunctions>`
- * :ref:`work function<concepts_workfunctions>`
+ * :ref:`calculation function<topics:calculations:concepts:calcfunctions>`
+ * :ref:`work function<topics:workflows:concepts:workfunctions>`
 
 The former can *create* new data, whereas the latter can orchestrate other processes and *return* their results.
 This section will provide detailed information and best practices on how to implement these two process types.
 Since the calculation function and work function are both process functions and have the same implementation, all the rules explained below apply to both process types.
 
-.. warning::
-    This chapter assumes that the basic concept and difference between calculation functions and work functions is known and when one should use on or the other.
-    It is therefore crucial that, before you continue, you have read and understood the basic concept of :ref:`calculation functions<concepts_calcfunctions>` and :ref:`work functions<concepts_workfunctions>`.
-
-The simple example in the :ref:`introductory section on calculation functions<concepts_calcfunctions>` showed how a simple python function can be turned into a calculation function simply by adorning it with the :py:func:`~aiida.engine.processes.functions.calcfunction` decorator.
-When the function is run, AiiDA will dynamically generate a :py:class:`~aiida.engine.processes.functions.FunctionProcess` and build its :ref:`process specification<working_processes_spec>` based on the function signature.
+The simple example in the :ref:`introductory section on calculation functions<topics:calculations:concepts:calcfunctions>` showed how a simple python function can be turned into a calculation function simply by adorning it with the :py:func:`~aiida.engine.processes.functions.calcfunction` decorator.
+When the function is run, AiiDA will dynamically generate a :py:class:`~aiida.engine.processes.functions.FunctionProcess` and build its :ref:`process specification<topics:processes:usage:spec>` based on the function signature.
 Here we will explain how this is accomplished and what features of the python function signature standard are supported.
 
 Function signatures
@@ -138,7 +135,7 @@ So far we have only seen examples of calculation functions where everything work
 However, the real world is different, and often we will encounter situations where problems arise.
 A calculation function may receive incorrect or incoherent inputs, or the code it executes may throw an exception.
 Of course we could throw an input validation exception or not even catch the exceptions that the code we call throws, but that will lead the function process to be put in the ``Excepted`` terminal state.
-As explained in the :ref:`process state<concepts_process_state>` section, this state is indeed reserved for processes that incurred an exception during execution.
+As explained in the :ref:`process state<topics:processes:concepts:state>` section, this state is indeed reserved for processes that incurred an exception during execution.
 Consider the following calculation function definition and call:
 
 .. include:: include/snippets/processes/functions/calcfunction_exception.py
@@ -175,7 +172,7 @@ In the case of the example above, it would look something like the following:
     ZeroDivisionError: division by zero
 
 However, in this particular example the exception is not so much an unexpected error, but one we could have considered and have seen coming, so it might be more applicable to simply mark the process as failed.
-To accomplish this, there is the concept of an :ref:`exit status<concepts_process_exit_codes>` that can be set on the process, which is an integer that, when non-zero, marks a process in the ``Finished`` state as 'failed'.
+To accomplish this, there is the concept of an :ref:`exit status<topics:processes:concepts:exit_codes>` that can be set on the process, which is an integer that, when non-zero, marks a process in the ``Finished`` state as 'failed'.
 Since the exit status is set as an attribute on the process node, it also makes it very easy to query for failed processes.
 To set a non-zero exit status on a calculation function to indicate it as failed, simply return an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` class.
 Time for a demonstration:

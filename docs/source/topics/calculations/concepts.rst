@@ -36,7 +36,7 @@ In plain python code, the solution would look something like the following:
 This simple code snippet will achieve the goal of getting the desired result, however, the provenance is lost.
 There is no connection between the output of the functions and their inputs.
 The remedy to this problem is the :py:func:`~aiida.engine.processes.functions.calcfunction`.
-The ``calcfunction`` in AiiDA is a `function decorator <https://docs.python.org/3/glossary.html#term-decorator>`_ that transforms a regular python function in a calculation process, which automatically stores the provenance of its output in the :ref:`provenance graph<concepts_provenance>` when executed.
+The ``calcfunction`` in AiiDA is a `function decorator <https://docs.python.org/3/glossary.html#term-decorator>`_ that transforms a regular python function in a calculation process, which automatically stores the provenance of its output in the :ref:`provenance graph<topics:provenance>` when executed.
 Updating the previous snippet with ``calcfunction`` decorators yields:
 
 .. include:: include/snippets/calculations/calcfunctions/add_multiply_calcfunction_decorator.py

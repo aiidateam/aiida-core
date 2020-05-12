@@ -31,7 +31,7 @@ Processes in AiiDA come in two flavors:
 The calculation-like processes have the capability to *create* data, whereas the workflow-like processes orchestrate other processes and have the ability to *return* data produced by calculations.
 Again, this is a distinction that plays a big role in AiiDA and is crucial to understand.
 For this reason, these different types of processes also get a different sub class of the ``ProcessNode`` class.
-The hierarchy of these node classes and the link types that are allowed between them and ``Data`` nodes, is explained in detail in the :ref:`provenance implementation<concepts_provenance_implementation>` documentation.
+The hierarchy of these node classes and the link types that are allowed between them and ``Data`` nodes, is explained in detail in the :ref:`provenance implementation<topics:provenance:implementation>` documentation.
 
 Currently, there are four types of processes in ``aiida-core`` and the following table shows with which node class it is represented in the provenance graph and what the process is used for.
 

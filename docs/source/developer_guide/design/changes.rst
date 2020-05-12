@@ -32,7 +32,7 @@ The AiiDA development team, in close collaboration with advanced users, spent a 
 As always, we have tried our best to allow early adopters of AiiDA to migrate their existing databases to newer versions as easy as possible, by providing automatic migration.
 This time around is no different, except for the fact that the migration was a lot more complicated and unfortunately this time some backwards-incompatible changes had to be introduced in the API.
 
-A more detailed explanation of the new provenance design and the motivation can be found :ref:`here <concepts_provenance>`.
+A more detailed explanation of the new provenance design and the motivation can be found :ref:`here <topics:provenance>`.
 
 
 .. _design_changes_1_0_0_calcjob_redesign:

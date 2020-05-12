@@ -136,6 +136,7 @@ Welcome to AiiDA's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Internal architecture
+   :hidden:
 
    internals/global_design
    internals/orm

@@ -173,6 +173,10 @@ def export(
     else:
         EXPORT_LOGGER.debug('No information about the timing of the export.')
 
+    # Reset logging level
+    if silent:
+        logging.disable(level=logging.NOTSET)
+
 
 def export_zip(entities=None, filename=None, use_compression=True, **kwargs):
     """Export in a zipped folder
@@ -723,3 +727,7 @@ def export_tree(
             thisnodefolder.insert_path(src=src.abspath, dest_name='.')
 
     close_progress_bar(leave=False)
+
+    # Reset logging level
+    if silent:
+        logging.disable(level=logging.NOTSET)

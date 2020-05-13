@@ -788,4 +788,8 @@ def import_data_sqla(
             session.rollback()
             raise
 
+    # Reset logging level
+    if silent:
+        logging.disable(level=logging.NOTSET)
+
     return ret_dict

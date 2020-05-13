@@ -777,4 +777,8 @@ def import_data_dj(
     # Summarize import
     result_summary(ret_dict, getattr(group, 'label', None))
 
+    # Reset logging level
+    if silent:
+        logging.disable(level=logging.NOTSET)
+
     return ret_dict

@@ -128,9 +128,6 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
 }
 
-# Set sphinx-copybutton prompt
-copybutton_prompt_text = '$ '
-
 # -- Options for HTML output ---------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

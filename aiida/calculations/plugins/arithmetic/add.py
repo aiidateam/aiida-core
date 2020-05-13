@@ -23,6 +23,9 @@ class ArithmeticAddCalculation(CalcJob):
         spec.inputs['metadata']['options']['parser_name'].default = 'arithmetic.add'
         spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
         spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
+        spec.inputs['metadata']['options']['resources'].default = {
+            'num_machines': 1, 'num_mpiprocs_per_machine': 1
+        }
         spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
         spec.input('settings', required=False, valid_type=orm.Dict, help='Optional settings.')
@@ -58,7 +61,7 @@ class ArithmeticAddCalculation(CalcJob):
         remote_copy_list = self.get_remote_copy_list()
 
         codeinfo = CodeInfo()
-        codeinfo.cmdline_params = ['-in', self.options.input_filename]
+        codeinfo.cmdline_params = [self.options.input_filename]
         codeinfo.stdout_name = self.options.output_filename
         codeinfo.code_uuid = input_code.uuid
 
@@ -108,4 +111,5 @@ class ArithmeticAddCalculation(CalcJob):
         :param input_y: the numeric node representing the right operand of the summation
         """
         with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
-            handle.write('{} {}\n'.format(input_x.value, input_y.value))
+            handle.write('echo $(({} + {}))\n'.format(input_x.value,
+                                                        input_y.value))

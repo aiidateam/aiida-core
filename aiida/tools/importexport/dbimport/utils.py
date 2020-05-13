@@ -14,8 +14,7 @@ import os
 import click
 from tabulate import tabulate
 
-from aiida.cmdline.utils import echo
-from aiida.common.log import AIIDA_LOGGER
+from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT
 from aiida.common.utils import get_new_uuid
 from aiida.orm import QueryBuilder, Comment
 
@@ -263,7 +262,7 @@ def start_summary(archive, comment_mode, extras_mode_new, extras_mode_existing):
     ]
     result += '\n\n{}'.format(tabulate(parameters, headers=['Parameters', '']))
 
-    echo.echo(result)
+    IMPORT_LOGGER.log(msg=result, level=LOG_LEVEL_REPORT)
 
 
 def result_summary(results, import_group_label):
@@ -287,4 +286,4 @@ def result_summary(results, import_group_label):
         parameters.extend([[param, val] for param, val in zip(['{}(s)'.format(model)], value)])
 
     if title:
-        echo.echo('\n{}\n'.format(tabulate(parameters, headers=[title, ''])))
+        IMPORT_LOGGER.log(msg='\n{}\n'.format(tabulate(parameters, headers=[title, ''])), level=LOG_LEVEL_REPORT)

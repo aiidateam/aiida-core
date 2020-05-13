@@ -13,7 +13,7 @@ from enum import Enum
 import warnings
 
 from aiida.orm import QueryBuilder, ProcessNode
-from aiida.common.log import AIIDA_LOGGER
+from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT, override_log_formatter
 from aiida.common.warnings import AiidaDeprecationWarning
 
 from aiida.tools.importexport.common import exceptions
@@ -285,10 +285,10 @@ def check_process_nodes_sealed(nodes):
         )
 
 
+@override_log_formatter('%(message)s')
 def summary(file_format, outfile, **kwargs):
     """Print summary for export"""
     from tabulate import tabulate
-    from aiida.cmdline.utils import echo
     from aiida.tools.importexport.common.config import EXPORT_VERSION
 
     parameters = [['Archive', outfile], ['Format', file_format], ['Export version', EXPORT_VERSION]]
@@ -311,7 +311,7 @@ def summary(file_format, outfile, **kwargs):
                        ['Follow CALL Links backwards', call_reversed]]
     result += '\n\n{}\n'.format(tabulate(traversal_rules, headers=['Traversal rules', '']))
 
-    echo.echo(result)
+    EXPORT_LOGGER.log(msg=result, level=LOG_LEVEL_REPORT)
 
 
 def deprecated_parameters(old, new):
@@ -325,11 +325,12 @@ def deprecated_parameters(old, new):
 
     :return: New parameter's value (if not defined, then old parameter's value)
     """
-    if new.get('value', None) is not None:
-        message = '`{}` is deprecated, the supplied `{}` input will be used'.format(old['name'], new['name'])
-    else:
-        message = '`{}` is deprecated, please use `{}` instead'.format(old['name'], new['name'])
-        new['value'] = old['value']
-    warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
+    if old.get('value', None) is not None:
+        if new.get('value', None) is not None:
+            message = '`{}` is deprecated, the supplied `{}` input will be used'.format(old['name'], new['name'])
+        else:
+            message = '`{}` is deprecated, please use `{}` instead'.format(old['name'], new['name'])
+            new['value'] = old['value']
+        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
 
     return new['value']

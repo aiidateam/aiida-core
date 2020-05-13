@@ -239,7 +239,7 @@ def update_description(path, refresh: bool = False):
     progress_bar.set_description_str(description, refresh=refresh)
 
 
-def get_file_iterator(file_handle, folderpath, silent=False, **kwargs):  # pylint: disable=unused-argument
+def get_file_iterator(file_handle, folderpath, silent=True, **kwargs):  # pylint: disable=unused-argument
     """Go through JSON files and then return new file_iterator
 
     :param file_handle: A file handle returned from `with open() as file_handle:`.
@@ -284,7 +284,7 @@ def get_file_iterator(file_handle, folderpath, silent=False, **kwargs):  # pylin
     return get_progress_bar(iterable=file_handle.namelist(), unit='files', leave=False, disable=silent)
 
 
-def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, **kwargs):
+def extract_zip(infile, folder, nodes_export_subfolder=None, **kwargs):
     """Extract the nodes to be imported from a zip file.
 
     :param infile: file path
@@ -316,7 +316,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, **kwa
             if not handle.namelist():
                 raise CorruptArchive('no files detected in archive')
 
-            file_iterator = get_file_iterator(file_handle=handle, folderpath=folder.abspath, silent=silent, **kwargs)
+            file_iterator = get_file_iterator(file_handle=handle, folderpath=folder.abspath, **kwargs)
 
             for membername in file_iterator:
                 # Check that we are only exporting nodes within the subfolder!
@@ -333,7 +333,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False, **kwa
     close_progress_bar(leave=False)
 
 
-def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, **kwargs):
+def extract_tar(infile, folder, nodes_export_subfolder=None, **kwargs):
     """
     Extract the nodes to be imported from a (possibly zipped) tar file.
 
@@ -366,7 +366,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False, **kwa
             if len(handle.getmembers()) == 1 and handle.getmembers()[0].size == 0:
                 raise CorruptArchive('no files detected in archive')
 
-            file_iterator = get_file_iterator(file_handle=handle, folderpath=folder.abspath, silent=silent, **kwargs)
+            file_iterator = get_file_iterator(file_handle=handle, folderpath=folder.abspath, **kwargs)
 
             for member in file_iterator:
                 if member.isdev():

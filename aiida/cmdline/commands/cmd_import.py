@@ -142,7 +142,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
     return migrate_archive
 
 
-def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive, more_archives, **kwargs):  # pylint: disable=unused-argument
+def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive, more_archives, silent, **kwargs):  # pylint: disable=unused-argument
     """Utility function for `verdi import` to migrate archive
     Invoke click command `verdi export migrate`, passing in the archive,
     outputting the migrated archive in a temporary SandboxFolder.
@@ -154,6 +154,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     :param archive: Filename of archive to be migrated, and later attempted imported.
     :param non_interactive: Whether or not the user should be asked for input for any reason.
     :param more_archives: Whether or not there are more archives to be imported.
+    :param silent: Suppress console messages.
     :return: Absolute path to migrated archive within SandboxFolder.
     """
     from aiida.cmdline.commands.cmd_export import migrate
@@ -167,7 +168,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     # Migration
     try:
         ctx.invoke(
-            migrate, input_file=file_to_import, output_file=temp_folder.get_abs_path(temp_out_file), silent=False
+            migrate, input_file=file_to_import, output_file=temp_folder.get_abs_path(temp_out_file), silent=silent
         )
     except Exception as exception:
         _echo_error(
@@ -288,7 +289,8 @@ def cmd_import(
         'extras_mode_existing': ExtrasImportCode[extras_mode_existing].value,
         'extras_mode_new': extras_mode_new,
         'comment_mode': comment_mode,
-        'non_interactive': non_interactive
+        'non_interactive': non_interactive,
+        'silent': False,
     }
 
     # Import local archives

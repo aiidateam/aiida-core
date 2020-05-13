@@ -11,6 +11,7 @@
 """ SQLAlchemy-specific import of AiiDA entities """
 
 from distutils.version import StrictVersion
+import logging
 import os
 import tarfile
 import zipfile
@@ -19,6 +20,7 @@ from itertools import chain
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType
+from aiida.common.log import override_log_formatter
 from aiida.common.utils import get_object_from_string
 from aiida.orm import QueryBuilder, Node, Group, ImportGroup
 from aiida.orm.utils.links import link_triple_exists, validate_link
@@ -41,6 +43,7 @@ from aiida.tools.importexport.dbimport.utils import (
 from aiida.tools.importexport.dbimport.backends.sqla.utils import validate_uuid
 
 
+@override_log_formatter('%(message)s')
 def import_data_sqla(
     in_path,
     group=None,
@@ -122,6 +125,9 @@ def import_data_sqla(
         elif not group.is_stored:
             group.store()
 
+    if silent:
+        logging.disable(level=logging.CRITICAL)
+
     ################
     # EXTRACT DATA #
     ################
@@ -169,8 +175,7 @@ def import_data_sqla(
 
             raise exceptions.IncompatibleArchiveVersionError(msg)
 
-        if not silent:
-            start_summary(in_path, comment_mode, extras_mode_new, extras_mode_existing)
+        start_summary(in_path, comment_mode, extras_mode_new, extras_mode_existing)
 
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
@@ -770,16 +775,14 @@ def import_data_sqla(
             # Finalize Progress bar
             close_progress_bar(leave=False)
 
-            if not silent:
-                # Summarize import
-                result_summary(ret_dict, getattr(group, 'label', None))
+            # Summarize import
+            result_summary(ret_dict, getattr(group, 'label', None))
 
         except:
             # Finalize Progress bar
             close_progress_bar(leave=False)
 
-            if not silent:
-                result_summary({}, None)
+            result_summary({}, None)
 
             IMPORT_LOGGER.debug('Rolling back')
             session.rollback()

@@ -11,6 +11,7 @@
 """ Django-specific import of AiiDA entities """
 
 from distutils.version import StrictVersion
+import logging
 import os
 import tarfile
 import zipfile
@@ -19,6 +20,7 @@ from itertools import chain
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType, validate_link_label
+from aiida.common.log import override_log_formatter
 from aiida.common.utils import grouper, get_object_from_string
 from aiida.manage.configuration import get_config_option
 from aiida.orm.utils.repository import Repository
@@ -37,6 +39,7 @@ from aiida.tools.importexport.dbimport.utils import (
 )
 
 
+@override_log_formatter('%(message)s')
 def import_data_dj(
     in_path,
     group=None,
@@ -118,6 +121,9 @@ def import_data_dj(
         elif not group.is_stored:
             group.store()
 
+    if silent:
+        logging.disable(level=logging.CRITICAL)
+
     ################
     # EXTRACT DATA #
     ################
@@ -163,8 +169,7 @@ def import_data_dj(
 
             raise exceptions.IncompatibleArchiveVersionError(msg)
 
-        if not silent:
-            start_summary(in_path, comment_mode, extras_mode_new, extras_mode_existing)
+        start_summary(in_path, comment_mode, extras_mode_new, extras_mode_existing)
 
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
@@ -769,8 +774,7 @@ def import_data_dj(
     # Finalize Progress bar
     close_progress_bar(leave=False)
 
-    if not silent:
-        # Summarize import
-        result_summary(ret_dict, getattr(group, 'label', None))
+    # Summarize import
+    result_summary(ret_dict, getattr(group, 'label', None))
 
     return ret_dict

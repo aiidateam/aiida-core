@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=fixme,too-many-branches,too-many-locals,too-many-statements,too-many-arguments
 """Provides export functionalities."""
+import logging
 import os
 import tarfile
 import time
@@ -18,6 +19,7 @@ from aiida.common import json
 from aiida.common.exceptions import LicensingException
 from aiida.common.folders import RepositoryFolder, SandboxFolder, Folder
 from aiida.common.lang import type_check
+from aiida.common.log import override_log_formatter, LOG_LEVEL_REPORT
 from aiida.orm.utils.repository import Repository
 
 from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar
@@ -67,7 +69,7 @@ def export(
         :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError` if the output file already exists.
     :type overwrite: bool
 
-    :param silent: suppress progress bar.
+    :param silent: suppress console prints and progress bar.
     :type silent: bool
 
     :param use_compression: Whether or not to compress the archive file (only valid for the zip file format).
@@ -135,15 +137,17 @@ def export(
     if not overwrite and os.path.exists(filename):
         raise exceptions.ArchiveExportError("The output file '{}' already exists".format(filename))
 
-    if not silent:
-        if file_format == ExportFileFormat.TAR_GZIPPED:
-            file_format_verbose = 'Gzipped tarball (compressed)'
-        # Must be a zip then
-        elif use_compression:
-            file_format_verbose = 'Zip (compressed)'
-        else:
-            file_format_verbose = 'Zip (uncompressed)'
-        summary(file_format_verbose, filename, **kwargs)
+    if silent:
+        logging.disable(level=logging.CRITICAL)
+
+    if file_format == ExportFileFormat.TAR_GZIPPED:
+        file_format_verbose = 'Gzipped tarball (compressed)'
+    # Must be a zip then
+    elif use_compression:
+        file_format_verbose = 'Zip (compressed)'
+    else:
+        file_format_verbose = 'Zip (uncompressed)'
+    summary(file_format_verbose, filename, **kwargs)
 
     try:
         if file_format == ExportFileFormat.TAR_GZIPPED:
@@ -276,6 +280,7 @@ def export_tar(entities=None, filename=None, **kwargs):
     return (time_export_start, time_export_end, time_compress_start, time_compress_end)
 
 
+@override_log_formatter('%(message)s')
 def export_tree(
     entities=None,
     folder=None,
@@ -307,7 +312,7 @@ def export_tree(
         otherwise.
     :type forbidden_licenses: list
 
-    :param silent: suppress progress bar.
+    :param silent: suppress console prints and progress bar.
     :type silent: bool
 
     :param include_comments: In-/exclude export of comments for given node(s) in ``entities``.
@@ -327,6 +332,9 @@ def export_tree(
     """
     from collections import defaultdict
     from aiida.tools.graph.graph_traversers import get_nodes_export
+
+    if silent:
+        logging.disable(level=logging.CRITICAL)
 
     EXPORT_LOGGER.debug('STARTING EXPORT...')
 
@@ -580,16 +588,12 @@ def export_tree(
 
     model_data = sum(len(model_data) for model_data in export_data.values())
     if not model_data:
-        msg = 'Nothing to store, exiting...'
-        if not silent:
-            print(msg)
-        EXPORT_LOGGER.debug(msg)
+        EXPORT_LOGGER.log(msg='Nothing to store, exiting...', level=LOG_LEVEL_REPORT)
         return
-
-    msg = 'Exporting a total of {} database entries, of which {} are Nodes.'.format(model_data, len(all_node_pks))
-    if not silent:
-        print(msg)
-    EXPORT_LOGGER.debug(msg)
+    EXPORT_LOGGER.log(
+        msg='Exporting a total of {} database entries, of which {} are Nodes.'.format(model_data, len(all_node_pks)),
+        level=LOG_LEVEL_REPORT
+    )
 
     # Instantiate new progress bar
     progress_bar = get_progress_bar(total=1, leave=False, disable=silent)

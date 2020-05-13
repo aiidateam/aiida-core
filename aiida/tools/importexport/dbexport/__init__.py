@@ -16,7 +16,8 @@ import time
 from aiida import get_version, orm
 from aiida.common import json
 from aiida.common.exceptions import LicensingException
-from aiida.common.folders import RepositoryFolder, SandboxFolder
+from aiida.common.folders import RepositoryFolder, SandboxFolder, Folder
+from aiida.common.lang import type_check
 from aiida.orm.utils.repository import Repository
 
 from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar
@@ -29,7 +30,8 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
-    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, summary, EXPORT_LOGGER, ExportFileFormat
+    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, summary, EXPORT_LOGGER, ExportFileFormat,
+    deprecated_parameters
 )
 
 from .zip import ZipFolder
@@ -38,7 +40,7 @@ __all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat')
 
 
 def export(
-    entities,
+    entities=None,
     filename=None,
     file_format=ExportFileFormat.ZIP,
     overwrite=False,
@@ -47,6 +49,10 @@ def export(
     **kwargs
 ):
     """Export AiiDA data
+
+    .. deprecated:: 1.2.1
+        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
+        Please use `entities` and `filename` instead, respectively.
 
     :param entities: a list of entity instances; they can belong to different models/entities.
     :type entities: list
@@ -99,7 +105,32 @@ def export(
             )
         )
 
-    filename = filename if filename is not None and isinstance(filename, str) else 'export_data.aiida'
+    # Backwards-compatibility
+    entities = deprecated_parameters(
+        old={
+            'name': 'what',
+            'value': kwargs.pop('what', None)
+        },
+        new={
+            'name': 'entities',
+            'value': entities
+        },
+    )
+    filename = deprecated_parameters(
+        old={
+            'name': 'outfile',
+            'value': kwargs.pop('outfile', None)
+        },
+        new={
+            'name': 'filename',
+            'value': filename
+        },
+    )
+
+    type_check(entities, (list, tuple, set), msg='`entities` must be specified and given as a list of AiiDA entities')
+    entities = list(entities)
+    if type_check(filename, str, allow_none=True) is None:
+        filename = 'export_data.aiida'
 
     if not overwrite and os.path.exists(filename):
         raise exceptions.ArchiveExportError("The output file '{}' already exists".format(filename))
@@ -116,10 +147,10 @@ def export(
 
     try:
         if file_format == ExportFileFormat.TAR_GZIPPED:
-            times = export_tar(what=entities, outfile=filename, silent=silent, **kwargs)
+            times = export_tar(entities=entities, filename=filename, silent=silent, **kwargs)
         else:  # zip
             times = export_zip(
-                what=entities, outfile=filename, use_compression=use_compression, silent=silent, **kwargs
+                entities=entities, filename=filename, use_compression=use_compression, silent=silent, **kwargs
             )
     except (exceptions.ArchiveExportError, LicensingException) as exc:
         if os.path.exists(filename):
@@ -139,41 +170,105 @@ def export(
         EXPORT_LOGGER.debug('No information about the timing of the export.')
 
 
-def export_zip(what, outfile, use_compression=True, **kwargs):
+def export_zip(entities=None, filename=None, use_compression=True, **kwargs):
     """Export in a zipped folder
 
-    :param what: a list of entity instances; they can belong to different models/entities.
-    :type what: list
+    .. deprecated:: 1.2.1
+        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
+        Please use `entities` and `filename` instead, respectively.
 
-    :param outfile: the filename (possibly including the absolute path) of the file on which to export.
-    :type outfile: str
+    :param entities: a list of entity instances; they can belong to different models/entities.
+    :type entities: list
+
+    :param filename: the filename (possibly including the absolute path) of the file on which to export.
+    :type filename: str
 
     :param use_compression: Whether or not to compress the zip file.
     :type use_compression: bool
     """
-    with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
+    # Backwards-compatibility
+    entities = deprecated_parameters(
+        old={
+            'name': 'what',
+            'value': kwargs.pop('what', None)
+        },
+        new={
+            'name': 'entities',
+            'value': entities
+        },
+    )
+    filename = deprecated_parameters(
+        old={
+            'name': 'outfile',
+            'value': kwargs.pop('outfile', None)
+        },
+        new={
+            'name': 'filename',
+            'value': filename
+        },
+    )
+
+    type_check(entities, (list, tuple, set), msg='`entities` must be specified and given as a list of AiiDA entities')
+    entities = list(entities)
+
+    if type_check(filename, str, allow_none=True) is None:
+        filename = 'export_data.aiida'
+
+    with ZipFolder(filename, mode='w', use_compression=use_compression) as folder:
         time_start = time.time()
-        export_tree(what, folder=folder, **kwargs)
+        export_tree(entities=entities, folder=folder, **kwargs)
         time_end = time.time()
 
     return (time_start, time_end)
 
 
-def export_tar(what, outfile, **kwargs):
-    """Export the entries passed in the 'what' list to a tar file.
+def export_tar(entities=None, filename=None, **kwargs):
+    """Export the entries passed in the 'entities' list to a gzipped tar file.
 
-    :param what: a list of entity instances; they can belong to different models/entities.
-    :type what: list
+    .. deprecated:: 1.2.1
+        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
+        Please use `entities` and `filename` instead, respectively.
 
-    :param outfile: the filename (possibly including the absolute path) of the file on which to export.
-    :type outfile: str
+    :param entities: a list of entity instances; they can belong to different models/entities.
+    :type entities: list
+
+    :param filename: the filename (possibly including the absolute path) of the file on which to export.
+    :type filename: str
     """
+    # Backwards-compatibility
+    entities = deprecated_parameters(
+        old={
+            'name': 'what',
+            'value': kwargs.pop('what', None)
+        },
+        new={
+            'name': 'entities',
+            'value': entities
+        },
+    )
+    filename = deprecated_parameters(
+        old={
+            'name': 'outfile',
+            'value': kwargs.pop('outfile', None)
+        },
+        new={
+            'name': 'filename',
+            'value': filename
+        },
+    )
+
+    type_check(entities, (list, tuple, set), msg='`entities` must be specified and given as a list of AiiDA entities')
+    entities = list(entities)
+
+    if type_check(filename, str, allow_none=True) is None:
+        filename = 'export_data.aiida'
+
     with SandboxFolder() as folder:
         time_export_start = time.time()
-        export_tree(what, folder=folder, **kwargs)
+        export_tree(entities=entities, folder=folder, **kwargs)
         time_export_end = time.time()
 
-        with tarfile.open(outfile, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
+        with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
             time_compress_start = time.time()
             tar.add(folder.abspath, arcname='')
             time_compress_end = time.time()
@@ -182,8 +277,8 @@ def export_tar(what, outfile, **kwargs):
 
 
 def export_tree(
-    what,
-    folder,
+    entities=None,
+    folder=None,
     allowed_licenses=None,
     forbidden_licenses=None,
     silent=False,
@@ -191,10 +286,13 @@ def export_tree(
     include_logs=True,
     **kwargs
 ):
-    """Export the entries passed in the 'what' list to a file tree.
+    """Export the entries passed in the 'entities' list to a file tree.
 
-    :param what: a list of entity instances; they can belong to different models/entities.
-    :type what: list
+    .. deprecated:: 1.2.1
+        Support for the parameter `what` will be removed in `v2.0.0`. Please use `entities` instead.
+
+    :param entities: a list of entity instances; they can belong to different models/entities.
+    :type entities: list
 
     :param folder: a temporary folder to build the archive before compression.
     :type folder: :py:class:`~aiida.common.folders.Folder`
@@ -212,11 +310,11 @@ def export_tree(
     :param silent: suppress progress bar.
     :type silent: bool
 
-    :param include_comments: In-/exclude export of comments for given node(s) in ``what``.
+    :param include_comments: In-/exclude export of comments for given node(s) in ``entities``.
         Default: True, *include* comments in export (as well as relevant users).
     :type include_comments: bool
 
-    :param include_logs: In-/exclude export of logs for given node(s) in ``what``.
+    :param include_logs: In-/exclude export of logs for given node(s) in ``entities``.
         Default: True, *include* logs in export.
     :type include_logs: bool
 
@@ -232,6 +330,23 @@ def export_tree(
 
     EXPORT_LOGGER.debug('STARTING EXPORT...')
 
+    # Backwards-compatibility
+    entities = deprecated_parameters(
+        old={
+            'name': 'what',
+            'value': kwargs.pop('what', None)
+        },
+        new={
+            'name': 'entities',
+            'value': entities
+        },
+    )
+
+    type_check(entities, (list, tuple, set), msg='`entities` must be specified and given as a list of AiiDA entities')
+    entities = list(entities)
+
+    type_check(folder, (Folder, ZipFolder), msg='`folder` must be specified and given as an AiiDA Folder entity')
+
     all_fields_info, unique_identifiers = get_all_fields_info()
 
     entities_starting_set = defaultdict(set)
@@ -241,13 +356,13 @@ def export_tree(
     given_log_entry_ids = set()
     given_comment_entry_ids = set()
 
-    # Instantiate progress bar - go through list of "what"
-    pbar_total = len(what) + 1 if what else 1
+    # Instantiate progress bar - go through list of `entities`
+    pbar_total = len(entities) + 1 if entities else 1
     progress_bar = get_progress_bar(total=pbar_total, leave=False, disable=silent)
     progress_bar.set_description_str('Collecting chosen entities', refresh=False)
 
     # I store a list of the actual dbnodes
-    for entry in what:
+    for entry in entities:
         progress_bar.update()
 
         # This returns the class name (as in imports). E.g. for a model node:

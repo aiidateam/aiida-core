@@ -10,9 +10,11 @@
 """ Utility functions for export of AiiDA entities """
 # pylint: disable=too-many-locals,too-many-branches,too-many-nested-blocks
 from enum import Enum
+import warnings
 
 from aiida.orm import QueryBuilder, ProcessNode
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.warnings import AiidaDeprecationWarning
 
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.config import (
@@ -310,3 +312,24 @@ def summary(file_format, outfile, **kwargs):
     result += '\n\n{}\n'.format(tabulate(traversal_rules, headers=['Traversal rules', '']))
 
     echo.echo(result)
+
+
+def deprecated_parameters(old, new):
+    """Handle deprecated parameter (where it is replaced with another)
+
+    :param old: The old, deprecated parameter as a dict with keys "name" and "value"
+    :type old: dict
+
+    :param new: The new parameter as a dict with keys "name" and "value"
+    :type new: dict
+
+    :return: New parameter's value (if not defined, then old parameter's value)
+    """
+    if new.get('value', None) is not None:
+        message = '`{}` is deprecated, the supplied `{}` input will be used'.format(old['name'], new['name'])
+    else:
+        message = '`{}` is deprecated, please use `{}` instead'.format(old['name'], new['name'])
+        new['value'] = old['value']
+    warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
+
+    return new['value']

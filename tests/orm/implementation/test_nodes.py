@@ -103,7 +103,7 @@ class TestBackendNode(AiidaTestCase):
         Test creation of a BackendNode when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        from aiida.tools.importexport.dbimport.backends.utils import deserialize_attributes
+        from aiida.tools.importexport.dbimport.utils import deserialize_attributes
 
         ctime = deserialize_attributes('2019-02-27T16:20:12.245738', 'date')
         mtime = deserialize_attributes('2019-02-27T16:27:14.798838', 'date')

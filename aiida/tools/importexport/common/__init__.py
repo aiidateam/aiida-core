@@ -13,5 +13,6 @@
 from .archive import *
 from .config import *
 from .exceptions import *
+from .progress_bar import *
 
-__all__ = (archive.__all__ + config.__all__ + exceptions.__all__)
+__all__ = (archive.__all__ + config.__all__ + exceptions.__all__ + progress_bar.__all__)

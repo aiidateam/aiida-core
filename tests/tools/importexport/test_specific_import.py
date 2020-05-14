@@ -66,7 +66,7 @@ class TestSpecificImport(AiidaTestCase):
 
         with tempfile.NamedTemporaryFile() as handle:
             nodes = [parameters]
-            export(nodes, outfile=handle.name, overwrite=True, silent=True)
+            export(nodes, filename=handle.name, overwrite=True, silent=True)
 
             # Check that we have the expected number of nodes in the database
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
@@ -127,7 +127,7 @@ class TestSpecificImport(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as handle:
 
             nodes = [structure, child_calculation, parent_process, remote_folder]
-            export(nodes, outfile=handle.name, overwrite=True, silent=True)
+            export(nodes, filename=handle.name, overwrite=True, silent=True)
 
             # Check that we have the expected number of nodes in the database
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
@@ -198,9 +198,9 @@ class TestSpecificImport(AiidaTestCase):
         )
 
         # Try to export, check it raises and check the raise message
-        filename = os.path.join(temp_dir, 'export.tar.gz')
+        filename = os.path.join(temp_dir, 'export.aiida')
         with self.assertRaises(exceptions.ArchiveExportError) as exc:
-            export([node], outfile=filename, silent=True)
+            export([node], filename=filename, silent=True)
 
         self.assertIn(
             'Unable to find the repository folder for Node with UUID={}'.format(node_uuid), str(exc.exception)
@@ -233,8 +233,8 @@ class TestSpecificImport(AiidaTestCase):
         )
 
         # Export and reset db
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([node], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([node], filename=filename, file_format='tar.gz', silent=True)
         self.reset_database()
 
         # Untar export file, remove repository folder, re-tar
@@ -256,7 +256,7 @@ class TestSpecificImport(AiidaTestCase):
                 msg="The Node's repository folder should now have been removed in the export file"
             )
 
-            filename_corrupt = os.path.join(temp_dir, 'export_corrupt.tar.gz')
+            filename_corrupt = os.path.join(temp_dir, 'export_corrupt.aiida')
             with tarfile.open(filename_corrupt, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
                 tar.add(folder.abspath, arcname='')
 
@@ -273,7 +273,7 @@ class TestSpecificImport(AiidaTestCase):
     def test_empty_repo_folder_export(self, temp_dir):
         """Check a Node's empty repository folder is exported properly"""
         from aiida.common.folders import Folder
-        from aiida.tools.importexport.dbexport import export_zip, export_tree
+        from aiida.tools.importexport.dbexport import export_tree
 
         node = orm.Dict().store()
         node_uuid = node.uuid
@@ -302,8 +302,8 @@ class TestSpecificImport(AiidaTestCase):
         }
 
         export_tree([node], folder=Folder(archive_variants['archive folder']), silent=True)
-        export([node], outfile=archive_variants['tar archive'], silent=True)
-        export_zip([node], outfile=archive_variants['zip archive'], silent=True)
+        export([node], filename=archive_variants['tar archive'], file_format='tar.gz', silent=True)
+        export([node], filename=archive_variants['zip archive'], file_format='zip', silent=True)
 
         for variant, filename in archive_variants.items():
             self.reset_database()

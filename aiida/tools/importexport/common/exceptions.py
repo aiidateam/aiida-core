@@ -18,7 +18,7 @@ from aiida.common.exceptions import AiidaException
 __all__ = (
     'ExportImportException', 'ArchiveExportError', 'ArchiveImportError', 'CorruptArchive',
     'IncompatibleArchiveVersionError', 'ExportValidationError', 'ImportUniquenessError', 'ImportValidationError',
-    'ArchiveMigrationError', 'MigrationValidationError', 'DanglingLinkError'
+    'ArchiveMigrationError', 'MigrationValidationError', 'DanglingLinkError', 'ProgressBarError'
 )
 
 
@@ -67,3 +67,7 @@ class MigrationValidationError(ArchiveMigrationError):
 
 class DanglingLinkError(MigrationValidationError):
     """Raised when an export archive is detected to contain dangling links when importing."""
+
+
+class ProgressBarError(ExportImportException):
+    """Something is wrong with setting up the tqdm progress bar"""

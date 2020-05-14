@@ -9,11 +9,18 @@
 ###########################################################################
 """ Utility functions for import of AiiDA entities """
 # pylint: disable=inconsistent-return-statements,too-many-branches
-import click
+import os
 
-from aiida.orm import QueryBuilder, Comment
+import click
+from tabulate import tabulate
+
+from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT
 from aiida.common.utils import get_new_uuid
+from aiida.orm import QueryBuilder, Comment
+
 from aiida.tools.importexport.common import exceptions
+
+IMPORT_LOGGER = AIIDA_LOGGER.getChild('import')
 
 
 def merge_comment(incoming_comment, comment_mode):
@@ -241,3 +248,42 @@ def deserialize_field(key, value, fields_info, import_unique_ids_mappings, forei
 
     # else
     return ('{}_id'.format(key), None)
+
+
+def start_summary(archive, comment_mode, extras_mode_new, extras_mode_existing):
+    """Print starting summary for import"""
+    archive = os.path.basename(archive)
+    result = '\n{}'.format(tabulate([['Archive', archive]], headers=['IMPORT', '']))
+
+    parameters = [
+        ['Comment rules', comment_mode],
+        ['New Node Extras rules', extras_mode_new],
+        ['Existing Node Extras rules', extras_mode_existing],
+    ]
+    result += '\n\n{}'.format(tabulate(parameters, headers=['Parameters', '']))
+
+    IMPORT_LOGGER.log(msg=result, level=LOG_LEVEL_REPORT)
+
+
+def result_summary(results, import_group_label):
+    """Summarize import results"""
+    title = None
+
+    if results or import_group_label:
+        parameters = []
+        title = 'Summary'
+
+    if import_group_label:
+        parameters.append(['Auto-import Group label', import_group_label])
+
+    for model in results:
+        value = []
+        if results[model].get('new', None):
+            value.append('{} new'.format(len(results[model]['new'])))
+        if results[model].get('existing', None):
+            value.append('{} existing'.format(len(results[model]['existing'])))
+
+        parameters.extend([[param, val] for param, val in zip(['{}(s)'.format(model)], value)])
+
+    if title:
+        IMPORT_LOGGER.log(msg='\n{}\n'.format(tabulate(parameters, headers=[title, ''])), level=LOG_LEVEL_REPORT)

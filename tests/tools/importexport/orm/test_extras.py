@@ -33,7 +33,7 @@ class TestExtras(AiidaTestCase):
         data.set_extra_many({'b': 2, 'c': 3})
         cls.tmp_folder = tempfile.mkdtemp()
         cls.export_file = os.path.join(cls.tmp_folder, 'export.aiida')
-        export([data], outfile=cls.export_file, silent=True)
+        export([data], filename=cls.export_file, silent=True)
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
@@ -89,7 +89,8 @@ class TestExtras(AiidaTestCase):
             self.imported_node.get_extra('c')
 
     def test_extras_import_mode_keep_existing(self):
-        """Check if old extras are not modified in case of name collision"""
+        """Check if old extras are not modified in case of name collision
+        (keep original, create new, leave original)"""
         self.import_extras()
         imported_node = self.modify_extras(mode_existing='kcl')
 
@@ -99,7 +100,8 @@ class TestExtras(AiidaTestCase):
         self.assertEqual(imported_node.get_extra('c'), 3)
 
     def test_extras_import_mode_update_existing(self):
-        """Check if old extras are modified in case of name collision"""
+        """Check if old extras are modified in case of name collision
+        (keep original, create new, update original)"""
         self.import_extras()
         imported_node = self.modify_extras(mode_existing='kcu')
 
@@ -109,7 +111,8 @@ class TestExtras(AiidaTestCase):
         self.assertEqual(imported_node.get_extra('c'), 3)
 
     def test_extras_import_mode_mirror(self):
-        """Check if old extras are fully overwritten by the imported ones"""
+        """Check if old extras are fully overwritten by the imported ones
+        (not keep original, create new, update original)"""
         self.import_extras()
         imported_node = self.modify_extras(mode_existing='ncu')
 
@@ -122,7 +125,8 @@ class TestExtras(AiidaTestCase):
         self.assertEqual(imported_node.get_extra('c'), 3)
 
     def test_extras_import_mode_none(self):
-        """Check if old extras are fully overwritten by the imported ones"""
+        """Check if old extras are fully overwritten by the imported ones
+        (keep original, not create new, leave original)"""
         self.import_extras()
         imported_node = self.modify_extras(mode_existing='knl')
 
@@ -134,7 +138,8 @@ class TestExtras(AiidaTestCase):
             imported_node.get_extra('c')
 
     def test_extras_import_mode_strange(self):
-        """Check a mode that is probably does not make much sense but is still available"""
+        """Check a mode that probably does not make much sense but is still available
+        (keep original, create new, delete)"""
         self.import_extras()
         imported_node = self.modify_extras(mode_existing='kcd')
 
@@ -146,7 +151,7 @@ class TestExtras(AiidaTestCase):
             imported_node.get_extra('b')
 
     def test_extras_import_mode_correct(self):
-        """Test all possible import modes except 'ask' """
+        """Test all possible import modes except 'ask'"""
         self.import_extras()
         for mode1 in ['k', 'n']:  # keep or not keep old extras
             for mode2 in ['n', 'c']:  # create or not create new extras

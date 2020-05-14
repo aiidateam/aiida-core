@@ -137,6 +137,6 @@ After this, if you open a Jupyter notebook as explained above and type in a cell
 
     %aiida <profile_name>
 
-followed by ``Shift-Enter``. The ``<profile_name>`` argument is optional, and the line magic selects the default profile if it is omitted.
-You should receive the message "Loaded AiiDA DB environment - profile name: <profile_name>."
+followed by ``Shift-Enter``.
+The ``<profile_name>`` argument is optional, and the line magic selects the default profile if it is omitted.
 This line magic should also be enabled in standard ipython shells.

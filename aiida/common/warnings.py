@@ -10,7 +10,11 @@
 """Define warnings that can be thrown by AiiDA."""
 
 
-class AiidaDeprecationWarning(Warning):
+class AiidaWarning(Warning):
+    """Generic AiiDA warning."""
+
+
+class AiidaDeprecationWarning(AiidaWarning):
     """
     Class for AiiDA deprecations.
 
@@ -22,13 +26,13 @@ class AiidaDeprecationWarning(Warning):
     """
 
 
-class AiidaEntryPointWarning(Warning):
+class AiidaEntryPointWarning(AiidaWarning):
     """
     Class for warnings concerning AiiDA entry points.
     """
 
 
-class AiidaTestWarning(Warning):
+class AiidaTestWarning(AiidaWarning):
     """
     Class for warnings concerning the AiiDA testing infrastructure.
     """

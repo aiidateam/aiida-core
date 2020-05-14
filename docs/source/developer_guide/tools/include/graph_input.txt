@@ -1,8 +1,0 @@
- [ DI ] - incall -> [ C0 ]
- [ C0 ] - create -> [ DO ]
- [ DI ] - inwork -> [ W1 ]
- [ W1 ] - return -> [ DO ]
- [ DI ] - inwork -> [ W2 ]
- [ W2 ] - return -> [ DO ]
- [ W1 ] - cawork -> [ W2 ]
- [ W2 ] - cacall -> [ C0 ]

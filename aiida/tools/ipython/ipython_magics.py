@@ -81,8 +81,9 @@ class AiiDALoaderMagics(magic.Magics):
         from aiida.cmdline.utils.shell import get_start_namespace
 
         self.is_warning = False
-        if line:
-            profile = load_profile(line.strip())
+        lcontent = line.strip()
+        if lcontent:
+            profile = load_profile(lcontent)
         else:
             profile = load_profile()
 

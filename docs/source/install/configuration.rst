@@ -135,7 +135,8 @@ The current ipython profile folder can be located using::
 
 After this, if you open a Jupyter notebook as explained above and type in a cell::
 
-    %aiida
+    %aiida <profile_name>
 
-followed by ``Shift-Enter``. You should receive the message "Loaded AiiDA DB environment."
+followed by ``Shift-Enter``. The ``<profile_name>`` argument is optional, and the line magic selects the default profile if it is omitted.
+You should receive the message "Loaded AiiDA DB environment - profile name: <profile_name>."
 This line magic should also be enabled in standard ipython shells.

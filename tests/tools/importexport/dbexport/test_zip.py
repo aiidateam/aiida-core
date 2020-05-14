@@ -12,10 +12,10 @@ def test_writing_bytes(temp_dir):
     zip_file = os.path.join(temp_dir, 'test.zip')
     filename = 'data{}.json'
 
-    data: str = 'aà'
-    bytes_data: bytes = data.encode('utf-8')
-    json_data: str = json.dumps(bytes_data)  # Will always return a string
-    json_bytes_data: bytes = json_data.encode('utf-8')
+    data = 'aà'
+    bytes_data = data.encode('utf-8')
+    json_data = json.dumps(bytes_data)  # Will always return a string
+    json_bytes_data = json_data.encode('utf-8')
 
     with ZipFolder(zip_file, mode='w') as folder:
         with folder.open(filename.format(0), mode='w') as fhandle:

@@ -2,7 +2,7 @@
 
 .. _tutorial:basic:
 
-.. For reference: 
+.. For reference:
 
 .. * The `tutorial guidelines <https://github.com/aiidateam/aiida-core/wiki/Writing-documentation#tutorial>`_.
 .. * See `issue #3981 <https://github.com/aiidateam/aiida-core/issues/3981>`_.
@@ -21,15 +21,15 @@ At the end of this tutorial you will be able to:
 * Monitor the status of processes.
 * Explore and visualize the provenance.
 
-.. important:: 
+.. important::
 
-    If you are working on your own machine, note that tutorial assumes that you have a working AiiDA installation, and have set up your AiiDA profile in the current Python environment. 
+    If you are working on your own machine, note that tutorial assumes that you have a working AiiDA installation, and have set up your AiiDA profile in the current Python environment.
     If this is not the case, consult the :ref:`getting started page<intro/get_started>`.
 
 Provenance
 ==========
 
-One of the most important concepts in AiiDA is *provenance*. 
+One of the most important concepts in AiiDA is *provenance*.
 An AiiDA database does not only contain the results of your calculations, but also their inputs and each step that was executed to obtain them.
 All of this information is stored in the form of a *directed acyclic graph* (DAG).
 As an example, :numref:`fig_intro_workchain_graph` shows the provenance of the calculations of this tutorial.
@@ -37,11 +37,11 @@ As an example, :numref:`fig_intro_workchain_graph` shows the provenance of the c
 .. _fig_intro_workchain_graph:
 .. figure:: include/workchain_graph.png
     :scale: 30
-    :align: center 
+    :align: center
 
     Provenance Graph of a basic AiiDA WorkChain.
 
-In the provenance graph, you can see different types of *nodes*, represented by different shapes. 
+In the provenance graph, you can see different types of *nodes*, represented by different shapes.
 The green ellipses are ``Data`` nodes, the blue ellipse is a ``Code`` node.
 The rectangles represent *processes*, i.e. the calculations performed in your *workflow*.
 During this tutorial we will be using AiiDA to generate the provenance graph in :numref:`fig_intro_workchain_graph` step by step.
@@ -57,7 +57,7 @@ To start the IPython shell, simply type in the terminal:
 
     $ verdi shell
 
-There are many types of data nodes already implemented in AiiDA. 
+There are many types of data nodes already implemented in AiiDA.
 For this tutorial, we'll keep it very simple, and start by initializing an ``Int`` node and assigning it to the `node` variable:
 
 .. code-block:: python
@@ -82,14 +82,14 @@ Let's store the node in the database:
 
 .. code-block:: python
 
-    In [3]: node.store() 
+    In [3]: node.store()
     Out[3]: <Int: uuid: eac48d2b-ae20-438b-aeab-2d02b69eb6a8 (pk: 1) value: 2>
 
-As you can see, the data node has now been assigned a *primary key* (**PK**), a number that identifies the node in your database ``(pk: 1)``. 
+As you can see, the data node has now been assigned a *primary key* (**PK**), a number that identifies the node in your database ``(pk: 1)``.
 The difference between the PK and UUID is that the PK is a quick reference to a node that is unique for *one* database only, whereas the UUID is a hexadecimal string that is globally unique between *different* databases.
 
-.. important:: 
-    
+.. important::
+
     The PK numbers shown throughout this tutorial assume that you start from a completely empty database.
     It is likely that the node PK's will be different for your database!
 
@@ -121,40 +121,40 @@ Once again, we can see that the node is of type ``Int``, as PK = 1, and UUID = `
 Calculation functions
 =====================
 
-Once your data is stored in the database, it is ready to be used for some computational task. 
-For example, let's say you want to multiply two ``Int`` data nodes. 
-The following Python function: 
+Once your data is stored in the database, it is ready to be used for some computational task.
+For example, let's say you want to multiply two ``Int`` data nodes.
+The following Python function:
 
 .. code-block:: python
-  
+
     def multiply(x, y):
         return x * y
 
-will give the desired result when applied to two ``Int`` nodes, but the calculation will not be stored in the provenance. 
-However, AiiDA ships with a handy ``decorator`` that you can add to any Python function so its execution will be stored in the provenance. 
+will give the desired result when applied to two ``Int`` nodes, but the calculation will not be stored in the provenance.
+However, AiiDA ships with a handy ``decorator`` that you can add to any Python function so its execution will be stored in the provenance.
 Start up the AiiDA IPython shell again using ``verdi shell`` and execute the following code snippet:
 
 .. code-block:: python
 
-    from aiida.engine import calcfunction 
-    
-    @calcfunction 
-    def multiply(x, y): 
-        return x * y 
+    from aiida.engine import calcfunction
 
-This defines the most basic process in AiiDA: the *calculation function*. 
+    @calcfunction
+    def multiply(x, y):
+        return x * y
+
+This defines the most basic process in AiiDA: the *calculation function*.
 Next, load the ``Int`` node you have created in the previous section using the ``load_node`` function and the PK of the data node:
 
 .. code-block:: python
 
     In [2]: x = load_node(pk=1)
 
-Of course, we need another integer to multiply with the first one. 
+Of course, we need another integer to multiply with the first one.
 Let's create a new ``Int`` data node and assign it to the variable ``y``:
 
 .. code-block:: python
 
-    In [3]: y = Int(3) 
+    In [3]: y = Int(3)
 
 Now it's time to multiply the two numbers!
 
@@ -163,7 +163,7 @@ Now it's time to multiply the two numbers!
     In [4]: multiply(x, y)
     Out[4]: <Int: uuid: 42541d38-1fb3-4f60-8122-ab8b3e723c2e (pk: 4) value: 6>
 
-Success! The ``calcfunction``-decorated ``multiply`` function has multiplied the two ``Int`` data nodes and returned a new ``Int`` data node whose value is the product of the two input nodes. 
+Success! The ``calcfunction``-decorated ``multiply`` function has multiplied the two ``Int`` data nodes and returned a new ``Int`` data node whose value is the product of the two input nodes.
 Note that by executing the ``multiply`` function, all input and output nodes are automatically stored in the database:
 
 .. code-block:: python
@@ -171,7 +171,7 @@ Note that by executing the ``multiply`` function, all input and output nodes are
     In [5]:  y
     Out[5]: <Int: uuid: 7865c8ff-f243-4443-9233-dd303a9be3c5 (pk: 2) value: 3>
 
-We hadn't stored data node assigned to the ``y`` variable yet, but by providing it as an input argument to ``multiply`` function, it was automatically stored with PK = 2. 
+We hadn't stored data node assigned to the ``y`` variable yet, but by providing it as an input argument to ``multiply`` function, it was automatically stored with PK = 2.
 Similarly, the returned ``Int`` node with value 6 has been stored with PK = 4.
 
 Let's once again leave the IPython shell with ``exit()`` and look for the process we have just run using the ``verdi`` CLI:
@@ -180,7 +180,7 @@ Let's once again leave the IPython shell with ``exit()`` and look for the proces
 
     $ verdi process list
 
-The returned list will be empty, but don't worry! By default, ``verdi process list`` only returns the *active* processes. 
+The returned list will be empty, but don't worry! By default, ``verdi process list`` only returns the *active* processes.
 If you want to see *all* processes (i.e. also the processes that are *terminated*), simply add the ``-a`` option:
 
 .. code:: bash
@@ -201,7 +201,7 @@ You should now see something like the following output:
 
 We can see that our ``multiply`` calcfunction was created 1 minute ago, assigned the PK 3, and has ``Finished``.
 
-As a final step, let's have a look at the provenance of this simply calculation. 
+As a final step, let's have a look at the provenance of this simply calculation.
 The provenance graph can be automatically generated using the verdi CLI.
 Let's generate the provenance graph for the ``multiply`` calculation function we have just run with PK = 3:
 
@@ -214,7 +214,7 @@ The command will write the provenance graph to a ``.pdf`` file. Use your favorit
 .. _fig_calcfun_graph:
 .. figure:: include/calcfun_graph.png
     :scale: 50
-    :align: center 
+    :align: center
 
     Provenance graph of the ``multiply`` calculation function.
 
@@ -223,10 +223,10 @@ The command will write the provenance graph to a ``.pdf`` file. Use your favorit
 CalcJobs
 ========
 
-When running calculations that take require an external code or run on a remote machine, a simple calculation function is no longer sufficient. 
+When running calculations that take require an external code or run on a remote machine, a simple calculation function is no longer sufficient.
 For this purpose, AiiDA has implemented the ``CalcJob`` process.
 
-To run a ``CalcJob``, you need to set up two things: a ``computer`` for the calculation to run on, and the ``code`` that you want the ``CalcJob`` to run. 
+To run a ``CalcJob``, you need to set up two things: a ``computer`` for the calculation to run on, and the ``code`` that you want the ``CalcJob`` to run.
 If you're running this tutorial in the Quantum Mobile VM or on Binder, these have been pre-configured for you. If you're running on your own machine, you can follow the instructions in the panel below:
 
 .. accordion:: Install localhost computer and code
@@ -257,8 +257,8 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
     This command sets up a code with *label* ``add`` on the *computer* ``tutor``, using the *plugin* ``arithmetic.add``.
 
-.. note:: 
-    A typical real-world example of a computer is a remote supercomputing facility. 
+.. note::
+    A typical real-world example of a computer is a remote supercomputing facility.
     Codes can be anything from a Python script to powerful *ab initio* codes such as Quantum Espresso or machine learning tools like Tensorflow.
 
 Let's have a look at the codes we have available:
@@ -267,7 +267,7 @@ Let's have a look at the codes we have available:
 
     $ verdi code list
 
-You can see a single code ``add@tutor``, with PK = 5, in the printed list. 
+You can see a single code ``add@tutor``, with PK = 5, in the printed list.
 This powerful code allows us to add two integers together.
 The ``add@tutor`` identifier indicates that the code with label ``add`` is run on the computer with label ``tutor``.
 To see more details about the computer, you can use the following ``verdi`` command:
@@ -283,16 +283,16 @@ Let's now start up the ``verdi shell`` again and load the ``add@tutor`` code usi
 
 .. code-block:: python
 
-    code = load_code(label='add') 
+    code = load_code(label='add')
 
 Every code has a convenient tool for setting up the required input, called the builder.
 It can be obtain by using the ``get_buider`` method:
 
 .. code-block:: python
 
-    builder = code.get_builder() 
+    builder = code.get_builder()
 
-Using the builder, you can easily set up the calculation by providing the input arguments. 
+Using the builder, you can easily set up the calculation by providing the input arguments.
 Let's use the ``Int`` node that was created by our previous ``calcfunction`` as one of the inputs:
 
 .. code-block:: python
@@ -311,7 +311,7 @@ To run the ``CalcJob``, simply use the ``run`` function from the AiiDA engine:
     from aiida.engine import run
     run(builder)
 
-Wait for the process to complete. 
+Wait for the process to complete.
 Once it is done, it will return a dictionary with the output nodes.
 Exit the IPython shell and once again check for *all* processes:
 
@@ -329,7 +329,7 @@ Grab the PK of the ``ArithmeticAddCalculation``, and once again generate the pro
 .. _fig_calcjob_graph:
 .. figure:: include/calcjob_graph.png
     :scale: 35
-    :align: center 
+    :align: center
 
     Provenance graph of the ``ArithmeticAddCalculation`` CalcJob, with one input provided by the output of the ``multiply`` calculation function.
 
@@ -359,17 +359,17 @@ If the daemon is running, let's stop it for now:
   $ verdi daemon stop
 
 Next, let's *submit* the ``CalcJob`` we ran previously.
-Start the ``verdi shell`` and execute the Python code snippet below. 
+Start the ``verdi shell`` and execute the Python code snippet below.
 This follows all the steps we did previously, but now uses the ``submit`` function instead of ``run``:
 
 .. code-block:: python
 
-    from aiida.engine import submit 
+    from aiida.engine import submit
 
-    code = load_code(label='add') 
+    code = load_code(label='add')
     builder = code.get_builder()
     builder.x = load_node(pk=4)
-    builder.y = Int(5) 
+    builder.y = Int(5)
 
     submit(builder)
 
@@ -427,22 +427,62 @@ Once the ``CalcJob`` is completed you can once again use ``verdi process list -a
 Workflows
 =========
 
-So far we have executed each process manually. 
+So far we have executed each process manually.
 Of course, the purpose of AiiDA is to automate these steps by linking them together in a *workflow*, whose provenance is stored to ensure reproducability.
 For this tutorial we have prepared a basic ``WorkChain`` that is already implemented in ``aiida-core``.
 You can see the code below:
 
 .. accordion:: MultiplyAddWorkChain code
 
-    .. literalinclude:: ../../../aiida/workflows/multiplyadd.py 
+    .. code-block:: python
+
+        from aiida.orm import Code, Int
+        from aiida.engine import calcfunction, WorkChain, ToContext
+
+        @calcfunction
+        def multiply(x, y):
+            return x * y
+
+        class MultiplyAddWorkChain(WorkChain):
+            """WorkChain to perform basic arithmetic for testing and demonstration purposes."""
+
+            @classmethod
+            def define(cls, spec):
+                """Specify inputs and outputs."""
+                super(MultiplyAddWorkChain, cls).define(spec)
+                spec.input('x', valid_type=Int)
+                spec.input('y', valid_type=Int)
+                spec.input('z', valid_type=Int)
+                spec.input('code', valid_type=Code)
+                spec.outline(cls.multiply, cls.add, cls.result)
+                spec.output('result', valid_type=Int)
+
+            def multiply(self):
+                """Multiply two integers."""
+                self.ctx.multiple = multiply(self.inputs.x, self.inputs.y)
+
+            def add(self):
+                """Add two numbers with the ArithmeticAddCalculation process."""
+
+                builder = self.inputs.code.get_builder()
+
+                builder.x = self.ctx.multiple
+                builder.y = self.inputs.z
+
+                future = self.submit(builder)
+
+                return ToContext({'addition': future})
+
+            def result(self):
+                self.out('result', self.ctx['addition'].get_outgoing().get_node_by_label('sum'))
 
     First, we recognize the ``multiply`` function we have used earlier, decorated as a ``calcfunction``.
     The ``define`` class method specifies the ``input`` and ``output`` of the ``WorkChain``, as well as the ``outline``, which are the steps of the workflow.
     These steps are provided as methods of the ``MultiplyAddWorkChain`` class.
 
-.. note:: 
+.. note::
 
-    Besides WorkChain's, workflows can also be implemented as *work functions*. 
+    Besides WorkChain's, workflows can also be implemented as *work functions*.
     These are ideal for workflows that are not very computationally intensive and can be easily implemented in a Python function.
 
 Let's run the ``WorkChain`` above! Start up the ``verdi shell`` and import the ``MultiplyAddWorkChain``:
@@ -455,7 +495,7 @@ Similar to a ``CalcJob``, the ``WorkChain`` input can be set up using a builder:
 
 .. code-block:: python
 
-    builder = MultiplyAddWorkChain.get_builder() 
+    builder = MultiplyAddWorkChain.get_builder()
     builder.code = load_code(label='add')
     builder.x = Int(2)
     builder.y = Int(3)
@@ -466,7 +506,7 @@ Once the ``WorkChain`` input has been set up, we submit it to the daemon using t
 .. code-block:: python
 
     from aiida.engine import submit
-    submit(builder) 
+    submit(builder)
 
 Now quickly leave the IPython shell and check the process list:
 
@@ -506,7 +546,7 @@ The provenance graph now looks like the one we showed at the start of this tutor
 .. _fig_workchain_graph:
 .. figure:: include/workchain_graph.png
     :scale: 30
-    :align: center 
+    :align: center
 
     Final provenance Graph of the basic AiiDA tutorial.
 

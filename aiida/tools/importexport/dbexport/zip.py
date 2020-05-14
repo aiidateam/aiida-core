@@ -92,15 +92,16 @@ class ZipFolder:
 
         Imitating :py:meth:`aiida.common.folders.Folder.open`.
 
-        Since zipfile.ZipFile.writestr is str/bytes agnostic, we don't care about encoding.
-        NOTE: This means encoding other than UTF-8/Unicode is not supported
-        (since it is not supported by zipfile.ZipFile).
+        Since zipfile.ZipFile.writestr is str/bytes agnostic, we don't care about encoding (or 'b' in mode).
+        NOTE: This means whatever data is passed to
+        :py:meth:`aiida.tools.importexport.dbexport.zip.ZipFileWrapper.write` will be written to this ZipFolder with
+        whatever encoding it may have.
         The encoding parameter is still present to be similar to :py:class:`aiida.common.folders.Folder`.
         """
-        if encoding is not None:
+        if encoding is not None or 'b' in mode:
             warnings.warn(  # pylint: disable=no-member
-                'encoding has no effect for ZipFolder, it will always be "utf-8". '
-                'See zipfile docs for more information.',
+                'encoding or "b" in mode has no effect for ZipFolder, it will always be encoded according to the '
+                'encoding of the data written or read. See zipfile docs for more information.',
                 AiidaWarning
             )
 
@@ -120,7 +121,7 @@ class ZipFolder:
         dest = os.path.normpath(os.path.join(self.path, relpath))
 
         if check_existence:
-            if not os.path.exists(dest):
+            if not self.exists(dest):
                 raise OSError('{} does not exist within the zip-folder {}'.format(relpath, self.path))
 
         return dest

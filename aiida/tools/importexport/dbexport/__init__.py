@@ -673,10 +673,9 @@ def export_tree(
         'groups_uuid': groups_uuid
     }
 
-    # N.B. We're really calling zipfolder.open (if exporting a zipfile)
-    with folder.open('data.json', mode='w', encoding='utf-8') as fhandle:
-        # fhandle.write(json.dumps(data, cls=UUIDEncoder))
-        fhandle.write(json.dumps(data))
+    # NOTE: We're really calling zipfolder.open (if exporting a zipfile)
+    with folder.open('data.json', mode='w') as fhandle:
+        fhandle.write(json.dumps(data))  # json.dumps will always return a str
 
     # Turn sets into lists to be able to export them as JSON metadata.
     for entity, entity_set in entities_starting_set.items():
@@ -695,8 +694,8 @@ def export_tree(
         }
     }
 
-    with folder.open('metadata.json', 'w', encoding='utf-8') as fhandle:
-        fhandle.write(json.dumps(metadata))
+    with folder.open('metadata.json', 'w') as fhandle:
+        fhandle.write(json.dumps(metadata))  # json.dumps will always return a str
 
     EXPORT_LOGGER.debug('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')
 

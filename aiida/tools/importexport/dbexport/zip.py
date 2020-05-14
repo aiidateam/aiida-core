@@ -25,12 +25,16 @@ class MyWritingZipFile:
     def open(self):
         if self._buffer is not None:
             raise IOError('Cannot open again!')
-        self._buffer = io.StringIO()
+        self._buffer = io.BytesIO()
 
     def write(self, data):
         if self._encoding:
-            self._buffer.write(str(data.encode(self._encoding)))
+            if not isinstance(data, str):
+                raise TypeError('data must be a str when opening in non-bytes mode')
+            self._buffer.write(data.encode(self._encoding))
         else:
+            if not isinstance(data, bytes):
+                raise TypeError('data must be a bytes when opening in bytes mode')
             self._buffer.write(data)
 
     def close(self):
@@ -98,11 +102,11 @@ class ZipFolder:
     def pwd(self):
         return self._pwd
 
-    def open(self, fname, mode='r', encoding='utf8'):
+    def open(self, fname, mode='r', encoding='utf-8'):
         if 'b' in mode:
             encoding = None
 
-        if mode == 'w':
+        if 'w' in mode:
             return MyWritingZipFile(zip_file=self._zipfile, fname=self._get_internal_path(fname), encoding=encoding)
         # else
         return self._zipfile.open(self._get_internal_path(fname), mode)

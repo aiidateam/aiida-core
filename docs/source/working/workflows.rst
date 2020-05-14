@@ -109,8 +109,8 @@ Exit codes
 ----------
 
 To terminate the execution of a work function and mark it as failed, one simply has to return an :ref:`exit code<working_processes_exit_codes>`.
-The :py:class:`~aiida.engine.processes.exit_code.ExitCode` named tuple is constructed with an integer, to denote the desired exit status and an optional message
-When such as exit code is returned, the engine will mark the node of the work function as ``Finished`` and set the exit status and message to the value of the tuple.
+The :py:class:`~aiida.engine.processes.exit_code.ExitCode` class is constructed with an integer, to denote the desired exit status and an optional message
+When such as exit code is returned, the engine will mark the node of the work function as ``Finished`` and set the exit status and message to the value of the exit code.
 Consider the following example:
 
 .. code:: python
@@ -120,7 +120,7 @@ Consider the following example:
         from aiida.engine import ExitCode
         return ExitCode(418, 'I am a teapot')
 
-The execution of the work function will be immediately terminated as soon as the tuple is returned, and the exit status and message will be set to ``418`` and ``I am a teapot``, respectively.
+The execution of the work function will be immediately terminated as soon as the exit code is returned, and the exit status and message will be set to ``418`` and ``I am a teapot``, respectively.
 Since no output nodes are returned, the ``WorkFunctionNode`` node will have no outputs and the value returned from the function call will be an empty dictionary.
 
 
@@ -178,8 +178,8 @@ The third and final line is extremely important, as it will call the ``define`` 
 Inputs and outputs
 ------------------
 With those formalities out of the way, you can start defining the interesting properties of the work chain through the ``spec``.
-In the example you can see how the method :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.input` is used to define multiple input ports, which document exactly which inputs the work chain expects.
-Similarly, :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.output` is called to instruct that the work chain will produce an output with the label ``result``.
+In the example you can see how the method :py:meth:`~plumpy.ProcessSpec.input` is used to define multiple input ports, which document exactly which inputs the work chain expects.
+Similarly, :py:meth:`~plumpy.ProcessSpec.output` is called to instruct that the work chain will produce an output with the label ``result``.
 These two port creation methods support a lot more functionality, such as adding help string, validation and more, all of which is documented in detail in the section on :ref:`ports and port namespace<working_processes_ports_portnamespaces>`.
 
 
@@ -189,7 +189,7 @@ Outline
 -------
 The outline is what sets the work chain apart from other processes.
 It is a way of defining the higher-level logic that encodes the workflow that the work chain takes.
-The outline is defined in the ``define`` method through the :py:meth:`~aiida.engine.processes.process_spec.ProcessSpec.outline`.
+The outline is defined in the ``define`` method through the :py:meth:`~plumpy.WorkChainSpec.outline`.
 It takes a sequence of instructions that the work chain will execute, each of which is implemented as a method of the work chain class.
 In the simple example above, the outline consists of three simple instructions: ``add``, ``multiply``, ``results``.
 Since these are implemented as instance methods, they are prefixed with ``cls.`` to indicate that they are in fact methods of the work chain class.
@@ -483,15 +483,40 @@ In the ``inspect_calculation`` outline, we retrieve the calculation that was sub
 If this returns ``False``, in this example we simply fire a report message and return the exit code corresponding to the label ``ERROR_CALCULATION_FAILED``.
 Note that the specific exit code can be retrieved through the ``WorkChain`` property ``exit_codes``.
 This will return a collection of exit codes that have been defined for that ``WorkChain`` and any specific exit code can then be retrieved by accessing it as an attribute.
-Returning this exit code, which will be an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` named tuple, will cause the work chain to be aborted and the ``exit_status`` and ``exit_message`` to be set on the node, which were defined in the spec.
+Returning this exit code, which will be an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` class, will cause the work chain to be aborted and the ``exit_status`` and ``exit_message`` to be set on the node, which were defined in the spec.
 
 .. note::
 
-    The notation ``self.exit_codes.ERROR_CALCULATION_FAILED`` is just syntactic sugar to retrieve the ``ExitCode`` tuple that was defined in the spec with that error label.
+    The notation ``self.exit_codes.ERROR_CALCULATION_FAILED`` is just syntactic sugar to retrieve the ``ExitCode`` instance that was defined in the spec with that error label.
     Constructing your own ``ExitCode`` directly and returning that from the outline step will have exactly the same effect in terms of aborting the work chain execution and setting the exit status and message.
     However, it is strongly advised to define the exit code through the spec and retrieve it through the ``self.exit_codes`` collection, as that makes it easily retrievable through the spec by the caller of the work chain.
 
-The best part about this method of aborting a work chains execution, is that the exit status can now be used programmatically, by for example a parent work chain.
+The ``message`` attribute of an ``ExitCode`` can also be a string that contains placeholders.
+This is useful when the exit code's message is generic enough to a host of situations, but one would just like to parameterize the exit message.
+To concretize the template message of an exit code, simply call the :meth:`~aiida.engine.processes.exit_code.ExitCode.format` method and pass the parameters as keyword arguments::
+
+.. code:: python
+
+    exit_code_template = ExitCode(450, 'the parameter {parameter} is invalid.')
+    exit_code_concrete = exit_code_template.format(parameter='some_specific_key')
+
+This concept can also be applied within the scope of a process.
+In the process spec, we can declare a generic exit code whose exact message should depend on one or multiple parameters::
+
+.. code:: python
+
+    spec.exit_code(450, 'ERROR_INVALID_PARAMETER, 'the parameter {parameter} is invalid.')
+
+Through the ``self.exit_codes`` collection of a ``WorkChain``, this generic can be easily customized as follows:
+
+.. code:: python
+
+    def inspect_calculation(self):
+        return self.exit_codes.ERROR_INVALID_PARAMETER.format(parameter='some_specific_key')
+
+This is no different than the example before, because ``self.exit_codes.ERROR_INVALID_PARAMETER`` simply returns an instance of ``ExitCode``, which we then call ``format`` on with the substitution parameters.
+
+In conclusion, the best part about using exit codes to abort a work chain's execution, is that the exit status can now be used programmatically, by for example a parent work chain.
 Imagine that a parent work chain submitted this work chain.
 After it has terminated its execution, the parent work chain will want to know what happened to the child work chain.
 As already noted in the :ref:`report<working_workchains_reporting>` section, the report messages of the work chain should not be used.

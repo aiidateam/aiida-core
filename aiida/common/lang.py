@@ -9,8 +9,8 @@
 ###########################################################################
 """Utilities that extend the basic python language."""
 import functools
+import inspect
 import keyword
-from inspect import stack, currentframe, getfullargspec
 
 
 def isidentifier(identifier):
@@ -40,41 +40,6 @@ def type_check(what, of_type, msg=None, allow_none=False):
         raise TypeError(msg)
 
 
-def protected_decorator(check=False):
-    """Decorator to ensure that the decorated method is not called from outside the class hierarchy."""
-
-    def wrap(func):  # pylint: disable=missing-docstring
-        if isinstance(func, property):
-            raise RuntimeError('Protected must go after @property decorator')
-
-        args = getfullargspec(func)[0]
-        if not args:
-            raise RuntimeError('Can only use the protected decorator on member functions')
-
-        # We can only perform checks if the interpreter is capable of giving
-        # us the stack i.e. currentframe() produces a valid object
-        if check and currentframe() is not None:
-
-            @functools.wraps(func)
-            def wrapped_fn(self, *args, **kwargs):  # pylint: disable=missing-docstring
-                try:
-                    calling_class = stack()[1][0].f_locals['self']
-                    assert self is calling_class
-                except (KeyError, AssertionError):
-                    raise RuntimeError(
-                        'Cannot access protected function {} from outside'
-                        ' class hierarchy'.format(func.__name__)
-                    )
-
-                return func(self, *args, **kwargs)
-        else:
-            wrapped_fn = func
-
-        return wrapped_fn
-
-    return wrap
-
-
 def override_decorator(check=False):
     """Decorator to signal that a method from a base class is being overridden completely."""
 
@@ -82,7 +47,7 @@ def override_decorator(check=False):
         if isinstance(func, property):
             raise RuntimeError('Override must go after @property decorator')
 
-        args = getfullargspec(func)[0]
+        args = inspect.getfullargspec(func)[0]
         if not args:
             raise RuntimeError('Can only use the override decorator on member functions')
 
@@ -104,7 +69,6 @@ def override_decorator(check=False):
     return wrap
 
 
-protected = protected_decorator(check=False)  # pylint: disable=invalid-name
 override = override_decorator(check=False)  # pylint: disable=invalid-name
 
 
@@ -122,85 +86,3 @@ class classproperty:  # pylint: disable=too-few-public-methods,invalid-name
 
     def __get__(self, instance, owner):
         return self.getter(owner)
-
-
-class abstractclassmethod(classmethod):  # pylint: disable=too-few-public-methods, invalid-name
-    """
-    A decorator indicating abstract classmethods.
-
-    Backported from python3.
-    """
-    __isabstractmethod__ = True
-
-    def __init__(self, callable):  # pylint: disable=redefined-builtin
-        callable.__isabstractmethod__ = True
-        super().__init__(callable)
-
-
-class abstractstaticmethod(staticmethod):  # pylint: disable=too-few-public-methods, invalid-name
-    """
-    A decorator indicating abstract staticmethods.
-
-    Similar to abstractmethod.
-    Backported from python3.
-    """
-
-    __isabstractmethod__ = True
-
-    def __init__(self, callable):  # pylint: disable=redefined-builtin
-        callable.__isabstractmethod__ = True  # pylint: disable=redefined-builtin
-        super().__init__(callable)
-
-
-class combomethod:  # pylint: disable=invalid-name,too-few-public-methods
-    """
-    A decorator that wraps a function that can be both a classmethod or
-    instancemethod and behaves accordingly::
-
-        class A():
-
-            @combomethod
-            def do(self, **kwargs):
-                isclass = kwargs.get('isclass')
-                if isclass:
-                    print("I am a class", self)
-                else:
-                    print("I am an instance", self)
-
-        A.do()
-        A().do()
-
-        >>> I am a class __main__.A
-        >>> I am an instance <__main__.A instance at 0x7f2efb116e60>
-
-    Attention: For ease of handling, pass keyword **isclass**
-    equal to True if this was called as a classmethod and False if this
-    was called as an instance.
-    The argument self is therefore ambiguous!
-    """
-
-    def __init__(self, method):
-        self.method = method
-
-    def __get__(self, obj=None, objtype=None):  # pylint: disable=missing-docstring
-
-        @functools.wraps(self.method)
-        def _wrapper(*args, **kwargs):  # pylint: disable=missing-docstring
-            kwargs.pop('isclass', None)
-            if obj is not None:
-                return self.method(obj, *args, isclass=False, **kwargs)
-            return self.method(objtype, *args, isclass=True, **kwargs)
-
-        return _wrapper
-
-
-class EmptyContextManager:  # pylint: disable=too-few-public-methods
-    """
-    A dummy/no-op context manager.
-    """
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass

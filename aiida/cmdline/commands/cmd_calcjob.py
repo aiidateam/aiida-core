@@ -176,8 +176,8 @@ def calcjob_inputls(calcjob, path, color):
 
     try:
         list_repository_contents(calcjob, path, color)
-    except ValueError as exception:
-        echo.echo_critical(exception)
+    except FileNotFoundError:
+        echo.echo_critical('the path `{}` does not exist for the given node'.format(path))
 
 
 @verdi_calcjob.command('outputls')
@@ -203,8 +203,8 @@ def calcjob_outputls(calcjob, path, color):
 
     try:
         list_repository_contents(retrieved, path, color)
-    except ValueError as exception:
-        echo.echo_critical(exception)
+    except FileNotFoundError:
+        echo.echo_critical('the path `{}` does not exist for the given node'.format(path))
 
 
 @verdi_calcjob.command('cleanworkdir')

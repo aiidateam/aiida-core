@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi process`."""
-
 import datetime
 import subprocess
 import sys
@@ -41,13 +40,19 @@ class TestVerdiProcessDaemon(AiidaTestCase):
 
     def setUp(self):
         super().setUp()
-        from aiida.manage.configuration import get_config
+        from aiida.cmdline.utils.common import get_env_with_venv_bin
         from aiida.engine.daemon.client import DaemonClient
+        from aiida.manage.configuration import get_config
+
+        # Add the current python path to the environment that will be used for the daemon sub process. This is necessary
+        # to guarantee the daemon can also import all the classes that are defined in this `tests` module.
+        env = get_env_with_venv_bin()
+        env['PYTHONPATH'] = ':'.join(sys.path)
 
         profile = get_config().current_profile
         self.daemon_client = DaemonClient(profile)
         self.daemon_pid = subprocess.Popen(
-            self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout
+            self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout, env=env
         ).pid
         self.runner = get_manager().create_runner(rmq_submit=True)
         self.cli_runner = CliRunner()
@@ -384,7 +389,7 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         aiida.cmdline.utils.common.get_num_workers = lambda: 1
 
     def tearDown(self):
-        # Reset the redifined function
+        # Reset the redefined function
         import aiida.cmdline.utils.common
         aiida.cmdline.utils.common.get_num_workers = self.real_get_num_workers
         super().tearDown()
@@ -395,10 +400,12 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         that the warning message is displayed to the user when running `verdi process list`
         """
         from aiida.engine import ProcessState
+        from aiida.manage.configuration import get_config
 
         # Get the number of allowed processes per worker:
-        from aiida.manage.external.rmq import _RMQ_TASK_PREFETCH_COUNT
-        limit = int(_RMQ_TASK_PREFETCH_COUNT * 0.9)
+        config = get_config()
+        worker_process_slots = config.get_option('daemon.worker_process_slots', config.current_profile.name)
+        limit = int(worker_process_slots * 0.9)
 
         # Create additional active nodes such that we have 90% of the active slot limit
         for _ in range(limit):

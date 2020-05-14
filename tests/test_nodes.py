@@ -24,32 +24,28 @@ from aiida.manage.database.delete.nodes import delete_nodes
 
 
 class TestNodeIsStorable(AiidaTestCase):
-    """
-    Test if one can store specific Node subclasses, and that Node and
-    ProcessType are not storable, intead.
-    """
+    """Test that checks on storability of certain node sub classes work correctly."""
 
-    def test_storable_unstorable(self):
-        """
-        Test storability of Nodes
-        """
-        node = orm.Node()
+    def test_base_classes(self):
+        """Test storability of `Node` base sub classes."""
         with self.assertRaises(StoringNotAllowed):
-            node.store()
+            orm.Node().store()
 
-        process = orm.ProcessNode()
         with self.assertRaises(StoringNotAllowed):
-            process.store()
+            orm.ProcessNode().store()
 
-        # These below should be allowed instead
-        data = orm.Data()
-        data.store()
+        # The following base classes are storable
+        orm.Data().store()
+        orm.CalculationNode().store()
+        orm.WorkflowNode().store()
 
-        calc = orm.CalculationNode()
-        calc.store()
+    def test_unregistered_sub_class(self):
+        """Sub classes without a registered entry point are not storable."""
+        class SubData(orm.Data):
+            pass
 
-        work = orm.WorkflowNode()
-        work.store()
+        with self.assertRaises(StoringNotAllowed):
+            SubData().store()
 
 
 class TestNodeCopyDeepcopy(AiidaTestCase):
@@ -1206,35 +1202,6 @@ class TestNodeBasic(AiidaTestCase):
         for spec in (node.pk, uuid_stored):
             with self.assertRaises(NotExistent):
                 orm.load_node(spec, sub_classes=(orm.ArrayData,))
-
-    def test_load_unknown_data_type(self):
-        """
-        Test that the loader will choose a common data ancestor for an unknown data type.
-        For the case where, e.g., the user doesn't have the necessary plugin.
-        """
-        from aiida.plugins import DataFactory
-
-        KpointsData = DataFactory('array.kpoints')
-        kpoint = KpointsData().store()
-
-        # compare if plugin exist
-        obj = orm.load_node(uuid=kpoint.uuid)
-        self.assertEqual(type(kpoint), type(obj))
-
-        class TestKpointsData(KpointsData):
-            pass
-
-        # change node type and save in database again
-        TestKpointsData().store()
-
-        # changed node should return data node as its plugin is not exist
-        obj = orm.load_node(uuid=kpoint.uuid)
-        self.assertEqual(type(kpoint), type(obj))
-
-        # for node
-        n1 = orm.Data().store()
-        obj = orm.load_node(n1.uuid)
-        self.assertEqual(type(n1), type(obj))
 
 
 class TestSubNodesAndLinks(AiidaTestCase):

@@ -22,7 +22,6 @@ import os
 import sys
 import json
 from collections import OrderedDict
-import toml
 import click
 
 FILENAME_TOML = 'pyproject.toml'
@@ -227,92 +226,6 @@ def validate_version():
         write_setup_json(setup_content)
 
         sys.exit(1)
-
-
-@cli.command('toml')
-def validate_pyproject():
-    """Ensure that the version of reentry in setup.json and pyproject.toml are identical."""
-    reentry_requirement = None
-    for requirement in get_setup_json()['install_requires']:
-        if 'reentry' in requirement:
-            reentry_requirement = requirement
-            break
-
-    if reentry_requirement is None:
-        click.echo('Could not find the reentry requirement in {}'.format(FILEPATH_SETUP_JSON), err=True)
-        sys.exit(1)
-
-    try:
-        with open(FILEPATH_TOML, 'r') as handle:
-            toml_string = handle.read()
-    except IOError as exception:
-        click.echo('Could not read the required file: {}'.format(FILEPATH_TOML), err=True)
-        sys.exit(1)
-
-    try:
-        parsed_toml = toml.loads(toml_string)
-    except Exception as exception:  # pylint: disable=broad-except
-        click.echo('Could not parse {}: {}'.format(FILEPATH_TOML, exception), err=True)
-        sys.exit(1)
-
-    try:
-        pyproject_toml_requires = parsed_toml['build-system']['requires']
-    except KeyError as exception:
-        click.echo('Could not retrieve the build-system requires list from {}'.format(FILEPATH_TOML), err=True)
-        sys.exit(1)
-
-    if reentry_requirement not in pyproject_toml_requires:
-        click.echo(
-            'Reentry requirement from {} {} is not mirrored in {}'.format(
-                FILEPATH_SETUP_JSON, reentry_requirement, FILEPATH_TOML
-            ),
-            err=True
-        )
-        sys.exit(1)
-
-
-@cli.command('conda')
-def update_environment_yml():
-    """Update `environment.yml` file for conda."""
-    import yaml
-    import re
-
-    # needed for ordered dict, see https://stackoverflow.com/a/52621703
-    yaml.add_representer(
-        OrderedDict,
-        lambda self, data: yaml.representer.SafeRepresenter.represent_dict(self, data.items()),
-        Dumper=yaml.SafeDumper
-    )
-
-    # fix incompatibilities between conda and pypi
-    replacements = {'psycopg2-binary': 'psycopg2', 'graphviz': 'python-graphviz'}
-    install_requires = get_setup_json()['install_requires']
-
-    conda_requires = []
-    for req in install_requires:
-        # skip packages required for specific python versions
-        # (environment.yml aims at the latest python version)
-        if req.find('python_version') != -1:
-            continue
-
-        for (regex, replacement) in iter(replacements.items()):
-            req = re.sub(regex, replacement, req)
-
-        conda_requires.append(req)
-
-    environment = OrderedDict([
-        ('name', 'aiida'),
-        ('channels', ['defaults', 'conda-forge', 'etetoolkit']),
-        ('dependencies', conda_requires),
-    ])
-
-    environment_filename = 'environment.yml'
-    file_path = os.path.join(ROOT_DIR, environment_filename)
-    with open(file_path, 'w') as env_file:
-        env_file.write('# Usage: conda env create -n myenvname -f environment.yml python=3.6\n')
-        yaml.safe_dump(
-            environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True
-        )
 
 
 if __name__ == '__main__':

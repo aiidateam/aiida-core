@@ -1,8 +1,92 @@
 # Changelog
 
+
+## v1.2.1
+
+In the fixing of three bugs, three minor features have been added along the way.
+
+### Features
+- Add config option `daemon.worker_process_slots` to configure the maximum number of concurrent tasks each daemon worker can handle [[#3949]](https://github.com/aiidateam/aiida-core/pull/3949)
+- Add config option `daemon.default_workers` to set the default number of workers to be started by `verdi daemon start` [[#3949]](https://github.com/aiidateam/aiida-core/pull/3949)
+- `CalcJob`: make submit script filename configurable through the `metadata.options` [[#3948]](https://github.com/aiidateam/aiida-core/pull/3948)
+
+### Bug fixes
+- `CalcJob`: fix bug in idempotency check of upload transport task [[#3948]](https://github.com/aiidateam/aiida-core/pull/3948)
+- REST API: reintroduce CORS headers, the lack of which was breaking the Materials Cloud provenance explorer [[#3951]](https://github.com/aiidateam/aiida-core/pull/3951)
+- Remove the equality operator of `ExitCode` which caused the serialization of workchains to fail if put in the workchain context [[#3940]](https://github.com/aiidateam/aiida-core/pull/3940)
+
+### Deprecations
+- The `hookup` argument of `aiida.restapi.run_api` and the `--hookup` option of `verdi restapi` are deprecated [[#3951]](https://github.com/aiidateam/aiida-core/pull/3951)
+
+
+## v1.2.0
+
+### Features
+- `ExitCode`: make the exit message parameterizable through templates [[#3824]](https://github.com/aiidateam/aiida-core/pull/3824)
+- `GroupPath`: a utility to work with virtual `Group` hierarchies [[#3613]](https://github.com/aiidateam/aiida-core/pull/3613)
+- Make `Group` sub classable through entry points [[#3882]](https://github.com/aiidateam/aiida-core/pull/3882)[[#3903]](https://github.com/aiidateam/aiida-core/pull/3903)[[#3926]](https://github.com/aiidateam/aiida-core/pull/3926)
+- Add auto-complete support for `CodeParamType` and `GroupParamType` [[#3926]](https://github.com/aiidateam/aiida-core/pull/3926)
+- Add export archive migration for `Group` type strings [[#3912]](https://github.com/aiidateam/aiida-core/pull/3912)
+- Add the `-v/--version` option to `verdi export migrate` [[#3910]](https://github.com/aiidateam/aiida-core/pull/3910)
+- Add the `-l/--limit` option to `verdi group show` [[#3857]](https://github.com/aiidateam/aiida-core/pull/3857)
+- Add the `--order-by/--order-direction` options to `verdi group list` [[#3858]](https://github.com/aiidateam/aiida-core/pull/3858)
+- Add `prepend_text` and `append_text` to `aiida_local_code_factory` pytest fixture [[#3831]](https://github.com/aiidateam/aiida-core/pull/3831)
+- REST API: make it easier to call `run_api` in wsgi scripts [[#3875]](https://github.com/aiidateam/aiida-core/pull/3875)
+- Plot bands with only one kpoint [[#3798]](https://github.com/aiidateam/aiida-core/pull/3798)
+
+### Bug fixes
+- Improved validation for CLI parameters [[#3894]](https://github.com/aiidateam/aiida-core/pull/3894)
+- Ensure unicity when creating instances of `Autogroup` [[#3650]](https://github.com/aiidateam/aiida-core/pull/3650)
+- Prevent nodes without registered entry points from being stored [[#3886]](https://github.com/aiidateam/aiida-core/pull/3886)
+- Fix the `RotatingFileHandler` configuration of the daemon logger[[#3891]](https://github.com/aiidateam/aiida-core/pull/3891)
+- Ensure log messages are not duplicated in daemon log file [[#3890]](https://github.com/aiidateam/aiida-core/pull/3890)
+- Convert argument to `str` in `aiida.common.escaping.escape_for_bash` [[#3873]](https://github.com/aiidateam/aiida-core/pull/3873)
+- Remove the return statement of `RemoteData.getfile()` [[#3742]](https://github.com/aiidateam/aiida-core/pull/3742)
+- Support for `BandsData` nodes without `StructureData` ancestors [[#3817]](https://github.com/aiidateam/aiida-core/pull/3817)
+
+### Deprecations
+- Deprecate `--group-type` option in favor of `--type-string` for `verdi group list` [[#3926]](https://github.com/aiidateam/aiida-core/pull/3926)
+
+### Documentation
+- Docs: link to documentation of other libraries via `intersphinx` mapping [[#3876]](https://github.com/aiidateam/aiida-core/pull/3876)
+- Docs: remove extra `advanced_plotting` from install instructions [[#3860]](https://github.com/aiidateam/aiida-core/pull/3860)
+- Docs: consistent use of "plugin" vs "plugin package" terminology [[#3799]](https://github.com/aiidateam/aiida-core/pull/3799)
+
+### Developers
+- Deduplicate code for tests of archive migration code [[#3924]](https://github.com/aiidateam/aiida-core/pull/3924)
+- CI: use GitHub Actions services for PostgreSQL and RabbitMQ [[#3901]](https://github.com/aiidateam/aiida-core/pull/3901)
+- Move `aiida.manage.external.pgsu` to external package `pgsu` [[#3892]](https://github.com/aiidateam/aiida-core/pull/3892)
+- Cleanup the top-level directory of the repository [[#3738]](https://github.com/aiidateam/aiida-core/pull/3738)
+- Remove unused `orm.implementation.utils` module [[#3877]](https://github.com/aiidateam/aiida-core/pull/3877)
+- Revise dependency management workflow [[#3771]](https://github.com/aiidateam/aiida-core/pull/3771)
+- Re-add support for Coverage reports through codecov.io [[#3618]](https://github.com/aiidateam/aiida-core/pull/3618)
+
+
+## v1.1.1
+
+### Changes
+- Emit a warning when input port specifies a node instance as default [[#3466]](https://github.com/aiidateam/aiida-core/pull/3466)
+- `BaseRestartWorkChain`: require process handlers to be instance methods [[#3782]](https://github.com/aiidateam/aiida-core/pull/3782)
+- `BaseRestartWorkChain`: add method to enable/disable process handlers [[#3786]](https://github.com/aiidateam/aiida-core/pull/3786)
+- Docker container: remove conda activation from configure-aiida.sh script [[#3791]](https://github.com/aiidateam/aiida-core/pull/3791)
+- Add fixtures to clear the database before or after tests [[#3783]](https://github.com/aiidateam/aiida-core/pull/3783)
+- `verdi status`: add the configuration directory path to the output [[#3587]](https://github.com/aiidateam/aiida-core/pull/3587)
+- `QueryBuilder`: add support for `datetime.date` objects in filters [[#3796]](https://github.com/aiidateam/aiida-core/pull/3796)
+
+### Bug fixes
+- Fix bugs in `Node._store_from_cache` and `Node.repository.erase` that could result in calculations not being reused [[#3777]](https://github.com/aiidateam/aiida-core/pull/3777)
+- Caching: fix configuration spec and validation [[#3785]](https://github.com/aiidateam/aiida-core/pull/3785)
+- Write migrated config to disk in `Config.from_file` [[#3797]](https://github.com/aiidateam/aiida-core/pull/3797)
+- Validate label string at code setup stage [[#3793]](https://github.com/aiidateam/aiida-core/pull/3793)
+- Reuse `prepend_text` and `append_text` in `verdi computer/code duplicate` [[#3788]](https://github.com/aiidateam/aiida-core/pull/3788)
+- Fix broken imports of `urllib` in various locations including `verdi import` [[#3767]](https://github.com/aiidateam/aiida-core/pull/3767)
+- Match headers with actual output for `verdi data structure list` [[#3756]](https://github.com/aiidateam/aiida-core/pull/3756)
+- Disable caching for the `Data` node subclass (this should not affect usual caching behavior) [[#3807]](https://github.com/aiidateam/aiida-core/pull/3807)
+
+
 ## v1.1.0
 
-**Note Bene:** although this is a minor version release, the support for python 2 is dropped [(#3566)](https://github.com/aiidateam/aiida-core/pull/3566) following the reasoning outlined in the corresponding [AEP001](https://github.com/aiidateam/AEP/tree/master/001_drop_python2).
+**Nota Bene:** although this is a minor version release, the support for python 2 is dropped [(#3566)](https://github.com/aiidateam/aiida-core/pull/3566) following the reasoning outlined in the corresponding [AEP001](https://github.com/aiidateam/AEP/tree/master/001_drop_python2).
 Critical bug fixes for python 2 will be supported until July 1 2020 on the `v1.0.*` release series.
 With the addition of python 3.8 [(#3719)](https://github.com/aiidateam/aiida-core/pull/3719), this version is now compatible with all current python versions that are not end-of-life:
  * 3.5

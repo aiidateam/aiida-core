@@ -8,14 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test export file migration from old export versions to the newest"""
-
 import os
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.tools.importexport import import_data, EXPORT_VERSION as newest_version
+from aiida.tools.importexport import import_data, ArchiveMigrationError, Archive, EXPORT_VERSION as newest_version
 from aiida.tools.importexport.migration import migrate_recursively, verify_metadata_version
-from aiida.common.utils import Capturing
 
 from tests.utils.archives import get_archive_file, get_json_files, migrate_archive
 from tests.utils.configuration import with_temp_dir
@@ -102,6 +100,28 @@ class TestExportFileMigration(AiidaTestCase):
             verify_metadata_version(metadata, version=newest_version)
             self.assertEqual(new_version, newest_version)
 
+    def test_migrate_recursively_specific_version(self):
+        """Test the `version` argument of the `migrate_recursively` function."""
+        filepath_archive = get_archive_file('export_v0.3_simple.aiida', **self.core_archive)
+
+        with Archive(filepath_archive) as archive:
+
+            # Incorrect type
+            with self.assertRaises(TypeError):
+                migrate_recursively(archive.meta_data, archive.data, None, version=0.2)
+
+            # Backward migrations are not supported
+            with self.assertRaises(ArchiveMigrationError):
+                migrate_recursively(archive.meta_data, archive.data, None, version='0.2')
+
+            # Same version will also raise
+            with self.assertRaises(ArchiveMigrationError):
+                migrate_recursively(archive.meta_data, archive.data, None, version='0.3')
+
+            migrated_version = '0.5'
+            version = migrate_recursively(archive.meta_data, archive.data, None, version=migrated_version)
+            self.assertEqual(version, migrated_version)
+
     @with_temp_dir
     def test_no_node_export(self, temp_dir):
         """Test migration of export file that has no Nodes"""
@@ -138,7 +158,6 @@ class TestExportFileMigration(AiidaTestCase):
         """Test correct errors are raised if export files have wrong version numbers"""
         from aiida.tools.importexport.migration import MIGRATE_FUNCTIONS
 
-        # Initialization
         wrong_versions = ['0.0', '0.1.0', '0.99']
         old_versions = list(MIGRATE_FUNCTIONS.keys())
         legal_versions = old_versions + [newest_version]
@@ -147,7 +166,6 @@ class TestExportFileMigration(AiidaTestCase):
             metadata = {'export_version': version}
             wrong_version_metadatas.append(metadata)
 
-        # Checks
         # Make sure the "wrong_versions" are wrong
         for version in wrong_versions:
             self.assertNotIn(
@@ -156,18 +174,11 @@ class TestExportFileMigration(AiidaTestCase):
                 msg="'{}' was not expected to be a legal version, legal version: {}".format(version, legal_versions)
             )
 
-        # Make sure migrate_recursively throws a critical message and raises SystemExit
+        # Make sure migrate_recursively throws an ArchiveMigrationError
         for metadata in wrong_version_metadatas:
-            with self.assertRaises(SystemExit) as exception:
-                with Capturing(capture_stderr=True):
-                    new_version = migrate_recursively(metadata, {}, None)
+            with self.assertRaises(ArchiveMigrationError):
+                new_version = migrate_recursively(metadata, {}, None)
 
-                self.assertIn(
-                    'Critical: Cannot migrate from version {}'.format(metadata['export_version']),
-                    exception.exception,
-                    msg="Expected a critical statement for the wrong export version '{}', "
-                    'instead got {}'.format(metadata['export_version'], exception.exception)
-                )
                 self.assertIsNone(
                     new_version,
                     msg='migrate_recursively should not return anything, '
@@ -175,26 +186,12 @@ class TestExportFileMigration(AiidaTestCase):
                 )
 
     def test_migrate_newest_version(self):
-        """
-        Test critical message and SystemExit is raised, when an export file with the newest export version is migrated
-        """
-        # Initialization
+        """Test that an exception is raised when an export file with the newest export version is migrated."""
         metadata = {'export_version': newest_version}
 
-        # Check
-        with self.assertRaises(SystemExit) as exception:
+        with self.assertRaises(ArchiveMigrationError):
+            new_version = migrate_recursively(metadata, {}, None)
 
-            with Capturing(capture_stderr=True):
-                new_version = migrate_recursively(metadata, {}, None)
-
-            self.assertIn(
-                'Critical: Your export file is already at the newest export version {}'.format(
-                    metadata['export_version']
-                ),
-                exception.exception,
-                msg="Expected a critical statement that the export version '{}' is the newest export version '{}', "
-                'instead got {}'.format(metadata['export_version'], newest_version, exception.exception)
-            )
             self.assertIsNone(
                 new_version,
                 msg='migrate_recursively should not return anything, '

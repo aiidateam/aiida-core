@@ -98,6 +98,7 @@ class TestVerdiCalculation(AiidaTestCase):
         cls.arithmetic_job = calculations[0]
 
     def setUp(self):
+        super().setUp()
         self.cli_runner = CliRunner()
 
     def test_calcjob_res(self):
@@ -140,6 +141,11 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertIn('calcinfo.json', get_result_lines(result))
         self.assertIn('job_tmpl.json', get_result_lines(result))
 
+        options = [self.arithmetic_job.uuid, 'non-existing-folder']
+        result = self.cli_runner.invoke(command.calcjob_inputls, options)
+        self.assertIsNotNone(result.exception)
+        self.assertIn('does not exist for the given node', result.output)
+
     def test_calcjob_outputls(self):
         """Test verdi calcjob outputls"""
         options = []
@@ -153,6 +159,11 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertIn('_scheduler-stderr.txt', get_result_lines(result))
         self.assertIn('_scheduler-stdout.txt', get_result_lines(result))
         self.assertIn('aiida.out', get_result_lines(result))
+
+        options = [self.arithmetic_job.uuid, 'non-existing-folder']
+        result = self.cli_runner.invoke(command.calcjob_inputls, options)
+        self.assertIsNotNone(result.exception)
+        self.assertIn('does not exist for the given node', result.output)
 
     def test_calcjob_inputcat(self):
         """Test verdi calcjob inputcat"""

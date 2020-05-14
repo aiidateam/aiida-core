@@ -177,7 +177,7 @@ In the case of the example above, it would look something like the following:
 However, in this particular example the exception is not so much an unexpected error, but one we could have considered and have seen coming, so it might be more applicable to simply mark the process as failed.
 To accomplish this, there is the concept of an :ref:`exit status<concepts_process_exit_codes>` that can be set on the process, which is an integer that, when non-zero, marks a process in the ``Finished`` state as 'failed'.
 Since the exit status is set as an attribute on the process node, it also makes it very easy to query for failed processes.
-To set a non-zero exit status on a calculation function to indicate it as failed, simply return an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` named tuple.
+To set a non-zero exit status on a calculation function to indicate it as failed, simply return an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` class.
 Time for a demonstration:
 
 .. include:: include/snippets/processes/functions/calcfunction_exit_code.py
@@ -239,7 +239,7 @@ Likewise, you should not load any existing data from the database through the AP
 A similar problem occurs when importing other python code.
 Practically, it is almost impossible to never import code into process functions, as this would force massive code duplication.
 However, there is still a difference between importing code from the ``aiida-core`` library or the repository in which the process function is hosted, and the importing of a local python file.
-Even though for both cases there can no be guarantee of reproducibility, the former stands a better chance by far, as the version number of the plugin should be recorded.
+Even though for both cases there can no be guarantee of reproducibility, the former stands a better chance by far, as the version number of the plugin package should be recorded.
 The rule of thumb then is to keep the importing of code to a minimum, but if you have to, make sure to make it part of a plugin package with a well-defined version number.
 
 Finally, as mentioned in the introduction, the source file of a process function is stored as a file in the repository for *each execution*.

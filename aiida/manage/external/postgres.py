@@ -21,7 +21,7 @@ __all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
 import click
 
 from aiida.cmdline.utils import echo
-from .pgsu import PGSU, PostgresConnectionMode, DEFAULT_DBINFO
+from pgsu import PGSU, PostgresConnectionMode, DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
 _DROP_USER_COMMAND = 'DROP USER "{}"'
@@ -32,20 +32,20 @@ _CREATE_DB_COMMAND = (
 )
 _DROP_DB_COMMAND = 'DROP DATABASE "{}"'
 _GRANT_PRIV_COMMAND = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
-_GET_USERS_COMMAND = "SELECT usename FROM pg_user WHERE usename='{}'"
+_USER_EXISTS_COMMAND = "SELECT usename FROM pg_user WHERE usename='{}'"
 _CHECK_DB_EXISTS_COMMAND = "SELECT datname FROM pg_database WHERE datname='{}'"
 _COPY_DB_COMMAND = 'CREATE DATABASE "{}" WITH TEMPLATE "{}" OWNER "{}"'
 
 
 class Postgres(PGSU):
     """
-    Adds convenience functions to pgsu.Postgres.
+    Adds convenience functions to :py:class:`pgsu.PGSU`.
 
-    Provides conenience functions for
+    Provides convenience functions for
       * creating/dropping users
       * creating/dropping databases
 
-    etc. See pgsu.Postgres for implementation details.
+    etc.
 
     Example::
 
@@ -55,6 +55,10 @@ class Postgres(PGSU):
             postgres.create_db('username', 'dbname')
     """
 
+    def __init__(self, dbinfo=None, **kwargs):
+        """See documentation of :py:meth:`pgsu.PGSU.__init__`."""
+        super().__init__(dsn=dbinfo, **kwargs)
+
     @classmethod
     def from_profile(cls, profile, **kwargs):
         """Create Postgres instance with dbinfo from AiiDA profile data.
@@ -63,7 +67,7 @@ class Postgres(PGSU):
           database superuser.
 
         :param profile: AiiDA profile instance
-        :param kwargs: keyword arguments forwarded to Postgres constructor
+        :param kwargs: keyword arguments forwarded to PGSU constructor
 
         :returns: Postgres instance pre-populated with data from AiiDA profile
         """
@@ -77,8 +81,89 @@ class Postgres(PGSU):
 
         return Postgres(dbinfo=dbinfo, **kwargs)
 
-    def check_db_name(self, dbname):
-        """Looks up if a database with the name exists, prompts for using or creating a differently named one."""
+    ### DB user functions ###
+
+    def dbuser_exists(self, dbuser):
+        """
+        Find out if postgres user with name dbuser exists
+
+        :param str dbuser: database user to check for
+        :return: (bool) True if user exists, False otherwise
+        """
+        return bool(self.execute(_USER_EXISTS_COMMAND.format(dbuser)))
+
+    def create_dbuser(self, dbuser, dbpass):
+        """
+        Create a database user in postgres
+
+        :param str dbuser: Name of the user to be created.
+        :param str dbpass: Password the user should be given.
+        :raises: psycopg2.errors.DuplicateObject if user already exists and
+            self.connection_mode == PostgresConnectionMode.PSYCOPG
+        """
+        self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass))
+
+    def drop_dbuser(self, dbuser):
+        """
+        Drop a database user in postgres
+
+        :param str dbuser: Name of the user to be dropped.
+        """
+        self.execute(_DROP_USER_COMMAND.format(dbuser))
+
+    def check_dbuser(self, dbuser):
+        """Looks up if a given user already exists, prompts for using or creating a differently named one.
+
+        :param str dbuser: Name of the user to be created or reused.
+        :returns: tuple (dbuser, created)
+        """
+        create = True
+        while create and self.dbuser_exists(dbuser):
+            echo.echo_info('Database user "{}" already exists!'.format(dbuser))
+            if not click.confirm('Use it? '):
+                dbuser = click.prompt('New database user name: ', type=str, default=dbuser)
+            else:
+                create = False
+        return dbuser, create
+
+    ### DB functions ###
+
+    def db_exists(self, dbname):
+        """
+        Check wether a postgres database with dbname exists
+
+        :param str dbname: Name of the database to check for
+        :return: (bool), True if database exists, False otherwise
+        """
+        return bool(self.execute(_CHECK_DB_EXISTS_COMMAND.format(dbname)))
+
+    def create_db(self, dbuser, dbname):
+        """
+        Create a database in postgres
+
+        :param str dbuser: Name of the user which should own the db.
+        :param str dbname: Name of the database.
+        """
+        self.execute(_CREATE_DB_COMMAND.format(dbname, dbuser))
+        self.execute(_GRANT_PRIV_COMMAND.format(dbname, dbuser))
+
+    def drop_db(self, dbname):
+        """
+        Drop a database in postgres
+
+        :param str dbname: Name of the database.
+        """
+        self.execute(_DROP_DB_COMMAND.format(dbname))
+
+    def copy_db(self, src_db, dest_db, dbuser):
+        self.execute(_COPY_DB_COMMAND.format(dest_db, src_db, dbuser))
+
+    def check_db(self, dbname):
+        """Looks up if a database with the name exists, prompts for using or creating a differently named one.
+
+        :param str dbname: Name of the database to be created or reused.
+        :returns: tuple (dbname, created)
+        """
         create = True
         while create and self.db_exists(dbname):
             echo.echo_info('database {} already exists!'.format(dbname))
@@ -88,68 +173,48 @@ class Postgres(PGSU):
                 create = False
         return dbname, create
 
-    def create_dbuser(self, dbuser, dbpass):
-        """
-        Create a database user in postgres
+    def create_dbuser_db_safe(self, dbname, dbuser, dbpass):
+        """Create DB and user + grant privileges.
 
-        :param dbuser: (str), Name of the user to be created.
-        :param dbpass: (str), Password the user should be given.
+        Prompts when reusing existing users / databases.
         """
-        self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass))
+        dbuser, create = self.check_dbuser(dbuser=dbuser)
+        if create:
+            self.create_dbuser(dbuser=dbuser, dbpass=dbpass)
 
-    def drop_dbuser(self, dbuser):
-        """
-        Drop a database user in postgres
+        dbname, create = self.check_db(dbname=dbname)
+        if create:
+            self.create_db(dbuser, dbname)
 
-        :param dbuser: (str), Name of the user to be dropped.
-        """
-        self.execute(_DROP_USER_COMMAND.format(dbuser))
+        return dbuser, dbname
 
-    def dbuser_exists(self, dbuser):
-        """
-        Find out if postgres user with name dbuser exists
+    @property
+    def host_for_psycopg2(self):
+        """Return correct host for psycopg2 connection (as required by regular AiiDA operation)."""
+        host = self.dsn.get('host')
+        if self.connection_mode == PostgresConnectionMode.PSQL:
+            # If "sudo su postgres" was needed to create the DB, we are likely on Ubuntu, where
+            # the same will *not* work for arbitrary database users => enforce TCP/IP connection
+            host = host or 'localhost'
 
-        :param dbuser: (str) database user to check for
-        :return: (bool) True if user exists, False otherwise
-        """
-        return bool(self.execute(_GET_USERS_COMMAND.format(dbuser)))
+        return host
 
-    def create_db(self, dbuser, dbname):
-        """
-        Create a database in postgres
+    @property
+    def port_for_psycopg2(self):
+        """Return port for psycopg2 connection (as required by regular AiiDA operation)."""
+        return self.dsn.get('port')
 
-        :param dbuser: (str), Name of the user which should own the db.
-        :param dbname: (str), Name of the database.
-        """
-        self.execute(_CREATE_DB_COMMAND.format(dbname, dbuser))
-        self.execute(_GRANT_PRIV_COMMAND.format(dbname, dbuser))
-
-    def drop_db(self, dbname):
-        """
-        Drop a database in postgres
-
-        :param dbname: (str), Name of the database.
-        """
-        self.execute(_DROP_DB_COMMAND.format(dbname))
-
-    def copy_db(self, src_db, dest_db, dbuser):
-        self.execute(_COPY_DB_COMMAND.format(dest_db, src_db, dbuser))
-
-    def db_exists(self, dbname):
-        """
-        Check wether a postgres database with dbname exists
-
-        :param dbname: Name of the database to check for
-        :return: (bool), True if database exists, False otherwise
-        """
-        return bool(self.execute(_CHECK_DB_EXISTS_COMMAND.format(dbname)))
+    @property
+    def dbinfo(self):
+        """Alias for Postgres.dsn."""
+        return self.dsn.copy()
 
 
 def manual_setup_instructions(dbuser, dbname):
     """Create a message with instructions for manually creating a database"""
     dbpass = '<password>'
     instructions = '\n'.join([
-        'Please run the following commands as the user for PostgreSQL (Ubuntu: $sudo su postgres):',
+        'Run the following commands as a UNIX user with access to PostgreSQL (Ubuntu: $ sudo su postgres):',
         '',
         '\t$ psql template1',
         '\t==> ' + _CREATE_USER_COMMAND.format(dbuser, dbpass),

@@ -49,12 +49,16 @@ def verdi_status():
     from aiida.common.utils import Capturing
     from aiida.manage.external.rmq import get_rmq_url
     from aiida.manage.manager import get_manager
+    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
     exit_code = ExitCode.SUCCESS
+
+    # path to configuration file
+    print_status(ServiceStatus.UP, 'config dir', AIIDA_CONFIG_FOLDER)
+
     manager = get_manager()
     profile = manager.get_profile()
 
-    # getting the profile
     try:
         profile = manager.get_profile()
         print_status(ServiceStatus.UP, 'profile', 'On profile {}'.format(profile.name))

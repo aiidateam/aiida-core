@@ -8,15 +8,45 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Base implementation of `WorkChain` class that implements a simple automated restart mechanism for sub processes."""
+import functools
+
 from aiida import orm
 from aiida.common import AttributeDict
-from aiida.common.lang import classproperty
 
 from .context import ToContext, append_
 from .workchain import WorkChain
-from .utils import ProcessHandlerReport
+from .utils import ProcessHandlerReport, process_handler
 
 __all__ = ('BaseRestartWorkChain',)
+
+
+def validate_handler_overrides(process_class, handler_overrides, ctx):  # pylint: disable=inconsistent-return-statements,unused-argument
+    """Validator for the `handler_overrides` input port of the `BaseRestartWorkChain.
+
+    The `handler_overrides` should be a dictionary where keys are strings that are the name of a process handler, i.e. a
+    instance method of the `process_class` that has been decorated with the `process_handler` decorator. The values
+    should be boolean.
+
+    .. note:: the normal signature of a port validator is `(value, ctx)` but since for the validation here we need a
+        reference to the process class, we add it and the class is bound to the method in the port declaration in the
+        `define` method.
+
+    :param process_class: the `BaseRestartWorkChain` (sub) class
+    :param handler_overrides: the input `Dict` node
+    :param ctx: the `PortNamespace` in which the port is embedded
+    """
+    if not handler_overrides:
+        return
+
+    for handler, override in handler_overrides.get_dict().items():
+        if not isinstance(handler, str):
+            return 'The key `{}` is not a string.'.format(handler)
+
+        if not process_class.is_process_handler(handler):
+            return 'The key `{}` is not a process handler of {}'.format(handler, process_class)
+
+        if not isinstance(override, bool):
+            return 'The value of key `{}` is not a boolean.'.format(handler)
 
 
 class BaseRestartWorkChain(WorkChain):
@@ -28,8 +58,9 @@ class BaseRestartWorkChain(WorkChain):
     are recoverable.
 
     This work chain implements the most basic functionality to achieve this goal. It will launch the sub process,
-    restarting until it is completed successfully or the maximum number of iterations is reached. It can recover from
-    errors through error handlers that can be registered to the class through the `register_process_handler` decorator.
+    restarting until it is completed successfully or the maximum number of iterations is reached. After completion of
+    the sub process it will be inspected, and a list of process handlers are called successively. These process handlers
+    are defined as class methods that are decorated with :meth:`~aiida.engine.process_handler`.
 
     The idea is to sub class this work chain and leverage the generic error handling that is implemented in the few
     outline methods. The minimally required outline would look something like the following::
@@ -57,13 +88,21 @@ class BaseRestartWorkChain(WorkChain):
     process will be run with those inputs.
 
     The `_process_class` attribute should be set to the `Process` class that should be run in the loop.
+    Finally, to define handlers that will be called during the `inspect_process` simply define a class method with the
+    signature `(self, node)` and decorate it with the `process_handler` decorator, for example::
+
+        @process_handler
+        def handle_problem(self, node):
+            if some_problem:
+                self.ctx.inputs = improved_inputs
+                return ProcessHandlerReport()
+
+    The `process_handler` and `ProcessHandlerReport` support various arguments to control the flow of the logic of the
+    `inspect_process`. Refer to their respective documentation for details.
     """
 
-    _verbose = False
     _process_class = None
-
-    _handler_entry_point = None
-    __handlers = tuple()
+    _considered_handlers_extra = 'considered_handlers'
 
     @classmethod
     def define(cls, spec):
@@ -74,6 +113,11 @@ class BaseRestartWorkChain(WorkChain):
             help='Maximum number of iterations the work chain will restart the process to finish successfully.')
         spec.input('clean_workdir', valid_type=orm.Bool, default=lambda: orm.Bool(False),
             help='If `True`, work directories of all called calculation jobs will be cleaned at the end of execution.')
+        spec.input('handler_overrides',
+            valid_type=orm.Dict, required=False, validator=functools.partial(validate_handler_overrides, cls),
+            help='Mapping where keys are process handler names and the values are a boolean, where `True` will enable '
+                 'the corresponding handler and `False` will disable it. This overrides the default value set by the '
+                 '`enabled` keyword of the `process_handler` decorator with which the method is decorated.')
         spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED',
             message='The sub process excepted.')
         spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED',
@@ -85,6 +129,8 @@ class BaseRestartWorkChain(WorkChain):
 
     def setup(self):
         """Initialize context variables that are used during the logical flow of the `BaseRestartWorkChain`."""
+        overrides = self.inputs.handler_overrides.get_dict() if 'handler_overrides' in self.inputs else {}
+        self.ctx.handler_overrides = overrides
         self.ctx.process_name = self._process_class.__name__
         self.ctx.unhandled_failure = False
         self.ctx.is_finished = False
@@ -113,12 +159,12 @@ class BaseRestartWorkChain(WorkChain):
         inputs = self._wrap_bare_dict_inputs(self._process_class.spec().inputs, unwrapped_inputs)
         node = self.submit(self._process_class, **inputs)
 
-        # Add a new empty list to the `called_process_handlers` extra. If any errors handled registered through the
-        # `register_process_handler` decorator return an `ProcessHandlerReport`, their name will be appended to that
-        # list.
-        called_process_handlers = self.node.get_extra('called_process_handlers', [])
-        called_process_handlers.append([])
-        self.node.set_extra('called_process_handlers', called_process_handlers)
+        # Add a new empty list to the `BaseRestartWorkChain._considered_handlers_extra` extra. This will contain the
+        # name and return value of all class methods, decorated with `process_handler`, that are called during
+        # the `inspect_process` outline step.
+        considered_handlers = self.node.get_extra(self._considered_handlers_extra, [])
+        considered_handlers.append([])
+        self.node.set_extra(self._considered_handlers_extra, considered_handlers)
 
         self.report('launching {}<{}> iteration #{}'.format(self.ctx.process_name, node.pk, self.ctx.iteration))
 
@@ -153,18 +199,22 @@ class BaseRestartWorkChain(WorkChain):
         if node.is_killed:
             return self.exit_codes.ERROR_SUB_PROCESS_KILLED  # pylint: disable=no-member
 
-        # Sort the handlers with a priority defined, based on their priority in reverse order
-        handlers = [handler for handler in self._handlers if handler.priority]
-        handlers = sorted(handlers, key=lambda x: x.priority, reverse=True)
-
         last_report = None
 
-        for handler in handlers:
+        # Sort the handlers with a priority defined, based on their priority in reverse order
+        for handler in sorted(self.get_process_handlers(), key=lambda handler: handler.priority, reverse=True):
 
-            report = handler.method(self, node)
+            # Skip if the handler is enabled, either explicitly through `handler_overrides` or by default
+            if not self.ctx.handler_overrides.get(handler.__name__, handler.enabled):
+                continue
+
+            # Even though the `handler` is an instance method, the `get_process_handlers` method returns unbound methods
+            # so we have to pass in `self` manually. Also, always pass the `node` as an argument because the
+            # `process_handler` decorator with which the handler is decorated relies on this behavior.
+            report = handler(self, node)
 
             if report is not None and not isinstance(report, ProcessHandlerReport):
-                name = handler.method.__name__
+                name = handler.__name__
                 raise RuntimeError('handler `{}` returned a value that is not a ProcessHandlerReport'.format(name))
 
             # If an actual report was returned, save it so it is not overridden by next handler returning `None`
@@ -234,8 +284,6 @@ class BaseRestartWorkChain(WorkChain):
                         name, self.ctx.process_name, node.pk))
             else:
                 self.out(name, output)
-                if self._verbose:
-                    self.report("attaching the node {}<{}> as '{}'".format(output.__class__.__name__, output.pk, name))
 
     def __init__(self, *args, **kwargs):
         """Construct the instance."""
@@ -245,23 +293,25 @@ class BaseRestartWorkChain(WorkChain):
         if self._process_class is None or not issubclass(self._process_class, Process):
             raise ValueError('no valid Process class defined for `_process_class` attribute')
 
-    @classproperty
-    def _handlers(cls):  # pylint: disable=no-self-argument
-        """Return the tuple of all registered handlers for this class and of any parent class.
+    @classmethod
+    def is_process_handler(cls, process_handler_name):
+        """Return whether the given method name corresponds to a process handler of this class.
 
-        :return: tuple of handler methods
+        :param process_handler_name: string name of the instance method
+        :return: boolean, True if corresponds to process handler, False otherwise
         """
-        return getattr(super(), '__handlers', tuple()) + cls.__handlers
+        # pylint: disable=comparison-with-callable
+        if isinstance(process_handler_name, str):
+            handler = getattr(cls, process_handler_name, {})
+        else:
+            handler = process_handler_name
+
+        return getattr(handler, 'decorator', None) == process_handler
 
     @classmethod
-    def register_handler(cls, name, handler):
-        """Register a new handler to this class.
-
-        :param name: the name under which to register the handler
-        :param handler: a method with the signature `self, node`.
-        """
-        setattr(cls, name, handler)
-        cls.__handlers = cls.__handlers + (handler,)
+    def get_process_handlers(cls):
+        from inspect import getmembers
+        return [method[1] for method in getmembers(cls) if cls.is_process_handler(method[1])]
 
     def on_terminated(self):
         """Clean the working directories of all child calculation jobs if `clean_workdir=True` in the inputs."""

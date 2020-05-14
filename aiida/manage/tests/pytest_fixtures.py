@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name,unused-argument
 """
 Collection of pytest fixtures using the TestManager for easy testing of AiiDA plugins.
 
@@ -16,8 +17,8 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
  * aiida_local_code_factory
 
 """
-import tempfile
 import shutil
+import tempfile
 import pytest
 
 from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
@@ -30,19 +31,32 @@ def aiida_profile():
     Note: scope='session' limits this fixture to run once per session. Thanks to ``autouse=True``, you don't actually
      need to depend on it explicitly - it will activate as soon as you import it in your ``conftest.py``.
     """
-    # create new TestManager instance
-    with test_manager(backend=get_test_backend_name(), profile_name=get_test_profile_name()) as test_mgr:
-        yield test_mgr
-    # here, the TestManager instance has already been destroyed
+    with test_manager(backend=get_test_backend_name(), profile_name=get_test_profile_name()) as manager:
+        yield manager
+    # Leaving the context manager will automatically cause the `TestManager` instance to be destroyed
 
 
 @pytest.fixture(scope='function')
-def clear_database(aiida_profile):  # pylint: disable=redefined-outer-name
-    """Clear the database after each test.
+def clear_database(clear_database_after_test):
+    """Alias for 'clear_database_after_test'.
+
+    Clears the database after each test. Use of the explicit
+    'clear_database_after_test' is preferred.
     """
+
+
+@pytest.fixture(scope='function')
+def clear_database_after_test(aiida_profile):
+    """Clear the database after the test."""
     yield
-    # after the test function has completed, reset the database
     aiida_profile.reset_db()
+
+
+@pytest.fixture(scope='function')
+def clear_database_before_test(aiida_profile):
+    """Clear the database before the test."""
+    aiida_profile.reset_db()
+    yield
 
 
 @pytest.fixture(scope='function')
@@ -64,7 +78,7 @@ def temp_dir():
 
 
 @pytest.fixture(scope='function')
-def aiida_localhost(temp_dir):  # pylint: disable=redefined-outer-name
+def aiida_localhost(temp_dir):
     """Get an AiiDA computer for localhost.
 
     Usage::
@@ -101,7 +115,7 @@ def aiida_localhost(temp_dir):  # pylint: disable=redefined-outer-name
 
 
 @pytest.fixture(scope='function')
-def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-outer-name
+def aiida_local_code_factory(aiida_localhost):
     """Get an AiiDA code on localhost.
 
     Searches in the PATH for a given executable and creates an AiiDA code with provided entry point.
@@ -109,36 +123,56 @@ def aiida_local_code_factory(aiida_localhost):  # pylint: disable=redefined-oute
     Usage::
 
       def test_1(aiida_local_code_factory):
-          code = aiida_local_code_factory('pw.x', 'quantumespresso.pw')
+          code = aiida_local_code_factory('quantumespresso.pw', '/usr/bin/pw.x')
           # use code for testing ...
 
-    :return: A function get_code(executable, entry_point) that returns the Code node.
+    :return: A function get_code(entry_point, executable) that returns the `Code` node.
     :rtype: object
     """
 
-    def get_code(entry_point, executable, computer=aiida_localhost):
+    def get_code(entry_point, executable, computer=aiida_localhost, label=None, prepend_text=None, append_text=None):
         """Get local code.
+
         Sets up code for given entry point on given computer.
 
         :param entry_point: Entry point of calculation plugin
         :param executable: name of executable; will be searched for in local system PATH.
         :param computer: (local) AiiDA computer
-        :return: The code node
+        :param prepend_text: a string of code that will be put in the scheduler script before the execution of the code.
+        :param append_text: a string of code that will be put in the scheduler script after the execution of the code.
+        :return: the `Code` either retrieved from the database or created if it did not yet exist.
         :rtype: :py:class:`aiida.orm.Code`
         """
-        from aiida.orm import Code
+        from aiida.common import exceptions
+        from aiida.orm import Code, Computer, QueryBuilder
 
-        codes = Code.objects.find(filters={'label': executable})  # pylint: disable=no-member
-        if codes:
-            return codes[0]
+        if label is None:
+            label = executable
+
+        builder = QueryBuilder().append(Computer, filters={'uuid': computer.uuid}, tag='computer')
+        builder.append(Code, filters={'label': label, 'attributes.input_plugin': entry_point}, with_computer='computer')
+
+        try:
+            code = builder.one()[0]
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+            code = None
+        else:
+            return code
 
         executable_path = shutil.which(executable)
+        if not executable_path:
+            raise ValueError('The executable "{}" was not found in the $PATH.'.format(executable))
 
-        code = Code(
-            input_plugin_name=entry_point,
-            remote_computer_exec=[computer, executable_path],
-        )
-        code.label = executable
+        code = Code(input_plugin_name=entry_point, remote_computer_exec=[computer, executable_path])
+        code.label = label
+        code.description = label
+
+        if prepend_text is not None:
+            code.set_prepend_text(prepend_text)
+
+        if append_text is not None:
+            code.set_append_text(append_text)
+
         return code.store()
 
     return get_code

@@ -33,6 +33,7 @@ class TestVerdiStatus(AiidaTestCase):
         options = []
         result = self.cli_runner.invoke(cmd_status.verdi_status, options)
         self.assertIsInstance(result.exception, SystemExit)
+        self.assertIn('config', result.output)
         self.assertIn('profile', result.output)
         self.assertIn('postgres', result.output)
         self.assertIn('rabbitmq', result.output)

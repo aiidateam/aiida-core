@@ -21,7 +21,7 @@ class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0043_default_link_label'
+LATEST_MIGRATION = '0044_dbgroup_type_string'
 
 
 def _update_schema_version(version, apps, _):

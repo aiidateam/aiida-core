@@ -1,10 +1,11 @@
 {
   "name": "aiida-core",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "url": "http://www.aiida.net/",
   "license": "MIT License",
   "author": "The AiiDA team",
   "author_email": "developers@aiida.net",
+  "description": "AiiDA is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.",
   "include_package_data": true,
   "python_requires": ">=3.5",
   "classifiers": [
@@ -37,6 +38,7 @@
     "paramiko~=2.6",
     "pika~=1.1",
     "plumpy~=0.14.5",
+    "pgsu~=0.1.0",
     "psutil~=5.6",
     "psycopg2-binary~=2.8,>=2.8.3",
     "pyblake2~=1.1; python_version<'3.6'",
@@ -51,7 +53,7 @@
     "tornado<5.0",
     "tzlocal~=2.0",
     "upf_to_json~=0.9.2",
-    "wrapt~=1.11"
+    "wrapt~=1.11.1"
   ],
   "extras_require": {
     "ssh_kerberos": [
@@ -87,15 +89,18 @@
       "notebook<6"
     ],
     "testing": [
-      "aiida-export-migration-tests==0.8.0",
+      "aiida-export-migration-tests==0.9.0",
       "pg8000~=1.13",
       "pgtest~=1.3,>=1.3.1",
       "pytest~=5.3",
       "pytest-timeout~=1.3",
+      "pytest-cov~=2.7",
+      "coverage<5.0",
       "sqlalchemy-diff~=0.1.3"
     ],
     "dev_precommit": [
       "astroid==2.3.3",
+      "packaging==20.3",
       "pre-commit==1.18.3",
       "prospector==1.2.0",
       "pylint==2.4.4",
@@ -109,7 +114,8 @@
   "reentry_register": true,
   "entry_points": {
     "console_scripts": [
-      "verdi=aiida.cmdline.commands.cmd_verdi:verdi"
+      "verdi=aiida.cmdline.commands.cmd_verdi:verdi",
+      "runaiida=aiida.cmdline.commands.cmd_run:run"
     ],
     "aiida.calculations": [
       "arithmetic.add = aiida.calculations.plugins.arithmetic.add:ArithmeticAddCalculation",
@@ -153,6 +159,12 @@
       "str = aiida.orm.nodes.data.str:Str",
       "structure = aiida.orm.nodes.data.structure:StructureData",
       "upf = aiida.orm.nodes.data.upf:UpfData"
+    ],
+    "aiida.groups": [
+      "core = aiida.orm.groups:Group",
+      "core.auto = aiida.orm.groups:AutoGroup",
+      "core.import = aiida.orm.groups:ImportGroup",
+      "core.upf = aiida.orm.groups:UpfFamily"
     ],
     "aiida.node": [
       "data = aiida.orm.nodes.data.data:Data",
@@ -198,8 +210,5 @@
       "realhydrogen = aiida.tools.data.orbital.realhydrogen:RealhydrogenOrbital"
     ],
     "aiida.workflows": []
-  },
-  "scripts": [
-    "bin/runaiida"
-  ]
+  }
 }

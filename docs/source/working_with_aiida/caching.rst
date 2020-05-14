@@ -104,6 +104,30 @@ Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides c
 In this example, caching is disabled by default, but explicitly enabled for calculaions of the ``PwCalculation`` class, identified by the ``aiida.calculations:quantumespresso.pw`` entry point string.
 It also shows how to disable caching for particular calculations (which has no effect here due to the profile-wide default).
 
+For calculations which do not have an entry point, you need to specify the fully qualified Python name instead. For example, the ``seekpath_structure_analysis`` calcfunction defined in ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis`` is labelled as ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis.seekpath_structure_analysis``. From an existing :class:`~aiida.orm.nodes.process.calculation.CalculationNode`, you can get the identifier string through the ``process_type`` attribute.
+
+The caching configuration also accepts ``*`` wildcards. For example, the following configuration enables caching for all calculation entry points defined by ``aiida-quantumespresso``, and the ``seekpath_structure_analysis`` calcfunction. Note that the ``*.seekpath_structure_analysis`` entry needs to be quoted, because it starts with ``*`` which is a special character in YAML.
+
+.. code:: yaml
+
+    profile-name:
+      default: False
+      enabled:
+        - aiida.calculations:quantumespresso.*
+        - '*.seekpath_structure_analysis'
+
+You can even override a wildcard with a more specific entry. The following configuration enables caching for all ``aiida.calculation`` entry points, except those of ``aiida-quantumespresso``:
+
+.. code:: yaml
+
+    profile-name:
+      default: False
+      enabled:
+        - aiida.calculations:*
+      disabled:
+        - aiida.calculations:quantumespresso.*
+
+
 Instance level
 ..............
 

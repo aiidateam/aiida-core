@@ -31,7 +31,7 @@ class ExampleWorkChain(WorkChain):
         spec.input('name.spaced', valid_type=orm.Int, help='Namespaced port')
         spec.input('name_spaced', valid_type=orm.Str, help='Not actually a namespaced port')
         spec.input('boolean', valid_type=orm.Bool, help='A pointless boolean')
-        spec.input('default', valid_type=orm.Int, default=orm.Int(DEFAULT_INT).store())
+        spec.input('default', valid_type=orm.Int, default=lambda: orm.Int(DEFAULT_INT).store())
 
 
 class LazyProcessNamespace(Process):

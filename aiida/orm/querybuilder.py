@@ -49,6 +49,14 @@ __all__ = ('QueryBuilder',)
 
 _LOGGER = logging.getLogger(__name__)
 
+# This global variable is necessary to enable the subclassing functionality for the `Group` entity. The current
+# implementation of the `QueryBuilder` was written with the assumption that only `Node` was subclassable. Support for
+# subclassing was added later for `Group` and is based on its `type_string`, but the current implementation does not
+# allow to extend this support to the `QueryBuilder` in an elegant way. The prefix `group.` needs to be used in various
+# places to make it work, but really the internals of the `QueryBuilder` should be rewritten to in principle support
+# subclassing for any entity type. This workaround should then be able to be removed.
+GROUP_ENTITY_TYPE_PREFIX = 'group.'
+
 
 def get_querybuilder_classifiers_from_cls(cls, qb):
     """
@@ -83,10 +91,10 @@ def get_querybuilder_classifiers_from_cls(cls, qb):
 
     # Groups:
     elif issubclass(cls, qb.Group):
-        classifiers['ormclass_type_string'] = 'group'
+        classifiers['ormclass_type_string'] = GROUP_ENTITY_TYPE_PREFIX + cls._type_string
         ormclass = cls
     elif issubclass(cls, groups.Group):
-        classifiers['ormclass_type_string'] = 'group'
+        classifiers['ormclass_type_string'] = GROUP_ENTITY_TYPE_PREFIX + cls._type_string
         ormclass = qb.Group
 
     # Computers:
@@ -164,7 +172,8 @@ def get_querybuilder_classifiers_from_type(ormclass_type_string, qb):
     classifiers['process_type_string'] = None
     classifiers['ormclass_type_string'] = ormclass_type_string.lower()
 
-    if classifiers['ormclass_type_string'] == 'group':
+    if classifiers['ormclass_type_string'].startswith(GROUP_ENTITY_TYPE_PREFIX):
+        classifiers['ormclass_type_string'] = 'group.core'
         ormclass = qb.Group
     elif classifiers['ormclass_type_string'] == 'computer':
         ormclass = qb.Computer
@@ -179,11 +188,10 @@ def get_querybuilder_classifiers_from_type(ormclass_type_string, qb):
     if ormclass == qb.Node:
         is_valid_node_type_string(classifiers['ormclass_type_string'], raise_on_false=True)
 
-
     return ormclass, classifiers
 
 
-def get_type_filter(classifiers, subclassing):
+def get_node_type_filter(classifiers, subclassing):
     """
     Return filter dictionaries given a set of classifiers.
 
@@ -199,13 +207,14 @@ def get_type_filter(classifiers, subclassing):
     value = classifiers['ormclass_type_string']
 
     if not subclassing:
-        filter = {'==': value}
+        filters = {'==': value}
     else:
         # Note: the query_type_string always ends with a dot. This ensures that "like {str}%" matches *only*
         # the query type string
-        filter = {'like': '{}%'.format(escape_for_sql_like(get_query_type_from_type_string(value)))}
+        filters = {'like': '{}%'.format(escape_for_sql_like(get_query_type_from_type_string(value)))}
 
-    return filter
+    return filters
+
 
 def get_process_type_filter(classifiers, subclassing):
     """
@@ -229,7 +238,7 @@ def get_process_type_filter(classifiers, subclassing):
     value = classifiers['process_type_string']
 
     if not subclassing:
-        filter = {'==': value}
+        filters = {'==': value}
     else:
         if ':' in value:
             # if value is an entry point, do usual subclassing
@@ -237,7 +246,7 @@ def get_process_type_filter(classifiers, subclassing):
             # Note: the process_type_string stored in the database does *not* end in a dot.
             # In order to avoid that querying for class 'Begin' will also find class 'BeginEnd',
             # we need to search separately for equality and 'like'.
-            filter = {'or': [
+            filters = {'or': [
                 {'==': value},
                 {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},
             ]}
@@ -248,19 +257,46 @@ def get_process_type_filter(classifiers, subclassing):
             # between process classes and node classes
 
             # Note: Improve this when issue #2475 is addressed
-            filter = {'like': '%'}
+            filters = {'like': '%'}
         else:
             warnings.warn("Process type '{}' does not correspond to a registered entry. "
                           'This risks queries to fail once the location of the process class changes. '
                           "Add an entry point for '{}' to remove this warning.".format(value, value),
                           AiidaEntryPointWarning)
-            filter = {'or': [
+            filters = {'or': [
                 {'==': value},
                 {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},
             ]}
 
+    return filters
 
-    return filter
+
+def get_group_type_filter(classifiers, subclassing):
+    """Return filter dictionaries for `Group.type_string` given a set of classifiers.
+
+    :param classifiers: a dictionary with classifiers (note: does *not* support lists)
+    :param subclassing: if True, allow for subclasses of the ormclass
+
+    :returns: dictionary in QueryBuilder filter language to pass into {'type_string': ... }
+    :rtype: dict
+    """
+    from aiida.common.escaping import escape_for_sql_like
+
+    value = classifiers['ormclass_type_string'].lstrip(GROUP_ENTITY_TYPE_PREFIX)
+
+    if not subclassing:
+        filters = {'==': value}
+    else:
+        # This is a hardcoded solution to the problem that the base class `Group` should match all subclasses, however
+        # its entry point string is `core` and so will only match those subclasses whose entry point also starts with
+        # 'core', however, this is only the case for group subclasses shipped with `aiida-core`. Any plugins from
+        # external packages will never be matched. Making the entry point name of `Group` an empty string is also not
+        # possible so we perform the switch here in code.
+        if value == 'core':
+            value = ''
+        filters = {'like': '{}%'.format(escape_for_sql_like(value))}
+
+    return filters
 
 
 class QueryBuilder:
@@ -692,20 +728,16 @@ class QueryBuilder:
         # FILTERS ######################################
         try:
             self._filters[tag] = {}
-            # So far, only Node and its subclasses need additional filters on column type
-            # (for other classes, the "classifi.
-            # This so far only is necessary for AiidaNodes not for groups.
-            # Now here there is the issue that for everything else,
-            # the query_type_string is either None (e.g. if Group was passed)
-            # or a list of None (if (Group, ) was passed.
-            # Here we have to only call the function _add_type_filter essentially if it makes sense to
-            # For now that is only nodes, and it is hardcoded. In the future (e.g. we subclass group)
-            # this has to be added
+            # Subclassing is currently only implemented for the `Node` and `Group` classes. So for those cases we need
+            # to construct the correct filters corresponding to the provided classes and value of `subclassing`.
             if ormclass == self._impl.Node:
-                self._add_type_filter(tag, classifiers, subclassing)
+                self._add_node_type_filter(tag, classifiers, subclassing)
                 self._add_process_type_filter(tag, classifiers, subclassing)
 
-            # The order has to be first _add_type_filter and then add_filter.
+            elif ormclass == self._impl.Group:
+                self._add_group_type_filter(tag, classifiers, subclassing)
+
+            # The order has to be first _add_node_type_filter and then add_filter.
             # If the user adds a query on the type column, it overwrites what I did
             # if the user specified a filter, add it:
             if filters is not None:
@@ -993,23 +1025,21 @@ class QueryBuilder:
 
         return processed_filters
 
-    def _add_type_filter(self, tagspec, classifiers, subclassing):
+    def _add_node_type_filter(self, tagspec, classifiers, subclassing):
         """
-        Add a filter based on type.
+        Add a filter based on node type.
 
         :param tagspec: The tag, which has to exist already as a key in self._filters
         :param classifiers: a dictionary with classifiers
         :param subclassing: if True, allow for subclasses of the ormclass
         """
-        tag = self._get_tag_from_specification(tagspec)
-
         if isinstance(classifiers, list):
             # If a list was passed to QueryBuilder.append, this propagates to a list in the classifiers
             entity_type_filter = {'or': []}
             for c in classifiers:
-                entity_type_filter['or'].append(get_type_filter(c, subclassing))
+                entity_type_filter['or'].append(get_node_type_filter(c, subclassing))
         else:
-            entity_type_filter = get_type_filter(classifiers, subclassing)
+            entity_type_filter = get_node_type_filter(classifiers, subclassing)
 
         self.add_filter(tagspec, {'node_type': entity_type_filter})
 
@@ -1023,8 +1053,6 @@ class QueryBuilder:
 
         Note: This function handles the case when process_type_string is None.
         """
-        tag = self._get_tag_from_specification(tagspec)
-
         if isinstance(classifiers, list):
             # If a list was passed to QueryBuilder.append, this propagates to a list in the classifiers
             process_type_filter = {'or': []}
@@ -1040,6 +1068,23 @@ class QueryBuilder:
                 process_type_filter = get_process_type_filter(classifiers, subclassing)
                 self.add_filter(tagspec, {'process_type': process_type_filter})
 
+    def _add_group_type_filter(self, tagspec, classifiers, subclassing):
+        """
+        Add a filter based on group type.
+
+        :param tagspec: The tag, which has to exist already as a key in self._filters
+        :param classifiers: a dictionary with classifiers
+        :param subclassing: if True, allow for subclasses of the ormclass
+        """
+        if isinstance(classifiers, list):
+            # If a list was passed to QueryBuilder.append, this propagates to a list in the classifiers
+            type_string_filter = {'or': []}
+            for classifier in classifiers:
+                type_string_filter['or'].append(get_group_type_filter(classifier, subclassing))
+        else:
+            type_string_filter = get_group_type_filter(classifiers, subclassing)
+
+        self.add_filter(tagspec, {'type_string': type_string_filter})
 
     def add_projection(self, tag_spec, projection_spec):
         r"""
@@ -1678,10 +1723,14 @@ class QueryBuilder:
         :param joining_value: the tag of the nodes to be joined
         """
         # Set the calling entity - to allow for the correct join relation to be set
-        if self._path[index]['entity_type'] not in ['computer', 'user', 'group', 'comment', 'log']:
+        entity_type = self._path[index]['entity_type']
+
+        if isinstance(entity_type, str) and entity_type.startswith(GROUP_ENTITY_TYPE_PREFIX):
+            calling_entity = 'group'
+        elif entity_type not in ['computer', 'user', 'comment', 'log']:
             calling_entity = 'node'
         else:
-            calling_entity = self._path[index]['entity_type']
+            calling_entity = entity_type
 
         if joining_keyword == 'direction':
             if joining_value > 0:
@@ -2140,21 +2189,24 @@ class QueryBuilder:
 
             yield item
 
-    def all(self, batch_size=None):
-        """
-        Executes the full query with the order of the rows as returned by the backend.
-        the order inside each row is given by the order of the vertices in the path
-        and the order of the projections for each vertice in the path.
+    def all(self, batch_size=None, flat=False):
+        """Executes the full query with the order of the rows as returned by the backend.
 
-        :param int batch_size:
-            The size of the batches to ask the backend to batch results in subcollections.
-            You can optimize the speed of the query by tuning this parameter.
-            Leave the default (*None*) if speed is not critical or if you don't know
-            what you're doing!
+        The order inside each row is given by the order of the vertices in the path and the order of the projections for
+        each vertex in the path.
 
+        :param int batch_size: the size of the batches to ask the backend to batch results in subcollections. You can
+            optimize the speed of the query by tuning this parameter. Leave the default `None` if speed is not critical
+            or if you don't know what you're doing.
+        :param bool flat: return the result as a flat list of projected entities without sub lists.
         :returns: a list of lists of all projected entities.
         """
-        return list(self.iterall(batch_size=batch_size))
+        matches = list(self.iterall(batch_size=batch_size))
+
+        if not flat:
+            return matches
+
+        return [projection for entry in matches for projection in entry]
 
     def dict(self, batch_size=None):
         """

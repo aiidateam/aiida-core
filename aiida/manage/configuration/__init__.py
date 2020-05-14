@@ -22,7 +22,7 @@ BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as it
 
 __all__ = (
     config.__all__ + options.__all__ + profile.__all__ +
-    ('get_config', 'get_config_option', 'load_profile', 'reset_config')
+    ('get_config', 'get_config_option', 'get_config_path', 'load_profile', 'reset_config')
 )
 
 
@@ -66,6 +66,14 @@ def load_profile(profile=None):
     return PROFILE
 
 
+def get_config_path():
+    """Returns path to .aiida configuration directory."""
+    import os
+    from .settings import AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME
+
+    return os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
+
+
 def load_config(create=False):
     """Instantiate Config object representing an AiiDA configuration file.
 
@@ -82,9 +90,8 @@ def load_config(create=False):
     import os
     from aiida.common import exceptions
     from .config import Config
-    from .settings import AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME
 
-    filepath = os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
+    filepath = get_config_path()
 
     if not os.path.isfile(filepath) and not create:
         raise exceptions.MissingConfigurationError('configuration file {} does not exist'.format(filepath))

@@ -11,7 +11,7 @@
 # pylint: disable=broad-except,too-many-arguments,too-many-locals,too-many-branches
 from enum import Enum
 import traceback
-import urllib
+import urllib.request
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi

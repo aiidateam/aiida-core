@@ -99,7 +99,11 @@ class AiidaTestCase(unittest.TestCase):
 
     def reset_database(self):
         """Reset the database to the default state deleting any content currently stored"""
+        from aiida.orm import autogroup
+
         self.clean_db()
+        if autogroup.CURRENT_AUTOGROUP is not None:
+            autogroup.CURRENT_AUTOGROUP.clear_group_cache()
         self.insert_data()
 
     @classmethod
@@ -109,7 +113,10 @@ class AiidaTestCase(unittest.TestCase):
         inserts default data into the database (which is for the moment a
         default computer).
         """
+        from aiida.orm import User
+
         cls.create_user()
+        User.objects.reset()
         cls.create_computer()
 
     @classmethod
@@ -180,7 +187,11 @@ class AiidaTestCase(unittest.TestCase):
     def tearDownClass(cls, *args, **kwargs):  # pylint: disable=arguments-differ
         # Double check for double security to avoid to run the tearDown
         # if this is not a test profile
+        from aiida.orm import autogroup
+
         check_if_tests_can_run()
+        if autogroup.CURRENT_AUTOGROUP is not None:
+            autogroup.CURRENT_AUTOGROUP.clear_group_cache()
         cls.clean_db()
         cls.clean_repository()
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)

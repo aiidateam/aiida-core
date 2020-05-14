@@ -1,0 +1,268 @@
+name: test-install
+
+on:
+  pull_request:
+    paths:
+      - 'setup.*'
+      - 'environment.yml'
+      - '**/requirements*.txt'
+      - 'pyproject.toml'
+      - 'util/dependency_management.py'
+      - '.github/workflows/test-install.yml'
+  schedule:
+    - cron: '30 02 * * *'  # nightly build
+
+jobs:
+
+  validate-dependency-specification:
+    # Note: The specification is also validated by the pre-commit hook.
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+
+    - name: Install dm-script dependencies
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
+
+    - name: Validate
+      run: python ./utils/dependency_management.py validate-all
+
+  install-with-pip:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Pip install
+      run: |
+        python -m pip install -e .
+        python -m pip freeze
+
+    - name: Test importing aiida
+      run:
+        python -c "import aiida"
+
+  install-with-conda:
+
+    runs-on: ubuntu-latest
+    name: install-with-conda
+
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Conda
+      uses: s-weigand/setup-conda@v1
+      with:
+        update-conda: true
+        python-version: 3.7
+    - run: conda --version
+    - run: python --version
+    - run: which python
+
+    - name: Create conda environment
+      run: |
+        conda env create -f environment.yml -n test-environment
+        source activate test-environment
+        python -m pip install --no-deps -e .
+
+    - name: Test importing aiida
+      run: |
+        source activate test-environment
+        python -c "import aiida"
+
+  tests:
+
+    needs: [install-with-pip, install-with-conda]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8]
+        backend: ['django', 'sqlalchemy']
+
+    services:
+      postgres:
+        image: postgres:10
+        env:
+          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      rabbitmq:
+        image: rabbitmq:latest
+        ports:
+          - 5672:5672
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies
+      run: |
+        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
+        sudo apt update
+        sudo apt install postgresql-10 graphviz
+
+    - run: pip install --upgrade pip
+
+    - name: upgrade setuptools [py35]
+      if: matrix.python-version == 3.5
+      run: pip install -I setuptools==38.2.0
+
+    - name: Install aiida-core
+      run: |
+        pip install -e .[atomic_tools,docs,notebook,rest,testing]
+        reentry scan
+
+    - run: pip freeze
+
+    - name: Setup AiiDA environment
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run:
+        .github/workflows/setup.sh
+
+    - name: Run test suite
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run:
+        .github/workflows/tests.sh
+
+    - name: Freeze test environment
+      run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt
+
+    # Add python-version specific requirements/ file to the requirements.txt artifact.
+    # This artifact can be used in the next step to automatically create a pull request
+    # updating the requirements (in case they are  inconsistent with the setup.json file).
+    - uses: actions/upload-artifact@v1
+      if: matrix.backend == 'django'  # The requirements are identical between backends.
+      with:
+        name: requirements.txt
+        path: requirements-py-${{ matrix.python-version }}.txt
+
+# Check whether the requirements/ files are consistent with the dependency specification in the setup.json file.
+# If the check fails, warn the user via a comment and try to automatically create a pull request to update the files
+# (does not work on pull requests from forks).
+
+  check-requirements:
+
+    needs: tests
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+
+    - name: Install dm-script dependencies
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
+
+    - name: Check consistency of requirements/ files
+      id: check_reqs
+      continue-on-error: true
+      run: python ./utils/dependency_management.py check-requirements DEFAULT --no-github-annotate
+
+#
+# The following steps are only executed if the consistency check failed.
+#
+    - name: Create commit comment
+      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
+      uses: peter-evans/commit-comment@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        path: setup.json
+        body: |
+          The requirements/ files are inconsistent!
+
+    # Check out the base branch so that we can prepare the pull request.
+    - name: Checkout base branch
+      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ github.head_ref }}
+        clean: true
+
+    - name: Download requirements.txt files
+      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
+      uses: actions/download-artifact@v1
+      with:
+        name: requirements.txt
+        path: requirements
+
+    - name: Commit requirements files
+      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
+      run: |
+        git add requirements/*
+
+    - name: Create pull request for updated requirements files
+      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
+      id: create_update_requirements_pr
+      continue-on-error: true
+      uses: peter-evans/create-pull-request@v2
+      with:
+        committer: GitHub <noreply@github.com>
+        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+        branch: update-requirements
+        commit-message: "Automated update of requirements/ files."
+        title: "Update requirements/ files."
+        body: |
+          Update requirements files to ensure that they are consistent
+          with the dependencies specified in the 'setup.json' file.
+
+          Please note, that this pull request was likely created to
+          resolve the inconsistency for a specific dependency, however
+          other versions that have changed since the last update will
+          be included as part of this commit as well.
+
+          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information.
+
+    - name: Create PR comment on success
+      if: steps.create_update_requirements_pr.outcome == 'Success'
+      uses: peter-evans/create-or-update-comment@v1
+      with:
+        issue-number: ${{ github.event.number }}
+        body: |
+          I automatically created a pull request (#${{ steps.create_update_requirements_pr.outputs.pr_number }}) that adapts the
+          requirements/ files according to the dependencies specified in the 'setup.json' file.
+
+    - name: Create PR comment on failure
+      if: steps.create_update_requirements_pr.outcome == 'Failure'
+      uses: peter-evans/create-or-update-comment@v1
+      with:
+        issue-number: ${{ github.event.number }}
+        body: |
+          Please update the requirements/ files to ensure that they
+          are consistent with the dependencies specified in the 'setup.json' file.

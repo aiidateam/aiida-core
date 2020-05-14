@@ -11,6 +11,7 @@
 """Tests for the Node ORM class."""
 
 import os
+import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, LinkType
@@ -705,7 +706,7 @@ class TestNodeLinks(AiidaTestCase):
         # .inputs for calculations
         self.assertEqual(calc1.inputs.input_value.pk, input1.pk)
         self.assertEqual(calc2.inputs.input_value.pk, input2.pk)
-        with self.assertRaises(exceptions.NotExistent):
+        with self.assertRaises(AttributeError):
             _ = calc1.inputs.some_label
 
         # .inputs for workflows
@@ -713,13 +714,13 @@ class TestNodeLinks(AiidaTestCase):
         self.assertEqual(top_workflow.inputs.b.pk, input2.pk)
         self.assertEqual(workflow.inputs.a.pk, input1.pk)
         self.assertEqual(workflow.inputs.b.pk, input2.pk)
-        with self.assertRaises(exceptions.NotExistent):
+        with self.assertRaises(AttributeError):
             _ = workflow.inputs.some_label
 
         # .outputs for calculations
         self.assertEqual(calc1.outputs.result.pk, output1.pk)
         self.assertEqual(calc2.outputs.result.pk, output2.pk)
-        with self.assertRaises(exceptions.NotExistent):
+        with self.assertRaises(AttributeError):
             _ = calc1.outputs.some_label
 
         # .outputs for workflows
@@ -727,5 +728,30 @@ class TestNodeLinks(AiidaTestCase):
         self.assertEqual(top_workflow.outputs.result_b.pk, output2.pk)
         self.assertEqual(workflow.outputs.result_a.pk, output1.pk)
         self.assertEqual(workflow.outputs.result_b.pk, output2.pk)
-        with self.assertRaises(exceptions.NotExistent):
+        with self.assertRaises(AttributeError):
             _ = workflow.outputs.some_label
+
+
+# Clearing the DB is needed because other parts of the tests (not using
+# the fixture infrastructure) delete the User.
+def test_store_from_cache(clear_database_before_test):  # pylint: disable=unused-argument
+    """
+    Regression test for storing a Node with (nested) repository
+    content with caching.
+    """
+    data = Data()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dir_path = os.path.join(tmpdir, 'directory')
+        os.makedirs(dir_path)
+        with open(os.path.join(dir_path, 'file'), 'w') as file:
+            file.write('content')
+        data.put_object_from_tree(tmpdir)
+
+    data.store()
+
+    clone = data.clone()
+    clone._store_from_cache(data, with_transaction=True)  # pylint: disable=protected-access
+
+    assert clone.is_stored
+    assert clone.get_cache_source() == data.uuid
+    assert data.get_hash() == clone.get_hash()

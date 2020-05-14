@@ -9,7 +9,7 @@
 ###########################################################################
 """Module that defines methods required to setup a new AiiDA instance."""
 import os
-import urllib
+import urllib.parse
 
 import click
 

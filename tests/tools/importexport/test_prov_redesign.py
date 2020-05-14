@@ -229,7 +229,7 @@ class TestProvenanceRedesign(AiidaTestCase):
         groups_type_string = [g.type_string for g in [group_user, group_upf]]
 
         # Assert correct type strings exists prior to export
-        self.assertListEqual(groups_type_string, ['user', 'data.upf'])
+        self.assertListEqual(groups_type_string, ['core', 'core.upf'])
 
         # Export node
         filename = os.path.join(temp_dir, 'export.tar.gz')
@@ -268,4 +268,4 @@ class TestProvenanceRedesign(AiidaTestCase):
 
         # Check type_string content of "import group"
         import_group = orm.load_group(imported_groups_uuid[0])
-        self.assertEqual(import_group.type_string, 'auto.import')
+        self.assertEqual(import_group.type_string, 'core.import')

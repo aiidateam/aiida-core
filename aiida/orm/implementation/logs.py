@@ -45,7 +45,7 @@ class BackendLog(backends.BackendEntity):
         The name of the logger that created this entry
 
         :return: The entry loggername
-        :rtype: basestring
+        :rtype: str
         """
 
     @abc.abstractproperty
@@ -54,7 +54,7 @@ class BackendLog(backends.BackendEntity):
         The name of the log level
 
         :return: The entry log level name
-        :rtype: basestring
+        :rtype: str
         """
 
     @abc.abstractproperty
@@ -72,7 +72,7 @@ class BackendLog(backends.BackendEntity):
         Get the message corresponding to the entry
 
         :return: The entry message
-        :rtype: basestring
+        :rtype: str
         """
 
     @abc.abstractproperty

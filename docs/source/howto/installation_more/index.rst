@@ -1,11 +1,12 @@
-.. _move_postgresql:
+.. _how-to:installation:more:move_postgresql:
 
-Moving the database
--------------------
+##############################
+Moving the PostgreSQL database
+##############################
 
 This section describes how to move the physical location of the database files from one location to another (e.g. if you run out of disk space).
 
- 1. Stop the AiiDA daemon and :ref:`back up your database <backup_postgresql>`.
+ 1. Stop the AiiDA daemon and :ref:`back up your database <how-to:installation:backup:postgresql>`.
 
  2. Find the data directory of your postgres installation (something like ``/var/lib/postgresql/9.6/main``, ``/scratch/postgres/9.6/main``, ...).
 
@@ -14,7 +15,6 @@ This section describes how to move the physical location of the database files f
       psql
       SHOW data_directory;
       \q
-
 
     If you are unable to enter the postgres shell, try looking for the ``data_directory`` variable in a file ``/etc/postgresql/9.6/main/postgresql.conf`` or similar.
 
@@ -25,7 +25,6 @@ This section describes how to move the physical location of the database files f
  4. Copy all files and folders from the postgres ``data_directory`` to the new location::
 
       cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
-
 
     .. note::
         Flag ``-a`` will create a directory within ``DESTINATION_DIRECTORY``, e.g.::
@@ -62,3 +61,14 @@ Finally, check that the data directory has indeed changed::
 and try a simple AiiDA query with the new database.
 
 If everything went fine, you can delete the old database location.
+
+.. _how-to:installation:more:disable_repo_indexing:
+
+#############################################
+Exclude file repository from ``locate`` index
+#############################################
+
+Many Linux distributions include the ``locate`` command to quickly find files and folders, and run a daily cron job ``updatedb.mlocate`` to create the corresponding index.
+A large file repository can take a long time to index, up to the point where the hard drive is constantly indexing.
+
+In order to exclude the repository folder from indexing, add its path to the ``PRUNEPATH`` variable in the ``/etc/updatedb.conf`` configuration file (use ``sudo``).

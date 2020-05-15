@@ -16,11 +16,10 @@ Each AiiDA installation can have multiple profiles, each of which can have its o
 Profiles allow you to run multiple projects completely independently from one another with just a single AiiDA installation and at least one profile is required to run AiiDA.
 A new profile can be created using :ref:`verdi quicksetup<reference:command-line:verdi-quicksetup>` or :ref:`verdi setup<reference:command-line:verdi-setup>`, which works similar to the former but gives more control to the user.
 
-
 Listing profiles
 ----------------
 The :ref:`verdi profile<reference:command-line:verdi-profile>` command line interface provides various commands to manage the profiles of an AiiDA installation.
-To list the currently configured profiles, you can use ``verdi profile list``:
+To list the currently configured profiles, use ``verdi profile list``:
 
 .. code:: bash
 
@@ -31,13 +30,13 @@ To list the currently configured profiles, you can use ``verdi profile list``:
 In this particular example, there are two configured profiles, ``project-one`` and ``project-two``.
 The first one is highlighted and marked with a ``*`` symbol, meaning it is the default profile.
 A profile being the default means simply that any ``verdi`` command will always be executed for that profile.
-Of course you can :ref:`change the profile on a per-call basis<topics:cli:profile>` with the ``--p/--profile`` option.
-If you would like to change the default profile in order to not always have to specify it explicitly, you can use ``verdi profile setdefault PROFILE``.
+You can :ref:`change the profile on a per-call basis<topics:cli:profile>` with the ``--p/--profile`` option.
+To change the default profile use ``verdi profile setdefault PROFILE``.
 
 Showing profiles
 ----------------
 Each profile defines various parameters, such as the location of the file repository on the file system and the connection parameters for the database.
-To display these parameters, you can use ``verdi profile show``:
+To display these parameters, use ``verdi profile show``:
 
 .. code:: bash
 

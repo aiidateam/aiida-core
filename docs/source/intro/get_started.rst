@@ -8,9 +8,10 @@ Getting Started
 
 .. admonition:: Want to jump straight to the tutorials?
 
-    .. container:: link-box
-
-        Launch AiiDA with MyBinder
+   .. link-button:: my-binder
+      :type: url
+      :text: Launch AiiDA with MyBinder
+      :classes: btn-outline-primary btn-block
 
 
 Installation
@@ -38,7 +39,7 @@ Here we first provide the simplest approaches for installation on your local com
 
     `Conda <https://docs.conda.io>`_ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
 
-    ..................................................................................
+    ----------------------------------------------
 
     **Install with pip**
 
@@ -51,9 +52,11 @@ Here we first provide the simplest approaches for installation on your local com
 
     You will then need to install |PostgreSQL| and |RabbitMQ| depending on your operating system.
 
-    .. container:: link-box
+    .. link-button:: intro/install_advanced
+        :type: ref
+        :text: Advanced Installation
+        :classes: btn-outline-primary btn-block
 
-        :ref:`advanced installation <intro/install_advanced>`.
 
 Before working with AiiDA, you must first initialize a database storage area on disk.
 
@@ -149,25 +152,28 @@ Next Steps
 
     blah blah blah
 
-    .. container:: link-box
-
-        links to tutorials
+    .. link-button:: ...
+        :type: url
+        :text: links to tutorials
+        :classes: btn-outline-primary btn-block
 
 .. accordion:: Run compute-intensive codes
 
     blah blah blah
 
-    .. container:: link-box
-
-        links to tutorials
+    .. link-button:: ...
+        :type: url
+        :text: links to tutorials
+        :classes: btn-outline-primary btn-block
 
 .. accordion:: Run computations on High Performance Computers
 
     blah blah blah
 
-    .. container:: link-box
-
-        links to tutorials
+    .. link-button:: ...
+        :type: url
+        :text: links to tutorials
+        :classes: btn-outline-primary btn-block
 
 
 .. |PostgreSQL| replace:: `PostgreSQL <https://www.postgresql.org>`__

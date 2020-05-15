@@ -27,71 +27,77 @@ Welcome to AiiDA's documentation!
 
    First time user or are looking for installation instructions? Start here!
 
-   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. container:: link-box bottom
+   .. link-button:: intro/get_started
+      :type: ref
+      :text: To the getting started guides
+      :classes: btn-outline-primary btn-block stretched-link
 
-      :ref:`To the getting started guides <intro/get_started>`
-
-   ........................................................
+   ----------------------------------------------
 
    **Tutorial**
 
    Get your feet wet with a brief introduction to the basics of AiiDA.
 
-   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. container:: link-box bottom
+   .. link-button:: tutorials
+      :type: ref
+      :text: To the tutorials
+      :classes: btn-outline-primary btn-block stretched-link
 
-      :ref:`To the tutorials <tutorials>`
-
-   ........................................................
+   ----------------------------------------------
 
    **How-To Guides**
 
    Learn how to use AiiDA to power your own work.
 
-   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. container:: link-box bottom
+   .. link-button:: how-to
+      :type: ref
+      :text: To the how-to guides
+      :classes: btn-outline-primary btn-block stretched-link
 
-      :ref:`To the how-to guides <how-to>`
-
-   ........................................................
+   ----------------------------------------------
 
    **Topics**
 
    Comprehensive background information for those who want to learn more about AiiDA's underlying concepts.
 
-   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. container:: link-box bottom
+   .. link-button:: topics
+      :type: ref
+      :text: To the topics
+      :classes: btn-outline-primary btn-block stretched-link
 
-      :ref:`To the topics <topics>`
-
-   ........................................................
+   ----------------------------------------------
 
    **API Reference**
 
    Comprehensive description of all AiiDA components and APIs, including the command-line-interface, the Python interface, and the RESTful API.
 
-   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. container:: link-box bottom
+   .. link-button:: api
+      :type: ref
+      :text: To the reference guide
+      :classes: btn-outline-primary btn-block stretched-link
 
-      :ref:`To the reference guide <api>`
-
-   ........................................................
+   ----------------------------------------------
 
    **Development**
 
    Saw a typo in the documentation? Want to improve existing functionalities? The contributing guidelines will guide you through the process of improving AiiDA.
 
-   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. container:: link-box bottom
-
-      :ref:`To the development guide <development>`
+   .. link-button:: development
+      :type: ref
+      :text: To the development guide
+      :classes: btn-outline-primary btn-block stretched-link
 
 
 .. toctree::

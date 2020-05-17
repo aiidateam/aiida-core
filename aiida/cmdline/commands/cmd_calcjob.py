@@ -117,8 +117,9 @@ def calcjob_inputcat(calcjob, path):
 @verdi_calcjob.command('outputcat')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 @click.argument('path', type=click.STRING, required=False)
+@click.option('--byte', '-b', is_flag=True)
 @decorators.with_dbenv()
-def calcjob_outputcat(calcjob, path):
+def calcjob_outputcat(calcjob, path, byte):
     """
     Show the contents of one of the calcjob retrieved outputs.
 
@@ -127,6 +128,7 @@ def calcjob_outputcat(calcjob, path):
     If PATH is not specified, the default output file path will be used, if defined by the calcjob plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
     """
+    mode = 'rb' if byte else 'r'
     try:
         retrieved = calcjob.outputs.retrieved
     except AttributeError:
@@ -151,12 +153,16 @@ def calcjob_outputcat(calcjob, path):
         )
 
     try:
-        content = retrieved.get_object_content(path)
+        content = retrieved.get_object_content(path, mode=mode)
     except (IOError, OSError) as exception:
         # Incorrect path or file not readable
         echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
     else:
-        echo.echo(content)
+        if mode == 'r':
+            echo.echo(content)
+        else:
+            # For binary data we don't want the newline at the end
+            click.echo(content, nl=False)
 
 
 @verdi_calcjob.command('inputls')

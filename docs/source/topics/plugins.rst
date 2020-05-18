@@ -48,13 +48,13 @@ Entry points are defined in the ``setup.py`` file, for example::
       entry_points={
          "aiida.data": [
              # entry point = path.to.python.object
-             "mycode.mydat = aiida_mycode.data.mydat:MyData",
+             "mycode.mydata = aiida_mycode.data.mydata:MyData",
          ]
       }
       ...
 
-Here, we add a new entry point ``mycode.mydat`` to the entry point *group* ``aiida.data``.
-The entry point identifier points to the ``MyData`` class inside the file ``mydat.py``, which is part of the ``aiida_mycode`` package.
+Here, we add a new entry point ``mycode.mydata`` to the entry point *group* ``aiida.data``.
+The entry point identifier points to the ``MyData`` class inside the file ``mydata.py``, which is part of the ``aiida_mycode`` package.
 
 When installing a python package that defines entry points, the entry point specifications are written to a file inside the distribution's ``.egg-info`` folder.
 ``setuptools`` provides a package ``pkg_resources`` for querying these entry point specifications by distribution, by entry point group and/or by name of the entry point and load the data structure to which it points.

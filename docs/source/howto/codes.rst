@@ -28,16 +28,16 @@ Design guidelines
    | Make a list of which information to:
 
      #. parse into the database for querying (:py:class:`~aiida.orm.nodes.data.dict.Dict`, ...)
-     #. store in files for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
-     #. leave on the remote computer (:py:class:`~aiida.orm.nodes.data.remote.RemoteData`, ...)
+     #. store in the file repository for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
+     #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.nodes.data.remote.RemoteData`, ...)
 
  * | **Expose the full functionality.**
    | Standardization is good but don't artificially limit the power of a code you are wrapping - or your users will get frustrated.
    | If the code can do it, there should be *some* way to do it with your plugin.
 
  * | **Don't rely on AiiDA internals.**
-   | AiiDA's :ref:`public python API<python_api_public_list>` includes anything that you can import via  ``from aiida.module import thing``.
-   | Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, which would render your plugin incompatible.
+   | AiiDA's :ref:`public python API<python_api_public_list>` includes anything that you can import via ``from aiida.module import thing``.
+   | Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, breaking your plugin.
 
 
 .. _how-to:codes:run:

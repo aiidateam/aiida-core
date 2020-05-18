@@ -15,7 +15,7 @@ Creating a plugin package
 =========================
 
 
-AiiDA plugins can be bundled and distributed in a `python package <packages>`_ that provides a set of extensions to AiiDA.
+AiiDA plugins can be bundled and distributed in a `Python package <packages>`_ that provides a set of extensions to AiiDA.
 
 .. note::
 
@@ -28,12 +28,12 @@ AiiDA plugins can be bundled and distributed in a `python package <packages>`_ t
 Quickstart
 ----------
 
-The fastest way to jumpstart an AiiDA plugin package is to use the `AiiDA plugin cutter <plugin-cutter>`_ in order to template the basic folder structure, already customized according to the desired name of your plugin, follwing AiiDA conventions.
+The fastest way to jumpstart an AiiDA plugin package is to use the `AiiDA plugin cutter <plugin-cutter>`_ in order to template the basic folder structure, already customized according to the desired name of your plugin, following AiiDA conventions.
 
 Simply go to the `AiiDA plugin cutter <plugin-cutter>`_ and follow the usage instructions.
 See also the `aiida-diff`_ demo plugin package for an in-depth explanation of the files & folders produced by the plugin cutter.
 
-In the following, we explain a few steps taken by the AiiDA plugin cutter.
+In the following, we explain some of the conventions implemented by the AiiDA plugin cutter.
 
 
 Choosing a name
@@ -53,33 +53,36 @@ If you intend to eventually publish your plugin package, please go to the `AiiDA
 You are also encouraged to pre-register your package (instructions provided on the registry), both to reserve your plugin name and to inform others of your ongoing development.
 
 
+.. _how-to:plugins:bundle:folderstructure:
 
 Folder structure
 ----------------
 
-While it is up to you to decide the folder structure for your plugin, here is how a typical AiiDA plugin package may look like (see also the `aiida-diff`_ demo plugin)::
+The overall folder structure of your plugin is up to you, but it is useful to follow a set of basic conventions.
+Here is an example of a folder structure for an AiiDA plugin, illustrating different levels of nesting (see also the `aiida-diff demo plugin`_)::
 
    aiida-mycode/           - distribution folder
-      aiida_mycode/        - toplevel package (from aiida_mycode import ..)
+      aiida_mycode/        - top-level package (from aiida_mycode import ..)
          __init__.py
          calculations/
             __init__.py
             mycode.py      - contains MycodeCalculation
          parsers/
             __init__.py
-            mycode.py      - contains MycodeParser
+            basic.py       - contains BasicMycodeParser
+            full.py        - contains FullMycodeParser
          data/
-            __init__.py
-            mydat.py       - contains MyData (supports code specific format)
-         commands/
-            __init__.py
-            mydat.py       - contains visualization subcommand for MyData
+            __init__.py    - contains code-specific MyData data format
+         commands.py       - contains verdi subcommand for visualizing MyData
          workflows/
             __init__.py
-            mywf.py        - contains a basic workflow using mycode
+            basic.py       - contains a basic workflow using mycode
          ...
-      setup.py             - install script
-      setup.json           - install configuration
+      LICENSE              - license of your plugin
+      MANIFEST.in          - lists non-python files to be installed, such as LICENSE
+      README.md            - project description for github and PyPI
+      setup.json           - plugin metadata: installation requirements, author, entry points, etc.
+      setup.py             - PyPI installation script, parses setup.json and README.md
       ...
 
 A minimal plugin package instead might look like::
@@ -87,14 +90,13 @@ A minimal plugin package instead might look like::
    aiida-minimal/
       aiida_minimal/
          __init__.py
-         simpledata.py
       setup.py
       setup.json
 
 .. _how-to:plugins:entrypoints:
 
-Adding entry points
-===================
+Registering plugins through entry points
+========================================
 
 An AiiDA plugin is an extension of AiiDA that announces itself by means of a new *entry point* (for details, see :ref:`topics:plugins:entrypoints`).
 Adding a new entry point consists of the following steps:
@@ -233,7 +235,7 @@ Documentation website
 For simple plugins, a well-written ``README.md`` can be a good start.
 Once the README grows out of proportion, you may want to consider creating a dedicated documentation website.
 
-The `Sphinx <sphinx>`_ tool makes creating documentations for python packages a breeze, and even comes with a the free `ReadTheDocs <readthedocs>`_ service to host your documentation online.
+The `Sphinx <sphinx>`_ tool makes it very easy to create documentation websites for python packages, and the `ReadTheDocs <readthedocs>`_ service will host your sphinx documentation online for free.
 The `aiida-diff demo plugin <aiida-diff>`_ comes with a full template for a sphinx-based documentation, including a mix of manually written pages and an automatically generated documentation of your plugin's python API.
 See the `developer guide of aiida-diff <https://aiida-diff.readthedocs.io/en/latest/developer_guide/index.html>`_ for instructions on how to build it.
 
@@ -264,6 +266,13 @@ Publishing a plugin package
 
 AiiDA plugin packages are published on the `AiiDA plugin registry <registry>`_ and the `python package index (PyPI) <pypi>`_.
 
+Before publishing your plugin, make sure your plugin comes with:
+
+ * a ``setup.json`` file with the plugin metadata
+ * a ``setup.py`` file for installing your plugin via ``pip``
+ * a license
+
+For examples of these files, see the `aiida-diff demo plugin <aiida-diff>`_.
 
 .. _how-to:plugins:publish:plugin-registry:
 
@@ -277,8 +286,7 @@ In order to register your plugin package, simply go to the `plugin registry <reg
 
 .. note::
 
-  The plugin registry reads the metadata for your plugin from a ``setup.json`` file in your plugin repository.
-  For an example of such a file (and how to reuse it in the ``setup.py`` for PyPI), see the `aiida-diff demo plugin <aiida-diff>`_.
+  The plugin registry reads the metadata of your plugin from the ``setup.json`` file in your plugin repository.
 
 
 We encourage you to **get your plugin package listed as soon as possible**, both in order to reserve the plugin name and to inform others of the ongoing development.
@@ -288,17 +296,6 @@ Publishing on PyPI
 
 For distributing AiiDA plugin packages, we recommend to follow the `guidelines for packaging python projects <packaging>`_, which include making the plugin available on the `python package index <PyPI>`_.
 This makes it possible for users to simply ``pip install aiida-myplugin``.
-
-Our suggested folder structure::
-
-   aiida-mycode/       top-folder containing you package and additional files
-      aiida_mycode/    The package that is to be installed
-         __init__.py
-         ...
-      MANIFEST.in       (optional) lists non-python files to be installed
-      README.md         (optional) description to be used by github etc and PyPI
-      setup.py          PyPI installation script, reads setup.json
-      setup.json        metadata: installation requirements, author, entry points, etc.
 
 .. note::
     When updating the version of your plugin, don't forget to update the version number both in the ``setup.json`` and in ``aiida_mycode/__init__.py``.

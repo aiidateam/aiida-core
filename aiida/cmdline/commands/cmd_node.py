@@ -435,11 +435,14 @@ def graph_generate(
     echo.echo_info('Initiating graphviz engine: {}'.format(engine))
     graph = Graph(engine=engine, node_id_type=identifier)
     echo.echo_info('Recursing ancestors, max depth={}'.format(ancestor_depth))
+
+    origin_style_override = {'color': 'red', 'penwidth': 6}
     graph.recurse_ancestors(
         root_node,
         depth=ancestor_depth,
         link_types=link_types,
         annotate_links='both',
+        origin_style=origin_style_override,
         include_process_outputs=process_out,
         print_func=print_func
     )
@@ -449,6 +452,7 @@ def graph_generate(
         depth=descendant_depth,
         link_types=link_types,
         annotate_links='both',
+        origin_style=origin_style_override,
         include_process_inputs=process_in,
         print_func=print_func
     )

@@ -37,7 +37,7 @@ Design guidelines
 
  * | **Don't rely on AiiDA internals.**
    | AiiDA's :ref:`public python API<python_api_public_list>` includes anything that you can import via  ``from aiida.module import thing``.
-   | Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, forcing you to update your plugin.
+   | Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, which would render your plugin incompatible.
 
 
 .. _how-to:codes:run:

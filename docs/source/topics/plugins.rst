@@ -28,8 +28,7 @@ An AiiDA plugin should not:
 
 Failure to comply will likely prevent your plugin from being listed on the official `AiiDA plugin registry <registry>`_.
 
-If you find yourself tempted to do any of the above, please open an issue on the `AiiDA repository <core>`_ and explain why.
-We will advise on how to proceed.
+If you find yourself in a situation where you feel like you need to do any of the above, please open an issue on the `AiiDA repository <core>`_ and we can try to advise on how to proceed.
 
 
 .. _core: https://github.com/aiidateam/aiida-core
@@ -302,7 +301,7 @@ Plugin test fixtures
 ====================
 
 One concern when running tests for AiiDA plugins is to separate the test environment from your production environment.
-Depending on the kind of test, each should even be run against a fresh AiiDA database.
+Typically tests should be run against an empty AiiDA database.
 
 AiiDA ships with tools that take care of this for you. They will:
 

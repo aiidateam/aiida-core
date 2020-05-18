@@ -19,8 +19,8 @@ AiiDA plugins can be bundled and distributed in a `python package <packages>`_ t
 
 .. note::
 
-  The python community uses the term 'package' rather loosely.
-  Depending on context, it may refer simply to a folder containing individual python modules or it may include the files necessary for building and installing a package to be distributed via the `python package index (PyPI) <pypi>`_.
+  The Python community uses the term 'package' rather loosely.
+  Depending on context, it may refer simply to a folder containing individual Python modules or it may include the files necessary for building and installing a package to be distributed via the `Python Package Index (PyPI) <pypi>`_.
 
 .. _packages: https://docs.python.org/2/tutorial/modules.html?highlight=package#packages
 
@@ -129,7 +129,7 @@ Testing a plugin package
 =========================
 
 Writing tests for your AiiDA plugins and running continuous integration tests using free platforms like `GitHub Actions <ghactions>`_ is the best way to ensure that your plugin works and keeps working as it is being developed.
-We recommend using the popular `pytest`_ framework for testing AiiDA plugins.
+We recommend using the `pytest`_ framework for testing AiiDA plugins.
 
 For an example of how to write tests and how to set up continuous integration, see the `aiida-diff`_ demo plugin package.
 
@@ -150,7 +150,7 @@ AiiDA's fixtures
 ----------------
 
 Many tests require a full AiiDA environment to be set up before the test starts, e.g. some AiiDA data nodes.
-pytest has the concept of `fixtures`_ for encapsulating code you would like to run before a test starts.
+The pytest library has the concept of `fixtures`_ for encapsulating code you would like to run before a test starts.
 AiiDA ships with a number of fixtures in :py:mod:`aiida.manage.tests.pytest_fixtures` that take care of setting up the test environment for you (for more details, see :ref:`topics:plugins:testfixtures`).
 
 In order to make these fixtures available to your tests, create a ``conftest.py`` (see also `pytest docs <conftest>`_) at the root level of your plugin package as follows::
@@ -234,10 +234,10 @@ For simple plugins, a well-written ``README.md`` can be a good start.
 Once the README grows out of proportion, you may want to consider creating a dedicated documentation website.
 
 The `Sphinx <sphinx>`_ tool makes creating documentations for python packages a breeze, and even comes with a the free `ReadTheDocs <readthedocs>`_ service to host your documentation online.
-We strongly recommend using sphinx, and the `aiida-diff demo plugin <aiida-diff>`_ already comes with a full template for a sphinx-based documentation, including a mix of manually written pages and an automatically generated documentation of your plugin's python API.
-For instructions on how to build it, see the `developer guide of aiida-diff <https://aiida-diff.readthedocs.io/en/latest/developer_guide/index.html>`_.
+The `aiida-diff demo plugin <aiida-diff>`_ comes with a full template for a sphinx-based documentation, including a mix of manually written pages and an automatically generated documentation of your plugin's python API.
+See the `developer guide of aiida-diff <https://aiida-diff.readthedocs.io/en/latest/developer_guide/index.html>`_ for instructions on how to build it.
 
-As a gimmick, AiiDA provides a handy sphinx extension for inserting automatically generated documentations of ``Process`` classes (calculations and workflows) into your sphinx documentation (analogous to the information displayed by ``verdi plugin list``).
+AiiDA provides a sphinx extension for inserting automatically generated documentations of ``Process`` classes (calculations and workflows) into your sphinx documentation (analogous to the information displayed by ``verdi plugin list``).
 Enable the extension by adding ``aiida.sphinxext`` to the list of ``extensions`` in your ``docs/conf.py`` file.
 You can now use the ``aiida-process``, ``aiida-calcjob`` or ``aiida-workchain`` directives in your ReST files like so::
 
@@ -262,7 +262,7 @@ Here,
 Publishing a plugin package
 ===========================
 
-AiiDA plugin packages are published in two key places: the `AiiDA plugin registry <registry>`_ and the `python package index (PyPI) <pypi>`_.
+AiiDA plugin packages are published on the `AiiDA plugin registry <registry>`_ and the `python package index (PyPI) <pypi>`_.
 
 
 .. _how-to:plugins:publish:plugin-registry:
@@ -281,7 +281,7 @@ In order to register your plugin package, simply go to the `plugin registry <reg
   For an example of such a file (and how to reuse it in the ``setup.py`` for PyPI), see the `aiida-diff demo plugin <aiida-diff>`_.
 
 
-We encourage you to **get your plugin package listed as soon as possible**, both in order to reserve your plugin name and to inform others of your ongoing development.
+We encourage you to **get your plugin package listed as soon as possible**, both in order to reserve the plugin name and to inform others of the ongoing development.
 
 Publishing on PyPI
 ------------------

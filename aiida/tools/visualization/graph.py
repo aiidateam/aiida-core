@@ -12,6 +12,7 @@
 """
 
 import os
+from types import MappingProxyType  # pylint: disable=no-name-in-module,useless-suppression
 
 from graphviz import Digraph
 
@@ -187,6 +188,19 @@ def pstate_node_styles(node):
     return node_style
 
 
+_OVERRIDE_STYLES_DICT = {
+    'ignore_node': {
+        'color': 'lightgray',
+        'fillcolor': 'white',
+        'penwidth': 2,
+    },
+    'origin_node': {
+        'color': 'red',
+        'penwidth': 6,
+    },
+}
+
+
 def default_node_sublabels(node):
     """function mapping nodes to a sublabel
     (e.g. specifying some attribute values)
@@ -249,6 +263,21 @@ def get_node_id_label(node, id_type):
     raise ValueError('node_id_type not recognised: {}'.format(id_type))
 
 
+def _get_node_label(node, id_type='pk'):
+    """return a label text of node and the return format is '<NodeType> (<id>)'."""
+    if isinstance(node, orm.Data):
+        label = '{} ({})'.format(node.__class__.__name__, get_node_id_label(node, id_type))
+    elif isinstance(node, orm.ProcessNode):
+        label = '{} ({})'.format(
+            node.__class__.__name__ if node.process_label is None else node.process_label,
+            get_node_id_label(node, id_type)
+        )
+    else:
+        raise TypeError('Unknown type: {}'.format(type(node)))
+
+    return label
+
+
 def _add_graphviz_node(
     graph, node, node_style_func, node_sublabel_func, style_override=None, include_sublabels=True, id_type='pk'
 ):
@@ -279,27 +308,15 @@ def _add_graphviz_node(
     types, and also color the nodes for successful/failed processes
     """
     # pylint: disable=too-many-arguments
-    node_style = {}
-    if isinstance(node, orm.Data):
-        node_style = node_style_func(node)
-        label = ['{} ({})'.format(node.__class__.__name__, get_node_id_label(node, id_type))]
-
-    elif isinstance(node, orm.ProcessNode):
-        node_style = node_style_func(node)
-
-        label = [
-            '{} ({})'.format(
-                node.__class__.__name__ if node.process_label is None else node.process_label,
-                get_node_id_label(node, id_type)
-            )
-        ]
+    node_style = node_style_func(node)
+    label_list = [_get_node_label(node, id_type)]
 
     if include_sublabels:
         sublabel = node_sublabel_func(node)
         if sublabel:
-            label.append(sublabel)
+            label_list.append(sublabel)
 
-    node_style['label'] = '\n'.join(label)
+    node_style['label'] = '\n'.join(label_list)
 
     if style_override is not None:
         node_style.update(style_override)
@@ -382,6 +399,9 @@ class Graph:
         self._node_sublabels = node_sublabel_fn or default_node_sublabels
         self._node_id_type = node_id_type
 
+        self._ignore_node_style = _OVERRIDE_STYLES_DICT['ignore_node']
+        self._origin_node_style = _OVERRIDE_STYLES_DICT['origin_node']
+
     @property
     def graphviz(self):
         """return a copy of the graphviz.Digraph"""
@@ -438,7 +458,7 @@ class Graph:
         :type overwrite: bool
         """
         node = self._load_node(node)
-        style = {} if style_override is None else style_override
+        style = {} if style_override is None else dict(style_override)
         style.update(self._global_node_style)
         if node.pk not in self._nodes or overwrite:
             _add_graphviz_node(
@@ -613,8 +633,9 @@ class Graph:
         depth=None,
         link_types=(),
         annotate_links=False,
-        origin_style=None,
+        origin_style=MappingProxyType(_OVERRIDE_STYLES_DICT['origin_node']),
         include_process_inputs=False,
+        highlight_classes=None,
         print_func=None
     ):
         """add nodes and edges from an origin recursively,
@@ -632,6 +653,9 @@ class Graph:
         :type origin_style: None or dict
         :param include_calculation_inputs: include incoming links for all processes (Default value = False)
         :type include_calculation_inputs: bool
+        :param highlight_classes: target class in exported graph expected to be highlight and
+            other nodes are decolorized (Default value = None)
+        :typle highlight_classes: tuple of class or class
         :param print_func:
             a function to stream information to, i.e. print_func(str)
             (this feature is deprecated since `v1.1.0` and will be removed in `v2.0.0`)
@@ -686,7 +710,11 @@ class Graph:
 
         # Add all traversed nodes to the graph with default styling
         for _, traversed_node in traversed_nodes.items():
-            self.add_node(traversed_node, style_override={})
+            node_label = _get_node_label(traversed_node)
+            if highlight_classes and not node_label.split()[0] in highlight_classes:
+                self.add_node(traversed_node, style_override=self._ignore_node_style)
+            else:
+                self.add_node(traversed_node, style_override=None)
 
         # Add the origin node back into traversed nodes so it can be found for adding edges
         traversed_nodes[origin_pk] = origin_node
@@ -708,8 +736,9 @@ class Graph:
         depth=None,
         link_types=(),
         annotate_links=False,
-        origin_style=None,
+        origin_style=MappingProxyType(_OVERRIDE_STYLES_DICT['origin_node']),
         include_process_outputs=False,
+        highlight_classes=None,
         print_func=None
     ):
         """add nodes and edges from an origin recursively,
@@ -727,6 +756,9 @@ class Graph:
         :type origin_style: None or dict
         :param include_process_outputs:  include outgoing links for all processes (Default value = False)
         :type include_process_outputs: bool
+        :param highlight_classes:  class label (as displayed in the graph, e.g. 'StructureData', 'FolderData', etc.)
+            to be highlight and other nodes are decolorized (Default value = None)
+        :typle highlight_classes: list or tuple of str
         :param print_func: a function to stream information to, i.e. print_func(str)
 
         .. deprecated:: 1.1.0
@@ -781,7 +813,11 @@ class Graph:
 
         # Add all traversed nodes to the graph with default styling
         for _, traversed_node in traversed_nodes.items():
-            self.add_node(traversed_node, style_override=None)
+            node_label = _get_node_label(traversed_node)
+            if highlight_classes and not node_label.split()[0] in highlight_classes:
+                self.add_node(traversed_node, style_override=self._ignore_node_style)
+            else:
+                self.add_node(traversed_node, style_override=None)
 
         # Add the origin node back into traversed nodes so it can be found for adding edges
         traversed_nodes[origin_pk] = origin_node

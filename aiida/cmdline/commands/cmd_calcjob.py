@@ -87,6 +87,10 @@ def calcjob_inputcat(calcjob, path):
 
     If PATH is not specified, the default input file path will be used, if defined by the calcjob plugin class.
     """
+    from shutil import copyfileobj
+    import sys
+    import errno
+
     # Get path from the given CalcJobNode if not defined by user
     if path is None:
         path = calcjob.get_option('input_filename')
@@ -106,12 +110,15 @@ def calcjob_inputcat(calcjob, path):
         )
 
     try:
-        content = calcjob.get_object_content(path)
-    except (IOError, OSError) as exception:
-        # Incorrect path or file not readable
-        echo.echo_critical('Could not open input path "{}". Exception: {}'.format(path, exception))
-    else:
-        echo.echo(content)
+        # When we `cat`, it makes sense to directly send the output to stdout as it is
+        with calcjob.open(path, mode='rb') as fhandle:
+            copyfileobj(fhandle, sys.stdout.buffer)
+    except OSError as exception:
+        # The sepcial case is breakon pipe error, which is usually OK.
+        # It can happen if the output is redirected, for example, to `head`.
+        if exception.errno != errno.EPIPE:
+            # Incorrect path or file not readable
+            echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
 
 
 @verdi_calcjob.command('outputcat')
@@ -129,6 +136,7 @@ def calcjob_outputcat(calcjob, path):
     """
     from shutil import copyfileobj
     import sys
+    import errno
 
     try:
         retrieved = calcjob.outputs.retrieved
@@ -157,10 +165,10 @@ def calcjob_outputcat(calcjob, path):
         # When we `cat`, it makes sense to directly send the output to stdout as it is
         with retrieved.open(path, mode='rb') as fhandle:
             copyfileobj(fhandle, sys.stdout.buffer)
-    except (IOError, OSError) as exception:
-        # The sepcial case is error No. 32 breakon pipe, which is usually OK.
+    except OSError as exception:
+        # The sepcial case is breakon pipe error, which is usually OK.
         # It can happen if the output is redirected, for example, to `head`.
-        if exception.args[0] != 32:
+        if exception.errno != errno.EPIPE:
             # Incorrect path or file not readable
             echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
 

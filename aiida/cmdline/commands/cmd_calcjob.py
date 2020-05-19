@@ -117,9 +117,8 @@ def calcjob_inputcat(calcjob, path):
 @verdi_calcjob.command('outputcat')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 @click.argument('path', type=click.STRING, required=False)
-@click.option('--byte', '-b', is_flag=True)
 @decorators.with_dbenv()
-def calcjob_outputcat(calcjob, path, byte):
+def calcjob_outputcat(calcjob, path):
     """
     Show the contents of one of the calcjob retrieved outputs.
 
@@ -128,7 +127,9 @@ def calcjob_outputcat(calcjob, path, byte):
     If PATH is not specified, the default output file path will be used, if defined by the calcjob plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
     """
-    mode = 'rb' if byte else 'r'
+    from shutil import copyfileobj
+    import sys
+
     try:
         retrieved = calcjob.outputs.retrieved
     except AttributeError:
@@ -153,16 +154,15 @@ def calcjob_outputcat(calcjob, path, byte):
         )
 
     try:
-        content = retrieved.get_object_content(path, mode=mode)
+        # When we `cat`, it makes sense to directly send the output to stdout as it is
+        with retrieved.open(path, mode='rb') as fhandle:
+            copyfileobj(fhandle, sys.stdout.buffer)
     except (IOError, OSError) as exception:
-        # Incorrect path or file not readable
-        echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
-    else:
-        if mode == 'r':
-            echo.echo(content)
-        else:
-            # For binary data we don't want the newline at the end
-            click.echo(content, nl=False)
+        # The sepcial case is error No. 32 breakon pipe, which is usually OK.
+        # It can happen if the output is redirected, for example, to `head`.
+        if exception.args[0] != 32:
+            # Incorrect path or file not readable
+            echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
 
 
 @verdi_calcjob.command('inputls')

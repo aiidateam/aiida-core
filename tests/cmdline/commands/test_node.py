@@ -14,6 +14,7 @@ import io
 import errno
 import pathlib
 import tempfile
+import gzip
 
 from click.testing import CliRunner
 
@@ -195,6 +196,16 @@ class TestVerdiNode(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_node.repo_ls, options, catch_exceptions=False)
         self.assertIsNotNone(result.exception)
         self.assertIn('does not exist for the given node', result.output)
+
+    def test_node_repo_cat(self):
+        """Test 'verdi node repo cat' command."""
+        # Test cat binary files
+        with self.folder_node.open('filename.txt.gz', 'wb') as fh_out:
+            fh_out.write(gzip.compress(b'COMPRESS'))
+
+        options = [str(self.folder_node.pk), 'filename.txt.gz']
+        result = self.cli_runner.invoke(cmd_node.repo_cat, options)
+        assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
 
     def test_node_repo_dump(self):
         """Test 'verdi node repo dump' command."""

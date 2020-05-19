@@ -20,7 +20,7 @@ if (sys.version_info.major, sys.version_info.minor) == (3, 5):
     import setuptools
     from distutils.version import StrictVersion
 
-    REQUIRED_SETUPTOOLS_VERSION = StrictVersion('38.2.0')
+    REQUIRED_SETUPTOOLS_VERSION = StrictVersion('42.0.0')
     INSTALLED_SETUPTOOLS_VERSION = StrictVersion(setuptools.__version__)
 
     if INSTALLED_SETUPTOOLS_VERSION < REQUIRED_SETUPTOOLS_VERSION:

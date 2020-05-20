@@ -1,8 +1,8 @@
 .. _intro/installation:
 
-******************
-Installation Guide
-******************
+************
+Installation
+************
 
 .. _install/software:
 
@@ -22,9 +22,6 @@ Depending on your set up, there are a few optional dependencies:
 
 * `git`_ (Version control system used for AiiDA development)
 * `graphviz`_ (For plotting AiiDA provenance graphs)
-
-.. * `virtualenv`_ (Software to create a virtual python environment to install AiiDA in)
-.. * `virtualenvwrapper`_ (Wrapper for ``virtualenv`` to easily handle virtual environments)
 
 .. _graphviz: https://www.graphviz.org/download
 .. _git: https://git-scm.com/downloads
@@ -471,6 +468,37 @@ After installing AiiDA packages, always remember to update the reentry cache usi
 .. code-block:: console
 
    $ reentry scan
+
+.. _updating_aiida:
+
+Updating aiida-core
+===================
+
+1. Enter the python environment where AiiDA is installed
+2. Finish all running calculations. 
+   After migrating your database, you will not be able to resume unfinished calculations!
+   Data of finished calculations will of course be automatically migrated.
+3. Stop the daemon using ``verdi daemon stop``
+4. :ref:`Create a backup of your database and repository<backup>`
+
+.. warning::
+
+   Once you have migrated your database, you can no longer go back to an older version of ``aiida-core`` (unless you restore your database and repository from a backup).
+
+5. Update your ``aiida-core`` installation
+
+    - If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``
+    - If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch.
+
+6. Migrate your database with ``verdi -p <profile_name> database migrate``.
+   Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
+
+After the database migration finishes, you will be able to continue working with your existing data.
+
+.. admonition:: Updating from version 0.12?
+   :class: warning title-icon-important
+
+   If your update involved a change in the major version number of ``aiida-core``, expect :ref:`backwards incompatible changes<updating_backward_incompatible_changes>` and check whether you also need to update your installed plugin packages.
 
 
 .. _install/docker:

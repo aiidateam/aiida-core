@@ -109,6 +109,7 @@ Automated Interactive Infrastructure and Database for Computational Science
    intro/about
    intro/get_started
    intro/installation
+   intro/configuration
    intro/troubleshooting
 
 .. toctree::

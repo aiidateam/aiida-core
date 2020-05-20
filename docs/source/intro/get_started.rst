@@ -190,14 +190,12 @@ If computations are still running, then they will be picked up next time the ser
 
     :ref:`See the troubleshooting section <intro/troubleshooting>`
 
-.. .. admonition:: In-depth instructions
-..     :class: tip title-icon-read-more
+.. admonition:: In-depth instructions
+    :class: tip title-icon-read-more
 
-..     Installing from source? Install into a VM?
+    For more ways to install AiiDA :ref:`Check the advanced installation section <intro/installation>`.
 
-..     :ref:`Check the advanced installation section <intro/installation>`
-
-..     .. For configuration of tab completion or using AiiDA in jupyter, see the :ref:`configuration instructions <configure_aiida>` before moving on.
+    For more detailed instructions on configuring AiiDA, :ref:`see the configuration instructions <configure_aiida>`
 
 Next Steps
 ==========

@@ -7,14 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 import os
 
 from aiida.common.exceptions import ValidationError, EntryPointError, InputValidationError
-
 from .data import Data
-
-DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/concepts/processes.html#the-process-builder'
 
 __all__ = ('Code',)
 
@@ -491,9 +487,12 @@ class Code(Data):
         return builder
 
     def get_full_text_info(self, verbose=False):
+        """Return a list of lists with a human-readable detailed information on this code.
+
+        :return: list of lists where each entry consists of two elements: a key and a value
         """
-        Return a (multiline) string with a human-readable detailed information on this computer
-        """
+        from aiida.orm.utils.repository import FileType
+
         result = []
         result.append(['PK', self.pk])
         result.append(['UUID', self.uuid])
@@ -508,11 +507,11 @@ class Code(Data):
             result.append(['Type', 'local'])
             result.append(['Exec name', self.get_execname()])
             result.append(['List of files/folders:', ''])
-            for fname in self.list_object_names():
-                if self._repository._get_folder_pathsubfolder.isdir(fname):
-                    result.append(['directory', fname])
+            for obj in self.list_objects():
+                if obj.type == FileType.DIRECTORY:
+                    result.append(['directory', obj.name])
                 else:
-                    result.append(['file', fname])
+                    result.append(['file', obj.name])
         else:
             result.append(['Type', 'remote'])
             result.append(['Remote machine', self.get_remote_computer().name])
@@ -536,7 +535,6 @@ class Code(Data):
 
     @classmethod
     def setup(cls, **kwargs):
-        # raise NotImplementedError
         from aiida.cmdline.commands.code import CodeInputValidationClass
         code = CodeInputValidationClass().set_and_validate_from_code(kwargs)
 

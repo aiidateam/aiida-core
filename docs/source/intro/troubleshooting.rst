@@ -162,7 +162,7 @@ A potential solution is to run the following command:
 .. _ContinuumIO/anaconda-issues#686: https://github.com/ContinuumIO/anaconda-issues/issues/686
 
 Output from .bashrc and/or .bash_profile on remote computers
-------------------------------------------------------------
+............................................................
 
 ..note:: This applies also computers configured via ``local`` transport!
 

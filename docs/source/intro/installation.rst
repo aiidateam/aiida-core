@@ -1,8 +1,8 @@
 .. _intro/installation:
 
-************
-Installation
-************
+*********************
+Detailed Installation
+*********************
 
 .. _install/software:
 

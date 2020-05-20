@@ -5,25 +5,26 @@
 
 **aiida-core version:** |release|
 
-.. figure:: images/AiiDA_transparent_logo.png
+.. image:: images/AiiDA_transparent_logo.png
     :width: 250px
     :align: center
+    :alt: AiiDA logo
+    :class: mb-3
 
-    Automated Interactive Infrastructure and Database for Computational Science
-
-#################################
-Welcome to AiiDA's documentation!
-#################################
+###########################################################################
+Automated Interactive Infrastructure and Database for Computational Science
+###########################################################################
 
 `AiiDA`_ is an open-source framework implemented in Python that aims to help researchers with managing simple to complex workflows and making them fully reproducible.
 
 .. _AiiDA: https://www.aiida.net
 
 .. panels::
-   :column: col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
-   :body: text-center
+   :body: bg-light text-center
+   :footer: bg-light border-0
 
-   **Getting Started**
+
+   :fa:`rocket,mr-1` **Getting Started**
 
    First time user or are looking for installation instructions? Start here!
 
@@ -31,12 +32,12 @@ Welcome to AiiDA's documentation!
 
    .. link-button:: intro/get_started
       :type: ref
-      :text: To the getting started guides
+      :text: To the install guides
       :classes: btn-outline-primary btn-block stretched-link
 
    ----------------------------------------------
 
-   **Tutorial**
+   :fa:`info-circle,mr-1` **Tutorial**
 
    Get your feet wet with a brief introduction to the basics of AiiDA.
 
@@ -49,7 +50,7 @@ Welcome to AiiDA's documentation!
 
    ----------------------------------------------
 
-   **How-To Guides**
+   :fa:`question-circle,mr-1` **How-To Guides**
 
    Learn how to use AiiDA to power your own work.
 
@@ -62,7 +63,7 @@ Welcome to AiiDA's documentation!
 
    ----------------------------------------------
 
-   **Topics**
+   :fa:`bookmark,mr-1` **Topics**
 
    Comprehensive background information for those who want to learn more about AiiDA's underlying concepts.
 
@@ -75,7 +76,7 @@ Welcome to AiiDA's documentation!
 
    ----------------------------------------------
 
-   **API Reference**
+   :fa:`cogs,mr-1` **API Reference**
 
    Comprehensive description of all AiiDA components and APIs, including the command-line-interface, the Python interface, and the RESTful API.
 
@@ -88,7 +89,7 @@ Welcome to AiiDA's documentation!
 
    ----------------------------------------------
 
-   **Development**
+   :fa:`code-fork,mr-1` **Development**
 
    Saw a typo in the documentation? Want to improve existing functionalities? The contributing guidelines will guide you through the process of improving AiiDA.
 

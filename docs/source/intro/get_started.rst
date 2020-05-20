@@ -4,32 +4,82 @@
 Getting Started
 ****************
 
-`#4026 <https://github.com/aiidateam/aiida-core/issues/4026>`_
-
-.. admonition:: Want to jump straight to the tutorials?
-
-   .. link-button:: my-binder
-      :type: url
-      :text: Launch AiiDA with MyBinder
-      :classes: btn-outline-primary btn-block
-
-
-Installation
-============
-
-A working AiiDA installation consists of three core components:
+A working AiiDA installation consists of three core components, plus any external codes you wish to run:
 
 * ``aiida-core``: The main python package and associated CLI ``verdi``.
 * |PostgreSQL|: A service which manages the database where we store generated data.
 * |RabbitMQ|: A service which manages communication with the processes that we run.
 
-Each component may be installed separately, depending on your use case.
-Here we first provide the simplest approaches for installation on your local computer.
+AiiDA provides a number of routes to setting up this environment, depending on your use case.
+These are outlined below, followed by a recommended "quick-install" route on your local computer.
+
+.. panels::
+   :body: bg-light
+   :footer: bg-light border-0
+
+   :fa:`desktop,mr-1` **Direct (Bare Metal)**
+
+   *Install software directly into your local root directory.*
+
+   The required software can be installed using most package managers, including: apt, Homebrew, MacPorts, Gentoo and Windows Subsystem for Linux.
+
+   +++
+
+   :link-badge:`install/software,Software install,ref,badge-primary text-white`
+   :link-badge:`install/aiida-core,aiida-core install,ref,badge-primary text-white`
+
+   ---------------
+
+   :fa:`folder,mr-1` **Virtual Folder**
+
+   *Install software into an isolated directory on your machine.*
+
+   Environment managers such as `Conda <https://docs.conda.io>`__, `pipenv <https://pipenv.pypa.io>`__  and `venv <https://docs.python.org/3/library/venv.html>`__ create isolated python environments.
+   It is advised that you install ``aiida-core`` into one of these managed environments.
+
+   +++
+
+   :link-badge:`install/virtual_environments,Environments Tutorial,ref,badge-primary text-white`
+   :link-badge:`https://anaconda.org/conda-forge/aiida-core,aiida-core on Conda,url,badge-primary text-white`
+
+   ---------------
+
+   :fa:`cube,mr-1` **Containers**
+
+   *Use a pre-made image of all the required software.*
+
+   AiiDA maintains a `Docker <https://www.docker.com/>`__ image, which is particularly useful for learning and testing purposes.
+   It is a great way to quickly get started on the tutorials.  
+
+   +++
+
+   :link-badge:`install/docker,Docker Tutorial,ref,badge-primary text-white`
+   :link-badge:`https://hub.docker.com/r/aiidateam/aiida-core,aiida-core on DockerHub,url,badge-primary text-white`
+
+   ---------------
+
+   :fa:`cloud,mr-1` **Virtual Machines**
+
+   *Use a pre-made machine with all the required software.*
+
+   `Materials Cloud <https://www.materialscloud.org>`__ provides both downloadable and web based VMs,
+   also incorporating pre-installed Materials Science codes.
+
+   +++
+
+   :link-badge:`https://materialscloud.org/quantum-mobile,Quantum Mobile,url,badge-primary text-white`
+   :link-badge:`https://aiidalab.materialscloud.org,AiiDA lab,url,badge-primary text-white`
+
+
+Quick Installation
+==================
+
+Here we first provide a simple approach for installation on your local computer.
 
 .. panels::
     :column: col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
 
-    **Install from Conda**
+    :fa:`download,mr-1` **Install from Conda**
 
     .. code-block:: console
 
@@ -37,25 +87,21 @@ Here we first provide the simplest approaches for installation on your local com
         $ conda activate aiida
         $ reentry scan
 
-    `Conda <https://docs.conda.io>`_ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
+    `Conda <https://docs.conda.io>`__ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
 
     ----------------------------------------------
 
-    **Install with pip**
+    :fa:`download,mr-1` **Install with pip**
 
     .. code-block:: console
 
         $ pip install aiida-core
         $ reentry scan
 
-    ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`_.
-
+    ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`__.
     You will then need to install |PostgreSQL| and |RabbitMQ| depending on your operating system.
 
-    .. link-button:: intro/install_advanced
-        :type: ref
-        :text: Advanced Installation
-        :classes: btn-outline-primary btn-block
+    :link-badge:`install/software,Get install instructions,ref,badge-primary text-white`
 
 
 Before working with AiiDA, you must first initialize a database storage area on disk.
@@ -64,9 +110,6 @@ Before working with AiiDA, you must first initialize a database storage area on 
 
     $ initdb -D mylocal_db
 
-.. seealso::
-
-    `Creating a Database Cluster <https://www.postgresql.org/docs/12/creating-cluster.html>`_
 
 This *database cluster* may contain a collection of databases (one per profile) that is managed by a single running server process.
 We start this process with:
@@ -75,9 +118,11 @@ We start this process with:
 
     $ pg_ctl -D mylocal_db -l logfile start
 
-.. seealso::
+.. admonition:: Further Reading
+    :class: title-icon-read-more
 
-    `Starting the Database Server <https://www.postgresql.org/docs/12/server-start.html>`_
+    - `Creating a Database Cluster <https://www.postgresql.org/docs/12/creating-cluster.html>`__.
+    - `Starting the Database Server <https://www.postgresql.org/docs/12/server-start.html>`__.
 
 To set up an AiiDA configuration profile and related data storage, we can then use the `quicksetup` command.
 
@@ -94,7 +139,8 @@ To set up an AiiDA configuration profile and related data storage, we can then u
 
 At this point you now have a working AiiDA environment, from which you can add and retrieve data.
 
-.. tip::
+.. admonition:: Tab Completion
+    :class: tip title-icon-lightbulb
 
     Enable tab completion of ``verdi`` commands in the terminal with:
 
@@ -129,51 +175,63 @@ Finally, to check that all services are running as expected use:
 
 Awesome! You now have a fully operational installation from which to take the next steps!
 
-.. Finally, to power down the services, you can run:
+After finishing with your aiida session, you may wish to power down the services:
 
-.. .. code-block:: console
+.. code-block:: console
 
-..     $ verdi daemon stop
-..     $ pg_ctl stop
+    $ verdi daemon stop
+    $ pg_ctl stop
+
+If computations are still running, then they will be picked up next time the services are started.
+
 
 .. admonition:: Having problems?
+    :class: attention title-icon-troubleshoot
 
-    See the :ref:`troubleshooting section <intro/troubleshooting>`.
+    :ref:`See the troubleshooting section <intro/troubleshooting>`
 
-.. admonition:: In-depth instructions
+.. .. admonition:: In-depth instructions
+..     :class: tip title-icon-read-more
 
-    Installing from source? Install into a VM?
-    Check the :ref:`advanced installation section <intro/install_advanced>`.
+..     Installing from source? Install into a VM?
+
+..     :ref:`Check the advanced installation section <intro/installation>`
+
+..     .. For configuration of tab completion or using AiiDA in jupyter, see the :ref:`configuration instructions <configure_aiida>` before moving on.
 
 Next Steps
 ==========
 
-.. accordion:: Run pure Python lightweight computations
+.. div:: dropdown-group
 
-    blah blah blah
+    .. dropdown:: Run pure Python lightweight computations
+        :container:
 
-    .. link-button:: ...
-        :type: url
-        :text: links to tutorials
-        :classes: btn-outline-primary btn-block
+        blah blah blah
 
-.. accordion:: Run compute-intensive codes
+        .. link-button:: ...
+            :type: url
+            :text: links to tutorials
+            :classes: btn-outline-primary btn-block
 
-    blah blah blah
+    .. dropdown:: Run compute-intensive codes
+        :container:
 
-    .. link-button:: ...
-        :type: url
-        :text: links to tutorials
-        :classes: btn-outline-primary btn-block
+        blah blah blah
 
-.. accordion:: Run computations on High Performance Computers
+        .. link-button:: ...
+            :type: url
+            :text: links to tutorials
+            :classes: btn-outline-primary btn-block
 
-    blah blah blah
+    .. dropdown:: Run computations on High Performance Computers
 
-    .. link-button:: ...
-        :type: url
-        :text: links to tutorials
-        :classes: btn-outline-primary btn-block
+        blah blah blah
+
+        .. link-button:: ...
+            :type: url
+            :text: links to tutorials
+            :classes: btn-outline-primary btn-block
 
 
 .. |PostgreSQL| replace:: `PostgreSQL <https://www.postgresql.org>`__

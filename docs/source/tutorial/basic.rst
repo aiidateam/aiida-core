@@ -556,7 +556,7 @@ The provenance graph now looks like the one we showed at the start of this tutor
 How to continue from here
 *************************
 
-Congratulations! You have completed the first step to becoming an AiiDA master.
+Congratulations! You have completed the first step to becoming an AiiDA expert.
 
 TODO: A list of how-to sections that might be most relevant as a continuation, after having completed the tutorial. This will be split into a few 'user types'.
 

@@ -135,7 +135,7 @@ jobs:
 
     - name: upgrade setuptools [py35]
       if: matrix.python-version == 3.5
-      run: pip install -I setuptools==38.2.0
+      run: pip install -I setuptools==42.0.0
 
     - name: Install aiida-core
       run: |

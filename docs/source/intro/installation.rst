@@ -478,4 +478,72 @@ After installing AiiDA packages, always remember to update the reentry cache usi
 Docker
 ======
 
-a
+AiiDA maintains a `Docker <https://www.docker.com/>`__ image on `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core>`__, which is particularly useful for learning and testing purposes.
+It is a great way to quickly get started on the tutorials.
+
+Follow Docker's `install guide <https://docs.docker.com/get-docker/>`__ to download Docker and start its daemon.
+Now you can pull the aiida-core image straight from Docker Hub, for a specific version.
+
+.. code-block:: console
+
+   $ docker pull aiidateam/aiida-core:1.2.1
+
+We can start a container running by:
+
+.. code-block:: console
+
+   $ docker run -d --name aiida-container aiidateam/aiida-core:1.2.1
+
+The container comes installed with all required services and, on start-up, will automatically start them and create an AiiDA profile (plus a localhost computer).
+To (optionally) wait for the services to start and inspect the start-up process, we can run:
+
+.. code-block:: console
+
+   $ docker exec -t aiida-container wait-for-services
+   $ docker logs aiida-container
+
+The profile is created under the ``aiida`` username, so to execute commands use:
+
+.. code-block:: console
+
+   $ docker exec -t --user aiida aiida-container /bin/bash -l -c 'verdi status'
+   ✓ config dir:  /home/aiida/.aiida
+   ✓ profile:     On profile default
+   ✓ repository:  /home/aiida/.aiida/repository/default
+   ✓ postgres:    Connected as aiida_qs_aiida_477d3dfc78a2042156110cb00ae3618f@localhost:5432
+   ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+   ✓ daemon:      Daemon is running as PID 1795 since 2020-05-20 02:54:00
+
+Or to enter into the container interactively:
+
+.. code-block:: console
+
+   $ docker exec -it --user aiida aiida-container /bin/bash
+
+If you stop the container and start it again, any data you created will persist.
+
+.. code-block:: console
+
+   $ docker stop aiida-container
+   $ docker start aiida-container
+
+But if you remove the container all data will be removed.
+
+.. code-block:: console
+
+   $ docker stop aiida-container
+   $ docker rm aiida-container
+
+To store data and even share it between containers, you may wish to `add a volume <https://docs.docker.com/storage/volumes/>`__:
+
+.. code-block:: console
+
+   $ docker run -d --name aiida-container --mount source=my_data,target=/tmp/my_data aiidateam/aiida-core:1.2.1
+
+Now anything that you save to the ``/tmp/my_data`` folder will be saved to the volume persistently.
+You can even add files directly to the folder outside of the container, by finding its mounting point:
+
+.. code-block:: console
+
+   $ docker volume inspect my_data
+   $ echo "hallo" | sudo tee -a /var/lib/docker/volumes/my_data/_data/hallo.txt  > /dev/null

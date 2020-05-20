@@ -25,7 +25,7 @@ jobs:
       - run:
           name: Build docs to store
           command: |
-            sphinx-build -b html docs/source docs/_build/html
+            sphinx-build -b html -d docs/_build/doctrees docs/source docs/_build/html
           environment:
             # READTHEDOCS: 'True'
             RUN_APIDOC: 'False'

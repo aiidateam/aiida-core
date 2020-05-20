@@ -28,11 +28,10 @@ In order to enable tab completion in your current shell, make sure to source the
 
     This line replaces the ``eval "$(verdi completioncommand)"`` line that was used in ``aiida-core<1.0.0``. While this continues to work, support for the old line may be dropped in the future.
 
-
 .. _setup_aiida:
 
 AiiDA profile setup
-===================
+-------------------
 
 After successful installation, you need to create an AiiDA profile via AiiDA's command line interface ``verdi``.
 
@@ -40,7 +39,7 @@ Most users should use the interactive quicksetup:
 
 .. code-block:: console
 
-    $ verdi quicksetup <profile_name>
+    $ verdi quicksetup
 
 which leads through the installation process and takes care of creating the corresponding AiiDA database.
 
@@ -108,9 +107,8 @@ If you use the same names as in the example commands above, then during the ``ve
   on your hard drive AFTER it has been created and filled, look at the
   instructions :ref:`here<move_postgresql>`.
 
-
 Database setup using 'peer' authentication
-++++++++++++++++++++++++++++++++++++++++++
+..........................................
 
 On Ubuntu Linux, the default PostgreSQL setup is configured to use ``peer`` authentication, which allows password-less login via local Unix sockets.
 In this mode, PostgreSQL compares the Unix user connecting to the socket with its own database of users and allows a connection if a matching user exists.
@@ -200,7 +198,7 @@ If you open a new terminal for example, be sure to activate it first with::
 .. _start_daemon:
 
 Start the daemon
-================
+----------------
 
 The AiiDA daemon process runs in the background and takes care of processing your submitted calculations and workflows, checking their status, retrieving their results once they are finished and storing them in the AiiDA database.
 
@@ -216,7 +214,7 @@ The AiiDA daemon is controlled using three simple commands:
 
 
 Final checks
-============
+------------
 
 Use the ``verdi status`` command to check that all services are up and running:
 

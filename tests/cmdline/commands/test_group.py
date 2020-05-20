@@ -192,6 +192,14 @@ class TestVerdiGroup(AiidaTestCase):
         self.assertEqual(len(result.output.strip().split('\n')), 1)
         self.assertTrue(str(nodes[0].pk) in result.output or str(nodes[1].pk) in result.output)
 
+        # Repeat test with `limit=1` but without the `--raw` flag as it has a different code path that is affected
+        result = self.cli_runner.invoke(cmd_group.group_show, [label, '--limit', '1'])
+        self.assertClickResultNoException(result)
+
+        # Check that one, and only one pk appears in the output
+        self.assertTrue(str(nodes[0].pk) in result.output or str(nodes[1].pk) in result.output)
+        self.assertTrue(not (str(nodes[0].pk) in result.output and str(nodes[1].pk) in result.output))
+
     def test_description(self):
         """Test `verdi group description` command."""
         description = 'It is a new description'

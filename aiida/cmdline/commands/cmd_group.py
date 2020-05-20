@@ -166,7 +166,7 @@ def group_show(group, raw, limit, uuid):
             header.append('UUID')
         header.extend(['PK', 'Type', 'Created'])
         echo.echo('# Nodes:')
-        for node in group.nodes:
+        for node in node_iterator:
             row = []
             if uuid:
                 row.append(node.uuid)

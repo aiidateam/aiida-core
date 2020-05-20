@@ -409,6 +409,76 @@ If you have `Conda`_ installed then you can directly create a new environment wi
    $ conda activate
    $ conda deactivate aiida
 
+.. _directory_location:
+
+Isolating AiiDA environments
+----------------------------
+
+By default, the AiiDA configuration is stored in the directory ``~/.aiida``.
+When running AiiDA in multiple virtual environments (using ``venv`` or ``conda``),
+you can ask AiiDA to use a separate ``.aiida`` configuration directory per environment.
+
+1. Create your virtual environment ``aiida2``
+2. Edit the activation script ``/path/to/new/virtual/environment/aiida2/bin/activate``
+   and append a line to set the ``AIIDA_PATH`` environment variable:
+
+   .. code-block:: bash
+
+      export AIIDA_PATH='/path/to/new/virtual/environment/aiida2/'  # use .aiida configuration in this folder
+      eval "$(_VERDI_COMPLETE=source verdi)"  # e.g. set up tab completion
+
+.. note::
+   For ``conda``,     create a directory structure ``etc/conda/activate.d`` in
+   the root folder of your conda environment (e.g.
+   ``/home/user/miniconda/envs/aiida``), and place a file ``aiida-init.sh`` in
+   that folder which exports the ``AIIDA_PATH``.
+
+3. Deactivate and re-activate the virtual environment
+
+You can test that everything is set up correctly if you can reproduce the following:
+
+.. code-block:: console
+
+   (aiida2)$ echo $AIIDA_PATH
+   /path/to/new/virtual/environment/aiida2/
+   (aiida2)$ verdi profile list
+   Info: configuration folder: /home/my_username/.virtualenvs/aiida/.aiida2
+   Critical: configuration file /home/my_username/.virtualenvs/aiida/.aiida2/config.json does not exist
+
+Now simply :ref:`create a new AiiDA profile <setup_aiida>` in the ``aiida2`` environment.
+
+``AIIDA_PATH`` Details
+......................
+
+The value of ``AIIDA_PATH`` can be a colon-separated list of paths.
+AiiDA will go through each of the paths and check whether they contain a ``.aiida`` directory.
+The first configuration directory that is encountered will be used.
+If no ``.aiida`` directory is found, one will be created in the last path that was considered.
+
+For example, the directory structure in your home folder ``~/`` might look like this::
+
+   .
+   ├── .aiida
+   └── project_a
+      ├── .aiida
+      └── subfolder
+
+
+If you leave the ``AIIDA_PATH`` variable unset, the default location ``~/.aiida`` will be used.
+However, if you set :
+
+.. code-block:: console
+
+   $ export AIIDA_PATH='~/project_a:'
+
+the configuration directory ``~/project_a/.aiida`` will be used.
+
+.. warning::
+
+   If there was no ``.aiida`` directory in ``~/project_a``, AiiDA would have created it for you.
+   Thus make sure to set the ``AIIDA_PATH`` correctly.
+
+
 .. _install/aiida-core:
 
 aiida-core package

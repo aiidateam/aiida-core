@@ -94,6 +94,7 @@ Here we first provide a simple approach for installation on your local computer.
     :fa:`download,mr-1` **Install with pip**
 
     .. code-block:: console
+        :class: no-copy
 
         $ pip install aiida-core
         $ reentry scan

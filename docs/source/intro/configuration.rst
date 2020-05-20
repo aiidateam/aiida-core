@@ -18,9 +18,9 @@ Enable tab-completion with the following shell command:
 
 Place this command in your startup file, i.e. one of
 
-* the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide
-* the `activate script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment
-* a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
+* the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide,
+* the `activate script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment, or
+* a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment.
 
 In order to enable tab completion in your current shell, make sure to source the start-up file once.
 

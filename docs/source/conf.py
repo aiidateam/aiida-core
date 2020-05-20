@@ -171,6 +171,7 @@ numfig = True
 html_static_path = ['_static']
 html_css_files = ['aiida-custom.css']
 copybutton_selector = 'div:not(.no-copy)>div.highlight pre'
+copybutton_prompt_text = '$ '
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.

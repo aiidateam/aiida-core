@@ -324,15 +324,16 @@ The guide for Ubuntu above can generally be followed, but there are a few things
       These services may be run at startup *without* passing a password in the following way:
 
       Create a ``.sh`` file with the lines above, but *without* ``sudo``.
-      Make the file executeable, i.e., type::
+      Make the file executeable, i.e., type:
 
-         chmod +x /path/to/file.sh
+      .. code-block:: console
 
-      Then type::
+         $ chmod +x /path/to/file.sh
+         $ sudo visudo
 
-         sudo visudo
+      And add the line:
 
-      And add the line::
+      .. code-block:: sh
 
          <username> ALL=(root) NOPASSWD: /path/to/file.sh
 
@@ -340,9 +341,11 @@ The guide for Ubuntu above can generally be followed, but there are a few things
       This will allow you to run *only* this specific ``.sh`` file with ``root`` access (without password), without lowering security on the rest of your system.
 
 #. There is a `known issue <https://github.com/Microsoft/WSL/issues/856>`_ in WSL Ubuntu 18.04 where the timezone is not configured correctly out-of-the-box, which may cause problem for the database.
-   The following command can be used to re-configure the time zone::
+   The following command can be used to re-configure the time zone:
 
-     sudo dpkg-reconfigure tzdata
+   .. code-block:: console
+
+      $ sudo dpkg-reconfigure tzdata
 
 #. The file open limit may need to be raised using ``ulimit -n 2048`` (default is 1024), when running tests.
    You can check the limit by using ``ulimit -n``.
@@ -383,7 +386,7 @@ With bash the following command is used:
 
    $ source /path/to/new/virtual/environment/aiida/bin/activate
 
-To leave or deactivate the environment, simply run::
+To leave or deactivate the environment, simply run:
 
 .. code-block:: console
 
@@ -419,7 +422,7 @@ AiiDA can be installed either from the python package index `PyPI`_, `Conda`_ (b
 
 With your virtual environment active (see above), install the ``aiida-core`` python package from `PyPI`_ using:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ pip install aiida-core
 
@@ -428,7 +431,9 @@ With your virtual environment active (see above), install the ``aiida-core`` pyt
 
    Consider adding the ``--user`` flag to avoid the need for administrator privileges.
 
-Alternatively, you can create a directory where to clone the AiiDA source code and install AiiDA from source::
+Alternatively, you can create a directory where to clone the AiiDA source code and install AiiDA from source:
+
+.. code-block:: console
 
     $ mkdir <your_directory>
     $ cd <your_directory>

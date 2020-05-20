@@ -43,7 +43,7 @@ Automated Interactive Infrastructure and Database for Computational Science
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: tutorials
+   .. link-button:: tutorial
       :type: ref
       :text: To the tutorials
       :classes: btn-outline-primary btn-block stretched-link
@@ -155,6 +155,7 @@ Automated Interactive Infrastructure and Database for Computational Science
 .. toctree::
    :maxdepth: 2
    :caption: Internal architecture
+   :hidden:
 
    internals/global_design
    internals/orm

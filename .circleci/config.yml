@@ -26,9 +26,9 @@ jobs:
           name: Build docs to store
           command: |
             sphinx-build -b html -d docs/_build/doctrees docs/source docs/_build/html
-          environment:
+          # environment:
             # READTHEDOCS: 'True'
-            RUN_APIDOC: 'False'
+            # RUN_APIDOC: 'False'
       - store_artifacts:
           path: docs/_build/html/
           destination: html

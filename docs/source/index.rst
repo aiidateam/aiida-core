@@ -56,7 +56,7 @@ Automated Interactive Infrastructure and Database for Computational Science
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: how-to
+   .. link-button:: howto/codes
       :type: ref
       :text: To the how-to guides
       :classes: btn-outline-primary btn-block stretched-link
@@ -69,7 +69,7 @@ Automated Interactive Infrastructure and Database for Computational Science
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: topics
+   .. link-button:: topics/cli
       :type: ref
       :text: To the topics
       :classes: btn-outline-primary btn-block stretched-link
@@ -82,7 +82,7 @@ Automated Interactive Infrastructure and Database for Computational Science
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: api
+   .. link-button:: reference/command_line
       :type: ref
       :text: To the reference guide
       :classes: btn-outline-primary btn-block stretched-link
@@ -95,7 +95,7 @@ Automated Interactive Infrastructure and Database for Computational Science
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: development
+   .. link-button:: internals/global_design
       :type: ref
       :text: To the development guide
       :classes: btn-outline-primary btn-block stretched-link

@@ -23,19 +23,15 @@ jobs:
 
       # Build the docs
       - run:
-          command: ls
-      - run:
           name: Build docs to store
           command: |
-            sphinx-build -b html docs docs/_build/html
+            sphinx-build -b html docs/source docs/_build/html
           environment:
             READTHEDOCS: 'True'
             RUN_APIDOC: 'False'
       - store_artifacts:
-          # path: docs/_build/html/
-          # destination: html
-          path: docs
-          destination: docs
+          path: docs/_build/html/
+          destination: html
 
 
 workflows:

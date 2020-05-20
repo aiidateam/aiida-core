@@ -32,7 +32,7 @@ Automated Interactive Infrastructure and Database for Computational Science
 
    .. link-button:: intro/get_started
       :type: ref
-      :text: To the install guides
+      :text: To the installation guides
       :classes: btn-outline-primary btn-block stretched-link
 
    ----------------------------------------------

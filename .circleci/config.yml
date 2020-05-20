@@ -2,7 +2,8 @@ version: 2
 jobs:
   build_docs:
     docker:
-      - image: circleci/python:3.6-stretch
+      # see: https://circleci.com/docs/2.0/circleci-images/#python
+      - image: circleci/python:3.7-stretch
     steps:
       # Get our data and merge with upstream
       - run: sudo apt-get update
@@ -24,8 +25,10 @@ jobs:
       # Build the docs
       - run:
           name: Build docs to store
+          # nit-picky mode, turn warnings into errors,
+          # but don't stop the build on errors (so we can still inspect the doc artifacts)
           command: |
-            sphinx-build -b html -d docs/_build/doctrees docs/source docs/_build/html
+            sphinx-build -b html -nW --keep-going -d docs/_build/doctrees docs/source docs/_build/html
           # environment:
             # READTHEDOCS: 'True'
             # RUN_APIDOC: 'False'

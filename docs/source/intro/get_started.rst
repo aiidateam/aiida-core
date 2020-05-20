@@ -30,7 +30,7 @@ These are outlined below, followed by a recommended "quick-install" route on you
 
    ---------------
 
-   :fa:`folder,mr-1` **Virtual Folder**
+   :fa:`folder,mr-1` **Virtual Environment**
 
    *Install software into an isolated directory on your machine.*
 

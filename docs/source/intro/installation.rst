@@ -149,7 +149,7 @@ Finally install the aiida-core python environment:
 
 .. admonition:: Further Reading
    :class: title-icon-read-more
-   
+
    - For a more detailed description of database requirements and usage see the :ref:`database section<database>`.
    - For problems with installing RabbitMQ, refer to the detailed instructions provided on the `RabbitMQ website for Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
 
@@ -196,10 +196,10 @@ Finally install the aiida-core python environment:
 
 .. admonition:: Further Reading
    :class: title-icon-read-more
-   
+
    - For a more detailed description of database requirements and usage see the :ref:`database section<database>`.
    - For problems with installing RabbitMQ, refer to the detailed instructions provided on the `RabbitMQ website for Homebrew based distributions <https://www.rabbitmq.com/install-homebrew.html>`_.
-   - For details on the installation of the ``pip`` package manager, refer to `their documentation <https://pip.pypa.io/en/stable/installing/#installation>`_ 
+   - For details on the installation of the ``pip`` package manager, refer to `their documentation <https://pip.pypa.io/en/stable/installing/#installation>`_
 
 .. _install/details_macports:
 
@@ -251,9 +251,9 @@ Finally install the aiida-core python environment:
 
 .. admonition:: Further Reading
    :class: title-icon-read-more
-   
+
    - For a more detailed description of database requirements and usage see the :ref:`database section<database>`.
-   - For details on the installation of the ``pip`` package manager, refer to `their documentation <https://pip.pypa.io/en/stable/installing/#installation>`_ 
+   - For details on the installation of the ``pip`` package manager, refer to `their documentation <https://pip.pypa.io/en/stable/installing/#installation>`_
 
 .. _install/details_gentoo:
 
@@ -394,7 +394,7 @@ To leave or deactivate the environment, simply run:
 
 .. admonition:: Update install tools
    :class: tip title-icon-tip
-   
+
    You may need to install ``pip`` and ``setuptools`` in your virtual environment in case the system or user version of these tools is old
 
    .. code-block:: console
@@ -550,7 +550,7 @@ Updating aiida-core
 ===================
 
 1. Enter the python environment where AiiDA is installed
-2. Finish all running calculations. 
+2. Finish all running calculations.
    After migrating your database, you will not be able to resume unfinished calculations!
    Data of finished calculations will of course be automatically migrated.
 3. Stop the daemon using ``verdi daemon stop``

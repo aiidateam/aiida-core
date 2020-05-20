@@ -49,7 +49,7 @@ These are outlined below, followed by a recommended "quick-install" route on you
    *Use a pre-made image of all the required software.*
 
    AiiDA maintains a `Docker <https://www.docker.com/>`__ image, which is particularly useful for learning and testing purposes.
-   It is a great way to quickly get started on the tutorials.  
+   It is a great way to quickly get started on the tutorials.
 
    +++
 

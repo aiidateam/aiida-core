@@ -54,20 +54,20 @@ Before running any calculations, let's create and store a *data node*.
 AiiDA ships with an interactive IPython shell that has many basic AiiDA classes pre-loaded.
 To start the IPython shell, simply type in the terminal:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ verdi shell
 
 AiiDA implements data node types for the most common types of data (int, float, str, etc.), which you can extend with your own (composite) data node types if needed.
 For this tutorial, we'll keep it very simple, and start by initializing an ``Int`` node and assigning it to the `node` variable:
 
-.. code-block:: python
+.. code-block:: ipython
 
     In [1]: node = Int(2)
 
 We can check the contents of the ``node`` variable like this:
 
-.. code-block:: python
+.. code-block:: ipython
 
     In [2]: node
     Out[2]: <Int: uuid: eac48d2b-ae20-438b-aeab-2d02b69eb6a8 (unstored) value: 2>
@@ -81,7 +81,7 @@ Quite a bit of information on our freshly created node is returned:
 
 Let's store the node in the database:
 
-.. code-block:: python
+.. code-block:: ipython
 
     In [3]: node.store()
     Out[3]: <Int: uuid: eac48d2b-ae20-438b-aeab-2d02b69eb6a8 (pk: 1) value: 2>
@@ -98,7 +98,7 @@ Use the PK only if you are working within a single database, i.e. in an interact
 Next, let's leave the IPython shell by typing ``exit()`` and then enter.
 Back in the terminal, use the ``verdi`` command line interface (CLI) to check data node we have just created:
 
-.. code:: bash
+.. code:: console
 
     $ verdi node show 1
 
@@ -136,31 +136,31 @@ will give the desired result when applied to two ``Int`` nodes, but the calculat
 However, we can use a ``decorator`` provided by AiiDA to automatically make it part of the provenance graph.
 Start up the AiiDA IPython shell again using ``verdi shell`` and execute the following code snippet:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    from aiida.engine import calcfunction
-
-    @calcfunction
-    def multiply(x, y):
-        return x * y
+    In [1]: from aiida.engine import calcfunction
+       ...:
+       ...: @calcfunction
+       ...: def multiply(x, y):
+       ...:     return x * y
 
 This converts the ``multiply`` function into an AiIDA *calculation function*, the most basic execution unit in AiiDA.
 Next, load the ``Int`` node you have created in the previous section using the ``load_node`` function and the PK of the data node:
 
-.. code-block:: python
+.. code-block:: ipython
 
     In [2]: x = load_node(pk=1)
 
 Of course, we need another integer to multiply with the first one.
 Let's create a new ``Int`` data node and assign it to the variable ``y``:
 
-.. code-block:: python
+.. code-block:: ipython
 
     In [3]: y = Int(3)
 
 Now it's time to multiply the two numbers!
 
-.. code-block:: python
+.. code-block:: ipython
 
     In [4]: multiply(x, y)
     Out[4]: <Int: uuid: 42541d38-1fb3-4f60-8122-ab8b3e723c2e (pk: 4) value: 6>
@@ -168,9 +168,9 @@ Now it's time to multiply the two numbers!
 Success! The ``calcfunction``-decorated ``multiply`` function has multiplied the two ``Int`` data nodes and returned a new ``Int`` data node whose value is the product of the two input nodes.
 Note that by executing the ``multiply`` function, all input and output nodes are automatically stored in the database:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    In [5]:  y
+    In [5]: y
     Out[5]: <Int: uuid: 7865c8ff-f243-4443-9233-dd303a9be3c5 (pk: 2) value: 3>
 
 We had not yet stored the data node assigned to the ``y`` variable, but by providing it as an input argument to the ``multiply`` function, it was automatically stored with PK = 2.
@@ -178,14 +178,15 @@ Similarly, the returned ``Int`` node with value 6 has been stored with PK = 4.
 
 Let's once again leave the IPython shell with ``exit()`` and look for the process we have just run using the ``verdi`` CLI:
 
-.. code:: bash
+.. code:: console
 
     $ verdi process list
 
-The returned list will be empty, but don't worry! By default, ``verdi process list`` only returns the *active* processes.
+The returned list will be empty, but don't worry!
+By default, ``verdi process list`` only returns the *active* processes.
 If you want to see *all* processes (i.e. also the processes that are *terminated*), simply add the ``-a`` option:
 
-.. code:: bash
+.. code:: console
 
     $ verdi process list -a
 
@@ -207,11 +208,13 @@ As a final step, let's have a look at the provenance of this simple calculation.
 The provenance graph can be automatically generated using the verdi CLI.
 Let's generate the provenance graph for the ``multiply`` calculation function we have just run with PK = 3:
 
-.. code-block:: bash
+.. code-block:: console
 
   $ verdi node graph generate 3
 
-The command will write the provenance graph to a ``.pdf`` file. Use your favorite PDF viewer to have a look. It should look something like the graph shown in :numref:`fig_calcfun_graph`.
+The command will write the provenance graph to a ``.pdf`` file.
+Use your favorite PDF viewer to have a look.
+It should look something like the graph shown in :numref:`fig_calcfun_graph`.
 
 .. _fig_calcfun_graph:
 .. figure:: include/calcfun_graph.png
@@ -235,7 +238,7 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
     Let's begin by setting up the computer using the ``verdi computer`` subcommand:
 
-    .. code-block:: bash
+    .. code-block:: console
 
         $ verdi computer setup -L tutor -H localhost -T local -S direct -w `echo $PWD/work` -n
         $ verdi computer configure local tutor --safe-interval 5 -n
@@ -253,7 +256,7 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
     Next, let's set up the code we're going to use for the tutorial:
 
-    .. code-block:: bash
+    .. code-block:: console
 
         $ verdi code setup -L add --on-computer --computer=tutor -P arithmetic.add --remote-abs-path=/bin/bash -n
 
@@ -265,7 +268,7 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
 Let's have a look at the codes that are available to us:
 
-.. code:: bash
+.. code:: console
 
     $ verdi code list
 
@@ -274,7 +277,7 @@ This code allows us to add two integers together.
 The ``add@tutor`` identifier indicates that the code with label ``add`` is run on the computer with label ``tutor``.
 To see more details about the computer, you can use the following ``verdi`` command:
 
-.. code:: bash
+.. code:: console
 
     $ verdi computer show tutor
 
@@ -283,24 +286,24 @@ This is the directory in which the calculations running on the ``tutor`` compute
 
 Let's now start up the ``verdi shell`` again and load the ``add@tutor`` code using its label:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    code = load_code(label='add')
+    In [1]: code = load_code(label='add')
 
 Every code has a convenient tool for setting up the required input, called the builder.
 It can be obtained by using the ``get_builder`` method:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    builder = code.get_builder()
+    In [2]: builder = code.get_builder()
 
 Using the builder, you can easily set up the calculation by directly providing the input arguments.
 Let's use the ``Int`` node that was created by our previous ``calcfunction`` as one of the inputs:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    builder.x = load_node(pk=4)
-    builder.y = Int(5)
+    In [3]: builder.x = load_node(pk=4)
+       ...: builder.y = Int(5)
 
 .. note::
 
@@ -309,16 +312,16 @@ Let's use the ``Int`` node that was created by our previous ``calcfunction`` as 
 
 To execute the ``CalcJob``, we use the ``run`` function provided by the AiiDA engine:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    from aiida.engine import run
-    run(builder)
+    In [4]: from aiida.engine import run
+       ...: run(builder)
 
 Wait for the process to complete.
 Once it is done, it will return a dictionary with the output nodes.
 Exit the IPython shell and once more check for *all* processes:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ verdi process list -a
 
@@ -327,7 +330,7 @@ One is the ``multiply`` calcfunction you ran earlier, the second is the ``Arithm
 Grab the PK of the ``ArithmeticAddCalculation``, and generate the provenance graph.
 The result should look like the graph shown in :numref:`fig_calcjob_graph`.
 
-.. code-block:: bash
+.. code-block:: console
 
     $ verdi node graph generate 7
 
@@ -340,7 +343,7 @@ The result should look like the graph shown in :numref:`fig_calcjob_graph`.
 
 You can see more details on any process, including its inputs and outputs, using the verdi shell:
 
-.. code:: bash
+.. code:: console
 
     $ verdi process show 7
 
@@ -353,42 +356,54 @@ Instead, we are going to *submit* the ``CalcJob`` to the AiiDA *daemon*.
 The daemon is a program that runs in the background and manages submitted calculations until they are *terminated*.
 Let's first check the status of the daemon using the ``verdi`` CLI:
 
+.. code-block:: console
+
+    $ verdi daemon status
+
+If the daemon is running, the output will be something like the following:
+
 .. code-block:: bash
 
-  $ verdi daemon status
+    Profile: tutorial
+    Daemon is running as PID 96447 since 2020-05-22 18:04:39
+    Active workers [1]:
+      PID    MEM %    CPU %  started
+    -----  -------  -------  -------------------
+    96448    0.507        0  2020-05-22 18:04:39
+    Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers
 
-If the daemon is running, let's stop it for now:
+In this case, let's stop it for now:
 
-.. code-block:: bash
+.. code-block:: console
 
-  $ verdi daemon stop
+    $ verdi daemon stop
 
 Next, let's *submit* the ``CalcJob`` we ran previously.
 Start the ``verdi shell`` and execute the Python code snippet below.
 This follows all the steps we did previously, but now uses the ``submit`` function instead of ``run``:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    from aiida.engine import submit
-
-    code = load_code(label='add')
-    builder = code.get_builder()
-    builder.x = load_node(pk=4)
-    builder.y = Int(5)
-
-    submit(builder)
+    In [1]: from aiida.engine import submit
+       ...:
+       ...: code = load_code(label='add')
+       ...: builder = code.get_builder()
+       ...: builder.x = load_node(pk=4)
+       ...: builder.y = Int(5)
+       ...:
+       ...: submit(builder)
 
 Note that the submission finishes very quickly, and that it returns the ``CalcJob`` that was just submitted:
 
-.. code-block:: python
+.. code-block:: ipython
 
     Out[1]: <CalcJobNode: uuid: e221cf69-5027-4bb4-a3c9-e649b435393b (pk: 12) (aiida.calculations:arithmetic.add)>
 
 Let's exit the IPython shell and have a look at the process list:
 
-.. code-block:: bash
+.. code-block:: console
 
-  $ verdi process list
+    $ verdi process list
 
 You should see the ``CalcJob`` you have just submitted, with the state ``Created``:
 
@@ -405,13 +420,13 @@ You should see the ``CalcJob`` you have just submitted, with the state ``Created
 The ``CalcJob`` process is now waiting to be picked up by a daemon runner, but the daemon is currently disabled.
 Let's start it up (again):
 
-.. code-block:: bash
+.. code-block:: console
 
     $ verdi daemon start
 
 Now you can either use ``verdi process list`` to follow the execution of the ``CalcJob``, or ``watch`` its progress:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ verdi process watch 12
 
@@ -493,30 +508,30 @@ You can see the code below:
 Let's run the ``WorkChain`` above!
 Start up the ``verdi shell`` and import the ``MultiplyAddWorkChain``:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    from aiida.workflows.multiplyadd import MultiplyAddWorkChain
+    In [1]: from aiida.workflows.multiplyadd import MultiplyAddWorkChain
 
 Similar to a ``CalcJob``, the ``WorkChain`` input can be set up using a builder:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    builder = MultiplyAddWorkChain.get_builder()
-    builder.code = load_code(label='add')
-    builder.x = Int(2)
-    builder.y = Int(3)
-    builder.z = Int(5)
+    In [2]: builder = MultiplyAddWorkChain.get_builder()
+       ...: builder.code = load_code(label='add')
+       ...: builder.x = Int(2)
+       ...: builder.y = Int(3)
+       ...: builder.z = Int(5)
 
 Once the ``WorkChain`` input has been set up, we submit it to the daemon using the ``submit`` function from the AiiDA engine:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    from aiida.engine import submit
-    submit(builder)
+    In [3]: from aiida.engine import submit
+       ...: submit(builder)
 
 Now quickly leave the IPython shell and check the process list:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ verdi process list -a
 
@@ -543,7 +558,7 @@ Now all the processes should be in the ``Finished`` state.
 
 We can now generate the full provenance graph for the ``WorkChain`` with:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ verdi node graph generate 19
 

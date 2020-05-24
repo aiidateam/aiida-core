@@ -244,8 +244,7 @@ However, storing large amounts of data within the database comes at the cost of 
 Therefore, big data (think large files), whose content does not necessarily need to be queried for, is better stored in the file repository.
 A data type may safely use both the database and file repository in parallel for individual properties.
 Properties stored in the database are stored as *attributes* of the node.
-The node class has various methods to set these attributes, such as :py:meth:`~aiida.orm.node.Node.set_attribute` and :py:meth:`~aiida.orm.node.Node.set_attribute_many`.
-
+The node class has various methods to set these attributes, such as :py:`~aiida.orm.node.Node.set_attribute` and :py:`~aiida.orm.node.Node.set_attribute_many`.
 
 .. _how-to:data:find:
 

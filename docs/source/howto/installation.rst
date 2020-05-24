@@ -224,54 +224,104 @@ Tuning performance
 ==================
 
 AiiDA supports running hundreds of thousands of calculations and graphs with millions of nodes.
-However, to scale to this amount, you might need to properly configure some variables in AiiDA to balance the load on your CPU and disk.
+However, optimal performance at that scale might require some tweaks to the AiiDA configuration to balance the CPU and disk load.
 
-Here are a few things you can do in order to keep AiiDA running smoothly:
+Here are a few general tips that might improve the AiiDA performance:
 
   1. :ref:`Move the Postgresql database<how-to:installation:more:move_postgresql>` to a fast disk (SSD), ideally on a large partition.
 
   2. Use AiiDA's tools for making :ref:`efficient incremental backups<how-to:installation:backup:repository>` of the file repository.
 
-  3. Your operating system may be indexing the file repository.
-     :ref:`Disable this<how-to:installation:more:disable_repo_indexing>`.
+  3. Prevent your operating system from indexing the file repository.
+
+     .. dropdown:: Disabling ``locate`` on Linux
+
+        Many Linux distributions include the ``locate`` command to quickly find files and folders, and run a daily cron job ``updatedb.mlocate`` to create the corresponding index.
+        A large file repository can take a long time to index, up to the point where the hard drive is constantly indexing.
+
+        In order to exclude the repository folder from indexing, add its path to the ``PRUNEPATH`` variable in the ``/etc/updatedb.conf`` configuration file (use ``sudo``).
+
 
   4. The verdi deamon can manage an arbitrary number of parallel workers; by default only one is activated. If ``verdi daemon status`` shows the daemon worker(s) constantly at high CPU usage, use ``verdi daemon incr X`` to add ``X`` daemon workers.
-     However, don't use many more workers than CPU cores on your machine (or ideally, if you have many cores, leave one or two available for the database).
+     It is recommended that the number of workers does not exceed the number of CPU cores (or, if possible, that you use one or two cores less than your machine has, to avoid to degrade the PostgreSQL database performance).
 
-  5. If you submit to a supercomputer shared by many users (e.g., in a supercomputer center), be careful not to overload the supercomputer with too many jobs:
+.. _how-to:installation:running-on-supercomputers:
 
-     * keep the number of jobs in the queue under control (the exact number depends on the supercomputer: discuss this with your supercomputer administrators, and you can redirect them to :ref:`this page<how-to:installation:performance:for_cluster_admins>` that may contain useful information for them).
-       While in the future `this might be dealt by AiiDA automatically <https://github.com/aiidateam/aiida-core/issues/88>`_,
-       you are responsible for this at the moment.
-       This can be achieved for instance by submitting only a maximum number of workflows to AiiDA, and submitting new ones only when the previous ones complete.
+Running on supercomputers
+=========================
 
-     * Tune the parameters that AiiDA uses to avoid overloading the supercomputer with connections or batch requests.
-       For SSH transports, the default is 30 seconds, which means that when each worker opens a SSH connection to a computer, it will reuse it as long as there are tasks to execute and then close it.
-       Opening a new connection will not happen before 30 seconds has passed from the opening of the previous one.
+.. _how-to:installation:running-on-supercomputers:avoiding-overloads:
 
-       We stress that this is *per daemon worker*, so that if you have 10 workers, your supercomputer will on average see 10 connections every 30 seconds.
-       Therefore, if you are using many workers and you mostly have long-running jobs, you can set a longer time (e.g., 120 seconds) by reconfiguring the computer with ``verdi computer configure ssh <COMPUTER_NAME>`` and changing the value
-       of the *Connection cooldown time* or, alternatively, by running::
+Avoiding overloads
+------------------
 
-         verdi computer configure ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
+If you submit to a supercomputer shared by many users (e.g., in a supercomputer center), be careful not to overload the supercomputer with too many jobs:
 
-     * In addition to the connection cooldown time described above, AiiDA also avoids running too often the command to get the list of jobs in the queue (``squeue``, ``qstat``, ...), as this can also impact the performance of the scheduler.
-       For a given computer, you can increase how many seconds must pass between requests.
-       First load the computer in a shell with ``computer = load_computer(<COMPUTER_NAME>)``.
-       You can check the current value in seconds (by default, 10) with ``computer.get_minimum_job_poll_interval()``.
-       You can then set it to a higher value using::
+  * keep the number of jobs in the queue under control (the exact number depends on the supercomputer: discuss this with your supercomputer administrators, and you can redirect them to :ref:`this page<how-to:installation:running-on-supercomputers:for_cluster_admins>` that may contain useful information for them).
+    While in the future `this might be dealt by AiiDA automatically <https://github.com/aiidateam/aiida-core/issues/88>`_,
+    you are responsible for this at the moment.
+    This can be achieved for instance by submitting only a maximum number of workflows to AiiDA, and submitting new ones only when the previous ones complete.
 
-         computer.set_minimum_job_poll_interval(<NEW_VALUE_SECONDS>)
+  * Tune the parameters that AiiDA uses to avoid overloading the supercomputer with connections or batch requests.
+    For SSH transports, the default is 30 seconds, which means that when each worker opens a SSH connection to a computer, it will reuse it as long as there are tasks to execute and then close it.
+    Opening a new connection will not happen before 30 seconds has passed from the opening of the previous one.
+
+    We stress that this is *per daemon worker*, so that if you have 10 workers, your supercomputer will on average see 10 connections every 30 seconds.
+    Therefore, if you are using many workers and you mostly have long-running jobs, you can set a longer time (e.g., 120 seconds) by reconfiguring the computer with ``verdi computer configure ssh <COMPUTER_NAME>`` and changing the value
+    of the *Connection cooldown time* or, alternatively, by running::
+
+      verdi computer configure ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
+
+  * In addition to the connection cooldown time described above, AiiDA also avoids running too often the command to get the list of jobs in the queue (``squeue``, ``qstat``, ...), as this can also impact the performance of the scheduler.
+    For a given computer, you can increase how many seconds must pass between requests.
+    First load the computer in a shell with ``computer = load_computer(<COMPUTER_NAME>)``.
+    You can check the current value in seconds (by default, 10) with ``computer.get_minimum_job_poll_interval()``.
+    You can then set it to a higher value using::
+
+      computer.set_minimum_job_poll_interval(<NEW_VALUE_SECONDS>)
+
+.. _how-to:installation:running-on-supercomputers:for_cluster_admins:
+
+Optimising the SLURM scheduler configuration
+--------------------------------------------
+
+If too many jobs are submitted at the same time to the queue, SLURM might have troubles in dealing with the new submissions.
+If you are a cluster administrator, you might be interested in the following tips (or you can redirect your admin to this page if your cluster is experiencing slowness related to a large number of submitted jobs).
+
+.. dropdown:: SLURM optimization notes for cluster administrators
+
+  When too many jobs are submitted at the same time to SLURM, this might result in the ``sbatch`` command returning a time-out error, but eventually the job might be scheduled anyway.
+  In this situation, AiiDA will not have any way to know that the job has actually been run and will try to resubmit the job again in the same folder, which will probably result in a wide range of different errors (see, e.g., the discussion `in this issue <https://github.com/aiidateam/aiida-core/issues/3404>`_).
+
+  Here we report a few suggestions and tricks (text adapted by us) to improve the configuration of SLURM, courtesy of Miguel Gila and Maxime Martinasso (from the Swiss Supercomputing Center `CSCS <http://www.cscs.ch>`_).
+
+      We found two main reasons for SLURM to be slow when submitting a job and potentially returning a timeout while the jobs is/will be scheduled:
+
+      * If many jobs are completing at the same time (with a success or fail status) SLURM will try to accommodate them as soon as possible and will delay the schedule operation which can potentially timeout.
+        Imagine the scenario of a(nother) user submitting a lot of quickly failing jobs in a ``for`` loop.
+        So, your job is registered in SLURM but, because of the slow schedule operation (with SLURM giving higher priority to dealing with the failing jobs of the other user), ``sbatch`` returns a timeout.
+        On the next schedule operation (periodically triggered by SLURM) the job will be actually scheduled but you will not get a job ID back as your ``sbatch`` command already returned with a timeout error earlier.
+        To avoid this, one can add ``reduce_completing_frag`` to ``SchedulerParameters``: this should limit the time spent by SLURM to look at completing jobs;
+      * If there are identical nodes that are part of several partitions, then this will slow down the schedule operation of SLURM.
+        Best is to delete such partitions or change their state to disable.
+        In particular we found a bug (now more or less fixed) in which, if you have a large partition covering *all* the nodes, any node in completing state will defer the scheduling of jobs in any other partition overlapping with the large one over that node.
+        Given some of the workloads we run, this practically disabled the regular scheduling cycle.
+        The backfill will continue to run, but it is a lot less reactive (order of minutes vs. seconds).
+
+      Moreover:
+
+      * Make sure user job submission scripts don't try running too many very short-lived tasks very quickly/at the same time: if this happens, ``slurmctld`` will become unresponsive for large periods of time.
+        Basically what would happen is that the control daemon is busy placing and removing tasks, deferring legitimate RPCs.
+        On a large system like Daint they will pile up, resulting in commands like ``squeue`` or ``sbatch`` to timeout.
 
 .. _how-to:installation:update:
 
 Updating your installation
 ==========================
 
-1. Enter the python environment where AiiDA is installed
+1. Activate the Python environment where AiiDA is installed.
 2. Finish all running calculations.
-   After migrating your database, you will not be able to resume unfinished calculations.
-   Data of finished calculations will of course be automatically migrated.
+   All finished calculations will be automatically migrated, but it is not possible to resume unfinished calculations.
 3. Stop the daemon using ``verdi daemon stop``.
 4. :ref:`Create a backup of your database and repository<how-to:installation:backup>`.
 
@@ -281,8 +331,9 @@ Updating your installation
 
 5. Update your ``aiida-core`` installation.
 
+    * If you have installed AiiDA through ``conda`` simply run: ``conda update aiida-core``.
     * If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``.
-    * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch.
+    * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch with ``git pull``.
 
 6. Migrate your database with ``verdi -p <profile_name> database migrate``.
    Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
@@ -290,13 +341,13 @@ Updating your installation
 After the database migration finishes, you will be able to continue working with your existing data.
 
 .. note::
-    If your update involved a change in the major version number of ``aiida-core``, expect :ref:`backwards incompatible changes<updating_backward_incompatible_changes>` and check whether you also need to update your installed plugin packages.
+    If the update involved a change in the major version number of ``aiida-core``, expect :ref:`backwards incompatible changes<updating_backward_incompatible_changes>` and check whether you also need to update installed plugin packages.
 
 Updating from 0.x.* to 1.*
 --------------------------
-- You will find additional instructions when migrating from the 0.12.x versions <here `https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#updating-from-0-12-to-1`>.
-- If you are upgrading from even older versions (0.4 to 0.11), check <here `https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#older-versions`>.
-- For a list of breaking changes between the 0.x and the 1.x series of AiiDA, check <this page `https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#breaking-changes-from-0-12-to-1`>.
+- `Additional instructions on how to migrate from 0.12.x versions <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#updating-from-0-12-to-1>`_.
+- `Additional instructions on how to migrate from versions 0.4 -- 0.11 <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#older-versions>`_.
+- For a list of breaking changes between the 0.x and the 1.x series of AiiDA, check `this page <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#breaking-changes-from-0-12-to-1>`_.
 
 
 .. _how-to:installation:backup:
@@ -304,28 +355,27 @@ Updating from 0.x.* to 1.*
 Backing up your installation
 ============================
 
-AiiDA stores:
+A full backup of an AiiDA instance and AiiDA managed data requires a backup of:
 
- * the profile configuration in the ``config.json`` file located in the ``.aiida`` folder.
-   Typically located at ``~/.aiida`` (see also :ref:`configure_aiida`).
+* the profile configuration in the ``config.json`` file located in the ``.aiida`` folder.
+  Typically located at ``~/.aiida`` (see also :ref:`configure_aiida`).
 
- * files associated with nodes in the repository folder (one per profile). Typically located in the ``.aiida`` folder.
+* files associated with nodes in the repository folder (one per profile). Typically located in the ``.aiida`` folder.
 
- * queryable metadata in the PostgreSQL database (one per profile).
+* queryable metadata in the PostgreSQL database (one per profile).
 
-All three components are required for the operation of AiiDA and should be backed up.
 
 .. _how-to:installation:backup:repository:
 
 Repository backup (``.aiida`` folder)
 -------------------------------------
 
-For **small repositories** back up the ``.aiida`` folder either by making a full copy or using tools for incremental backups like ``rsync``.
+For **small repositories** (with less than ~100k files), simply back up the ``.aiida`` folder using standard backup software.
+For example, the ``rsync`` utility supports incremental backups, and a backup command might look like ``rsync -avHzPx`` (verbose) or ``rsync -aHzx``.
 
-For **large repositories** with more than 100k nodes, even incremental backups can take a significant amount of time.
+For **large repositories** with millions of files, even incremental backups can take a significant amount of time.
 AiiDA provides a helper script that takes advantage of the AiiDA database in order to figure out which files have been added since your last backup.
 The instructions below explain how to use it:
-
 
  1. Configure your backup using ``verdi -p PROFILENAME devel configure-backup`` where ``PROFILENAME`` is the name of the AiiDA profile that should be backed up.
     This will ask for information on:
@@ -338,7 +388,7 @@ The instructions below explain how to use it:
 
     The configuration step creates two files in the "backup folder": a ``backup_info.json`` configuration file (can also be edited manually) and a ``start_backup.py`` script.
 
-    .. note::
+    .. dropdown:: Notes on using a SSH mount for the backups (on Linux)
 
         Using the same disk for your backup forgoes protection against the most common cause of data loss: disk failure.
         One simple option is to use a destination folder mounted over ssh.
@@ -357,11 +407,13 @@ The instructions below explain how to use it:
  2. Run the ``start_backup.py`` script in the "backup folder" to start the backup.
 
     This will back up all data added after the ``oldest_object_backedup`` date.
-    It will only carry out a new backup every ``periodicity`` days, until a certain end date if specified (using ``end_date_of_backup`` or ``days_to_backup``), see :ref:`how-to:installation:backup:repository:configuration_options` below.
+    It will only carry out a new backup every ``periodicity`` days, until a certain end date if specified (using ``end_date_of_backup`` or ``days_to_backup``), see :ref:`this reference page <reference:backup-script-config-options>` for a detailed description of all options.
 
-    Once you've checked that it works, make sure to run the script periodically (e.g. using a daily cron job, see note below).
+    Once you've checked that it works, make sure to run the script periodically (e.g. using a daily cron job).
 
-    .. note::
+    .. dropdown:: Setting up a cron job on Linux
+
+        This is a quick note on how to setup a cron job on Linux (you can find many more resources online).
 
         On Ubuntu, you can set up a cron job using::
 
@@ -377,50 +429,9 @@ The instructions below explain how to use it:
 
         This will launch the backup of the database every day at 3 AM (03:00), and send the output (or any error message) to the email address specified at the end (provided the ``mail`` command -- from ``mailutils`` -- is configured appropriately).
 
-Finally, if you have a separate automatic backup of your home directory set up, do not forget to exclude the repository folder.
+.. note::
 
-.. _how-to:installation:backup:repository:configuration_options:
-
-Configuration options
-^^^^^^^^^^^^^^^^^^^^^
-
-The configuration options in the ``backup_info.json`` are:
-
-* | ``periodicity`` (in `days`):
-  | The backup runs periodically for a number of days defined in the periodicity variable.
-    The purpose of this variable is to limit the backup to run only on a few number of days and therefore to limit the number of files that are backed up at every round.
-  | E.g. ``"periodicity": 2``.
-  | Example: If you have files in the AiiDA repositories created in the past 30 days, and periodicity is 15, the first run will backup the files of the first 15 days; a second run of the script will backup the next 15 days, completing the backup (if it is run within the same day).
-    Further runs will only backup newer files, if they are created.
-
-* | ``oldest_object_backedup`` (`timestamp` or ``null``):
-  | This is the timestamp of the oldest object that was backed up.
-    If you are not aware of this value or if it is the first time you start a backup for this repository, then set this value to ``null``.
-    Then the script will search the creation date of the oldest Node object in the database and start the backup from that date.
-  | E.g. ``"oldest_object_backedup": "2015-07-20 11:13:08.145804+02:00"``
-
-* | ``end_date_of_backup`` (`timestamp` or ``null``):
-  | If set, the backup script will backup files that have a modification date up until the value specified by this variable.
-    If not set, the ending of the backup will be set by the ``days_to_backup`` variable, which specifies how many days to backup from the start of the backup.
-    If none of these variables are set (``end_date_of_backup`` and ``days_to_backup``), then the end date of backup is set to the current date.
-  | E.g. ``"end_date_of_backup": null`` or ``"end_date_of_backup": "2015-07-20 11:13:08.145804+02:00"``.
-
-* | ``days_to_backup`` (in `days` or ``null``):
-  | If set, you specify how many days you will backup from the starting date of your backup.
-    If it is set to ``null`` and also ``end_date_of_backup`` is set to ``null``, then the end date of the backup is set to the current date.
-    You can not set ``days_to_backup`` & ``end_date_of_backup`` at the same time (it will lead to an error).
-  | E.g. ``"days_to_backup": null`` or ``"days_to_backup": 5``.
-
-* | ``backup_length_threshold`` (in `hours`):
-  | The backup script runs in rounds and on every round it will backup a number of days that are controlled primarily by ``periodicity`` and also by ``end_date_of_backup`` / ``days_to_backup``, for the last backup round.
-    The ``backup_length_threshold`` specifies the *lowest acceptable* round length.
-    This is important for the end of the backup.
-  | E.g. ``backup_length_threshold: 1``
-
-* | ``backup_dir`` (absolute path):
-  | The destination directory of the backup.
-  | E.g. ``"backup_dir": "/home/USERNAME/.aiida/backup/backup_dest"``.
-
+    You might want to exclude the file repository from any separately set up automatic backups of your home directory.
 
 .. _how-to:installation:backup:postgresql:
 
@@ -430,41 +441,13 @@ Database backup
 PostgreSQL typically spreads database information over multiple files that, if backed up directly, are not guaranteed to restore the database.
 We therefore strongly recommend to periodically dump the database contents to a file (which you can then back up using your method of choice).
 
-The instructions below show how to achieve this under Ubuntu 12.04 and 18.04.
-In the following, we assume your database is called ``aiidadb``, and the database user and owner is ``aiida``.
-You'll find this information in the output of ``verdi profile show``.
+A few useful pointers:
 
-In order to dump your database, use a bash script similar to :download:`backup_postgresql.sh <installation_more/backup_postgresql.sh>`:
+* In order to avoid having to enter your database password each time you use the script, you can create a file ``.pgpass`` in your home directory containing your database credentials, as described `in the PostgreSQL documentation <https://www.postgresql.org/docs/12/libpq-pgpass.html>`_.
 
-.. _how-to:installation:backup:postgresql:backup_script:
+* In order to dump your database, use the `pg_dump utility from PostgreSQL <https://www.postgresql.org/docs/12/app-pgdump.html>`_. You can use as a starting example a bash script similar to :download:`this file <backup_postgresql.sh>`.
 
-.. literalinclude:: installation_more/backup_postgresql.sh
-   :language: shell
-
-.. note::
-    In order to avoid having to enter your database password each time you use the script, you can create a file :download:`.pgpass <installation_more/pgpass>` in your home directory:
-
-    .. literalinclude:: installation_more/pgpass
-
-    where ``YOUR_DATABASE_PASSWORD`` is the password you set up for the database.
-
-    This file needs read and write permissions: ``chmod u=rw ~/.pgpass``.
-
-
-In order to automatically dump the database to a file ``~/.aiida/${AIIDADB}-backup.psql.gz`` once per day, you can add a cron job:
-
-Add the following script :download:`backup-aiidadb-USERNAME <installation_more/backup-aiidadb-USERNAME>` to the folder ``/etc/cron.daily/``:
-
-.. literalinclude:: installation_more/backup-aiidadb-USERNAME
-   :language: shell
-
-and replace all instances of ``USERNAME`` with your UNIX user name.
-
-Remember to give the script execute permissions::
-
-  sudo chmod +x /etc/cron.daily/backup-aiidadb-USERNAME
-
-Finally make sure your database folder (``/home/USERNAME/.aiida/``) containing this dump file and the ``repository`` directory, is properly backed up by your backup software (under Ubuntu, 12.04: Backup -> check the "Folders" tab, 18.04: Backups -> check the "Folder to save" tab).
+* You can setup the backup script to run daily using cron (see notes in the :ref:`previous section <how-to:installation:backup:repository>`).
 
 .. _how-to:installation:backup:restore:
 
@@ -473,22 +456,21 @@ Restore backup
 
 In order to restore a backup, you will need to:
 
- 1. | Restore the repository folder.
-    | If you used the :ref:`backup script <how-to:installation:backup:postgresql:backup_script>`, this involves extracting the corresponding zip file (should be created in ``~/.aiida/``).
+ 1. Restore the repository folder that you backed up earlier in the same location as it used to be (you can check the location in the ``config.json`` file inside your ``.aiida`` folder, or simply using ``verdi profile show``).
 
- 2. | Create an empty database following the instructions described in :ref:`database` skipping the ``verdi setup`` phase.
-    | The database should have the same name and database username as the original one (i.e. if you are restoring on the original postgresql cluster, you may have to either rename or delete the original database).
+ 2. Create an empty database following the instructions described in :ref:`database` skipping the ``verdi setup`` phase.
+    The database should have the same name and database username as the original one (i.e. if you are restoring on the original postgresql cluster, you may have to either rename or delete the original database).
 
- 3. As the ``postgres`` user, ``cd`` to the folder containing the database dump (``aiidadb-backup.psql``) and load it::
+ 3. Change directory to the folder containing the database dump created with ``pg_dump``, and load it using the ``psql`` command.
 
-      psql -h localhost -U aiida -d aiidadb -f aiidadb-backup.psql
+    .. dropdown:: Example commands on Linux Ubuntu
 
-    After supplying your database password, the database should be restored.
+       This is an example command, assuming that your dump is named ``aiidadb-backup.psql``::
 
-    .. note::
+          psql -h localhost -U aiida -d aiidadb -f aiidadb-backup.psql
 
-        On Ubuntu, type ``sudo su - postgres`` to become the postgres UNIX user.
-
+       After supplying your database password, the database should be restored.
+       Note that, if you installed the database on Ubuntu as a system service, you need to type ``sudo su - postgres`` to become the ``postgres`` UNIX user.
 
 .. _how-to:installation:multi-user:
 

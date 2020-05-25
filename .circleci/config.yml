@@ -27,14 +27,8 @@ jobs:
           name: Build docs to store
           # nit-picky mode, turn warnings into errors,
           # but do not stop the build on errors (so we can still inspect the doc artifacts)
-          # this needs to re re-instated when doc-revamp merged
-          # command: |
-          #   sphinx-build -b html -nW --keep-going -d docs/_build/doctrees docs/source docs/_build/html
           command: |
             sphinx-build -b html -n --keep-going -d docs/_build/doctrees docs/source docs/_build/html
-          # environment:
-            # READTHEDOCS: 'True'
-            # RUN_APIDOC: 'False'
       - store_artifacts:
           path: docs/_build/html/
           destination: html
@@ -43,4 +37,4 @@ workflows:
   version: 2
   default:
     jobs:
-      - build_docs
+      - docs

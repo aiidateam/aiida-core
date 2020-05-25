@@ -276,14 +276,12 @@ Sharing data
 Deleting data
 =============
 
-By default, every time you run or submit a new calculation or workflow, AiiDA will create for you new nodes in the database, and will never replace or delete data.
+By default, every time you run or submit a new calculation, AiiDA will create for you new nodes in the database, and will never replace or delete data.
 There are cases, however, when it might be useful to delete nodes that are not useful anymore, for instance test runs or incorrect/wrong data and calculations.
-In this case, AiiDA provides a ``verdi node delete`` command to remove the nodes from the provenance graph.
+For this case, AiiDA provides the ``verdi node delete`` command to remove the nodes from the provenance graph.
 
-.. note::
-   The ``verdi node delete`` command should be used with great care.
-
-   First, once the data is deleted, there is no way to recover it (unless you made a backup).
+.. caution::
+   Once the data is deleted, there is no way to recover it (unless you made a backup).
 
    Even more critically, even if you ask to delete only one node, ``verdi node delete`` will typically delete a number of additional linked nodes, in order to preserve a consistent state of the provenance graph.
    For instance, if you delete an input of a calculation, AiiDA will delete also the calculation itself (as otherwise you would be effectively changing the inputs to that calculation in the provenance graph).
@@ -311,16 +309,16 @@ This includes, notably:
 * *Node extras*: These can be deleted using :py:meth:`~aiida.orm.nodes.node.Node.delete_extra` and :py:meth:`~aiida.orm.nodes.node.Node.delete_extra_many`.
 * *Node comments*: These can be removed using :py:meth:`~aiida.orm.nodes.node.Node.remove_comment`.
 * *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.Group.Collection.delete>`.
-  Note that only the group is deleted, while the nodes contained in it are not deleted.
+  This command will only delete the group, not the nodes contained in the group.
 
 Completely deleting an AiiDA profile
 ------------------------------------
-If you don't want to selectively delete some nodes, but you want to delete a whole AiiDA profile altogether, use the ``verdi profile delete`` command.
+If you don't want to selectively delete some nodes, but instead want to delete a whole AiiDA profile altogether, use the ``verdi profile delete`` command.
 This command will delete both the file repository and the database.
 
-.. note::
+.. danger::
 
-  This operation cannot be undone.
+  It is not possible to restore a deleted profile unless it was previously backed up!
 
 
 Serving your data to others

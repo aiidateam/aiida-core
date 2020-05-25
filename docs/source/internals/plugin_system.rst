@@ -29,7 +29,7 @@ Nomenclature
 ``plugin_name``
    A unique name identifying the plugin. Suggested naming scheme is
 
-   * ``aiida-<plugin_name>`` for pypi distribution / source code repository
+   * ``aiida-<plugin-name>`` for pypi distribution / source code repository
    * ``aiida_<plugin_name>`` for python package (``import aiida_<plugin_name>``; dashes replaced by underscores)
    * ``<plugin_name>.ep_name`` for entry points
 
@@ -45,11 +45,10 @@ Interfaces
 
 Pluginloader
 ^^^^^^^^^^^^
-The plugin loading functionality is defined in :py:mod:`aiida.plugins.entry_point` and relies on the `reentry PyPI package <https://github.com/dropd/reentry>`_ to find and load entry points.
+The plugin loading functionality is defined in :py:mod:`aiida.plugins.entry_point` and relies on the `reentry package <https://pypi.org/project/reentry/>`_ to find and load entry points.
 ``reentry`` is about 10x faster than the equivalent functionality in ``pkg_resources`` from ``setuptools``, leading to significant speedup of tab-autocompletion in the ``verdi`` cli.
 If, for some reason, ``reentry`` is not found, the plugin system falls back on ``pkg_resources``.
 
 Registry Tools
 ^^^^^^^^^^^^^^
 See the API documentation in :py:mod:`aiida.plugins`.
-

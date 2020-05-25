@@ -651,6 +651,17 @@ Below is a list with all available subcommands.
       --su-db-password TEXT           Password to connect as the database
                                       superuser.
 
+      --broker-protocol [amqp|amqps]  Protocol to use for the message broker.
+      --broker-username NONEMPTYSTRING
+                                      Username to use for authentication with the
+                                      message broker.
+
+      --broker-password NONEMPTYSTRING
+                                      Password to use for authentication with the
+                                      message broker.
+
+      --broker-host HOSTNAME          Hostname for the message broker.
+      --broker-port INTEGER           Port for the message broker.
       --repository DIRECTORY          Absolute path to the file repository.
       --config FILE                   Load option values from configuration file
                                       in yaml format.
@@ -774,6 +785,17 @@ Below is a list with all available subcommands.
                                       [required]
 
       --db-password TEXT              Password of the database user.  [required]
+      --broker-protocol [amqp|amqps]  Protocol to use for the message broker.
+      --broker-username NONEMPTYSTRING
+                                      Username to use for authentication with the
+                                      message broker.
+
+      --broker-password NONEMPTYSTRING
+                                      Password to use for authentication with the
+                                      message broker.
+
+      --broker-host HOSTNAME          Hostname for the message broker.
+      --broker-port INTEGER           Port for the message broker.
       --repository DIRECTORY          Absolute path to the file repository.
       --config FILE                   Load option values from configuration file
                                       in yaml format.

@@ -8,12 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
-
 import click
-# Note: importing from aiida.manage.postgres leads to circular imports
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.manage.external.rmq import BROKER_DEFAULTS
 from ...utils import defaults, echo
 from .. import types
 from .multivalue import MultipleValueOption
@@ -268,6 +267,39 @@ DB_PASSWORD = OverridableOption(
 )
 
 DB_NAME = OverridableOption('--db-name', type=types.NonEmptyStringParamType(), help='Database name.')
+
+BROKER_PROTOCOL = OverridableOption(
+    '--broker-protocol',
+    type=click.Choice(('amqp', 'amqps')),
+    default=BROKER_DEFAULTS.protocol,
+    help='Protocol to use for the message broker.'
+)
+
+BROKER_USERNAME = OverridableOption(
+    '--broker-username',
+    type=types.NonEmptyStringParamType(),
+    default=BROKER_DEFAULTS.username,
+    help='Username to use for authentication with the message broker.'
+)
+
+BROKER_PASSWORD = OverridableOption(
+    '--broker-password',
+    type=types.NonEmptyStringParamType(),
+    default=BROKER_DEFAULTS.password,
+    help='Password to use for authentication with the message broker.',
+    hide_input=True,
+)
+
+BROKER_HOST = OverridableOption(
+    '--broker-host', type=types.HostnameType(), default=BROKER_DEFAULTS.host, help='Hostname for the message broker.'
+)
+
+BROKER_PORT = OverridableOption(
+    '--broker-port',
+    type=click.INT,
+    default=BROKER_DEFAULTS.port,
+    help='Port for the message broker.',
+)
 
 REPOSITORY_PATH = OverridableOption(
     '--repository', type=click.Path(file_okay=False), help='Absolute path to the file repository.'

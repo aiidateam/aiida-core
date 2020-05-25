@@ -45,8 +45,92 @@ Design guidelines
 Running external codes
 ======================
 
-`#3987`_
+The process of running an external code through AiiDA involves loading and instantiating the appropriate ``CalcJob`` wrapping class for the code, filling the inputs necessary, and then running or submitting the constructed object.
 
+If the ``CalcJob`` has been registered in AiiDA (see section :ref:`on how to register plugins<how-to:plugins:entrypoints>`) you can use the ``CalculationFactory``:
+
+.. code-block:: python
+
+    from aiida.plugins import CalculationFactory
+    calculation_builder = CalculationFactory('arithmetic.add').get_builder()
+
+Otherwise, you can just load the class and get the builder directly:
+
+.. code-block:: python
+
+    from aiida.calculations.plugins.arithmetic.add import ArithmeticAddCalculation
+    calculation_builder = ArithmeticAddCalculation.get_builder()
+
+Then you need to start filling out the builder with all the inputs that you need to specify to run your calculation.
+In the case of the ``ArithmeticAddCalculation``, there are 4 required inputs:
+
+.. code-block:: python
+    :linenos:
+
+    # Specific for ArithmeticAdd
+    spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
+    spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
+
+    # General for all CalcJobs
+    spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
+    spec.input('metadata.options.resources', valid_type=dict, required=True, validator=validate_resources,
+        help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
+             'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
+             'scheduler for more details.')
+
+The first three are input nodes (lines 2, 3 and 6), so you can either use nodes that are already in your database (you can query for them, load them, etc.) or you can create new nodes and these will be automatically stored when starting the calculation.
+
+.. code-block:: python
+
+    code_node = orm.load_node(100)
+    num1_node = orm.Int(17)
+    num2_node = orm.Int(11)
+
+    calculation_builder.code = code_node
+    calculation_builder.x = num1_node
+    calculation_builder.y = num2_node
+
+The last input (line 7) is not a node but a dictionary containing information about the resources required from the remote machine to run the code.
+It will be stored as a property of the ``CalcJob`` node, and should at least contain the following two keys:
+
+.. code-block:: python
+
+    calculation_builder.metadata.options.resources = {
+        'num_machines': 1,
+        'tot_num_mpiprocs': 1,
+    }
+
+Now everything is in place and you are ready to perform the calculation, which you can do in two different ways.
+The first one is blocking and will return a dictionary containing all the output nodes (keyed after their label, so in this case these should be: "remote_folder", "retrieved" and "sum") that you can safely inspect and work with:
+
+.. code-block:: python
+
+    from aiida.engine import run
+    output_dict = run(calculation_builder)
+    sum_node = output_dict['sum']
+
+The second one is non blocking, as you will be submitting it to the daemon and immediately getting control in the interpreter:
+
+.. code-block:: python
+
+    from aiida.engine import submit
+    calculation_node = submit(calculation_builder)
+
+As the variable name suggests, the return value for the submit method is the calculation node that is stored in the database.
+In this case the underlying calculation is not guaranteed to have finished, so it is often convenient to keep track of it using the verdi command line interface:
+
+.. code-block:: bash
+
+    $ verdi process list
+
+Additionally, you might want to check and verify your inputs before actually running or submitting a calculation.
+You can do so by specifying to use a ``dry_run``, which will create the running folder in the current directory (``submit_test/[date]-0000[x]``) so the user can inspect the integrity of the inputs generated:
+
+.. code-block:: bash
+
+    calculation_builder.metadata.dry_run = True
+    calculation_builder.metadata.store_provenance = False
+    run(calculation_builder)
 
 .. _how-to:codes:caching:
 

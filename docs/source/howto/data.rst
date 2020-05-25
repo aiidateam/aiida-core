@@ -276,7 +276,52 @@ Sharing data
 Deleting data
 =============
 
-`#3999`_
+By default, every time you run or submit a new calculation or workflow, AiiDA will create for you new nodes in the database, and will never replace or delete data.
+There are cases, however, when it might be useful to delete nodes that are not useful anymore, for instance test runs or incorrect/wrong data and calculations.
+In this case, AiiDA provides a ``verdi node delete`` command to remove the nodes from the provenance graph.
+
+.. note::
+   The ``verdi node delete`` command should be used with great care.
+
+   First, once the data is deleted, there is no way to recover it (unless you made a backup).
+
+   Even more critically, even if you ask to delete only one node, ``verdi node delete`` will typically delete a number of additional linked nodes, in order to preserve a consistent state of the provenance graph.
+   For instance, if you delete an input of a calculation, AiiDA will delete also the calculation itself (as otherwise you would be effectively changing the inputs to that calculation in the provenance graph).
+   The full set of consistency rules are explained in detail :ref:`here <topics:provenance:consistency>`.
+
+   Therefore: always check the output of ``verdi node delete`` to make sure that it is not deleting more than you expect.
+   You can also use the ``--dry-run`` flag of ``verdi node delete`` to see what the command would do without performing any actual operation.
+
+In addition, there are a number of additional rules that are not mandatory to ensure consistency, but can be toggled by the user.
+For instance, you can set ``--create-forward`` if, when deleting a calculation, you want to delete also the data it produced (using instead ``--no-create-forward`` will delete the calculation only, keeping the output data: note that this effectively strips out the provenance information of the output data).
+The full list of these flags is available from the help command ``verdi node delete -h``.
+
+Deleting computers
+------------------
+To delete a computer, you can use ``verdi computer delete``.
+This command is mostly useful if, right after creating a computer, you realise that there was an error and you want to remove it.
+In particular, note that ``verdi computer delete`` will prevent execution if the computer has been already used by at least one node. In this case, you will need to use ``verdi node delete`` to delete first the corresponding nodes.
+
+Deleting mutable data
+---------------------
+A subset of data in AiiDA is mutable also after storing a node, and is used as a convenience for the user to tag/group/comment on data.
+This data can be safely deleted at any time.
+This includes, notably:
+
+* *Node extras*: These can be deleted using :py:meth:`~aiida.orm.nodes.node.Node.delete_extra` and :py:meth:`~aiida.orm.nodes.node.Node.delete_extra_many`.
+* *Node comments*: These can be removed using :py:meth:`~aiida.orm.nodes.node.Node.remove_comment`.
+* *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.Group.Collection.delete>`.
+  Note that only the group is deleted, while the nodes contained in it are not deleted.
+
+Completely deleting an AiiDA profile
+------------------------------------
+If you don't want to selectively delete some nodes, but you want to delete a whole AiiDA profile altogether, use the ``verdi profile delete`` command.
+This command will delete both the file repository and the database.
+
+.. note::
+
+  This operation cannot be undone.
+
 
 Serving your data to others
 ===========================
@@ -363,4 +408,3 @@ Notice that we haven't specified any port in the URLs since Apache listens conve
 .. _#3996: https://github.com/aiidateam/aiida-core/issues/3996
 .. _#3997: https://github.com/aiidateam/aiida-core/issues/3997
 .. _#3998: https://github.com/aiidateam/aiida-core/issues/3998
-.. _#3999: https://github.com/aiidateam/aiida-core/issues/3999

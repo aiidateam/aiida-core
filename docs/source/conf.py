@@ -23,8 +23,6 @@ import sys
 
 # Add `aiida` to the path so it can be imported without installing it
 sys.path.append(os.path.join(os.path.split(__file__)[0], os.pardir, os.pardir))
-# Add custom extensions to path
-sys.path.append(os.path.join(os.path.split(__file__)[0], '_extensions'))
 
 import aiida
 from aiida.manage.configuration import load_documentation_profile
@@ -54,8 +52,7 @@ needs_sphinx = '1.5.0'
 extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
     'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext',
-    'sphinx_panels', 'accordion'
+    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton'
 ]
 ipython_mplbackend = ''
 
@@ -170,7 +167,9 @@ numfig = True
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
-html_css_files = ['link-box.css']
+html_css_files = ['aiida-custom.css']
+copybutton_selector = 'div:not(.no-copy)>div.highlight pre'
+copybutton_prompt_text = '$ '
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.

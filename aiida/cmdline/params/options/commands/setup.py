@@ -8,13 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Reusable command line interface options for the setup commands."""
-import functools
 import getpass
 import hashlib
 
 import click
 
-from aiida.backends import BACKEND_DJANGO
 from aiida.cmdline.params import options, types
 from aiida.manage.configuration import get_config, get_config_option, Profile
 from aiida.manage.external.postgres import DEFAULT_DBINFO
@@ -243,83 +241,53 @@ QUICKSETUP_REPOSITORY_URI = options.REPOSITORY_PATH.clone(
 )
 
 SETUP_DATABASE_ENGINE = QUICKSETUP_DATABASE_ENGINE.clone(
-    prompt='Database engine',
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_engine', 'postgresql_psycopg2')),
-    cls=options.interactive.InteractiveOption
+    prompt='Database engine', cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_BACKEND = QUICKSETUP_DATABASE_BACKEND.clone(
-    prompt='Database backend',
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_backend', BACKEND_DJANGO)),
-    cls=options.interactive.InteractiveOption
+    prompt='Database backend', cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_HOSTNAME = QUICKSETUP_DATABASE_HOSTNAME.clone(
-    prompt='Database host',
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_hostname', DEFAULT_DBINFO['host'])),
-    cls=options.interactive.InteractiveOption
+    prompt='Database host', cls=options.interactive.InteractiveOption
 )
 
-SETUP_DATABASE_PORT = QUICKSETUP_DATABASE_PORT.clone(
-    prompt='Database port',
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_port', DEFAULT_DBINFO['port'])),
-    cls=options.interactive.InteractiveOption
-)
+SETUP_DATABASE_PORT = QUICKSETUP_DATABASE_PORT.clone(prompt='Database port', cls=options.interactive.InteractiveOption)
 
 SETUP_DATABASE_NAME = QUICKSETUP_DATABASE_NAME.clone(
-    prompt='Database name',
-    required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_name', None)),
-    cls=options.interactive.InteractiveOption
+    prompt='Database name', required=True, cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_USERNAME = QUICKSETUP_DATABASE_USERNAME.clone(
-    prompt='Database username',
-    required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_username', None)),
-    cls=options.interactive.InteractiveOption
+    prompt='Database username', required=True, cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
-    prompt='Database password',
-    required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_password', None)),
-    cls=options.interactive.InteractiveOption
+    prompt='Database password', required=True, cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_PROTOCOL = QUICKSETUP_BROKER_PROTOCOL.clone(
-    prompt='Broker protocol',
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_protocol', None)),
-    cls=options.interactive.InteractiveOption
+    prompt='Broker protocol', required=True, cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_USERNAME = QUICKSETUP_BROKER_USERNAME.clone(
-    prompt='Broker username',
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_username', None)),
-    cls=options.interactive.InteractiveOption
+    prompt='Broker username', required=True, cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_PASSWORD = QUICKSETUP_BROKER_PASSWORD.clone(
-    prompt='Broker password',
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_password', None)),
-    cls=options.interactive.InteractiveOption
+    prompt='Broker password', required=True, cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_HOST = QUICKSETUP_BROKER_HOST.clone(
-    prompt='Broker host',
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_host', None)),
-    cls=options.interactive.InteractiveOption
+    prompt='Broker host', required=True, cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_PORT = QUICKSETUP_BROKER_PORT.clone(
-    prompt='Broker port',
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_port', None)),
-    cls=options.interactive.InteractiveOption
+    prompt='Broker port', required=True, cls=options.interactive.InteractiveOption
 )
 
 SETUP_REPOSITORY_URI = QUICKSETUP_REPOSITORY_URI.clone(
     prompt='Repository directory',
     callback=None,  # Unset the `callback` to define the default, which is instead done by the `contextual_default`
-    contextual_default=get_repository_uri_default,
     cls=options.interactive.InteractiveOption
 )

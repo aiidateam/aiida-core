@@ -4,39 +4,6 @@ on: [push, pull_request]
 
 jobs:
 
-  # The docs action is currently replaced by a build with CircleCI (see .circleci/config.yml)
-  # When/if GitHub actions allows for storage of (unzipped) artifacts, we can move back to this action
-  # docs:
-
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 30
-
-  #   steps:
-  #   - uses: actions/checkout@v2
-
-  #   - name: Set up Python 3.7
-  #     uses: actions/setup-python@v1
-  #     with:
-  #       python-version: 3.7
-
-  #   - name: Install system dependencies
-  #     # remove occasionally problematic repositories we don't use anyway
-  #     run: |
-  #       sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
-  #       sudo apt update
-  #       sudo apt install texlive-base texlive-generic-recommended texlive-fonts-recommended texlive-latex-base texlive-latex-recommended texlive-latex-extra dvipng dvidvi
-
-  #   - name: Install python dependencies
-  #     run: |
-  #       pip install numpy==1.17.4
-  #       pip install -e .[docs,testing]
-
-  #   - name: Build documentation
-  #     env:
-  #       READTHEDOCS: 'True'
-  #     run:
-  #       SPHINXOPTS='-n' make -C docs html
-
   pre-commit:
 
     runs-on: ubuntu-latest

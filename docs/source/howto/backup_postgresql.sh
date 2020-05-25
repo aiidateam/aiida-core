@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## Adapt the credentials yere
+## Adapt the credentials here
 AIIDAUSER=aiida
 AIIDADB=aiidadb
 AIIDAPORT=5432

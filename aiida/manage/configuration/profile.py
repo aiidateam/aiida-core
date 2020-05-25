@@ -41,6 +41,11 @@ class Profile:  # pylint: disable=too-many-public-methods
     KEY_DATABASE_HOSTNAME = 'AIIDADB_HOST'
     KEY_DATABASE_USERNAME = 'AIIDADB_USER'
     KEY_DATABASE_PASSWORD = 'AIIDADB_PASS'  # noqa
+    KEY_BROKER_PROTOCOL = 'broker_protocol'
+    KEY_BROKER_USERNAME = 'broker_username'
+    KEY_BROKER_PASSWORD = 'broker_password'  # noqa
+    KEY_BROKER_HOST = 'broker_host'
+    KEY_BROKER_PORT = 'broker_port'
     KEY_REPOSITORY_URI = 'AIIDADB_REPOSITORY_URI'
 
     # A mapping of valid attributes to the key under which they are stored in the configuration dictionary
@@ -55,6 +60,11 @@ class Profile:  # pylint: disable=too-many-public-methods
         KEY_DATABASE_HOSTNAME: 'database_hostname',
         KEY_DATABASE_USERNAME: 'database_username',
         KEY_DATABASE_PASSWORD: 'database_password',
+        KEY_BROKER_PROTOCOL: 'broker_protocol',
+        KEY_BROKER_USERNAME: 'broker_username',
+        KEY_BROKER_PASSWORD: 'broker_password',
+        KEY_BROKER_HOST: 'broker_host',
+        KEY_BROKER_PORT: 'broker_port',
         KEY_REPOSITORY_URI: 'repository_uri',
     }
 
@@ -174,6 +184,46 @@ class Profile:  # pylint: disable=too-many-public-methods
     @database_password.setter
     def database_password(self, value):
         self._attributes[self.KEY_DATABASE_PASSWORD] = value
+
+    @property
+    def broker_protocol(self):
+        return self._attributes[self.KEY_BROKER_PROTOCOL]
+
+    @broker_protocol.setter
+    def broker_protocol(self, value):
+        self._attributes[self.KEY_BROKER_PROTOCOL] = value
+
+    @property
+    def broker_host(self):
+        return self._attributes[self.KEY_BROKER_HOST]
+
+    @broker_host.setter
+    def broker_host(self, value):
+        self._attributes[self.KEY_BROKER_HOST] = value
+
+    @property
+    def broker_port(self):
+        return self._attributes[self.KEY_BROKER_PORT]
+
+    @broker_port.setter
+    def broker_port(self, value):
+        self._attributes[self.KEY_BROKER_PORT] = value
+
+    @property
+    def broker_username(self):
+        return self._attributes[self.KEY_BROKER_USERNAME]
+
+    @broker_username.setter
+    def broker_username(self, value):
+        self._attributes[self.KEY_BROKER_USERNAME] = value
+
+    @property
+    def broker_password(self):
+        return self._attributes[self.KEY_BROKER_PASSWORD]
+
+    @broker_password.setter
+    def broker_password(self, value):
+        self._attributes[self.KEY_BROKER_PASSWORD] = value
 
     @property
     def repository_uri(self):

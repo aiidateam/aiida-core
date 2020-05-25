@@ -42,8 +42,7 @@ class ConfigMigration:
 
 
 def _1_add_profile_uuid(config):
-    """
-    This adds the required values for a new default profile
+    """Add the required values for a new default profile.
 
         * PROFILE_UUID
 
@@ -58,10 +57,11 @@ def _1_add_profile_uuid(config):
 
 
 def _2_simplify_default_profiles(config):
-    """
-    The concept of a different 'process' for a profile has been removed and as such the
-    default profiles key in the configuration no longer needs a value per process ('verdi', 'daemon').
-    We remove the dictionary 'default_profiles' and replace it with a simple value 'default_profile'.
+    """Replace process specific default profiles with single default profile key.
+
+    The concept of a different 'process' for a profile has been removed and as such the default profiles key in the
+    configuration no longer needs a value per process ('verdi', 'daemon'). We remove the dictionary 'default_profiles'
+    and replace it with a simple value 'default_profile'.
     """
     from aiida.manage.configuration import PROFILE
 
@@ -77,9 +77,30 @@ def _2_simplify_default_profiles(config):
     return config
 
 
+def _3_add_message_broker(config):
+    """Add the configuration for the message broker, which was not configurable up to now."""
+    from aiida.manage.external.rmq import BROKER_DEFAULTS
+
+    defaults = [
+        ('broker_protocol', BROKER_DEFAULTS.protocol),
+        ('broker_username', BROKER_DEFAULTS.username),
+        ('broker_password', BROKER_DEFAULTS.password),
+        ('broker_host', BROKER_DEFAULTS.host),
+        ('broker_port', BROKER_DEFAULTS.port),
+    ]
+
+    for profile in config.get('profiles', {}).values():
+        for key, default in defaults:
+            if key not in profile:
+                profile[key] = default
+
+    return config
+
+
 # Maps the initial config version to the ConfigMigration which updates it.
 _MIGRATION_LOOKUP = {
     0: ConfigMigration(migrate_function=lambda x: x, version=1, version_oldest_compatible=0),
     1: ConfigMigration(migrate_function=_1_add_profile_uuid, version=2, version_oldest_compatible=0),
-    2: ConfigMigration(migrate_function=_2_simplify_default_profiles, version=3, version_oldest_compatible=3)
+    2: ConfigMigration(migrate_function=_2_simplify_default_profiles, version=3, version_oldest_compatible=3),
+    3: ConfigMigration(migrate_function=_3_add_message_broker, version=4, version_oldest_compatible=3)
 }

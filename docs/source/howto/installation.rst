@@ -246,16 +246,13 @@ Backing up your installation
 
 Managing multiple users
 =======================
-Each AiiDA user should install AiiDA in an Unix/Windows account on their own computer or workstation.
+Setups with multiple users for a single AiiDA instance is currently not supported.
+Instead, each AiiDA user should install AiiDA in an Unix/Windows account on their own computer or workstation.
 Under this account it is possible to configure all the credentials to connect to remote computers.
 Using independent accounts will ensure that, for instance, the SSH credentials to connect to supercomputers are not shared with others.
 
-When data needs to be shared with colleagues, you can share data using :ref:`AiiDA's sharing functionality <how-to:data:share>`. Sharing (subsets of) the AiiDA graph can be done as often as needed.
-
-.. note::
-
-   Remember that, when sharing, the PK of your nodes will change, while instead UUIDs will always be the same.
-   Therefore, always use UUIDs when you are referring to AiiDA nodes that you are not going to use only in your AiiDA installation.
+Data can be shared using :ref:`AiiDA's export and import functionality <how-to:data:share>`.
+Sharing (subsets of) the AiiDA graph can be done as often as needed.
 
 
 .. _#4002: https://github.com/aiidateam/aiida-core/issues/4002

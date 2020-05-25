@@ -283,12 +283,12 @@ For this case, AiiDA provides the ``verdi node delete`` command to remove the no
 .. caution::
    Once the data is deleted, there is no way to recover it (unless you made a backup).
 
-   Even more critically, even if you ask to delete only one node, ``verdi node delete`` will typically delete a number of additional linked nodes, in order to preserve a consistent state of the provenance graph.
-   For instance, if you delete an input of a calculation, AiiDA will delete also the calculation itself (as otherwise you would be effectively changing the inputs to that calculation in the provenance graph).
-   The full set of consistency rules are explained in detail :ref:`here <topics:provenance:consistency>`.
+Critically, note that even if you ask to delete only one node, ``verdi node delete`` will typically delete a number of additional linked nodes, in order to preserve a consistent state of the provenance graph.
+For instance, if you delete an input of a calculation, AiiDA will delete also the calculation itself (as otherwise you would be effectively changing the inputs to that calculation in the provenance graph).
+The full set of consistency rules are explained in detail :ref:`here <topics:provenance:consistency>`.
 
-   Therefore: always check the output of ``verdi node delete`` to make sure that it is not deleting more than you expect.
-   You can also use the ``--dry-run`` flag of ``verdi node delete`` to see what the command would do without performing any actual operation.
+Therefore: always check the output of ``verdi node delete`` to make sure that it is not deleting more than you expect.
+You can also use the ``--dry-run`` flag of ``verdi node delete`` to see what the command would do without performing any actual operation.
 
 In addition, there are a number of additional rules that are not mandatory to ensure consistency, but can be toggled by the user.
 For instance, you can set ``--create-forward`` if, when deleting a calculation, you want to delete also the data it produced (using instead ``--no-create-forward`` will delete the calculation only, keeping the output data: note that this effectively strips out the provenance information of the output data).

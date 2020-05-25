@@ -16,7 +16,9 @@ from tornado import gen
 import plumpy
 from kiwipy import communications, Future
 
-__all__ = ('RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher')
+from aiida.common.extendeddicts import AttributeDict
+
+__all__ = ('RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher', 'BROKER_DEFAULTS')
 
 LOGGER = logging.getLogger(__name__)
 
@@ -24,40 +26,47 @@ RemoteException = plumpy.RemoteException
 DeliveryFailed = plumpy.DeliveryFailed
 CommunicationTimeout = communications.TimeoutError  # pylint: disable=invalid-name
 
-# GP: Using here 127.0.0.1 instead of localhost because on some computers
-# localhost resolves first to IPv6 with address ::1 and if RMQ is not
-# running on IPv6 one gets an annoying warning. When moving this to
-# a user-configurable variable, make sure users are aware of this and
-# know how to avoid warnings. For more info see
-# https://github.com/aiidateam/aiida-core/issues/1142
-_RMQ_URL = 'amqp://127.0.0.1'
-_RMQ_HEARTBEAT_TIMEOUT = 600  # Maximum that can be set by client, with default RabbitMQ server configuration
 _LAUNCH_QUEUE = 'process.queue'
 _MESSAGE_EXCHANGE = 'messages'
 _TASK_EXCHANGE = 'tasks'
+BROKER_DEFAULTS = AttributeDict({
+    'protocol': 'amqp',
+    'username': 'guest',
+    'password': 'guest',
+    'host': '127.0.0.1',
+    'port': 5672,
+})
 
 
-def get_rmq_url(heartbeat_timeout=None):
-    """
-    Get the URL to connect to RabbitMQ
+def get_rmq_url(protocol=None, username=None, password=None, host=None, port=None, heartbeat_timeout=600):
+    """Return the URL to connect to RabbitMQ.
 
-    :param heartbeat_timeout: the interval in seconds for the heartbeat timeout
+    .. note::
+
+        The default of the ``host`` is set to ``127.0.0.1`` instead of ``localhost`` because on some computers localhost
+        resolves first to IPv6 with address ::1 and if RMQ is not running on IPv6 one gets an annoying warning. For more
+        info see: https://github.com/aiidateam/aiida-core/issues/1142
+
+    :param username: the username for authentication
+    :param password: the password for authentication
+    :param host: the hostname of the RabbitMQ server
+    :param port: the port of the RabbitMQ server
+    :param heartbeat_timeout: the interval in seconds for the heartbeat timeout, default of 600 is maximum that can be
+        set by client, with default RabbitMQ server configuration.
     :returns: the connection URL string
     """
-    url = _RMQ_URL
-
-    if heartbeat_timeout is None:
-        heartbeat_timeout = _RMQ_HEARTBEAT_TIMEOUT
-
-    if heartbeat_timeout is not None:
-        url += '?heartbeat={}'.format(heartbeat_timeout)
-
-    return url
+    return '{protocol}://{username}:{password}@{host}:{port}?heartbeat={heartbeat_timeout}'.format(
+        protocol=protocol or BROKER_DEFAULTS.protocol,
+        username=username or BROKER_DEFAULTS.username,
+        password=password or BROKER_DEFAULTS.password,
+        host=host or BROKER_DEFAULTS.host,
+        port=port or BROKER_DEFAULTS.port,
+        heartbeat_timeout=heartbeat_timeout
+    )
 
 
 def get_launch_queue_name(prefix=None):
-    """
-    Return the launch queue name with an optional prefix
+    """Return the launch queue name with an optional prefix.
 
     :returns: launch queue name
     """
@@ -68,8 +77,7 @@ def get_launch_queue_name(prefix=None):
 
 
 def get_message_exchange_name(prefix):
-    """
-    Return the message exchange name for a given prefix
+    """Return the message exchange name for a given prefix.
 
     :returns: message exchange name
     """
@@ -77,8 +85,7 @@ def get_message_exchange_name(prefix):
 
 
 def get_task_exchange_name(prefix):
-    """
-    Return the task exchange name for a given prefix
+    """Return the task exchange name for a given prefix.
 
     :returns: task exchange name
     """
@@ -86,8 +93,9 @@ def get_task_exchange_name(prefix):
 
 
 def _store_inputs(inputs):
-    """
-    Try to store the values in the input dictionary. For nested dictionaries, the values are stored by recursively.
+    """Try to store the values in the input dictionary.
+
+    For nested dictionaries, the values are stored by recursively.
     """
     for node in inputs.values():
         try:

@@ -4,14 +4,217 @@
 How to run multi-step workflows
 *******************************
 
-
 .. _how-to:workflows:write:
 
 Writing workflows
 =================
 
-`#3991`_
+A workflow in AiiDA is a :ref:`process <topics:processes:concepts>` that calls other workflows and calculations and optionally *returns* data and as such can encode the logic of a typical scientific workflow.
+Currently, there are two ways of implementing a workflow process:
 
+ * :ref:`work functions<topics:workflows:concepts:workfunctions>`
+ * :ref:`work chains<topics:workflows:concepts:workchains>`
+
+Here we present a brief introduction on how to write both workflow types.
+
+.. note::
+
+    For more details on the concept of a workflow, and the different between a work function and a work chain, please see the corresponding :ref:`topics section<topics:workflows:concepts>`.
+
+Work function
+-------------
+
+A *work function* is a process function that calls one or more calculation functions and *returns* data that has been *created* by the calculation functions it has called.
+Writing a work function that can be stored in the provenance simply involves writing a Python function that calls a set of calculation functions with the desired logic and decorating it with the ``@workfunction`` decorator:
+
+.. code-block:: python
+
+    from aiida.engine import calcfunction, workfunction
+    from aiida.orm import Int
+
+    @calcfunction
+    def add(x, y):
+        return x + y
+
+    @calcfunction
+    def multiply(x, y):
+        return x * y
+
+    @workfunction
+    def add_and_multiply(x, y, z):
+        sum = add(x, y)
+        product = multiply(sum, z)
+        return product
+
+    result = add_and_multiply(Int(1), Int(2), Int(3))
+
+It is important to reiterate here that the ``@workfunction``-decorated ``add_and_multiply`` function does not *create* any new data nodes.
+The ``add`` and ``multiply`` calculation functions create the ``Int`` data nodes, all the work function does is *return* the results of the ``multiply`` calculation function.
+Moreover, both calculation and workflow functions can only accept and return data nodes, i.e. instances of classes that subclass the ``Data`` class.
+
+Work chain
+----------
+
+When the workflow you want to run that is more expensive and complex, it is better to write a *work chain*.
+Writing a work chain in AiiDA requires creating a class that inherits from the ``WorkChain`` class and defines the work chain.
+Below is an example of a work chain that takes three integers as inputs, multiplies the first two and then adds the third to obtain the final result:
+
+.. code-block:: python
+
+    from aiida.orm import Code, Int
+    from aiida.engine import calcfunction, WorkChain, ToContext
+    from aiida.plugins.factories import CalculationFactory
+
+    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+
+    @calcfunction
+    def multiply(x, y):
+        return x * y
+
+    class MultiplyAddWorkChain(WorkChain):
+        """WorkChain for testing and demonstration purposes."""
+
+        @classmethod
+        def define(cls, spec):
+            """Specify inputs and outputs."""
+            super(MultiplyAddWorkChain, cls).define(spec)
+            spec.input('x', valid_type=Int)
+            spec.input('y', valid_type=Int)
+            spec.input('z', valid_type=Int)
+            spec.input('code', valid_type=Code)
+            spec.outline(
+                cls.multiply,
+                cls.add,
+                cls.validate_result,
+                cls.result
+            )
+            spec.output('result', valid_type=Int)
+            spec.exit_code(400, 'ERROR_NEGATIVE_NUMBER',
+                message='The result is a negative number.')
+
+        def multiply(self):
+            """Multiply two integers."""
+            self.ctx.multiple = multiply(self.inputs.x, self.inputs.y)
+
+        def add(self):
+            """Add two numbers with the ArithmeticAddCalculation process."""
+
+            inputs = {'x': self.ctx.multiple, 'y': self.inputs.z, 'code': self.inputs.code}
+            future = self.submit(ArithmeticAddCalculation, **inputs)
+
+            return ToContext({'addition': future})
+
+        def validate_result(self):
+
+            result = self.ctx['addition'].outputs.sum
+
+            if result.value < 0:
+                return self.exit_codes.ERROR_NEGATIVE_NUMBER
+
+        def result(self):
+            self.out('result', self.ctx['addition'].outputs.sum)
+
+You can give the work chain any valid Python class name, but the convention is to have it end in ``WorkChain`` so that it is always immediately clear what it references.
+Let's go over the methods of the ``MultiplyAddWorkChain`` one by one:
+
+.. code-block:: python
+
+    @classmethod
+    def define(cls, spec):
+        """Specify inputs and outputs."""
+        super(MultiplyAddWorkChain, cls).define(spec)
+        spec.input('x', valid_type=Int)
+        spec.input('y', valid_type=Int)
+        spec.input('z', valid_type=Int)
+        spec.input('code', valid_type=Code)
+        spec.outline(
+            cls.multiply,
+            cls.add,
+            cls.validate_result,
+            cls.result
+        )
+        spec.output('result', valid_type=Int)
+        spec.exit_code(400, 'ERROR_NEGATIVE_NUMBER',
+            message='The result is a negative number.')
+
+The most important method to implement for every work chain is the ``define()`` method.
+This class method must always start by calling the ``define()`` method of its parent class.
+Next, the ``define()`` method allows the developer to define the characteristics of the work chain, which are contained in the work chain ``spec``:
+
+* the **inputs**, specified using the ``spec.input()`` method.
+  The first argument of the ``input()`` method is a string that specifies the label of the input, e.g. ``'x'``.
+  The ``valid_type`` keyword argument allows you to specify the required node type of the input.
+  Other keyword arguments allow the developer to set a default for the input, or indicate that an input should not be stored in the database, see :ref:`the process topics section <topics:processes:usage:spec>` for more details.
+* the **outline** or logic of the workflow, specified using the ``spec.outline()`` method.
+  The outline of the workflow is constructed from the methods of the ``WorkChain`` class.
+  For the ``MultiplyAddWorkChain``, the outline is a simple linear sequence of steps, but it's possible to define more complex workflows as well.
+  See the :ref:`work chain outline section <topics:workflows:usage:workchains:define_outline>` for more details.
+* the **outputs**, specified using the ``spec.output()`` method.
+  This method is very similar in its usage to the ``input()`` method.
+* the **exit codes** of the work chain, specified using the ``spec.exit_code()`` method.
+  Exit codes are used to clearly communicate known failure modes of the work chain to the user.
+  The first and second arguments define the ``exit_status`` of the work chain in case of failure (``400``) and the string that the developer can use to reference to the exit code (``ERROR_NEGATIVE_NUMBER``).
+  A descriptive exit message can be provided using the ``message`` keyword argument.
+  For the ``MultiplyAddWorkChain``, we demand that the final result is not a negative number, which is checked in the ``validate_result`` step of the outline.
+
+.. note::
+
+    For more information on the ``define()`` method and the process spec, see the :ref:`corresponding section in the topics <topics:processes:usage:defining>`.
+
+.. code-block:: python
+
+    def multiply(self):
+        """Multiply two integers."""
+        self.ctx.multiple = multiply(self.inputs.x, self.inputs.y)
+
+The ``multiply`` method is the first step in the outline of the ``MultiplyAddWorkChain`` work chain.
+This step simply involves running the calculation function ``multiply``, on the ``x`` and ``y`` **inputs** of the work chain.
+To store the result of this function and use it in the next step of the outline, it is added to the *context* of the work chain using ``self.ctx``.
+
+.. code-block:: python
+
+    def add(self):
+        """Add two numbers with the ArithmeticAddCalculation process."""
+
+        inputs = {'x': self.ctx.multiple, 'y': self.inputs.z, 'code': self.inputs.code}
+        calcjob_node = self.submit(ArithmeticAddCalculation, **inputs)
+
+        return ToContext({'addition': calcjob_node})
+
+The ``add`` method is the second step in the outline of the work chain.
+As this step uses the ``ArithmeticAddCalculation`` calculation job, we start by setting up the inputs for this ``CalcJob`` in a dictionary.
+Next, when submitting this calculation job to the daemon, it is important to use the submit method from the work chain instance via ``self.submit()``.
+Since the result of the addition is only available once the calculation job is finished, the ``submit()`` method returns the ``CalcJobNode`` of the *future* ``ArithmeticAddCalculation`` process.
+To tell the work chain to wait for this process to finish before continuing the workflow, we return the ``ToContext`` class, where we have passed a dictionary to specify that the future calculation job node should be assigned to the ``'addition'`` context key.
+
+.. note::
+    Instead of passing a dictionary, you can also initialize a ``ToContext`` instance by passing the future process as a keyword argument, e.g. ``ToContext(addition=calcjob_node)``.
+    More information on the ``ToContext`` class can be found in :ref:`the topics section on submitting sub processes<topics:workflows:usage:workchains:submitting_sub_processes>`.
+
+.. code-block:: python
+
+    def validate_result(self):
+
+        result = self.ctx['addition'].outputs.sum
+
+        if result.value < 0:
+            return self.exit_codes.ERROR_NEGATIVE_NUMBER
+
+Once the ``ArithmeticAddCalculation`` calculation job is finished, the next step in the work chain is to validate the result, i.e. verify that the result is not a negative number.
+After the ``addition`` node has been extracted from the context, we take the ``sum`` node from the ``ArithmeticAddCalculation`` outputs and store it in the ``result`` variable.
+In case the value of this ``Int`` node is negative, the ``ERROR_NEGATIVE_NUMBER`` exit code - defined in the ``define()`` method - is returned.
+
+.. code-block:: python
+
+    def result(self):
+        self.out('result', self.ctx['addition'].outputs.sum)
+
+The final step in the outline is to pass the result to the outputs of the work chain using the ``self.out()`` method.
+The first argument (``'result'``) specifies the label of the output, which corresponds to the label provided to the spec in the ``define()`` method.
+The second argument is the result of the work chain, extracted from the ``Int`` node stored in the context under the ``'addition'`` key.
+
+Hopefully you now have a basic understanding of how to implement workflows in AiiDA.
+For a more complete discussion on workflows and their usage, please read :ref:`the corresponding topics section<topics:workflows:usage>`.
 
 .. _how-to:workflows:run:
 

@@ -55,7 +55,7 @@ configure some variables in AiiDA to balance the load on your CPU and disk.
 
 Here are a few things you can do in order to keep AiiDA running smoothly:
 
-  1. :ref:`Move the Postgresql database<move_postgresql>` to a fast disk (SSD),
+  1. :ref:`Move the Postgresql database<how-to:installation:more:move_postgresql>` to a fast disk (SSD),
      ideally on a large partition.
 
   2. Use AiiDA's tools for making :ref:`efficient incremental

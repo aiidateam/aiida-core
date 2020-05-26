@@ -11,9 +11,9 @@
     :alt: AiiDA logo
     :class: mb-3
 
-###########################################################################
-Automated Interactive Infrastructure and Database for Computational Science
-###########################################################################
+#################################
+Welcome to AiiDA's documentation!
+#################################
 
 `AiiDA`_ is an open-source framework implemented in Python that aims to help researchers with managing simple to complex workflows and making them fully reproducible.
 
@@ -183,6 +183,7 @@ Acknowledgements
 ****************
 
 This work is supported by:
+
 * the `MARVEL National Centre for Competency in Research`_ funded by the `Swiss National Science Foundation`_;
 * the `MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598;
 * the `swissuniversities P-5 project "Materials Cloud"`_.

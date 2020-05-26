@@ -109,7 +109,6 @@ Welcome to AiiDA's documentation!
    intro/about
    intro/get_started
    intro/installation
-   intro/configuration
    intro/troubleshooting
 
 .. toctree::

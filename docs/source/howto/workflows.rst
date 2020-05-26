@@ -123,9 +123,7 @@ So, it is advisable to *submit* more complex or longer work chains to the daemon
 Note that when using ``submit`` the work chain is not run in the local interpreter but is sent off to the daemon and you get back control instantly.
 This allows you to submit multiple work chains at the same time and the daemon will start working on them in parallel.
 Once the ``submit`` call returns, you will not get the result as with ``run``, but you will get the **node** that represents the work chain.
-This is because at that point in time, the results do not exist yet, because the work chain has not finished.
-In addition to making it easy to execute multiple work chains in parallel, submitting work chains also allows you to shut down your computer.
-The daemon will always save the progress of the work chains that it is managing such that if it is stopped, it can restart where it left off.
+Submitting a work chain instead of directly running it not only makes it easier to execute multiple work chains in parallel, but also ensures that the progress of a workchain is not lost when you restart your computer.
 
 .. important::
 

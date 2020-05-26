@@ -192,12 +192,12 @@ If computations are still running, then they will be picked up next time the ser
 .. admonition:: Having problems?
     :class: attention title-icon-troubleshoot
 
-    :ref:`See the troubleshooting section <intro:troubleshooting>`
+    :ref:`See the troubleshooting section <intro:troubleshooting>`.
 
 .. admonition:: In-depth instructions
     :class: seealso title-icon-read-more
 
-    For more ways to install AiiDA :ref:`Check the advanced installation section <intro:install>`.
+    For more ways to install AiiDA, :ref:`check the advanced installation section <intro:install>`.
 
     For more detailed instructions on configuring AiiDA, :ref:`see the configuration how-to <how-to:installation:configure>`.
 

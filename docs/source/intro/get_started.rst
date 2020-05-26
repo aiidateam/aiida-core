@@ -41,7 +41,6 @@ These are outlined below, followed by a recommended "quick-install" route on you
 
    :link-badge:`intro:install:virtual_environments,Environments Tutorial,ref,badge-primary text-white`
    :link-badge:`https://anaconda.org/conda-forge/aiida-core,aiida-core on Conda,url,badge-primary text-white`
-   :link-badge:`intro:quick_install,Conda Quick Install,ref,badge-primary text-white`
 
    ---------------
 
@@ -71,12 +70,12 @@ These are outlined below, followed by a recommended "quick-install" route on you
    :link-badge:`https://materialscloud.org/quantum-mobile,Quantum Mobile,url,badge-primary text-white`
    :link-badge:`https://aiidalab.materialscloud.org,AiiDA lab,url,badge-primary text-white`
 
-.. _intro:quick_install:
+.. _intro:quick_start:
 
-Quick Installation
-==================
+Quick Start Install
+===================
 
-Here we first provide a simple approach for installation on your local computer.
+Here we first provide a simple approach for installation and setup on your local computer.
 
 .. panels::
     :column: col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
@@ -103,7 +102,7 @@ Here we first provide a simple approach for installation on your local computer.
     ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`__.
     You will then need to install |PostgreSQL| and |RabbitMQ| depending on your operating system.
 
-    :link-badge:`intro:install:prerequisites,Get install instructions,ref,badge-primary text-white`
+    :link-badge:`intro:install:prerequisites,Install prerequisites,ref,badge-primary text-white`
 
 
 Before working with AiiDA, you must first initialize a database storage area on disk.
@@ -200,12 +199,12 @@ If computations are still running, then they will be picked up next time the ser
 
     For more ways to install AiiDA :ref:`Check the advanced installation section <intro:install>`.
 
-    For more detailed instructions on configuring AiiDA, :ref:`see the how-to <how-to:installation:configure>`
+    For more detailed instructions on configuring AiiDA, :ref:`see the configuration how-to <how-to:installation:configure>`.
 
 Next Steps
 ==========
 
-Try out the ::ref:`Basic Tutorial <tutorial:basic>`, or check if your use case is one of the following:
+Try out the :ref:`Basic Tutorial <tutorial:basic>`, or check if your use case is one of the following:
 
 .. div:: dropdown-group
 

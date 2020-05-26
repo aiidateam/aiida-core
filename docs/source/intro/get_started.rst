@@ -7,11 +7,11 @@ Getting Started
 A working AiiDA installation consists of three core components, plus any external codes you wish to run:
 
 * aiida-core: The main Python package and the associated command line tool: ``verdi``.
-* |PostgreSQL|: A service which manages the database where we store generated data.
-* |RabbitMQ|: A service which manages communication with the processes that we run.
+* |PostgreSQL|: A service which manages the database that AiiDA uses to store generated data.
+* |RabbitMQ|: A service which manages communication with the processes that AiiDA spawns.
 
-AiiDA provides a number of routes to setting up this environment, depending on your use case.
-These are outlined below, followed by a recommended "quick-install" route on your local computer.
+There are multiple routes to setting up a working AiiDA environment.
+These are shown below, followed by a recommended "quick-install" route on your local computer.
 
 .. panels::
    :body: bg-light
@@ -125,7 +125,7 @@ We start this process with:
     - `Creating a Database Cluster <https://www.postgresql.org/docs/12/creating-cluster.html>`__.
     - `Starting the Database Server <https://www.postgresql.org/docs/12/server-start.html>`__.
 
-To set up an AiiDA configuration profile and related data storage, we can then use the `quicksetup` command.
+Next, we set up an AiiDA configuration profile and related data storage, with the `quicksetup` command.
 
 .. code-block:: console
 
@@ -153,7 +153,7 @@ At this point you now have a working AiiDA environment, from which you can add a
 
 
 In order to run computations, some additional steps are required to start the services that manage these background processes.
-The |RabbitMQ| service is started, to manage communication between processes and remember process states, even when you shut down your computer:
+The |RabbitMQ| service is used, to manage communication between processes and retain process states, even after restarting your computer:
 
 .. code-block:: console
 
@@ -186,7 +186,7 @@ After finishing with your aiida session, you may wish to power down the services
     $ verdi daemon stop
     $ pg_ctl stop
 
-If computations are still running, then they will be picked up next time the services are started.
+Any computations that are still running at this point, will be picked up next time the services are started.
 
 
 .. admonition:: Having problems?
@@ -197,14 +197,15 @@ If computations are still running, then they will be picked up next time the ser
 .. admonition:: In-depth instructions
     :class: seealso title-icon-read-more
 
-    For more ways to install AiiDA, :ref:`check the advanced installation section <intro:install>`.
+    For more ways to install AiiDA, :ref:`check the detailed installation section <intro:install>`.
 
     For more detailed instructions on configuring AiiDA, :ref:`see the configuration how-to <how-to:installation:configure>`.
 
 Next Steps
 ==========
 
-Try out the :ref:`Basic Tutorial <tutorial:basic>`, or check if your use case is one of the following:
+If you are new to AiiDA, go through the :ref:`Basic Tutorial <tutorial:basic>`.
+We also compiled some useful how-to guides that are especially relevant for the following use cases:
 
 .. div:: dropdown-group
 

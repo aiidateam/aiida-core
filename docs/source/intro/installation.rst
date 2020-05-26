@@ -495,6 +495,11 @@ which leads through the installation process and takes care of creating the corr
 
 For maximum control and customizability, one can use ``verdi setup`` and set up the database manually as explained below.
 
+.. admonition:: Don't forget to backup your data!
+   :class: tip title-icon-tip
+
+    See the :ref:`installation backup how-to <how-to:installation:backup>`.
+
 .. admonition:: Want to manage multiple profiles?
    :class: seealso title-icon-read-more
 
@@ -512,6 +517,13 @@ AiiDA uses a database to store the nodes, node attributes and other information,
 Currently, the highly performant `PostgreSQL`_ database is supported as a database backend.
 
 .. _PostgreSQL: https://www.postgresql.org/downloads
+
+.. admonition:: Find out more about the database
+   :class: seealso title-icon-read-more
+
+   - `Creating a Database Cluster <https://www.postgresql.org/docs/12/creating-cluster.html>`__.
+   - `Starting the Database Server <https://www.postgresql.org/docs/12/server-start.html>`__.
+   - :ref:`The database topic <topics:database>`.
 
 To manually create the database for AiiDA, you need to run the program ``psql`` to interact with postgres.
 On most operating systems, you need to do so as the ``postgres`` user that was created upon installing the software.
@@ -575,11 +587,10 @@ If you use the same names as in the example commands above, then during the ``ve
    $ AiiDA Database user: aiida
    $ AiiDA Database password: <password>
 
-.. note:: Do not forget to backup your database (instructions :ref:`here<backup_postgresql>`).
+.. admonition:: Don't forget to backup your database!
+   :class: tip title-icon-tip
 
-.. note:: If you want to move the physical location of the data files
-  on your hard drive AFTER it has been created and filled, look at the
-  instructions :ref:`here<how-to:installation:more:move_postgresql>`.
+   See the :ref:`Database backup how-to <how-to:installation:backup:postgresql>`), and :ref:`how to move yrou database <how-to:installation:more:move_postgresql>`.
 
 Database setup using 'peer' authentication
 ..........................................
@@ -588,6 +599,7 @@ On Ubuntu Linux, the default PostgreSQL setup is configured to use ``peer`` auth
 In this mode, PostgreSQL compares the Unix user connecting to the socket with its own database of users and allows a connection if a matching user exists.
 
 .. note::
+
     This is an alternative route to set up your database - the standard approach will work on Ubuntu just as well.
 
 Below we are going to take advantage of the command-line utilities shipped on Ubuntu to simplify creating users and databases compared to issuing the SQL commands directly.
@@ -630,7 +642,6 @@ During the ``verdi setup`` phase, use ``!`` to leave host empty and specify your
    $ AiiDA Database user: <username>
    $ AiiDA Database password: ""
 
-
 verdi setup
 ...........
 
@@ -646,10 +657,10 @@ The ``verdi setup`` command will guide you through the setup process through a s
 The first information asked is your email, which will be used to associate the calculations to you.
 In AiiDA, the email is your username, and acts as a unique identifier when importing/exporting data from AiiDA.
 
-.. note:: The password, in the current version of AiiDA, is not used (it will
-    be used only in the REST API and in the web interface). If you leave the
-    field empty, no password will be set and no access will be granted to the
-    user via the REST API and the web interface.
+.. note:: 
+
+   The password, in the current version of AiiDA, is not used (it will be used only in the REST API and in the web interface).
+   If you leave the field empty, no password will be set and no access will be granted to the user via the REST API and the web interface.
 
 Then, the following prompts will help you configure the database. Typical settings are:
 
@@ -672,13 +683,10 @@ Then, the following prompts will help you configure the database. Typical settin
    $ Insert the new password:
    $ Insert the new password (again):
 
+.. admonition:: Don't forget to backup your data!
+   :class: tip title-icon-tip
 
-Remember that in order to work with AiiDA through for example the ``verdi`` command, you need to be in your virtual environment.
-If you open a new terminal for example, be sure to activate it first with:
-
-.. code-block:: console
-
-   $ source ~/.virtualenvs/aiida/bin/activate
+    See the :ref:`installation backup how-to <how-to:installation:backup>`.
 
 .. _intro:install:start_daemon:
 
@@ -716,6 +724,16 @@ Use the ``verdi status`` command to check that all services are up and running:
    ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
 
 In the example output, all service have a green check mark and so should be running as expected.
+
+.. admonition:: Are you in your virtual environment?  
+   :class: note title-icon-troubleshoot
+
+   Remember that in order to work with AiiDA through for example the ``verdi`` command, you need to be in your virtual environment.
+   If you open a new terminal for example, be sure to activate it first, e.g. for venv:
+
+   .. code-block:: console
+
+      $ source ~/.virtualenvs/aiida/bin/activate
 
 .. admonition:: Want to know more about managing your install?
    :class: seealso title-icon-read-more

@@ -25,7 +25,7 @@ These are outlined below, followed by a recommended "quick-install" route on you
 
    +++
 
-   :link-badge:`intro:install:software,Software install,ref,badge-primary text-white`
+   :link-badge:`intro:install:prerequisites,Prerequisites install,ref,badge-primary text-white`
    :link-badge:`intro:install:aiida-core,aiida-core install,ref,badge-primary text-white`
 
    ---------------
@@ -102,7 +102,7 @@ Here we first provide a simple approach for installation on your local computer.
     ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`__.
     You will then need to install |PostgreSQL| and |RabbitMQ| depending on your operating system.
 
-    :link-badge:`intro:install:software,Get install instructions,ref,badge-primary text-white`
+    :link-badge:`intro:install:prerequisites,Get install instructions,ref,badge-primary text-white`
 
 
 Before working with AiiDA, you must first initialize a database storage area on disk.
@@ -192,14 +192,14 @@ If computations are still running, then they will be picked up next time the ser
 .. admonition:: Having problems?
     :class: attention title-icon-troubleshoot
 
-    :ref:`See the troubleshooting section <intro/troubleshooting>`
+    :ref:`See the troubleshooting section <intro:troubleshooting>`
 
 .. admonition:: In-depth instructions
     :class: tip title-icon-read-more
 
-    For more ways to install AiiDA :ref:`Check the advanced installation section <intro/installation>`.
+    For more ways to install AiiDA :ref:`Check the advanced installation section <intro:install>`.
 
-    For more detailed instructions on configuring AiiDA, :ref:`see the configuration instructions <configure_aiida>`
+    For more detailed instructions on configuring AiiDA, :ref:`see the how-to <how-to:installation:configure>`
 
 Next Steps
 ==========

@@ -93,7 +93,7 @@ Below, we provide installation instructions for a number of operating systems.
          $ emerge --ask dev-python/pip
          $ pip install aiida-core
 
-      See :ref:`Gentoo Linux instructions<iintro:install:prerequisites:gentoo>` for details.
+      See :ref:`Gentoo Linux instructions<intro:install:prerequisites:gentoo>` for details.
 
    .. dropdown:: Windows Subsystem for Linux
 
@@ -150,7 +150,7 @@ Finally install the aiida-core python environment:
 .. admonition:: Further Reading
    :class: title-icon-read-more
 
-   - For a more detailed description of database requirements and usage see the :ref:`database section<database>`.
+   - For a more detailed description of database requirements and usage see the :ref:`database topic<topics:database>`.
    - For problems with installing RabbitMQ, refer to the detailed instructions provided on the `RabbitMQ website for Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
 
 .. _intro:install:prerequisites:brew:
@@ -197,7 +197,7 @@ Finally install the aiida-core python environment:
 .. admonition:: Further Reading
    :class: title-icon-read-more
 
-   - For a more detailed description of database requirements and usage see the :ref:`database section<database>`.
+   - For a more detailed description of database requirements and usage see the :ref:`database topic<topics:database>`.
    - For problems with installing RabbitMQ, refer to the detailed instructions provided on the `RabbitMQ website for Homebrew based distributions <https://www.rabbitmq.com/install-homebrew.html>`_.
    - For details on the installation of the ``pip`` package manager, refer to `their documentation <https://pip.pypa.io/en/stable/installing/#installation>`_
 
@@ -252,7 +252,7 @@ Finally install the aiida-core python environment:
 .. admonition:: Further Reading
    :class: title-icon-read-more
 
-   - For a more detailed description of database requirements and usage see the :ref:`database section<database>`.
+   - For a more detailed description of database requirements and usage see the :ref:`database topic<topics:database>`.
    - For details on the installation of the ``pip`` package manager, refer to `their documentation <https://pip.pypa.io/en/stable/installing/#installation>`_
 
 .. _intro:install:prerequisites:gentoo:

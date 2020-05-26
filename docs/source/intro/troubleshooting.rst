@@ -1,4 +1,4 @@
-.. _intro/troubleshooting:
+.. _intro:troubleshooting:
 
 ***************
 Troubleshooting

@@ -220,8 +220,7 @@ Here is an example for a custom data type that needs to wrap a single text file:
 
 To create a new instance of this data type and get its content:
 
-.. code:: python
-
+.. code-block:: python
     node = TextFileData(filepath='/some/absolute/path/to/file.txt')
     node.get_content()  # This will return the content of the file
 
@@ -248,11 +247,653 @@ The node class has various methods to set these attributes, such as :py:`~aiida.
 
 .. _how-to:data:find:
 
-Finding data
-============
+Finding and querying for data
+=============================
 
-`#3996`_
+Once you have successfully completed a series of workflows for your project, or have imported a dataset you are interested in, you want to quickly find the data that is relevant for your analysis.
+The data in an AiiDA database is stored as a graph of connected entities, which can be easily *queried* with the ``QueryBuilder`` class.
 
+The ``QueryBuilder`` lets you query your AiiDA database independently of the backend used under the hood.
+Before starting to write a query, it helps to:
+
+*   know what you want to query for.
+    In the language of databases, you need to tell the backend what to *project*.
+    For example, you might be interested in the label of a calculation and the PK's of all its outputs.
+*   know the relationships between entities you are interested in.
+    Nodes of an AiiDA graph (vertices) are connected with links (edges).
+    A node can for example be either the input or output of another node, but also an ancestor or a descendant.
+*   know how you want to filter the results of your query.
+
+Once you are clear about what you want and how you can get it, the QueryBuilder will build an SQL-query for you.
+
+There are two ways of using the QueryBuilder:
+
+#.  In the :ref:`appender method <how-to:data:find:appender>`, you construct your query step by step using the ``QueryBuilder.append()`` method.
+#.  In the :ref:`queryhelp approach <QueryBuilderQueryhelp>`, you construct a dictionary that defines your query and pass it to the ``QueryBuilder``.
+
+Both APIs provide the same functionality - the appender method may be more suitable for interactive use, e.g., in the ``verdi shell``, whereas the queryhelp method can be useful in scripting.
+
+.. _how-to:data:find:appender:
+
+The appender method
+-------------------
+
+Selecting entities
+^^^^^^^^^^^^^^^^^^
+
+Using the ``append()`` method of the ``QueryBuilder``, you can query for the entities you are interested in.
+Suppose you want to query for calculation job nodes in your database::
+
+    from aiida.orm.querybuilder import QueryBuilder
+    qb = QueryBuilder()       # Instantiating instance. One instance -> one query
+    qb.append(CalcJobNode)    # Setting first vertex of path
+
+If you are interested in instances of different classes, you can also pass a tuple, list or set of classes.
+However, they have to be of the same ORM-type (e.g. all have to be subclasses of ``Node``)::
+
+    qb = QueryBuilder()       # Instantiating instance. One instance -> one query
+    qb.append([CalcJobNode, WorkChainNode]) # Setting first vertice of path, either WorkChainNode or Job.
+
+.. note::
+    Remember that :ref:`processes<topics:processes:concepts:types>` have both a run-time ``Process`` that steers them and a ``Node`` that stores their metadata in the database.
+    The QueryBuilder allows you to pass either the ``Node`` class (e.g. ``CalcJobNode``) or the ``Process`` class (e.g. ``CalcJob``), which will automatically apply the correct filters for the type of calculation.
+
+.. _how-to:data:find:appender:results:
+
+Retrieving results
+^^^^^^^^^^^^^^^^^^
+
+Once you have *appended* the entity you want to query for to the ``QueryBuilder``, the next question is how to get the results.
+There are several ways to obtain data from a query::
+
+    qb = QueryBuilder()                 # Instantiating instance
+    qb.append(CalcJobNode)              # Setting first vertice of path
+
+    first_row = qb.first()              # Returns a list (!)
+                                        # of the results of the first row
+
+    all_results_d = qb.dict()           # Returns all results as
+                                        # a list of dictionaries
+
+    all_results_l = qb.all()            # Returns a list of lists
+
+In case you are working with a large dataset, you can also return your query as a generator::
+
+    all_res_d_gen = qb.iterdict()       # Return a generator of dictionaries
+                                        # of all results
+    all_res_l_gen = qb.iterall()        # Returns a generator of lists
+
+This will retrieve the data in batches, and you can start working with the data before the query has completely finished.
+
+.. warning::
+
+    Complete the iteration of the query before committing (storing) new data to avoid race conditions.
+
+.. _how-to:data:find:appender:filters:
+
+Filters
+^^^^^^^
+
+Usually you do not want to query for *all* entities of a certain class, but rather *filter* the results based on certain properties.
+Suppose you do not want to all ``CalcJobNode`` data, but only the ones that are ``finished``::
+
+    qb = QueryBuilder()                 # Initialize a QueryBuilder instance
+    qb.append(
+        CalcJobNode,                    # Append a CalcJobNode
+        filters={                       # Specify the filters:
+            'attributes.process_state': 'finished',  # the process is finished
+        },
+    )
+
+You can apply multiple filters to one entity in a query.
+Say you are interested in all calculation jobs in your database that are ``finished`` **and** have the ``process_label`` ``ArithmeticAddCalculation``::
+
+    qb = QueryBuilder()                 # Initialize a QueryBuilder instance
+    qb.append(
+        CalcJobNode,                    # Append a CalcJobNode
+        filters={                       # Specify the filters:
+            'attributes.process_state': 'finished',                   # the process is finished AND
+            'attributes.process_label': 'ArithmeticAddCalculation'    # has process_label ArithmeticAddCalculation
+        },
+    )
+
+In case you want to query for calculation jobs that satisfy one of these conditions, you can use the ``or`` operator::
+
+    qb = QueryBuilder()
+    qb.append(
+        CalcJobNode,
+        filters={
+            'or':[
+                {'attributes.process_state': 'excepted'},
+                {'attributes.process_label': 'ArithmeticAddCalculation'}
+            ]
+        },
+    )
+
+If we had written *and* instead of *or* in the example above, we would have performed the exact same query as the previous one, because *and* is the default behavior if you provide several filters as key-value pairs in a dictionary to the ``filters`` argument.
+In case you want all calculation jobs with state ``finished`` or ``excepted``, you can also use the ``in`` operator::
+
+    qb = QueryBuilder()
+    qb.append(
+        CalcJobNode,
+        filters={
+            'attributes.process_state': {'in': ['finished', 'excepted']}
+        },
+    )
+
+You can also negate a filter by adding an exclamation mark in front of the operator.
+So, to query for all calculation jobs that are not a 'finished' or 'excepted' state::
+
+    qb = QueryBuilder()
+    qb.append(
+        CalcJobNode,
+        filters={
+            'attributes.process_state': {'!in': ['finished', 'excepted']}
+        },
+    )
+
+.. note::
+    The above rule applies to all operators.
+    For example, you can check non-equality with ``!==``, since this is the equality operator (``==``) with a negation prepended.
+
+This is a list of all implemented operators:
+
+.. _how-to:data:find:appender:operators:
+
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+|**Operator**  |**Datatype** |  **Example**                                          | Explanation                                                                  |
++==============+=============+=======================================================+==============================================================================+
+|   ``==``     |      all    | ``'id': {'==': 123}``                                 | Filter for equality                                                          |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+|   ``in``     |      all    | ``'name': {'in': ['foo', 'bar']}``                    | Filter for values that are in the given list.                                |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``>,<,<=,>=``| float,      | ``'ctime': {'<': datetime(2016, 03, 03)}``            | Filter for values that are greater or smaller than a certain value           |
+|              | integer,    |                                                       |                                                                              |
+|              | date        |                                                       |                                                                              |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``like``     | string      | ``'name': {'like': 'label%'}``                        | Filter for matching substrings where ``%`` and ``_`` are wildcards.          |
+|              |             |                                                       | To match a literal ``%`` or ``_`` escape it by prefixing it with ``\\``.     |
+|              |             |                                                       |                                                                              |
+|              |             |                                                       |                                                                              |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``ilike``    | string      | ``'name': {'ilike': 'lAbEl%'}``                       | Case insensitive version of ``like``.                                        |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``or``       | list of     | ``'id': {'or': [{'<': 12}, {'==': 199}]}``            | A list of expressions where at least one should be matched.                  |
+|              | expressions |                                                       |                                                                              |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``and``      | list of     | ``'id': {'and': [{'<': 12}, {'>': 1}]}``              | A list of expressions where all should be matched.                           |
+|              | expressions |                                                       |                                                                              |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``has_key``  | dict        | ``'attributes': {'has_key': 'some_key'}``             | Filter for dictionaries that contain a certain key.                          |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``of_type``  |    any      | ``'attributes.some_key': {'of_type': 'bool'}``        | Filter for values of a certain type.                                         |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``of_length``|    lists    | ``'attributes.some_list': {'of_length': 4}``          | Filter for lists of a certain length.                                        |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``shorter``  |    lists    | ``'attributes.some_list': {'shorter': 4}``            | Filter for lists that are shorter than a certain length.                     |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``longer``   |    lists    | ``'attributes.some_list': {'longer': 4}``             | Filter for lists that are longer than a certain length.                      |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+| ``contains`` |    lists    | ``'attributes.some_key': {'contains': ['a', 'b']}``   | Filter for lists that should contain certain values.                         |
++--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
+
+.. _how-to:data:find:appender:relationships:
+
+Relationships
+^^^^^^^^^^^^^
+
+It is possible to query for data based on its relationship to another entity in the database.
+Assuming you are not interested in the calculation jobs themselves, but in one of the outputs they create.
+You can build upon your initial query for all ``CalcJobNode``'s in the database using the relationship of the output to the first step in the query::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_incoming='calcjob')
+
+In the first ``append`` call, we query for all ``CalcJobNode``'s in the database, and *tag* this step with the *unique* identifier ``'calcjob'``.
+Next, we look for all ``Int`` nodes that are an output of the ``CalcJobNode``'s found in the first step, using the ``with_incoming`` relationship argument.
+Since the ``CalcJobNode`` *created* the ``Int`` node, it is an *incoming* node from the ``Int`` node's perspective.
+
+In the context of our query, we are building a *path* consisting of *vertices* (i.e. the entities we query for) connected by *edges* defined by the relationships between them.
+Here is a list of all the relationships you can use for your query, as well as the entities that they connect:
+
+.. In above example we are querying calculation jobs and ``Int`` nodes, with the predicate that the ``Int`` is an output of the calculation (the same as saying that the calculation   is an input to the ``Int``).
+    In the above example, we have first appended ``CalcJobNode`` to the path.
+    To be able to refer to that vertex later, we *tag* it with a unique keyword
+    of our choice, which can be used only once.
+    When we append another vertex to the path, we specify the relationship
+    to a previous entity by using one of the keywords in the table below
+    and as a value the tag of the vertex that it has the specified relationship with.
+    There are several relationships that entities in Aiida can have:
+
++------------------+---------------+--------------------+-------------------------------------------------+
+| **Entity from**  | **Entity to** | **Relationship**   | **Explanation**                                 |
++==================+===============+====================+=================================================+
+| Node             | Node          | *with_outgoing*    | One node as input of another node               |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Node          | *with_incoming*    | One node as output of another node              |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Node          | *with_descendants* | One node as the ancestor of another node (Path) |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Node          | *with_ancestors*   | One node as descendant of another node (Path)   |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Group         | *with_node*        | The group of a node                             |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Group            | Node          | *with_group*       | The node is a member of a group                 |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Computer      | *with_node*        | The computer of a node                          |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Computer         | Node          | *with_computer*    | The node of a computer                          |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | User          | *with_node*        | The creator of a node is a user                 |
++------------------+---------------+--------------------+-------------------------------------------------+
+| User             | Node          | *with_user*        | The node was created by a user                  |
++------------------+---------------+--------------------+-------------------------------------------------+
+| User             | Group         | *with_user*        | The node was created by a user                  |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Group            | User          | *with_group*       | The node was created by a user                  |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Node             | Log           | *with_node*        | The log of a node                               |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Log              | Node          | *with_log*         | The node has a log                              |
+| Node             | Comment       | *with_node*        | The comment of a node                           |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Comment          | Node          | *with_comment*     | The node has a comment                          |
++------------------+---------------+--------------------+-------------------------------------------------+
+| User             | Comment       | *with_user*        | The comment was created by a user               |
++------------------+---------------+--------------------+-------------------------------------------------+
+| Comment          | User          | *with_comment*     | The creator of a comment is a user              |
++------------------+---------------+--------------------+-------------------------------------------------+
+
+.. Some more examples::
+
+..     # StructureData as an input of a job calculation
+..     qb = QueryBuilder()
+..     qb.append(CalcJobNode, tag='calc')
+..     qb.append(StructureData, with_outgoing='calc')
+
+..     # StructureData and Dict as inputs to a calculation
+..     qb = QueryBuilder()
+..     qb.append(CalcJobNode, tag='calc')
+..     qb.append(StructureData, with_outgoing='calc')
+..     qb.append(Dict, with_outgoing='calc')
+
+..     # Filtering the remote data instance by the computer it ran on (name)
+..     qb = QueryBuilder()
+..     qb.append(RemoteData, tag='remote')
+..     qb.append(Computer, with_node='remote', filters={'name':{'==':'mycomputer'}})
+
+..     # Find all descendants of a structure with a certain uuid
+..     qb = QueryBuilder()
+..     qb.append(StructureData, tag='structure', filters={'uuid':{'==':myuuid}})
+..     qb.append(Node, with_ancestors='structure')
+
+.. The above QueryBuilder will join a structure to all its descendants via the
+.. transitive closure table.
+
+.. _how-to:data:find:appender:projections:
+
+Projections
+^^^^^^^^^^^
+
+When no *projection* is specified, the default behavior of the ``QueryBuilder`` is to project the entities corresponding to the final vertex of the query path.
+However, in many cases we are not interested in the entities themselves, but rather their PK, UUID, *attributes* or some other piece of information stored by the entity.
+This can be achieved using the ``project`` keyword argument::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_incoming='calcjob', project='id')
+
+In the above example, executing the query returns all PK's of the ``Int`` nodes which are outputs of all ``CalcJobNode``'s in the database.
+However, you can project more than one piece of information for one vertex by using a list::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_incoming='calcjob', project=['id', 'attributes.value'])
+
+Moreover, you can project information for multiple vertices along the query path::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob', project='uuid)
+    qb.append(Int, with_incoming='calcjob', project=['id', 'attributes.value'])
+
+Asking only for the properties that you are interested in can result in much faster queries.
+If you want the Aiida-ORM instance, add ``'*'`` to your list of projections::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob', project='uuid')
+    qb.append(Int, with_incoming='calcjob', project=['id', '*', 'attributes.value'])
+
+All projections must start with one of the *columns* of the entities in the database.
+Examples of columns we have encountered so far are ``id``, ``uuid`` and ``attributes``.
+If the column is a dictionary, you can expand the dictionary values using a dot notation, as we have done in the previous example to obtain the ``attributes.value``.
+This can be used to project the values of nested dictionaries as well.
+
+.. note::
+    Be aware that, for consistency, ``QueryBuilder.all()`` / ``iterall()`` always returns a list of lists, even if you project on one entity.
+    A convenient boolean keyword argument for the ``all()`` method is ``flat``, which returns the query as a flat list if set to ``True``.
+
+.. _how-to:data:find:appender:edges:
+
+Working with edges
+^^^^^^^^^^^^^^^^^^
+
+So far the filters and projections have been applied to the vertices of the query path.
+However, it is also possible to apply filters and projections on the edges that connect the vertices.
+This works the same way as for vertices, but the relevant keyword is now preceded by ``edge_``.
+Returning to the ``ArithmeticAddCalculation`` example, let's say we want to query for the first input of the addition, i.e. the ``Int`` nodes which have been provided as the input with label ``x``::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_outgoing='calcjob', edge_filters={'label': 'x'})
+
+By using the ``edge_filters`` keyword argument, we can query for only the inputs that have the label ``x``.
+Similarly, we can project information of the edge using the ``edge_project`` keyword argument::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_outgoing='calcjob', edge_project='label')
+
+In the example above, we are querying for the edge labels of the incoming ``Int`` nodes of all ``CalcJobNode``'s.
+Note that you can use the :ref:`operators from the table above <how-to:data:find:appender:operators>` to filter edges as well.
+Say we want to find all input ``Int`` nodes that do are **not** connected to the ``CalcJobNode``'s via an edge with label ``x``::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_outgoing='calcjob', edge_filters={'label': {'!==': 'x'}})
+
+.. how-to:data:find:appender:ordering:
+
+Ordering and limiting results
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can order the results of your query by the properties of the entity.
+Say you want to return the list of ``Int`` outputs from all ``CalcJobNode``'s, sorted by the time they were created in *descending* order, i.e. the most recent first::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_incoming='calcjob')
+    qb.order_by({Int: {'ctime': 'desc'}})
+    qb.all()
+
+This can also be used to order your results based on values in a (nested) dictionary, such as the ``attributes`` column.
+However, as the ``QueryBuilder`` cannot infer the type of the value in this case, you have to *cast* the type::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_incoming='calcjob')
+    qb.order_by({Int: {'attributes.value': {'order': 'asc', 'cast': 'i'}}})
+    qb.all()
+
+The query above will return all ``Int`` nodes that are output of all ``CalcJobNode``'s, in *ascending* order of their value, i.e. from small to big.
+Note that in this case you have to specify the order operation with a dictionary, where the ``order`` key details the way you want to order the query results and the ``cast`` key informs the ``QueryBuilder`` of the attribute type.
+Below is a list of the available cast types and their aliases:
+
++-------------------+-----------+---------------------+
+| **Python type**   | **Alias** | **SQLAlchemy type** |
++===================+===========+=====================+
+| int               | i         | Integer             |
++-------------------+-----------+---------------------+
+| float             | f         | Float               |
++-------------------+-----------+---------------------+
+| bool              | b         | Boolean             |
++-------------------+-----------+---------------------+
+| str               | t         | String              |
++-------------------+-----------+---------------------+
+| dict              | j         | JSONB               |
++-------------------+-----------+---------------------+
+| datetime.datetime | d         | DateTime            |
++-------------------+-----------+---------------------+
+
+You can also order using multiple properties by providing a list of dictionaries that each specify one sorting operation::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_incoming='calcjob')
+    qb.order_by({Int: [{'attributes.value': {'order': 'asc', 'cast': 'f'}}, {'ctime': 'desc'}]})
+    qb.all()
+
+Here the ``Int`` nodes will first be sorted by their value in ascending order.
+Nodes for which the value is equal are subsequently sorted by their modification time in descending order.
+
+Finally, you can also limit the number of query results returned with the ``limit`` method.
+Suppose you only want the first three results from our query::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode)
+    qb.limit(3)
+
+This can be easily combined with the ``order_by`` method in order to get the last three ``CalcJobNode``'s that were created in the database::
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode)
+    qb.limit(3)
+    qb.order_by({CalcJobNode: {'ctime': 'desc'}})
+
+.. how-to:data:find:queryhelp:
+
+The queryhelp
+-------------
+
+As mentioned at the start of this how-to, there are two possibilities to query for data with the ``QueryBuilder``.
+The second uses a single dictionary called the ``queryhelp`` that contains all the details of your query.
+It has the same functionality as the appender method, but you can save this dictionary in a JSON file or in the database and use it at some later date.
+
+.. note::
+
+    The ``queryhelp`` dictionary is a property of the ``QueryBuilder`` class. So, in case you have built your query using the appender method, you can store your query by saving the ``QueryBuilder.queryhelp`` dictionary as a JSON file for later use.
+
+To use the queryhelp, you have to specify the path, filters and projections beforehand and instantiate the QueryBuilder with that dictionary::
+
+    qb = QueryBuilder(**queryhelp)
+
+To construct the queryhelp dictionary, you have to specify:
+
+*   the ``path``:
+    Here, the user specifies the path along which to join tables as a list of dictionaries, where each list item identifies a vertex in your path.
+    You define the vertex class with the ``cls`` key::
+
+        queryhelp = {
+            'path':[
+                {'cls': Data}
+            ]
+        }
+
+    Each entity in the query has to have a unique tag.
+    If the tag is not provided, it is set to the name of the class.
+    However, this will not work if you choose the same class twice in the query.
+    In this case you have to provide the tag using the ``tag`` key::
+
+        queryhelp = {
+            'path':[
+                {
+                    'cls':Node,
+                    'tag':'node_1'
+                },
+                {
+                    'cls':Node,
+                    'tag':'node_2'
+                }
+            ]
+        }
+
+    You also have to detail some information on the vertex edges, in order to connect them correctly.
+    There are several redundant ways this can be done:
+
+    *   You can specify that this node is an input or output of another node preceding the current one in the list.
+        That other node can be specified by an integer or the class or type.
+        The following examples are all valid joining instructions, assuming there is a structure defined at index 2 of the path with tag "struc1"::
+
+            edge_specification = queryhelp['path'][3]
+            edge_specification['with_incoming'] = 2
+            edge_specification['with_incoming'] = StructureData
+            edge_specification['with_incoming'] = 'struc1'
+            edge_specification['with_outgoing']  = 2
+            edge_specification['with_outgoing']  = StructureData
+            edge_specification['with_outgoing']  = 'struc1'
+
+    *   queryhelp_item['direction'] = integer
+
+        If any of the above specs ("with_outgoing", "with_incoming") were not specified, the key "direction" is looked for.
+        Directions are defined as distances in the tree.
+        1 is defined as one step down the tree along a link.
+        This means that 1 joins the node specified in this dictionary to the node specified on list-item before **as an output**.
+        Direction defaults to 1, which is why, if nothing is specified, this node is joined to the previous one as an output by default.
+        A negative number reverse the direction of the link.
+        The absolute value of the direction defines the table to join to with respect to your own position in the list.
+        An absolute value of 1 joins one table above, a value of 2 to the table defined 2 indices above.
+        The two following queryhelps yield the same query::
+
+            from aiida.orm import TrajectoryData
+            from aiida_quantumespresso.calculations.pw import PwCalculation
+            from aiida.orm import Dict
+            qh1 = {
+                'path': [
+                    {
+                        'cls':PwCalculation
+                    },
+                    {
+                        'cls':TrajectoryData
+                    },
+                    {
+                        'cls':Dict,
+                        'direction':-2
+                    }
+                ]
+            }
+
+            # returns same query as:
+
+            qh2 = {
+                'path':[
+                    {
+                        'cls':PwCalculation
+                    },
+                    {
+                        'cls':TrajectoryData
+                    },
+                    {
+                        'cls':Dict,
+                        'with_outgoing':PwCalculation
+                    }
+                ]
+            }
+
+            # Shorter version:
+
+            qh3 = {
+                'path':[
+                    Dict,
+                    PwCalculation,
+                    TrajectoryData,
+                ]
+            }
+
+*   what to ``project``: Determing which columns the query will return::
+
+        queryhelp = {
+            'path':[PwCalculation],
+            'project':{
+                PwCalculation:['user_id', 'id'],
+            }
+        }
+
+    If you are using JSONB columns, you can also project a value stored inside the json::
+
+        queryhelp = {
+            'path':[
+                PwCalculation,
+                StructureData,
+            ],
+            'project':{
+                PwCalculation:['state', 'id'],
+            }
+        }
+
+    Returns the state and the id of all instances of ``PwCalculation`` where a structures is linked as output of a relax-calculation.
+    The strings that you pass have to be name of the columns.
+    If you pass an asterisk ('*'), the query will return the instance of the AiidaClass.
+
+*   the ``filters``:
+    Filters enable you to further specify the query.
+    This is an example for a query for structures that were added after a certain time (say last 4 days) and have an id larger than 50::
+
+        from aiida.common import timezone
+        from datetime import timedelta
+
+        queryhelp = {
+            'path':[
+                {'cls':PwCalculation}, # PwCalculation with structure as output
+                {'cls':StructureData}
+            ],
+            'filters':{
+                StructureData:{
+                    'ctime':{'>':  timezone.now() - timedelta(days=4)},
+                    'id':{'>': 50}
+                }
+            }
+        }
+
+If you want to include filters and projections on links between nodes, you will have to add these to filters and projections in the queryhelp.
+Let's take an example from before and add a few filters on the link::
+
+    queryhelp = {
+        'path':[
+            {'cls':PwCalculation, 'tag':'relax'}, # PwCalculation with structure as output
+            {'cls':StructureData, 'tag':'structure'}
+        ],
+        'filters':{
+            'structure':{
+                'id':{'>': 50}
+            },
+            'relax--structure':{
+                'label':{'like':'output_%'},
+            }
+        },
+        'project':{
+            'relax--structure':['label'],
+            'structure':['label'],
+            'relax':['label', 'uuid'],
+        }
+    }
+
+Notice that the tag for the link, by default, is the tag of the two connecting nodes delimited by two dashes '--' and the order DOES matter.
+
+Alternatively, you can choose the tag for the edge in the path when defining the entity to join using ``edge_tag``::
+
+    queryhelp = {
+        'path':[
+            {'cls':PwCalculation, 'tag':'relax'},         # Relaxation with structure as output
+            {
+                'cls':StructureData,
+                'tag':'structure',
+                'edge_tag':'ThisIsMyLinkTag'     # Definining the link tag
+            }
+        ],
+        'filters':{
+            'structure':{
+                'id':{'>': 50}
+            },
+            'ThisIsMyLinkTag':{                  # Using this link tag
+                'label':{'like':'output_%'},
+            }
+        },
+        'project':{
+            'ThisIsMyLinkTag':['label'],
+            'structure':['label'],
+            'relax':['label', 'uuid'],
+        }
+    }
+
+Limits and offset can be set directly like this::
+
+    queryhelp = {
+        'path':[Node],
+        'limit':10,
+        'offset':20
+    }
+
+That queryhelp would tell the QueryBuilder to return 10 rows after the first 20 have been skipped.
 
 .. _how-to:data:organize:
 

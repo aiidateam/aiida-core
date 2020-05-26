@@ -549,7 +549,10 @@ If you are a cluster administrator, you might be interested in `some tips availa
 
 Managing multiple users
 =======================
+Setups with multiple users for a single AiiDA instance are currently not supported.
+Instead, each AiiDA user should install AiiDA in a Unix/Windows account on their own computer.
+Under this account it is possible to configure all the credentials necessary to connect to remote computers.
+Using independent accounts will ensure that, for instance, the SSH credentials to connect to supercomputers are not shared with others.
 
-`#4005`_
-
-.. _#4005: https://github.com/aiidateam/aiida-core/issues/4005
+Data can be shared between instances using :ref:`AiiDA's export and import functionality <how-to:data:share>`.
+Sharing (subsets of) the AiiDA graph can be done as often as needed.

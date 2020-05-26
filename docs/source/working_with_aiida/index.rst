@@ -85,14 +85,6 @@ Provenance Graphs
 
     visualising_graphs/visualising_graphs
 
-Backups
-=======
-
-.. toctree::
-    :maxdepth: 4
-
-    ../backup/index.rst
-
 Import and Export
 =================
 

@@ -1,11 +1,12 @@
-.. _move_postgresql:
+.. _how-to:installation:more:move_postgresql:
 
-Moving the database
--------------------
+##############################
+Moving the PostgreSQL database
+##############################
 
 This section describes how to move the physical location of the database files from one location to another (e.g. if you run out of disk space).
 
- 1. Stop the AiiDA daemon and :ref:`back up your database <backup_postgresql>`.
+ 1. Stop the AiiDA daemon and :ref:`back up your database <how-to:installation:backup:postgresql>`.
 
  2. Find the data directory of your postgres installation (something like ``/var/lib/postgresql/9.6/main``, ``/scratch/postgres/9.6/main``, ...).
 
@@ -14,7 +15,6 @@ This section describes how to move the physical location of the database files f
       psql
       SHOW data_directory;
       \q
-
 
     If you are unable to enter the postgres shell, try looking for the ``data_directory`` variable in a file ``/etc/postgresql/9.6/main/postgresql.conf`` or similar.
 
@@ -25,7 +25,6 @@ This section describes how to move the physical location of the database files f
  4. Copy all files and folders from the postgres ``data_directory`` to the new location::
 
       cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
-
 
     .. note::
         Flag ``-a`` will create a directory within ``DESTINATION_DIRECTORY``, e.g.::

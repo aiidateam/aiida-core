@@ -120,7 +120,5 @@ Various tips & tricks
   :maxdepth: 1
 
   tips/ssh_proxycommand
-  tips/move_db
   tips/repo_indexing
-  tips/for_cluster_admins
 

@@ -1,10 +1,3 @@
-.. aiida documentation master file, created by
-       sphinx-quickstart on Wed Oct 24 11:33:37 2012.
-       You can adapt this file completely to your liking, but it should at least
-       contain the root `toctree` directive.
-
-**aiida-core version:** |release|
-
 .. image:: images/AiiDA_transparent_logo.png
     :width: 250px
     :align: center
@@ -14,6 +7,8 @@
 #################################
 Welcome to AiiDA's documentation!
 #################################
+
+**aiida-core version:** |release|
 
 `AiiDA`_ is an open-source framework implemented in Python that aims to help researchers with managing simple to complex workflows and making them fully reproducible.
 

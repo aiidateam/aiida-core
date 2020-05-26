@@ -235,7 +235,7 @@ For this purpose, AiiDA provides the ``CalcJob`` process class.
 To run a ``CalcJob``, you need to set up two things: a ``computer`` for the calculation to run on, and the ``code`` that you want the ``CalcJob`` to run.
 If you're running this tutorial in the Quantum Mobile VM or on Binder, these have been pre-configured for you. If you're running on your own machine, you can follow the instructions in the panel below:
 
-.. accordion:: Install localhost computer and code
+.. dropdown:: Install localhost computer and code
 
     Let's begin by setting up the computer using the ``verdi computer`` subcommand:
 
@@ -262,7 +262,7 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
         $ verdi code setup -L add --on-computer --computer=tutor -P arithmetic.add --remote-abs-path=/bin/bash -n
 
     This command sets up a code with *label* ``add`` on the *computer* ``tutor``, using the *plugin* ``arithmetic.add``.
-|
+
 A typical real-world example of a computer is a remote supercomputing facility.
 Codes can be anything from a Python script to powerful *ab initio* codes such as Quantum Espresso or machine learning tools like Tensorflow.
 Let's have a look at the codes that are available to us:
@@ -495,7 +495,7 @@ AiiDA allows us to automate these steps by linking them together in a *workflow*
 For this tutorial we have prepared a basic ``WorkChain`` that is already implemented in ``aiida-core``.
 You can see the code below:
 
-.. accordion:: MultiplyAddWorkChain code
+.. dropdown:: MultiplyAddWorkChain code
 
     .. code-block:: python
 
@@ -542,7 +542,7 @@ You can see the code below:
     First, we recognize the ``multiply`` function we have used earlier, decorated as a ``calcfunction``.
     The ``define`` class method specifies the ``input`` and ``output`` of the ``WorkChain``, as well as the ``outline``, which are the steps of the workflow.
     These steps are provided as methods of the ``MultiplyAddWorkChain`` class.
-|
+
 .. note::
 
     Besides WorkChain's, workflows can also be implemented as *work functions*.

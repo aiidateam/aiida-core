@@ -103,8 +103,8 @@ The first one is blocking and will return a dictionary containing all the output
     output_dict = run(calculation_builder)
     sum_node = output_dict['sum']
 
-The second one is non blocking, as you will be submitting it to the daemon and immediately getting control in the interpreter.
-The return value in this case is the actual calculation node that is stored in the database.
+The second one is non blocking, as you will be submitting it to the daemon and control is immediately returned to the interpreter.
+The return value in this case is the calculation node that is stored in the database.
 
 .. code-block:: python
 

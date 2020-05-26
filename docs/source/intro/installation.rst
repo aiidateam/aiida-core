@@ -657,7 +657,7 @@ The ``verdi setup`` command will guide you through the setup process through a s
 The first information asked is your email, which will be used to associate the calculations to you.
 In AiiDA, the email is your username, and acts as a unique identifier when importing/exporting data from AiiDA.
 
-.. note:: 
+.. note::
 
    The password, in the current version of AiiDA, is not used (it will be used only in the REST API and in the web interface).
    If you leave the field empty, no password will be set and no access will be granted to the user via the REST API and the web interface.
@@ -725,7 +725,7 @@ Use the ``verdi status`` command to check that all services are up and running:
 
 In the example output, all service have a green check mark and so should be running as expected.
 
-.. admonition:: Are you in your virtual environment?  
+.. admonition:: Are you in your virtual environment?
    :class: note title-icon-troubleshoot
 
    Remember that in order to work with AiiDA through for example the ``verdi`` command, you need to be in your virtual environment.
@@ -743,6 +743,11 @@ In the example output, all service have a green check mark and so should be runn
    :link-badge:`how-to:installation:configure,Configuring,ref,badge-primary text-white`
    :link-badge:`how-to:installation:update,Updating,ref,badge-primary text-white`
    :link-badge:`how-to:installation:backup:software,Backing-up,ref,badge-primary text-white`
+
+.. admonition:: What next?
+   :class: seealso title-icon-read-more
+
+   Try out the ::ref:`Basic Tutorial <tutorial:basic>`.
 
 .. _intro:install:jupyter:
 
@@ -880,3 +885,8 @@ You can even add files directly to the folder outside of the container, by findi
 
    $ docker volume inspect my_data
    $ echo "hallo" | sudo tee -a /var/lib/docker/volumes/my_data/_data/hallo.txt  > /dev/null
+
+.. admonition:: What next?
+   :class: seealso title-icon-read-more
+
+   Try out the ::ref:`Basic Tutorial <tutorial:basic>`.

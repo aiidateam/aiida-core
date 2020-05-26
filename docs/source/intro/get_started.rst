@@ -205,6 +205,8 @@ If computations are still running, then they will be picked up next time the ser
 Next Steps
 ==========
 
+Try out the ::ref:`Basic Tutorial <tutorial:basic>`, or check if your use case is one of the following:
+
 .. div:: dropdown-group
 
     .. dropdown:: Run pure Python lightweight computations

@@ -148,7 +148,7 @@ Finally install the aiida-core python environment:
    $ pip install aiida-core
 
 .. admonition:: Further Reading
-   :class: title-icon-read-more
+   :class: seealso title-icon-read-more
 
    - For a more detailed description of database requirements and usage see the :ref:`database topic<topics:database>`.
    - For problems with installing RabbitMQ, refer to the detailed instructions provided on the `RabbitMQ website for Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
@@ -195,7 +195,7 @@ Finally install the aiida-core python environment:
    $ pip install aiida-core
 
 .. admonition:: Further Reading
-   :class: title-icon-read-more
+   :class: seealso title-icon-read-more
 
    - For a more detailed description of database requirements and usage see the :ref:`database topic<topics:database>`.
    - For problems with installing RabbitMQ, refer to the detailed instructions provided on the `RabbitMQ website for Homebrew based distributions <https://www.rabbitmq.com/install-homebrew.html>`_.
@@ -250,7 +250,7 @@ Finally install the aiida-core python environment:
    If ``rabbitmqctl status`` returns an error "Hostname mismatch", the easiest solution can be to simply ``sudo port uninstall`` the package and install it again.
 
 .. admonition:: Further Reading
-   :class: title-icon-read-more
+   :class: seealso title-icon-read-more
 
    - For a more detailed description of database requirements and usage see the :ref:`database topic<topics:database>`.
    - For details on the installation of the ``pip`` package manager, refer to `their documentation <https://pip.pypa.io/en/stable/installing/#installation>`_
@@ -355,7 +355,7 @@ The guide for Ubuntu above can generally be followed, but there are a few things
 It may be worth considering adding some of these commands to your ``~/.bashrc`` file, since some of these settings may reset upon reboot.
 
 .. admonition:: Further Reading
-   :class: title-icon-read-more
+   :class: seealso title-icon-read-more
 
    For using WSL as a developer, please see the considerations made in our `wiki-page for developers <https://github.com/aiidateam/aiida-core/wiki/Development-environment#using-windows-subsystem-for-linux-wsl>`_.
 
@@ -496,7 +496,7 @@ which leads through the installation process and takes care of creating the corr
 For maximum control and customizability, one can use ``verdi setup`` and set up the database manually as explained below.
 
 .. admonition:: Want to manage multiple profiles?
-   :class: title-icon-read-more
+   :class: seealso title-icon-read-more
 
    See the :ref:`managing profiles how-to <how-to:installation:profile>`.
 
@@ -539,7 +539,7 @@ Use the ``verdi status`` command to check that all services are up and running:
 In the example output, all service have a green check mark and so should be running as expected.
 
 .. admonition:: Want to know more about managing your install?
-   :class: tip title-icon-read-more
+   :class: seealso title-icon-read-more
 
    See the :ref:`Installation how-to <how-to:installation>`
 

@@ -120,7 +120,7 @@ We start this process with:
     $ pg_ctl -D mylocal_db -l logfile start
 
 .. admonition:: Further Reading
-    :class: title-icon-read-more
+    :class: seealso title-icon-read-more
 
     - `Creating a Database Cluster <https://www.postgresql.org/docs/12/creating-cluster.html>`__.
     - `Starting the Database Server <https://www.postgresql.org/docs/12/server-start.html>`__.
@@ -195,7 +195,7 @@ If computations are still running, then they will be picked up next time the ser
     :ref:`See the troubleshooting section <intro:troubleshooting>`
 
 .. admonition:: In-depth instructions
-    :class: tip title-icon-read-more
+    :class: seealso title-icon-read-more
 
     For more ways to install AiiDA :ref:`Check the advanced installation section <intro:install>`.
 

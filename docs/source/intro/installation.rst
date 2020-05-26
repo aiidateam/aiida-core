@@ -1,13 +1,13 @@
-.. _intro/installation:
+.. _intro:install:
 
 *********************
 Detailed Installation
 *********************
 
-.. _install/software:
+.. _intro:install:prerequisites:
 
-Software Packages
-=================
+Installing Prerequisites
+========================
 
 AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems and requires the following software:
 
@@ -56,7 +56,7 @@ Below, we provide installation instructions for a number of operating systems.
             git python3-dev python3-pip
          $ pip install aiida-core
 
-      See :ref:`Ubuntu instructions<install/details_ubuntu>` for details.
+      See :ref:`Ubuntu instructions<intro:install:prerequisites:ubuntu>` for details.
 
    .. dropdown:: MacOS X (Homebrew)
 
@@ -69,7 +69,7 @@ Below, we provide installation instructions for a number of operating systems.
          $ python get-pip.py
          $ pip install aiida-core
 
-      See :ref:`MacOS X (Homebrew) instructions<install/details_brew>` for details.
+      See :ref:`MacOS X (Homebrew) instructions<intro:install:prerequisites:brew>` for details.
 
    .. dropdown:: MacOS X (MacPorts)
 
@@ -81,7 +81,7 @@ Below, we provide installation instructions for a number of operating systems.
          $ python get-pip.py
          $ pip install aiida-core
 
-      See :ref:`MacOS X (MacPorts) instructions<install/details_macports>` for details.
+      See :ref:`MacOS X (MacPorts) instructions<intro:install:prerequisites:macports>` for details.
 
    .. dropdown:: Gentoo Linux
 
@@ -93,7 +93,7 @@ Below, we provide installation instructions for a number of operating systems.
          $ emerge --ask dev-python/pip
          $ pip install aiida-core
 
-      See :ref:`Gentoo Linux instructions<install/details_gentoo>` for details.
+      See :ref:`Gentoo Linux instructions<iintro:install:prerequisites:gentoo>` for details.
 
    .. dropdown:: Windows Subsystem for Linux
 
@@ -106,12 +106,12 @@ Below, we provide installation instructions for a number of operating systems.
          # install rabbitmq on windows
          $ pip install aiida-core
 
-      See :ref:`WSL instructions<install/details_wsl>` for details.
+      See :ref:`WSL instructions<intro:install:prerequisites:wsl>` for details.
 
-.. _install/details_ubuntu:
+.. _intro:install:prerequisites:ubuntu:
 
 Ubuntu
-======
+------
 
 To install the prerequisites on Ubuntu and any other Debian derived distribution, you can use the ``apt`` package manager.
 The following will install the basic ``python`` requirements and the ``git`` source control manager:
@@ -153,10 +153,10 @@ Finally install the aiida-core python environment:
    - For a more detailed description of database requirements and usage see the :ref:`database section<database>`.
    - For problems with installing RabbitMQ, refer to the detailed instructions provided on the `RabbitMQ website for Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
 
-.. _install/details_brew:
+.. _intro:install:prerequisites:brew:
 
 Mac OS X (homebrew)
-===================
+-------------------
 
 For Mac OS we recommend using the `Homebrew`_ package manager.
 If you have not installed Homebrew yet, you can do so with the following command:
@@ -201,10 +201,10 @@ Finally install the aiida-core python environment:
    - For problems with installing RabbitMQ, refer to the detailed instructions provided on the `RabbitMQ website for Homebrew based distributions <https://www.rabbitmq.com/install-homebrew.html>`_.
    - For details on the installation of the ``pip`` package manager, refer to `their documentation <https://pip.pypa.io/en/stable/installing/#installation>`_
 
-.. _install/details_macports:
+.. _intro:install:prerequisites:macports:
 
 Mac OS X (MacPorts)
-===================
+-------------------
 
 .. _macports: https://www.macports.org/
 
@@ -255,10 +255,10 @@ Finally install the aiida-core python environment:
    - For a more detailed description of database requirements and usage see the :ref:`database section<database>`.
    - For details on the installation of the ``pip`` package manager, refer to `their documentation <https://pip.pypa.io/en/stable/installing/#installation>`_
 
-.. _install/details_gentoo:
+.. _intro:install:prerequisites:gentoo:
 
 Gentoo Linux
-============
+------------
 
 To install RabbitMQ on a Gentoo distribution through the ``portage`` package manager run the following command:
 
@@ -297,10 +297,10 @@ Make sure that RabbitMQ is running with:
     If you still have trouble getting RabbitMQ to run, please refer to the detailed instructions provided on the `website of RabbitMQ itself for generic Unix systems <https://www.rabbitmq.com/install-generic-unix.html>`_.
 
 
-.. _install/details_wsl:
+.. _intro:install:prerequisites:wsl:
 
 Windows Subsystem for Linux (Ubuntu)
-====================================
+------------------------------------
 
 The guide for Ubuntu above can generally be followed, but there are a few things to note:
 
@@ -359,10 +359,10 @@ It may be worth considering adding some of these commands to your ``~/.bashrc`` 
 
    For using WSL as a developer, please see the considerations made in our `wiki-page for developers <https://github.com/aiidateam/aiida-core/wiki/Development-environment#using-windows-subsystem-for-linux-wsl>`_.
 
-.. _install/virtual_environments:
+.. _intro:install:virtual_environments:
 
-Virtual environments
-====================
+Using virtual environments
+==========================
 
 AiiDA depends on a number of third party python packages, and usually on specific versions of those packages.
 In order not to interfere with third party packages needed by other software on your system, we **strongly** recommend isolating AiiDA in a virtual python environment.
@@ -409,80 +409,11 @@ If you have `Conda`_ installed then you can directly create a new environment wi
    $ conda activate
    $ conda deactivate aiida
 
-.. _directory_location:
 
-Isolating AiiDA environments
-----------------------------
+.. _intro:install:aiida-core:
 
-By default, the AiiDA configuration is stored in the directory ``~/.aiida``.
-When running AiiDA in multiple virtual environments (using ``venv`` or ``conda``),
-you can ask AiiDA to use a separate ``.aiida`` configuration directory per environment.
-
-1. Create your virtual environment ``aiida2``
-2. Edit the activation script ``/path/to/new/virtual/environment/aiida2/bin/activate``
-   and append a line to set the ``AIIDA_PATH`` environment variable:
-
-   .. code-block:: bash
-
-      export AIIDA_PATH='/path/to/new/virtual/environment/aiida2/'  # use .aiida configuration in this folder
-      eval "$(_VERDI_COMPLETE=source verdi)"  # e.g. set up tab completion
-
-.. note::
-   For ``conda``,     create a directory structure ``etc/conda/activate.d`` in
-   the root folder of your conda environment (e.g.
-   ``/home/user/miniconda/envs/aiida``), and place a file ``aiida-init.sh`` in
-   that folder which exports the ``AIIDA_PATH``.
-
-3. Deactivate and re-activate the virtual environment
-
-You can test that everything is set up correctly if you can reproduce the following:
-
-.. code-block:: console
-
-   (aiida2)$ echo $AIIDA_PATH
-   /path/to/new/virtual/environment/aiida2/
-   (aiida2)$ verdi profile list
-   Info: configuration folder: /home/my_username/.virtualenvs/aiida/.aiida2
-   Critical: configuration file /home/my_username/.virtualenvs/aiida/.aiida2/config.json does not exist
-
-Now simply :ref:`create a new AiiDA profile <setup_aiida>` in the ``aiida2`` environment.
-
-``AIIDA_PATH`` Details
-......................
-
-The value of ``AIIDA_PATH`` can be a colon-separated list of paths.
-AiiDA will go through each of the paths and check whether they contain a ``.aiida`` directory.
-The first configuration directory that is encountered will be used.
-If no ``.aiida`` directory is found, one will be created in the last path that was considered.
-
-For example, the directory structure in your home folder ``~/`` might look like this::
-
-   .
-   ├── .aiida
-   └── project_a
-      ├── .aiida
-      └── subfolder
-
-
-If you leave the ``AIIDA_PATH`` variable unset, the default location ``~/.aiida`` will be used.
-However, if you set :
-
-.. code-block:: console
-
-   $ export AIIDA_PATH='~/project_a:'
-
-the configuration directory ``~/project_a/.aiida`` will be used.
-
-.. warning::
-
-   If there was no ``.aiida`` directory in ``~/project_a``, AiiDA would have created it for you.
-   Thus make sure to set the ``AIIDA_PATH`` correctly.
-
-
-.. _install/aiida-core:
-
-aiida-core package
-==================
+Installing the aiida-core package
+=================================
 
 .. _Conda: https://anaconda.org/conda-forge/aiida-core
 .. _PyPI: https://pypi.python.org/pypi/aiida-core
@@ -509,8 +440,6 @@ Alternatively, you can create a directory where to clone the AiiDA source code a
     $ cd <your_directory>
     $ git clone https://github.com/aiidateam/aiida-core
     $ pip install -e aiida-core
-
-.. _install_optional_dependencies:
 
 There are additional optional packages that you may want to install, which are grouped in the following categories:
 
@@ -544,45 +473,89 @@ After installing AiiDA packages, always remember to update the reentry cache usi
 
    $ reentry scan
 
-.. _updating_aiida:
+.. _intro:setup:
 
-Updating aiida-core
-===================
+Setting up the installation
+===========================
 
-1. Enter the python environment where AiiDA is installed
-2. Finish all running calculations.
-   After migrating your database, you will not be able to resume unfinished calculations!
-   Data of finished calculations will of course be automatically migrated.
-3. Stop the daemon using ``verdi daemon stop``
-4. :ref:`Create a backup of your database and repository<backup>`
+.. _intro:setup:profile:
 
-.. warning::
+AiiDA profile setup
+-------------------
 
-   Once you have migrated your database, you can no longer go back to an older version of ``aiida-core`` (unless you restore your database and repository from a backup).
+After successful installation, you need to create an AiiDA profile via AiiDA's command line interface ``verdi``.
 
-5. Update your ``aiida-core`` installation
+Most users should use the interactive quicksetup:
 
-    - If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``
-    - If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch.
+.. code-block:: console
 
-6. Migrate your database with ``verdi -p <profile_name> database migrate``.
-   Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
+    $ verdi quicksetup
 
-After the database migration finishes, you will be able to continue working with your existing data.
+which leads through the installation process and takes care of creating the corresponding AiiDA database.
 
-.. admonition:: Updating from version 0.12?
-   :class: warning title-icon-important
+For maximum control and customizability, one can use ``verdi setup`` and set up the database manually as explained below.
 
-   If your update involved a change in the major version number of ``aiida-core``, expect :ref:`backwards incompatible changes<updating_backward_incompatible_changes>` and check whether you also need to update your installed plugin packages.
+.. admonition:: Want to manage multiple profiles?
+   :class: title-icon-read-more
+
+   See the :ref:`managing profiles how-to <how-to:installation:profile>`.
 
 
-.. _install/docker:
+.. _intro:setup:start_daemon:
 
-Docker
-======
+Starting the daemon
+-------------------
 
-AiiDA maintains a `Docker <https://www.docker.com/>`__ image on `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core>`__, which is particularly useful for learning and testing purposes.
-It is a great way to quickly get started on the tutorials.
+The AiiDA daemon process runs in the background and takes care of processing your submitted calculations and workflows, checking their status, retrieving their results once they are finished and storing them in the AiiDA database.
+
+The AiiDA daemon is controlled using three simple commands:
+
+ * ``verdi daemon start``: start the daemon
+ * ``verdi daemon status``: check the status of the daemon
+ * ``verdi daemon stop``: stop the daemon
+
+.. note::
+
+    While operational, the daemon logs its activity to a file in ``~/.aiida/daemon/log/`` (or, more generally, ``$AIIDA_PATH/.aiida/daemon/log``).
+    Get the latest log messages via ``verdi daemon logshow``.
+
+.. _intro:setup:final_checks:
+
+Final checks
+------------
+
+Use the ``verdi status`` command to check that all services are up and running:
+
+.. code-block:: console
+
+   $ verdi status
+
+   ✓ profile:     On profile quicksetup
+   ✓ repository:  /repo/aiida_dev/quicksetup
+   ✓ postgres:    Connected to aiida@localhost:5432
+   ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+   ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
+
+In the example output, all service have a green check mark and so should be running as expected.
+
+.. admonition:: Want to know more about managing your install?
+   :class: tip title-icon-read-more
+
+   See the :ref:`Installation how-to <how-to:installation>`
+
+   :link-badge:`how-to:installation:configure,Configuring,ref,badge-primary text-white`
+   :link-badge:`how-to:installation:update,Updating,ref,badge-primary text-white`
+   :link-badge:`how-to:installation:backup:software,Backing-up,ref,badge-primary text-white`
+
+
+.. _intro:install:docker:
+
+Using the Docker image
+======================
+
+AiiDA maintains a `Docker <https://www.docker.com/>`__ image on `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core>`__.
+This image contains a pre-configured AiiDA environment, and so is particularly useful for learning and testing purposes.
+It is a great way to quickly get started on the tutorials!
 
 Follow Docker's `install guide <https://docs.docker.com/get-docker/>`__ to download Docker and start its daemon.
 Now you can pull the aiida-core image straight from Docker Hub, for a specific version.

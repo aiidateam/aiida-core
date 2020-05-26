@@ -1,51 +1,13 @@
-.. _configure_aiida:
+.. _intro:configure:
 
 =================
 Configuring AiiDA
 =================
 
-.. _tab-completion:
 
-Verdi tab-completion
---------------------
 
-The ``verdi`` command line interface has many commands and options, which can be tab-completed to simplify your life.
-Enable tab-completion with the following shell command:
 
-.. code-block:: bash
-
-   eval "$(_VERDI_COMPLETE=source verdi)"
-
-Place this command in your startup file, i.e. one of
-
-* the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide,
-* the `activate script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment, or
-* a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment.
-
-In order to enable tab completion in your current shell, make sure to source the start-up file once.
-
-.. note::
-
-    This line replaces the ``eval "$(verdi completioncommand)"`` line that was used in ``aiida-core<1.0.0``. While this continues to work, support for the old line may be dropped in the future.
-
-.. _setup_aiida:
-
-AiiDA profile setup
--------------------
-
-After successful installation, you need to create an AiiDA profile via AiiDA's command line interface ``verdi``.
-
-Most users should use the interactive quicksetup:
-
-.. code-block:: console
-
-    $ verdi quicksetup
-
-which leads through the installation process and takes care of creating the corresponding AiiDA database.
-
-For maximum control and customizability, one can use ``verdi setup`` and set up the database manually as explained below.
-
-.. _database:
+.. _intro:setup:database:
 
 Database setup
 --------------
@@ -221,42 +183,6 @@ If you open a new terminal for example, be sure to activate it first with:
 .. code-block:: console
 
    $ source ~/.virtualenvs/aiida/bin/activate
-
-.. _start_daemon:
-
-Start the daemon
-----------------
-
-The AiiDA daemon process runs in the background and takes care of processing your submitted calculations and workflows, checking their status, retrieving their results once they are finished and storing them in the AiiDA database.
-
-The AiiDA daemon is controlled using three simple commands:
-
- * ``verdi daemon start``: start the daemon
- * ``verdi daemon status``: check the status of the daemon
- * ``verdi daemon stop``: stop the daemon
-
-.. note::
-
-    While operational, the daemon logs its activity to a file in ``~/.aiida/daemon/log/`` (or, more generally, ``$AIIDA_PATH/.aiida/daemon/log``).
-    Get the latest log messages via ``verdi daemon logshow``.
-
-
-Final checks
-------------
-
-Use the ``verdi status`` command to check that all services are up and running:
-
-.. code-block:: console
-
-   $ verdi status
-
-   ✓ profile:     On profile quicksetup
-   ✓ repository:  /repo/aiida_dev/quicksetu
-   ✓ postgres:    Connected to aiida@localhost:5432
-   ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
-   ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
-
-In the example output, all service have a green check mark and so should be running as expected.
 
 
 Using AiiDA in Jupyter

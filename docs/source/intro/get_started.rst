@@ -1,4 +1,4 @@
-.. _intro/get_started:
+.. _intro:get_started:
 
 ****************
 Getting Started
@@ -25,8 +25,8 @@ These are outlined below, followed by a recommended "quick-install" route on you
 
    +++
 
-   :link-badge:`install/software,Software install,ref,badge-primary text-white`
-   :link-badge:`install/aiida-core,aiida-core install,ref,badge-primary text-white`
+   :link-badge:`intro:install:software,Software install,ref,badge-primary text-white`
+   :link-badge:`intro:install:aiida-core,aiida-core install,ref,badge-primary text-white`
 
    ---------------
 
@@ -39,7 +39,7 @@ These are outlined below, followed by a recommended "quick-install" route on you
 
    +++
 
-   :link-badge:`install/virtual_environments,Environments Tutorial,ref,badge-primary text-white`
+   :link-badge:`intro:install:virtual_environments,Environments Tutorial,ref,badge-primary text-white`
    :link-badge:`https://anaconda.org/conda-forge/aiida-core,aiida-core on Conda,url,badge-primary text-white`
 
    ---------------
@@ -53,7 +53,7 @@ These are outlined below, followed by a recommended "quick-install" route on you
 
    +++
 
-   :link-badge:`install/docker,Docker Tutorial,ref,badge-primary text-white`
+   :link-badge:`intro:install:docker,Docker Tutorial,ref,badge-primary text-white`
    :link-badge:`https://hub.docker.com/r/aiidateam/aiida-core,aiida-core on DockerHub,url,badge-primary text-white`
 
    ---------------
@@ -70,6 +70,7 @@ These are outlined below, followed by a recommended "quick-install" route on you
    :link-badge:`https://materialscloud.org/quantum-mobile,Quantum Mobile,url,badge-primary text-white`
    :link-badge:`https://aiidalab.materialscloud.org,AiiDA lab,url,badge-primary text-white`
 
+.. _intro:quick_install:
 
 Quick Installation
 ==================
@@ -101,7 +102,7 @@ Here we first provide a simple approach for installation on your local computer.
     ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`__.
     You will then need to install |PostgreSQL| and |RabbitMQ| depending on your operating system.
 
-    :link-badge:`install/software,Get install instructions,ref,badge-primary text-white`
+    :link-badge:`intro:install:software,Get install instructions,ref,badge-primary text-white`
 
 
 Before working with AiiDA, you must first initialize a database storage area on disk.
@@ -147,6 +148,9 @@ At this point you now have a working AiiDA environment, from which you can add a
     .. code-block:: console
 
         $ eval "$(_VERDI_COMPLETE=source verdi)"
+
+    :link-badge:`how-to:installation:configure:tab-completion,Read More,ref,badge-primary text-white`
+
 
 In order to run computations, some additional steps are required to start the services that manage these background processes.
 The |RabbitMQ| service is started, to manage communication between processes and remember process states, even when you shut down your computer:

@@ -889,4 +889,4 @@ You can even add files directly to the folder outside of the container, by findi
 .. admonition:: What next?
    :class: seealso title-icon-read-more
 
-   Try out the ::ref:`Basic Tutorial <tutorial:basic>`.
+   Try out the :ref:`Basic Tutorial <tutorial:basic>`.

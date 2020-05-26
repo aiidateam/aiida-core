@@ -362,7 +362,7 @@ Once it is done, it will return a dictionary with the output nodes:
     'retrieved': <FolderData: uuid: 4733aa78-2e2f-4aeb-8e09-c5cfb58553db (pk: 10s)>}
 
 Besides the sum of the two ``Int`` nodes, the calculation function also returns two other outputs: one of type ``RemoteData`` and one of type ``FolderData``.
-See the `topics section on calculation jobs <topics:calculations:usage:calcfunctions>` for more details.
+See the :ref:`topics section on calculation jobs <topics:calculations:usage:calcfunctions>` for more details.
 Now, exit the IPython shell and once more check for *all* processes:
 
 .. code-block:: console
@@ -551,12 +551,13 @@ You can see the code below:
     These are ideal for workflows that are not very computationally intensive and can be easily implemented in a Python function.
 
 Let's run the ``WorkChain`` above!
-Start up the ``verdi shell`` and import the ``MultiplyAddWorkChain``:
+Start up the ``verdi shell`` and load the ``MultiplyAddWorkChain`` using the ``WorkflowFactory``:
 
 .. code-block:: ipython
 
-    In [1]: from aiida.workflows.multiplyadd import MultiplyAddWorkChain
+    In [1]: MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
 
+The ``WorkflowFactory`` is a useful and robust tool for loading workflows based on their *entry point*, e.g. ``'arithmetic.multiply_add'`` in this case.
 Similar to a ``CalcJob``, the ``WorkChain`` input can be set up using a builder:
 
 .. code-block:: ipython

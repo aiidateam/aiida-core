@@ -170,11 +170,11 @@ If you use the same names as in the example commands above, then during the ``ve
     AiiDA Database user: aiida
     AiiDA Database password: <password>
 
-.. note:: Do not forget to backup your database (instructions :ref:`here<backup_postgresql>`).
+.. note:: Do not forget to backup your database (instructions :ref:`here<how-to:installation:backup:postgresql>`).
 
 .. note:: If you want to move the physical location of the data files
   on your hard drive AFTER it has been created and filled, look at the
-  instructions :ref:`here<move_postgresql>`.
+  instructions :ref:`here<how-to:installation:more:move_postgresql>`.
 
 
 Database setup using 'peer' authentication

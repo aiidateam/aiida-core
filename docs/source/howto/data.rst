@@ -92,7 +92,7 @@ These basic data types serve most needs for the majority of applications, but mo
 In the next sections, we will explain :ref:`how a new data type can be created<how-to:data:plugin:create>` and what :ref:`guidelines<how-to:data:plugin:design-guidelines>` should ideally be observed during the design process.
 
 
-.. _how-to:data:plugin:create
+.. _how-to:data:plugin:create:
 
 Creating a data plugin
 ----------------------
@@ -245,7 +245,6 @@ Therefore, big data (think large files), whose content does not necessarily need
 A data type may safely use both the database and file repository in parallel for individual properties.
 Properties stored in the database are stored as *attributes* of the node.
 The node class has various methods to set these attributes, such as :py:`~aiida.orm.node.Node.set_attribute` and :py:`~aiida.orm.node.Node.set_attribute_many`.
-
 
 .. _how-to:data:find:
 

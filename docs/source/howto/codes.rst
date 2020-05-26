@@ -45,24 +45,24 @@ Design guidelines
 Running external codes
 ======================
 
-To run an external code with AiiDA, you will need to use an appropriate :ref:`calculation plugin <topics:plugins>` that knows how to take transform the input nodes into the input files that the code expects, copy everything in the code's machine, run the calculation and retrieve the results.
+To run an external code with AiiDA, you will need to use an appropriate :ref:`calculation plugin <topics:plugins>` that knows how to transform the input nodes into the input files that the code expects, copy everything in the code's machine, run the calculation and retrieve the results.
 This plugin would have already been created, either by you (see section on :ref:`interfacing external codes <how-to:codes:plugin>`) or by other AiiDA plugin-developers (available packages are listed in the `plugin registry <https://aiidateam.github.io/aiida-registry/>`_), and has been properly installed in your environment.
-You can check which ones you have currently available by running the ``verdi plugin`` command:
+You can check which ones you have currently available:
 
 .. code-block:: bash
 
     $ verdi plugin list aiida.calculations
 
-For the purpose of this example, we will use the ``arithmetic.add`` plugin, which is a plugin for bash to sum two integers that comes pre-installed with ``aiida-core``.
-You can access it through the use of the ``CalculationFactory``:
+As an example, we will show how to use the ``arithmetic.add`` plugin, which is a pre-installed plugin implemented in `bash` to sum two integers.
+You can access it with the ``CalculationFactory``:
 
 .. code-block:: python
 
     from aiida.plugins import CalculationFactory
     calculation_class = CalculationFactory('arithmetic.add')
 
-We will obviously also need to provide the inputs for the code when running the calculation.
-You can also use ``verdi plugin`` to check this and other relevant information for specific plugins:
+Next, we provide the inputs for the code when running the calculation.
+Use ``verdi plugin`` to determine what inputs a specific plugin expects:
 
 .. code-block:: bash
 

@@ -94,6 +94,8 @@ Use the PK only if you are working within a single database, i.e. in an interact
     The PK numbers shown throughout this tutorial assume that you start from a completely empty database.
     It is possible that the nodes' PKs will be different for your database!
 
+    The UUIDs are generated randomly and are therefore **guaranteed** to be different.
+
 Next, let's leave the IPython shell by typing ``exit()`` and then enter.
 Back in the terminal, use the ``verdi`` command line interface (CLI) to check the data node we have just created:
 
@@ -115,7 +117,7 @@ This prints something like the following:
     ctime        2020-05-13 08:58:15.193421+00:00
     mtime        2020-05-13 08:58:40.976821+00:00
 
-Once again, we can see that the node is of type ``Int``, as PK = 1, and UUID = ``eac48d2b-ae20-438b-aeab-2d02b69eb6a8``.
+Once again, we can see that the node is of type ``Int``, has PK = 1, and UUID = ``eac48d2b-ae20-438b-aeab-2d02b69eb6a8``.
 Besides this information, the ``verdi node show`` command also shows the (empty) ``label`` and ``description``, as well as the time the node was created (``ctime``) and last modified (``mtime``).
 
 .. note:: AiiDA already provides many standard data types, but you can also :ref:`create your own<how-to:data:plugin>`.
@@ -232,7 +234,7 @@ CalcJobs
 When running calculations that require an external code or run on a remote machine, a simple calculation function is no longer sufficient.
 For this purpose, AiiDA provides the ``CalcJob`` process class.
 
-To run a ``CalcJob``, you need to set up two things: a ``computer`` for the calculation to run on, and the ``code`` that you want the ``CalcJob`` to run.
+To run a ``CalcJob``, you need to set up two things: a ``code`` that is going to implement the desired calculation and a ``computer`` for the calculation to run on.
 If you're running this tutorial in the Quantum Mobile VM or on Binder, these have been pre-configured for you. If you're running on your own machine, you can follow the instructions in the panel below:
 
 .. dropdown:: Install localhost computer and code
@@ -327,7 +329,7 @@ Let's use the ``Int`` node that was created by our previous ``calcfunction`` as 
     In [3]: builder.x = load_node(pk=4)
        ...: builder.y = Int(5)
 
-In case your nodes' PKs are different, and you don't remember the PK of the output node from the previous calculation, you can also check the provenance graph you have generated and use the start of the UUID of the output node:
+In case that your nodes' PKs are different and you don't remember the PK of the output node from the previous calculation, check the provenance graph you generated earlier and use the UUID of the output node instead:
 
 .. code-block:: ipython
 
@@ -473,7 +475,7 @@ Now you can either use ``verdi process list`` to follow the execution of the ``C
 
     $ verdi process watch 12
 
-Let's wait for the ``CalcJob` to complete and then use ``verdi process list -a`` to see all processes we have run so far:
+Let's wait for the ``CalcJob`` to complete and then use ``verdi process list -a`` to see all processes we have run so far:
 
 .. code-block:: bash
 

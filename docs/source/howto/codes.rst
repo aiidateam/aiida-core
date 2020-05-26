@@ -45,62 +45,50 @@ Design guidelines
 Running external codes
 ======================
 
-The process of running an external code through AiiDA involves loading and instantiating the appropriate ``CalcJob`` wrapping class for the code, filling the inputs necessary, and then running or submitting the constructed object.
+To run an external code with AiiDA, you will need to use an appropriate :ref:`calculation plugin <topics:plugins>` that knows how to take transform the input nodes into the input files that the code expects, copy everything in the code's machine, run the calculation and retrieve the results.
+This plugin would have already been created, either by you (see section on :ref:`interfacing external codes <how-to:codes:plugin>`) or by other AiiDA plugin-developers (available packages are listed in the `plugin registry <https://aiidateam.github.io/aiida-registry/>`_), and has been properly installed in your environment.
+You can check which ones you have currently available by running the ``verdi plugin`` command:
 
-If the ``CalcJob`` has been registered in AiiDA (see section :ref:`on how to register plugins<how-to:plugins:entrypoints>`) you can use the ``CalculationFactory``:
+.. code-block:: bash
+
+    $ verdi plugin list aiida.calculations
+
+For the purpose of this example, we will use the ``arithmetic.add`` plugin, which is a plugin for bash to sum two integers that comes pre-installed with ``aiida-core``.
+You can access it through the use of the ``CalculationFactory``:
 
 .. code-block:: python
 
     from aiida.plugins import CalculationFactory
-    calculation_builder = CalculationFactory('arithmetic.add').get_builder()
+    calculation_class = CalculationFactory('arithmetic.add')
 
-Otherwise, you can just load the class and get the builder directly:
+We will obviously also need to provide the inputs for the code when running the calculation.
+You can also use ``verdi plugin`` to check this and other relevant information for specific plugins:
 
-.. code-block:: python
+.. code-block:: bash
 
-    from aiida.calculations.plugins.arithmetic.add import ArithmeticAddCalculation
-    calculation_builder = ArithmeticAddCalculation.get_builder()
+    $ verdi plugin list aiida.calculations arithmetic.add
 
-Then you need to start filling out the builder with all the inputs that you need to specify to run your calculation.
-In the case of the ``ArithmeticAddCalculation``, there are 4 required inputs:
-
-.. code-block:: python
-    :linenos:
-
-    # Specific for ArithmeticAdd
-    spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
-    spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
-
-    # General for all CalcJobs
-    spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
-    spec.input('metadata.options.resources', valid_type=dict, required=True, validator=validate_resources,
-        help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-             'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
-             'scheduler for more details.')
-
-The first three are input nodes (lines 2, 3 and 6), so you can either use nodes that are already in your database (you can query for them, load them, etc.) or you can create new nodes and these will be automatically stored when starting the calculation.
+You will see that 3 inputs nodes are required: two containing the values to add up (``x``, ``y``) and one containing information about the specific code to execute (``code``).
+If you already have these nodes in your database, you can get them by :ref:`querying for them <how-to:data:finding-data>` or using ``orm.load_node(<PK>)``.
+Otherwise, you will need to create them as shown below (note that you `will` need to already have the ``localhost`` computer configured):
 
 .. code-block:: python
 
-    code_node = orm.load_node(100)
-    num1_node = orm.Int(17)
-    num2_node = orm.Int(11)
+    from aiida import orm
+    code_node = orm.Code(remote_computer_exec=[localhost, '/bin/bash'])
+    numx_node = orm.Int(17)
+    numy_node = orm.Int(11)
 
+To provide these as inputs to the calculations, we will now use the ``builder`` object that we can get from the class:
+
+.. code-block:: python
+
+    calculation_builder = calculation_class.get_builder()
     calculation_builder.code = code_node
-    calculation_builder.x = num1_node
-    calculation_builder.y = num2_node
+    calculation_builder.x = numx_node
+    calculation_builder.y = numy_node
 
-The last input (line 7) is not a node but a dictionary containing information about the resources required from the remote machine to run the code.
-It will be stored as a property of the ``CalcJob`` node, and should at least contain the following two keys:
-
-.. code-block:: python
-
-    calculation_builder.metadata.options.resources = {
-        'num_machines': 1,
-        'tot_num_mpiprocs': 1,
-    }
-
-Now everything is in place and you are ready to perform the calculation, which you can do in two different ways.
+Now everything is in place and ready to perform the calculation, which can be done in two different ways.
 The first one is blocking and will return a dictionary containing all the output nodes (keyed after their label, so in this case these should be: "remote_folder", "retrieved" and "sum") that you can safely inspect and work with:
 
 .. code-block:: python
@@ -109,24 +97,28 @@ The first one is blocking and will return a dictionary containing all the output
     output_dict = run(calculation_builder)
     sum_node = output_dict['sum']
 
-The second one is non blocking, as you will be submitting it to the daemon and immediately getting control in the interpreter:
+The second one is non blocking, as you will be submitting it to the daemon and immediately getting control in the interpreter.
+The return value in this case is the actual calculation node that is stored in the database.
 
 .. code-block:: python
 
     from aiida.engine import submit
     calculation_node = submit(calculation_builder)
 
-As the variable name suggests, the return value for the submit method is the calculation node that is stored in the database.
-In this case the underlying calculation is not guaranteed to have finished, so it is often convenient to keep track of it using the verdi command line interface:
+Note that, although you have access to the node, the underlying calculation `process` is not guaranteed to have finished when you get back control in the interpreter.
+In order to keep track of it you can use the verdi command line interface:
 
 .. code-block:: bash
 
     $ verdi process list
 
-Additionally, you might want to check and verify your inputs before actually running or submitting a calculation.
-You can do so by specifying to use a ``dry_run``, which will create the running folder in the current directory (``submit_test/[date]-0000[x]``) so the user can inspect the integrity of the inputs generated:
+Performing a dry-run
+--------------------
 
-.. code-block:: bash
+Additionally, you might want to check and verify your inputs before actually running or submitting a calculation.
+You can do so by specifying to use a ``dry_run``, which will create all the input files in a local directory (``submit_test/[date]-0000[x]``) so you can inspect them before actually launching the calculation:
+
+.. code-block:: python
 
     calculation_builder.metadata.dry_run = True
     calculation_builder.metadata.store_provenance = False

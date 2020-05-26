@@ -22,7 +22,7 @@ At the end of this tutorial you will know how to:
 
 .. important::
 
-    If you are working on your own machine, note that tutorial assumes that you have a working AiiDA installation, and have set up your AiiDA profile in the current Python environment.
+    If you are working on your own machine, note that the tutorial assumes that you have a working AiiDA installation, and have set up your AiiDA profile in the current Python environment.
     If this is not the case, consult the :ref:`getting started page<intro/get_started>`.
 
 Provenance
@@ -40,9 +40,8 @@ As an example, :numref:`fig_intro_workchain_graph` shows the provenance of the c
 
     Provenance Graph of a basic AiiDA WorkChain.
 
-In the provenance graph, you can see different types of *nodes*, represented by different shapes.
-The green ellipses are ``Data`` nodes, the blue ellipse is a ``Code`` node.
-The rectangles represent *processes*, i.e. the calculations performed in your *workflow*.
+In the provenance graph, you can see different types of *nodes* represented by different shapes.
+The green ellipses are ``Data`` nodes, the blue ellipse is a ``Code`` node, and the rectangles represent *processes*, i.e. the calculations performed in your *workflow*.
 
 The provenance graph allows us to not only see what data we have, but also how it was produced.
 During this tutorial we will be using AiiDA to generate the provenance graph in :numref:`fig_intro_workchain_graph` step by step.
@@ -93,10 +92,10 @@ Use the PK only if you are working within a single database, i.e. in an interact
 .. important::
 
     The PK numbers shown throughout this tutorial assume that you start from a completely empty database.
-    It is possible that the node PK's will be different for your database!
+    It is possible that the nodes' PKs will be different for your database!
 
 Next, let's leave the IPython shell by typing ``exit()`` and then enter.
-Back in the terminal, use the ``verdi`` command line interface (CLI) to check data node we have just created:
+Back in the terminal, use the ``verdi`` command line interface (CLI) to check the data node we have just created:
 
 .. code:: console
 
@@ -116,9 +115,10 @@ This prints something like the following:
     ctime        2020-05-13 08:58:15.193421+00:00
     mtime        2020-05-13 08:58:40.976821+00:00
 
-Once again, we can see that the node is of type ``Int``, as PK = 1, and UUID = ``eac48d2b-ae20-438b-aeab-2d02b69eb6a8``. Besides this information, the ``verdi node show`` command also shows the (empty) ``label`` and ``description``, as well as the time the node was created (``ctime``) and last modified (``mtime``).
+Once again, we can see that the node is of type ``Int``, as PK = 1, and UUID = ``eac48d2b-ae20-438b-aeab-2d02b69eb6a8``.
+Besides this information, the ``verdi node show`` command also shows the (empty) ``label`` and ``description``, as well as the time the node was created (``ctime``) and last modified (``mtime``).
 
-.. note:: Although AiiDA already provides many data types, you can also :ref:`create your own<how-to:data:plugin>`.
+.. note:: AiiDA already provides many standard data types, but you can also :ref:`create your own<how-to:data:plugin>`.
 
 Calculation functions
 =====================
@@ -133,7 +133,7 @@ The following Python function:
         return x * y
 
 will give the desired result when applied to two ``Int`` nodes, but the calculation will not be stored in the provenance graph.
-However, we can use a ``decorator`` provided by AiiDA to automatically make it part of the provenance graph.
+However, we can use a `Python decorator <https://docs.python.org/3/glossary.html#term-decorator>`_ provided by AiiDA to automatically make it part of the provenance graph.
 Start up the AiiDA IPython shell again using ``verdi shell`` and execute the following code snippet:
 
 .. code-block:: ipython
@@ -165,7 +165,8 @@ Now it's time to multiply the two numbers!
     In [4]: multiply(x, y)
     Out[4]: <Int: uuid: 42541d38-1fb3-4f60-8122-ab8b3e723c2e (pk: 4) value: 6>
 
-Success! The ``calcfunction``-decorated ``multiply`` function has multiplied the two ``Int`` data nodes and returned a new ``Int`` data node whose value is the product of the two input nodes.
+Success!
+The ``calcfunction``-decorated ``multiply`` function has multiplied the two ``Int`` data nodes and returned a new ``Int`` data node whose value is the product of the two input nodes.
 Note that by executing the ``multiply`` function, all input and output nodes are automatically stored in the database:
 
 .. code-block:: ipython
@@ -223,7 +224,7 @@ It should look something like the graph shown in :numref:`fig_calcfun_graph`.
 
     Provenance graph of the ``multiply`` calculation function.
 
-.. note:: Remember that the PK of the ``CalcJob`` is most likely different for your database.
+.. note:: Remember that the PK of the ``CalcJob`` can be different for your database.
 
 CalcJobs
 ========
@@ -261,16 +262,17 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
         $ verdi code setup -L add --on-computer --computer=tutor -P arithmetic.add --remote-abs-path=/bin/bash -n
 
     This command sets up a code with *label* ``add`` on the *computer* ``tutor``, using the *plugin* ``arithmetic.add``.
-
-.. note::
-    A typical real-world example of a computer is a remote supercomputing facility.
-    Codes can be anything from a Python script to powerful *ab initio* codes such as Quantum Espresso or machine learning tools like Tensorflow.
-
+|
+A typical real-world example of a computer is a remote supercomputing facility.
+Codes can be anything from a Python script to powerful *ab initio* codes such as Quantum Espresso or machine learning tools like Tensorflow.
 Let's have a look at the codes that are available to us:
 
 .. code:: console
 
     $ verdi code list
+    # List of configured codes:
+    # (use 'verdi code show CODEID' to see the details)
+    * pk 5 - add@tutor
 
 You can see a single code ``add@tutor``, with PK = 5, in the printed list.
 This code allows us to add two integers together.
@@ -280,9 +282,29 @@ To see more details about the computer, you can use the following ``verdi`` comm
 .. code:: console
 
     $ verdi computer show tutor
+    Computer name:     tutor
+     * PK:             1
+     * UUID:           b9ecb07c-d084-41d7-b862-a2b1f02722c5
+     * Description:
+     * Hostname:       localhost
+     * Transport type: local
+     * Scheduler type: direct
+     * Work directory: /Users/mbercx/epfl/tutorials/my_tutor/work
+     * Shebang:        #!/bin/bash
+     * mpirun command: mpirun -np {tot_num_mpiprocs}
+     * prepend text:
+     # No prepend text.
+     * append text:
+     # No append text.
 
-Note that the *Work directory* has been set up as the ``work`` subdirectory of the current directory.
+We can see that the *Work directory* has been set up as the ``work`` subdirectory of the current directory.
 This is the directory in which the calculations running on the ``tutor`` computer will be executed.
+
+.. note::
+
+    You may have noticed that the PK of the ``tutor`` computer is 1, same as the ``Int`` node we created at the start of this tutorial.
+    This is because different entities, such as nodes, computers and groups, are stored in different tables of the database.
+    So, the PKs for each entity type are unique for each database, but entities of different types can have the same PK within one database.
 
 Let's now start up the ``verdi shell`` again and load the ``add@tutor`` code using its label:
 
@@ -290,7 +312,7 @@ Let's now start up the ``verdi shell`` again and load the ``add@tutor`` code usi
 
     In [1]: code = load_code(label='add')
 
-Every code has a convenient tool for setting up the required input, called the builder.
+Every code has a convenient tool for setting up the required input, called the *builder*.
 It can be obtained by using the ``get_builder`` method:
 
 .. code-block:: ipython
@@ -298,12 +320,22 @@ It can be obtained by using the ``get_builder`` method:
     In [2]: builder = code.get_builder()
 
 Using the builder, you can easily set up the calculation by directly providing the input arguments.
-Let's use the ``Int`` node that was created by our previous ``calcfunction`` as one of the inputs:
+Let's use the ``Int`` node that was created by our previous ``calcfunction`` as one of the inputs and a new node as the second input:
 
 .. code-block:: ipython
 
     In [3]: builder.x = load_node(pk=4)
        ...: builder.y = Int(5)
+
+In case your nodes' PKs are different, and you don't remember the PK of the output node from the previous calculation, you can also check the provenance graph you have generated and use the start of the UUID of the output node:
+
+.. code-block:: ipython
+
+    In [3]: builder.x = load_node(uuid='42541d38')
+       ...: builder.y = Int(5)
+
+Note that you don't have to provide the entire UUID to load the node.
+As long as the first part of the UUID is unique within your database, AiiDA will find the node you are looking for.
 
 .. note::
 
@@ -318,8 +350,18 @@ To execute the ``CalcJob``, we use the ``run`` function provided by the AiiDA en
        ...: run(builder)
 
 Wait for the process to complete.
-Once it is done, it will return a dictionary with the output nodes.
-Exit the IPython shell and once more check for *all* processes:
+Once it is done, it will return a dictionary with the output nodes:
+
+.. code-block:: ipython
+
+    Out[6]:
+    {'sum': <Int: uuid: 7d5d781e-8f17-498a-b3d5-dbbd3488b935 (pk: 8) value: 11>,
+    'remote_folder': <RemoteData: uuid: 888d654a-65fb-4da0-b3bc-d63f0374f274 (pk: 9)>,
+    'retrieved': <FolderData: uuid: 4733aa78-2e2f-4aeb-8e09-c5cfb58553db (pk: 10s)>}
+
+Besides the sum of the two ``Int`` nodes, the calculation function also returns two other outputs: one of type ``RemoteData`` and one of type ``FolderData``.
+See the `topics section on calculation jobs <topics:calculations:usage:calcfunctions>` for more details.
+Now, exit the IPython shell and once more check for *all* processes:
 
 .. code-block:: console
 
@@ -393,7 +435,8 @@ This follows all the steps we did previously, but now uses the ``submit`` functi
        ...:
        ...: submit(builder)
 
-Note that the submission finishes very quickly, and that it returns the ``CalcJob`` that was just submitted:
+When using ``submit`` the calculation job is not run in the local interpreter but is sent off to the daemon and you get back control instantly.
+Instead of the *result* of the calculation, it returns the node of the ``CalcJob`` that was just submitted:
 
 .. code-block:: ipython
 
@@ -499,7 +542,7 @@ You can see the code below:
     First, we recognize the ``multiply`` function we have used earlier, decorated as a ``calcfunction``.
     The ``define`` class method specifies the ``input`` and ``output`` of the ``WorkChain``, as well as the ``outline``, which are the steps of the workflow.
     These steps are provided as methods of the ``MultiplyAddWorkChain`` class.
-
+|
 .. note::
 
     Besides WorkChain's, workflows can also be implemented as *work functions*.
@@ -554,7 +597,7 @@ Depending on which step the workflow is running, you should get something like t
 
 We can see that the ``MultiplyAddWorkChain`` is currently waiting for its *child process*, the ``ArithmeticAddCalculation``, to finish.
 Check the process list again for *all* processes (You should know how by now!).
-Now all the processes should be in the ``Finished`` state.
+After about half a minute, all the processes should be in the ``Finished`` state.
 
 We can now generate the full provenance graph for the ``WorkChain`` with:
 

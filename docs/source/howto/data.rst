@@ -84,7 +84,167 @@ For details refer to the next section :ref:`"How to add support for custom data 
 Adding support for custom data types
 ====================================
 
-`#3995`_
+The nodes in the :ref:`provenance graph<topics:provenance>` that are the inputs and outputs of processes are referred to as `data` and are represented by :class:`~aiida.orm.nodes.data.data.Data` nodes.
+Since data can come in all shapes and forms, the :class:`~aiida.orm.nodes.data.data.Data` class can be sub classed.
+AiiDA ships with some basic data types such as the :class:`~aiida.orm.nodes.data.int.Int` which represents a simple integer and the :class:`~aiida.orm.nodes.data.dict.Dict`, representing a dictionary of key-value pairs.
+There are also more complex data types such as the :class:`~aiida.orm.nodes.data.array.array.ArrayData` which can store multidimensional arrays of numbers.
+These basic data types serve most needs for the majority of applications, but more specific solutions may be useful or even necessary.
+In the next sections, we will explain :ref:`how a new data type can be created<how-to:data:plugin:create>` and what :ref:`guidelines<how-to:data:plugin:design-guidelines>` should ideally be observed during the design process.
+
+
+.. _how-to:data:plugin:create
+
+Creating a data plugin
+----------------------
+
+Creating a new data type is as simple as creating a new sub class of the base :class:`~aiida.orm.nodes.data.data.Data` class.
+
+.. code:: python
+
+    from aiida.orm import Data
+
+    class NewData(Data)
+        """A new data type that wraps a single value."""
+
+At this point, our new data type does nothing special.
+Typically, one creates a new data type to represent a specific type of data.
+For the purposes of this example, let's assume that the goal of our ``NewData`` type is to store a single numerical value.
+To allow one to construct a new ``NewData`` data node with the desired ``value``, for example:
+
+.. code:: python
+
+    node = NewData(value=5)
+
+we need to allow passing that value to the constructor of the node class.
+Therefore, we have to override the constructor :meth:`~aiida.orm.nodes.node.Node.__init__`:
+
+.. code:: python
+
+    from aiida.orm import Data
+
+    class NewData(Data)
+        """A new data type that wraps a single value."""
+
+        def __init__(self, **kwargs)
+            value = kwargs.pop('value')
+            super().__init__(**kwargs)
+            self.set_attribute('value', value)
+
+.. warning::
+
+    For the class to function properly, the signature of the constructor **cannot be changed** and the constructor of the parent class **has to be called**.
+
+Before calling the construtor of the base class, we have to remove the ``value`` keyword from the keyword arguments ``kwargs``, because the base class will not expect it and will raise an exception if left in the keyword arguments.
+The final step is to actually *store* the value that is passed by the caller of the constructor.
+A new node has two locations to permanently store any of its properties:
+
+    * the database
+    * the file repository
+
+The section on :ref:`design guidelines<how-to:data:plugin:design-guidelines>` will go into more detail what the advantages and disadvantages of each option are and when to use which.
+For now, since we are storing only a single value, the easiest and best option is to use the database.
+Each node has *attributes* that can store any key-value pair, as long as the value is JSON serializable.
+By adding the value to the node's attributes, they will be queryable in the database once an instance of the ``NewData`` node is stored.
+
+.. code:: python
+
+    node = NewData(value=5)   # Creating new node instance in memory
+    node.set_attribute('value', 6)  # While in memory, node attributes can be changed
+    node.store()  # Storing node instance in the database
+
+After storing the node instance in the database, its attributes are frozen, and ``node.set_attribute('value', 7)`` will fail.
+By storing the ``value`` in the attributes of the node instance, we ensure that that ``value`` can be retrieved even when the node is reloaded at a later point in time.
+
+Besides making sure that the content of a data node is stored in the database or file repository, the data type class can also provide useful methods for users to retrieve that data.
+For example, with the current state of the ``NewData`` class, in order to retrieve the ``value`` of a stored ``NewData`` node, one needs to do:
+
+.. code:: python
+
+    node = load_node(<IDENTIFIER>)
+    node.get_attribute('value')
+
+In other words, the user of the ``NewData`` class needs to know that the ``value`` is stored as an attribute with the name 'value'.
+This is not easy to remember and therefore not very user-friendly.
+Since the ``NewData`` type is a class, we can give it useful methods.
+Let's introduce one that will return the value that was stored for it:
+
+.. code:: python
+
+    from aiida.orm import Data
+
+    class NewData(Data)
+        """A new data type that wraps a single value."""
+
+        @property
+        def value(self):
+            """Return the value stored for this instance."""
+            return self.get_attribute('value')
+
+The addition of the instance property ``value`` makes retrieving the value of a ``NewData`` node a lot easier:
+
+.. code:: python
+
+    node = load_node(<IDENTIFIER)
+    value = node.value
+
+As said before, in addition to their attributes, data types can also store their properties in the file repository.
+Here is an example for a custom data type that needs to wrap a single text file:
+
+.. code:: python
+
+    import os
+    from aiida.orm import Data
+
+
+    class TextFileData(Data):
+        """Data class that can be used to wrap a single text file by storing it in its file repository."""
+
+        def __init__(self, filepath, **kwargs):
+            """Construct a new instance and set the contents to that of the file.
+
+            :param file: an absolute filepath of the file to wrap
+            """
+            super().__init__(**kwargs)
+
+            filename = os.path.basename(filepath)  # Get the filename from the absolute path
+            self.put_object_from_file(filepath, filename)  # Store the file in the repository under the given filename
+            self.set_attribute('filename', filename)  # Store in the attributes what the filename is
+
+        def get_content(self):
+            """Return the content of the single file stored for this data node.
+
+            :return: the content of the file as a string
+            """
+            filename = self.get_attribute('filename')
+            return self.get_object_content(filename)
+
+To create a new instance of this data type and get its content:
+
+.. code:: python
+
+    node = TextFileData(filepath='/some/absolute/path/to/file.txt')
+    node.get_content()  # This will return the content of the file
+
+This example is a simplified version of the :class:`~aiida.orm.nodes.data.singlefile.SinglefileData` data class that ships with ``aiida-core``.
+If this happens to be your use case (or very close to it), it is of course better to use that class, or you can sub class it and adapt it where needed.
+
+The just presented examples for new data types are of course trivial, but the concept is always the same and can easily be extended to more complex custom data types.
+The following section will provide useful guidelines on how to optimally design new data types.
+
+
+.. _how-to:data:plugin:design-guidelines:
+
+Database or repository?
+-----------------------
+
+When deciding where to store a property of a data type, one has the option to choose between the database and the file repository.
+All node properties that are stored in the database (such as the attributes), are directly searchable as part of a database query, whereas data stored in the file repository cannot be queried for.
+What this means is that, for example, it is possible to search for all nodes where a particular database-stored integer attribute falls into a certain value range, but the same value stored in a file within the file repository would not be directly searchable in this way.
+However, storing large amounts of data within the database comes at the cost of slowing down database queries.
+Therefore, big data (think large files), whose content does not necessarily need to be queried for, is better stored in the file repository.
+A data type may safely use both the database and file repository in parallel for individual properties.
+Properties stored in the database are stored as *attributes* of the node.
+The node class has various methods to set these attributes, such as :py:`~aiida.orm.node.Node.set_attribute` and :py:`~aiida.orm.node.Node.set_attribute_many`.
 
 
 .. _how-to:data:find:
@@ -116,7 +276,50 @@ Sharing data
 Deleting data
 =============
 
-`#3999`_
+By default, every time you run or submit a new calculation, AiiDA will create for you new nodes in the database, and will never replace or delete data.
+There are cases, however, when it might be useful to delete nodes that are not useful anymore, for instance test runs or incorrect/wrong data and calculations.
+For this case, AiiDA provides the ``verdi node delete`` command to remove the nodes from the provenance graph.
+
+.. caution::
+   Once the data is deleted, there is no way to recover it (unless you made a backup).
+
+Critically, note that even if you ask to delete only one node, ``verdi node delete`` will typically delete a number of additional linked nodes, in order to preserve a consistent state of the provenance graph.
+For instance, if you delete an input of a calculation, AiiDA will delete also the calculation itself (as otherwise you would be effectively changing the inputs to that calculation in the provenance graph).
+The full set of consistency rules are explained in detail :ref:`here <topics:provenance:consistency>`.
+
+Therefore: always check the output of ``verdi node delete`` to make sure that it is not deleting more than you expect.
+You can also use the ``--dry-run`` flag of ``verdi node delete`` to see what the command would do without performing any actual operation.
+
+In addition, there are a number of additional rules that are not mandatory to ensure consistency, but can be toggled by the user.
+For instance, you can set ``--create-forward`` if, when deleting a calculation, you want to delete also the data it produced (using instead ``--no-create-forward`` will delete the calculation only, keeping the output data: note that this effectively strips out the provenance information of the output data).
+The full list of these flags is available from the help command ``verdi node delete -h``.
+
+Deleting computers
+------------------
+To delete a computer, you can use ``verdi computer delete``.
+This command is mostly useful if, right after creating a computer, you realise that there was an error and you want to remove it.
+In particular, note that ``verdi computer delete`` will prevent execution if the computer has been already used by at least one node. In this case, you will need to use ``verdi node delete`` to delete first the corresponding nodes.
+
+Deleting mutable data
+---------------------
+A subset of data in AiiDA is mutable also after storing a node, and is used as a convenience for the user to tag/group/comment on data.
+This data can be safely deleted at any time.
+This includes, notably:
+
+* *Node extras*: These can be deleted using :py:meth:`~aiida.orm.nodes.node.Node.delete_extra` and :py:meth:`~aiida.orm.nodes.node.Node.delete_extra_many`.
+* *Node comments*: These can be removed using :py:meth:`~aiida.orm.nodes.node.Node.remove_comment`.
+* *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.Group.Collection.delete>`.
+  This command will only delete the group, not the nodes contained in the group.
+
+Completely deleting an AiiDA profile
+------------------------------------
+If you don't want to selectively delete some nodes, but instead want to delete a whole AiiDA profile altogether, use the ``verdi profile delete`` command.
+This command will delete both the file repository and the database.
+
+.. danger::
+
+  It is not possible to restore a deleted profile unless it was previously backed up!
+
 
 Serving your data to others
 ===========================
@@ -200,10 +403,6 @@ The first (second) request will be handled by the app ``django`` (``sqlalchemy``
 Notice that we haven't specified any port in the URLs since Apache listens conventionally to port 80, where any request lacking the port is automatically redirected.
 
 
-
-.. _#3994: https://github.com/aiidateam/aiida-core/issues/3994
-.. _#3995: https://github.com/aiidateam/aiida-core/issues/3995
 .. _#3996: https://github.com/aiidateam/aiida-core/issues/3996
 .. _#3997: https://github.com/aiidateam/aiida-core/issues/3997
 .. _#3998: https://github.com/aiidateam/aiida-core/issues/3998
-.. _#3999: https://github.com/aiidateam/aiida-core/issues/3999

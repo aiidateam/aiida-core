@@ -23,8 +23,6 @@ import sys
 
 # Add `aiida` to the path so it can be imported without installing it
 sys.path.append(os.path.join(os.path.split(__file__)[0], os.pardir, os.pardir))
-# Add custom extensions to path
-# sys.path.append(os.path.join(os.path.split(__file__)[0], '_extensions'))
 
 import aiida
 from aiida.manage.configuration import load_documentation_profile

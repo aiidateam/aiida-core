@@ -136,11 +136,13 @@ Automated Interactive Infrastructure and Database for Computational Science
    :hidden:
 
    topics/cli
+   topics/processes/index
+   topics/calculations/index
+   topics/workflows/index
+   topics/provenance/index
    topics/daemon
-   topics/provenance
    topics/database
    topics/repository
-   topics/processes
    topics/plugins
 
 .. toctree::

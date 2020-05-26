@@ -21,7 +21,7 @@ These are outlined below, followed by a recommended "quick-install" route on you
 
    *Install software directly into your local root directory.*
 
-   The required software can be installed using most package managers, including: apt, Homebrew, MacPorts, Gentoo and Windows Subsystem for Linux.
+   The prerequisite software can be installed using most package managers, including: apt, Homebrew, MacPorts, Gentoo and Windows Subsystem for Linux.
 
    +++
 
@@ -41,6 +41,7 @@ These are outlined below, followed by a recommended "quick-install" route on you
 
    :link-badge:`intro:install:virtual_environments,Environments Tutorial,ref,badge-primary text-white`
    :link-badge:`https://anaconda.org/conda-forge/aiida-core,aiida-core on Conda,url,badge-primary text-white`
+   :link-badge:`intro:quick_install,Conda Quick Install,ref,badge-primary text-white`
 
    ---------------
 

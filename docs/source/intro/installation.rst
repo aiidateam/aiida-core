@@ -498,7 +498,7 @@ For maximum control and customizability, one can use ``verdi setup`` and set up 
 .. admonition:: Don't forget to backup your data!
    :class: tip title-icon-tip
 
-    See the :ref:`installation backup how-to <how-to:installation:backup>`.
+   See the :ref:`installation backup how-to <how-to:installation:backup>`.
 
 .. admonition:: Want to manage multiple profiles?
    :class: seealso title-icon-read-more
@@ -686,7 +686,7 @@ Then, the following prompts will help you configure the database. Typical settin
 .. admonition:: Don't forget to backup your data!
    :class: tip title-icon-tip
 
-    See the :ref:`installation backup how-to <how-to:installation:backup>`.
+   See the :ref:`installation backup how-to <how-to:installation:backup>`.
 
 .. _intro:install:start_daemon:
 
@@ -735,7 +735,7 @@ In the example output, all service have a green check mark and so should be runn
 
       $ source ~/.virtualenvs/aiida/bin/activate
 
-.. admonition:: Want to know more about managing your install?
+.. admonition:: Want to manage your install?
    :class: seealso title-icon-read-more
 
    See the :ref:`Installation how-to <how-to:installation>`

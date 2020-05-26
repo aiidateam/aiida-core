@@ -89,3 +89,7 @@
 .dropdown-group .dropdown:last-child {
     margin-bottom: 24px !important;
 }
+
+div.admonition :last-child {
+    margin-bottom: 0
+}

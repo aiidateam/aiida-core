@@ -207,7 +207,7 @@ Next Steps
 
         blah blah blah
 
-        .. link-button:: ....
+        .. link-button:: ...
             :type: url
             :text: links to tutorials
             :classes: btn-outline-primary btn-block

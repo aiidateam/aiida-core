@@ -67,6 +67,12 @@ Use ``verdi plugin`` to determine what inputs a specific plugin expects:
 .. code-block:: bash
 
     $ verdi plugin list aiida.calculations arithmetic.add
+    (...)
+        Inputs:
+               code:  required  Code        The `Code` to use for this job.
+                  x:  required  Int, Float  The left operand.
+                  y:  required  Int, Float  The right operand.
+    (...)
 
 You will see that 3 inputs nodes are required: two containing the values to add up (``x``, ``y``) and one containing information about the specific code to execute (``code``).
 If you already have these nodes in your database, you can get them by :ref:`querying for them <how-to:data:finding-data>` or using ``orm.load_node(<PK>)``.

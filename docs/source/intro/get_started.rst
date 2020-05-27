@@ -241,19 +241,29 @@ We have also compiled useful how-to guides that are especially relevant for the 
         :container:
 
         Tuning performance
-            :ref:`Tuning performance <how-to:installation:performance>`
+            To optimise the performance of AiiDA for running many concurrent computations see the :ref:`tuning performance how-to <how-to:installation:performance>`.
 
         Saving computational resources
-            :ref:`Using caching to save computational resources <how-to:codes:caching>`
+            AiiDA can cache and reuse the outputs of identical computations, as described in the :ref:`caching how-to <how-to:codes:caching>`.
 
     .. dropdown:: Run computations on High Performance Computers
 
         Connecting to supercomputers
-            :ref:`Running on supercomputers <how-to:installation:running-on-supercomputers>`
+            To setup up a computer which can communicate with a HPC over SSH, see the :ref:`running on supercomputers how-to <how-to:installation:running-on-supercomputers>`, or add a :ref:`custom transport <how-to:codes:transport>`.
+            AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque, or you can add a :ref:`custom scheduler <how-to:codes:scheduler>`.
 
         Working with external codes
-            :ref:`How to run external codes <how-to:codes>`
+            Existing calculation plugins, , for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
+            If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
 
+        Exploring your data
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <VisualizingGraphs>`.
+
+        Sharing your data
+            You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
+
+        Sharing your calculation plugin
+            Once you have a working plugin, you may also wish to :ref:`package it into a python module <how-to:plugins>` for others to use.
 
 .. |PostgreSQL| replace:: `PostgreSQL <https://www.postgresql.org>`__
 .. |RabbitMQ| replace:: `RabbitMQ <https://www.rabbitmq.com>`__

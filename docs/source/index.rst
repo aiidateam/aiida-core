@@ -92,7 +92,7 @@ Welcome to AiiDA's documentation!
 
    .. link-button:: internals/global_design
       :type: ref
-      :text: To the development guide
+      :text: To the architecture guide
       :classes: btn-outline-primary btn-block stretched-link
 
 .. admonition:: Development Contributions

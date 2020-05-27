@@ -159,7 +159,7 @@ The |RabbitMQ| service is used, to manage communication between processes and re
 
     $ rabbitmq-server -detached
 
-We can then start a one or more "daemon" processes, which handle starting and monitoring all submitted computations.
+We then start one or more "daemon" processes, which handle the execution and monitoring of all submitted computations.
 
 .. code-block:: console
 

@@ -215,7 +215,7 @@ Next Steps
 ==========
 
 If you are new to AiiDA, go through the :ref:`Basic Tutorial <tutorial:basic>`.
-We also compiled some useful how-to guides that are especially relevant for the following use cases:
+We have also compiled useful how-to guides that are especially relevant for the following use cases:
 
 .. div:: dropdown-group
 

@@ -164,7 +164,9 @@ A potential solution is to run the following command:
 Output from .bashrc and/or .bash_profile on remote computers
 ............................................................
 
-..note:: This applies also computers configured via ``local`` transport!
+.. note:: 
+   
+   This also applies to computers configured via ``local`` transport.
 
 When connecting to remote computers, AiiDA (like other codes as ``sftp``) can get confused if you have code in your ``.bashrc`` or ``.bash_profile`` that produces output or e.g. runs commands like ``clean`` that require a terminal.
 

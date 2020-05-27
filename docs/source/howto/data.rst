@@ -251,28 +251,28 @@ Finding and querying for data
 =============================
 
 Once you have successfully completed a series of workflows for your project, or have imported a dataset you are interested in, you want to quickly find the data that is relevant for your analysis.
-The data in an AiiDA database is stored as a graph of connected entities, which can be easily *queried* with the ``QueryBuilder`` class.
+The data in an AiiDA database is stored as a graph of connected entities, which can be easily *queried* with the :class:`~aiida.orm.querybuilder.QueryBuilder` class.
 
-The ``QueryBuilder`` lets you query your AiiDA database independently of the backend used under the hood.
+The :class:`~aiida.orm.querybuilder.QueryBuilder` lets you query your AiiDA database independently of the backend used under the hood.
 Before starting to write a query, it helps to:
 
-*   know what you want to query for.
-    In the language of databases, you need to tell the backend what to *project*.
+*   Know what you want to query for.
+    In the language of databases, you need to tell the backend what *entity* you are looking for and optionally which of its properties you want to *project*.
     For example, you might be interested in the label of a calculation and the PK's of all its outputs.
-*   know the relationships between entities you are interested in.
+*   Know the relationships between entities you are interested in.
     Nodes of an AiiDA graph (vertices) are connected with links (edges).
     A node can for example be either the input or output of another node, but also an ancestor or a descendant.
-*   know how you want to filter the results of your query.
+*   Know how you want to filter the results of your query.
 
-Once you are clear about what you want and how you can get it, the QueryBuilder will build an SQL-query for you.
+Once you are clear about what you want and how you can get it, the :class:`~aiida.orm.querybuilder.QueryBuilder` will build an SQL-query for you.
 
-There are two ways of using the QueryBuilder:
+There are two ways of using the :class:`~aiida.orm.querybuilder.QueryBuilder`:
 
 #.  In the *appender* method, you construct your query step by step using the ``QueryBuilder.append()`` method.
-#.  In the *queryhelp* approach, you construct a dictionary that defines your query and pass it to the ``QueryBuilder``.
+#.  In the *queryhelp* approach, you construct a dictionary that defines your query and pass it to the :class:`~aiida.orm.querybuilder.QueryBuilder`.
 
 Both APIs provide the same functionality - the appender method may be more suitable for interactive use, e.g., in the ``verdi shell``, whereas the queryhelp method can be useful in scripting.
-In this how-to we will focus on the basics of the appender method.
+In this section we will focus on the basics of the appender method.
 For more advanced queries or more details on the queryhelp, see the :ref:`topics section on advanced querying <topics:database:advancedquery>`.
 
 .. _how-to:data:find:select:
@@ -280,7 +280,7 @@ For more advanced queries or more details on the queryhelp, see the :ref:`topics
 Selecting entities
 ------------------
 
-Using the ``append()`` method of the ``QueryBuilder``, you can query for the entities you are interested in.
+Using the ``append()`` method of the :class:`~aiida.orm.querybuilder.QueryBuilder`, you can query for the entities you are interested in.
 Suppose you want to query for calculation job nodes in your database:
 
 .. code-block:: python
@@ -289,8 +289,8 @@ Suppose you want to query for calculation job nodes in your database:
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
     qb.append(CalcJobNode)    # Setting first vertex of path
 
-If you are interested in instances of different classes, you can also pass a tuple, list or set of classes.
-However, they have to be of the same ORM-type (e.g. all have to be subclasses of ``Node``):
+If you are interested in instances of different classes, you can also pass an iterable of classes.
+However, they have to be of the same ORM-type (e.g. all have to be subclasses of :class:`~aiida.orm.nodes.node.Node`):
 
 .. code-block:: python
 
@@ -299,15 +299,16 @@ However, they have to be of the same ORM-type (e.g. all have to be subclasses of
 
 .. note::
 
-    Remember that :ref:`processes<topics:processes:concepts:types>` have both a run-time ``Process`` that steers them and a ``Node`` that stores their metadata in the database.
-    The QueryBuilder allows you to pass either the ``Node`` class (e.g. ``CalcJobNode``) or the ``Process`` class (e.g. ``CalcJob``), which will automatically apply the correct filters for the type of calculation.
+    Processes have both a run-time :class:`~aiida.engine.processes.process.Process` that executes them and a :class:`~aiida.orm.nodes.node.Node` that stores their data in the database (see the :ref:`corresponding topics section<topics:processes:concepts:types>` for a detailed explanation).
+    The :class:`~aiida.orm.querybuilder.QueryBuilder` allows you to pass either the :class:`~aiida.orm.nodes.node.Node` class (e.g. :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`) or the :class:`~aiida.engine.processes.process.Process` class (e.g. :class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`), which will automatically select the right entity for the query.
+    Using either :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` or :class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` will produce the same query results.
 
 .. _how-to:data:find:results:
 
 Retrieving results
 ------------------
 
-Once you have *appended* the entity you want to query for to the ``QueryBuilder``, the next question is how to get the results.
+Once you have *appended* the entity you want to query for to the :class:`~aiida.orm.querybuilder.QueryBuilder`, the next question is how to get the results.
 There are several ways to obtain data from a query:
 
 .. code-block:: python
@@ -315,11 +316,9 @@ There are several ways to obtain data from a query:
     qb = QueryBuilder()                 # Instantiating instance
     qb.append(CalcJobNode)              # Setting first vertice of path
 
-    first_row = qb.first()              # Returns a list (!)
-                                        # of the results of the first row
+    first_row = qb.first()              # Returns a list (!) of the results of the first row
 
-    all_results_d = qb.dict()           # Returns all results as
-                                        # a list of dictionaries
+    all_results_d = qb.dict()           # Returns all results as a list of dictionaries
 
     all_results_l = qb.all()            # Returns a list of lists
 
@@ -332,6 +331,12 @@ In case you are working with a large dataset, you can also return your query as 
     all_res_l_gen = qb.iterall()        # Returns a generator of lists
 
 This will retrieve the data in batches, and you can start working with the data before the query has completely finished.
+For example, you can iterate over the results of your query in a for loop:
+
+.. code-block:: python
+
+    for entry in qb.iterall():
+        # do something with a single entry in the query result
 
 .. _how-to:data:find:filters:
 
@@ -339,7 +344,7 @@ Filters
 -------
 
 Usually you do not want to query for *all* entities of a certain class, but rather *filter* the results based on certain properties.
-Suppose you do not want to all ``CalcJobNode`` data, but only the ones that are ``finished``:
+Suppose you do not want all :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` data, but only those that are ``finished``:
 
 .. code-block:: python
 
@@ -352,7 +357,7 @@ Suppose you do not want to all ``CalcJobNode`` data, but only the ones that are 
     )
 
 You can apply multiple filters to one entity in a query.
-Say you are interested in all calculation jobs in your database that are ``finished`` **and** have the ``process_label`` ``ArithmeticAddCalculation``:
+Say you are interested in all calculation jobs in your database that are ``finished`` **and** have ``exit_status == 0``:
 
 .. code-block:: python
 
@@ -360,8 +365,8 @@ Say you are interested in all calculation jobs in your database that are ``finis
     qb.append(
         CalcJobNode,                    # Append a CalcJobNode
         filters={                       # Specify the filters:
-            'attributes.process_state': 'finished',                   # the process is finished AND
-            'attributes.process_label': 'ArithmeticAddCalculation'    # has process_label ArithmeticAddCalculation
+            'attributes.process_state': 'finished',     # the process is finished AND
+            'attributes.exit_status': 0                 # has exit_status == 0
         },
     )
 
@@ -374,8 +379,8 @@ In case you want to query for calculation jobs that satisfy one of these conditi
         CalcJobNode,
         filters={
             'or':[
-                {'attributes.process_state': 'excepted'},
-                {'attributes.process_label': 'ArithmeticAddCalculation'}
+                {'attributes.process_state': 'finished'},
+                {'attributes.exit_status': 0}
             ]
         },
     )
@@ -393,8 +398,8 @@ In case you want all calculation jobs with state ``finished`` or ``excepted``, y
         },
     )
 
-You can also negate a filter by adding an exclamation mark in front of the operator.
-So, to query for all calculation jobs that are not a 'finished' or 'excepted' state:
+You can negate a filter by adding an exclamation mark in front of the operator.
+So, to query for all calculation jobs that are not a ``finished`` or ``excepted`` state:
 
 .. code-block:: python
 
@@ -411,7 +416,7 @@ So, to query for all calculation jobs that are not a 'finished' or 'excepted' st
     The above rule applies to all operators.
     For example, you can check non-equality with ``!==``, since this is the equality operator (``==``) with a negation prepended.
 
-A list of all implemented operators can be found in the ``QueryBuilder`` docstring.
+A complete list of all available operators can be found in the :ref:`advanced querying section<topics:database:advancedquery:tables>`.
 
 .. _how-to:data:find:relationships:
 
@@ -420,7 +425,7 @@ Relationships
 
 It is possible to query for data based on its relationship to another entity in the database.
 Imagine you are not interested in the calculation jobs themselves, but in one of the outputs they create.
-You can build upon your initial query for all ``CalcJobNode``'s in the database using the relationship of the output to the first step in the query:
+You can build upon your initial query for all  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s in the database using the relationship of the output to the first step in the query:
 
 .. code-block::
 
@@ -428,21 +433,44 @@ You can build upon your initial query for all ``CalcJobNode``'s in the database 
     qb.append(CalcJobNode, tag='calcjob')
     qb.append(Int, with_incoming='calcjob')
 
-In the first ``append`` call, we query for all ``CalcJobNode``'s in the database, and *tag* this step with the *unique* identifier ``'calcjob'``.
-Next, we look for all ``Int`` nodes that are an output of the ``CalcJobNode``'s found in the first step, using the ``with_incoming`` relationship argument.
-Since the ``CalcJobNode`` *created* the ``Int`` node, it is an *incoming* node from the ``Int`` node's perspective.
+In the first ``append`` call, we query for all  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s in the database, and *tag* this step with the *unique* identifier ``'calcjob'``.
+Next, we look for all ``Int`` nodes that are an output of the  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s found in the first step, using the ``with_incoming`` relationship argument.
+The ``Int`` node was created by the  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` and as such has an *incoming* create link.
 
 In the context of our query, we are building a *path* consisting of *vertices* (i.e. the entities we query for) connected by *edges* defined by the relationships between them.
-A list of all the relationships you can use for your query, as well as the entities that they connect, can be found in the ``QueryBuilder`` docstring.
+The complete set of all possible relationships you can use query for, as well as the entities that they connect to, can be found in the :ref:`advanced querying section<topics:database:advancedquery:tables>`.
+
+.. note::
+
+    The ``tag`` identifier can be any alphanumeric string, it is simply a label used to refer to a previous vertex along the query path when defining a relationship.
 
 .. _how-to:data:find:projections:
 
 Projections
 -----------
 
-When no *projection* is specified, the default behavior of the ``QueryBuilder`` is to project the entities corresponding to the final vertex of the query path.
+By default, the :class:`~aiida.orm.querybuilder.QueryBuilder` returns the instances of the entities corresponding to the final append to the query path.
+For example:
+
+.. code-block:: python
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_incoming='calcjob')
+
+The above code snippet will return all ``Int`` nodes that are outputs of any  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`.
+However, you can also *project* other entities in the path by adding ``project='*'`` to the corresponding ``append()`` call:
+
+.. code-block:: python
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob', project='*')
+    qb.append(Int, with_incoming='calcjob')
+
+This will return all  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s that have an ``Int`` output node.
+
 However, in many cases we are not interested in the entities themselves, but rather their PK, UUID, *attributes* or some other piece of information stored by the entity.
-This can be achieved using the ``project`` keyword argument:
+This can be achieved by providing the corresponding *column* to the ``project`` keyword argument:
 
 .. code-block:: python
 
@@ -450,31 +478,23 @@ This can be achieved using the ``project`` keyword argument:
     qb.append(CalcJobNode, tag='calcjob')
     qb.append(Int, with_incoming='calcjob', project='id')
 
-In the above example, executing the query returns all PK's of the ``Int`` nodes which are outputs of all ``CalcJobNode``'s in the database.
-However, you can project more than one piece of information for one vertex by using a list:
+In the above example, executing the query returns all *PK's* of the ``Int`` nodes which are outputs of all  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s in the database.
+Moreover, you can project more than one piece of information for one vertex by providing a list:
 
 .. code-block:: python
 
     qb = QueryBuilder()
     qb.append(CalcJobNode, tag='calcjob')
-    qb.append(Int, with_incoming='calcjob', project=['id', 'attributes.value'])
+    qb.append(Int, with_incoming='calcjob', project=['id', '*', 'attributes.value'])
 
-Moreover, you can project information for multiple vertices along the query path:
-
-.. code-block:: python
-
-    qb = QueryBuilder()
-    qb.append(CalcJobNode, tag='calcjob', project='uuid)
-    qb.append(Int, with_incoming='calcjob', project=['id', 'attributes.value'])
-
-Asking only for the properties that you are interested in can result in much faster queries.
-If you want the Aiida-ORM instance, add ``'*'`` to your list of projections:
+For the query above, ``qb.all()`` will return a list of lists, for which each element corresponds to one entity and contains three items: the PK, instance of the ``Int`` node and its value.
+Finally, you can project information for multiple vertices along the query path:
 
 .. code-block:: python
 
     qb = QueryBuilder()
     qb.append(CalcJobNode, tag='calcjob', project='uuid')
-    qb.append(Int, with_incoming='calcjob', project=['id', '*', 'attributes.value'])
+    qb.append(Int, with_incoming='calcjob', project=['id', 'attributes.value'])
 
 All projections must start with one of the *columns* of the entities in the database.
 Examples of columns we have encountered so far are ``id``, ``uuid`` and ``attributes``.
@@ -483,11 +503,11 @@ This can be used to project the values of nested dictionaries as well.
 
 .. note::
 
-    Be aware that, for consistency, ``QueryBuilder.all()`` / ``iterall()`` always returns a list of lists, even if you project on one entity.
-    A convenient boolean keyword argument for the ``all()`` method is ``flat``, which returns the query as a flat list if set to ``True``.
+    Be aware that for consistency, ``QueryBuilder.all()`` / ``iterall()`` always returns a list of lists, even if you only project one property of a single entity.
+    Use ``QueryBuilder.all(flat=True)`` to return the query result as a flat list in this case.
 
-As mentioned in the introduction of this how-to, these sections only explain the basic functionality of the ``QueryBuilder``.
-For more advanced queries, please see :ref:`the corresponding topics section<topics:database:advancedquery>`.
+As mentioned in the beginning, this section provides only a brief introduction to the :class:`~aiida.orm.querybuilder.QueryBuilder`'s basic functionality.
+To learn about more advanced queries, please see :ref:`the corresponding topics section<topics:database:advancedquery>`.
 
 .. _how-to:data:organize:
 

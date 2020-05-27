@@ -224,10 +224,10 @@ We have also compiled useful how-to guides that are especially relevant for the 
 
         Designing a workflow
             After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`multi-step workflows how-to <how-to:workflows>`.
-        
+
         Reusable data types
             If you have a certain input or output data type, which you use often, then you may wish to turn it into its own :ref:`data plugin <how-to:data:plugin>`.
-        
+
         Exploring your data
             Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <VisualizingGraphs>`.
 

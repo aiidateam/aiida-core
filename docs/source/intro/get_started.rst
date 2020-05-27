@@ -240,17 +240,19 @@ We have also compiled useful how-to guides that are especially relevant for the 
     .. dropdown:: Run compute-intensive codes
         :container:
 
-        :ref:`Using caching to save computational resources <how-to:codes:caching>`
+        Tuning performance
+            :ref:`Tuning performance <how-to:installation:performance>`
 
-        :ref:`Tuning performance <how-to:installation:performance>`
+        Saving computational resources
+            :ref:`Using caching to save computational resources <how-to:codes:caching>`
 
     .. dropdown:: Run computations on High Performance Computers
 
-        :ref:`How to run external codes <how-to:codes>`
+        Connecting to supercomputers
+            :ref:`Running on supercomputers <how-to:installation:running-on-supercomputers>`
 
-        :ref:`Tuning performance <how-to:installation:performance>`
-
-        :ref:`Running on supercomputers <how-to:installation:running-on-supercomputers>`
+        Working with external codes
+            :ref:`How to run external codes <how-to:codes>`
 
 
 .. |PostgreSQL| replace:: `PostgreSQL <https://www.postgresql.org>`__

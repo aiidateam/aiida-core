@@ -13,7 +13,7 @@ AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operati
 
 * `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or
   `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ (The shell)
-* `python`_ >= 3.6 (The programming language used by AiiDA)
+* `python`_ >= 3.5 (The programming language used by AiiDA)
 * `python3-pip`_ (Python 3 package manager)
 * `postgresql`_ (Database software, version 9.4 or higher)
 * `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)
@@ -113,8 +113,8 @@ Below, we provide installation instructions for a number of operating systems.
 Ubuntu
 ------
 
-To install the prerequisites on Ubuntu and any other Debian derived distribution, you can use the ``apt`` package manager.
-The following will install the basic ``python`` requirements and the ``git`` source control manager:
+To install the prerequisites on Ubuntu and any other Debian derived distribution, you can use the *apt* package manager.
+The following will install the basic Python requirements and the *git* source control manager:
 
 .. code-block:: console
 
@@ -140,7 +140,7 @@ This installs and adds RabbitMQ as a system service. To check whether it is runn
 
 If it is not running already, it should after a reboot.
 
-Finally install the aiida-core python environment:
+Finally install the aiida-core Python environment:
 
 .. code-block:: console
 
@@ -370,7 +370,7 @@ In order not to interfere with third party packages needed by other software on 
 .. admonition:: Additional Information
    :class: seealso title-icon-read-more
 
-   A very good tutorial on python environments is provided by `realpython.com <https://realpython.com/effective-python-environment>`__.
+   A very good tutorial on Python environments is provided by `realpython.com <https://realpython.com/effective-python-environment>`__.
 
 `venv <https://docs.python.org/3/library/venv.html>`__ is module included directly with python for creating virtual environments.
 To create a virtual environment, in a given directory, run:
@@ -747,7 +747,7 @@ In the example output, all service have a green check mark and so should be runn
 .. admonition:: What next?
    :class: seealso title-icon-read-more
 
-   Try out the ::ref:`Basic Tutorial <tutorial:basic>`.
+   Try out the :ref:`Basic Tutorial <tutorial:basic>`.
 
 .. _intro:install:jupyter:
 

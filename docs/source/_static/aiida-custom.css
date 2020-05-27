@@ -93,3 +93,10 @@
 div.admonition :last-child {
     margin-bottom: 0
 }
+
+div.highlight-bash div.highlight {
+    background-color: aliceblue;
+}
+div.highlight-console div.highlight {
+    background-color: aliceblue;
+}

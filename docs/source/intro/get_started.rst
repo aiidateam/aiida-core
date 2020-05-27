@@ -72,10 +72,13 @@ These are shown below, followed by a recommended "quick-install" route on your l
 
 .. _intro:quick_start:
 
-Quick Start Install
-===================
+Quick Start
+===========
 
 Here we first provide a simple approach for installation and setup on your local computer.
+
+Install Software
+----------------
 
 .. panels::
     :column: col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
@@ -104,6 +107,8 @@ Here we first provide a simple approach for installation and setup on your local
 
     :link-badge:`intro:install:prerequisites,Install prerequisites,ref,badge-primary text-white`
 
+Initialise Data Storage
+------------------------
 
 Before working with AiiDA, you must first initialize a database storage area on disk.
 
@@ -151,6 +156,8 @@ At this point you now have a working AiiDA environment, from which you can add a
 
     :link-badge:`how-to:installation:configure:tab-completion,Read More,ref,badge-primary text-white`
 
+Start Computation Services
+--------------------------
 
 In order to run computations, some additional steps are required to start the services that manage these background processes.
 The |RabbitMQ| service is used, to manage communication between processes and retain process states, even after restarting your computer:
@@ -179,7 +186,10 @@ Finally, to check that all services are running as expected use:
 
 Awesome! You now have a fully operational installation from which to take the next steps!
 
-After finishing with your aiida session, you may wish to power down the services:
+Stopping Services
+-----------------
+
+After finishing with your aiida session, particularly if switching between profiles, you may wish to power down the services:
 
 .. code-block:: console
 

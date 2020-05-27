@@ -81,18 +81,18 @@ Otherwise, you will need to create them as shown below (note that you `will` nee
 .. code-block:: python
 
     from aiida import orm
-    code_node = orm.Code(remote_computer_exec=[localhost, '/bin/bash'])
-    numx_node = orm.Int(17)
-    numy_node = orm.Int(11)
+    bash_binary = orm.Code(remote_computer_exec=[localhost, '/bin/bash'])
+    number_x = orm.Int(17)
+    number_y = orm.Int(11)
 
 To provide these as inputs to the calculations, we will now use the ``builder`` object that we can get from the class:
 
 .. code-block:: python
 
     calculation_builder = calculation_class.get_builder()
-    calculation_builder.code = code_node
-    calculation_builder.x = numx_node
-    calculation_builder.y = numy_node
+    calculation_builder.code = bash_binary
+    calculation_builder.x = number_x
+    calculation_builder.y = number_y
 
 Now everything is in place and ready to perform the calculation, which can be done in two different ways.
 The first one is blocking and will return a dictionary containing all the output nodes (keyed after their label, so in this case these should be: "remote_folder", "retrieved" and "sum") that you can safely inspect and work with:
@@ -101,7 +101,7 @@ The first one is blocking and will return a dictionary containing all the output
 
     from aiida.engine import run
     output_dict = run(calculation_builder)
-    sum_node = output_dict['sum']
+    sum_result = output_dict['sum']
 
 The second one is non blocking, as you will be submitting it to the daemon and control is immediately returned to the interpreter.
 The return value in this case is the calculation node that is stored in the database.
@@ -109,7 +109,7 @@ The return value in this case is the calculation node that is stored in the data
 .. code-block:: python
 
     from aiida.engine import submit
-    calculation_node = submit(calculation_builder)
+    calculation = submit(calculation_builder)
 
 Note that, although you have access to the node, the underlying calculation `process` is not guaranteed to have finished when you get back control in the interpreter.
 In order to keep track of it you can use the verdi command line interface:

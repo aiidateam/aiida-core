@@ -222,31 +222,26 @@ We also compiled some useful how-to guides that are especially relevant for the 
     .. dropdown:: Run pure Python lightweight computations
         :container:
 
-        blah blah blah
-
-        .. link-button:: ....
-            :type: url
-            :text: links to tutorials
-            :classes: btn-outline-primary btn-block
+        - **Designing a workflow**: After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`multi-step workflows how-to <how-to:workflows>`.
+        - **Reusable data types**: If you have a certain input or output data type, which you use often, then you may wish to turn it into its own :ref:`data plugin <how-to:data:plugin>`.
+        - **Exploring your data** Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <VisualizingGraphs>`.
+        - **Sharing your data**: You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
+        - **Sharing your workflows**: Once you have a working computation workflow, you may also wish to :ref:`package it into a python module <how-to:plugins>` for others to use.
 
     .. dropdown:: Run compute-intensive codes
         :container:
 
-        blah blah blah
+        :ref:`Using caching to save computational resources <how-to:codes:caching >`
 
-        .. link-button:: ...
-            :type: url
-            :text: links to tutorials
-            :classes: btn-outline-primary btn-block
+        :ref:`Tuning performance <how-to:installation:performance>`
 
     .. dropdown:: Run computations on High Performance Computers
 
-        blah blah blah
+        :ref:`How to run external codes <how-to:codes>`
 
-        .. link-button:: ...
-            :type: url
-            :text: links to tutorials
-            :classes: btn-outline-primary btn-block
+        :ref:`Tuning performance <how-to:installation:performance>`
+
+        :ref:`Running on supercomputers <how-to:installation:running-on-supercomputers>`
 
 
 .. |PostgreSQL| replace:: `PostgreSQL <https://www.postgresql.org>`__

@@ -34,7 +34,7 @@ These are shown below, followed by a recommended "quick-install" route on your l
 
    *Install software into an isolated directory on your machine.*
 
-   Environment managers such as `Conda <https://docs.conda.io>`__, `pipenv <https://pipenv.pypa.io>`__  and `venv <https://docs.python.org/3/library/venv.html>`__ create isolated Python environments.
+   Environment managers such as `Conda <https://docs.conda.io>`__, `pipenv <https://pipenv.pypa.io>`__  and `venv <https://docs.python.org/3/library/venv.html>`__ create isolated environments, allowing for installation of multiple versions of software on the same machine.
    It is advised that you install ``aiida-core`` into one of these managed environments.
 
    +++

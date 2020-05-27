@@ -15,22 +15,20 @@ Writing workflows
 
 .. _how-to:workflows:run:
 
-Running a predefined workflow
-=============================
+Launching a predefined workflow
+===============================
 
-The first step to running a predefined workflow is loading the work function or work chain class that defines the workflow you want to run.
+The first step to launching a predefined workflow is loading the work function or work chain class that defines the workflow you want to run.
 The recommended method for loading a workflow is using the ``WorkflowFactory``, for example:
 
 .. code-block:: python
 
     from aiida.plugins import WorkflowFactory
     add_and_multiply = WorkflowFactory('arithmetic.add_multiply')
-    MultiplyAndAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
 
-This is essentially the same as importing the workflow from its respective module, but using the ``WorkflowFactory`` has the advantage that the entry point will not change when the packages or plugins are reorganised.
+This is essentially the same as importing the workflow from its respective module, but using the ``WorkflowFactory`` has the advantage that the so called *entry point* (e.g. ``'arithmetic.multiply_add'``) will not change when the packages or plugins are reorganised.
 This means your code is less likely to break when updating AiiDA or the plugin that supplies the workflow.
-The input argument of the ``WorkflowFactory`` is the so-called *entry point*.
-For each workflow, the entry point usually starts with the name of the plugin package (here ``arithmetic``), followed by a dot and the string identifying the workflow (here ``multiplyadd``).
 
 The list of installed plugins can be easily accessed via the verdi CLI:
 
@@ -38,7 +36,7 @@ The list of installed plugins can be easily accessed via the verdi CLI:
 
     $ verdi plugin list
 
-To see the list of ``WorkChain`` entry points, simply use:
+To see the list of workflow entry points, simply use:
 
 .. code-block:: console
 
@@ -48,7 +46,7 @@ By further specifying the entry point of the workflow, you can see its descripti
 
 .. code-block:: console
 
-    $ verdi plugin list aiida.workflows arithmetic.multiplyadd
+    $ verdi plugin list aiida.workflows arithmetic.multiply_add
 
 Work functions
 --------------
@@ -57,6 +55,7 @@ Running a work function is as simple as calling a typical Python function: simpl
 
 .. code-block:: python
 
+    from aiida.plugins import WorkflowFactory, DataFactory
     add_and_multiply = WorkflowFactory('arithmetic.add_multiply')
     Int = DataFactory('int')
 
@@ -75,7 +74,7 @@ Just calling the ``add_and_multiply`` function with regular integers will result
 Work chains
 -----------
 
-To launch a work chain, you can either use the ``run`` or ``submit`` functions from the AiiDA engine.
+To launch a work chain, you can either use the ``run`` or ``submit`` functions.
 For either function, you need to provide the class of the work chain as the first argument, followed by the inputs as keyword arguments.
 Using the ``run`` function, or "running", a work chain means it is executed in the same system process as the interpreter in which it is launched:
 
@@ -84,18 +83,18 @@ Using the ``run`` function, or "running", a work chain means it is executed in t
     from aiida.engine import run
     from aiida.plugins import WorkflowFactory, DataFactory
     Int = DataFactory('int')
-    MultiplyAndAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
 
     add_code = load_code(label='add')
 
-    results = run(MultiplyAndAddWorkChain, x=Int(2), y=Int(3), z=Int(5), code=add_code)
+    results = run(MultiplyAddWorkChain, x=Int(2), y=Int(3), z=Int(5), code=add_code)
 
 Alternatively, you can first construct a dictionary of the inputs, and pass it to the ``run`` function by taking advantage of `Python's automatic keyword expansion <https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists>`_:
 
 .. code-block:: python
 
     inputs = {'x': Int(1), 'y': Int(2), 'z': Int(3), 'code': add_code}
-    results = run(MultiplyAndAddWorkChain, **inputs)
+    results = run(MultiplyAddWorkChain, **inputs)
 
 This is particularly useful in case you have a workflow with a lot of inputs.
 In both cases, running the ``MultiplyAddWorkChain`` workflow returns the **results** of the workflow, i.e. a dictionary of the nodes that are produced as outputs, where the keys of the dictionary correspond to the labels of each respective output.
@@ -112,13 +111,14 @@ So, it is advisable to *submit* more complex or longer work chains to the daemon
 .. code-block:: python
 
     from aiida.engine import submit
+    from aiida.plugins import WorkflowFactory, DataFactory
     Int = DataFactory('int')
-    MultiplyAndAddWorkChain = WorkflowFactory('arithmetic.multiplyadd')
+    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
 
     add_code = load_code(label='add')
     inputs = {'x': Int(1), 'y': Int(2), 'z': Int(3), 'code': add_code}
 
-    workchain_node = submit(MultiplyAndAddWorkChain, **inputs)
+    workchain_node = submit(MultiplyAddWorkChain, **inputs)
 
 Note that when using ``submit`` the work chain is not run in the local interpreter but is sent off to the daemon and you get back control instantly.
 This allows you to submit multiple work chains at the same time and the daemon will start working on them in parallel.
@@ -132,17 +132,19 @@ Submitting a work chain instead of directly running it not only makes it easier 
 If you are unfamiliar with the inputs of a particular ``WorkChain``, a convenient tool for setting up the work chain is the :ref:`process builder<topics:processes:usage:builder>`.
 This can be obtained by using the ``get_builder()`` method, which is implemented for every ``CalcJob`` and ``WorkChain``:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiplyadd')
-    builder = MultiplyAddWorkChain.get_builder()
+    In [1]: from aiida.plugins import WorkflowFactory, DataFactory
+       ...: Int = DataFactory('int')
+       ...: MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+       ...: builder = MultiplyAddWorkChain.get_builder()
 
 To explore the inputs of the work chain, you can use tab autocompletion by typing ``builder.`` and then hitting ``TAB``.
 If you want to get more details on a specific input, you can simply add a ``?`` and press enter:
 
 .. code-block:: ipython
 
-    In [3]: builder.x?
+    In [2]: builder.x?
     Type:        property
     String form: <property object at 0x119ad2dd0>
     Docstring:   {"name": "x", "required": "True", "valid_type": "<class 'aiida.orm.nodes.data.int.Int'>", "non_db": "False"}
@@ -151,20 +153,19 @@ Here you can see that the ``x`` input is required, needs to be of the ``Int`` ty
 
 Using the builder, the inputs of the ``WorkChain`` can be provided one by one:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    builder.code = load_code(label='add')
-    builder.x = Int(2)
-    builder.y = Int(3)
-    builder.z = Int(5)
+    In [3]: builder.code = load_code(label='add')
+       ...: builder.x = Int(2)
+       ...: builder.y = Int(3)
+       ...: builder.z = Int(5)
 
 Once the *required* inputs of the workflow have been provided to the builder, you can either run the work chain or submit it to the daemon:
 
-.. code-block:: python
+.. code-block:: ipython
 
-    from aiida.engine import submit
-
-    workchain_node = submit(builder)
+    In [4]: from aiida.engine import submit
+       ...: workchain_node = submit(builder)
 
 .. note::
 

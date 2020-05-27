@@ -35,6 +35,10 @@
     margin-right:.5rem;
     content: "\f085"
 }
+.title-icon-code-fork .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f126"
+}
 /* Semantic icon names */
 .title-icon-launch-software .admonition-title:before {
     margin-right:.5rem;

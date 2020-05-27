@@ -84,9 +84,9 @@ Welcome to AiiDA's documentation!
 
    ----------------------------------------------
 
-   :fa:`code-fork,mr-1` **Development**
+   :fa:`sitemap,mr-1` **Internal Architecture**
 
-   Saw a typo in the documentation? Want to improve existing functionalities? The contributing guidelines will guide you through the process of improving AiiDA.
+   Detailed information and rational for the design and architecture of AiiDA and its components.
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -95,6 +95,11 @@ Welcome to AiiDA's documentation!
       :text: To the development guide
       :classes: btn-outline-primary btn-block stretched-link
 
+.. admonition:: Development Contributions
+   :class: title-icon-code-fork
+
+   Saw a typo in the documentation? Want to improve existing functionalities?
+   The contributing guidelines are hosted on the `aiida-core wiki <https://github.com/aiidateam/aiida-core/wiki>`__ and will guide you through the process of improving AiiDA.
 
 .. toctree::
    :maxdepth: 2

@@ -39,9 +39,9 @@ Design guidelines
    | AiiDA's :ref:`public python API<python_api_public_list>` includes anything that you can import via ``from aiida.module import thing``.
    | Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, breaking your plugin.
 
-.. _how-to:codes:remotes:
+.. _how-to:codes:computers:
 
-Configuring remote resources
+Configuring remote computers
 ============================
 
 `#4123`_
@@ -84,7 +84,7 @@ Use ``verdi plugin`` to determine what inputs a specific plugin expects:
 
 You will see that 3 inputs nodes are required: two containing the values to add up (``x``, ``y``) and one containing information about the specific code to execute (``code``).
 If you already have these nodes in your database, you can get them by :ref:`querying for them <how-to:data:finding-data>` or using ``orm.load_node(<PK>)``.
-Otherwise, you will need to create them as shown below (note that you `will` need to already have the ``localhost`` computer configured, as explained in the :ref:`previous how-to<how-to:codes:remotes>`):
+Otherwise, you will need to create them as shown below (note that you `will` need to already have the ``localhost`` computer configured, as explained in the :ref:`previous how-to<how-to:codes:computers>`):
 
 .. code-block:: python
 

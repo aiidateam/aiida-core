@@ -412,10 +412,11 @@ Installing the aiida-core package
 =================================
 
 .. _Conda: https://anaconda.org/conda-forge/aiida-core
+.. _Anaconda Cloud: https://anaconda.org/conda-forge/aiida-core
 .. _PyPI: https://pypi.python.org/pypi/aiida-core
 .. _github repository: https://github.com/aiidateam/aiida-core
 
-AiiDA can be installed either from the python package index `PyPI`_, `Conda`_ (both good for general use) or directly from the aiida-core `github repository`_ (good for developers).
+AiiDA can be installed either from the python package index `PyPI`_, `Anaconda Cloud`_ (both good for general use) or directly from the aiida-core `github repository`_ (good for developers).
 
 With your virtual environment active (see above), install the ``aiida-core`` python package from `PyPI`_ using:
 
@@ -427,6 +428,16 @@ With your virtual environment active (see above), install the ``aiida-core`` pyt
    :class: tip title-icon-tip
 
    Consider adding the ``--user`` flag to avoid the need for administrator privileges.
+
+Or, if using `Conda`_, from the `Anaconda Cloud <https://anaconda.org/conda-forge/aiida-core>`__:
+
+.. code-block:: console
+
+    $ conda install -c conda-forge aiida-core aiida-core.services
+
+.. note::
+
+   `aiida-core.services <https://anaconda.org/conda-forge/aiida-core.services>`__ is an optional package to also install PostgreSQL and RabbitMQ.
 
 Alternatively, you can create a directory where to clone the AiiDA source code and install AiiDA from source:
 

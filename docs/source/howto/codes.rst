@@ -46,14 +46,16 @@ Running external codes
 ======================
 
 To run an external code with AiiDA, you will need to use an appropriate :ref:`calculation plugin <topics:plugins>` that knows how to transform the input nodes into the input files that the code expects, copy everything in the code's machine, run the calculation and retrieve the results.
-This plugin would have already been created, either by you (see section on :ref:`interfacing external codes <how-to:codes:plugin>`) or by other AiiDA plugin-developers (available packages are listed in the `plugin registry <https://aiidateam.github.io/aiida-registry/>`_), and has been properly installed in your environment.
-You can check which ones you have currently available:
+You can check the `plugin registry <https://aiidateam.github.io/aiida-registry/>`_ to see if a plugin already exists for the code that you would like to run.
+If that is not the case, you can :ref:`develop your own <how-to:codes:plugin>`.
+After you have installed the plugin, you can start running the code through AiiDA.
+To check which calculation plugins you have currently installed, run:
 
 .. code-block:: bash
 
     $ verdi plugin list aiida.calculations
 
-As an example, we will show how to use the ``arithmetic.add`` plugin, which is a pre-installed plugin implemented in `bash` to sum two integers.
+As an example, we will show how to use the ``arithmetic.add`` plugin, which is a pre-installed plugin that uses the `bash shell<https://www.gnu.org/software/bash/>`_ to sum two integers.
 You can access it with the ``CalculationFactory``:
 
 .. code-block:: python

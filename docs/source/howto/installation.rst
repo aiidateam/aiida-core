@@ -218,6 +218,14 @@ the configuration directory ``~/project_a/.aiida`` will be used.
     If there was no ``.aiida`` directory in ``~/project_a``, AiiDA would have created it for you, so make sure to set the ``AIIDA_PATH`` correctly.
 
 
+.. _how-to:installation:plugins:
+
+Installing plugins
+==================
+
+`#4122`_
+
+
 .. _how-to:installation:performance:
 
 Tuning performance
@@ -556,3 +564,5 @@ Using independent accounts will ensure that, for instance, the SSH credentials t
 
 Data can be shared between instances using :ref:`AiiDA's export and import functionality <how-to:data:share>`.
 Sharing (subsets of) the AiiDA graph can be done as often as needed.
+
+.. _#4122: https://github.com/aiidateam/aiida-core/issues/4122

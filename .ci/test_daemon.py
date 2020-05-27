@@ -270,14 +270,6 @@ def run_base_restart_workchain():
             'y': Int(2),
             'code': code,
             'settings': Dict(dict={'allow_negative': False}),
-            'metadata': {
-                'options': {
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    }
-                }
-            }
         }
     }
 

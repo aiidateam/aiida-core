@@ -31,4 +31,4 @@ verdi -p $AIIDA_TEST_BACKEND computer configure local localhost --non-interactiv
 # Configure the 'add' code inside localhost
 verdi -p $AIIDA_TEST_BACKEND code setup -n -L add \
     -D "simple script that adds two numbers" --on-computer -P arithmetic.add \
-    -Y localhost --remote-abs-path=/usr/local/bin/add.sh
+    -Y localhost --remote-abs-path=/bin/bash

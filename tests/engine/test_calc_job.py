@@ -76,23 +76,10 @@ class TestCalcJob(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
-        import aiida
-        files = [os.path.join(os.path.dirname(aiida.__file__), os.pardir, '.ci', 'add.sh')]
         cls.computer.configure()  # pylint: disable=no-member
-        cls.remote_code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
-        cls.local_code = orm.Code(local_executable='add.sh', files=files).store()
-        cls.inputs = {
-            'x': orm.Int(1),
-            'y': orm.Int(2),
-            'metadata': {
-                'options': {
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    },
-                }
-            }
-        }
+        cls.remote_code = orm.Code(remote_computer_exec=(cls.computer, '/bin/bash')).store()
+        cls.local_code = orm.Code(local_executable='bash', files=['/bin/bash']).store()
+        cls.inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'metadata': {'options': {}}}
 
     def setUp(self):
         super().setUp()
@@ -230,7 +217,7 @@ class TestCalcJob(AiidaTestCase):
         """Passing invalid resources should already stop during input validation."""
         inputs = deepcopy(self.inputs)
         inputs['code'] = self.remote_code
-        inputs['metadata']['options']['resources'].pop('num_machines')
+        inputs['metadata']['options']['resources'] = {'num_machines': 'invalid_type'}
 
         with self.assertRaises(exceptions.InputValidationError):
             ArithmeticAddCalculation(inputs=inputs)

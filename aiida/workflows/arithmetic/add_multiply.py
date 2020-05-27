@@ -7,13 +7,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`CalcJob` implementation to add two numbers using bash for testing and demonstration purposes."""
-import warnings
+"""Basic calcfunction-based workflows for demonstration purposes."""
 
-from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.calculations.arithmetic.add import ArithmeticAddCalculation  # pylint: disable=unused-import
+from aiida.engine import calcfunction, workfunction
 
-warnings.warn(  # pylint: disable=no-member
-    'The add module has moved to aiida.calculations.arithmetic.add. '
-    'This path will be removed in`v2.0.0`.', AiidaDeprecationWarning
-)
+
+@calcfunction
+def add(x, y):
+    return x + y
+
+
+@calcfunction
+def multiply(x, y):
+    return x * y
+
+
+@workfunction
+def add_multiply(x, y, z):
+    """Add two numbers and multiply it with a third."""
+    addition = add(x, y)
+    product = multiply(addition, z)
+    return product

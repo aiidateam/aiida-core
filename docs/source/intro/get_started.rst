@@ -103,6 +103,7 @@ Install Software
         $ reentry scan
 
     ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`__.
+    It is strongly recommended that you install into a :ref:`virtual environment <intro:install:virtual_environments>`.
     You will then need to install |PostgreSQL| and |RabbitMQ| depending on your operating system.
 
     :link-badge:`intro:install:prerequisites,Install prerequisites,ref,badge-primary text-white`

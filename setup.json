@@ -119,8 +119,8 @@
       "runaiida=aiida.cmdline.commands.cmd_run:run"
     ],
     "aiida.calculations": [
-      "arithmetic.add = aiida.calculations.plugins.arithmetic.add:ArithmeticAddCalculation",
-      "templatereplacer = aiida.calculations.plugins.templatereplacer:TemplatereplacerCalculation"
+      "arithmetic.add = aiida.calculations.arithmetic.add:ArithmeticAddCalculation",
+      "templatereplacer = aiida.calculations.templatereplacer:TemplatereplacerCalculation"
     ],
     "aiida.cmdline.computer.configure": [
       "local = aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD",
@@ -210,6 +210,9 @@
       "orbital = aiida.tools.data.orbital.orbital:Orbital",
       "realhydrogen = aiida.tools.data.orbital.realhydrogen:RealhydrogenOrbital"
     ],
-    "aiida.workflows": []
+    "aiida.workflows": [
+      "arithmetic.multiply_add = aiida.workflows.arithmetic.multiply_add:MultiplyAddWorkChain",
+      "arithmetic.add_multiply = aiida.workflows.arithmetic.add_multiply:add_multiply"
+    ]
   }
 }

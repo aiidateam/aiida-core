@@ -103,9 +103,9 @@ Below, we provide installation instructions for a number of operating systems.
             postgresql postgresql-server-dev-all postgresql-client \
             git python3-dev python-pip
          $ sudo service postgresql start
-         # install rabbitmq on windows
          $ pip install aiida-core
 
+      Then RabbitMQ must be `installed directly on Windows <https://www.rabbitmq.com/install-windows.html>`__.
       See :ref:`WSL instructions<intro:install:prerequisites:wsl>` for details.
 
 .. _intro:install:prerequisites:ubuntu:
@@ -159,13 +159,9 @@ Mac OS X (homebrew)
 -------------------
 
 For Mac OS we recommend using the `Homebrew`_ package manager.
-If you have not installed Homebrew yet, you can do so with the following command:
+If you have not installed Homebrew yet, see their `installation guide <https://docs.brew.sh/Installation>`__.
 
-.. code-block:: console
-
-   $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-
-.. _Homebrew: http://brew.sh/index_de.html
+.. _Homebrew: https://brew.sh/
 
 After you have installed Homebrew, you can install the basic requirements as follows:
 

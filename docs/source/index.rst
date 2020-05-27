@@ -86,7 +86,7 @@ Welcome to AiiDA's documentation!
 
    :fa:`sitemap,mr-1` **Internal Architecture**
 
-   Detailed information and rational for the design and architecture of AiiDA and its components.
+   Detailed information and rationale for the design and architecture of AiiDA and its components.
 
    +++++++++++++++++++++++++++++++++++++++++++++
 

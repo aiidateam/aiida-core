@@ -39,6 +39,12 @@ Design guidelines
    | AiiDA's :ref:`public python API<python_api_public_list>` includes anything that you can import via ``from aiida.module import thing``.
    | Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, breaking your plugin.
 
+.. _how-to:codes:remotes:
+
+Configuring remote resources
+============================
+
+`#4123`_
 
 .. _how-to:codes:run:
 
@@ -78,7 +84,7 @@ Use ``verdi plugin`` to determine what inputs a specific plugin expects:
 
 You will see that 3 inputs nodes are required: two containing the values to add up (``x``, ``y``) and one containing information about the specific code to execute (``code``).
 If you already have these nodes in your database, you can get them by :ref:`querying for them <how-to:data:finding-data>` or using ``orm.load_node(<PK>)``.
-Otherwise, you will need to create them as shown below (note that you `will` need to already have the ``localhost`` computer configured):
+Otherwise, you will need to create them as shown below (note that you `will` need to already have the ``localhost`` computer configured, as explained in the :ref:`previous how-to<how-to:codes:remotes>`):
 
 .. code-block:: python
 
@@ -114,7 +120,7 @@ The return value in this case is the calculation node that is stored in the data
     calculation = submit(calculation_builder)
 
 Note that, although you have access to the node, the underlying calculation `process` is not guaranteed to have finished when you get back control in the interpreter.
-In order to keep track of it you can use the verdi command line interface:
+You can use the verdi command line interface to :ref:`monitor<topics:processes:usage:monitoring>` these processes:
 
 .. code-block:: bash
 
@@ -161,3 +167,4 @@ Adding support for a custom transport
 .. _#3988: https://github.com/aiidateam/aiida-core/issues/3988
 .. _#3989: https://github.com/aiidateam/aiida-core/issues/3989
 .. _#3990: https://github.com/aiidateam/aiida-core/issues/3990
+.. _#4123: https://github.com/aiidateam/aiida-core/issues/4123

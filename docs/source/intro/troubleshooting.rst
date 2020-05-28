@@ -17,10 +17,10 @@ If you experience any problems, first check that all services are up and running
    ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
 
 In the example output, all service have a green check mark and so should be running as expected.
-If all services are up and running and you are still experiencing problems, consider the commonly encountered problems below.
+If all services are up and running and you are still experiencing problems or if you have trouble with the installation of aiida-core and related services, consider the commonly encountered problems below.
 
-Installation phase
-------------------
+Installation issues
+-------------------
 
 numpy dependency
 .................

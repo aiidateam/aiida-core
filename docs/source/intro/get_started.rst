@@ -1,69 +1,140 @@
-.. _intro/get_started:
+.. _intro:get_started:
 
 ****************
 Getting Started
 ****************
 
-`#4026 <https://github.com/aiidateam/aiida-core/issues/4026>`_
+A working AiiDA installation consists of three core components, plus any external codes you wish to run:
 
-.. admonition:: Want to jump straight to the tutorials?
+* aiida-core: The main Python package and the associated command line tool: ``verdi``.
+* |PostgreSQL|: A service which manages the database that AiiDA uses to store generated data.
+* |RabbitMQ|: A service which manages communication with the processes that AiiDA spawns.
 
-    .. container:: link-box
-
-        Launch AiiDA with MyBinder
-
-
-Installation
-============
-
-A working AiiDA installation consists of three core components:
-
-* ``aiida-core``: The main python package and associated CLI ``verdi``.
-* `PostgreSQL <https://www.postgresql.org>`_: A service which manages the database where we store generated data.
-* `RabbitMQ <https://www.rabbitmq.com>`_: A service which manages communication with the processes that we run.
-
-Each component may be installed separately, depending on your use case.
-Here we first provide the simplest approaches for installation on your local computer.
+There are multiple routes to setting up a working AiiDA environment.
+These are shown below, followed by a recommended "quick-install" route on your local computer.
 
 .. panels::
+   :body: bg-light
+   :footer: bg-light border-0
 
-    **Install from Conda**
+   :fa:`desktop,mr-1` **Direct (Bare Metal)**
 
-    `Conda <https://docs.conda.io>`_ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
+   *Install software directly into your local root directory.*
+
+   The prerequisite software can be installed using most package managers, including: apt, Homebrew, MacPorts, Gentoo and Windows Subsystem for Linux.
+
+   +++
+
+   :link-badge:`intro:install:prerequisites,Prerequisites install,ref,badge-primary text-white`
+   :link-badge:`intro:install:aiida-core,aiida-core install,ref,badge-primary text-white`
+
+   ---------------
+
+   :fa:`folder,mr-1` **Virtual Environment**
+
+   *Install software into an isolated directory on your machine.*
+
+   Environment managers such as `Conda <https://docs.conda.io>`__, `pipenv <https://pipenv.pypa.io>`__  and `venv <https://docs.python.org/3/library/venv.html>`__ create isolated environments, allowing for installation of multiple versions of software on the same machine.
+   It is advised that you install ``aiida-core`` into one of these managed environments.
+
+   +++
+
+   :link-badge:`intro:install:virtual_environments,Environments Tutorial,ref,badge-primary text-white`
+   :link-badge:`https://anaconda.org/conda-forge/aiida-core,aiida-core on Conda,url,badge-primary text-white`
+
+   ---------------
+
+   :fa:`cube,mr-1` **Containers**
+
+   *Use a pre-made image of all the required software.*
+
+   AiiDA maintains a `Docker <https://www.docker.com/>`__ image, which is particularly useful for learning and testing purposes.
+   It is a great way to quickly get started on the tutorials.
+
+   +++
+
+   :link-badge:`intro:install:docker,Docker Tutorial,ref,badge-primary text-white`
+   :link-badge:`https://hub.docker.com/r/aiidateam/aiida-core,aiida-core on DockerHub,url,badge-primary text-white`
+
+   ---------------
+
+   :fa:`cloud,mr-1` **Virtual Machines**
+
+   *Use a pre-made machine with all the required software.*
+
+   `Materials Cloud <https://www.materialscloud.org>`__ provides both downloadable and web based VMs,
+   also incorporating pre-installed Materials Science codes.
+
+   +++
+
+   :link-badge:`https://materialscloud.org/quantum-mobile,Quantum Mobile,url,badge-primary text-white`
+   :link-badge:`https://aiidalab.materialscloud.org,AiiDA lab,url,badge-primary text-white`
+
+.. _intro:quick_start:
+
+Quick Start
+===========
+
+Here we first provide a simple approach for installation and setup on your local computer.
+
+Install Software
+----------------
+
+.. panels::
+    :column: col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
+
+    :fa:`download,mr-1` **Install from Conda**
 
     .. code-block:: console
 
         $ conda create -n aiida -c conda-forge aiida-core aiida-core.services
         $ conda activate aiida
+        $ reentry scan
 
-    ---
+    `Conda <https://docs.conda.io>`__ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
 
-    **Install with pip**
+    ----------------------------------------------
 
-    ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`_.
+    :fa:`download,mr-1` **Install with pip**
 
     .. code-block:: console
 
-        pip install aiida-core
+        $ pip install aiida-core
+        $ reentry scan
 
-    You will then need to install PostgreSQL and RabbitMQ depending on your operating system.
+    ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`__.
+    It is strongly recommended that you install into a :ref:`virtual environment <intro:install:virtual_environments>`.
+    You will then need to install |PostgreSQL| and |RabbitMQ| depending on your operating system.
 
-    .. container:: link-box
+    :link-badge:`intro:install:prerequisites,Install prerequisites,ref,badge-primary text-white`
 
-        :ref:`advanced installation <intro/install_advanced>`.
+Initialise Data Storage
+------------------------
 
-To initialise a database cluster with PostgreSQL and start the service:
+Before working with AiiDA, you must first initialize a database storage area on disk.
 
 .. code-block:: console
 
     $ initdb -D mylocal_db
-    $ pg_ctl -D mylocal_db -l logfile start
 
-We can then use the `quicksetup` command, to set up an AiiDA configuration profile and related data storage.
+
+This *database cluster* may contain a collection of databases (one per profile) that is managed by a single running server process.
+We start this process with:
 
 .. code-block:: console
 
-    $ reentry scan
+    $ pg_ctl -D mylocal_db -l logfile start
+
+.. admonition:: Further Reading
+    :class: seealso title-icon-read-more
+
+    - `Creating a Database Cluster <https://www.postgresql.org/docs/12/creating-cluster.html>`__.
+    - `Starting the Database Server <https://www.postgresql.org/docs/12/server-start.html>`__.
+
+Next, we set up an AiiDA configuration profile and related data storage, with the `quicksetup` command.
+
+.. code-block:: console
+
     $ verdi quicksetup
     Info: enter "?" for help
     Info: enter "!" to ignore the default and set no value
@@ -75,7 +146,8 @@ We can then use the `quicksetup` command, to set up an AiiDA configuration profi
 
 At this point you now have a working AiiDA environment, from which you can add and retrieve data.
 
-.. tip::
+.. admonition:: Tab Completion
+    :class: tip title-icon-lightbulb
 
     Enable tab completion of ``verdi`` commands in the terminal with:
 
@@ -83,14 +155,25 @@ At this point you now have a working AiiDA environment, from which you can add a
 
         $ eval "$(_VERDI_COMPLETE=source verdi)"
 
-In order to run computations, one additional step is required to start the services that manage these background processes:
+    :link-badge:`how-to:installation:configure:tab-completion,Read More,ref,badge-primary text-white`
+
+Start Computation Services
+--------------------------
+
+In order to run computations, some additional steps are required to start the services that manage these background processes.
+The |RabbitMQ| service is used, to manage communication between processes and retain process states, even after restarting your computer:
 
 .. code-block:: console
 
     $ rabbitmq-server -detached
-    $ verdi daemon start
 
-We can check that all services are running as expected using:
+We then start one or more "daemon" processes, which handle the execution and monitoring of all submitted computations.
+
+.. code-block:: console
+
+    $ verdi daemon start 2
+
+Finally, to check that all services are running as expected use:
 
 .. code-block:: console
 
@@ -104,45 +187,88 @@ We can check that all services are running as expected using:
 
 Awesome! You now have a fully operational installation from which to take the next steps!
 
-Finally, to power down the services, you can run:
+Stopping Services
+-----------------
+
+After finishing with your aiida session, particularly if switching between profiles, you may wish to power down the services:
 
 .. code-block:: console
 
     $ verdi daemon stop
     $ pg_ctl stop
 
-.. admonition:: Having problems?
+Any computations that are still running at this point, will be picked up next time the services are started.
 
-    See the :ref:`troubleshooting section <intro/troubleshooting>`.
+
+.. admonition:: Having problems?
+    :class: attention title-icon-troubleshoot
+
+    :ref:`See the troubleshooting section <intro:troubleshooting>`.
 
 .. admonition:: In-depth instructions
+    :class: seealso title-icon-read-more
 
-    Installing from source? Install into a VM?
-    Check the :ref:`advanced installation section <intro/install_advanced>`.
+    For more ways to install AiiDA, :ref:`check the detailed installation section <intro:install>`.
+
+    For more detailed instructions on configuring AiiDA, :ref:`see the configuration how-to <how-to:installation:configure>`.
 
 Next Steps
 ==========
 
-.. accordion:: Run pure Python lightweight computations
+If you are new to AiiDA, go through the :ref:`Basic Tutorial <tutorial:basic>`.
+We have also compiled useful how-to guides that are especially relevant for the following use cases:
 
-    blah blah blah
+.. div:: dropdown-group
 
-    .. container:: link-box
+    .. dropdown:: Run pure Python lightweight computations
+        :container:
 
-        links to tutorials
+        Designing a workflow
+            After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`multi-step workflows how-to <how-to:workflows>`.
 
-.. accordion:: Run compute-intensive codes
+        Reusable data types
+            If you have a certain input or output data type, which you use often, then you may wish to turn it into its own :ref:`data plugin <how-to:data:plugin>`.
 
-    blah blah blah
+        Exploring your data
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <VisualizingGraphs>`.
 
-    .. container:: link-box
+        Sharing your data
+            You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
 
-        links to tutorials
+        Sharing your workflows
+            Once you have a working computation workflow, you may also wish to :ref:`package it into a python module <how-to:plugins>` for others to use.
 
-.. accordion:: Run computations on High Performance Computers
+    .. dropdown:: Run compute-intensive codes
+        :container:
 
-    blah blah blah
+        Working with external codes
+            Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
+            If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
 
-    .. container:: link-box
+        Tuning performance
+            To optimise the performance of AiiDA for running many concurrent computations see the :ref:`tuning performance how-to <how-to:installation:performance>`.
 
-        links to tutorials
+        Saving computational resources
+            AiiDA can cache and reuse the outputs of identical computations, as described in the :ref:`caching how-to <how-to:codes:caching>`.
+
+    .. dropdown:: Run computations on High Performance Computers
+
+        Connecting to supercomputers
+            To setup up a computer which can communicate with a HPC over SSH, see the :ref:`running on supercomputers how-to <how-to:installation:running-on-supercomputers>`, or add a :ref:`custom transport <how-to:codes:transport>`.
+            AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque, or you can add a :ref:`custom scheduler <how-to:codes:scheduler>`.
+
+        Working with external codes
+            Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
+            If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
+
+        Exploring your data
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <VisualizingGraphs>`.
+
+        Sharing your data
+            You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
+
+        Sharing your calculation plugin
+            Once you have a working plugin, you may also wish to :ref:`package it into a python module <how-to:plugins>` for others to use.
+
+.. |PostgreSQL| replace:: `PostgreSQL <https://www.postgresql.org>`__
+.. |RabbitMQ| replace:: `RabbitMQ <https://www.rabbitmq.com>`__

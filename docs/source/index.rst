@@ -1,85 +1,105 @@
-.. aiida documentation master file, created by
-       sphinx-quickstart on Wed Oct 24 11:33:37 2012.
-       You can adapt this file completely to your liking, but it should at least
-       contain the root `toctree` directive.
-
-**aiida-core version:** |release|
-
-.. figure:: images/AiiDA_transparent_logo.png
+.. image:: images/AiiDA_transparent_logo.png
     :width: 250px
     :align: center
-
-    Automated Interactive Infrastructure and Database for Computational Science
+    :alt: AiiDA logo
+    :class: mb-3
 
 #################################
 Welcome to AiiDA's documentation!
 #################################
+
+**aiida-core version:** |release|
 
 `AiiDA`_ is an open-source framework implemented in Python that aims to help researchers with managing simple to complex workflows and making them fully reproducible.
 
 .. _AiiDA: https://www.aiida.net
 
 .. panels::
-   :centred:
+   :body: bg-light text-center
+   :footer: bg-light border-0
 
-   **Getting Started**
+
+   :fa:`rocket,mr-1` **Getting Started**
 
    First time user or are looking for installation instructions? Start here!
 
-   .. container:: link-box bottom
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-      :ref:`To the getting started guides <intro/get_started>`
+   .. link-button:: intro/get_started
+      :type: ref
+      :text: To the installation guides
+      :classes: btn-outline-primary btn-block stretched-link
 
-   ---
+   ----------------------------------------------
 
-   **Tutorial**
+   :fa:`info-circle,mr-1` **Tutorial**
 
    Get your feet wet with a brief introduction to the basics of AiiDA.
 
-   .. container:: link-box bottom
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-      :ref:`To the tutorials <tutorials>`
+   .. link-button:: tutorial
+      :type: ref
+      :text: To the tutorials
+      :classes: btn-outline-primary btn-block stretched-link
 
-   ---
+   ----------------------------------------------
 
-   **How-To Guides**
+   :fa:`question-circle,mr-1` **How-To Guides**
 
    Learn how to use AiiDA to power your own work.
 
-   .. container:: link-box bottom
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-      :ref:`To the how-to guides <how-to>`
+   .. link-button:: howto/codes
+      :type: ref
+      :text: To the how-to guides
+      :classes: btn-outline-primary btn-block stretched-link
 
-   ---
+   ----------------------------------------------
 
-   **Topics**
+   :fa:`bookmark,mr-1` **Topics**
 
    Comprehensive background information for those who want to learn more about AiiDA's underlying concepts.
 
-   .. container:: link-box bottom
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-      :ref:`To the topics <topics>`
+   .. link-button:: topics/cli
+      :type: ref
+      :text: To the topics
+      :classes: btn-outline-primary btn-block stretched-link
 
-   ---
+   ----------------------------------------------
 
-   **API Reference**
+   :fa:`cogs,mr-1` **API Reference**
 
    Comprehensive description of all AiiDA components and APIs, including the command-line-interface, the Python interface, and the RESTful API.
 
-   .. container:: link-box bottom
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-      :ref:`To the reference guide <api>`
+   .. link-button:: reference/command_line
+      :type: ref
+      :text: To the reference guide
+      :classes: btn-outline-primary btn-block stretched-link
 
-   ---
+   ----------------------------------------------
 
-   **Development**
+   :fa:`sitemap,mr-1` **Internal Architecture**
 
-   Saw a typo in the documentation? Want to improve existing functionalities? The contributing guidelines will guide you through the process of improving AiiDA.
+   Detailed information and rationale for the design and architecture of AiiDA and its components.
 
-   .. container:: link-box bottom
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-      :ref:`To the development guide <development>`
+   .. link-button:: internals/global_design
+      :type: ref
+      :text: To the architecture guide
+      :classes: btn-outline-primary btn-block stretched-link
 
+.. admonition:: Development Contributions
+   :class: title-icon-code-fork
+
+   Saw a typo in the documentation? Want to improve existing functionalities?
+   The contributing guidelines are hosted on the `aiida-core wiki <https://github.com/aiidateam/aiida-core/wiki>`__ and will guide you through the process of improving AiiDA.
 
 .. toctree::
    :maxdepth: 2
@@ -163,6 +183,7 @@ Acknowledgements
 ****************
 
 This work is supported by:
+
 * the `MARVEL National Centre for Competency in Research`_ funded by the `Swiss National Science Foundation`_;
 * the `MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598;
 * the `swissuniversities P-5 project "Materials Cloud"`_.

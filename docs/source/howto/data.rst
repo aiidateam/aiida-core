@@ -525,9 +525,9 @@ Organise groups in hierarchies
    :keywords: grouppath
 
 Groups in AiiDA are inherently "flat", in that groups may only contain nodes and not other groups.
-However, the `GroupPath` utility allows one to construct *virtual* group hierarchies based on delimited group labels.
+However, the :py:class:`~aiida.tools.groups.paths.GroupPath` utility allows one to construct *virtual* group hierarchies based on delimited group labels.
 
-`GroupPath` is designed to work in much the same way as python's `pathlib.Path`, whereby paths are denoted by forward slash characters '/' in group labels.
+:py:class:`~aiida.tools.groups.paths.GroupPath` is designed to work in much the same way as python's :py:class:`pathlib.Path`, whereby paths are denoted by forward slash characters '/' in group labels.
 For example say we have the groups:
 
 .. code-block:: console
@@ -562,7 +562,7 @@ Or from the python interface:
     Out[3]: [GroupPath('base1/sub_group2', cls='<class 'aiida.orm.groups.Group'>'),
              GroupPath('base1/sub_group1', cls='<class 'aiida.orm.groups.Group'>')]
 
-The `GroupPath` can be constructed using indexing or "divisors":
+The ``GroupPath`` can be constructed using indexing or "divisors":
 
 .. code-block:: ipython
 
@@ -570,7 +570,7 @@ The `GroupPath` can be constructed using indexing or "divisors":
     In [5]: path["base1"] == path / "base1"
     Out[5]: True
 
-Using the `browse` attribute, you can also construct the paths as preceding attributes.
+Using the :py:func:`~aiida.tools.groups.paths.GroupPath.browse` attribute, you can also construct the paths as preceding attributes.
 This is useful in interactive environments, whereby available paths will be shown in the tab-completion:
 
 .. code-block:: ipython
@@ -585,7 +585,7 @@ To check the existence of a path element:
     In [7]: "base1" in path
     Out[7]: True
 
-A group may be "virtual", in which case its label does not directly relate to a group, or the group can be retrieved with the `get_group()` method:
+A group may be "virtual", in which case its label does not directly relate to a group, or the group can be retrieved with the :py:func:`~aiida.tools.groups.paths.GroupPath.get_group` method:
 
 .. code-block:: ipython
 
@@ -610,7 +610,7 @@ Groups can be created and destroyed:
     In [15]: path["base1/sub_group1"].is_virtual
     Out[15]: False
 
-To traverse paths, use the `children` attribute - for recursive traversal, use `walk`:
+To traverse paths, use the :py:func:`~aiida.tools.groups.paths.GroupPath.children` attribute - for recursive traversal, use :py:func:`~aiida.tools.groups.paths.GroupPath.walk`:
 
 .. code-block:: ipython
 
@@ -621,7 +621,7 @@ To traverse paths, use the `children` attribute - for recursive traversal, use `
     GroupPath('base1/sub_group2', cls='<class 'aiida.orm.groups.Group'>')
     GroupPath('base2/other/sub_group3', cls='<class 'aiida.orm.groups.Group'>')
 
-You can also traverse directly through the nodes of a path, optionally filtering by node class and any other filters allowed by the `QueryBuilder`:
+You can also traverse directly through the nodes of a path, optionally filtering by node class and any other filters allowed by the :ref:`QueryBuilder <how-to:data:find>`:
 
 .. code-block:: ipython
 
@@ -635,7 +635,7 @@ You can also traverse directly through the nodes of a path, optionally filtering
     Out[21]: WalkNodeResult(group_path=GroupPath('base1/sub_group1', cls='<class 'aiida.orm.groups.Group'>'),
     node=<Data: uuid: 0adb5224-585d-4fd4-99ae-20a071972ddd (pk: 1)>)
 
-Finally, you can also specify the `Group` subclasses (as discussed above):
+Finally, you can also specify the ``Group`` subclasses (as discussed above):
 
 .. code-block:: ipython
 
@@ -646,7 +646,7 @@ Finally, you can also specify the `Group` subclasses (as discussed above):
 
 .. important::
 
-    A `GroupPath` instance will only recognise groups of the instantiated ``cls`` type.
+    A :py:class:`~aiida.tools.groups.paths.GroupPath` instance will only recognise groups of the instantiated ``cls`` type.
     The default ``cls`` is ``aiida.orm.Group``:
 
     .. code-block:: ipython

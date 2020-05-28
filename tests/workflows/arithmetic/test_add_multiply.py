@@ -1,0 +1,25 @@
+"""Tests for the `aiida.workflows.arithmetic.add_multiply` work function."""
+import pytest
+
+from aiida.orm import Int
+from aiida.plugins import WorkflowFactory
+from aiida.workflows.arithmetic.add_multiply import add_multiply
+
+
+def test_factory():
+    """Test that the work function can be loaded through the factory."""
+    loaded = WorkflowFactory('arithmetic.add_multiply')
+    assert loaded.is_process_function
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_run():
+    """Test running the work function."""
+    x = Int(1)
+    y = Int(2)
+    z = Int(3)
+
+    result = add_multiply(x, y, z)
+
+    assert isinstance(result, Int)
+    assert result == (x + y) * z

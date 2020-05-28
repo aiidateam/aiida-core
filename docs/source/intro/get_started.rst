@@ -241,6 +241,10 @@ We have also compiled useful how-to guides that are especially relevant for the 
     .. dropdown:: Run compute-intensive codes
         :container:
 
+        Working with external codes
+            Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
+            If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
+
         Tuning performance
             To optimise the performance of AiiDA for running many concurrent computations see the :ref:`tuning performance how-to <how-to:installation:performance>`.
 
@@ -254,7 +258,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque, or you can add a :ref:`custom scheduler <how-to:codes:scheduler>`.
 
         Working with external codes
-            Existing calculation plugins, , for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
+            Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
             If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
 
         Exploring your data

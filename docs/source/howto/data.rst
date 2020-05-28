@@ -574,6 +574,7 @@ This command will delete both the file repository and the database.
 
   It is not possible to restore a deleted profile unless it was previously backed up!
 
+.. _how-to:data:serve:
 
 Serving your data to others
 ===========================

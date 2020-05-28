@@ -10,6 +10,28 @@ Its job is to orchestrate the whole process that starts with transforming the in
 The following subsections will take you through the process of :ref:`creating the calculation plugin<how-to:codes:interfacing>` and its acompanying :ref:`parser<how-to:codes:parsing>`, and then using these to actually :ref:`run the code<how-to:codes:run>`.
 Other supporting sections are also included.
 
+Some general guidelines to keep in mind are:
+
+ * | **Check existing resources.**
+   | Before starting to write a plugin, check on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_ whether a plugin for your code is already available.
+ * | **Start simple.**
+   | Make use of existing classes like :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...
+   | Write only what is necessary to pass information from and to AiiDA.
+ * | **Don't break data provenance.**
+   | Store *at least* what is needed for full reproducibility.
+ * | **Expose the full functionality.**
+   | Standardization is good but don't artificially limit the power of a code you are wrapping - or your users will get frustrated.
+   | If the code can do it, there should be *some* way to do it with your plugin.
+ * | **Don't rely on AiiDA internals.**
+   | AiiDA's :ref:`public python API<python_api_public_list>` includes anything that you can import via ``from aiida.module import thing``.
+   | Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, breaking your plugin.
+ * | **Parse what you want to query for.**
+   | Make a list of which information to:
+
+     #. parse into the database for querying (:py:class:`~aiida.orm.nodes.data.dict.Dict`, ...)
+     #. store in the file repository for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
+     #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.nodes.data.remote.RemoteData`, ...)
+
 As the underlying example for these we will use the process of using the `bash` interpreter (``/bin/bash``) to add up two numbers by running the command: ``echo $(( numx + numy ))``.
 Here, the `bash` binary will be effectively acting as our |Code| executable, the input (``aiida.in``) will then be a file containing the command with the numbers provided by the user replaced, and the output (``aiida.out``) will be caught through the standard output.
 The final recipe to run this code will then be:
@@ -141,23 +163,6 @@ There are other lists available that allow you to easily customize how to move f
 
 In the Topics section on :ref:`defining calculations <topics:calculations:usage>` you will find more information on available settings of the |CalcInfo| and |CodeInfo|, such as available copy lists, running script options, etc.
 
-Design guidelines
------------------
-
- * | **Check existing resources.**
-   | Before starting to write a plugin, check on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_ whether a plugin for your code is already available.
- * | **Start simple.**
-   | Make use of existing classes like :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...
-   | Write only what is necessary to pass information from and to AiiDA.
- * | **Don't break data provenance.**
-   | Store *at least* what is needed for full reproducibility.
- * | **Expose the full functionality.**
-   | Standardization is good but don't artificially limit the power of a code you are wrapping - or your users will get frustrated.
-   | If the code can do it, there should be *some* way to do it with your plugin.
- * | **Don't rely on AiiDA internals.**
-   | AiiDA's :ref:`public python API<python_api_public_list>` includes anything that you can import via ``from aiida.module import thing``.
-   | Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, breaking your plugin.
-
 .. _how-to:codes:parsing:
 
 Parsing the outputs
@@ -192,7 +197,7 @@ After unloading this information into local variables, these are then used to op
 Finally, it uses the ``out`` method to provide the ``sum`` output of the calculation its final value (of type AiiDA integer, as was specified in the |define| section of the associated |CalcJob|).
 It is important to note here that there is no return statement: the output is provided to the ``self.out`` method instead (any returned value is interpreted as an error signal) as an unstored node, and the engine will be in charge of performing the storing process.
 
-In order to use this ``ArithmeticAddParser`` inside an appropriate |CalcJob| (such as the one described in the :ref:`previous section <how-to:codes:interfacing>`), one needs to add it as a `metadata.options.parser_name` input.
+In order to use this ``ArithmeticAddParser`` inside an appropriate |CalcJob| (such as the one described in the :ref:`previous section <how-to:codes:interfacing>`), one needs to add it as a ``metadata.options.parser_name`` input.
 You can set a parser as the default option in the |define| method, but note that this choice can be overriden when instantiating the |CalcJob|.
 
 .. code-block:: python
@@ -256,12 +261,6 @@ The Topics section on :ref:`defining processes <topics:processes:usage:defining>
 Design guidelines
 -----------------
 
- * | **Parse what you want to query for.**
-   | Make a list of which information to:
-
-     #. parse into the database for querying (:py:class:`~aiida.orm.nodes.data.dict.Dict`, ...)
-     #. store in the file repository for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
-     #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.nodes.data.remote.RemoteData`, ...)
 
 .. _how-to:codes:computers:
 
@@ -397,7 +396,7 @@ Adding support for a custom transport
 .. |CodeInfo| replace:: :py:class:`~aiida.common.CodeInfo`
 .. |spec| replace:: ``spec``
 .. |define| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.define`
-.. |prepare_for_submission| :py:class:`~aiida.engine.processes.calcjobs.CalcJob.prepare_for_submission`
+.. |prepare_for_submission| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.prepare_for_submission`
 
 .. _#3986: https://github.com/aiidateam/aiida-core/issues/3986
 .. _#3987: https://github.com/aiidateam/aiida-core/issues/3987

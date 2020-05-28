@@ -485,18 +485,18 @@ Moreover, you can project more than one piece of information for one vertex by p
 
     qb = QueryBuilder()
     qb.append(CalcJobNode, tag='calcjob')
-    qb.append(Int, with_incoming='calcjob', project=['id', '*', 'attributes.value'])
+    qb.append(Int, with_incoming='calcjob', project=['id', 'attributes.value'])
 
-For the query above, ``qb.all()`` will return a list of lists, for which each element corresponds to one entity and contains three items: the PK, instance of the ``Int`` node and its value.
+For the query above, ``qb.all()`` will return a list of lists, for which each element corresponds to one entity and contains two items: the PK of the ``Int`` node and its value.
 Finally, you can project information for multiple vertices along the query path:
 
 .. code-block:: python
 
     qb = QueryBuilder()
-    qb.append(CalcJobNode, tag='calcjob', project='uuid')
+    qb.append(CalcJobNode, tag='calcjob', project='*')
     qb.append(Int, with_incoming='calcjob', project=['id', 'attributes.value'])
 
-All projections must start with one of the *columns* of the entities in the database.
+All projections must start with one of the *columns* of the entities in the database, or project the instances themselves using ``'*'``.
 Examples of columns we have encountered so far are ``id``, ``uuid`` and ``attributes``.
 If the column is a dictionary, you can expand the dictionary values using a dot notation, as we have done in the previous example to obtain the ``attributes.value``.
 This can be used to project the values of nested dictionaries as well.
@@ -657,6 +657,5 @@ The first (second) request will be handled by the app ``django`` (``sqlalchemy``
 Notice that we haven't specified any port in the URLs since Apache listens conventionally to port 80, where any request lacking the port is automatically redirected.
 
 
-.. _#3996: https://github.com/aiidateam/aiida-core/issues/3996
 .. _#3997: https://github.com/aiidateam/aiida-core/issues/3997
-.. _#3998: https://github.com/aiidateam/
+.. _#3998: https://github.com/aiidateam/aiida-core/issues/3998

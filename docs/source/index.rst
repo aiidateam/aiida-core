@@ -12,6 +12,8 @@ Welcome to AiiDA's documentation!
 
 `AiiDA`_ is an open-source framework implemented in Python that aims to help researchers with managing simple to complex workflows and making them fully reproducible.
 
+Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's features.
+
 .. _AiiDA: https://www.aiida.net
 
 .. panels::

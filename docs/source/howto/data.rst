@@ -525,9 +525,10 @@ Organise groups in hierarchies
    :keywords: grouppath
 
 Groups in AiiDA are inherently "flat", in that groups may only contain nodes and not other groups.
-However, the :py:class:`~aiida.tools.groups.paths.GroupPath` utility allows one to construct *virtual* group hierarchies based on delimited group labels.
+However it is possible to construct *virtual* group hierarchies based on delimited group labels, using the :py:class:`~aiida.tools.groups.paths.GroupPath` utility.
 
-:py:class:`~aiida.tools.groups.paths.GroupPath` is designed to work in much the same way as python's :py:class:`pathlib.Path`, whereby paths are denoted by forward slash characters '/' in group labels.
+:py:class:`~aiida.tools.groups.paths.GroupPath` is designed to work in much the same way as Python's :py:class:`pathlib.Path`, whereby paths are denoted by forward slash characters '/' in group labels.
+
 For example say we have the groups:
 
 .. code-block:: console

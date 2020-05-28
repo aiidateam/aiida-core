@@ -56,3 +56,38 @@ def non_interactive_editor(request):
 
     with patch.object(Editor, 'edit_file', edit_file):
         yield
+
+
+@pytest.fixture(scope='function')
+def fixture_sandbox():
+    """Return a `SandboxFolder`."""
+    from aiida.common.folders import SandboxFolder
+    with SandboxFolder() as folder:
+        yield folder
+
+
+@pytest.fixture
+def generate_calc_job():
+    """Fixture to construct a new `CalcJob` instance and call `prepare_for_submission` for testing `CalcJob` classes.
+
+    The fixture will return the `CalcInfo` returned by `prepare_for_submission` and the temporary folder that was passed
+    to it, into which the raw input files will have been written.
+    """
+
+    def _generate_calc_job(folder, entry_point_name, inputs=None):
+        """Fixture to generate a mock `CalcInfo` for testing calculation jobs."""
+        from aiida.engine.utils import instantiate_process
+        from aiida.manage.manager import get_manager
+        from aiida.plugins import CalculationFactory
+
+        manager = get_manager()
+        runner = manager.get_runner()
+
+        process_class = CalculationFactory(entry_point_name)
+        process = instantiate_process(runner, process_class, **inputs)
+
+        calc_info = process.prepare_for_submission(folder)
+
+        return calc_info
+
+    return _generate_calc_job

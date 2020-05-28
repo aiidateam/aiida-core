@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Basic calcfunction-based workflows for demonstration purposes."""
-
 from aiida.engine import calcfunction, workfunction
 
 

@@ -259,7 +259,7 @@ Updating your installation
 ==========================
 
 Whenever updating your AiiDA installation, make sure you follow these instructions **very carefully**, even when merely upgrading the patch version!
-Failing to do so, may leave your installation in a broken state, or worse may even damage your data, potentially irreperably.
+Failing to do so, may leave your installation in a broken state, or worse may even damage your data, potentially irreparably.
 
 1. Activate the Python environment where AiiDA is installed.
 2. Finish all running processes.

@@ -514,7 +514,149 @@ To learn about more advanced queries, please see :ref:`the corresponding topics 
 Organizing data
 ===============
 
-`#3997`_
+
+.. _how-to:data:organize:grouppath:
+
+Organise groups in hierarchies
+------------------------------
+
+.. meta::
+   :description: The reStructuredText plaintext markup language
+   :keywords: grouppath
+
+Groups in AiiDA are inherently "flat", in that groups may only contain nodes and not other groups.
+However, the `GroupPath` utility allows one to construct *virtual* group hierarchies based on delimited group labels.
+
+`GroupPath` is designed to work in much the same way as python's `pathlib.Path`, whereby paths are denoted by forward slash characters '/' in group labels.
+For example say we have the groups:
+
+.. code-block:: console
+
+    $ verdi group list
+    PK    Label                    Type string    User
+    ----  -----------------        -------------  --------------
+    1     base1/sub_group1         core           user@email.com
+    2     base1/sub_group2         core           user@email.com
+    3     base2/other/sub_group3   core           user@email.com
+
+We can also access them from the command-line as:
+
+.. code-block:: console
+
+    $ verdi group path ls -l
+    Path         Sub-Groups
+    ---------  ------------
+    base1                 2
+    base2                 1
+    $ verdi group path ls base1
+    base1/sub_group1
+    base1/sub_group2
+
+Or from the python interface:
+
+.. code-block:: ipython
+
+    In [1]: from aiida.tools.groups import GroupPath
+    In [2]: path = GroupPath("base1")
+    In [3]: print(list(path.children))
+    Out[3]: [GroupPath('base1/sub_group2', cls='<class 'aiida.orm.groups.Group'>'),
+             GroupPath('base1/sub_group1', cls='<class 'aiida.orm.groups.Group'>')]
+
+The `GroupPath` can be constructed using indexing or "divisors":
+
+.. code-block:: ipython
+
+    In [4]: path = GroupPath()
+    In [5]: path["base1"] == path / "base1"
+    Out[5]: True
+
+Using the `browse` attribute, you can also construct the paths as preceding attributes.
+This is useful in interactive environments, whereby available paths will be shown in the tab-completion:
+
+.. code-block:: ipython
+
+    In [6]: path.browse.base1.sub_group2()
+    Out[6]: GroupPath('base1/sub_group2', cls='<class 'aiida.orm.groups.Group'>')
+
+To check the existence of a path element:
+
+.. code-block:: ipython
+
+    In [7]: "base1" in path
+    Out[7]: True
+
+A group may be "virtual", in which case its label does not directly relate to a group, or the group can be retrieved with the `get_group()` method:
+
+.. code-block:: ipython
+
+    In [8]: path.is_virtual
+    Out[8]: True
+    In [9]: path.get_group() is None
+    Out[9]: True
+    In [10]: path["base1/sub_group1"].is_virtual
+    Out[10]: False
+    In [11]: path["base1/sub_group1"].get_group()
+    Out[11]: <Group: "base1/sub_group1" [type core], of user user@email.com>
+
+Groups can be created and destroyed:
+
+.. code-block:: ipython
+
+    In [12]: path["base1/sub_group1"].delete_group()
+    In [13]: path["base1/sub_group1"].is_virtual
+    Out[13]: True
+    In [14]: path["base1/sub_group1"].get_or_create_group()
+    Out[14]: (<Group: "base1/sub_group1" [type core], of user user@email.com>, True)
+    In [15]: path["base1/sub_group1"].is_virtual
+    Out[15]: False
+
+To traverse paths, use the `children` attribute - for recursive traversal, use `walk`:
+
+.. code-block:: ipython
+
+    In [16]: for subpath in path.walk(return_virtual=False):
+        ...:     print(subpath)
+        ...:
+    GroupPath('base1/sub_group1', cls='<class 'aiida.orm.groups.Group'>')
+    GroupPath('base1/sub_group2', cls='<class 'aiida.orm.groups.Group'>')
+    GroupPath('base2/other/sub_group3', cls='<class 'aiida.orm.groups.Group'>')
+
+You can also traverse directly through the nodes of a path, optionally filtering by node class and any other filters allowed by the `QueryBuilder`:
+
+.. code-block:: ipython
+
+    In [17]: from aiida.orm import Data
+    In [18]: data = Data()
+    In [19]: data.set_extra("key", "value")
+    In [20]: data.store()
+    Out[20]: <Data: uuid: 0adb5224-585d-4fd4-99ae-20a071972ddd (pk: 1)>
+    In [21]: path["base1/sub_group1"].get_group().add_nodes(data)
+    In [21]: next(path.walk_nodes(node_class=Data, filters={"extras.key": "value"}))
+    Out[21]: WalkNodeResult(group_path=GroupPath('base1/sub_group1', cls='<class 'aiida.orm.groups.Group'>'),
+    node=<Data: uuid: 0adb5224-585d-4fd4-99ae-20a071972ddd (pk: 1)>)
+
+Finally, you can also specify the `Group` subclasses (as discussed above):
+
+.. code-block:: ipython
+
+    In [22]: from aiida.orm import UpfFamily
+    In [23]: path2 = GroupPath(cls=UpfFamily)
+    In [24]: path2["base1"].get_or_create_group()
+    Out[24]: (<UpfFamily: "base1" [type core.upf], of user user@email.com>, True)
+
+.. important::
+
+    A `GroupPath` instance will only recognise groups of the instantiated ``cls`` type.
+    The default ``cls`` is ``aiida.orm.Group``:
+
+    .. code-block:: ipython
+
+        In [25]: orm.UpfFamily(label="a").store()
+        Out[25]: <UpfFamily: "a" [type core.upf], of user user@email.com>
+        In [26]: GroupPath("a").is_virtual
+        Out[26]: True
+        In [27]: GroupPath("a", cls=orm.UpfFamily).is_virtual
+        Out[27]: False
 
 
 .. _how-to:data:share:

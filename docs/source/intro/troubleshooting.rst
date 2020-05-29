@@ -276,8 +276,10 @@ Finally, start a Jupyter server:
 
 and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
 
-Increasing the debug level
---------------------------
+.. _intro:increase-logging-verbosity:
+
+Increasing the logging verbosity
+--------------------------------
 
 By default, the logging level of AiiDA is minimal to avoid filling logfiles.
 Only warnings and errors are logged to the daemon log files, while info and debug

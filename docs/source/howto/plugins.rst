@@ -5,8 +5,7 @@ How to package plugins
 **********************
 
 This section focuses on how to *package* AiiDA extensions (plugins) so that they can be tested, published and eventually reused by others.
-For guides on writing specific extensions, see :ref:`how-to:codes:plugin`, :ref:`how-to:codes:scheduler`, :ref:`how-to:codes:transport` or :ref:`how-to:data:plugin`.
-
+For guides on writing specific extensions, see :ref:`how-to:codes:interfacing`, :ref:`how-to:codes:scheduler`, :ref:`how-to:codes:transport` or :ref:`how-to:data:plugin`.
 
 
 .. _how-to:plugins:bundle:
@@ -122,6 +121,7 @@ Adding a new entry point consists of the following steps:
 
      pip install -e .
      reentry scan
+
 Your new entry point should now show up in ``verdi plugin list aiida.calculations``.
 
 
@@ -210,7 +210,7 @@ AiiDA plugin packages are python packages, and general `best practises for writi
 In the following, we mention a few hints that apply specifically to AiiDA plugins.
 
 Repository-level documentation
----------------------------
+------------------------------
 
 Since the source code of most AiiDA plugins is hosted on GitHub, the first contact of a new user with your plugin package is likely the landing page of your GitHub repository.
 
@@ -235,7 +235,7 @@ Documentation website
 For simple plugins, a well-written ``README.md`` can be a good start.
 Once the README grows out of proportion, you may want to consider creating a dedicated documentation website.
 
-The `Sphinx <sphinx>`_ tool makes it very easy to create documentation websites for python packages, and the `ReadTheDocs <readthedocs>`_ service will host your sphinx documentation online for free.
+The `Sphinx <http://www.sphinx-doc.org/en/master/>`_ tool makes it very easy to create documentation websites for python packages, and the `ReadTheDocs <http://readthedocs.org/>`_ service will host your sphinx documentation online for free.
 The `aiida-diff demo plugin <aiida-diff>`_ comes with a full template for a sphinx-based documentation, including a mix of manually written pages and an automatically generated documentation of your plugin's python API.
 See the `developer guide of aiida-diff <https://aiida-diff.readthedocs.io/en/latest/developer_guide/index.html>`_ for instructions on how to build it.
 
@@ -308,5 +308,3 @@ This makes it possible for users to simply ``pip install aiida-myplugin``.
 .. _registry: https://github.com/aiidateam/aiida-registry
 .. _pypi: https://pypi.python.org
 .. _packaging: https://packaging.python.org/distributing/#configuring-your-project
-.. _ReadTheDocs: http://readthedocs.org/
-.. _sphinx: http://www.sphinx-doc.org/en/master/

@@ -121,7 +121,7 @@ Fore more details, please refer to the section on :ref:`process specifications<t
 
 Prepare
 -------
-We have know defined through the process specification, what inputs the calculation job expects and what outputs it will create.
+We have now defined through the process specification, what inputs the calculation job expects and what outputs it will create.
 The final remaining task is to instruct the engine how the calculation job should actually be run.
 To understand what the engine would have to do to accomplish this, let's consider what one typically does when manually preparing to run a computing job through a scheduler:
 

@@ -44,7 +44,8 @@ Process class                                                         Node class
 :py:class:`~aiida.engine.processes.functions.FunctionProcess`         :py:class:`~aiida.orm.nodes.process.workflow.workfunction.WorkFunctionNode`     Python functions decorated with the ``@workfunction`` decorator
 ===================================================================   ==============================================================================  ===============================================================
 
-For basic information on the concept of a ``CalcJob`` or ``calcfunction``, refer to the :ref:`calculations concept<topics:calculations:concepts>` and the same for the ``WorkChain`` and ``workfunction`` is described in the :ref:`workflows concept<topics:workflows:concepts>`.
+For basic information on the concept of a ``CalcJob`` or ``calcfunction``, refer to the :ref:`calculations concept<topics:calculations:concepts>`
+The ``WorkChain`` and ``workfunction`` are described in the :ref:`workflows concept<topics:workflows:concepts>`.
 After having read and understood the basic concept of calculation and workflow processes, detailed information on how to implement and use them can be found in the dedicated developing sections for :ref:`calculations<topics:calculations:usage>` and :ref:`workflows<topics:workflows:usage>`, respectively.
 
 .. note:: A ``FunctionProcess`` is never explicitly implemented but will be generated dynamically by the engine when a python function decorated with a :py:func:`~aiida.engine.processes.functions.calcfunction` or :py:func:`~aiida.engine.processes.functions.workfunction` is run.
@@ -135,19 +136,19 @@ This means that the output of many of the ``verdi`` commands, such as ``verdi pr
 Process tasks
 -------------
 The previous section explained how launching a process means creating an instance of the ``Process`` class in memory.
-When the process is being 'ran' (see the section on :ref:`launching processes<topics:processes:usage:launch>` for more details) that is to say in a local interpreter, the particular process instance will die as soon as the interpreter dies.
+When the process is being 'run' (see the section on :ref:`launching processes<topics:processes:usage:launch>` for more details) that is to say in a local interpreter, the particular process instance will die as soon as the interpreter dies.
 This is what often makes 'submitting' the preferred method of launching a process.
-When a process is 'submitted', an instance of the ``Process`` is created, along with the node that represents it in the database, and its state is then persisted to the database.
+When a process is 'submitted', an instance of the ``Process`` is created, along with the node that represents it in the database, and its state is then persisted (stored) in the database.
 This is called a 'process checkpoint', more information on which :ref:`will follow later<topics:processes:concepts:checkpoints>`.
-Subsequently, the process instance is shutdown and a 'continuation task' is sent to the process queue of RabbitMQ.
+Subsequently, the process instance is shut down and a 'continuation task' is sent to the process queue of RabbitMQ.
 This task is simply a small message that just contains an identifier for the process.
 
 All the daemon runners, when they are launched, subscribe to the process queue and RabbitMQ will distribute the continuation tasks to them as they come in, making sure that each task is only sent to one runner at a time.
 The receiving daemon runner can restore the process instance in memory from the checkpoint that was stored in the database and continue the execution.
 As soon as the process reaches a terminal state, the daemon runner will acknowledge to RabbitMQ that the task has been completed.
 Until the runner has confirmed that a task is completed, RabbitMQ will consider the task as incomplete.
-If a daemon runner is shutdown or dies before it got the chance to finish running a process, the task will automatically be requeued by RabbitMQ and sent to another daemon runner.
-Together with the fact that all the tasks in the process queue are persisted to disk by RabbitMQ, guarantees that once a continuation task has been sent to RabbitMQ, it will at some point be finished, while allowing the machine to be shutdown.
+If a daemon runner is shut down or dies before it got the chance to finish running a process, the task will automatically be requeued by RabbitMQ and sent to another daemon runner.
+Together with the fact that all the tasks in the process queue are persisted to disk by RabbitMQ, guarantees that once a continuation task has been sent to RabbitMQ, it will at some point be finished, while allowing the machine to be shut down.
 
 Each daemon runner has a maximum number of tasks that it can run concurrently, which means that if there are more active tasks than available slots, some of the tasks will remain queued.
 Processes, whose task is in the queue and not with any runner, though technically 'active' as they are not terminated, are not actually being run at the moment.
@@ -162,7 +163,7 @@ Process checkpoints
 A process checkpoint is a complete representation of a ``Process`` instance in memory that can be stored in the database.
 Since it is a complete representation, the ``Process`` instance can also be fully reconstructed from such a checkpoint.
 At any state transition of a process, a checkpoint will be created, by serializing the process instance and storing it as an attribute on the corresponding process node.
-This mechanism is the final cog in the machine, together with the persisted process queue of RabbitMQ as explained in the previous section, that allows processes to continue after the machine they were running on, has been shutdown and restarted.
+This mechanism is the final cog in the machine, together with the persisted process queue of RabbitMQ as explained in the previous section, that allows processes to continue after the machine they were running on, has been shut down and restarted.
 
 
 .. _topics:processes:concepts:sealing:
@@ -179,4 +180,4 @@ A sealed process node behaves exactly like a normal stored node, as in *all* of 
 In addition, once a process node is sealed, no more incoming or outgoing links can be attached to it.
 Unsealed process nodes can also not be exported, because they belong to processes that are still active.
 Note that the sealing concept does not apply to data nodes and they are exportable as soon as they are stored.
-To determine whether a process node is sealed, one can use the property :py:meth:`~aiida.orm.utils.mixins.Sealable.is_sealed`.
+To determine whether a process node is sealed, one can use the property :py:attr:`~aiida.orm.utils.mixins.Sealable.is_sealed`.

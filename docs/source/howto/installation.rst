@@ -157,7 +157,7 @@ Isolating multiple instances
 An AiiDA instance is defined as the installed source code plus the configuration folder that stores the configuration files with all the configured profiles.
 It is possible to run multiple AiiDA instances on a single machine, simply by isolating the code and configuration in a virtual environment.
 
-To isolate the code, simply create a virtual environment, e.g., with conda or venv, and then follow the instructions for :ref:`installation<intro/install_advanced>` after activation.
+To isolate the code, simply create a virtual environment, e.g., with conda or venv, and then follow the instructions for :ref:`installation<intro:install:aiida-core>` after activation.
 Whenever you activate this particular environment, you will be running the particular version of AiiDA (and all the plugins) that you installed specifically for it.
 
 This is separate from the configuration of AiiDA, which is stored in the configuration directory which is always named ``.aiida`` and by default is stored in the home directory.
@@ -236,7 +236,7 @@ However, optimal performance at that scale might require some tweaks to the AiiD
 
 Here are a few general tips that might improve the AiiDA performance:
 
-  1. :ref:`Move the Postgresql database<how-to:installation:more:move_postgresql>` to a fast disk (SSD), ideally on a large partition.
+  1. Move the Postgresql database to a fast disk (SSD), ideally on a large partition.
 
   2. Use AiiDA's tools for making :ref:`efficient incremental backups<how-to:installation:backup:repository>` of the file repository.
 
@@ -285,7 +285,7 @@ Failing to do so, may leave your installation in a broken state, or worse may ev
 After the database migration finishes, you will be able to continue working with your existing data.
 
 .. note::
-    If the update involved a change in the major version number of ``aiida-core``, expect :ref:`backwards incompatible changes<updating_backward_incompatible_changes>` and check whether you also need to update installed plugin packages.
+    If the update involved a change in the major version number of ``aiida-core``, expect backwards incompatible changes and check whether you also need to update installed plugin packages.
 
 Updating from 0.x.* to 1.*
 --------------------------
@@ -296,13 +296,15 @@ Updating from 0.x.* to 1.*
 
 .. _how-to:installation:backup:
 
+.. _how-to:installation:backup:software
+
 Backing up your installation
 ============================
 
 A full backup of an AiiDA instance and AiiDA managed data requires a backup of:
 
 * the profile configuration in the ``config.json`` file located in the ``.aiida`` folder.
-  Typically located at ``~/.aiida`` (see also :ref:`configure_aiida`).
+  Typically located at ``~/.aiida`` (see also :ref:`intro:install:setup`).
 
 * files associated with nodes in the repository folder (one per profile). Typically located in the ``.aiida`` folder.
 
@@ -404,7 +406,7 @@ In order to restore a backup, you will need to:
 
  1. Restore the repository folder that you backed up earlier in the same location as it used to be (you can check the location in the ``config.json`` file inside your ``.aiida`` folder, or simply using ``verdi profile show``).
 
- 2. Create an empty database following the instructions described in :ref:`database` skipping the ``verdi setup`` phase.
+ 2. Create an empty database following the instructions described in :ref:`database <intro:install:database>` skipping the ``verdi setup`` phase.
     The database should have the same name and database username as the original one (i.e. if you are restoring on the original postgresql cluster, you may have to either rename or delete the original database).
 
  3. Change directory to the folder containing the database dump created with ``pg_dump``, and load it using the ``psql`` command.

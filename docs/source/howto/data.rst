@@ -519,7 +519,7 @@ How to group nodes
 
 AiiDA's database is great for automatically storing all your data, but sometimes it can be tricky to navigate this flat data store.
 To create some order in this mass of data, you can *group* sets of nodes together, just as you would with files in folders on your filesystem.
-A folder, in this analogy, is represented by the :py:class:`~aiida.orm.groups.group.Group` class.
+A folder, in this analogy, is represented by the :py:class:`~aiida.orm.groups.Group` class.
 Each group instance can hold any amount of nodes and any node can be contained in any number of groups.
 A typical use case is to store all nodes that share a common property in a single group.
 

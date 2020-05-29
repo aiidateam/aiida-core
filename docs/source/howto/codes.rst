@@ -26,7 +26,6 @@ Some general guidelines to keep in mind are:
    | Standardization is good but don't artificially limit the power of a code you are wrapping - or your users will get frustrated.
    | If the code can do it, there should be *some* way to do it with your plugin.
  * | **Don't rely on AiiDA internals.**
-   | AiiDA's :ref:`public python API<python_api_public_list>` includes anything that you can import via ``from aiida.module import thing``.
    | Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, breaking your plugin.
  * | **Parse what you want to query for.**
    | Make a list of which information to:
@@ -286,7 +285,7 @@ To check which calculation plugins you have currently installed, run:
 
     $ verdi plugin list aiida.calculations
 
-As an example, we will show how to use the ``arithmetic.add`` plugin, which is a pre-installed plugin that uses the `bash shell<https://www.gnu.org/software/bash/>`_ to sum two integers.
+As an example, we will show how to use the ``arithmetic.add`` plugin, which is a pre-installed plugin that uses the `bash shell <https://www.gnu.org/software/bash/>`_ to sum two integers.
 You can access it with the ``CalculationFactory``:
 
 .. code-block:: python
@@ -308,7 +307,7 @@ Use ``verdi plugin`` to determine what inputs a specific plugin expects:
     (...)
 
 You will see that 3 inputs nodes are required: two containing the values to add up (``x``, ``y``) and one containing information about the specific code to execute (``code``).
-If you already have these nodes in your database, you can get them by :ref:`querying for them <how-to:data:finding-data>` or using ``orm.load_node(<PK>)``.
+If you already have these nodes in your database, you can get them by :ref:`querying for them <how-to:data:find>` or using ``orm.load_node(<PK>)``.
 Otherwise, you will need to create them as shown below (note that you `will` need to already have the ``localhost`` computer configured, as explained in the :ref:`previous how-to<how-to:codes:computers>`):
 
 .. code-block:: python

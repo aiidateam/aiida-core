@@ -31,12 +31,6 @@ from aiida.manage.configuration import load_documentation_profile
 # default profile of the AiiDA installation does not use a Django backend.
 load_documentation_profile()
 
-# If we are not on READTHEDOCS load the Sphinx theme manually
-if not os.environ.get('READTHEDOCS', None):
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -166,6 +160,22 @@ numfig = True
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
+html_theme = 'pydata_sphinx_theme'
+html_theme_options = {
+    'external_links': [
+        {'url': 'http://www.aiida.net/', 'name': 'AiiDA Home'}
+    ],
+    'github_url': 'https://github.com/aiidateam/aiida-core',
+    'use_edit_page_button': True,
+}
+html_context = {
+    'github_user': 'aiidateam',
+    'github_repo': 'aiida-core',
+    'github_version': 'master',
+    'doc_path': 'docs',
+}
+panels_add_boostrap_css = False  # pydata-sphinx-theme already loads this
+html_logo = 'images/AiiDA_transparent_logo.png'
 html_static_path = ['_static']
 html_css_files = ['aiida-custom.css']
 copybutton_selector = 'div:not(.no-copy)>div.highlight pre'

@@ -1,9 +1,3 @@
-.. image:: images/AiiDA_transparent_logo.png
-    :width: 250px
-    :align: center
-    :alt: AiiDA logo
-    :class: mb-3
-
 #################################
 Welcome to AiiDA's documentation!
 #################################
@@ -40,7 +34,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: tutorial
+   .. link-button:: intro/tutorial
       :type: ref
       :text: To the tutorials
       :classes: btn-outline-primary btn-block stretched-link
@@ -53,7 +47,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: howto/codes
+   .. link-button:: howto/index
       :type: ref
       :text: To the how-to guides
       :classes: btn-outline-primary btn-block stretched-link
@@ -66,7 +60,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: topics/cli
+   .. link-button:: topics/index
       :type: ref
       :text: To the topics
       :classes: btn-outline-primary btn-block stretched-link
@@ -79,7 +73,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: reference/command_line
+   .. link-button:: reference/index
       :type: ref
       :text: To the reference guide
       :classes: btn-outline-primary btn-block stretched-link
@@ -92,7 +86,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: internals/global_design
+   .. link-button:: internals/index
       :type: ref
       :text: To the architecture guide
       :classes: btn-outline-primary btn-block stretched-link
@@ -106,69 +100,13 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
 .. toctree::
    :maxdepth: 2
-   :caption: Getting Started
    :hidden:
 
-   intro/about
-   intro/get_started
-   intro/installation
-   intro/troubleshooting
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Tutorial
-   :hidden:
-
-   tutorial/basic
-
-.. toctree::
-   :maxdepth: 1
-   :caption: How-To Guides
-   :hidden:
-
-   howto/codes
-   howto/workflows
-   howto/data
-   howto/installation
-   howto/plugins
-   howto/faq
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Topics
-   :hidden:
-
-   topics/cli
-   topics/processes/index
-   topics/calculations/index
-   topics/workflows/index
-   topics/provenance/index
-   topics/daemon
-   topics/database
-   topics/repository
-   topics/plugins
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Reference
-   :hidden:
-
-   reference/command_line
-   reference/apidoc/aiida.rst
-   reference/rest_api
-   reference/backup_script
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Internal architecture
-   :hidden:
-
-   internals/global_design
-   internals/orm
-   internals/data_storage
-   internals/engine
-   internals/plugin_system
-   internals/rest_api
+   intro/index
+   howto/index
+   topics/index
+   reference/index
+   internals/index
 
 ***********
 How to cite

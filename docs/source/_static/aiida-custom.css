@@ -1,3 +1,10 @@
+/* Fix CSS of top bar link icons */
+a.nav-link.nav-external i {
+    padding-left: 0.3em !important;
+    font-size: inherit !important;
+    vertical-align: inherit !important;
+}
+
 /* For icon unicodes see https://fontawesome.com/v4.7.0/icons/  */
 .title-icon-rocket .admonition-title:before {
     margin-right:.5rem;
@@ -70,7 +77,7 @@
 }
 .title-icon-read-more .admonition-title:before {
     margin-right:.5rem;
-    content: "\f08e"  /* external-link */
+    content: "\f518"  /* external-link */
 }
 
 .dropdown-group .dropdown .summary-title {

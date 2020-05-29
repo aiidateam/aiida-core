@@ -297,9 +297,9 @@ def run_apidoc(_):
     env['SPHINX_APIDOC_OPTIONS'] = 'members,special-members,private-members,undoc-members,show-inheritance'
     subprocess.check_call([cmd_path] + options, env=env)
 
-# def setup(app):
-#     if os.environ.get('RUN_APIDOC', None) != 'False':
-#         app.connect('builder-inited', run_apidoc)
+def setup(app):
+    if os.environ.get('RUN_APIDOC', None) != 'False':
+        app.connect('builder-inited', run_apidoc)
 
 
 # -- Options for manual page output --------------------------------------------

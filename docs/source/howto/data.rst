@@ -791,7 +791,6 @@ Organise groups in hierarchies
 ------------------------------
 
 .. meta::
-   :description: The reStructuredText plaintext markup language
    :keywords: grouppath
 
 Groups in AiiDA are inherently "flat", in that groups may only contain nodes and not other groups.

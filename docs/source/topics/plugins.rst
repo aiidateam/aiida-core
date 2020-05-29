@@ -4,12 +4,12 @@
 Plugins
 *******
 
-
 .. _topics:plugins:may:
+
 What a plugin can do
 ====================
 
-* Add a new class to AiiDA's :ref:`entry point groups <plugins.aiida_entry_points>`, including:: calculations, parsers, workflows, data types, verdi commands, schedulers, transports and importers/exporters from external databases.
+* Add a new class to AiiDA's :ref:`entry point groups <topics:plugins:entrypointgroups>`, including:: calculations, parsers, workflows, data types, verdi commands, schedulers, transports and importers/exporters from external databases.
   This typically involves subclassing the respective base class AiiDA provides for that purpose.
 * Install new commandline and/or GUI executables
 * Depend on, and build on top of any number of other plugins (as long as their requirements do not clash)
@@ -62,7 +62,7 @@ When installing a python package that defines entry points, the entry point spec
 Why entry points?
 =================
 
-AiiDA defines a set of entry point groups (see :ref:`topics:plugins:entrypointgroups:` below).
+AiiDA defines a set of entry point groups (see :ref:`topics:plugins:entrypointgroups` below).
 By inspecting the entry points added to these groups by AiiDA plugins, AiiDA can offer uniform interfaces to interact with them.
 For example:
 

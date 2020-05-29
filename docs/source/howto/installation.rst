@@ -157,7 +157,7 @@ Isolating multiple instances
 An AiiDA instance is defined as the installed source code plus the configuration folder that stores the configuration files with all the configured profiles.
 It is possible to run multiple AiiDA instances on a single machine, simply by isolating the code and configuration in a virtual environment.
 
-To isolate the code, simply create a virtual environment, e.g., with conda or venv, and then follow the instructions for :ref:`installation<intro/install_advanced>` after activation.
+To isolate the code, simply create a virtual environment, e.g., with conda or venv, and then follow the instructions for :ref:`installation<intro:install:aiida-core>` after activation.
 Whenever you activate this particular environment, you will be running the particular version of AiiDA (and all the plugins) that you installed specifically for it.
 
 This is separate from the configuration of AiiDA, which is stored in the configuration directory which is always named ``.aiida`` and by default is stored in the home directory.
@@ -233,25 +233,76 @@ Tuning performance
 
 AiiDA supports running hundreds of thousands of calculations and graphs with millions of nodes.
 However, optimal performance at that scale might require some tweaks to the AiiDA configuration to balance the CPU and disk load.
-
 Here are a few general tips that might improve the AiiDA performance:
 
-  1. :ref:`Move the Postgresql database<how-to:installation:more:move_postgresql>` to a fast disk (SSD), ideally on a large partition.
-
-  2. Use AiiDA's tools for making :ref:`efficient incremental backups<how-to:installation:backup:repository>` of the file repository.
-
-  3. Prevent your operating system from indexing the file repository.
-
-     .. dropdown:: Disabling ``locate`` on Linux
+    .. dropdown:: Prevent your operating system from indexing the file repository.
 
         Many Linux distributions include the ``locate`` command to quickly find files and folders, and run a daily cron job ``updatedb.mlocate`` to create the corresponding index.
         A large file repository can take a long time to index, up to the point where the hard drive is constantly indexing.
 
         In order to exclude the repository folder from indexing, add its path to the ``PRUNEPATH`` variable in the ``/etc/updatedb.conf`` configuration file (use ``sudo``).
 
+    .. dropdown:: Optimize the number of daemon workers
 
-  4. The verdi deamon can manage an arbitrary number of parallel workers; by default only one is activated. If ``verdi daemon status`` shows the daemon worker(s) constantly at high CPU usage, use ``verdi daemon incr X`` to add ``X`` daemon workers.
-     It is recommended that the number of workers does not exceed the number of CPU cores (or, if possible, that you use one or two cores less than your machine has, to avoid to degrade the PostgreSQL database performance).
+        The verdi deamon can manage an arbitrary number of parallel workers; by default only one is activated.
+        If ``verdi daemon status`` shows the daemon worker(s) constantly at high CPU usage, use ``verdi daemon incr X`` to add ``X`` daemon workers.
+        It is recommended that the number of workers does not exceed the number of CPU cores.
+        Ideally, if possible, one should use one or two cores less than the machine has, to avoid to degrade the PostgreSQL database performance.
+
+    .. dropdown:: Move the Postgresql database to a fast disk (SSD), ideally on a large partition.
+
+        1. Stop the AiiDA daemon and :ref:`back up your database <how-to:installation:backup:postgresql>`.
+
+        2. Find the data directory of your postgres installation (something like ``/var/lib/postgresql/9.6/main``, ``/scratch/postgres/9.6/main``, ...).
+
+            The best way is to become the postgres UNIX user and enter the postgres shell::
+
+                psql
+                SHOW data_directory;
+                \q
+
+            If you are unable to enter the postgres shell, try looking for the ``data_directory`` variable in a file ``/etc/postgresql/9.6/main/postgresql.conf`` or similar.
+
+        3. Stop the postgres database service::
+
+            service postgresql stop
+
+        4. Copy all files and folders from the postgres ``data_directory`` to the new location::
+
+            cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
+
+            .. note:: Flag ``-a`` will create a directory within ``DESTINATION_DIRECTORY``, e.g.::
+
+            cp -a OLD_DIR/main/ NEW_DIR/
+
+            creates ``NEW_DIR/main``.
+            It will also keep the file permissions (necessary).
+
+            The file permissions of the new and old directory need to be identical (including subdirectories).
+            In particular, the owner and group should be both ``postgres`` (except for symbolic links in ``server.crt`` and ``server.key`` that may or may not be present).
+
+            .. note::
+
+                If the permissions of these links need to be changed, use the ``-h`` option of ``chown`` to avoid changing the permissions of the destination of the links.
+                In case you have changed the permission of the links destination by mistake, they should typically be (beware that this might depend on your actual distribution!)::
+
+                -rw-r--r-- 1 root root 989 Mar  1  2012 /etc/ssl/certs/ssl-cert-snakeoil.pem
+                -rw-r----- 1 root ssl-cert 1704 Mar  1  2012 /etc/ssl/private/ssl-cert-snakeoil.key
+
+        5. Point the ``data_directory`` variable in your postgres configuration file (e.g. ``/etc/postgresql/9.6/main/postgresql.conf``) to the new directory.
+
+        6. Restart the database daemon::
+
+            service postgresql start
+
+        Finally, check that the data directory has indeed changed::
+
+            psql
+            SHOW data_directory;
+            \q
+
+        and try a simple AiiDA query with the new database.
+        If everything went fine, you can delete the old database location.
 
 .. _how-to:installation:update:
 
@@ -261,31 +312,31 @@ Updating your installation
 Whenever updating your AiiDA installation, make sure you follow these instructions **very carefully**, even when merely upgrading the patch version!
 Failing to do so, may leave your installation in a broken state, or worse may even damage your data, potentially irreparably.
 
-1. Activate the Python environment where AiiDA is installed.
-2. Finish all running processes.
-   All finished processes will be automatically migrated, but it is not possible to resume unfinished processes.
-3. Stop the daemon using ``verdi daemon stop``.
-4. :ref:`Create a backup of your database and repository<how-to:installation:backup>`.
+    1. Activate the Python environment where AiiDA is installed.
+    2. Finish all running processes.
+       All finished processes will be automatically migrated, but it is not possible to resume unfinished processes.
+    3. Stop the daemon using ``verdi daemon stop``.
+    4. :ref:`Create a backup of your database and repository<how-to:installation:backup>`.
 
-   .. warning::
+       .. warning::
 
-      Once you have migrated your database, you can no longer go back to an older version of ``aiida-core`` (unless you restore your database and repository from a backup).
+          Once you have migrated your database, you can no longer go back to an older version of ``aiida-core`` (unless you restore your database and repository from a backup).
 
-5. Update your ``aiida-core`` installation.
+    5. Update your ``aiida-core`` installation.
 
-    * If you have installed AiiDA through ``conda`` simply run: ``conda update aiida-core``.
-    * If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``.
-    * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch with ``git pull``.
+        * If you have installed AiiDA through ``conda`` simply run: ``conda update aiida-core``.
+        * If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``.
+        * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch with ``git pull``.
 
-6. Run `reentry scan` to update the cache of registered entry points.
+    6. Run `reentry scan` to update the cache of registered entry points.
 
-7. Migrate your database with ``verdi -p <profile_name> database migrate``.
-   Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
+    7. Migrate your database with ``verdi -p <profile_name> database migrate``.
+       Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
 
 After the database migration finishes, you will be able to continue working with your existing data.
 
 .. note::
-    If the update involved a change in the major version number of ``aiida-core``, expect :ref:`backwards incompatible changes<updating_backward_incompatible_changes>` and check whether you also need to update installed plugin packages.
+    If the update involved a change in the major version number of ``aiida-core``, expect backwards incompatible changes and check whether you also need to update installed plugin packages.
 
 Updating from 0.x.* to 1.*
 --------------------------
@@ -296,13 +347,15 @@ Updating from 0.x.* to 1.*
 
 .. _how-to:installation:backup:
 
+.. _how-to:installation:backup:software:
+
 Backing up your installation
 ============================
 
 A full backup of an AiiDA instance and AiiDA managed data requires a backup of:
 
 * the profile configuration in the ``config.json`` file located in the ``.aiida`` folder.
-  Typically located at ``~/.aiida`` (see also :ref:`configure_aiida`).
+  Typically located at ``~/.aiida`` (see also :ref:`intro:install:setup`).
 
 * files associated with nodes in the repository folder (one per profile). Typically located in the ``.aiida`` folder.
 
@@ -391,7 +444,7 @@ A few useful pointers:
 
 * In order to avoid having to enter your database password each time you use the script, you can create a file ``.pgpass`` in your home directory containing your database credentials, as described `in the PostgreSQL documentation <https://www.postgresql.org/docs/12/libpq-pgpass.html>`_.
 
-* In order to dump your database, use the `pg_dump utility from PostgreSQL <https://www.postgresql.org/docs/12/app-pgdump.html>`_. You can use as a starting example a bash script similar to :download:`this file <backup_postgresql.sh>`.
+* In order to dump your database, use the `pg_dump utility from PostgreSQL <https://www.postgresql.org/docs/12/app-pgdump.html>`_. You can use as a starting example a bash script similar to :download:`this file <include/backup_postgresql.sh>`.
 
 * You can setup the backup script to run daily using cron (see notes in the :ref:`previous section <how-to:installation:backup:repository>`).
 
@@ -404,7 +457,7 @@ In order to restore a backup, you will need to:
 
  1. Restore the repository folder that you backed up earlier in the same location as it used to be (you can check the location in the ``config.json`` file inside your ``.aiida`` folder, or simply using ``verdi profile show``).
 
- 2. Create an empty database following the instructions described in :ref:`database` skipping the ``verdi setup`` phase.
+ 2. Create an empty database following the instructions described in :ref:`database <intro:install:database>` skipping the ``verdi setup`` phase.
     The database should have the same name and database username as the original one (i.e. if you are restoring on the original postgresql cluster, you may have to either rename or delete the original database).
 
  3. Change directory to the folder containing the database dump created with ``pg_dump``, and load it using the ``psql`` command.
@@ -455,7 +508,7 @@ If you are unsure, just run the command ``ssh-add``: if it displays the error ``
 
     In order to use the same agent instance in every future opened shell, and most importantly to make this accessible to the AiiDA daemon, you need to make sure that the environment variables of ``ssh-agent`` are reused by *all* shells.
 
-    To make the ssh-agent persistent, downlod the script :download:`load-singlesshagent.sh <load-singlesshagent.sh>` and put it in a directory dedicated to the storage of your scripts (in our example will be ``~/bin``).
+    To make the ssh-agent persistent, downlod the script :download:`load-singlesshagent.sh <include/load-singlesshagent.sh>` and put it in a directory dedicated to the storage of your scripts (in our example will be ``~/bin``).
 
     .. note::
 
@@ -555,7 +608,7 @@ If you submit to a supercomputer shared by many users (e.g., in a supercomputer 
 Optimising the SLURM scheduler configuration
 --------------------------------------------
 
-If too many jobs are submitted at the same time to the queue, SLURM might have troubles in dealing with new submissions.
+If too many jobs are submitted at the same time to the queue, SLURM might have trouble in dealing with new submissions.
 If you are a cluster administrator, you might be interested in `some tips available in the AiiDA wiki <https://github.com/aiidateam/aiida-core/wiki/Optimising-the-SLURM-scheduler-configuration-(for-cluster-administrators)>`_, suggested by sysadmins at the Swiss Supercomputer Centre `CSCS <http://www.cscs.ch>`_ (or you can redirect your admin to this page if your cluster is experiencing slowness related to a large number of submitted jobs).
 
 .. _how-to:installation:multi-user:

@@ -33,6 +33,7 @@ We first load the database and required modules:
     from aiida.common import LinkType
     from aiida.orm.utils.links import LinkPair
     from aiida.tools.visualization import Graph, pstate_node_styles
+    from tests.utils.archives import get_archive_file
 
 The example provenance graph, used in this tutorial, can be downloaded :download:`from this link <graph1.aiida>` :fa:`download`
 

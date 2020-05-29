@@ -23,7 +23,7 @@ At the end of this tutorial you will know how to:
 .. important::
 
     If you are working on your own machine, note that the tutorial assumes that you have a working AiiDA installation, and have set up your AiiDA profile in the current Python environment.
-    If this is not the case, consult the :ref:`getting started page<intro/get_started>`.
+    If this is not the case, consult the :ref:`getting started page<intro:get_started>`.
 
 Provenance
 ==========
@@ -356,7 +356,7 @@ Once it is done, it will return a dictionary with the output nodes:
 
 .. code-block:: ipython
 
-    Out[6]:
+    Out[4]:
     {'sum': <Int: uuid: 7d5d781e-8f17-498a-b3d5-dbbd3488b935 (pk: 8) value: 11>,
     'remote_folder': <RemoteData: uuid: 888d654a-65fb-4da0-b3bc-d63f0374f274 (pk: 9)>,
     'retrieved': <FolderData: uuid: 4733aa78-2e2f-4aeb-8e09-c5cfb58553db (pk: 10s)>}
@@ -503,43 +503,58 @@ You can see the code below:
 
         from aiida.orm import Code, Int
         from aiida.engine import calcfunction, WorkChain, ToContext
+        from aiida.plugins.factories import CalculationFactory
+
+        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+
 
         @calcfunction
         def multiply(x, y):
             return x * y
 
+
         class MultiplyAddWorkChain(WorkChain):
-            """WorkChain to perform basic arithmetic for testing and demonstration purposes."""
+            """WorkChain to multiply two numbers and add a third, for testing and demonstration purposes."""
 
             @classmethod
             def define(cls, spec):
                 """Specify inputs and outputs."""
-                super(MultiplyAddWorkChain, cls).define(spec)
+                # yapf: disable
+                super().define(spec)
                 spec.input('x', valid_type=Int)
                 spec.input('y', valid_type=Int)
                 spec.input('z', valid_type=Int)
                 spec.input('code', valid_type=Code)
-                spec.outline(cls.multiply, cls.add, cls.result)
+                spec.outline(
+                    cls.multiply,
+                    cls.add,
+                    cls.validate_result,
+                    cls.result
+                )
                 spec.output('result', valid_type=Int)
+                spec.exit_code(400, 'ERROR_NEGATIVE_NUMBER', message='The result is a negative number.')
 
             def multiply(self):
                 """Multiply two integers."""
-                self.ctx.multiple = multiply(self.inputs.x, self.inputs.y)
+                self.ctx.product = multiply(self.inputs.x, self.inputs.y)
 
             def add(self):
-                """Add two numbers with the ArithmeticAddCalculation process."""
+                """Add two numbers using the `ArithmeticAddCalculation` calculation job plugin."""
+                inputs = {'x': self.ctx.product, 'y': self.inputs.z, 'code': self.inputs.code}
+                future = self.submit(ArithmeticAddCalculation, **inputs)
 
-                builder = self.inputs.code.get_builder()
+                return ToContext(addition=future)
 
-                builder.x = self.ctx.multiple
-                builder.y = self.inputs.z
+            def validate_result(self):  # pylint: disable=inconsistent-return-statements
+                """Make sure the result is not negative."""
+                result = self.ctx.addition.outputs.sum
 
-                future = self.submit(builder)
-
-                return ToContext({'addition': future})
+                if result.value < 0:
+                    return self.exit_codes.ERROR_NEGATIVE_NUMBER  # pylint: disable=no-member
 
             def result(self):
-                self.out('result', self.ctx['addition'].get_outgoing().get_node_by_label('sum'))
+                """Add the result to the outputs."""
+                self.out('result', self.ctx.addition.outputs.sum)
 
     First, we recognize the ``multiply`` function we have used earlier, decorated as a ``calcfunction``.
     The ``define`` class method specifies the ``input`` and ``output`` of the ``WorkChain``, as well as the ``outline``, which are the steps of the workflow.

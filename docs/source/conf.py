@@ -128,6 +128,7 @@ intersphinx_mapping = {
     'flask': ('http://flask.pocoo.org/docs/latest/', None),
     'flask_restful': ('https://flask-restful.readthedocs.io/en/latest/', None),
     'kiwipy': ('https://kiwipy.readthedocs.io/en/latest/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None),
     'plumpy': ('https://plumpy.readthedocs.io/en/latest/', None),
     'python': ('https://docs.python.org/3', None),
 }

@@ -640,7 +640,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             If you have a certain input or output data type, which you use often, then you may wish to turn it into its own :ref:`data plugin <how-to:data:plugin>`.
 
         Exploring your data
-            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <VisualizingGraphs>`.
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
 
         Sharing your data
             You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
@@ -672,7 +672,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
 
         Exploring your data
-            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <VisualizingGraphs>`.
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
 
         Sharing your data
             You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.

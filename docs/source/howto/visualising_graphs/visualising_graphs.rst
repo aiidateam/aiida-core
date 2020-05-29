@@ -1,10 +1,14 @@
 
 .. this document was created by ipypublish -f sphinx_ipypublish_all
 
-.. _VisualizingGraphs:
+.. _how-to:data:visualise-provenance:
 
-Visualizing Provenance Graphs
-=============================
+***************************
+How to visualize provenance
+***************************
+
+.. meta::
+   :keywords: graph,graphviz
 
 .. note::
 
@@ -28,16 +32,15 @@ We first load the database and required modules:
 
     from aiida.common import LinkType
     from aiida.orm.utils.links import LinkPair
-    from aiida.backends.tests.utils.archives import get_archive_file
     from aiida.tools.visualization import Graph, pstate_node_styles
 
-The example provenance graph, used in this tutorial, can then be
-imported into the database:
+The example provenance graph, used in this tutorial, can be downloaded :download:`from this link <graph1.aiida>` :fa:`download`
+
+It can then be imported into the database:
 
 .. code:: ipython
 
-    archive_path = get_archive_file('graph1.aiida', 'graphs')
-    !verdi import -n {archive_path}
+    !verdi import -n graph1.aiida
 
 .. code:: python
 

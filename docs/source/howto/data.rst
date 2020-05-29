@@ -935,12 +935,14 @@ Finally, you can also specify the ``Group`` subclasses (as discussed above):
 
 
 
-.. _how-to:data:share:
+.. todo::
 
-Sharing data
-============
+    .. _how-to:data:share:
 
-`#3998`_
+    Sharing data
+    ============
+
+    `#3998`_
 
 
 .. _how-to:data:delete:

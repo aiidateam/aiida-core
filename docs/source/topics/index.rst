@@ -10,7 +10,10 @@ Topics
    calculations/index
    workflows/index
    provenance/index
-   daemon
    database
-   repository
    plugins
+
+.. todo::
+
+    daemon  // after provenance
+    repository // after database

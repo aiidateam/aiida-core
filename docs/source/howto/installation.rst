@@ -218,12 +218,14 @@ the configuration directory ``~/project_a/.aiida`` will be used.
     If there was no ``.aiida`` directory in ``~/project_a``, AiiDA would have created it for you, so make sure to set the ``AIIDA_PATH`` correctly.
 
 
-.. _how-to:installation:plugins:
+.. todo::
 
-Installing plugins
-==================
+    .. _how-to:installation:plugins:
 
-`#4122`_
+    Installing plugins
+    ==================
+
+    `#4122`_
 
 
 .. _how-to:installation:performance:

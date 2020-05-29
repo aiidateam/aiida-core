@@ -263,12 +263,14 @@ To use these in the |parse| method, you just need to return the corresponding e
 You can see there is one for the case where no ``retrieve`` output was found (lines 4-7), another for the case of not being able to read the output file (outter ``try``/``except`` structure in lines 11-18), and finally one for when the result printed in the file is not a valid integer (inner ``try``/``except`` structure in lines 13-16).
 The Topics section on :ref:`defining processes <topics:processes:usage:defining>` provides additional information on how to use exit codes.
 
-.. _how-to:codes:computers:
+.. todo::
 
-Configuring remote computers
-============================
+    .. _how-to:codes:computers:
 
-`#4123`_
+    Configuring remote computers
+    ============================
+
+    `#4123`_
 
 .. _how-to:codes:run:
 
@@ -362,28 +364,30 @@ You can do so by specifying to use a ``dry_run``, which will create all the inpu
     calculation_builder.metadata.store_provenance = False
     run(calculation_builder)
 
-.. _how-to:codes:caching:
+.. todo::
 
-Using caching to save computational resources
-=============================================
+    .. _how-to:codes:caching:
 
-`#3988`_
+    Using caching to save computational resources
+    =============================================
 
-
-.. _how-to:codes:scheduler:
-
-Adding support for a custom scheduler
-=====================================
-
-`#3989`_
+    `#3988`_
 
 
-.. _how-to:codes:transport:
+    .. _how-to:codes:scheduler:
 
-Adding support for a custom transport
-=====================================
+    Adding support for a custom scheduler
+    =====================================
 
-`#3990`_
+    `#3989`_
+
+
+    .. _how-to:codes:transport:
+
+    Adding support for a custom transport
+    =====================================
+
+    `#3990`_
 
 
 .. |Int| replace:: :py:class:`~aiida.orm.nodes.data.int.Int`

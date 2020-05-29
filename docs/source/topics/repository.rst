@@ -1,10 +1,12 @@
-.. _topics:repository:
+.. todo::
 
-**********
-Repository
-**********
+    .. _topics:repository:
 
-`#4020`_
+    **********
+    Repository
+    **********
+
+    `#4020`_
 
 
 .. _#4020: https://github.com/aiidateam/aiida-core/issues/4020

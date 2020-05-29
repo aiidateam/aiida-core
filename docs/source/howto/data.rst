@@ -514,6 +514,276 @@ To learn about more advanced queries, please see :ref:`the corresponding topics 
 Organizing data
 ===============
 
+How to group nodes
+------------------
+
+AiiDA's database is great for automatically storing all your data, but sometimes it can be tricky to navigate this flat data store.
+To create some order in this mass of data, you can *group* sets of nodes together, just as you would with files in folders on your filesystem.
+A folder, in this analogy, is represented by the :py:class:`~aiida.orm.groups.group.Group` class.
+Each group instance can hold any amount of nodes and any node can be contained in any number of groups.
+A typical use case is to store all nodes that share a common property in a single group.
+
+Below we show how to perform a typical set of operations one may want to perform with groups.
+
+Create a new group
+^^^^^^^^^^^^^^^^^^
+
+From the command line interface:
+
+.. code-block:: console
+
+    $ verdi group create test_group
+
+From the Python interface:
+
+.. code-block:: ipython
+
+    In [1]: group = Group(label='test_group')
+
+    In [2]: group.store()
+    Out[2]: <Group: "test_group" [type core], of user xxx@xx.com>
+
+
+List available groups
+^^^^^^^^^^^^^^^^^^^^^
+
+Example:
+
+.. code-block:: console
+
+    $ verdi group list
+
+Groups come in different types, indicated by their type string.
+By default ``verdi group list`` only shows groups of the type *core*.
+In case you want to show groups of another type use ``-T/--type-string`` option.
+If you want to show groups of all types, use the ``-a/--all-types`` option.
+
+For example, to list groups of type ``core.auto``, use:
+
+.. code-block:: console
+
+    $ verdi group list -T core.auto
+
+Similarly, we can use the ``type_string`` key to filter groups with the ``QueryBuilder``:
+
+.. code-block:: ipython
+
+    In [1]: QueryBuilder().append(Group, filters={'type_string': 'core'}).all(flat=True)
+    Out[1]:
+    [<Group: "another_group" [type core], of user xxx@xx.com>,
+    <Group: "old_group" [type core], of user xxx@xx.com>,
+    <Group: "new_group" [type core], of user xxx@xx.com>]
+
+Add nodes to a group
+^^^^^^^^^^^^^^^^^^^^
+Once the ``test_group`` has been created, we can add nodes to it.
+For example, to add a node with ``pk=1`` to the group we could either use the command line interface:
+
+.. code-block:: console
+
+    $ verdi group add-nodes -G test_group 1
+    Do you really want to add 1 nodes to Group<test_group>? [y/N]: y
+
+Or the Python interface:
+
+.. code-block:: ipython
+
+    In [1]: group.add_nodes(load_node(pk=1))
+
+Show information about a group
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+From the command line interface:
+
+.. code-block:: console
+
+    $ verdi group show test_group
+
+    -----------------  ----------------
+    Group label        test_group
+    Group type_string  user
+    Group description  <no description>
+    -----------------  ----------------
+    # Nodes:
+    PK    Type    Created
+    ----  ------  ---------------
+     1    Code    26D:21h:45m ago
+
+Remove nodes from a group
+^^^^^^^^^^^^^^^^^^^^^^^^^
+From the command line interface:
+
+.. code-block:: console
+
+    $ verdi group remove-nodes -G test_group 1
+    Do you really want to remove 1 nodes from Group<test_group>? [y/N]: y
+
+From the Python interface:
+
+.. code-block:: ipython
+
+    In [1]: group = load_group(label='test_group')
+
+    In [2]: group.remove_nodes([load_node(1)])
+
+Alternatively, you might want to remove *all* nodes from the group.
+In the command line you just need to add ``-c/--clear`` option to ``verdi group remove-nodes ..``
+
+.. code-block:: console
+
+    $ verdi group remove-nodes -c -G test_group
+    Do you really want to remove ALL the nodes from Group<test_group>? [y/N]:
+
+In the Python interface you can use ``.clear()`` method to achieve the same goal:
+
+.. code-block:: ipython
+
+    In [1]: group = load_group(label='test_group')
+
+    In [2]: group.clear()
+
+
+Rename a group
+^^^^^^^^^^^^^^
+From the command line interface:
+
+.. code-block:: console
+
+      $ verdi group relabel test_group old_group
+      Success: Label changed to old_group
+
+From the Python interface:
+
+.. code-block:: ipython
+
+    In [1]: group = load_group(label='old_group')
+
+    In [2]: group.label = 'another_group'
+
+
+Delete a group
+^^^^^^^^^^^^^^
+From the command line interface:
+
+.. code-block:: console
+
+      $ verdi group delete another_group
+      Are you sure to delete Group<another_group>? [y/N]: y
+      Success: Group<another_group> deleted.
+
+.. important::
+    Any deletion operation related to groups won't affect the nodes themselves.
+    For example if you delete a group, the nodes that belonged to the group will remain in the database.
+    The same happens if you remove nodes from the group -- they will remain in the database but won't belong to the group anymore.
+
+Copy one group into another
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This operation will copy the nodes of the source group into the destination group.
+If the destination group does not yet exist, it will be created automatically.
+
+From the command line interface:
+
+.. code-block:: console
+
+    $ verdi group copy source_group dest_group
+    Success: Nodes copied from group<source_group> to group<dest_group>
+
+From the Python interface:
+
+.. code-block:: ipython
+
+    In [1]: src_group = Group.objects.get(label='source_group')
+
+    In [2]: dest_group = Group(label='destination_group').store()
+
+    In [3]: dest_group.add_nodes(list(src_group.nodes))
+
+
+Examples for using groups
+-------------------------
+
+In this section, we will provide some practical examples of how one can use Groups to structure and organize the nodes in the database.
+
+Group structures with a similar property
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Suppose, we wanted to group all structures for which the computed bandgap is higher than ``1.0 eV`` in a group named ``promising_structures``, one could use the following approach:
+
+.. code-block:: python
+
+    # Finding the structures with the bandgap > 1.0.
+    qb = QueryBuilder()
+    qb.append(StructureData,  tag='structure', project='*') # Here we are projecting the entire structure object
+    qb.append(CalcJobNode, with_incoming='structure', tag='calculation')
+    qb.append(Dict, with_incoming='calculation', filters={'attributes.bandgap': {'>': 1.0}})
+
+    # Adding the structures in 'promising_structures' group.
+    group = load_group(label='promising_structures')
+    group.add_nodes(q.all(flat=True))
+
+.. note::
+
+    Any node can be included in a group only once and if it is added again, it is simply ignored.
+    This means that add_nodes can be safely called multiple times, and only nodes that weren't already part of the group, will be added.
+
+
+Use grouped data for further processing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Here we demonstrate how to submit calculations for structures that all belong to a group named ``promising_structures``:
+
+.. code-block:: python
+
+    # Querying the structures that belong to the 'promising_structures' group.
+    qb = QueryBuilder()
+    qb.append(Group, filters={'label': 'promising_structures'}, tag='group')
+    qb.append(StructureData, with_group='group')
+
+    # Submitting the simulations.
+    for structure in qb.all(flat=True):
+        builder = SomeWorkChain.get_builder()
+        builder.structure = structure
+        ...
+        submit(builder)
+
+Note, however, that one can also use ``group.nodes`` to access the nodes of the group.
+To achieve the same result as above one would need to do something as follows:
+
+.. code-block:: python
+
+    group = load_group(label='promising_structures')
+
+    # Here make sure to include only structures, as group can contain any nodes.
+    structures = [s for s in group.nodes if isinstance(nodes, StructureData)]
+    for structure in structures:
+        builder = SomeWorkChain.get_builder()
+        builder.structure = structure
+        ...
+        submit(builder)
+
+
+To find all structures that have a property ``property_a`` with a value lower than ``1`` and also belong to the ``promising_structures`` group, one could build a query as follows:
+
+.. code-block:: python
+
+    qb = QueryBuilder()
+    qb.append(Group, filters={'label': 'promising_structures'}, tag='group')
+    qb.append(StructureData, with_group='group', tag='structure', project='*')
+    qb.append(SomeWorkChain, with_incoming='structure', tag='calculation')
+    qb.append(Dict, with_incoming='calculation', filters={'attributes.property_a': {'<': 1}})
+
+The return value of ``qb.all(flat=True)`` would contain all the structures matching the above mentioned criteria.
+
+Using groups for data exporting
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Groups can be very useful for selecting specific parts of the database for sharing.
+All data related to calculations that involved structures as part of the ``promising_structures`` group can be exported with a single command:
+
+.. code-block:: console
+
+    $ verdi export create export.aiida -G promising_structures
+
+Such an export operation would not only export the structures that are part of the group, but also the nodes linked to them, following the rules discussed in the :ref:`topics:provenance:consistency:traversal-rules` section.
 
 .. _how-to:data:organize:grouppath:
 
@@ -534,6 +804,7 @@ For example say we have the groups:
 .. code-block:: console
 
     $ verdi group list
+
     PK    Label                    Type string    User
     ----  -----------------        -------------  --------------
     1     base1/sub_group1         core           user@email.com
@@ -658,6 +929,8 @@ Finally, you can also specify the ``Group`` subclasses (as discussed above):
         Out[26]: True
         In [27]: GroupPath("a", cls=orm.UpfFamily).is_virtual
         Out[27]: False
+
+
 
 
 .. _how-to:data:share:

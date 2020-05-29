@@ -28,6 +28,7 @@ For this kind of recognition it doesn't matter which sub-graph was exported firs
 
 In the following section we will explain in more detail the criteria for including other nodes and the corresponding traversal rules.
 
+.. _topics:provenance:consistency:traversal-rules:
 
 Traversal Rules
 ===============

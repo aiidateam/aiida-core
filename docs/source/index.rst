@@ -1,9 +1,3 @@
-.. image:: images/AiiDA_transparent_logo.png
-    :width: 250px
-    :align: center
-    :alt: AiiDA logo
-    :class: mb-3
-
 #################################
 Welcome to AiiDA's documentation!
 #################################

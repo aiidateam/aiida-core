@@ -165,12 +165,12 @@ html_theme_options = {
     'external_links': [
         {'url': 'http://www.aiida.net/', 'name': 'AiiDA Home'}
     ],
-    'github_url': 'https://github.com/aiidateam/aiida_core',
+    'github_url': 'https://github.com/aiidateam/aiida-core',
     'use_edit_page_button': True,
 }
 html_context = {
     'github_user': 'aiidateam',
-    'github_repo': 'aiida_core',
+    'github_repo': 'aiida-core',
     'github_version': 'master',
     'doc_path': 'docs',
 }

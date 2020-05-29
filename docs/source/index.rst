@@ -103,6 +103,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
    Saw a typo in the documentation? Want to improve existing functionalities?
    The contributing guidelines are hosted on the `aiida-core wiki <https://github.com/aiidateam/aiida-core/wiki>`__ and will guide you through the process of improving AiiDA.
 
+
 .. toctree::
    :maxdepth: 2
    :caption: Getting Started
@@ -130,6 +131,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
    howto/data
    howto/installation
    howto/plugins
+   howto/faq
 
 .. toctree::
    :maxdepth: 1

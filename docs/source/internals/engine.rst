@@ -1,9 +1,11 @@
-.. _internal_architecture:engine:
+.. todo::
 
-******
-Engine
-******
+    .. _internal_architecture:engine:
 
-`#4038`_
+    ******
+    Engine
+    ******
+
+    `#4038`_
 
 .. _#4038: https://github.com/aiidateam/aiida-core/issues/4038

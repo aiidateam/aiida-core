@@ -384,14 +384,12 @@ Once the *required* inputs of the workflow have been provided to the builder, yo
     For more detail on the process builder, see the :ref:`corresponding topics section<topics:processes:usage:builder>`.
 
 
-.. _how-to:workflows:extend:
+.. todo::
 
-Extending workflows
-===================
+    .. _how-to:workflows:extend:
 
-`#3993`_
+    title: Extending workflows
 
+    `#3993`_
 
-.. _#3991: https://github.com/aiidateam/aiida-core/issues/3991
-.. _#3992: https://github.com/aiidateam/aiida-core/issues/3992
 .. _#3993: https://github.com/aiidateam/aiida-core/issues/3993

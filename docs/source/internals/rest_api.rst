@@ -1,9 +1,11 @@
-.. _internal_architecture:rest-api:
+.. todo::
 
-********
-REST API
-********
+    .. _internal_architecture:rest-api:
 
-`#4043`_
+    ********
+    REST API
+    ********
+
+    `#4043`_
 
 .. _#4043: https://github.com/aiidateam/aiida-core/issues/4043

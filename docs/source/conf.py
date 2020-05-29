@@ -36,6 +36,9 @@ if not os.environ.get('READTHEDOCS', None):
     import sphinx_rtd_theme
     html_theme = 'sphinx_rtd_theme'
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+html_theme_options = {
+    'collapse_navigation': False,
+}
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -294,9 +297,9 @@ def run_apidoc(_):
     env['SPHINX_APIDOC_OPTIONS'] = 'members,special-members,private-members,undoc-members,show-inheritance'
     subprocess.check_call([cmd_path] + options, env=env)
 
-def setup(app):
-    if os.environ.get('RUN_APIDOC', None) != 'False':
-        app.connect('builder-inited', run_apidoc)
+# def setup(app):
+#     if os.environ.get('RUN_APIDOC', None) != 'False':
+#         app.connect('builder-inited', run_apidoc)
 
 
 # -- Options for manual page output --------------------------------------------

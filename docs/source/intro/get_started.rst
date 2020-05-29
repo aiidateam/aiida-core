@@ -212,63 +212,11 @@ Any computations that are still running at this point, will be picked up next ti
 
     For more detailed instructions on configuring AiiDA, :ref:`see the configuration how-to <how-to:installation:configure>`.
 
-Next Steps
-==========
+What Next?
+----------
 
-If you are new to AiiDA, go through the :ref:`Basic Tutorial <tutorial:basic>`.
-We have also compiled useful how-to guides that are especially relevant for the following use cases:
-
-.. div:: dropdown-group
-
-    .. dropdown:: Run pure Python lightweight computations
-        :container:
-
-        Designing a workflow
-            After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`multi-step workflows how-to <how-to:workflows>`.
-
-        Reusable data types
-            If you have a certain input or output data type, which you use often, then you may wish to turn it into its own :ref:`data plugin <how-to:data:plugin>`.
-
-        Exploring your data
-            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <VisualizingGraphs>`.
-
-        Sharing your data
-            You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
-
-        Sharing your workflows
-            Once you have a working computation workflow, you may also wish to :ref:`package it into a python module <how-to:plugins>` for others to use.
-
-    .. dropdown:: Run compute-intensive codes
-        :container:
-
-        Working with external codes
-            Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
-            If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
-
-        Tuning performance
-            To optimise the performance of AiiDA for running many concurrent computations see the :ref:`tuning performance how-to <how-to:installation:performance>`.
-
-        Saving computational resources
-            AiiDA can cache and reuse the outputs of identical computations, as described in the :ref:`caching how-to <how-to:codes:caching>`.
-
-    .. dropdown:: Run computations on High Performance Computers
-
-        Connecting to supercomputers
-            To setup up a computer which can communicate with a HPC over SSH, see the :ref:`running on supercomputers how-to <how-to:installation:running-on-supercomputers>`, or add a :ref:`custom transport <how-to:codes:transport>`.
-            AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque, or you can add a :ref:`custom scheduler <how-to:codes:scheduler>`.
-
-        Working with external codes
-            Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
-            If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
-
-        Exploring your data
-            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <VisualizingGraphs>`.
-
-        Sharing your data
-            You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
-
-        Sharing your calculation plugin
-            Once you have a working plugin, you may also wish to :ref:`package it into a python module <how-to:plugins>` for others to use.
+If you are new to AiiDA, go through the :ref:`Basic Tutorial <tutorial:basic>`,
+or see our :ref:`Next steps guide <tutorial:next-steps>`.
 
 .. |PostgreSQL| replace:: `PostgreSQL <https://www.postgresql.org>`__
 .. |RabbitMQ| replace:: `RabbitMQ <https://www.rabbitmq.com>`__

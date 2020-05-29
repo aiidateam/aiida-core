@@ -1,3 +1,10 @@
+/* Fix CSS of top bar link icons */
+a.nav-link.nav-external i {
+    padding-left: 0.3em !important;
+    font-size: inherit !important;
+    vertical-align: inherit !important;
+}
+
 /* For icon unicodes see https://fontawesome.com/v4.7.0/icons/  */
 .title-icon-rocket .admonition-title:before {
     margin-right:.5rem;

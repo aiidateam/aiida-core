@@ -32,7 +32,7 @@ Some general guidelines to keep in mind are:
      #. store in the file repository for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
      #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.nodes.data.remote.RemoteData`, ...)
 
-As the underlying example for these we will use the process of using the `bash` interpreter (``/bin/bash``) to add up two numbers by running the command: ``echo $(( numx + numy ))``.
+To demonstrate how to create a plugin for an external code, we will use the trivial example of using the `bash` shell (``/bin/bash``) to sum two numbers by running the command: ``echo $(( numx + numy ))``.
 Here, the `bash` binary will be effectively acting as our |Code| executable, the input (``aiida.in``) will then be a file containing the command with the numbers provided by the user replaced, and the output (``aiida.out``) will be caught through the standard output.
 The final recipe to run this code will then be:
 
@@ -45,7 +45,7 @@ The final recipe to run this code will then be:
 Interfacing external codes
 ==========================
 
-The way you provide AiiDA with the set of instructions required to run a code is by extending the |CalcJob| class, which has the following two key methods:
+To provide AiiDA with the set of instructions, required to run a code, one should implement the |CalcJob| class, which has the following two key methods:
 
 .. code-block:: python
 
@@ -64,13 +64,13 @@ The way you provide AiiDA with the set of instructions required to run a code is
             # Preparation of input files and instructions for engine
             return calcinfo
 
-We will now indicate how to deal with each of them separatedly.
+We will now show how each of these can be implemented.
 
 Defining the specifications
 ---------------------------
 
 As the comment in the code above indicates, the first method (|define|) is where one specifies the different inputs that the user of the |CalcJob| will have to provide in order to run the code, as well as the outputs that will be produced (exit codes are discussed in the respective section).
-This is done through the |spec| object, which, as can be seen, is passed as an input to the method.
+This is done through the |spec| object, which, as can be seen, is passed as an argument to the method.
 For the code that adds up two numbers, we will need to define those numbers as inputs (lets call them ``x`` and ``y`` to label them) and the result as an output (``sum``).
 
 .. code-block:: python
@@ -88,19 +88,19 @@ For the code that adds up two numbers, we will need to define those numbers as i
         spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
         spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
 
-The first line after the import just runs the |define| method of the parent base |CalcJob| class, which will do some set-ups and define some basic `inputs` and `outputs` (we will see some of them shortly).
-The second "block of code" (lines 6-8), is where we are defining the specific inputs and outputs for the code, specifying their valid type (in this case AiiDA nodes of type |Int|) and a help message for the users of the class.
+The first line after the import just runs the |define| method of the parent base |CalcJob| class, which will define `inputs` and `outputs` that are common to all |CalcJob|'s (we will see some of them shortly).
+The second "block of code" (lines 6-8), is where we define the inputs and outputs that are specific to this implementation, specifying their valid type (in this case AiiDA nodes of type |Int|) and a description.
 
 The last block (lines 10+11) seems similar to the previous one, but has a subtle difference: it is not defining new `inputs`, but modifying some properties of the base `inputs` that are already defined in the parent |CalcJob| class.
-You can spot the difference in that the definition of new `inputs` uses the ``spec.input`` method, singular, whereas accessing is achieved via the ``spec.inputs`` method, plural.
+You can spot the difference in that the definition of new `inputs` uses the ``spec.input`` method (note `input` is singular here), whereas existing inputs are accessed through the ``spec.inputs`` property (where `inputs` is now plural).
 
-You can check the Topics section about :ref:`defining processes <topics:processes:usage:defining>` if you want more information about setting up your `inputs` and `outputs` (covering validation, dynamic number of inputs, etc).
+You can check the Topics section about :ref:`defining processes <topics:processes:usage:defining>` if you want more information about setting up your `inputs` and `outputs` (covering validation, dynamic number of inputs, etc.).
 
 Preparing for submission
 ------------------------
 
-There are two main tasks to take care of in this method: preparing the folder in which the code will be run (so that all required input files are correctly built or copied there) and setting up the configuration of the engine.
-The first one is achieved by manipulating the |Folder| object that the method receives as an input, whereas the second one requires the construction of the |CalcInfo| object (which is then returned by the method) and the |CodeInfo| object (which will be included in the |CalcInfo| one, see line 18 in the following code snippet).
+There are two main tasks to take care of in this method: writing the required input files into a folder in which the code will be run and defining additional options on how the code should be run.
+The first one is achieved by using the |Folder| object that the method receives as an argument, whereas the second one requires the construction of a |CalcInfo| object, which should be returned by the method.
 
 .. code-block:: python
    :linenos:
@@ -127,15 +127,15 @@ The first one is achieved by manipulating the |Folder| object that the method re
 
         return calcinfo
 
-The first block of code (lines 3-7) is just the unloading of the information stored in the ``spec`` into local variables.
+The first block of code (lines 3-7) is just unpacking the inputs that have been passed, which can be accessed through ``self.inputs``, into local variables.
 Note that this information is not accessed via the ``spec.inputs`` anymore, but by ``self.inputs``: by the time this method is executed the specs will have become properties of the |CalcJob| and now should contain the actual inputs provided by the user.
 
 The input required by the addition "code" is just a `bashscript` line with the value of the input nodes replaced appropriately.
-This is being created on line 9, using the |folder.open| method to get a handle to the file and simply wirting in it.
+This is being created on line 9, using the |folder.open| method to get a handle to the file and simply writing in it.
 This directory represented by the |Folder| object (along with all the files created in it) will not only be copied to the remote machine for the code to be run there, but will also be stored in the local repository of the calculation node.
 
 Next in lines 12-15 we are creating and setting up the ``codeinfo = CodeInfo()`` object.
-The ``code_uuid`` being passed in line 13 is necessary for the engine to get the base information from the |Code| node (in which computer the code is placed, what is the location of the executable, etc).
+The ``code_uuid`` that is passed in line 13 is necessary for the engine to get the required information from the |Code| node (such as the full path of the executable, etc.).
 Note that this was taken in the unloading block from ``input_code = self.inputs['code']``, which we never specified in the |define| method: this is one of the inputs defined in the base |CalcJob| class that we mentioned earlier when discussing the ``super().define(spec)``:
 
 .. code-block:: python
@@ -157,8 +157,8 @@ The specific combination presented here, together with the information inside of
 Through the |CodeInfo| object you can also pass more flags (by adding them as string elements to the list in ``codeinfo.cmdline_params``), configure what to pass through the standard input (just as it is shown for the standard output), add commands to be run before and after the execution line, etc.
 
 Finally, the last block remaining in lines 17-19 creates the |CalcInfo| object, passes to it the |CodeInfo| object, and adds the output to the ``retrieve_list``.
-This is a list of all files that the engine needs to copy back from the computer where the code is located, either for immediate parsing or local storage in an output node labeled ``retrieved`` for future post-processing.
-The ``retrieved`` node is a ``output`` defined in the base |CalcJob| class.
+This is a list of all files that the code will produce that the engine should copy from the computer where the code ran into an output node labeled ``retrieved``.
+The ``retrieved`` node is an ``output`` defined in the base |CalcJob| class.
 There are other lists available that allow you to easily customize how to move files to and from the remote working directory in order to prevent the creation of unnecessary copies.
 
 In the Topics section on :ref:`defining calculations <topics:calculations:usage>` you will find more information on available settings of the |CalcInfo| and |CodeInfo|, such as available copy lists, running script options, etc.
@@ -170,7 +170,7 @@ Parsing the outputs
 
 The parsing step occurs after the calculation has finished running and all the relevant outputs have been retrieved.
 It is an optional step that allows you to extract relevant information from the output files and store it into AiiDA nodes in formats that are easier and quicker to query and analyze.
-The way to implement this is by extending the base |Parser| class as you can see below:
+To parse retrieved files into nodes that can be stored in the database, one should implement the |Parser| class:
 
 .. code-block:: python
    :linenos:
@@ -183,22 +183,21 @@ The way to implement this is by extending the base |Parser| class as you can see
         def parse(self, **kwargs):
 
             output_folder = self.retrieved
-            output_filename = self.node.get_attribute('output_filename')
+            output_filename = self.node.get_option('output_filename')
 
             with output_folder.open(output_filename, 'r') as handle:
                 result = int(handle.read())
 
             self.out('sum', orm.Int(result))
 
-The first command in the example (line 8) shows the way to get the ``retrieve`` folder that was generated by the associated |CalcJob| and that, by this point, should contain the files included in the ``retrieve_list`` (as specified in the |prepare_for_submission| method).
-The second one (line 9) is also accessing a parameter of the |CalcJob|: in this case, the name of the output.
-After unloading this information into local variables, these are then used to open said output file located in the obtained retrieved folder and read the single integer value that was written there by the addition |Code| (lines 11 and 12).
+The first command in the example (line 8) shows how to get the ``retrieved`` folder that was generated by the associated |CalcJob|, which contains the files included in the ``retrieve_list`` (as specified in the |prepare_for_submission| method).
+The second one (line 9) retrieves the name of the output file that was defined in the inputs when the |CalcJob| was launched.
+Lines 11 and 12 show how the content of the output file in the output folder is read, which should be the sum as written by the code, and cast to an integer.
 
-Finally, it uses the ``out`` method to provide the ``sum`` output of the calculation its final value (of type AiiDA integer, as was specified in the |define| section of the associated |CalcJob|).
-It is important to note here that there is no return statement: the output is provided to the ``self.out`` method instead (any returned value is interpreted as an error signal) as an unstored node, and the engine will be in charge of performing the storing process.
+Finally, the parsed sum is wrapped into an |Int| node, which allows it to be registered as the ``sum`` output through the ``out`` method.
 
-In order to use this ``ArithmeticAddParser`` inside an appropriate |CalcJob| (such as the one described in the :ref:`previous section <how-to:codes:interfacing>`), one needs to add it as a ``metadata.options.parser_name`` input.
-You can set a parser as the default option in the |define| method, but note that this choice can be overriden when instantiating the |CalcJob|.
+To trigger the parsing using a |Parser| after a |CalcJob| has finished (such as the one described in the :ref:`previous section <how-to:codes:interfacing>`) its entry point name needs to be passed as the ``metadata.options.parser_name`` input.
+If a particular parser should always be used by default for a given |CalcJob|, it can be defined as the default in the |define| method.
 
 .. code-block:: python
 
@@ -206,15 +205,22 @@ You can set a parser as the default option in the |define| method, but note that
     def define(cls, spec):
         (...)
         spec.inputs['metadata']['options']['parser_name'].default = 'arithmetic.add'
-
-As can be seen in the previous line, the way to do this is not by passing the |Parser| class directly, but by providing the string label that identifies the |Parser| as a registered plugin in your working environment.
+Note that this default can be overridden through the inputs when launching the calculation job.
+To define the parser that should be used, one should not pass the |Parser| class itself, but rather the corresponding entry point name under which it is registered as a plugin.
 In other words, in order to use a |Parser| you will need to register it as explained in the following how-to section on :ref:`registering plugins <how-to:plugins>`.
 
 Handling parsing errors
 -----------------------
 
-In order for you to be able to provide the user with information regarding the errors that can ocur after the calculation has finished (so, mostly during parsing), you have the option of defining ``exit_codes`` for cases when something goes wrong.
-The typical way to implement these is to use ``try``/``except`` clauses to wrap the lines of code that might raise some typical errors, that can then be replaced by these ``exit_codes``:
+So far we have assumed in the implementation of the |Parser| that the code executed nominally and produced the correct output.
+For this trivial example this is likely the case, but for many codes there can be a variety of errors that prevent it from producing the desired result.
+These exit codes can be defined through the |spec| of the |CalcJob| that is used for that code, just as the inputs and output are defined
+The parser can be used to detect these problems and communicate them to the caller by returning an `exit code`.
+An `exit code` is a positive integer that corresponds to a particular known and well-defined error mode of a code.
+To signal a particular problem, you should just return the corresponding exit code.
+These can be easily referenced in the parser through the ``self.exit_codes`` property.
+For example, if the |CalcJob| defines an exit code with the label ``ERROR_READING_OUTPUT_FILE``, you can retrieve it as ``self.exit_codes.ERROR_READING_OUTPUT_FILE``.
+If an exit code is returned from the parser, the engine will set it on the corresponding calculation job node.
 
 .. code-block:: python
    :linenos:
@@ -227,19 +233,17 @@ The typical way to implement these is to use ``try``/``except`` clauses to wrap 
         except exceptions.NotExistent:
             return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
-        output_filename = self.node.get_attribute('output_filename')
+        output_filename = self.node.get_option('output_filename')
 
         try:
             with output_folder.open(output_filename, 'r') as handle:
                 try:
                     result = int(handle.read())
                 except ValueError:
-                    result = None
-        except (OSError, IOError):
+                    return self.exit_codes.ERROR_INVALID_OUTPUT
+        except OSError:
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
 
-        if result is None:
-            return self.exit_codes.ERROR_INVALID_OUTPUT
 
         self.out('sum', orm.Int(result))
 
@@ -255,8 +259,8 @@ You then have to introduce all of these `exit_codes` inside of the |define| meth
         spec.exit_code(310, 'ERROR_READING_OUTPUT_FILE', message='The output file could not be read from the retrieved folder.')
         spec.exit_code(320, 'ERROR_INVALID_OUTPUT', message='The output file contains invalid output.')
 
-As you can see, for each ``exit_code`` you need to provide an ID number that will be used to identify it, a label you can then use to reference the code in the |parse| method (``self.exit_codes.LABEL``), and a message that will give the user more information on the problem.
-The Topics section on :ref:`defining processes <topics:processes:usage:defining>` also contains more information on how to use exit codes.
+As you can see, for each ``exit_code`` you need to provide a exit status (which should be a positive integer), a label that can be used to reference the code in the |parse| method (``self.exit_codes.LABEL``), and a message that provides a more detailed information on the problem.
+The Topics section on :ref:`defining processes <topics:processes:usage:defining>` provides additional information on how to use exit codes.
 
 Design guidelines
 -----------------

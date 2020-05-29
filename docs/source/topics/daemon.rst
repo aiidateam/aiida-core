@@ -1,10 +1,12 @@
-.. _topics:daemon:
+.. todo::
 
-******
-Daemon
-******
+    .. _topics:daemon:
 
-`#4016`_
+    ******
+    Daemon
+    ******
+
+    `#4016`_
 
 
 .. _#4016: https://github.com/aiidateam/aiida-core/issues/4016

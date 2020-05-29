@@ -50,7 +50,7 @@ extensions = [
 ]
 ipython_mplbackend = ''
 
-todo_include_todos = True
+todo_include_todos = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -92,15 +92,22 @@ author = 'The AiiDA team.'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = [
-        'datatypes/**',
-        'developer_guide/**',
-        'get_started/**',
-        'howto/installation_more/index.rst',
-        'import_export/**',
-        'restapi/**',
-        'scheduler/index.rst',
-        'working_with_aiida/**',
-    ]
+    'datatypes/**',
+    'developer_guide/**',
+    'get_started/**',
+    'howto/installation_more/index.rst',
+    'import_export/**',
+    'internals/data_storage.rst',
+    'internals/engine.rst',
+    'internals/global_design.rst',
+    'internals/orm.rst',
+    'internals/rest_api.rst',
+    'restapi/**',
+    'scheduler/index.rst',
+    'topics/daemon.rst',
+    'topics/repository.rst',
+    'working_with_aiida/**',
+]
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None

@@ -4,7 +4,9 @@
 Database
 ********
 
-.. _#4019: https://github.com/aiidateam/aiida-core/issues/4019
+.. todo::
+
+    .. _#4019: https://github.com/aiidateam/aiida-core/issues/4019
 
 .. _topics:database:advancedquery:
 

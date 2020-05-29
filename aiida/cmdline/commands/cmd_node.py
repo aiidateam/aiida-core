@@ -41,12 +41,18 @@ def verdi_node_repo():
 @with_dbenv()
 def repo_cat(node, relative_path):
     """Output the content of a file in the node repository folder."""
+    from shutil import copyfileobj
+    import sys
+    import errno
+
     try:
-        content = node.get_object_content(relative_path)
-    except Exception as exception:  # pylint: disable=broad-except
-        echo.echo_critical('failed to get the content of file `{}`: {}'.format(relative_path, exception))
-    else:
-        echo.echo(content)
+        with node.open(relative_path, mode='rb') as fhandle:
+            copyfileobj(fhandle, sys.stdout.buffer)
+    except OSError as exception:
+        # The sepcial case is breakon pipe error, which is usually OK.
+        if exception.errno != errno.EPIPE:
+            # Incorrect path or file not readable
+            echo.echo_critical('failed to get the content of file `{}`: {}'.format(relative_path, exception))
 
 
 @verdi_node_repo.command('ls')

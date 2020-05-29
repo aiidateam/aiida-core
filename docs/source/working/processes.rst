@@ -326,7 +326,7 @@ All functions have the exact same interface ``launch(process, **inputs)`` where:
     * ``inputs`` are the inputs as keyword arguments to pass to the process.
 
 What inputs can be passed depends on the exact process class that is to be launched.
-For example, when we want to run an instance of the :py:class:`~aiida.calculations.plugins.arithmetic.add.ArithmeticAddCalculation` process, which takes two :py:class:`~aiida.orm.nodes.data.int.Int` nodes as inputs under the name ``x`` and ``y`` [#f1]_, we would do the following:
+For example, when we want to run an instance of the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` process, which takes two :py:class:`~aiida.orm.nodes.data.int.Int` nodes as inputs under the name ``x`` and ``y`` [#f1]_, we would do the following:
 
 .. include:: include/snippets/processes/launch/launch_submit.py
     :code: python
@@ -381,7 +381,7 @@ To know then what inputs they take, one would have to read the implementation, w
 To simplify this process, these two process classes provide a utility called the 'process builder'.
 The process builder is essentially a tool that helps you build the inputs for the specific process class that you want to run.
 To get a *builder* for a particular ``CalcJob`` or a ``WorkChain`` implementation, all you need is the class itself, which can be loaded through the :py:class:`~aiida.plugins.factories.CalculationFactory` and :py:class:`~aiida.plugins.factories.WorkflowFactory`, respectively.
-Let's take the :py:class:`~aiida.calculations.plugins.arithmetic.add.ArithmeticAddCalculation` as an example::
+Let's take the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` as an example::
 
     ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
     builder = ArithmeticAddCalculation.get_builder()
@@ -690,4 +690,4 @@ If you know that your daemon runners may be experiencing a heavy load, you can a
 
 .. rubric:: Footnotes
 
-.. [#f1] Note that the :py:class:`~aiida.calculations.plugins.arithmetic.add.ArithmeticAddCalculation` process class also takes a ``code`` as input, but that has been omitted for the purposes of the example.
+.. [#f1] Note that the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` process class also takes a ``code`` as input, but that has been omitted for the purposes of the example.

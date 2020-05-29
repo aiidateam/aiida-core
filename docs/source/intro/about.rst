@@ -17,4 +17,4 @@ AiiDA's primary features include:
 *  **Open Science:** Export subsets of your provenance graph and share them with peers or make them available online for everyone on the `Materials Cloud <https://www.materialscloud.org>`__.
 *  **Open source:** AiiDA is released under the `MIT open source license <LICENSE.txt>`__
 
-See also the `AiiDA testimonials <http://www.aiida.net/testimonials/>`__ and `AiiDA publications http://www.aiida.net/science/>`__ pages.
+See also the `AiiDA testimonials <http://www.aiida.net/testimonials/>`__ and `AiiDA publications <http://www.aiida.net/science/>`__ pages.

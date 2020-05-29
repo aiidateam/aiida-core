@@ -164,7 +164,7 @@ You might then wonder what the meaning is of a ``valid_type`` or ``default`` for
 The answer to this question lies in the ``PortNamespace`` attribute ``dynamic``.
 
 Often when designing the specification of a ``Process``, we cannot know exactly which inputs we want to be able to pass to the process.
-However, with the concept of the ``InputPort`` and ``OutputPort`` one *does* need to know exactly, how many value one expects at least, as they do have to be defined.
+However, with the concept of the ``InputPort`` and ``OutputPort`` one *does* need to know exactly, how many values one expects at least, as they do have to be defined.
 This is where the ``dynamic`` attribute of the ``PortNamespace`` comes in.
 By default this is set to ``False``, but by setting it to ``True``, one indicates that that namespace can take a number of values that is unknown at the time of definition of the specification.
 This now explains the meaning of the ``valid_type``, ``validator`` and ``default`` attributes in the context of the ``PortNamespace``.
@@ -185,7 +185,7 @@ However, there are cases where you might want to pass an input to a process, who
     There are legitimate reasons to break it regardless, but make sure you think about the implications and whether you are really willing to lose the information.
 
 For this situation, the ``InputPort`` has the attribute ``non_db``.
-By default this is set to ``False``, but by setting it to ``True`` the port is marked that the values that are passed to it should not be stored as a node in the provenance graph and linked to the process node.
+By default this is set to ``False``, but by setting it to ``True`` we can indicate that the values that are passed to the port should not be stored as a node in the provenance graph and linked to the process node.
 This allows one to pass any normal value that one would also be able to pass to a normal function.
 
 
@@ -203,12 +203,12 @@ For ``non_db`` inputs, the function must be idempotent because it might be appli
 
 The following example work chain takes three inputs ``a``, ``b``, ``c``, and simply returns the given inputs. The :func:`aiida.orm.nodes.data.base.to_aiida_type` function is used as serialization function.
 
-.. include:: include/snippets/workflows/workchains/workchain_serialize.py
+.. include:: include/snippets/serialize/workchain_serialize.py
     :code: python
 
-This work chain can now be called with native Python types, which will automatically converted to AiiDA types by the :func:`aiida.orm.nodes.data.base.to_aiida_type` function. Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`aiida.orm.nodes.data.base.to_aiida_type`.
+This work chain can now be called with native Python types, which will automatically be converted to AiiDA types by the :func:`aiida.orm.nodes.data.base.to_aiida_type` function. Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`aiida.orm.nodes.data.base.to_aiida_type`.
 
-.. include:: include/snippets/workflows/workchains/run_workchain_serialize.py
+.. include:: include/snippets/serialize/run_workchain_serialize.py
     :code: python
 
 Of course, you can also use the serialization feature to perform a more complex serialization of the inputs.
@@ -247,8 +247,8 @@ Assume for example that we ran a ``Process`` that threw the exit code described 
     out[2] 'the process had an identity crisis'
 
 This is useful, because the caller can now programmatically, based on the ``exit_status``, decide how to proceed.
-This is an infinitely more robust way of communcating specific errors to a non-human then parsing text based logs or reports.
-Additionally, The exit codes make it also very easy to query for failed processes with specific error codes.
+This is an infinitely more robust way of communicating specific errors to a non-human than parsing text-based logs or reports.
+Additionally, the exit codes make it very easy to query for failed processes with specific error codes.
 
 
 .. _topics:processes:usage:exit_code_conventions:
@@ -274,7 +274,7 @@ For any other exit codes, one can use the integers from 400 and up.
 Process metadata
 ----------------
 
-Each process, in addition to the normal inputs defined through its process specifcation, can take optional 'metadata'.
+Each process, in addition to the normal inputs defined through its process specification, can take optional 'metadata'.
 These metadata differ from inputs in the sense that they are not nodes that will show up as inputs in the provenance graph of the executed process.
 Rather, these are inputs that slightly modify the behavior of the process or allow to set attributes on the process node that represents its execution.
 The following metadata inputs are available for *all* process classes:
@@ -324,7 +324,7 @@ All functions have the exact same interface ``launch(process, **inputs)`` where:
 What inputs can be passed depends on the exact process class that is to be launched.
 For example, when we want to run an instance of the :py:class:`~aiida.calculations.plugins.arithmetic.add.ArithmeticAddCalculation` process, which takes two :py:class:`~aiida.orm.nodes.data.int.Int` nodes as inputs under the name ``x`` and ``y`` [#f1]_, we would do the following:
 
-.. include:: include/snippets/processes/launch/launch_submit.py
+.. include:: include/snippets/launch/launch_submit.py
     :code: python
 
 The function will submit the calculation to the daemon and immediately return control to the interpreter, returning the node that is used to represent the process in the provenance graph.
@@ -334,26 +334,26 @@ The function will submit the calculation to the daemon and immediately return co
 
 The ``run`` function is called identically:
 
-.. include:: include/snippets/processes/launch/launch_run.py
+.. include:: include/snippets/launch/launch_run.py
     :code: python
 
 except that it does not submit the process to the daemon, but executes it in the current interpreter, blocking it until the process is terminated.
 The return value of the ``run`` function is also **not** the node that represents the executed process, but the results returned by the process, which is a dictionary of the nodes that were produced as outputs.
 If you would still like to have the process node or the pk of the process node you can use one of the following variants:
 
-.. include:: include/snippets/processes/launch/launch_run_alternative.py
+.. include:: include/snippets/launch/launch_run_alternative.py
     :code: python
 
 Finally, the :py:func:`~aiida.engine.launch.run` launcher has two attributes ``get_node`` and ``get_pk`` that are simple proxies to the :py:func:`~aiida.engine.launch.run_get_node` and :py:func:`~aiida.engine.launch.run_get_pk` methods.
 This is a handy shortcut, as now you can choose to use any of the three variants with just a single import:
 
-.. include:: include/snippets/processes/launch/launch_run_shortcut.py
+.. include:: include/snippets/launch/launch_run_shortcut.py
     :code: python
 
 If you want to launch a process class that takes a lot more inputs, often it is useful to define them in a dictionary and use the python syntax ``**`` that automatically expands it into keyword argument and value pairs.
 The examples used above would look like the following:
 
-.. include:: include/snippets/processes/launch/launch_submit_dictionary.py
+.. include:: include/snippets/launch/launch_submit_dictionary.py
     :code: python
 
 Process functions, i.e. :ref:`calculation functions<topics:calculations:concepts:calcfunctions>` and :ref:`work functions<topics:workflows:concepts:workfunctions>`, can be launched like any other process as explained above, with the only exception that they **cannot be submitted**.
@@ -364,7 +364,7 @@ In addition to this limitation, process functions have two additional methods of
 
 Using a calculation function to add two numbers as an example, these two methods look like the following:
 
-.. include:: include/snippets/processes/launch/launch_process_function.py
+.. include:: include/snippets/launch/launch_process_function.py
     :code: python
 
 
@@ -373,7 +373,7 @@ Using a calculation function to add two numbers as an example, these two methods
 Process builder
 ---------------
 As explained in a :ref:`previous section<topics:processes:usage:spec>`, the inputs for a :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` and :py:class:`~aiida.engine.processes.workchains.workchain.WorkChain` are defined in the :py:meth:`~aiida.engine.processes.process.Process.define` method.
-To know then what inputs they take, one would have to read the implementation, which can be annoying if you are not a developer.
+To know what inputs they take, one would have to read the implementation, which can be annoying if you are not a developer.
 To simplify this process, these two process classes provide a utility called the 'process builder'.
 The process builder is essentially a tool that helps you build the inputs for the specific process class that you want to run.
 To get a *builder* for a particular ``CalcJob`` or a ``WorkChain`` implementation, all you need is the class itself, which can be loaded through the :py:class:`~aiida.plugins.factories.CalculationFactory` and :py:class:`~aiida.plugins.factories.WorkflowFactory`, respectively.
@@ -435,7 +435,7 @@ All that remains is to fill in all the required inputs and we are ready to launc
 When all the inputs have been defined for the builder, it can be used to actually launch the ``Process``.
 The process can be launched by passing the builder to any of the free functions :py:mod:`~aiida.engine.launch` module, just as you would do a normal process as :ref:`described above<topics:processes:usage:launching>`, i.e.:
 
-.. include:: include/snippets/processes/launch/launch_builder.py
+.. include:: include/snippets/launch/launch_builder.py
     :code: python
 
 Note that the process builder is in principle designed to be used in an interactive shell, as there is where the tab-completion and automatic input documentation really shines.
@@ -547,7 +547,7 @@ In general they can be very useful for a user to understand what has happened du
 verdi process status
 --------------------
 This command is most useful for ``WorkChain`` instances, but also works for ``CalcJobs``.
-One of the more powerful aspect of work chains, is that they can call ``CalcJobs`` and other ``WorkChains`` to create a nested call hierarchy.
+One of the more powerful aspects of work chains, is that they can call ``CalcJobs`` and other ``WorkChains`` to create a nested call hierarchy.
 If you want to inspect the status of a work chain and all the children that it called, ``verdi process status`` is the go-to tool.
 An example output is the following:
 
@@ -634,7 +634,7 @@ The first pauses a process temporarily, the second resumes any paused processes 
 The sub command names might seem to tell you this already and it might look like that is all there is to know, but the functionality underneath is quite complicated and deserves additional explanation nonetheless.
 
 As the section on :ref:`the distinction between the process and the node<topics:processes:concepts:node_distinction>` explained, manipulating a process means interacting with the live process instance that lives in the memory of the runner that is running it.
-By definition, these runners will always run in a different system process then the one from which you want to interact, because otherwise, you would *be* the runner, given that there can only be a single runner in an interpreter and if it is running, the interpreter would be blocked from performing any other operations.
+By definition, these runners will always run in a different system process than the one from which you want to interact, because otherwise, you would *be* the runner, given that there can only be a single runner in an interpreter and if it is running, the interpreter would be blocked from performing any other operations.
 This means that in order to interact with the live process, one has to interact with another interpreter running in a different system process.
 This is once again facilitated by the RabbitMQ message broker.
 When a runner starts to run a process, it will also add listeners for incoming messages that are being sent for that specific process over RabbitMQ.
@@ -659,8 +659,7 @@ Whenever a process is unreachable for an RPC, the command will return an error:
 Depending on the cause of the process being unreachable, the problem may resolve itself automatically over time and one can try again at a later time, as for example in the case of the runner being too busy to respond.
 However, to prevent this from happening, the runner has been designed to have the communication happen over a separate thread and to schedule callbacks for any necessary actions on the main thread, which performs all the heavy lifting.
 This should make occurrences of the runner being too busy to respond very rare.
-If you think the
-The problem is, however, there is unfortunately no way of telling what the actual problem is for the process not being reachable.
+However, there is unfortunately no way of telling what the actual problem is for the process not being reachable.
 The problem will manifest itself identically if the runner just could not respond in time or if the task has accidentally been lost forever due to a bug, even though these are two completely separate situations.
 
 This brings us to another potential unintuitive aspect of interacting with processes.

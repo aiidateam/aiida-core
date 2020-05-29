@@ -91,7 +91,16 @@ author = 'The AiiDA team.'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = [
+        'datatypes/**',
+        'developer_guide/**',
+        'get_started/**',
+        'howto/installation_more/index.rst',
+        'import_export/**',
+        'restapi/**',
+        'scheduler/index.rst',
+        'working_with_aiida/**',
+    ]
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -118,6 +127,7 @@ intersphinx_mapping = {
     'flask': ('http://flask.pocoo.org/docs/latest/', None),
     'flask_restful': ('https://flask-restful.readthedocs.io/en/latest/', None),
     'kiwipy': ('https://kiwipy.readthedocs.io/en/latest/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None),
     'plumpy': ('https://plumpy.readthedocs.io/en/latest/', None),
     'python': ('https://docs.python.org/3', None),
 }

@@ -56,7 +56,7 @@ As the output suggests, you can get more information about each type by appendin
 As you can see, the ``singlefile`` type corresponds to the :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData` class and is designed to wrap a single file that is stored on your local filesystem.
 If you have such a file that you would like to store in AiiDA, you can use the ``verdi shell`` to create it:
 
-.. code:: python
+.. code-block:: python
 
     SinglefileData = DataFactory('singlefile')
     singlefile = SinglefileData(file='/absolute/path/to/file.txt')
@@ -99,11 +99,11 @@ Creating a data plugin
 
 Creating a new data type is as simple as creating a new sub class of the base :class:`~aiida.orm.nodes.data.data.Data` class.
 
-.. code:: python
+.. code-block:: python
 
     from aiida.orm import Data
 
-    class NewData(Data)
+    class NewData(Data):
         """A new data type that wraps a single value."""
 
 At this point, our new data type does nothing special.
@@ -111,21 +111,21 @@ Typically, one creates a new data type to represent a specific type of data.
 For the purposes of this example, let's assume that the goal of our ``NewData`` type is to store a single numerical value.
 To allow one to construct a new ``NewData`` data node with the desired ``value``, for example:
 
-.. code:: python
+.. code-block:: python
 
     node = NewData(value=5)
 
 we need to allow passing that value to the constructor of the node class.
 Therefore, we have to override the constructor :meth:`~aiida.orm.nodes.node.Node.__init__`:
 
-.. code:: python
+.. code-block:: python
 
     from aiida.orm import Data
 
-    class NewData(Data)
+    class NewData(Data):
         """A new data type that wraps a single value."""
 
-        def __init__(self, **kwargs)
+        def __init__(self, **kwargs):
             value = kwargs.pop('value')
             super().__init__(**kwargs)
             self.set_attribute('value', value)
@@ -134,7 +134,7 @@ Therefore, we have to override the constructor :meth:`~aiida.orm.nodes.node.Node
 
     For the class to function properly, the signature of the constructor **cannot be changed** and the constructor of the parent class **has to be called**.
 
-Before calling the construtor of the base class, we have to remove the ``value`` keyword from the keyword arguments ``kwargs``, because the base class will not expect it and will raise an exception if left in the keyword arguments.
+Before calling the constructor of the base class, we have to remove the ``value`` keyword from the keyword arguments ``kwargs``, because the base class will not expect it and will raise an exception if left in the keyword arguments.
 The final step is to actually *store* the value that is passed by the caller of the constructor.
 A new node has two locations to permanently store any of its properties:
 
@@ -146,7 +146,7 @@ For now, since we are storing only a single value, the easiest and best option i
 Each node has *attributes* that can store any key-value pair, as long as the value is JSON serializable.
 By adding the value to the node's attributes, they will be queryable in the database once an instance of the ``NewData`` node is stored.
 
-.. code:: python
+.. code-block:: python
 
     node = NewData(value=5)   # Creating new node instance in memory
     node.set_attribute('value', 6)  # While in memory, node attributes can be changed
@@ -158,7 +158,7 @@ By storing the ``value`` in the attributes of the node instance, we ensure that 
 Besides making sure that the content of a data node is stored in the database or file repository, the data type class can also provide useful methods for users to retrieve that data.
 For example, with the current state of the ``NewData`` class, in order to retrieve the ``value`` of a stored ``NewData`` node, one needs to do:
 
-.. code:: python
+.. code-block:: python
 
     node = load_node(<IDENTIFIER>)
     node.get_attribute('value')
@@ -168,12 +168,14 @@ This is not easy to remember and therefore not very user-friendly.
 Since the ``NewData`` type is a class, we can give it useful methods.
 Let's introduce one that will return the value that was stored for it:
 
-.. code:: python
+.. code-block:: python
 
     from aiida.orm import Data
 
-    class NewData(Data)
+    class NewData(Data):
         """A new data type that wraps a single value."""
+
+        ...
 
         @property
         def value(self):
@@ -182,7 +184,7 @@ Let's introduce one that will return the value that was stored for it:
 
 The addition of the instance property ``value`` makes retrieving the value of a ``NewData`` node a lot easier:
 
-.. code:: python
+.. code-block:: python
 
     node = load_node(<IDENTIFIER)
     value = node.value
@@ -190,7 +192,7 @@ The addition of the instance property ``value`` makes retrieving the value of a 
 As said before, in addition to their attributes, data types can also store their properties in the file repository.
 Here is an example for a custom data type that needs to wrap a single text file:
 
-.. code:: python
+.. code-block:: python
 
     import os
     from aiida.orm import Data
@@ -221,6 +223,7 @@ Here is an example for a custom data type that needs to wrap a single text file:
 To create a new instance of this data type and get its content:
 
 .. code-block:: python
+
     node = TextFileData(filepath='/some/absolute/path/to/file.txt')
     node.get_content()  # This will return the content of the file
 
@@ -243,7 +246,7 @@ However, storing large amounts of data within the database comes at the cost of 
 Therefore, big data (think large files), whose content does not necessarily need to be queried for, is better stored in the file repository.
 A data type may safely use both the database and file repository in parallel for individual properties.
 Properties stored in the database are stored as *attributes* of the node.
-The node class has various methods to set these attributes, such as :py:`~aiida.orm.node.Node.set_attribute` and :py:`~aiida.orm.node.Node.set_attribute_many`.
+The node class has various methods to set these attributes, such as :py:meth:`~aiida.orm.nodes.node.Node.set_attribute` and :py:meth:`~aiida.orm.nodes.node.Node.set_attribute_many`.
 
 .. _how-to:data:find:
 
@@ -519,7 +522,7 @@ How to group nodes
 
 AiiDA's database is great for automatically storing all your data, but sometimes it can be tricky to navigate this flat data store.
 To create some order in this mass of data, you can *group* sets of nodes together, just as you would with files in folders on your filesystem.
-A folder, in this analogy, is represented by the :py:class:`~aiida.orm.groups.group.Group` class.
+A folder, in this analogy, is represented by the :py:class:`~aiida.orm.groups.Group` class.
 Each group instance can hold any amount of nodes and any node can be contained in any number of groups.
 A typical use case is to store all nodes that share a common property in a single group.
 
@@ -1073,5 +1076,4 @@ The first (second) request will be handled by the app ``django`` (``sqlalchemy``
 Notice that we haven't specified any port in the URLs since Apache listens conventionally to port 80, where any request lacking the port is automatically redirected.
 
 
-.. _#3997: https://github.com/aiidateam/aiida-core/issues/3997
 .. _#3998: https://github.com/aiidateam/aiida-core/issues/3998

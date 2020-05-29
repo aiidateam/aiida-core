@@ -46,7 +46,7 @@ The engine will inspect the return value from the function and attach the output
 To verify that the output nodes are in fact not 'created', the engine will check that the nodes are stored.
 Therefore, it is very important that you **do not store the nodes you create yourself**, or the engine will raise an exception, as shown in the following example:
 
-.. include:: include/snippets/workflows/workfunctions/workfunction_store.py
+.. include:: include/snippets/workfunctions/workfunction_store.py
     :code: python
 
 Because the returned node is a newly created node and not stored, the engine will raise the following exception:
@@ -63,7 +63,7 @@ To illustrate this problem, let's go back to the simple problem of implementing 
 The :ref:`correct implementation<topics:workflows:concepts:workfunctions>` has a resulting provenance graph that clearly captures the addition and the multiplication as separate calculation nodes, as shown in :numref:`fig_work_functions_provenance_add_multiply_full`.
 To illustrate what would happen if one does does not call calculation functions to perform the computations, but instead directly perform them in the work function itself and return the result, consider the following example:
 
-.. include:: include/snippets/workflows/workfunctions/workfunction_add_multiply_internal.py
+.. include:: include/snippets/workfunctions/workfunction_add_multiply_internal.py
     :code: python
 
 .. warning:: For the documentation skimmers: this is an explicit example on **how not to use** work functions. The :ref:`correct implementation<topics:workflows:concepts:workfunctions>` calls calculation functions to perform the computation
@@ -82,7 +82,7 @@ Compare this to the provenance graph of :numref:`fig_work_functions_provenance_a
 In this trivial example, one may think that this loss of information is not so important, because it is implicitly captured by the workflow node.
 But a halfway solution may make the problem more apparent, as demonstrated by the following snippet where the addition is properly done by calling a calculation function, but the final product is still performed by the work function itself:
 
-.. include:: include/snippets/workflows/workfunctions/workfunction_add_multiply_halfway.py
+.. include:: include/snippets/workfunctions/workfunction_add_multiply_halfway.py
     :code: python
 
 .. warning:: For the documentation skimmers: this is an explicit example on **how not to use** work functions. The :ref:`correct implementation<topics:workflows:concepts:workfunctions>` calls calculation functions to perform the computation
@@ -138,7 +138,7 @@ Let's continue with the example presented in the section on the :ref:`concept of
 We provided a very simple implementation in a code snippet, whose generated provenance graph, when executed, is shown in :numref:`fig_work_chains_provenance_add_multiply_workchain_full`.
 For convenience we copy the snippet here once more:
 
-.. include:: ../concepts/include/snippets/workflows/workchains/add_multiply_workchain_external_computation.py
+.. include:: include/snippets/workchains/add_multiply_workchain_external_computation.py
     :code: python
 
 We will now got through the implementation step-by-step and go into more detail on the interface and best practices.
@@ -362,7 +362,7 @@ To context
 In order to store the future of the submitted process, we can store it in the context with a special construct that will tell the engine that it should wait for that process to finish before continuing the work chain.
 To illustrate how this works, consider the following minimal example:
 
-.. include:: include/snippets/workflows/workchains/run_workchain_submit_complete.py
+.. include:: include/snippets/workchains/run_workchain_submit_complete.py
     :code: python
 
 As explained in the previous section, calling ``self.submit`` for a given process that you want to submit, will return a future.
@@ -385,7 +385,7 @@ Sometimes one wants to launch not just one, but multiple processes at the same t
 With the mechanism described above, this will not be possible since after submitting a single process and returning the ``ToContext`` instance, the work chain has to wait for the process to be finished before it can continue.
 To solve this problem, there is another way to add futures to the context:
 
-.. include:: include/snippets/workflows/workchains/run_workchain_submit_parallel.py
+.. include:: include/snippets/workchains/run_workchain_submit_parallel.py
     :code: python
 
 Here we submit three work chains in a for loop in a single outline step, but instead of returning an instance of ``ToContext``, we call the :meth:`~aiida.engine.processes.workchains.workchain.WorkChain.to_context` method.
@@ -407,7 +407,7 @@ Appending
 When you want to add a future of a submitted sub process to the context, but append it to a list rather than assign it to a key, you can use the :func:`~aiida.engine.processes.workchains.context.append_` function.
 Consider the example from the previous section, but now we will use the ``append_`` function instead:
 
-.. include:: include/snippets/workflows/workchains/run_workchain_submit_append.py
+.. include:: include/snippets/workchains/run_workchain_submit_append.py
     :code: python
 
 Notice that in the ``submit_workchains`` step we no longer have to generate a unique key based on the index but we simply wrap the future in the ``append_`` function and assign it to the generic key ``workchains``.
@@ -538,12 +538,12 @@ Exposing inputs and outputs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Consider the following example work chain, which simply takes a few inputs and returns them again as outputs:
 
-.. include:: include/snippets/workflows/expose_inputs/child.py
+.. include:: include/snippets/expose_inputs/child.py
     :code: python
 
 As a first example, we will implement a thin wrapper workflow, which simply forwards its inputs to ``ChildWorkChain``, and forwards the outputs of the child to its outputs:
 
-.. include:: include/snippets/workflows/expose_inputs/simple_parent.py
+.. include:: include/snippets/expose_inputs/simple_parent.py
     :code: python
 
 In the ``define`` method of this simple parent work chain, we use the :meth:`~plumpy.process_spec.ProcessSpec.expose_inputs` and :meth:`~plumpy.process_spec.ProcessSpec.expose_outputs`.
@@ -555,7 +555,7 @@ Finally, in the ``finalize`` method, we use :meth:`~aiida.engine.processes.proce
 Using :meth:`~aiida.engine.processes.process.Process.out_many`, these outputs are added to the outputs of the parent work chain.
 This work chain can now be run in exactly the same way as the child itself:
 
-.. include:: include/snippets/workflows/expose_inputs/run_simple.py
+.. include:: include/snippets/expose_inputs/run_simple.py
     :code: python
 
 Next, we will see how a more complex parent work chain can be created by using the additional features of the expose functionality.
@@ -565,13 +565,13 @@ The output ``e`` will be taken only from the first child, whereas ``d`` and ``f`
 In order to avoid name conflicts, we need to create a *namespace* for each of the two children, where the inputs and outputs which are not shared are stored.
 Our goal is that the workflow can be called as follows:
 
-.. include:: include/snippets/workflows/expose_inputs/run_complex.py
+.. include:: include/snippets/expose_inputs/run_complex.py
     :code: python
 
 This is achieved by the following workflow.
 In the next section, we will explain each of the steps.
 
-.. include:: include/snippets/workflows/expose_inputs/complex_parent.py
+.. include:: include/snippets/expose_inputs/complex_parent.py
     :code: python
 
 First of all, we want to expose the ``a`` input and the ``e`` output at the top-level.

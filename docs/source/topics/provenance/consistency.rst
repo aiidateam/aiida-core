@@ -171,7 +171,7 @@ The logic behind this is the assumption that the typical user of the program wil
 The default behavior then was designed to reproduce the most intuitive outcomes for this type of usage.
 
 This behavior is basically the result of the settings of ``call_calc_forward=True`` and ``call_work_forward=True``, which makes that the inclusion of a process node will also imply the inclusion of any child or parent process node as well.
-Following this rules in a recursive way leads to the command affecting all the processes within any given workflow: in this way, nodes that are sub-processes of a given highest-level workflow will end up grouped together, in the sense that (by default) they will all be affected in the same way when deleting or exporting.
+Following these rules in a recursive way leads to the command affecting all the processes within any given workflow: in this way, nodes that are sub-processes of a given highest-level workflow will end up grouped together, in the sense that (by default) they will all be affected in the same way when deleting or exporting.
 
 More freedom to further customize the selection of sections to export or delete is available through the specific switchable flags for each functionality (although the final sections must always comply with the non-switchable rules, see above).
 However, this usually requires a deeper understanding of the traversal rules and may imply a more thorough analysis of the particular graph.

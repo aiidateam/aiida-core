@@ -37,7 +37,7 @@ Capturing this logical provenance of the *sequence of calls* of processes is exa
 
 Consider the following example, where we implement a function called ``add_and_multiply`` that we decorate with the ``@workfunction`` decorator.
 
-.. include:: include/snippets/workflows/workfunctions/add_multiply_workfunction_orchestrate.py
+.. include:: include/snippets/workfunctions/add_multiply_workfunction_orchestrate.py
     :code: python
 
 Instead of calling the calculation functions directly in the script, we call the work function, which then consecutively calls the calculation functions, passing the intermediate result from the first to the second.
@@ -77,7 +77,7 @@ We cannot employ the ``calcfunction`` for this, because it would have to return 
 However, for the ``workfunction``, returning existing nodes, even one of its inputs, is perfectly fine.
 An example implementation might look like the following:
 
-.. include:: include/snippets/workflows/workfunctions/add_multiply_workfunction_select.py
+.. include:: include/snippets/workfunctions/add_multiply_workfunction_select.py
     :code: python
 
 The work function above will return the input node ``x`` as one of its outputs as it has the highest value.
@@ -120,7 +120,7 @@ Implementation
 
 If we were to reimplement our work function solution of the simple example problem of the previous section, but this time using a work chain, it would look something like the following:
 
-.. include:: include/snippets/workflows/workchains/add_multiply_workchain_external_computation.py
+.. include:: include/snippets/workchains/add_multiply_workchain_external_computation.py
     :code: python
 
 Don't be intimidated by all the code in this snippet.
@@ -148,7 +148,7 @@ Full data provenance is kept as the calculation of the sum and the product throu
 
 To illustrate what it means for worklow processes not being able to *create* new data and how doing so causes a loss of data provenance, let's change the previous implementation to perform the sum and product in the work chain outline steps itself, instead of calling the calculation functions.
 
-.. include:: include/snippets/workflows/workchains/add_multiply_workchain_outline_computation.py
+.. include:: include/snippets/workchains/add_multiply_workchain_outline_computation.py
     :code: python
 
 The resulting provenance would look like the following:

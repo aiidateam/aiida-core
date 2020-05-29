@@ -70,7 +70,7 @@
 }
 .title-icon-read-more .admonition-title:before {
     margin-right:.5rem;
-    content: "\f08e"  /* external-link */
+    content: "\f518"  /* external-link */
 }
 
 .dropdown-group .dropdown .summary-title {

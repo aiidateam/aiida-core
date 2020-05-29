@@ -12,12 +12,8 @@ Database
 Advanced querying
 =================
 
-.. warning:
-
 The basics on using the :class:`~aiida.orm.querybuilder.QueryBuilder` to find the data you are interested in is explained in the :ref:`finding and querying how-to<how-to:data:find>`.
 This section explains some more advanced methods for querying your database and the :ref:`queryhelp dictionary<topics:database:advancedquery>`.
-
-.. Complete the iteration of the query before committing (storing) new data to avoid race conditions.
 
 .. _topics:database:advancedquery:edges:
 
@@ -36,15 +32,6 @@ Using the ``ArithmeticAddCalculation`` calculation job as an example, let's say 
     qb.append(Int, with_outgoing='calcjob', edge_filters={'label': 'x'})
 
 By using the ``edge_filters`` keyword argument, we can query for only the inputs that have the label ``x``.
-Similarly, we can project information of the edge using the ``edge_project`` keyword argument:
-
-.. code-block:: python
-
-    qb = QueryBuilder()
-    qb.append(CalcJobNode, tag='calcjob')
-    qb.append(Int, with_outgoing='calcjob', edge_project='label')
-
-In the example above, we are querying for the edge labels of the incoming ``Int`` nodes of all ``CalcJobNode``'s.
 Note that any operator that can be used to filter vertices can also be applied to edges.
 Say we want to find all input ``Int`` nodes that are **not** connected to the ``CalcJobNode``'s via an edge with label ``x``:
 
@@ -55,7 +42,16 @@ Say we want to find all input ``Int`` nodes that are **not** connected to the ``
     qb.append(Int, with_outgoing='calcjob', edge_filters={'label': {'!==': 'x'}})
 
 Here, the equality operator ``==`` is negated by prepending an exclamation mark ``!``.
-See the :class:`~aiida.orm.querybuilder.QueryBuilder` docstring for a table with all operators.
+See the :ref:`reference table below<topics:database:advancedquery:tables:operators>` for a table with all operators.
+Similar to filters, we can *project* information of the edge using the ``edge_project`` keyword argument:
+
+.. code-block:: python
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, tag='calcjob')
+    qb.append(Int, with_outgoing='calcjob', edge_project='label')
+
+In the example above, we are querying for the edge labels of the incoming ``Int`` nodes of all ``CalcJobNode``'s.
 
 .. _topics:database:advancedquery:ordering:
 
@@ -71,7 +67,6 @@ Say you want to return the list of ``Int`` outputs from all ``CalcJobNode``'s, s
     qb.append(CalcJobNode, tag='calcjob')
     qb.append(Int, with_incoming='calcjob')
     qb.order_by({Int: {'ctime': 'desc'}})
-    qb.all()
 
 This can also be used to order your results based on values in a (nested) dictionary, such as the ``attributes`` column.
 However, as the :class:`~aiida.orm.querybuilder.QueryBuilder` cannot infer the type of the value in this case, you have to *cast* the type:
@@ -82,10 +77,9 @@ However, as the :class:`~aiida.orm.querybuilder.QueryBuilder` cannot infer the t
     qb.append(CalcJobNode, tag='calcjob')
     qb.append(Int, with_incoming='calcjob')
     qb.order_by({Int: {'attributes.value': {'order': 'asc', 'cast': 'i'}}})
-    qb.all()
 
 The query above will return all ``Int`` nodes that are output of all ``CalcJobNode``'s, in *ascending* order of their value, i.e. from small to big.
-Note that in this case you have to specify the order operation with a dictionary, where the ``order`` key details the way you want to order the query results and the ``cast`` key informs the ``QueryBuilder`` of the attribute type.
+Note that in this case you have to specify the order operation with a dictionary, where the ``order`` key details how you want to order the query results and the ``cast`` key informs the ``QueryBuilder`` of the attribute type.
 A list of the available cast types and their aliases can be found in the table below:
 
 .. _topics:database:advancedquery:tables:casttypes:
@@ -114,12 +108,11 @@ You can also order using multiple properties by providing a list of dictionaries
     qb.append(CalcJobNode, tag='calcjob')
     qb.append(Int, with_incoming='calcjob')
     qb.order_by({Int: [{'attributes.value': {'order': 'asc', 'cast': 'f'}}, {'ctime': 'desc'}]})
-    qb.all()
 
 Here the ``Int`` nodes will first be sorted by their value in ascending order.
 Nodes for which the value is equal are subsequently sorted by their modification time in descending order.
 
-Finally, you can also limit the number of query results returned with the ``limit`` method.
+Finally, you can also limit the number of query results returned with the ``limit()`` method.
 Suppose you only want the first three results from our query:
 
 .. code-block:: python
@@ -462,34 +455,3 @@ Limits and offset can be set directly like this::
     }
 
 That queryhelp would tell the QueryBuilder to return 10 rows after the first 20 have been skipped.
-
-
-.. Some more examples::
-
-..     # StructureData as an input of a job calculation
-..     qb = QueryBuilder()
-..     qb.append(CalcJobNode, tag='calc')
-..     qb.append(StructureData, with_outgoing='calc')
-
-..     # StructureData and Dict as inputs to a calculation
-..     qb = QueryBuilder()
-..     qb.append(CalcJobNode, tag='calc')
-..     qb.append(StructureData, with_outgoing='calc')
-..     qb.append(Dict, with_outgoing='calc')
-
-..     # Filtering the remote data instance by the computer it ran on (name)
-..     qb = QueryBuilder()
-..     qb.append(RemoteData, tag='remote')
-..     qb.append(Computer, with_node='remote', filters={'name':{'==':'mycomputer'}})
-
-..     # Find all descendants of a structure with a certain uuid
-..     qb = QueryBuilder()
-..     qb.append(StructureData, tag='structure', filters={'uuid':{'==':myuuid}})
-..     qb.append(Node, with_ancestors='structure')
-
-.. The above QueryBuilder will join a structure to all its descendants via the
-.. transitive closure table.
-
-
-
-.. _how-to:data:find:appender:operators:

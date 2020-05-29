@@ -8,6 +8,7 @@ How-To Guides
    codes
    workflows
    data
+   visualising_graphs/visualising_graphs
    installation
    plugins
    faq

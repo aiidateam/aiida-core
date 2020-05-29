@@ -511,6 +511,9 @@ To learn about more advanced queries, please see :ref:`the corresponding topics 
 
 .. _how-to:data:organize:
 
+Organizing data
+===============
+
 How to group nodes
 ------------------
 
@@ -713,7 +716,7 @@ Suppose, we wanted to group all structures for which the computed bandgap is hig
     qb.append(CalcJobNode, with_incoming='structure', tag='calculation')
     qb.append(Dict, with_incoming='calculation', filters={'attributes.bandgap': {'>': 1.0}})
 
-    # Adding the structures in 'promising_structures' group
+    # Adding the structures in 'promising_structures' group.
     group = load_group(label='promising_structures')
     group.add_nodes(q.all(flat=True))
 

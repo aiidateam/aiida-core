@@ -546,7 +546,6 @@ Below is a list with all available subcommands.
       -H, --hostname HOSTNAME  Hostname.
       -P, --port INTEGER       Port number.
       -c, --config-dir PATH    Path to the configuration directory
-      --debug                  Enable debugging
       --wsgi-profile           Whether to enable WSGI profiler middleware for
                                finding bottlenecks
 

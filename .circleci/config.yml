@@ -28,7 +28,7 @@ jobs:
           # nit-picky mode, turn warnings into errors,
           # but do not stop the build on errors (so we can still inspect the doc artifacts)
           command: |
-            sphinx-build -b html -n --keep-going -d docs/_build/doctrees docs/source docs/_build/html
+            sphinx-build -b html -n -W --keep-going -d docs/_build/doctrees docs/source docs/_build/html
       - store_artifacts:
           path: docs/_build/html/
           destination: html

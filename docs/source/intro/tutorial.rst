@@ -680,7 +680,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
 
         Connecting to supercomputers
             To setup up a computer which can communicate with a HPC over SSH, see the :ref:`running on supercomputers how-to <how-to:installation:running-on-supercomputers>`, or add a :ref:`custom transport <how-to:codes:transport>`.
-            AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque, or you can add a :ref:`custom scheduler <how-to:codes:scheduler>`.
+            AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque.
 
         Working with external codes
             Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
@@ -696,3 +696,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             Once you have a working plugin, you may also wish to :ref:`package it into a python module <how-to:plugins>` for others to use.
 
 .. You can do more with AiiDA than basic arithmetic! Check out some cool real-world examples of AiiDA in action on the `demo page <LINK HERE>
+
+.. todo::
+
+    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <how-to:codes:scheduler>`.

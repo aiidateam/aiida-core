@@ -45,7 +45,7 @@ needs_sphinx = '1.5.0'
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
-    'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
+    'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton'
 ]
 ipython_mplbackend = ''
@@ -183,13 +183,14 @@ html_theme_options = {
         {'url': 'http://www.aiida.net/', 'name': 'AiiDA Home'}
     ],
     'github_url': 'https://github.com/aiidateam/aiida-core',
+    'twitter_url': 'https://twitter.com/aiidateam',
     'use_edit_page_button': True,
 }
 html_context = {
     'github_user': 'aiidateam',
     'github_repo': 'aiida-core',
     'github_version': 'master',
-    'doc_path': 'docs',
+    'doc_path': 'docs/source',
 }
 panels_add_boostrap_css = False  # pydata-sphinx-theme already loads this
 html_logo = 'images/AiiDA_transparent_logo.png'

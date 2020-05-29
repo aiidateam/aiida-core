@@ -88,6 +88,7 @@ py==1.8.1
 pyblake2==1.1.2
 PyCifRW==4.4.1
 pycparser==2.20
+pydata-sphinx-theme==0.3.0
 PyDispatcher==2.0.5
 Pygments==2.6.1
 pymatgen==2019.7.2
@@ -121,8 +122,8 @@ six==1.14.0
 snowballstemmer==2.0.0
 spglib==1.14.1.post0
 Sphinx==2.4.4
-sphinx-rtd-theme==0.4.3
-sphinx-panels==0.1.0
+sphinx-copybutton==0.2.11
+sphinx-panels==0.4.0
 sphinxcontrib-applehelp==1.0.2
 sphinxcontrib-contentui==0.2.4
 sphinxcontrib-details-directive==0.1.0

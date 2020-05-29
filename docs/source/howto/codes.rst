@@ -11,7 +11,11 @@ This plugin must contain the instructions necessary for the engine to be able to
 2. Run the code with the correct set of command line parameters
 
 The following subsections will not only take you through the process of :ref:`creating the calculation plugin<how-to:codes:interfacing>` and then using these to actually :ref:`run the code<how-to:codes:run>`.
-It will also show examples on how to implement tools that are commonly coupled with the running of a calculation, such as :ref:`the parsing of outputs<how-to:codes:parsing>`, :ref:`the communication with external machines<how-to:codes:transport>` and the interaction with its :ref:`scheduling software<how-to:codes:scheduler>`.
+It will also show examples on how to implement tools that are commonly coupled with the running of a calculation, such as :ref:`the parsing of outputs<how-to:codes:parsing>`.
+
+.. todo::
+
+    Add to preceding sentence: :ref:`the communication with external machines<how-to:codes:transport>` and the interaction with its :ref:`scheduling software<how-to:codes:scheduler>`.
 
 Some general guidelines to keep in mind are:
 

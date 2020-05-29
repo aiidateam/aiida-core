@@ -285,7 +285,7 @@ Suppose you want to query for calculation job nodes in your database:
 
 .. code-block:: python
 
-    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm import QueryBuilder
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
     qb.append(CalcJobNode)    # Setting first vertex of path
 
@@ -416,7 +416,7 @@ So, to query for all calculation jobs that are not a ``finished`` or ``excepted`
     The above rule applies to all operators.
     For example, you can check non-equality with ``!==``, since this is the equality operator (``==``) with a negation prepended.
 
-A complete list of all available operators can be found in the :ref:`advanced querying section<topics:database:advancedquery:tables>`.
+A complete list of all available operators can be found in the :ref:`advanced querying section<topics:database:advancedquery:tables:operators>`.
 
 .. _how-to:data:find:relationships:
 
@@ -438,7 +438,7 @@ Next, we look for all ``Int`` nodes that are an output of the  :class:`~aiida.or
 The ``Int`` node was created by the  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` and as such has an *incoming* create link.
 
 In the context of our query, we are building a *path* consisting of *vertices* (i.e. the entities we query for) connected by *edges* defined by the relationships between them.
-The complete set of all possible relationships you can use query for, as well as the entities that they connect to, can be found in the :ref:`advanced querying section<topics:database:advancedquery:tables>`.
+The complete set of all possible relationships you can use query for, as well as the entities that they connect to, can be found in the :ref:`advanced querying section<topics:database:advancedquery:tables:relationships>`.
 
 .. note::
 

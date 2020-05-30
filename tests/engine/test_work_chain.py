@@ -28,7 +28,7 @@ from aiida.orm import load_node, Bool, Float, Int, Str
 
 
 def run_until_paused(proc):
-    """ Set up a future that will be resolved on entering the WAITING state """
+    """ Set up a future that will be resolved when process is paused"""
     listener = plumpy.ProcessListener()
     paused = plumpy.Future()
 
@@ -111,37 +111,37 @@ class Wf(WorkChain):
         }
 
     def step1(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def step2(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def step3(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def step4(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def step5(self):
         self.ctx.counter = 0
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def step6(self):
         self.ctx.counter = self.ctx.counter + 1
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def is_a(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
         return self.inputs.value.value == 'A'
 
-    def is_b(self):
-        self._set_finished(inspect.stack()[0][3])
+    def is_a(self):
+        self._set_finished(inspect.stack()[0].function)
         return self.inputs.value.value == 'B'
 
     def larger_then_n(self):
         keep_looping = self.ctx.counter < self.inputs.n.value
         if not keep_looping:
-            self._set_finished(inspect.stack()[0][3])
+            self._set_finished(inspect.stack()[0].function)
         return keep_looping
 
     def _set_finished(self, function_name):

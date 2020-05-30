@@ -83,9 +83,9 @@ LOGGING = {
             'level': lambda: get_config_option('logging.aiida_loglevel'),
             'propagate': False,
         },
-        'tornado': {
+        'asyncio': {
             'handlers': ['console'],
-            'level': lambda: get_config_option('logging.tornado_loglevel'),
+            'level': lambda: get_config_option('logging.asyncio_loglevel'),
             'propagate': False,
         },
         'plumpy': {

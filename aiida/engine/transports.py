@@ -12,7 +12,7 @@ from collections import namedtuple
 import contextlib
 import logging
 import traceback
-from tornado import concurrent, gen, ioloop
+import asyncio
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class TransportRequest:
     # pylint: disable=too-few-public-methods
     def __init__(self):
         super().__init__()
-        self.future = concurrent.Future()
+        self.future = asyncio.Future()
         self.count = 0
 
 
@@ -42,10 +42,10 @@ class TransportQueue:
 
     def __init__(self, loop=None):
         """
-        :param loop: The event loop to use, will use `tornado.ioloop.IOLoop.current()` if not supplied
-        :type loop: :class:`tornado.ioloop.IOLoop`
+        :param loop: The event loop to use, will use `asyncio.get_event_loop()` if not supplied
+        :type loop: The asyncio event loop
         """
-        self._loop = loop if loop is not None else ioloop.IOLoop.current()
+        self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._transport_requests = {}
 
     def loop(self):
@@ -57,12 +57,11 @@ class TransportQueue:
         """
         Request a transport from an authinfo.  Because the client is not allowed to
         request a transport immediately they will instead be given back a future
-        that can be yielded to get the transport::
+        that can be awaited to get the transport::
 
-            @tornado.gen.coroutine
-            def transport_task(transport_queue, authinfo):
+            async def transport_task(transport_queue, authinfo):
                 with transport_queue.request_transport(authinfo) as request:
-                    transport = yield request
+                    transport = await request
                     # Do some work with the transport
 
         :param authinfo: The authinfo to be used to get transport
@@ -101,9 +100,6 @@ class TransportQueue:
         try:
             transport_request.count += 1
             yield transport_request.future
-        except gen.Return:
-            # Have to have this special case so tornado returns are propagated up to the loop
-            raise
         except Exception:
             _LOGGER.error('Exception whilst using transport:\n%s', traceback.format_exc())
             raise
@@ -116,6 +112,6 @@ class TransportQueue:
                     _LOGGER.debug('Transport request closing transport for %s', authinfo)
                     transport_request.future.result().close()
                 elif open_callback_handle is not None:
-                    self._loop.remove_timeout(open_callback_handle)
+                    open_callback_handle.cancel()
 
                 self._transport_requests.pop(authinfo.id, None)

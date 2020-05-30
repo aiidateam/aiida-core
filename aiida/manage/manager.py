@@ -294,8 +294,8 @@ class Manager:
 
         This is used by workers when the daemon is running and in testing.
 
-        :param loop: the (optional) tornado event loop to use
-        :type loop: :class:`tornado.ioloop.IOLoop`
+        :param loop: the (optional) asyncio event loop to use
+        :type loop: the asyncio event loop
         :return: a runner configured to work in the daemon configuration
         :rtype: :class:`aiida.engine.runners.Runner`
         """

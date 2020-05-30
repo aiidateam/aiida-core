@@ -12,8 +12,6 @@ import functools
 import logging
 import tempfile
 
-from tornado.gen import coroutine, Return
-
 import plumpy
 
 from aiida.common.datastructures import CalcJobState
@@ -41,8 +39,7 @@ class PreSubmitException(Exception):
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
 
-@coroutine
-def task_upload_job(process, transport_queue, cancellable):
+async def task_upload_job(process, transport_queue, cancellable):
     """Transport task that will attempt to upload the files of a job calculation to the remote.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -54,24 +51,22 @@ def task_upload_job(process, transport_queue, cancellable):
     :param transport_queue: the TransportQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
-    :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     node = process.node
 
     if node.get_state() == CalcJobState.SUBMITTING:
         logger.warning('CalcJob<{}> already marked as SUBMITTING, skipping task_update_job'.format(node.pk))
-        raise Return
+        return
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     authinfo = node.computer.get_authinfo(node.user)
 
-    @coroutine
-    def do_upload():
+    async def do_upload():
         with transport_queue.request_transport(authinfo) as request:
-            transport = yield cancellable.with_interrupt(request)
+            transport = await cancellable.with_interrupt(request)
 
             with SandboxFolder() as folder:
                 # Any exception thrown in `presubmit` call is not transient so we circumvent the exponential backoff
@@ -82,14 +77,13 @@ def task_upload_job(process, transport_queue, cancellable):
                 else:
                     execmanager.upload_calculation(node, transport, calc_info, folder)
 
-            raise Return
+            return
 
     try:
         logger.info('scheduled request to upload CalcJob<{}>'.format(node.pk))
         ignore_exceptions = (plumpy.CancelledError, PreSubmitException)
-        result = yield exponential_backoff_retry(
-            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
-        )
+        result = await exponential_backoff_retry(
+            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions)
     except PreSubmitException:
         raise
     except plumpy.CancelledError:
@@ -100,11 +94,10 @@ def task_upload_job(process, transport_queue, cancellable):
     else:
         logger.info('uploading CalcJob<{}> successful'.format(node.pk))
         node.set_state(CalcJobState.SUBMITTING)
-        raise Return(result)
+        return result
 
 
-@coroutine
-def task_submit_job(node, transport_queue, cancellable):
+async def task_submit_job(node, transport_queue, cancellable):
     """Transport task that will attempt to submit a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -116,30 +109,27 @@ def task_submit_job(node, transport_queue, cancellable):
     :param transport_queue: the TransportQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
-    :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     if node.get_state() == CalcJobState.WITHSCHEDULER:
         assert node.get_job_id() is not None, 'job is WITHSCHEDULER, however, it does not have a job id'
         logger.warning('CalcJob<{}> already marked as WITHSCHEDULER, skipping task_submit_job'.format(node.pk))
-        raise Return(node.get_job_id())
+        return node.get_job_id()
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     authinfo = node.computer.get_authinfo(node.user)
 
-    @coroutine
-    def do_submit():
+    async def do_submit():
         with transport_queue.request_transport(authinfo) as request:
-            transport = yield cancellable.with_interrupt(request)
-            raise Return(execmanager.submit_calculation(node, transport))
+            transport = await cancellable.with_interrupt(request)
+            return execmanager.submit_calculation(node, transport)
 
     try:
         logger.info('scheduled request to submit CalcJob<{}>'.format(node.pk))
-        result = yield exponential_backoff_retry(
-            do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
-        )
+        result = await exponential_backoff_retry(
+            do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
     except plumpy.Interruption:
         pass
     except Exception:
@@ -148,11 +138,10 @@ def task_submit_job(node, transport_queue, cancellable):
     else:
         logger.info('submitting CalcJob<{}> successful'.format(node.pk))
         node.set_state(CalcJobState.WITHSCHEDULER)
-        raise Return(result)
+        return result
 
 
-@coroutine
-def task_update_job(node, job_manager, cancellable):
+async def task_update_job(node, job_manager, cancellable):
     """Transport task that will attempt to update the scheduler status of the job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -166,11 +155,11 @@ def task_update_job(node, job_manager, cancellable):
     :type job_manager: :class:`aiida.engine.processes.calcjobs.manager.JobManager`
     :param cancellable: A cancel flag
     :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
-    :raises: Return containing True if the tasks was successfully completed, False otherwise
+    :return: True if the tasks was successfully completed, False otherwise
     """
     if node.get_state() == CalcJobState.RETRIEVING:
         logger.warning('CalcJob<{}> already marked as RETRIEVING, skipping task_update_job'.format(node.pk))
-        raise Return(True)
+        return True
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
@@ -178,11 +167,10 @@ def task_update_job(node, job_manager, cancellable):
     authinfo = node.computer.get_authinfo(node.user)
     job_id = node.get_job_id()
 
-    @coroutine
-    def do_update():
+    async def do_update():
         # Get the update request
         with job_manager.request_job_info_update(authinfo, job_id) as update_request:
-            job_info = yield cancellable.with_interrupt(update_request)
+            job_info = await cancellable.with_interrupt(update_request)
 
         if job_info is None:
             # If the job is computed or not found assume it's done
@@ -193,13 +181,12 @@ def task_update_job(node, job_manager, cancellable):
             node.set_scheduler_state(job_info.job_state)
             job_done = job_info.job_state == JobState.DONE
 
-        raise Return(job_done)
+        return job_done
 
     try:
         logger.info('scheduled request to update CalcJob<{}>'.format(node.pk))
-        job_done = yield exponential_backoff_retry(
-            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
-        )
+        job_done = await exponential_backoff_retry(
+            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
     except plumpy.Interruption:
         raise
     except Exception:
@@ -210,11 +197,10 @@ def task_update_job(node, job_manager, cancellable):
         if job_done:
             node.set_state(CalcJobState.RETRIEVING)
 
-        raise Return(job_done)
+        return job_done
 
 
-@coroutine
-def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancellable):
+async def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancellable):
     """Transport task that will attempt to retrieve all files of a completed job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -226,22 +212,20 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     :param transport_queue: the TransportQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
-    :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     if node.get_state() == CalcJobState.PARSING:
         logger.warning('CalcJob<{}> already marked as PARSING, skipping task_retrieve_job'.format(node.pk))
-        raise Return
+        return
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     authinfo = node.computer.get_authinfo(node.user)
 
-    @coroutine
-    def do_retrieve():
+    async def do_retrieve():
         with transport_queue.request_transport(authinfo) as request:
-            transport = yield cancellable.with_interrupt(request)
+            transport = await cancellable.with_interrupt(request)
 
             # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
             # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
@@ -257,13 +241,12 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
             else:
                 node.set_detailed_job_info(detailed_job_info)
 
-            raise Return(execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder))
+            return execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
 
     try:
         logger.info('scheduled request to retrieve CalcJob<{}>'.format(node.pk))
-        yield exponential_backoff_retry(
-            do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
-        )
+        result = await exponential_backoff_retry(
+            do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
     except plumpy.Interruption:
         raise
     except Exception:
@@ -272,11 +255,10 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     else:
         node.set_state(CalcJobState.PARSING)
         logger.info('retrieving CalcJob<{}> successful'.format(node.pk))
-        raise Return
+        return
 
 
-@coroutine
-def task_kill_job(node, transport_queue, cancellable):
+async def task_kill_job(node, transport_queue, cancellable):
     """Transport task that will attempt to kill a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -288,7 +270,6 @@ def task_kill_job(node, transport_queue, cancellable):
     :param transport_queue: the TransportQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
-    :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
@@ -296,19 +277,18 @@ def task_kill_job(node, transport_queue, cancellable):
 
     if node.get_state() in [CalcJobState.UPLOADING, CalcJobState.SUBMITTING]:
         logger.warning('CalcJob<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
-        raise Return(True)
+        return True
 
     authinfo = node.computer.get_authinfo(node.user)
 
-    @coroutine
-    def do_kill():
+    async def do_kill():
         with transport_queue.request_transport(authinfo) as request:
-            transport = yield cancellable.with_interrupt(request)
-            raise Return(execmanager.kill_calculation(node, transport))
+            transport = await cancellable.with_interrupt(request)
+            return execmanager.kill_calculation(node, transport)
 
     try:
         logger.info('scheduled request to kill CalcJob<{}>'.format(node.pk))
-        result = yield exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
+        result = await exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
     except plumpy.Interruption:
         raise
     except Exception:
@@ -317,7 +297,7 @@ def task_kill_job(node, transport_queue, cancellable):
     else:
         logger.info('killing CalcJob<{}> successful'.format(node.pk))
         node.set_scheduler_state(JobState.DONE)
-        raise Return(result)
+        return result
 
 
 class Waiting(plumpy.Waiting):
@@ -336,8 +316,7 @@ class Waiting(plumpy.Waiting):
         self._task = None
         self._killing = None
 
-    @coroutine
-    def execute(self):
+    async def execute(self):
         """Override the execute coroutine of the base `Waiting` state."""
         # pylint: disable=too-many-branches
         node = self.process.node
@@ -350,13 +329,13 @@ class Waiting(plumpy.Waiting):
 
             if command == UPLOAD_COMMAND:
                 node.set_process_status(process_status)
-                yield self._launch_task(task_upload_job, self.process, transport_queue)
-                raise Return(self.submit())
+                await self._launch_task(task_upload_job, self.process, transport_queue)
+                return self.submit()
 
             elif command == SUBMIT_COMMAND:
                 node.set_process_status(process_status)
-                yield self._launch_task(task_submit_job, node, transport_queue)
-                raise Return(self.update())
+                await self._launch_task(task_submit_job, node, transport_queue)
+                return self.update()
 
             elif self.data == UPDATE_COMMAND:
                 job_done = False
@@ -366,16 +345,16 @@ class Waiting(plumpy.Waiting):
                     scheduler_state_string = scheduler_state.name if scheduler_state else 'UNKNOWN'
                     process_status = 'Monitoring scheduler: job state {}'.format(scheduler_state_string)
                     node.set_process_status(process_status)
-                    job_done = yield self._launch_task(task_update_job, node, self.process.runner.job_manager)
+                    job_done = await self._launch_task(task_update_job, node, self.process.runner.job_manager)
 
-                raise Return(self.retrieve())
+                return self.retrieve()
 
             elif self.data == RETRIEVE_COMMAND:
                 node.set_process_status(process_status)
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
                 temp_folder = tempfile.mkdtemp()
-                yield self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)
-                raise Return(self.parse(temp_folder))
+                await self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)
+                return self.parse(temp_folder)
 
             else:
                 raise RuntimeError('Unknown waiting command')
@@ -383,28 +362,26 @@ class Waiting(plumpy.Waiting):
         except TransportTaskException as exception:
             raise plumpy.PauseInterruption('Pausing after failed transport task: {}'.format(exception))
         except plumpy.KillInterruption:
-            yield self._launch_task(task_kill_job, node, transport_queue)
+            await self._launch_task(task_kill_job, node, transport_queue)
             self._killing.set_result(True)
-            raise
-        except Return:
-            node.set_process_status(None)
             raise
         except (plumpy.Interruption, plumpy.CancelledError):
             node.set_process_status('Transport task {} was interrupted'.format(command))
             raise
+        else:
+            node.set_process_state(None)
         finally:
             # If we were trying to kill but we didn't deal with it, make sure it's set here
             if self._killing and not self._killing.done():
                 self._killing.set_result(False)
 
-    @coroutine
-    def _launch_task(self, coro, *args, **kwargs):
+    async def _launch_task(self, coro, *args, **kwargs):
         """Launch a coroutine as a task, making sure to make it interruptable."""
         task_fn = functools.partial(coro, *args, **kwargs)
         try:
             self._task = interruptable_task(task_fn)
-            result = yield self._task
-            raise Return(result)
+            result = await self._task
+            return result
         finally:
             self._task = None
 

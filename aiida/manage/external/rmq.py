@@ -12,7 +12,6 @@
 import collections
 import logging
 
-from tornado import gen
 import plumpy
 from kiwipy import communications, Future
 
@@ -125,8 +124,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             node.set_process_state(ProcessState.EXCEPTED)
             node.seal()
 
-    @gen.coroutine
-    def _continue(self, communicator, pid, nowait, tag=None):
+    async def _continue(self, communicator, pid, nowait, tag=None):
         """Continue the task.
 
         Note that the task may already have been completed, as indicated from the corresponding the node, in which
@@ -153,7 +151,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             # we raise `Return` instead of `TaskRejected` because the latter would cause the task to be resent and start
             # to ping-pong between RabbitMQ and the daemon workers.
             LOGGER.exception('Cannot continue process<%d>', pid)
-            raise gen.Return(False)
+            return False
 
         if node.is_terminated:
 
@@ -168,10 +166,10 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             elif node.is_killed:
                 future.set_exception(plumpy.KilledError())
 
-            raise gen.Return(future.result())
+            return future.result()
 
         try:
-            result = yield super()._continue(communicator, pid, nowait, tag)
+            result = await super()._continue(communicator, pid, nowait, tag)
         except ImportError as exception:
             message = 'the class of the process could not be imported.'
             self.handle_continue_exception(node, exception, message)
@@ -188,4 +186,4 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             LOGGER.exception('failed to serialize the result for process<%d>', pid)
             raise
 
-        raise gen.Return(serialized)
+        return serialized

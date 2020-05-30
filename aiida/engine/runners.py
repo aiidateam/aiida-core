@@ -13,8 +13,7 @@ import collections
 import functools
 import logging
 import signal
-import threading
-import uuid
+import asyncio
 
 import kiwipy
 import plumpy
@@ -50,7 +49,7 @@ class Runner:  # pylint: disable=too-many-public-methods
 
         :param poll_interval: interval in seconds between polling for status of active sub processes
         :param loop: an event loop to use, if none is suppled a new one will be created
-        :type loop: :class:`tornado.ioloop.IOLoop`
+        :type loop: the asyncio event loop
         :param communicator: the communicator to use
         :type communicator: :class:`kiwipy.Communicator`
         :param rmq_submit: if True, processes will be submitted to RabbitMQ, otherwise they will be scheduled here
@@ -60,7 +59,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not (rmq_submit and persister is None), \
             'Must supply a persister if you want to submit using communicator'
 
-        self._loop = loop if loop is not None else tornado.ioloop.IOLoop()
+        self._loop = loop if loop is not None else asyncio.new_event_loop()
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
         self._transport = transports.TransportQueue(self._loop)
@@ -144,7 +143,7 @@ class Runner:  # pylint: disable=too-many-public-methods
     def run_until_complete(self, future):
         """Run the loop until the future has finished and return the result."""
         with utils.loop_scope(self._loop):
-            return self._loop.run_sync(lambda: future)
+            return self._loop.run_until_complete(future)
 
     def close(self):
         """Close the runner by stopping the loop."""

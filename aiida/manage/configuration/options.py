@@ -89,12 +89,12 @@ CONFIG_OPTIONS = {
         'description': 'Minimum level to log to the DbLog table',
         'global_only': False,
     },
-    'logging.tornado_loglevel': {
-        'key': 'logging_tornado_log_level',
+    'logging.asyncio_loglevel': {
+        'key': 'logging_asyncio_log_level',
         'valid_type': 'string',
         'valid_values': VALID_LOG_LEVELS,
         'default': 'WARNING',
-        'description': 'Minimum level to log to daemon log and the `DbLog` table for the `tornado` logger',
+        'description': 'Minimum level to log to daemon log and the `DbLog` table for the `asyncio` logger',
         'global_only': False,
     },
     'logging.plumpy_loglevel': {

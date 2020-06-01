@@ -75,6 +75,7 @@ class RemoteData(Data):
                     ))
                 else:
                     raise
+
             else:
                 return content
 

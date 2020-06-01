@@ -13,7 +13,7 @@ ENV AIIDADB_BACKEND django
 
 # Copy and install AiiDA
 COPY . aiida-core
-RUN pip install ./aiida-core
+RUN pip install ./aiida-core[atomic_tools]
 
 # Configure aiida for the user
 COPY .docker/opt/configure-aiida.sh /opt/configure-aiida.sh

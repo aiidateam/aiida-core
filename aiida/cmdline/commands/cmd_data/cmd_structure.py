@@ -18,7 +18,7 @@ from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
-LIST_PROJECT_HEADERS = ['Id', 'Label', 'Kinds', 'Sites']
+LIST_PROJECT_HEADERS = ['Id', 'Label', 'Formula']
 EXPORT_FORMATS = ['cif', 'xsf', 'xyz']
 VISUALIZATION_FORMATS = ['ase', 'jmol', 'vesta', 'vmd', 'xcrysden']
 
@@ -63,7 +63,8 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
 
     elements_only = False
     lst = data_list(
-        StructureData, LIST_PROJECT_HEADERS, elements, elements_only, formula_mode, past_days, groups, all_users
+        StructureData, ['Id', 'Label', 'Kinds', 'Sites'], elements, elements_only, formula_mode, past_days, groups,
+        all_users
     )
 
     entry_list = []
@@ -99,7 +100,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
         # referenced by the site
         except KeyError:
             formula = '<<UNKNOWN>>'
-        entry_list.append([str(pid), str(formula), label])
+        entry_list.append([str(pid), label, str(formula)])
 
     counter = 0
     struct_list_data = list()

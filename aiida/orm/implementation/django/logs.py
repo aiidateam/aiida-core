@@ -144,8 +144,8 @@ class DjangoLogCollection(BackendLogCollection):
             raise exceptions.ValidationError('filters must not be empty')
 
         # Apply filter and delete found entities
-        builder = QueryBuilder().append(Log, filters=filters, project='id').all()
-        entities_to_delete = [_[0] for _ in builder]
+        builder = QueryBuilder().append(Log, filters=filters, project='id')
+        entities_to_delete = builder.all(flat=True)
         for entity in entities_to_delete:
             self.delete(entity)
 

@@ -13,10 +13,11 @@ import copy
 import logging
 import types
 from contextlib import contextmanager
+from wrapt import decorator
 
 from aiida.manage.configuration import get_config_option
 
-__all__ = ('AIIDA_LOGGER', 'override_log_level')
+__all__ = ('AIIDA_LOGGER', 'override_log_level', 'override_log_formatter')
 
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
 # We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however
@@ -175,11 +176,17 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': daemon_log_file,
             'encoding': 'utf8',
-            'maxBytes': 100000,
+            'maxBytes': 10000000,  # 10 MB
+            'backupCount': 10,
         }
 
         for logger in config.get('loggers', {}).values():
             logger.setdefault('handlers', []).append(daemon_handler_name)
+            try:
+                # Remove the `console` stdout stream handler to prevent messages being duplicated in the daemon log file
+                logger['handlers'].remove('console')
+            except ValueError:
+                pass
 
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:
@@ -203,3 +210,29 @@ def override_log_level(level=logging.CRITICAL):
         yield
     finally:
         logging.disable(level=logging.NOTSET)
+
+
+def override_log_formatter(fmt: str):
+    """Temporarily use a different formatter for all handlers.
+
+    NOTE: One can _only_ set `fmt` (not `datefmt` or `style`).
+    Be aware! This may fail if the number of handlers is changed within the decorated function/method.
+    """
+
+    @decorator
+    def wrapper(wrapped, instance, args, kwargs):  # pylint: disable=unused-argument
+        temp_formatter = logging.Formatter(fmt=fmt)
+
+        cached_formatters = []
+        for handler in AIIDA_LOGGER.handlers:
+            cached_formatters.append(handler.formatter)
+
+        try:
+            for handler in AIIDA_LOGGER.handlers:
+                handler.setFormatter(temp_formatter)
+            return wrapped(*args, **kwargs)
+        finally:
+            for index, handler in enumerate(AIIDA_LOGGER.handlers):
+                handler.setFormatter(cached_formatters[index])
+
+    return wrapper

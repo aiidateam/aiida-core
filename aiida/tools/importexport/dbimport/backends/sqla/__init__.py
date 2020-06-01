@@ -11,6 +11,7 @@
 """ SQLAlchemy-specific import of AiiDA entities """
 
 from distutils.version import StrictVersion
+import logging
 import os
 import tarfile
 import zipfile
@@ -19,14 +20,15 @@ from itertools import chain
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType
+from aiida.common.log import override_log_formatter
 from aiida.common.utils import get_object_from_string
-from aiida.orm import QueryBuilder, Node, Group, WorkflowNode, CalculationNode, Data
+from aiida.orm import QueryBuilder, Node, Group, ImportGroup
 from aiida.orm.utils.links import link_triple_exists, validate_link
 from aiida.orm.utils.repository import Repository
 
-from aiida.tools.importexport.common import exceptions
+from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
-from aiida.tools.importexport.common.config import DUPL_SUFFIX, IMPORTGROUP_TYPE, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER, BAR_FORMAT
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
@@ -35,10 +37,13 @@ from aiida.tools.importexport.common.config import (
     entity_names_to_entities
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
-from aiida.tools.importexport.dbimport.backends.utils import deserialize_field, merge_comment, merge_extras
+from aiida.tools.importexport.dbimport.utils import (
+    deserialize_field, merge_comment, merge_extras, start_summary, result_summary, IMPORT_LOGGER
+)
 from aiida.tools.importexport.dbimport.backends.sqla.utils import validate_uuid
 
 
+@override_log_formatter('%(message)s')
 def import_data_sqla(
     in_path,
     group=None,
@@ -46,7 +51,8 @@ def import_data_sqla(
     extras_mode_existing='kcl',
     extras_mode_new='import',
     comment_mode='newest',
-    silent=False
+    silent=False,
+    **kwargs
 ):
     """Import exported AiiDA archive to the AiiDA database and repository.
 
@@ -86,7 +92,7 @@ def import_data_sqla(
         'overwrite' (will overwrite existing Comments with the ones from the import file).
     :type comment_mode: str
 
-    :param silent: suppress prints.
+    :param silent: suppress progress bar and summary.
     :type silent: bool
 
     :return: New and existing Nodes and Links.
@@ -119,6 +125,9 @@ def import_data_sqla(
         elif not group.is_stored:
             group.store()
 
+    if silent:
+        logging.disable(level=logging.CRITICAL)
+
     ################
     # EXTRACT DATA #
     ################
@@ -128,21 +137,23 @@ def import_data_sqla(
             extract_tree(in_path, folder)
         else:
             if tarfile.is_tarfile(in_path):
-                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
             elif zipfile.is_zipfile(in_path):
-                extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+                extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
             else:
                 raise exceptions.ImportValidationError(
                     'Unable to detect the input file format, it is neither a '
-                    '(possibly compressed) tar file, nor a zip file.'
+                    'tar file, nor a (possibly compressed) zip file.'
                 )
 
         if not folder.get_content_list():
             raise exceptions.CorruptArchive('The provided file/folder ({}) is empty'.format(in_path))
         try:
+            IMPORT_LOGGER.debug('CACHING metadata.json')
             with open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
 
+            IMPORT_LOGGER.debug('CACHING data.json')
             with open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
                 data = json.load(fhandle)
         except IOError as error:
@@ -164,10 +175,14 @@ def import_data_sqla(
 
             raise exceptions.IncompatibleArchiveVersionError(msg)
 
+        start_summary(in_path, comment_mode, extras_mode_new, extras_mode_existing)
+
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
         #              I HAVE ALL NODES FOR THE LINKS                     #
         ###################################################################
+        IMPORT_LOGGER.debug('CHECKING IF NODES FROM LINKS ARE IN DB OR ARCHIVE...')
+
         linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
         group_nodes = set(chain.from_iterable(data['groups_uuid'].values()))
 
@@ -192,25 +207,21 @@ def import_data_sqla(
         # DOUBLE-CHECK MODEL DEPENDENCIES #
         ###################################
         # The entity import order. It is defined by the database model relationships.
-        entity_sig_order = [
-            entity_names_to_signatures[m] for m in (
-                USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
-                COMMENT_ENTITY_NAME
-            )
+        entity_order = [
+            USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
+            COMMENT_ENTITY_NAME
         ]
 
         #  I make a new list that contains the entity names:
         # eg: ['User', 'Computer', 'Node', 'Group']
-        all_entity_names = [signatures_to_entity_names[entity_sig] for entity_sig in entity_sig_order]
         for import_field_name in metadata['all_fields_info']:
-            if import_field_name not in all_entity_names:
+            if import_field_name not in entity_order:
                 raise exceptions.ImportValidationError(
                     "You are trying to import an unknown model '{}'!".format(import_field_name)
                 )
 
-        for idx, entity_sig in enumerate(entity_sig_order):
+        for idx, entity_name in enumerate(entity_order):
             dependencies = []
-            entity_name = signatures_to_entity_names[entity_sig]
             # for every field, I checked the dependencies given as value for key requires
             for field in metadata['all_fields_info'][entity_name].values():
                 try:
@@ -219,9 +230,9 @@ def import_data_sqla(
                     # (No ForeignKey)
                     pass
             for dependency in dependencies:
-                if dependency not in all_entity_names[:idx]:
+                if dependency not in entity_order[:idx]:
                     raise exceptions.ArchiveImportError(
-                        'Entity {} requires {} but would be loaded first; stopping...'.format(entity_sig, dependency)
+                        'Entity {} requires {} but would be loaded first; stopping...'.format(entity_name, dependency)
                     )
 
         ###################################################
@@ -235,6 +246,7 @@ def import_data_sqla(
         #           2363: 'ef04aa5d-99e7-4bfd-95ef-fe412a6a3524', 2364: '1dc59576-af21-4d71-81c2-bac1fc82a84a'},
         # 'User': {1: 'aiida@localhost'}
         # }
+        IMPORT_LOGGER.debug('CREATING PK-2-UUID/EMAIL MAPPING...')
         import_unique_ids_mappings = {}
         # Export data since v0.3 contains the keys entity_name
         for entity_name, import_data in data['export_data'].items():
@@ -257,9 +269,18 @@ def import_data_sqla(
             new_entries = {}
             existing_entries = {}
 
+            IMPORT_LOGGER.debug('GENERATING LIST OF DATA...')
+
+            # Instantiate progress bar
+            progress_bar = get_progress_bar(total=1, leave=False, disable=silent)
+            pbar_base_str = 'Generating list of data - '
+
+            # Get total entities from data.json
+            # To be used with progress bar
+            number_of_entities = 0
+
             # I first generate the list of data
-            for entity_sig in entity_sig_order:
-                entity_name = signatures_to_entity_names[entity_sig]
+            for entity_name in entity_order:
                 entity = entity_names_to_entities[entity_name]
                 # I get the unique identifier, since v0.3 stored under entity_name
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
@@ -272,28 +293,31 @@ def import_data_sqla(
                 # Not necessarily all models are exported
                 if entity_name in data['export_data']:
 
+                    IMPORT_LOGGER.debug('  %s...', entity_name)
+
+                    progress_bar.set_description_str(pbar_base_str + entity_name, refresh=False)
+                    number_of_entities += len(data['export_data'][entity_name])
+
                     if unique_identifier is not None:
                         import_unique_ids = set(v[unique_identifier] for v in data['export_data'][entity_name].values())
 
-                        relevant_db_entries = dict()
+                        relevant_db_entries = {}
                         if import_unique_ids:
                             builder = QueryBuilder()
-                            builder.append(
-                                entity,
-                                filters={unique_identifier: {
-                                    'in': import_unique_ids
-                                }},
-                                project=['*'],
-                                tag='res'
-                            )
-                            relevant_db_entries = {
-                                str(getattr(v[0], unique_identifier)):  # str() to convert UUID() to string
-                                v[0] for v in builder.all()
-                            }
+                            builder.append(entity, filters={unique_identifier: {'in': import_unique_ids}}, project='*')
+
+                            if builder.count():
+                                progress_bar = get_progress_bar(total=builder.count(), disable=silent)
+                                for object_ in builder.iterall():
+                                    progress_bar.update()
+
+                                    relevant_db_entries.update({getattr(object_[0], unique_identifier): object_[0]})
 
                             foreign_ids_reverse_mappings[entity_name] = {
                                 k: v.pk for k, v in relevant_db_entries.items()
                             }
+
+                        IMPORT_LOGGER.debug('    GOING THROUGH ARCHIVE...')
 
                         imported_comp_names = set()
                         for key, value in data['export_data'][entity_name].items():
@@ -331,19 +355,19 @@ def import_data_sqla(
                                         '==': value['name']
                                     }}, project=['*'], tag='res'
                                 )
-                                dupl = (builder.count() or value['name'] in imported_comp_names)
+                                dupl = builder.count() or value['name'] in imported_comp_names
                                 dupl_counter = 0
                                 orig_name = value['name']
                                 while dupl:
                                     # Rename the new computer
-                                    value['name'] = (orig_name + DUPL_SUFFIX.format(dupl_counter))
+                                    value['name'] = orig_name + DUPL_SUFFIX.format(dupl_counter)
                                     builder = QueryBuilder()
                                     builder.append(
                                         entity, filters={'name': {
                                             '==': value['name']
                                         }}, project=['*'], tag='res'
                                     )
-                                    dupl = (builder.count() or value['name'] in imported_comp_names)
+                                    dupl = builder.count() or value['name'] in imported_comp_names
                                     dupl_counter += 1
                                     if dupl_counter == 100:
                                         raise exceptions.ImportUniquenessError(
@@ -361,21 +385,33 @@ def import_data_sqla(
                                 # To be added
                                 new_entries[entity_name][key] = value
                     else:
-                        # Why the copy:
-                        new_entries[entity_name] = data['export_data'][entity_name].copy()
+                        new_entries[entity_name] = data['export_data'][entity_name]
 
-            # Show Comment mode if not silent
-            if not silent:
-                print('Comment mode: {}'.format(comment_mode))
+            # Progress bar - reset for import
+            progress_bar = get_progress_bar(total=number_of_entities, disable=silent)
+            reset_progress_bar = {}
 
             # I import data from the given model
-            for entity_sig in entity_sig_order:
-                entity_name = signatures_to_entity_names[entity_sig]
+            for entity_name in entity_order:
                 entity = entity_names_to_entities[entity_name]
                 fields_info = metadata['all_fields_info'].get(entity_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, '')
 
+                # Progress bar initialization - Model
+                if reset_progress_bar:
+                    progress_bar = get_progress_bar(total=reset_progress_bar['total'], disable=silent)
+                    progress_bar.n = reset_progress_bar['n']
+                    reset_progress_bar = {}
+                pbar_base_str = '{}s - '.format(entity_name)
+                progress_bar.set_description_str(pbar_base_str + 'Initializing', refresh=True)
+
                 # EXISTING ENTRIES
+                if existing_entries[entity_name]:
+                    # Progress bar update - Model
+                    progress_bar.set_description_str(
+                        pbar_base_str + '{} existing entries'.format(len(existing_entries[entity_name])), refresh=True
+                    )
+
                 for import_entry_pk, entry_data in existing_entries[entity_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_pk = foreign_ids_reverse_mappings[entity_name][unique_id]
@@ -390,7 +426,7 @@ def import_data_sqla(
                     )
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
 
-                    if entity_sig is entity_names_to_signatures[COMMENT_ENTITY_NAME]:
+                    if entity_name == COMMENT_ENTITY_NAME:
                         new_entry_uuid = merge_comment(import_data, comment_mode)
                         if new_entry_uuid is not None:
                             entry_data[unique_identifier] = new_entry_uuid
@@ -399,8 +435,9 @@ def import_data_sqla(
                     if entity_name not in ret_dict:
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['existing'].append((import_entry_pk, existing_entry_pk))
-                    if not silent:
-                        print('existing %s: %s (%s->%s)' % (entity_sig, unique_id, import_entry_pk, existing_entry_pk))
+                    IMPORT_LOGGER.debug(
+                        'Existing %s: %s (%s->%s)', entity_name, unique_id, import_entry_pk, existing_entry_pk
+                    )
 
                 # Store all objects for this model in a list, and store them
                 # all in once at the end.
@@ -411,6 +448,12 @@ def import_data_sqla(
                 import_new_entry_pks = dict()
 
                 # NEW ENTRIES
+                if new_entries[entity_name]:
+                    # Progress bar update - Model
+                    progress_bar.set_description_str(
+                        pbar_base_str + '{} new entries'.format(len(new_entries[entity_name])), refresh=True
+                    )
+
                 for import_entry_pk, entry_data in new_entries[entity_name].items():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(
@@ -451,14 +494,17 @@ def import_data_sqla(
                     objects_to_create.append(db_entity(**import_data))
                     import_new_entry_pks[unique_id] = import_entry_pk
 
-                if entity_sig == entity_names_to_signatures[NODE_ENTITY_NAME]:
-                    if not silent:
-                        print('STORING NEW NODE REPOSITORY FILES & ATTRIBUTES...')
+                if entity_name == NODE_ENTITY_NAME:
+                    IMPORT_LOGGER.debug('STORING NEW NODE REPOSITORY FILES & ATTRIBUTES...')
 
                     # NEW NODES
                     for object_ in objects_to_create:
                         import_entry_uuid = object_.uuid
                         import_entry_pk = import_new_entry_pks[import_entry_uuid]
+
+                        # Progress bar initialization - Node
+                        progress_bar.update()
+                        pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
 
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
@@ -473,9 +519,13 @@ def import_data_sqla(
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing previous folders, and move the files
                         # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
+                        progress_bar.set_description_str(pbar_node_base_str + 'Repository', refresh=True)
                         destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
                         # For Nodes, we also have to store Attributes!
+                        IMPORT_LOGGER.debug('STORING NEW NODE ATTRIBUTES...')
+                        progress_bar.set_description_str(pbar_node_base_str + 'Attributes', refresh=True)
+
                         # Get attributes from import file
                         try:
                             object_.attributes = data['node_attributes'][str(import_entry_pk)]
@@ -485,10 +535,11 @@ def import_data_sqla(
                             )
 
                         # For DbNodes, we also have to store extras
-                        # Get extras from import file
                         if extras_mode_new == 'import':
-                            if not silent:
-                                print('STORING NEW NODE EXTRAS...')
+                            IMPORT_LOGGER.debug('STORING NEW NODE EXTRAS...')
+                            progress_bar.set_description_str(pbar_node_base_str + 'Extras', refresh=True)
+
+                            # Get extras from import file
                             try:
                                 extras = data['node_extras'][str(import_entry_pk)]
                             except KeyError:
@@ -503,8 +554,7 @@ def import_data_sqla(
                             # till here
                             object_.extras = extras
                         elif extras_mode_new == 'none':
-                            if not silent:
-                                print('SKIPPING NEW NODE EXTRAS...')
+                            IMPORT_LOGGER.debug('SKIPPING NEW NODE EXTRAS...')
                         else:
                             raise exceptions.ImportValidationError(
                                 "Unknown extras_mode_new value: {}, should be either 'import' or 'none'"
@@ -512,8 +562,7 @@ def import_data_sqla(
                             )
 
                     # EXISTING NODES (Extras)
-                    if not silent:
-                        print('UPDATING EXISTING NODE EXTRAS (mode: {})'.format(extras_mode_existing))
+                    IMPORT_LOGGER.debug('UPDATING EXISTING NODE EXTRAS...')
 
                     import_existing_entry_pks = {
                         entry_data[unique_identifier]: import_entry_pk
@@ -523,6 +572,11 @@ def import_data_sqla(
                         import_entry_uuid = str(node.uuid)
                         import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 
+                        # Progress bar initialization - Node
+                        pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
+                        progress_bar.set_description_str(pbar_node_base_str + 'Extras', refresh=False)
+                        progress_bar.update()
+
                         # Get extras from import file
                         try:
                             extras = data['node_extras'][str(import_entry_pk)]
@@ -531,15 +585,24 @@ def import_data_sqla(
                                 'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
                             )
 
+                        old_extras = node.extras.copy()
                         # TODO: remove when aiida extras will be moved somewhere else
                         # from here
                         extras = {key: value for key, value in extras.items() if not key.startswith('_aiida_')}
                         if node.node_type.endswith('code.Code.'):
                             extras = {key: value for key, value in extras.items() if not key == 'hidden'}
                         # till here
-                        node.extras = merge_extras(node.extras, extras, extras_mode_existing)
-                        flag_modified(node, 'extras')
-                        objects_to_update.append(node)
+                        new_extras = merge_extras(node.extras, extras, extras_mode_existing)
+                        if new_extras != old_extras:
+                            node.extras = new_extras
+                            flag_modified(node, 'extras')
+                            objects_to_update.append(node)
+
+                else:
+                    # Update progress bar with new non-Node entries
+                    progress_bar.update(n=len(existing_entries[entity_name]) + len(new_entries[entity_name]))
+
+                progress_bar.set_description_str(pbar_base_str + 'Storing', refresh=True)
 
                 # Store them all in once; However, the PK are not set in this way...
                 if objects_to_create:
@@ -549,19 +612,26 @@ def import_data_sqla(
 
                 session.flush()
 
+                just_saved = {}
                 if import_new_entry_pks.keys():
+                    reset_progress_bar = {'total': progress_bar.total, 'n': progress_bar.n}
+                    progress_bar = get_progress_bar(total=len(import_new_entry_pks), disable=silent)
+
                     builder = QueryBuilder()
                     builder.append(
                         entity,
                         filters={unique_identifier: {
                             'in': list(import_new_entry_pks.keys())
                         }},
-                        project=[unique_identifier, 'id'],
-                        tag='res'
+                        project=[unique_identifier, 'id']
                     )
-                    just_saved = {v[0]: v[1] for v in builder.all()}
-                else:
-                    just_saved = dict()
+
+                    for entry in builder.iterall():
+                        progress_bar.update()
+
+                        just_saved.update({entry[0]: entry[1]})
+
+                progress_bar.set_description_str(pbar_base_str + 'Done!', refresh=True)
 
                 # Now I have the PKs, print the info
                 # Moreover, add newly created Nodes to foreign_ids_reverse_mappings
@@ -575,16 +645,21 @@ def import_data_sqla(
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['new'].append((import_entry_pk, new_pk))
 
-                    if not silent:
-                        print('NEW %s: %s (%s->%s)' % (entity_sig, unique_id, import_entry_pk, new_pk))
+                    IMPORT_LOGGER.debug('N %s: %s (%s->%s)', entity_name, unique_id, import_entry_pk, new_pk)
 
-            if not silent:
-                print('STORING NODE LINKS...')
+            IMPORT_LOGGER.debug('STORING NODE LINKS...')
 
             import_links = data['links_uuid']
 
+            if import_links:
+                progress_bar = get_progress_bar(total=len(import_links), disable=silent)
+                pbar_base_str = 'Links - '
+
             for link in import_links:
                 # Check for dangling Links within the, supposed, self-consistent archive
+                progress_bar.set_description_str(pbar_base_str + 'label={}'.format(link['label']), refresh=False)
+                progress_bar.update()
+
                 try:
                     in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
                     out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
@@ -617,16 +692,24 @@ def import_data_sqla(
                     ret_dict['Link'] = {'new': []}
                 ret_dict['Link']['new'].append((in_id, out_id))
 
-            if not silent:
-                print('   ({} new links...)'.format(len(ret_dict.get('Link', {}).get('new', []))))
+            IMPORT_LOGGER.debug('   (%d new links...)', len(ret_dict.get('Link', {}).get('new', [])))
 
-            if not silent:
-                print('STORING GROUP ELEMENTS...')
+            IMPORT_LOGGER.debug('STORING GROUP ELEMENTS...')
+
             import_groups = data['groups_uuid']
+
+            if import_groups:
+                progress_bar = get_progress_bar(total=len(import_groups), disable=silent)
+                pbar_base_str = 'Groups - '
+
             for groupuuid, groupnodes in import_groups.items():
                 # # TODO: cache these to avoid too many queries
                 qb_group = QueryBuilder().append(Group, filters={'uuid': {'==': groupuuid}})
                 group_ = qb_group.first()[0]
+
+                progress_bar.set_description_str(pbar_base_str + 'label={}'.format(group_.label), refresh=False)
+                progress_bar.update()
+
                 nodes_ids_to_add = [
                     foreign_ids_reverse_mappings[NODE_ENTITY_NAME][node_uuid] for node_uuid in groupnodes
                 ]
@@ -664,35 +747,49 @@ def import_data_sqla(
                                 "Overflow of import groups (more than 100 import groups exists with basename '{}')"
                                 ''.format(basename)
                             )
-                    group = Group(label=group_label, type_string=IMPORTGROUP_TYPE)
+                    group = ImportGroup(label=group_label)
                     session.add(group.backend_entity._dbmodel)
 
                 # Adding nodes to group avoiding the SQLA ORM to increase speed
-                nodes = [
-                    entry[0].backend_entity
-                    for entry in QueryBuilder().append(Node, filters={
-                        'id': {
-                            'in': pks_for_group
-                        }
-                    }).all()
-                ]
-                group.backend_entity.add_nodes(nodes, skip_orm=True)
-                if not silent:
-                    print("IMPORTED NODES ARE GROUPED IN THE IMPORT GROUP LABELED '{}'".format(group.label))
-            else:
-                if not silent:
-                    print('NO NODES TO IMPORT, SO NO GROUP CREATED, IF IT DID NOT ALREADY EXIST')
+                builder = QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}})
 
-            if not silent:
-                print('COMMITTING EVERYTHING...')
+                progress_bar = get_progress_bar(total=len(pks_for_group), disable=silent)
+                progress_bar.set_description_str('Creating import Group - Preprocessing', refresh=True)
+                first = True
+
+                nodes = []
+                for entry in builder.iterall():
+                    if first:
+                        progress_bar.set_description_str('Creating import Group', refresh=False)
+                        first = False
+                    progress_bar.update()
+                    nodes.append(entry[0].backend_entity)
+                group.backend_entity.add_nodes(nodes, skip_orm=True)
+                progress_bar.set_description_str('Done (cleaning up)', refresh=True)
+            else:
+                IMPORT_LOGGER.debug('No Nodes to import, so no Group created, if it did not already exist')
+
+            IMPORT_LOGGER.debug('COMMITTING EVERYTHING...')
             session.commit()
+
+            # Finalize Progress bar
+            close_progress_bar(leave=False)
+
+            # Summarize import
+            result_summary(ret_dict, getattr(group, 'label', None))
+
         except:
-            if not silent:
-                print('Rolling back')
+            # Finalize Progress bar
+            close_progress_bar(leave=False)
+
+            result_summary({}, None)
+
+            IMPORT_LOGGER.debug('Rolling back')
             session.rollback()
             raise
 
-    if not silent:
-        print('DONE.')
+    # Reset logging level
+    if silent:
+        logging.disable(level=logging.NOTSET)
 
     return ret_dict

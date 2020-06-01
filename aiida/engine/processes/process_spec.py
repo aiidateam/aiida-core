@@ -65,10 +65,10 @@ class ProcessSpec(plumpy.ProcessSpec):
             raise ValueError('status should be a positive integer, received {}'.format(type(status)))
 
         if not isinstance(label, str):
-            raise TypeError('label should be of basestring type and not of {}'.format(type(label)))
+            raise TypeError('label should be of str type and not of {}'.format(type(label)))
 
         if not isinstance(message, str):
-            raise TypeError('message should be of basestring type and not of {}'.format(type(message)))
+            raise TypeError('message should be of str type and not of {}'.format(type(message)))
 
         if not isinstance(invalidates_cache, bool):
             raise TypeError('invalidates_cache should be of type bool and not of {}'.format(type(invalidates_cache)))

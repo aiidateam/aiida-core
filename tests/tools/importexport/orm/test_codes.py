@@ -24,9 +24,11 @@ class TestCode(AiidaTestCase):
     """Test ex-/import cases related to Codes"""
 
     def setUp(self):
+        super().setUp()
         self.reset_database()
 
     def tearDown(self):
+        super().tearDown()
         self.reset_database()
 
     @with_temp_dir
@@ -44,8 +46,8 @@ class TestCode(AiidaTestCase):
 
         code_uuid = code.uuid
 
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([code], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([code], filename=export_file, silent=True)
 
         self.reset_database()
 
@@ -80,8 +82,8 @@ class TestCode(AiidaTestCase):
 
         export_links = get_all_node_links()
 
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([calc], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([calc], filename=export_file, silent=True)
 
         self.reset_database()
 
@@ -117,8 +119,8 @@ class TestCode(AiidaTestCase):
 
         code_uuid = code.uuid
 
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([code], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([code], filename=export_file, silent=True)
 
         self.clean_db()
         self.insert_data()

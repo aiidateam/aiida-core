@@ -31,8 +31,7 @@ Examples of invalid full types:
     'process.calculation%.calcfunction.%|aiida.calculations:arithmetic.add'  # More than one operator in segment
 
 """
-
-import collections
+from collections.abc import MutableMapping
 
 from aiida.common.escaping import escape_for_sql_like
 
@@ -163,7 +162,7 @@ def load_entry_point_from_full_type(full_type):
     raise EntryPointError('entry point of the given full type cannot be loaded')
 
 
-class Namespace(collections.MutableMapping):
+class Namespace(MutableMapping):
     """Namespace that can be used to map the node class hierarchy."""
 
     namespace_separator = '.'

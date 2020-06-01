@@ -255,13 +255,13 @@ O 0.5 0.5 0.5
             c = CifData(file=tmpf.name)
 
         ase = c.get_structure(converter='ase', primitive_cell=False).get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 15)
+        self.assertEqual(ase.get_global_number_of_atoms(), 15)
 
         ase = c.get_structure(converter='ase').get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 15)
+        self.assertEqual(ase.get_global_number_of_atoms(), 15)
 
         ase = c.get_structure(converter='ase', primitive_cell=True, subtrans_included=False).get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 5)
+        self.assertEqual(ase.get_global_number_of_atoms(), 5)
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
@@ -310,13 +310,13 @@ Te2 0.00000 0.00000 0.79030 0.01912
             c = CifData(file=tmpf.name)
 
         ase = c.get_structure(converter='pymatgen', primitive_cell=False).get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 15)
+        self.assertEqual(ase.get_global_number_of_atoms(), 15)
 
         ase = c.get_structure(converter='pymatgen').get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 15)
+        self.assertEqual(ase.get_global_number_of_atoms(), 15)
 
         ase = c.get_structure(converter='pymatgen', primitive_cell=True).get_ase()
-        self.assertEqual(ase.get_number_of_atoms(), 5)
+        self.assertEqual(ase.get_global_number_of_atoms(), 5)
 
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_pycifrw_from_datablocks(self):
@@ -574,24 +574,6 @@ _tag   {}
 
         with self.assertRaises(ValueError):
             ret_dict = refine_inline(c)
-
-    @unittest.skipIf(not has_ase(), 'Unable to import ase')
-    @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
-    @unittest.skipIf(not has_spglib(), 'Unable to import spglib')
-    def test_parse_formula(self):
-        from aiida.orm.nodes.data.cif import parse_formula
-
-        self.assertEqual(parse_formula('C H'), {'C': 1, 'H': 1})
-        self.assertEqual(parse_formula('C5 H1'), {'C': 5, 'H': 1})
-        self.assertEqual(parse_formula('Ca5 Ho'), {'Ca': 5, 'Ho': 1})
-        self.assertEqual(parse_formula('H0.5 O'), {'H': 0.5, 'O': 1})
-        self.assertEqual(parse_formula('C0 O0'), {'C': 0, 'O': 0})
-        self.assertEqual(parse_formula('C1 H1 '), {'C': 1, 'H': 1})  # Trailing spaces should be accepted
-        self.assertEqual(parse_formula(' C1 H1'), {'C': 1, 'H': 1})  # Leading spaces should be accepted
-
-        # Invalid literal for float()
-        with self.assertRaises(ValueError):
-            parse_formula('H0.5.2 O')
 
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_scan_type(self):

@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Utilities and configuration of the Django database schema."""
 
@@ -25,10 +33,19 @@ class DjangoBackendManager(BackendManager):
 
         return self._settings_manager
 
-    def _load_backend_environment(self):
-        """Load the backend environment."""
+    def _load_backend_environment(self, **kwargs):
+        """Load the backend environment.
+
+        The scoped session is needed for the QueryBuilder only.
+
+        :param kwargs: keyword arguments that will be passed on to :py:func:`aiida.backends.djsite.get_scoped_session`.
+        """
         os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings'
         django.setup()  # pylint: disable=no-member
+
+        # For QueryBuilder only
+        from . import get_scoped_session
+        get_scoped_session(**kwargs)
 
     def reset_backend_environment(self):
         """Reset the backend environment."""

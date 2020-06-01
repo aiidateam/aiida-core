@@ -10,6 +10,7 @@
 """Tests for `verdi export`."""
 import errno
 import os
+import shutil
 import tempfile
 import tarfile
 import traceback
@@ -19,7 +20,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_export
-from aiida.tools.importexport import EXPORT_VERSION
+from aiida.tools.importexport import EXPORT_VERSION, Archive
 
 from tests.utils.archives import get_archive_file
 
@@ -69,7 +70,7 @@ class TestVerdiExport(AiidaTestCase):
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
         os.chdir(cls.old_cwd)
-        os.rmdir(cls.cwd)
+        shutil.rmtree(cls.cwd, ignore_errors=True)
 
     def setUp(self):
         self.cli_runner = CliRunner()
@@ -160,6 +161,26 @@ class TestVerdiExport(AiidaTestCase):
             finally:
                 delete_temporary_file(filename_output)
 
+    def test_migrate_version_specific(self):
+        """Test the `-v/--version` option to migrate to a specific version instead of the latest."""
+        archive = 'export_v0.1_simple.aiida'
+        target_version = '0.2'
+
+        filename_input = get_archive_file(archive, filepath=self.fixture_archive)
+        filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
+
+        try:
+            options = [filename_input, filename_output, '--version', target_version]
+            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            self.assertIsNone(result.exception, result.output)
+            self.assertTrue(os.path.isfile(filename_output))
+            self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
+
+            with Archive(filename_output) as archive_object:
+                self.assertEqual(archive_object.version_format, target_version)
+        finally:
+            delete_temporary_file(filename_output)
+
     def test_migrate_versions_recent(self):
         """Migrating an archive with the current version should exit with non-zero status."""
         filename_input = get_archive_file(self.newest_archive, filepath=self.fixture_archive)
@@ -243,7 +264,7 @@ class TestVerdiExport(AiidaTestCase):
             options = ['--version', filename_input]
             result = self.cli_runner.invoke(cmd_export.inspect, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertEqual(result.output.strip(), version_number)
+            self.assertEqual(result.output.strip()[-len(version_number):], version_number)
 
     def test_inspect_empty_archive(self):
         """Test the functionality of `verdi export inspect` for an empty archive."""

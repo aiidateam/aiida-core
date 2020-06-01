@@ -62,9 +62,6 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         raise ValueError('Cannot submit calculation {} because it has cached input links! If you just want to test the '
                          'submission, set `metadata.dry_run` to True in the inputs.'.format(node.pk))
 
-    # After this call, no modifications to the folder should be done
-    node.put_object_from_tree(folder.abspath, force=True)
-
     # If we are performing a dry-run, the working directory should actually be a local folder that should already exist
     if dry_run:
         workdir = transport.getcwd()
@@ -244,6 +241,23 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                 raise IOError('It is not possible to create a symlink between two different machines for '
                               'calculation {}'.format(node.pk))
 
+    provenance_exclude_list = calc_info.provenance_exclude_list or []
+
+    # Loop recursively over content of the sandbox folder copying all that are not in `provenance_exclude_list`. Note
+    # that directories are not created explicitly. The `node.put_object_from_filelike` call will create intermediate
+    # directories for nested files automatically when needed. This means though that empty folders in the sandbox or
+    # folders that would be empty when considering the `provenance_exclude_list` will *not* be copied to the repo. The
+    # advantage of this explicit copying instead of deleting the files from `provenance_exclude_list` from the sandbox
+    # first before moving the entire remaining content to the node's repository, is that in this way we are guaranteed
+    # not to accidentally move files to the repository that should not go there at all cost.
+    for root, dirnames, filenames in os.walk(folder.abspath):
+        for filename in filenames:
+            filepath = os.path.join(root, filename)
+            relpath = os.path.relpath(filepath, folder.abspath)
+            if relpath not in provenance_exclude_list:
+                with open(filepath, 'rb') as handle:
+                    node.put_object_from_filelike(handle, relpath, 'wb', force=True)
+
     if not dry_run:
         # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
         # chance of making this method idempotent. That is to say, if a runner gets interrupted during this action, it
@@ -255,13 +269,11 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         remotedata.store()
 
 
-def submit_calculation(calculation, transport, calc_info, script_filename):
+def submit_calculation(calculation, transport):
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
     :param transport: an already opened transport to use to submit the calculation.
-    :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
-    :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     :return: the job id as returned by the scheduler `submit_from_script` call
     """
     job_id = calculation.get_job_id()
@@ -277,8 +289,9 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
 
+    submit_script_filename = calculation.get_option('submit_script_filename')
     workdir = calculation.get_remote_workdir()
-    job_id = scheduler.submit_from_script(workdir, script_filename)
+    job_id = scheduler.submit_from_script(workdir, submit_script_filename)
     calculation.set_job_id(job_id)
 
     return job_id

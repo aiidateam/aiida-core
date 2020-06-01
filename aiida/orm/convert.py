@@ -61,8 +61,9 @@ def _(backend_entity):
 
 @get_orm_entity.register(BackendGroup)
 def _(backend_entity):
-    from . import groups
-    return groups.Group.from_backend_entity(backend_entity)
+    from .groups import load_group_class
+    group_class = load_group_class(backend_entity.type_string)
+    return group_class.from_backend_entity(backend_entity)
 
 
 @get_orm_entity.register(BackendComputer)

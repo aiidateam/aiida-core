@@ -33,29 +33,53 @@ def raise_exception(exception):
     raise exception()
 
 
+class FileCalcJob(CalcJob):
+    """Example `CalcJob` implementation to test the `provenance_exclude_list` functionality.
+
+    The content of the input `files` will be copied to the `folder` sandbox, but also added to the attribute
+    `provenance_exclude_list` of the `CalcInfo` which should instruct the engine to copy the files to the remote work
+    directory but NOT to the repository of the `CalcJobNode`.
+    """
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('settings', valid_type=orm.Dict)
+        spec.input_namespace('files', valid_type=orm.SinglefileData, dynamic=True)
+
+    def prepare_for_submission(self, folder):
+        from aiida.common.datastructures import CalcInfo, CodeInfo
+
+        for key, node in self.inputs.files.items():
+            filepath = key.replace('_', os.sep)
+            dirname = os.path.dirname(filepath)
+            basename = os.path.basename(filepath)
+            with node.open(mode='rb') as source:
+                if dirname:
+                    subfolder = folder.get_subfolder(dirname, create=True)
+                    subfolder.create_file_from_filelike(source, basename)
+                else:
+                    folder.create_file_from_filelike(source, filepath)
+
+        codeinfo = CodeInfo()
+        codeinfo.code_uuid = self.inputs.code.uuid
+
+        calcinfo = CalcInfo()
+        calcinfo.codes_info = [codeinfo]
+        calcinfo.provenance_exclude_list = self.inputs.settings.get_attribute('provenance_exclude_list')
+        return calcinfo
+
+
 class TestCalcJob(AiidaTestCase):
     """Test for the `CalcJob` process sub class."""
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
-        import aiida
-        files = [os.path.join(os.path.dirname(aiida.__file__), os.pardir, '.ci', 'add.sh')]
         cls.computer.configure()  # pylint: disable=no-member
-        cls.remote_code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
-        cls.local_code = orm.Code(local_executable='add.sh', files=files).store()
-        cls.inputs = {
-            'x': orm.Int(1),
-            'y': orm.Int(2),
-            'metadata': {
-                'options': {
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    },
-                }
-            }
-        }
+        cls.remote_code = orm.Code(remote_computer_exec=(cls.computer, '/bin/bash')).store()
+        cls.local_code = orm.Code(local_executable='bash', files=['/bin/bash']).store()
+        cls.inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'metadata': {'options': {}}}
 
     def setUp(self):
         super().setUp()
@@ -193,7 +217,7 @@ class TestCalcJob(AiidaTestCase):
         """Passing invalid resources should already stop during input validation."""
         inputs = deepcopy(self.inputs)
         inputs['code'] = self.remote_code
-        inputs['metadata']['options']['resources'].pop('num_machines')
+        inputs['metadata']['options']['resources'] = {'num_machines': 'invalid_type'}
 
         with self.assertRaises(exceptions.InputValidationError):
             ArithmeticAddCalculation(inputs=inputs)
@@ -231,3 +255,50 @@ class TestCalcJob(AiidaTestCase):
         # Since the repository will only contain files on the top-level due to `Code.set_files` we only check those
         for filename in self.local_code.list_object_names():
             self.assertTrue(filename in uploaded_files)
+
+    def test_provenance_exclude_list(self):
+        """Test the functionality of the `CalcInfo.provenance_exclude_list` attribute."""
+        import tempfile
+
+        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
+
+        with tempfile.NamedTemporaryFile('w+') as handle:
+            handle.write('dummy_content')
+            handle.flush()
+            file_one = orm.SinglefileData(file=handle.name)
+
+        with tempfile.NamedTemporaryFile('w+') as handle:
+            handle.write('dummy_content')
+            handle.flush()
+            file_two = orm.SinglefileData(file=handle.name)
+
+        inputs = {
+            'code': code,
+            'files': {
+                # Note the `FileCalcJob` will turn underscores in the key into forward slashes making a nested hierarchy
+                'base_a_sub_one': file_one,
+                'base_b_two': file_two,
+            },
+            'settings': orm.Dict(dict={'provenance_exclude_list': ['base/a/sub/one']}),
+            'metadata': {
+                'dry_run': True,
+                'options': {
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    }
+                }
+            }
+        }
+
+        # We perform a `dry_run` because the calculation cannot actually run, however, the contents will still be
+        # written to the node's repository so we can check it contains the expected contents.
+        _, node = launch.run_get_node(FileCalcJob, **inputs)
+
+        self.assertIn('folder', node.dry_run_info)
+
+        # Verify that the folder (representing the node's repository) indeed do not contain the input files. Note,
+        # however, that the directory hierarchy should be there, albeit empty
+        self.assertIn('base', node.list_object_names())
+        self.assertEqual(sorted(['b']), sorted(node.list_object_names(os.path.join('base'))))
+        self.assertEqual(['two'], node.list_object_names(os.path.join('base', 'b')))

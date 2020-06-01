@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=invalid-name,protected-access
 """Tests for `verdi database`."""
-
 import enum
 
 from click.testing import CliRunner
@@ -17,7 +16,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_database
 from aiida.common.links import LinkType
-from aiida.orm import Data, Node, CalculationNode, WorkflowNode
+from aiida.orm import Data, CalculationNode, WorkflowNode
 
 
 class TestVerdiDatabasaIntegrity(AiidaTestCase):
@@ -162,11 +161,11 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertClickResultNoException(result)
 
-        # Create a node with invalid type: a base Node type string is considered invalid
-        # Note that there is guard against storing base Nodes for this reason, which we temporarily disable
-        Node._storable = True
-        Node().store()
-        Node._storable = False
+        # Create a node with invalid type: since there are a lot of validation rules that prevent us from creating an
+        # invalid node type normally, we have to do it manually on the database model instance before storing
+        node = Data()
+        node.backend_entity.dbmodel.node_type = '__main__.SubClass.'
+        node.store()
 
         result = self.cli_runner.invoke(cmd_database.detect_invalid_nodes, [])
         self.assertNotEqual(result.exit_code, 0)

@@ -224,7 +224,7 @@ def traverse_graph(starting_pks, max_iterations=None, get_links=False, links_for
 
     query_nodes = orm.QueryBuilder()
     query_nodes.append(orm.Node, project=['id'], filters={'id': {'in': operational_set}})
-    existing_pks = {pk[0] for pk in query_nodes.all()}
+    existing_pks = set(query_nodes.all(flat=True))
     missing_pks = operational_set.difference(existing_pks)
     if missing_pks:
         raise exceptions.NotExistent(

@@ -38,8 +38,8 @@ class TestMigrations(AiidaTestCase):
         from aiida.backends.djsite import get_scoped_session
         from aiida.orm import autogroup
 
-        self.current_autogroup = autogroup.current_autogroup
-        autogroup.current_autogroup = None
+        self.current_autogroup = autogroup.CURRENT_AUTOGROUP
+        autogroup.CURRENT_AUTOGROUP = None
         assert self.migrate_from and self.migrate_to, \
             "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
         self.migrate_from = [(self.app, self.migrate_from)]
@@ -85,7 +85,7 @@ class TestMigrations(AiidaTestCase):
         """At the end make sure we go back to the latest schema version."""
         from aiida.orm import autogroup
         self._revert_database_schema()
-        autogroup.current_autogroup = self.current_autogroup
+        autogroup.CURRENT_AUTOGROUP = self.current_autogroup
 
     def setUpBeforeMigration(self):
         """Anything to do before running the migrations, which should be implemented in test subclasses."""

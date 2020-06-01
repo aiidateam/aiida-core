@@ -7,13 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=unused-argument
 """Tests for the 'verdi computer' command."""
-
 from collections import OrderedDict
 import os
 import tempfile
 
 from click.testing import CliRunner
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -116,36 +117,6 @@ class TestVerdiComputerSetup(AiidaTestCase):
         import subprocess as sp
         output = sp.check_output(['verdi', 'computer', 'setup', '--help'])
         self.assertIn(b'Usage:', output)
-
-    def test_interactive(self):
-        """Test verdi computer setup in interactive mode."""
-        os.environ['VISUAL'] = 'sleep 1; vim -cwq'
-        os.environ['EDITOR'] = 'sleep 1; vim -cwq'
-        label = 'interactive_computer'
-
-        options_dict = generate_setup_options_dict(replace_args={'label': label}, non_interactive=False)
-        # In any case, these would be managed by the visual editor
-        options_dict.pop('prepend-text')
-        options_dict.pop('append-text')
-        user_input = '\n'.join(generate_setup_options_interactive(options_dict))
-
-        result = self.cli_runner.invoke(computer_setup, input=user_input)
-        self.assertIsNone(result.exception, msg='There was an unexpected exception. Output: {}'.format(result.output))
-
-        new_computer = orm.Computer.objects.get(name=label)
-        self.assertIsInstance(new_computer, orm.Computer)
-
-        self.assertEqual(new_computer.description, options_dict['description'])
-        self.assertEqual(new_computer.hostname, options_dict['hostname'])
-        self.assertEqual(new_computer.get_transport_type(), options_dict['transport'])
-        self.assertEqual(new_computer.get_scheduler_type(), options_dict['scheduler'])
-        self.assertEqual(new_computer.get_mpirun_command(), options_dict['mpirun-command'].split())
-        self.assertEqual(new_computer.get_shebang(), options_dict['shebang'])
-        self.assertEqual(new_computer.get_workdir(), options_dict['work-dir'])
-        self.assertEqual(new_computer.get_default_mpiprocs_per_machine(), int(options_dict['mpiprocs-per-machine']))
-        # For now I'm not writing anything in them
-        self.assertEqual(new_computer.get_prepend_text(), '')
-        self.assertEqual(new_computer.get_append_text(), '')
 
     def test_mixed(self):
         """
@@ -317,7 +288,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         with tempfile.NamedTemporaryFile('w') as handle:
             handle.write("""---
 label: {l}
-hostname: {l}
+hostname: myhost
 transport: local
 scheduler: direct
 """.format(l=label))
@@ -557,6 +528,8 @@ class TestVerdiComputerCommands(AiidaTestCase):
             workdir='/tmp/aiida'
         )
         cls.comp.set_default_mpiprocs_per_machine(1)
+        cls.comp.set_prepend_text('text to prepend')
+        cls.comp.set_append_text('text to append')
         cls.comp.store()
 
     def setUp(self):
@@ -747,3 +720,33 @@ class TestVerdiComputerCommands(AiidaTestCase):
         self.assertEqual(self.comp.get_default_mpiprocs_per_machine(), new_computer.get_default_mpiprocs_per_machine())
         self.assertEqual(self.comp.get_prepend_text(), new_computer.get_prepend_text())
         self.assertEqual(self.comp.get_append_text(), new_computer.get_append_text())
+
+
+@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
+def test_interactive(clear_database_before_test, aiida_localhost, non_interactive_editor):
+    """Test verdi computer setup in interactive mode."""
+    label = 'interactive_computer'
+
+    options_dict = generate_setup_options_dict(replace_args={'label': label}, non_interactive=False)
+    # In any case, these would be managed by the visual editor
+    options_dict.pop('prepend-text')
+    options_dict.pop('append-text')
+    user_input = '\n'.join(generate_setup_options_interactive(options_dict))
+
+    result = CliRunner().invoke(computer_setup, input=user_input)
+    assert result.exception is None, 'There was an unexpected exception. Output: {}'.format(result.output)
+
+    new_computer = orm.Computer.objects.get(name=label)
+    assert isinstance(new_computer, orm.Computer)
+
+    assert new_computer.description == options_dict['description']
+    assert new_computer.hostname == options_dict['hostname']
+    assert new_computer.get_transport_type() == options_dict['transport']
+    assert new_computer.get_scheduler_type() == options_dict['scheduler']
+    assert new_computer.get_mpirun_command() == options_dict['mpirun-command'].split()
+    assert new_computer.get_shebang() == options_dict['shebang']
+    assert new_computer.get_workdir() == options_dict['work-dir']
+    assert new_computer.get_default_mpiprocs_per_machine() == int(options_dict['mpiprocs-per-machine'])
+    # For now I'm not writing anything in them
+    assert new_computer.get_prepend_text() == ''
+    assert new_computer.get_append_text() == ''

@@ -7,10 +7,71 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_
+# pylint: disable=invalid-name
+from aiida.common import AttributeDict
+from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_, while_, ExitCode
+from aiida.engine import BaseRestartWorkChain, process_handler, ProcessHandlerReport
 from aiida.engine.persistence import ObjectLoader
 from aiida.orm import Int, List, Str
+from aiida.plugins import CalculationFactory
+
+
+ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+
+
+class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
+    """Ridiculous work chain around `AritmethicAddCalculation` with automated sanity checks and error handling."""
+
+    _process_class = ArithmeticAddCalculation
+
+    @classmethod
+    def define(cls, spec):
+        """Define the process specification."""
+        super().define(spec)
+        spec.expose_inputs(ArithmeticAddCalculation, namespace='add')
+        spec.expose_outputs(ArithmeticAddCalculation)
+        spec.outline(
+            cls.setup,
+            while_(cls.should_run_process)(
+                cls.run_process,
+                cls.inspect_process,
+            ),
+            cls.results,
+        )
+        spec.exit_code(100, 'ERROR_TOO_BIG', message='The sum was too big.')
+        spec.exit_code(110, 'ERROR_ENABLED_DOOM', message='You should not have done that.')
+
+    def setup(self):
+        """Call the `setup` of the `BaseRestartWorkChain` and then create the inputs dictionary in `self.ctx.inputs`.
+
+        This `self.ctx.inputs` dictionary will be used by the `BaseRestartWorkChain` to submit the process in the
+        internal loop.
+        """
+        super().setup()
+        self.ctx.inputs = AttributeDict(self.exposed_inputs(ArithmeticAddCalculation, 'add'))
+
+    @process_handler(priority=500)
+    def sanity_check_not_too_big(self, node):
+        """My puny brain cannot deal with numbers that I cannot count on my hand."""
+        if node.is_finished_ok and node.outputs.sum > 10:
+            return ProcessHandlerReport(True, self.exit_codes.ERROR_TOO_BIG)
+
+    @process_handler(priority=460, enabled=False)
+    def disabled_handler(self, node):
+        """By default this is not enabled and so should never be called, irrespective of exit codes of sub process."""
+        return ProcessHandlerReport(True, self.exit_codes.ERROR_ENABLED_DOOM)
+
+    @process_handler(priority=450, exit_codes=ExitCode(1000, 'Unicorn encountered'))
+    def a_magic_unicorn_appeared(self, node):
+        """As we all know unicorns do not exist so we should never have to deal with it."""
+        raise RuntimeError('this handler should never even have been called')
+
+    @process_handler(priority=400, exit_codes=ArithmeticAddCalculation.exit_codes.ERROR_NEGATIVE_NUMBER)
+    def error_negative_sum(self, node):
+        """What even is a negative number, how can I have minus three melons?!."""
+        self.ctx.inputs.x = Int(abs(node.inputs.x.value))
+        self.ctx.inputs.y = Int(abs(node.inputs.y.value))
+        return ProcessHandlerReport(True)
 
 
 class NestedWorkChain(WorkChain):

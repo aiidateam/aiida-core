@@ -46,9 +46,6 @@ class ProcessNode(Sealable, Node):
     # The link_type might not be correct while the object is being created.
     _hash_ignored_inputs = ['CALL_CALC', 'CALL_WORK']
 
-    # Specific sub classes should be marked as cacheable when appropriate
-    _cachable = False
-
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
     def __str__(self):

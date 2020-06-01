@@ -432,7 +432,7 @@ def add_extras(data):
     data.update({'node_extras': node_extras, 'node_extras_conversion': node_extras_conversion})
 
 
-def migrate_v3_to_v4(metadata, data, folder, *args):  # pylint: disable=unused-argument
+def migrate_v3_to_v4(metadata, data, *args):
     """
     Migration of export files from v0.3 to v0.4
 
@@ -445,6 +445,9 @@ def migrate_v3_to_v4(metadata, data, folder, *args):  # pylint: disable=unused-a
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
+
+    # The trajectory data migration requires the folder containing all the repository files of the archive
+    folder = args[0]
 
     # Apply migrations in correct sequential order
     migration_base_data_plugin_type_string(data)

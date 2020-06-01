@@ -488,14 +488,16 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
-        from aiida.common.lang import EmptyContextManager
+        import contextlib
         from aiida.backends.djsite.db.models import suppress_auto_now
 
         if clean:
             self.clean_values()
 
-        with transaction.atomic() if with_transaction else EmptyContextManager():
-            with suppress_auto_now([(models.DbNode, ['mtime'])]) if self.mtime else EmptyContextManager():
+        # `contextlib.suppress` provides empty context and can be replaced with `contextlib.nullcontext` after we drop
+        # support for python 3.6
+        with transaction.atomic() if with_transaction else contextlib.suppress():
+            with suppress_auto_now([(models.DbNode, ['mtime'])]) if self.mtime else contextlib.suppress():
                 # We need to save the node model instance itself first such that it has a pk
                 # that can be used in the foreign keys that will be needed for setting the
                 # attributes and links

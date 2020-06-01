@@ -23,6 +23,7 @@ from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.repository import Repository
 from aiida.orm.utils.node import AbstractNodeMeta, validate_attribute_extra_key
+from aiida.orm import autogroup
 
 from ..comments import Comment
 from ..computers import Computer
@@ -85,7 +86,7 @@ class Node(Entity, metaclass=AbstractNodeMeta):
     _hash_ignored_attributes = tuple()
 
     # Flag that determines whether the class can be cached.
-    _cachable = True
+    _cachable = False
 
     # Base path within the repository where to put objects by default
     _repository_base_path = 'path'
@@ -162,6 +163,20 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         """
         # pylint: disable=no-self-use
         return True
+
+    def validate_storability(self):
+        """Verify that the current node is allowed to be stored.
+
+        :raises `aiida.common.exceptions.StoringNotAllowed`: if the node does not match all requirements for storing
+        """
+        from aiida.plugins.entry_point import is_registered_entry_point
+
+        if not self._storable:
+            raise exceptions.StoringNotAllowed(self._unstorable_message)
+
+        if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
+            msg = 'class `{}:{}` does not have registered entry point'.format(self.__module__, self.__class__.__name__)
+            raise exceptions.StoringNotAllowed(msg)
 
     @classproperty
     def class_node_type(cls):
@@ -613,6 +628,7 @@ class Node(Entity, metaclass=AbstractNodeMeta):
 
         :param key: fully qualified identifier for the object within the repository
         :return: a list of `File` named tuples representing the objects present in directory with the given key
+        :raises FileNotFoundError: if the `path` does not exist in the repository of this node
         """
         return self._repository.list_objects(key)
 
@@ -998,11 +1014,10 @@ class Node(Entity, metaclass=AbstractNodeMeta):
                 'the `use_cache` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
             )
 
-        if not self._storable:
-            raise exceptions.StoringNotAllowed(self._unstorable_message)
-
         if not self.is_stored:
 
+            # Call `validate_storability` directly and not in `_validate` in case sub class forgets to call the super.
+            self.validate_storability()
             self._validate()
 
             # Verify that parents are already stored. Raises if this is not the case.
@@ -1024,18 +1039,9 @@ class Node(Entity, metaclass=AbstractNodeMeta):
                 self._store(with_transaction=with_transaction, clean=True)
 
             # Set up autogrouping used by verdi run
-            from aiida.orm.autogroup import current_autogroup, Autogroup, VERDIAUTOGROUP_TYPE
-            from aiida.orm import Group
-
-            if current_autogroup is not None:
-                if not isinstance(current_autogroup, Autogroup):
-                    raise exceptions.ValidationError('`current_autogroup` is not of type `Autogroup`')
-
-                if current_autogroup.is_to_be_grouped(self):
-                    group_label = current_autogroup.get_group_name()
-                    if group_label is not None:
-                        group = Group.objects.get_or_create(label=group_label, type_string=VERDIAUTOGROUP_TYPE)[0]
-                        group.add_nodes(self)
+            if autogroup.CURRENT_AUTOGROUP is not None and autogroup.CURRENT_AUTOGROUP.is_to_be_grouped(self):
+                group = autogroup.CURRENT_AUTOGROUP.get_or_create_group()
+                group.add_nodes(self)
 
         return self
 
@@ -1090,6 +1096,11 @@ class Node(Entity, metaclass=AbstractNodeMeta):
             if key != Sealable.SEALED_KEY:
                 self.set_attribute(key, value)
 
+        # The erase() removes the current content of the sandbox folder.
+        # If this was not done, the content of the sandbox folder could
+        # become mangled when copying over the content of the cache
+        # source repository folder.
+        self._repository.erase()
         self.put_object_from_tree(cache_node._repository._get_base_folder().abspath)  # pylint: disable=protected-access
 
         self._store(with_transaction=with_transaction, clean=False)

@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Provides import functionalities."""
+from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
 
-__all__ = ('import_data',)
+__all__ = ('import_data', 'IMPORT_LOGGER')
 
 
 def import_data(in_path, group=None, silent=False, **kwargs):
@@ -64,13 +65,17 @@ def import_data(in_path, group=None, silent=False, **kwargs):
     from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
     from aiida.tools.importexport.common.exceptions import ArchiveImportError
 
-    if configuration.PROFILE.database_backend == BACKEND_SQLA:
+    backend = configuration.PROFILE.database_backend
+
+    if backend == BACKEND_SQLA:
         from aiida.tools.importexport.dbimport.backends.sqla import import_data_sqla
+        IMPORT_LOGGER.debug('Calling import function import_data_sqla for the %s backend.', backend)
         return import_data_sqla(in_path, group=group, silent=silent, **kwargs)
 
-    if configuration.PROFILE.database_backend == BACKEND_DJANGO:
+    if backend == BACKEND_DJANGO:
         from aiida.tools.importexport.dbimport.backends.django import import_data_dj
+        IMPORT_LOGGER.debug('Calling import function import_data_dj for the %s backend.', backend)
         return import_data_dj(in_path, group=group, silent=silent, **kwargs)
 
     # else
-    raise ArchiveImportError('Unknown backend: {}'.format(configuration.PROFILE.database_backend))
+    raise ArchiveImportError('Unknown backend: {}'.format(backend))

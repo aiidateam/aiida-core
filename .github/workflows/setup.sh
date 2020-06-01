@@ -15,12 +15,13 @@ sed -i "s|PLACEHOLDER_PROFILE|test_${AIIDA_TEST_BACKEND}|" "${CONFIG}/profile.ya
 sed -i "s|PLACEHOLDER_DATABASE_NAME|test_${AIIDA_TEST_BACKEND}|" "${CONFIG}/profile.yaml"
 sed -i "s|PLACEHOLDER_REPOSITORY|/tmp/test_repository_test_${AIIDA_TEST_BACKEND}/|" "${CONFIG}/profile.yaml"
 sed -i "s|PLACEHOLDER_WORK_DIR|${GITHUB_WORKSPACE}|" "${CONFIG}/localhost.yaml"
-sed -i "s|PLACEHOLDER_REMOTE_ABS_PATH|${GITHUB_WORKSPACE}/.ci/doubler.sh|" "${CONFIG}/doubler.yaml"
+sed -i "s|PLACEHOLDER_REMOTE_ABS_PATH_DOUBLER|${GITHUB_WORKSPACE}/.ci/doubler.sh|" "${CONFIG}/doubler.yaml"
 
 verdi setup --config "${CONFIG}/profile.yaml"
 verdi computer setup --config "${CONFIG}/localhost.yaml"
 verdi computer configure local localhost --config "${CONFIG}/localhost-config.yaml"
 verdi code setup --config "${CONFIG}/doubler.yaml"
+verdi code setup --config "${CONFIG}/add.yaml"
 
 verdi profile setdefault test_${AIIDA_TEST_BACKEND}
 verdi config runner.poll.interval 0

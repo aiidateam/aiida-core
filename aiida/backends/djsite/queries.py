@@ -108,43 +108,6 @@ class DjangoQueryManager(AbstractQueryManager):
         if args.group_pk is not None:
             q_object.add(Q(dbgroups__pk__in=args.group_pk), Q.AND)
 
-    @staticmethod
-    def _extract_formula(struc_pk, args, deser_data):
-        """Extract formula."""
-        from aiida.orm.nodes.data.structure import (get_formula, get_symbols_string)
-
-        if struc_pk is not None:
-            # Exclude structures by the elements
-            if args.element is not None:
-                all_kinds = [k['symbols'] for k in deser_data[struc_pk]['kinds']]
-                all_symbols = [item for sublist in all_kinds for item in sublist]
-                if not any([s in args.element for s in all_symbols]):
-                    return None
-            if args.element_only is not None:
-                all_kinds = [k['symbols'] for k in deser_data[struc_pk]['kinds']]
-                all_symbols = [item for sublist in all_kinds for item in sublist]
-                if not all([s in all_symbols for s in args.element_only]):
-                    return None
-
-            # build the formula
-            symbol_dict = {
-                k['name']: get_symbols_string(k['symbols'], k['weights']) for k in deser_data[struc_pk]['kinds']
-            }
-            try:
-                symbol_list = [symbol_dict[s['kind_name']] for s in deser_data[struc_pk]['sites']]
-                formula = get_formula(symbol_list, mode=args.formulamode)
-            # If for some reason there is no kind with the name
-            # referenced by the site
-            except KeyError:
-                formula = '<<UNKNOWN>>'
-                # cycle if we imposed the filter on elements
-                if args.element is not None or args.element_only is not None:
-                    return None
-        else:
-            formula = '<<UNKNOWN>>'
-
-        return formula
-
     def get_bands_and_parents_structure(self, args):
         """Returns bands and closest parent structure."""
         from django.db.models import Q
@@ -175,14 +138,24 @@ class DjangoQueryManager(AbstractQueryManager):
             # get the closest structures (WITHOUT DbPath)
             structure_dict = get_closest_parents(pks, Q(node_type='data.structure.StructureData.'), chunk_size=1)
 
-            struc_pks = [structure_dict[pk] for pk in pks]
+            struc_pks = [structure_dict.get(pk) for pk in pks]
 
             # query for the attributes needed for the structure formula
             res_attr = models.DbNode.objects.filter(id__in=struc_pks).values_list('id', 'attributes')
+            res_attr = {rattr[0]: rattr[1] for rattr in res_attr}
 
             # prepare the printout
             for (b_id_lbl_date, struc_pk) in zip(this_chunk, struc_pks):
-                formula = self._extract_formula(struc_pk, args, {rattr[0]: rattr[1] for rattr in res_attr})
+                if struc_pk is not None:
+                    strct = res_attr[struc_pk]
+                    akinds, asites = strct['kinds'], strct['sites']
+                    formula = self._extract_formula(akinds, asites, args)
+                else:
+                    if args.element is not None or args.element_only is not None:
+                        formula = None
+                    else:
+                        formula = '<<NOT FOUND>>'
+
                 if formula is None:
                     continue
                 entry_list.append([

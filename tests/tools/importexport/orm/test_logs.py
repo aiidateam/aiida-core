@@ -53,8 +53,8 @@ class TestLogs(AiidaTestCase):
         # Store Log metadata
         log_metadata = orm.Log.objects.get(dbnode_id=calc.id).metadata
 
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([calc], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([calc], filename=export_file, silent=True)
 
         self.reset_database()
 
@@ -84,8 +84,8 @@ class TestLogs(AiidaTestCase):
         calc_uuid = calc.uuid
 
         # Export, excluding logs
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([calc], outfile=export_file, silent=True, include_logs=False)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([calc], filename=export_file, silent=True, include_logs=False)
 
         # Clean database and reimport exported data
         self.reset_database()
@@ -121,8 +121,8 @@ class TestLogs(AiidaTestCase):
         log_uuid = str(log_uuid[0][0])
 
         # Export
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([calc], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([calc], filename=export_file, silent=True)
 
         # Clean database and reimport exported data
         self.reset_database()
@@ -142,8 +142,8 @@ class TestLogs(AiidaTestCase):
 
         # Re-export
         calc = orm.load_node(import_calcs[0][0])
-        re_export_file = os.path.join(temp_dir, 're_export.tar.gz')
-        export([calc], outfile=re_export_file, silent=True)
+        re_export_file = os.path.join(temp_dir, 're_export.aiida')
+        export([calc], filename=re_export_file, silent=True)
 
         # Clean database and reimport exported data
         self.reset_database()
@@ -175,8 +175,8 @@ class TestLogs(AiidaTestCase):
         log_uuid_existing = str(log_uuid_existing[0][0])
 
         # Export as "EXISTING" DB
-        export_file_existing = os.path.join(temp_dir, 'export_EXISTING.tar.gz')
-        export([node], outfile=export_file_existing, silent=True)
+        export_file_existing = os.path.join(temp_dir, 'export_EXISTING.aiida')
+        export([node], filename=export_file_existing, silent=True)
 
         # Add 2 more Logs and save UUIDs for all three Logs prior to export
         node.logger.critical(log_msgs[1])
@@ -185,8 +185,8 @@ class TestLogs(AiidaTestCase):
         log_uuids_full = [str(log[0]) for log in log_uuids_full]
 
         # Export as "FULL" DB
-        export_file_full = os.path.join(temp_dir, 'export_FULL.tar.gz')
-        export([node], outfile=export_file_full, silent=True)
+        export_file_full = os.path.join(temp_dir, 'export_FULL.aiida')
+        export([node], filename=export_file_full, silent=True)
 
         # Clean database and reimport "EXISTING" DB
         self.reset_database()
@@ -290,7 +290,7 @@ class TestLogs(AiidaTestCase):
 
         # Export "EXISTING" DB
         export_file_existing = os.path.join(temp_dir, export_filenames['EXISTING'])
-        export([calc], outfile=export_file_existing, silent=True)
+        export([calc], filename=export_file_existing, silent=True)
 
         # Add remaining Log messages
         for log_msg in log_msgs[1:]:
@@ -310,7 +310,7 @@ class TestLogs(AiidaTestCase):
 
         # Export "FULL" DB
         export_file_full = os.path.join(temp_dir, export_filenames['FULL'])
-        export([calc], outfile=export_file_full, silent=True)
+        export([calc], filename=export_file_full, silent=True)
 
         # Clean database
         self.reset_database()
@@ -348,7 +348,7 @@ class TestLogs(AiidaTestCase):
 
         # Export "NEW" DB
         export_file_new = os.path.join(temp_dir, export_filenames['NEW'])
-        export([calc], outfile=export_file_new, silent=True)
+        export([calc], filename=export_file_new, silent=True)
 
         # Clean database
         self.reset_database()

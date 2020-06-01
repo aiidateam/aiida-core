@@ -62,8 +62,8 @@ class TestGroups(AiidaTestCase):
         gr1_uuid = gr1.uuid
 
         # At this point we export the generated data
-        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
-        export([sd1, jc1, gr1], outfile=filename1, silent=True)
+        filename1 = os.path.join(temp_dir, 'export1.aiida')
+        export([sd1, jc1, gr1], filename=filename1, silent=True)
         n_uuids = [sd1.uuid, jc1.uuid]
         self.clean_db()
         self.insert_data()
@@ -100,8 +100,8 @@ class TestGroups(AiidaTestCase):
         group_uuid = group.uuid
 
         # At this point we export the generated data
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([group], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([group], filename=filename, silent=True)
         n_uuids = [sd1.uuid]
         self.clean_db()
         self.insert_data()
@@ -142,8 +142,8 @@ class TestGroups(AiidaTestCase):
         group.add_nodes([sd1])
 
         # At this point we export the generated data
-        filename = os.path.join(temp_dir, 'export1.tar.gz')
-        export([group], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export1.aiida')
+        export([group], filename=filename, silent=True)
         self.clean_db()
         self.insert_data()
 
@@ -184,7 +184,7 @@ class TestGroups(AiidaTestCase):
 
         # Export Nodes
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([data1, data2], outfile=filename, silent=True)
+        export([data1, data2], filename=filename, silent=True)
         self.reset_database()
 
         # Create Group, do not store

@@ -8,12 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi group` commands"""
-
 import click
 
 from aiida.common.exceptions import UniquenessError
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments, types
+from aiida.cmdline.params import options, arguments
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 
@@ -123,6 +122,7 @@ def group_description(group, description):
 
 @verdi_group.command('show')
 @options.RAW(help='Show only a space-separated list of PKs of the calculations in the group')
+@options.LIMIT()
 @click.option(
     '-u',
     '--uuid',
@@ -132,18 +132,23 @@ def group_description(group, description):
 )
 @arguments.GROUP()
 @with_dbenv()
-def group_show(group, raw, uuid):
+def group_show(group, raw, limit, uuid):
     """Show information for a given group."""
     from tabulate import tabulate
 
     from aiida.common.utils import str_timedelta
     from aiida.common import timezone
 
+    if limit:
+        node_iterator = group.nodes[:limit]
+    else:
+        node_iterator = group.nodes
+
     if raw:
         if uuid:
-            echo.echo(' '.join(str(_.uuid) for _ in group.nodes))
+            echo.echo(' '.join(str(_.uuid) for _ in node_iterator))
         else:
-            echo.echo(' '.join(str(_.pk) for _ in group.nodes))
+            echo.echo(' '.join(str(_.pk) for _ in node_iterator))
     else:
         type_string = group.type_string
         desc = group.description
@@ -161,7 +166,7 @@ def group_show(group, raw, uuid):
             header.append('UUID')
         header.extend(['PK', 'Type', 'Created'])
         echo.echo('# Nodes:')
-        for node in group.nodes:
+        for node in node_iterator:
             row = []
             if uuid:
                 row.append(node.uuid)
@@ -172,86 +177,90 @@ def group_show(group, raw, uuid):
         echo.echo(tabulate(table, headers=header))
 
 
-@with_dbenv()
-def valid_group_type_strings():
-    from aiida.orm import GroupTypeString
-    return tuple(i.value for i in GroupTypeString)
-
-
-@with_dbenv()
-def user_defined_group():
-    from aiida.orm import GroupTypeString
-    return GroupTypeString.USER.value
-
-
 @verdi_group.command('list')
-@options.ALL_USERS(help='Show groups for all users, rather than only for the current user')
-@click.option(
-    '-u',
-    '--user',
-    'user_email',
-    type=click.STRING,
-    help='Add a filter to show only groups belonging to a specific user'
-)
-@click.option('-a', '--all-types', is_flag=True, default=False, help='Show groups of all types')
+@options.ALL_USERS(help='Show groups for all users, rather than only for the current user.')
+@options.USER(help='Add a filter to show only groups belonging to a specific user')
+@options.ALL(help='Show groups of all types.')
 @click.option(
     '-t',
     '--type',
     'group_type',
-    type=types.LazyChoice(valid_group_type_strings),
-    default=user_defined_group,
+    default=None,
     help='Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to '
-    'specify aiida-internal type'
+    'specify aiida-internal type. [deprecated: use `--type-string` instead. Will be removed in 2.0.0]'
 )
+@options.TYPE_STRING()
 @click.option(
-    '-d', '--with-description', 'with_description', is_flag=True, default=False, help='Show also the group description'
+    '-d',
+    '--with-description',
+    'with_description',
+    is_flag=True,
+    default=False,
+    help='Show also the group description.'
 )
-@click.option('-C', '--count', is_flag=True, default=False, help='Show also the number of nodes in the group')
-@options.PAST_DAYS(help='add a filter to show only groups created in the past N days', default=None)
+@click.option('-C', '--count', is_flag=True, default=False, help='Show also the number of nodes in the group.')
+@options.PAST_DAYS(help='Add a filter to show only groups created in the past N days.', default=None)
 @click.option(
     '-s',
     '--startswith',
     type=click.STRING,
     default=None,
-    help='add a filter to show only groups for which the name begins with STRING'
+    help='Add a filter to show only groups for which the label begins with STRING.'
 )
 @click.option(
     '-e',
     '--endswith',
     type=click.STRING,
     default=None,
-    help='add a filter to show only groups for which the name ends with STRING'
+    help='Add a filter to show only groups for which the label ends with STRING.'
 )
 @click.option(
     '-c',
     '--contains',
     type=click.STRING,
     default=None,
-    help='add a filter to show only groups for which the name contains STRING'
+    help='Add a filter to show only groups for which the label contains STRING.'
 )
-@options.NODE(help='Show only the groups that contain the node')
+@options.ORDER_BY(type=click.Choice(['id', 'label', 'ctime']), default='id')
+@options.ORDER_DIRECTION()
+@options.NODE(help='Show only the groups that contain the node.')
 @with_dbenv()
 def group_list(
-    all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith, contains,
-    node
+    all_users, user, all_entries, group_type, type_string, with_description, count, past_days, startswith, endswith,
+    contains, order_by, order_dir, node
 ):
     """Show a list of existing groups."""
-    # pylint: disable=too-many-branches,too-many-arguments, too-many-locals
+    # pylint: disable=too-many-branches,too-many-arguments,too-many-locals,too-many-statements
     import datetime
-    from aiida.common.escaping import escape_for_sql_like
-    from aiida.common import timezone
-    from aiida.orm import Group
-    from aiida.orm import QueryBuilder
-    from aiida.orm import User
+    import warnings
     from aiida import orm
+    from aiida.common import timezone
+    from aiida.common.escaping import escape_for_sql_like
+    from aiida.common.warnings import AiidaDeprecationWarning
     from tabulate import tabulate
 
-    query = QueryBuilder()
+    builder = orm.QueryBuilder()
     filters = {}
 
-    # Specify group types
-    if not all_types:
-        filters = {'type_string': {'==': group_type}}
+    if group_type is not None:
+        warnings.warn('`--group-type` is deprecated, use `--type-string` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+
+        if type_string is not None:
+            raise click.BadOptionUsage('group-type', 'cannot use `--group-type` and `--type-string` at the same time.')
+        else:
+            type_string = group_type
+
+    # Have to specify the default for `type_string` here instead of directly in the option otherwise it will always
+    # raise above if the user specifies just the `--group-type` option. Once that option is removed, the default can
+    # be moved to the option itself.
+    if type_string is None:
+        type_string = 'core'
+
+    if not all_entries:
+        if '%' in type_string or '_' in type_string:
+            filters['type_string'] = {'like': type_string}
+        else:
+            filters['type_string'] = type_string
 
     # Creation time
     if past_days:
@@ -266,26 +275,25 @@ def group_list(
     if contains:
         filters['or'].append({'label': {'like': '%{}%'.format(escape_for_sql_like(contains))}})
 
-    query.append(Group, filters=filters, tag='group', project='*')
+    builder.append(orm.Group, filters=filters, tag='group', project='*')
 
     # Query groups that belong to specific user
-    if user_email:
-        user = user_email
+    if user:
+        user_email = user.email
     else:
         # By default: only groups of this user
-        user = orm.User.objects.get_default().email
+        user_email = orm.User.objects.get_default().email
 
     # Query groups that belong to all users
     if not all_users:
-        query.append(User, filters={'email': {'==': user}}, with_group='group')
+        builder.append(orm.User, filters={'email': {'==': user_email}}, with_group='group')
 
     # Query groups that contain a particular node
     if node:
-        from aiida.orm import Node
-        query.append(Node, filters={'id': {'==': node.id}}, with_group='group')
+        builder.append(orm.Node, filters={'id': {'==': node.id}}, with_group='group')
 
-    query.order_by({Group: {'id': 'asc'}})
-    result = query.all()
+    builder.order_by({orm.Group: {order_by: order_dir}})
+    result = builder.all()
 
     projection_lambdas = {
         'pk': lambda group: str(group.pk),
@@ -311,9 +319,13 @@ def group_list(
     for group in result:
         table.append([projection_lambdas[field](group[0]) for field in projection_fields])
 
-    if not all_types:
-        echo.echo_info('If you want to see the groups of all types, please add -a/--all-types option')
-    echo.echo(tabulate(table, headers=projection_header))
+    if not all_entries:
+        echo.echo_info('to show groups of all types, use the `-a/--all` option.')
+
+    if not table:
+        echo.echo_info('no groups found matching the specified criteria.')
+    else:
+        echo.echo(tabulate(table, headers=projection_header))
 
 
 @verdi_group.command('create')
@@ -322,9 +334,8 @@ def group_list(
 def group_create(group_label):
     """Create an empty group with a given name."""
     from aiida import orm
-    from aiida.orm import GroupTypeString
 
-    group, created = orm.Group.objects.get_or_create(label=group_label, type_string=GroupTypeString.USER.value)
+    group, created = orm.Group.objects.get_or_create(label=group_label)
 
     if created:
         echo.echo_success("Group created with PK = {} and name '{}'".format(group.id, group.label))
@@ -343,7 +354,7 @@ def group_copy(source_group, destination_group):
     Note that the destination group may not exist."""
     from aiida import orm
 
-    dest_group, created = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)
+    dest_group, created = orm.Group.objects.get_or_create(label=destination_group)
 
     # Issue warning if destination group is not empty and get user confirmation to continue
     if not created and not dest_group.is_empty:
@@ -353,3 +364,70 @@ def group_copy(source_group, destination_group):
     # Copy nodes
     dest_group.add_nodes(list(source_group.nodes))
     echo.echo_success('Nodes copied from group<{}> to group<{}>'.format(source_group.label, dest_group.label))
+
+
+@verdi_group.group('path')
+def verdi_group_path():
+    """Inspect groups of nodes, with delimited label paths."""
+
+
+@verdi_group_path.command('ls')
+@click.argument('path', type=click.STRING, required=False)
+@options.TYPE_STRING(default='core', help='Filter to only include groups of this type string.')
+@click.option('-R', '--recursive', is_flag=True, default=False, help='Recursively list sub-paths encountered.')
+@click.option('-l', '--long', 'as_table', is_flag=True, default=False, help='List as a table, with sub-group count.')
+@click.option(
+    '-d',
+    '--with-description',
+    'with_description',
+    is_flag=True,
+    default=False,
+    help='Show also the group description.'
+)
+@click.option(
+    '--no-virtual',
+    'no_virtual',
+    is_flag=True,
+    default=False,
+    help='Only show paths that fully correspond to an existing group.'
+)
+@click.option('--no-warn', is_flag=True, default=False, help='Do not issue a warning if any paths are invalid.')
+@with_dbenv()
+def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_description, no_warn):
+    # pylint: disable=too-many-arguments,too-many-branches
+    """Show a list of existing group paths."""
+    from aiida.plugins import GroupFactory
+    from aiida.tools.groups.paths import GroupPath, InvalidPath
+
+    try:
+        path = GroupPath(path or '', cls=GroupFactory(type_string), warn_invalid_child=not no_warn)
+    except InvalidPath as err:
+        echo.echo_critical(str(err))
+
+    if recursive:
+        children = path.walk()
+    else:
+        children = path.children
+
+    if as_table or with_description:
+        from tabulate import tabulate
+        headers = ['Path', 'Sub-Groups']
+        if with_description:
+            headers.append('Description')
+        rows = []
+        for child in sorted(children):
+            if no_virtual and child.is_virtual:
+                continue
+            row = [
+                child.path if child.is_virtual else click.style(child.path, bold=True),
+                len([c for c in child.walk() if not c.is_virtual])
+            ]
+            if with_description:
+                row.append('-' if child.is_virtual else child.get_group().description)
+            rows.append(row)
+        echo.echo(tabulate(rows, headers=headers))
+    else:
+        for child in sorted(children):
+            if no_virtual and child.is_virtual:
+                continue
+            echo.echo(child.path, bold=not child.is_virtual)

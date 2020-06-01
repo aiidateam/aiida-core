@@ -64,12 +64,12 @@ class TestComputer(AiidaTestCase):
         comp_uuid = str(comp.uuid)
 
         # Export the first job calculation
-        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
-        export([calc1], outfile=filename1, silent=True)
+        filename1 = os.path.join(temp_dir, 'export1.aiida')
+        export([calc1], filename=filename1, silent=True)
 
         # Export the second job calculation
-        filename2 = os.path.join(temp_dir, 'export2.tar.gz')
-        export([calc2], outfile=filename2, silent=True)
+        filename2 = os.path.join(temp_dir, 'export2.aiida')
+        export([calc2], filename=filename2, silent=True)
 
         # Clean the local database
         self.clean_db()
@@ -152,8 +152,8 @@ class TestComputer(AiidaTestCase):
         comp1_name = str(comp1.name)
 
         # Export the first job calculation
-        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
-        export([calc1], outfile=filename1, silent=True)
+        filename1 = os.path.join(temp_dir, 'export1.aiida')
+        export([calc1], filename=filename1, silent=True)
 
         # Rename the computer
         comp1.set_name(comp1_name + '_updated')
@@ -168,8 +168,8 @@ class TestComputer(AiidaTestCase):
         calc2.seal()
 
         # Export the second job calculation
-        filename2 = os.path.join(temp_dir, 'export2.tar.gz')
-        export([calc2], outfile=filename2, silent=True)
+        filename2 = os.path.join(temp_dir, 'export2.aiida')
+        export([calc2], filename=filename2, silent=True)
 
         # Clean the local database
         self.clean_db()
@@ -235,8 +235,8 @@ class TestComputer(AiidaTestCase):
         calc1.seal()
 
         # Export the first job calculation
-        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
-        export([calc1], outfile=filename1, silent=True)
+        filename1 = os.path.join(temp_dir, 'export1.aiida')
+        export([calc1], filename=filename1, silent=True)
 
         # Reset the database
         self.clean_db()
@@ -255,8 +255,8 @@ class TestComputer(AiidaTestCase):
         calc2.seal()
 
         # Export the second job calculation
-        filename2 = os.path.join(temp_dir, 'export2.tar.gz')
-        export([calc2], outfile=filename2, silent=True)
+        filename2 = os.path.join(temp_dir, 'export2.aiida')
+        export([calc2], filename=filename2, silent=True)
 
         # Reset the database
         self.clean_db()
@@ -275,8 +275,8 @@ class TestComputer(AiidaTestCase):
         calc3.seal()
 
         # Export the third job calculation
-        filename3 = os.path.join(temp_dir, 'export3.tar.gz')
-        export([calc3], outfile=filename3, silent=True)
+        filename3 = os.path.join(temp_dir, 'export3.aiida')
+        export([calc3], filename=filename3, silent=True)
 
         # Clean the local database
         self.clean_db()
@@ -332,8 +332,8 @@ class TestComputer(AiidaTestCase):
         calc1.seal()
 
         # Export the first job calculation
-        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
-        export([calc1], outfile=filename1, silent=True)
+        filename1 = os.path.join(temp_dir, 'export1.aiida')
+        export([calc1], filename=filename1, silent=True)
 
         # Clean the local database
         self.clean_db()

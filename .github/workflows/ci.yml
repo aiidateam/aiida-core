@@ -1,27 +1,8 @@
-name: aiida-core
+name: continuous-integration
 
 on: [push, pull_request]
 
 jobs:
-
-  conda:
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v1
-
-    - name: Set up Python 3.7
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.7
-
-    - name: Conda install
-      env:
-        PYTHON_VERSION: 3.7
-      run:
-        .github/workflows/conda.sh
 
   docs:
 
@@ -29,7 +10,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Set up Python 3.7
       uses: actions/setup-python@v1
@@ -60,7 +41,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Set up Python 3.7
       uses: actions/setup-python@v1
@@ -83,7 +64,39 @@ jobs:
       run:
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
+  check-requirements:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+
+    - name: Install dm-script dependencies
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
+
+    - name: Check requirements files
+      id: check_reqs
+      run: python ./utils/dependency_management.py check-requirements DEFAULT
+
+    - name: Create commit comment
+      if: failure() && steps.check_reqs.outputs.error
+      uses: peter-evans/commit-comment@v1
+      with:
+        path: setup.json
+        body: |
+          ${{ steps.check_reqs.outputs.error }}
+
+          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information on dependency management.
+
   tests:
+
+    needs: [check-requirements]
 
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -91,17 +104,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.5, 3.8]
         backend: ['django', 'sqlalchemy']
+        python-version: [3.5, 3.8]
+
+    services:
+      postgres:
+        image: postgres:10
+        env:
+          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      rabbitmq:
+        image: rabbitmq:latest
+        ports:
+          - 5672:5672
 
     steps:
-    - uses: actions/checkout@v1
-    - uses: harmon758/postgresql-action@v1
-      with:
-        postgresql version: '11'
-        postgresql db: test_${{ matrix.backend }}
-        postgresql user: 'postgres'
-        postgresql password: ''
+    - uses: actions/checkout@v2
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
@@ -110,20 +136,25 @@ jobs:
 
     - name: Install system dependencies
       run: |
-        wget -O - "https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc" | sudo apt-key add -
-        echo 'deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
-        echo 'deb https://dl.bintray.com/rabbitmq/debian bionic main' | sudo tee -a /etc/apt/sources.list.d/bintray.rabbitmq.list
         sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt update
-        sudo apt install postgresql postgresql-server-dev-all postgresql-client rabbitmq-server graphviz
-        sudo systemctl status rabbitmq-server.service
+        sudo apt install postgresql-10 graphviz
 
-    - name: Install python dependencies
+    - name: Upgrade pip
       run: |
         pip install --upgrade pip
-        pip install numpy==1.17.4
-        pip install -e .[atomic_tools,docs,notebook,rest,testing]
+        pip --version
+
+    - name: upgrade setuptools [py35]
+      if: matrix.python-version == 3.5
+      run: pip install -I setuptools==42.0.0  # Minimally required version for Python 3.5.
+
+    - name: Install aiida-core
+      run: |
+        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        pip install --no-deps -e .
         reentry scan
+        pip freeze
 
     - name: Setup environment
       env:
@@ -137,13 +168,22 @@ jobs:
       run:
         .github/workflows/tests.sh
 
+    - name: Upload coverage report
+      if: matrix.python-version == 3.5 && github.repository == 'aiidateam/aiida-core'
+      uses: codecov/codecov-action@v1
+      with:
+        name: aiida-pytests-py3.5-${{ matrix.backend }}
+        flags: ${{ matrix.backend }}
+        file: ./coverage.xml
+        fail_ci_if_error: true
+
   verdi:
 
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Set up Python 3.7
       uses: actions/setup-python@v1
@@ -165,7 +205,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Install docker
       run: |
@@ -187,3 +227,4 @@ jobs:
         docker logs $DOCKERID
         docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi profile show default'
         docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi computer show localhost'
+        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi daemon status'

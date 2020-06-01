@@ -96,6 +96,7 @@ def test_daemon_not_running():
     """Test `get_daemon_status` output when the daemon is not running."""
     client = get_daemon_client()
     assert 'The daemon is not running' in get_daemon_status(client)
+    assert not client.is_daemon_running
 
 
 @patch.object(DaemonClient, 'is_daemon_running', lambda: True)
@@ -120,6 +121,7 @@ Active workers [1]:
  4990    0.231        0  2019-12-17 12:27:38
 Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers"""
     assert get_daemon_status(client) == literal
+    assert client.is_daemon_running
 
 
 @patch.object(DaemonClient, 'is_daemon_running', lambda: True)

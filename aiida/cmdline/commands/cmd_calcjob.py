@@ -87,6 +87,10 @@ def calcjob_inputcat(calcjob, path):
 
     If PATH is not specified, the default input file path will be used, if defined by the calcjob plugin class.
     """
+    from shutil import copyfileobj
+    import sys
+    import errno
+
     # Get path from the given CalcJobNode if not defined by user
     if path is None:
         path = calcjob.get_option('input_filename')
@@ -106,12 +110,15 @@ def calcjob_inputcat(calcjob, path):
         )
 
     try:
-        content = calcjob.get_object_content(path)
-    except (IOError, OSError) as exception:
-        # Incorrect path or file not readable
-        echo.echo_critical('Could not open input path "{}". Exception: {}'.format(path, exception))
-    else:
-        echo.echo(content)
+        # When we `cat`, it makes sense to directly send the output to stdout as it is
+        with calcjob.open(path, mode='rb') as fhandle:
+            copyfileobj(fhandle, sys.stdout.buffer)
+    except OSError as exception:
+        # The sepcial case is breakon pipe error, which is usually OK.
+        # It can happen if the output is redirected, for example, to `head`.
+        if exception.errno != errno.EPIPE:
+            # Incorrect path or file not readable
+            echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
 
 
 @verdi_calcjob.command('outputcat')
@@ -127,6 +134,10 @@ def calcjob_outputcat(calcjob, path):
     If PATH is not specified, the default output file path will be used, if defined by the calcjob plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
     """
+    from shutil import copyfileobj
+    import sys
+    import errno
+
     try:
         retrieved = calcjob.outputs.retrieved
     except AttributeError:
@@ -151,12 +162,15 @@ def calcjob_outputcat(calcjob, path):
         )
 
     try:
-        content = retrieved.get_object_content(path)
-    except (IOError, OSError) as exception:
-        # Incorrect path or file not readable
-        echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
-    else:
-        echo.echo(content)
+        # When we `cat`, it makes sense to directly send the output to stdout as it is
+        with retrieved.open(path, mode='rb') as fhandle:
+            copyfileobj(fhandle, sys.stdout.buffer)
+    except OSError as exception:
+        # The sepcial case is breakon pipe error, which is usually OK.
+        # It can happen if the output is redirected, for example, to `head`.
+        if exception.errno != errno.EPIPE:
+            # Incorrect path or file not readable
+            echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
 
 
 @verdi_calcjob.command('inputls')
@@ -176,8 +190,8 @@ def calcjob_inputls(calcjob, path, color):
 
     try:
         list_repository_contents(calcjob, path, color)
-    except ValueError as exception:
-        echo.echo_critical(exception)
+    except FileNotFoundError:
+        echo.echo_critical('the path `{}` does not exist for the given node'.format(path))
 
 
 @verdi_calcjob.command('outputls')
@@ -203,8 +217,8 @@ def calcjob_outputls(calcjob, path, color):
 
     try:
         list_repository_contents(retrieved, path, color)
-    except ValueError as exception:
-        echo.echo_critical(exception)
+    except FileNotFoundError:
+        echo.echo_critical('the path `{}` does not exist for the given node'.format(path))
 
 
 @verdi_calcjob.command('cleanworkdir')

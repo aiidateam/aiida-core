@@ -146,11 +146,10 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             def __init__(self, dbnodes, backend):
                 self._backend = backend
                 self._dbnodes = dbnodes
-                self._iter = dbnodes.__iter__()
                 self.generator = self._genfunction()
 
             def _genfunction(self):
-                for node in self._iter:
+                for node in self._dbnodes:
                     yield self._backend.get_backend_entity(node)
 
             def __iter__(self):

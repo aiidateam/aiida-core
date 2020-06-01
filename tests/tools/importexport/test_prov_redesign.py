@@ -58,8 +58,8 @@ class TestProvenanceRedesign(AiidaTestCase):
         export_nodes.append(list_node)
 
         # Export nodes
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export(export_nodes, outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export(export_nodes, filename=filename, silent=True)
 
         # Clean the database
         self.reset_database()
@@ -107,8 +107,8 @@ class TestProvenanceRedesign(AiidaTestCase):
         self.assertEqual(node.process_type, node_process_type)
 
         # Export nodes
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([node], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([node], filename=filename, silent=True)
 
         # Clean the database and reimport data
         self.reset_database()
@@ -150,8 +150,8 @@ class TestProvenanceRedesign(AiidaTestCase):
         self.assertEqual(code_type, 'data.code.Code.')
 
         # Export node
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([code], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([code], filename=filename, silent=True)
 
         # Clean the database and reimport
         self.reset_database()
@@ -229,11 +229,11 @@ class TestProvenanceRedesign(AiidaTestCase):
         groups_type_string = [g.type_string for g in [group_user, group_upf]]
 
         # Assert correct type strings exists prior to export
-        self.assertListEqual(groups_type_string, ['user', 'data.upf'])
+        self.assertListEqual(groups_type_string, ['core', 'core.upf'])
 
         # Export node
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([group_user, group_upf], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([group_user, group_upf], filename=filename, silent=True)
 
         # Clean the database and reimport
         self.reset_database()
@@ -268,4 +268,4 @@ class TestProvenanceRedesign(AiidaTestCase):
 
         # Check type_string content of "import group"
         import_group = orm.load_group(imported_groups_uuid[0])
-        self.assertEqual(import_group.type_string, 'auto.import')
+        self.assertEqual(import_group.type_string, 'core.import')

@@ -86,13 +86,13 @@ class Folder:
         Return a Folder object pointing to a subfolder.
 
         :param subfolder: a string with the relative path of the subfolder,
-                relative to the absolute path of this object. Note that
-                this may also contain '..' parts,
-                as far as this does not go beyond the folder_limit.
+            relative to the absolute path of this object. Note that
+            this may also contain '..' parts,
+            as far as this does not go beyond the folder_limit.
         :param create: if True, the new subfolder is created, if it does not exist.
         :param reset_limit: when doing ``b = a.get_subfolder('xxx', reset_limit=False)``,
-                the limit of b will be the same limit of a.
-                if True, the limit will be set to the boundaries of folder b.
+            the limit of b will be the same limit of a.
+            if True, the limit will be set to the boundaries of folder b.
 
         :Returns: a Folder object pointing to the subfolder.
         """
@@ -114,18 +114,16 @@ class Folder:
         return new_folder
 
     def get_content_list(self, pattern='*', only_paths=True):
-        """
-        Return a list of files (and subfolders) in the folder,
-        matching a given pattern.
+        """Return a list of files (and subfolders) in the folder, matching a given pattern.
 
         Example: If you want to exclude files starting with a dot, you can
         call this method with ``pattern='[!.]*'``
 
         :param pattern: a pattern for the file/folder names, using Unix filename
-                pattern matching (see Python standard module fnmatch).
-                By default, pattern is '*', matching all files and folders.
+            pattern matching (see Python standard module fnmatch).
+            By default, pattern is '*', matching all files and folders.
         :param only_paths: if False (default), return pairs (name, is_file).
-                if True, return only a flat list.
+            if True, return only a flat list.
 
         :Returns:
             a list of tuples of two elements, the first is the file name and
@@ -140,8 +138,7 @@ class Folder:
         return [(fname, not os.path.isdir(os.path.join(self.abspath, fname))) for fname in file_list]
 
     def create_symlink(self, src, name):
-        """
-        Create a symlink inside the folder to the location 'src'.
+        """Create a symlink inside the folder to the location 'src'.
 
         :param src: the location to which the symlink must point. Can be
                 either a relative or an absolute path. Should, however,
@@ -155,8 +152,7 @@ class Folder:
         # For symlinks, permissions should not be set
 
     def insert_path(self, src, dest_name=None, overwrite=True):
-        """
-        Copy a file to the folder.
+        """Copy a file to the folder.
 
         :param src: the source filename to copy
         :param dest_name: if None, the same basename of src is used. Otherwise,
@@ -236,8 +232,7 @@ class Folder:
         return filepath
 
     def remove_path(self, filename):
-        """
-        Remove a file or folder from the folder.
+        """Remove a file or folder from the folder.
 
         :param filename: the relative path name to remove
         """
@@ -251,8 +246,7 @@ class Folder:
             os.remove(dest_abs_path)
 
     def get_abs_path(self, relpath, check_existence=False):
-        """
-        Return an absolute path for a file or folder in this folder.
+        """Return an absolute path for a file or folder in this folder.
 
         The advantage of using this method is that it checks that filename
         is a valid filename within this folder,
@@ -352,24 +346,20 @@ class Folder:
             os.makedirs(self.abspath, mode=self.mode_dir)
 
     def replace_with_folder(self, srcdir, move=False, overwrite=False):
-        """
-        This routine copies or moves the source folder 'srcdir' to the local
-        folder pointed by this Folder object.
+        """This routine copies or moves the source folder 'srcdir' to the local folder pointed to by this Folder.
 
-        :param srcdir: the source folder on the disk; this must be a string with
-                an absolute path
-        :param move: if True, the srcdir is moved to the repository. Otherwise, it
-                is only copied.
+        :param srcdir: the source folder on the disk; this must be an absolute path
+        :type srcdir: str
+        :param move: if True, the srcdir is moved to the repository. Otherwise, it is only copied.
+        :type move: bool
         :param overwrite: if True, the folder will be erased first.
-                if False, a IOError is raised if the folder already exists.
-                Whatever the value of this flag, parent directories will be
-                created, if needed.
+            if False, an IOError is raised if the folder already exists.
+            Whatever the value of this flag, parent directories will be created, if needed.
+        :type overwrite: bool
 
-        :Raises:
-            OSError or IOError: in case of problems accessing or writing
-            the files.
-        :Raises:
-            ValueError: if the section is not recognized.
+        :raises IOError: in case of problems accessing or writing the files.
+        :raises OSError: in case of problems accessing or writing the files (from ``shutil`` module).
+        :raises ValueError: if the section is not recognized.
         """
         if not os.path.isabs(srcdir):
             raise ValueError('srcdir must be an absolute path')
@@ -390,13 +380,11 @@ class Folder:
 
         # Set the mode also for the current dir, recursively
         for dirpath, _, filenames in os.walk(self.abspath, followlinks=False):
-            # dirpath should already be absolute, because I am passing
-            # an absolute path to os.walk
+            # dirpath should already be absolute, because I am passing an absolute path to os.walk
             os.chmod(dirpath, self.mode_dir)
             for filename in filenames:
-                # do not change permissions of symlinks (this would
-                # actually change permissions of the linked file/dir)
-                # Toc check whether this is a big speed loss
+                # do not change permissions of symlinks (this would actually change permissions of the linked file/dir)
+                # TODO check whether this is a big speed loss  # pylint: disable=fixme
                 full_file_path = os.path.join(dirpath, filename)
                 if not os.path.islink(full_file_path):
                     os.chmod(full_file_path, self.mode_file)

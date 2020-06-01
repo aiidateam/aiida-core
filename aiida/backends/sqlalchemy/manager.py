@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Utilities and configuration of the SqlAlchemy database schema."""
 
@@ -52,9 +60,13 @@ class SqlaBackendManager(BackendManager):
 
         return self._settings_manager
 
-    def _load_backend_environment(self):
-        """Load the backend environment."""
-        get_scoped_session()
+    def _load_backend_environment(self, **kwargs):
+        """Load the backend environment.
+
+        :param kwargs: keyword arguments that will be passed on to
+            :py:func:`aiida.backends.sqlalchemy.get_scoped_session`.
+        """
+        get_scoped_session(**kwargs)
 
     def reset_backend_environment(self):
         """Reset the backend environment."""

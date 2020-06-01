@@ -37,14 +37,14 @@ class TestSimple(AiidaTestCase):
         """Test ex-/import of Base Data nodes"""
         # producing values for each base type
         values = ('Hello', 6, -1.2399834e12, False)  # , ["Bla", 1, 1e-10])
-        filename = os.path.join(temp_dir, 'export.tar.gz')
+        filename = os.path.join(temp_dir, 'export.aiida')
 
         # producing nodes:
         nodes = [cls(val).store() for val, cls in zip(values, (orm.Str, orm.Int, orm.Float, orm.Bool))]
         # my uuid - list to reload the node:
         uuids = [n.uuid for n in nodes]
         # exporting the nodes:
-        export(nodes, outfile=filename, silent=True)
+        export(nodes, filename=filename, silent=True)
         # cleaning:
         self.clean_db()
         self.create_user()
@@ -79,9 +79,9 @@ class TestSimple(AiidaTestCase):
             for k in node.attributes.keys():
                 attrs[node.uuid][k] = node.get_attribute(k)
 
-        filename = os.path.join(temp_dir, 'export.tar.gz')
+        filename = os.path.join(temp_dir, 'export.aiida')
 
-        export([calc], outfile=filename, silent=True)
+        export([calc], filename=filename, silent=True)
 
         self.clean_db()
         self.create_user()
@@ -104,8 +104,8 @@ class TestSimple(AiidaTestCase):
             struct = orm.StructureData()
             struct.store()
 
-            filename = os.path.join(export_file_tmp_folder, 'export.tar.gz')
-            export([struct], outfile=filename, silent=True)
+            filename = os.path.join(export_file_tmp_folder, 'export.aiida')
+            export([struct], filename=filename, file_format='tar.gz', silent=True)
 
             with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack_tmp_folder)

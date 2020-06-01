@@ -24,6 +24,16 @@ class TestQueryBuilder(AiidaTestCase):
         self.clean_db()
         self.insert_data()
 
+    def test_date_filters_support(self):
+        """Verify that `datetime.date` is supported in filters."""
+        from datetime import datetime, date, timedelta
+
+        orm.Data(ctime=datetime.now() - timedelta(days=3)).store()
+        orm.Data(ctime=datetime.now() - timedelta(days=1)).store()
+
+        builder = orm.QueryBuilder().append(orm.Node, filters={'ctime': {'>': date.today() - timedelta(days=1)}})
+        self.assertEqual(builder.count(), 1)
+
     def test_ormclass_type_classification(self):
         """
         This tests the classifications of the QueryBuilder
@@ -50,10 +60,10 @@ class TestQueryBuilder(AiidaTestCase):
 
         for _cls, classifiers in (
             qb._get_ormclass(orm.Group, None),
-            qb._get_ormclass(None, 'group'),
-            qb._get_ormclass(None, 'Group'),
+            qb._get_ormclass(None, 'group.core'),
+            qb._get_ormclass(None, 'Group.core'),
         ):
-            self.assertEqual(classifiers['ormclass_type_string'], 'group')
+            self.assertTrue(classifiers['ormclass_type_string'].startswith('group'))
 
         for _cls, classifiers in (
             qb._get_ormclass(orm.User, None),
@@ -121,8 +131,8 @@ class TestQueryBuilder(AiidaTestCase):
             def define(cls, spec):
                 super().define(spec)
                 spec.input('success', valid_type=orm.Bool)
-                spec.input('through_return', valid_type=orm.Bool, default=orm.Bool(False))
-                spec.input('through_exit_code', valid_type=orm.Bool, default=orm.Bool(False))
+                spec.input('through_return', valid_type=orm.Bool, default=lambda: orm.Bool(False))
+                spec.input('through_exit_code', valid_type=orm.Bool, default=lambda: orm.Bool(False))
                 spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
                 spec.outline(if_(cls.should_return_out_of_outline)(return_(cls.EXIT_STATUS)), cls.failure, cls.success)
                 spec.output(cls.OUTPUT_LABEL, required=False)
@@ -618,6 +628,32 @@ class TestQueryBuilder(AiidaTestCase):
         qb.append(orm.Data, direction=4, project='id')
         res2 = {item[1] for item in qb.all()}
         self.assertEqual(res2, {d2.id, d4.id})
+
+    @staticmethod
+    def test_flat():
+        """Test the `flat` keyword for the `QueryBuilder.all()` method."""
+        from itertools import chain
+
+        pks = []
+        uuids = []
+        for _ in range(10):
+            node = orm.Data().store()
+            pks.append(node.pk)
+            uuids.append(node.uuid)
+
+        # Single projected property
+        builder = orm.QueryBuilder().append(orm.Data, project='id').order_by({orm.Data: 'id'})
+        result = builder.all(flat=True)
+        assert isinstance(result, list)
+        assert len(result) == 10
+        assert result == pks
+
+        # Mutltiple projections
+        builder = orm.QueryBuilder().append(orm.Data, project=['id', 'uuid']).order_by({orm.Data: 'id'})
+        result = builder.all(flat=True)
+        assert isinstance(result, list)
+        assert len(result) == 20
+        assert result == list(chain.from_iterable(zip(pks, uuids)))
 
 
 class TestMultipleProjections(AiidaTestCase):

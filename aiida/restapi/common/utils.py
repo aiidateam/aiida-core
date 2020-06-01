@@ -8,13 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ Util methods """
-import urllib
 from datetime import datetime, timedelta
+import urllib.parse
 
 from flask import jsonify
 from flask.json import JSONEncoder
+from wrapt import decorator
 
 from aiida.common.exceptions import InputValidationError, ValidationError
+from aiida.manage.manager import get_manager
 from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
 
@@ -845,3 +847,17 @@ def list_routes():
         output.append(line)
 
     return sorted(set(output))
+
+
+@decorator
+def close_session(wrapped, _, args, kwargs):
+    """Close AiiDA SQLAlchemy (QueryBuilder) session
+
+    This decorator can be used for router endpoints to close the SQLAlchemy global scoped session after the response
+    has been created. This is needed, since the QueryBuilder uses a SQLAlchemy global scoped session no matter the
+    profile's database backend.
+    """
+    try:
+        return wrapped(*args, **kwargs)
+    finally:
+        get_manager().get_backend().get_session().close()

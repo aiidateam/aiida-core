@@ -40,7 +40,7 @@ class Log(entities.Entity):
             Helper function to create a log entry from a record created as by the python logging library
 
             :param record: The record created by the logging module
-            :type record: :class:`logging.record`
+            :type record: :class:`logging.LogRecord`
 
             :return: An object implementing the log entry interface
             :rtype: :class:`aiida.orm.logs.Log`
@@ -139,16 +139,16 @@ class Log(entities.Entity):
         :type time: :class:`!datetime.datetime`
 
         :param loggername: name of logger
-        :type loggername: basestring
+        :type loggername: str
 
         :param levelname: name of log level
-        :type levelname: basestring
+        :type levelname: str
 
         :param dbnode_id: id of database node
         :type dbnode_id: int
 
         :param message: log message
-        :type message: basestring
+        :type message: str
 
         :param metadata: metadata
         :type metadata: dict
@@ -194,7 +194,7 @@ class Log(entities.Entity):
         The name of the logger that created this entry
 
         :return: The entry loggername
-        :rtype: basestring
+        :rtype: str
         """
         return self._backend_entity.loggername
 
@@ -204,7 +204,7 @@ class Log(entities.Entity):
         The name of the log level
 
         :return: The entry log level name
-        :rtype: basestring
+        :rtype: str
         """
         return self._backend_entity.levelname
 
@@ -224,7 +224,7 @@ class Log(entities.Entity):
         Get the message corresponding to the entry
 
         :return: The entry message
-        :rtype: basestring
+        :rtype: str
         """
         return self._backend_entity.message
 

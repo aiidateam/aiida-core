@@ -14,18 +14,19 @@ import sys
 import time
 
 from aiida.common import exceptions
-from aiida.engine import run_get_node, submit
+from aiida.engine import run, submit
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.caching import enable_caching
 from aiida.orm import CalcJobNode, load_node, Int, Str, List, Dict, load_code
-from aiida.plugins import CalculationFactory
+from aiida.plugins import CalculationFactory, WorkflowFactory
 from workchains import (
     NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, CalcFunctionRunnerWorkChain,
-    WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain
+    WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain, ArithmeticAddBaseWorkChain
 )
 
-CODENAME = 'doubler'
+CODENAME_ADD = 'add@localhost'
+CODENAME_DOUBLER = 'doubler'
 TIMEOUTSECS = 4 * 60  # 4 minutes
 NUMBER_CALCULATIONS = 15  # Number of calculations to submit
 NUMBER_WORKCHAINS = 8  # Number of workchains to submit
@@ -212,7 +213,7 @@ def run_calculation(code, counter, inputval):
     Run a calculation through the Process layer.
     """
     process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
-    _, calc = run_get_node(process, **inputs)
+    _, calc = run.get_node(process, **inputs)
     print('[{}] ran calculation {}, pk={}'.format(counter, calc.uuid, calc.pk))
     return calc, expected_result
 
@@ -260,25 +261,118 @@ def create_calculation_process(code, inputval):
     return TemplatereplacerCalculation, inputs, expected_result
 
 
+def run_arithmetic_add():
+    """Run the `ArithmeticAddCalculation`."""
+    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+
+    code = load_code(CODENAME_ADD)
+    inputs = {
+        'x': Int(1),
+        'y': Int(2),
+        'code': code,
+    }
+
+    # Normal inputs should run just fine
+    results, node = run.get_node(ArithmeticAddCalculation, **inputs)
+    assert node.is_finished_ok, node.exit_status
+    assert results['sum'] == 3
+
+
+def run_base_restart_workchain():
+    """Run the `AddArithmeticBaseWorkChain` a few times for various inputs."""
+    code = load_code(CODENAME_ADD)
+    inputs = {
+        'add': {
+            'x': Int(1),
+            'y': Int(2),
+            'code': code,
+            'settings': Dict(dict={'allow_negative': False}),
+        }
+    }
+
+    # Normal inputs should run just fine
+    results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
+    assert node.is_finished_ok, node.exit_status
+    assert len(node.called) == 1
+    assert 'sum' in results
+    assert results['sum'].value == 3
+
+    # With one input negative, the sum will be negative which will fail the calculation, but the error handler should
+    # fix it, so the second calculation should finish successfully
+    inputs['add']['y'] = Int(-4)
+    results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
+    assert node.is_finished_ok, node.exit_status
+    assert len(node.called) == 2
+    assert 'sum' in results
+    assert results['sum'].value == 5
+
+    # The silly sanity check aborts the workchain if the sum is bigger than 10
+    inputs['add']['y'] = Int(10)
+    results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
+    assert not node.is_finished_ok, node.process_state
+    assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_TOO_BIG.status, node.exit_status  # pylint: disable=no-member
+    assert len(node.called) == 1
+
+    # Check that overriding default handler enabled status works
+    inputs['add']['y'] = Int(1)
+    inputs['handler_overrides'] = Dict(dict={'disabled_handler': True})
+    results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
+    assert not node.is_finished_ok, node.process_state
+    assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_ENABLED_DOOM.status, node.exit_status  # pylint: disable=no-member
+    assert len(node.called) == 1
+
+
+def run_multiply_add_workchain():
+    """Run the `MultiplyAddWorkChain`."""
+    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+
+    code = load_code(CODENAME_ADD)
+    inputs = {
+        'x': Int(1),
+        'y': Int(2),
+        'z': Int(3),
+        'code': code,
+    }
+
+    # Normal inputs should run just fine
+    results, node = run.get_node(MultiplyAddWorkChain, **inputs)
+    assert node.is_finished_ok, node.exit_status
+    assert len(node.called) == 2
+    assert 'result' in results
+    assert results['result'].value == 5
+
+
 def main():
     """Launch a bunch of calculation jobs and workchains."""
     # pylint: disable=too-many-locals,too-many-statements
     expected_results_calculations = {}
     expected_results_workchains = {}
-    code = load_code(CODENAME)
+    code_doubler = load_code(CODENAME_DOUBLER)
+
+    # Run the `ArithmeticAddCalculation`
+    print('Running the `ArithmeticAddCalculation`')
+    run_arithmetic_add()
+
+    # Run the `AddArithmeticBaseWorkChain`
+    print('Running the `AddArithmeticBaseWorkChain`')
+    run_base_restart_workchain()
+
+    # Run the `MultiplyAddWorkChain`
+    print('Running the `MultiplyAddWorkChain`')
+    run_base_restart_workchain()
 
     # Submitting the Calculations the new way directly through the launchers
     print('Submitting {} calculations to the daemon'.format(NUMBER_CALCULATIONS))
     for counter in range(1, NUMBER_CALCULATIONS + 1):
         inputval = counter
-        calc, expected_result = launch_calculation(code=code, counter=counter, inputval=inputval)
+        calc, expected_result = launch_calculation(code=code_doubler, counter=counter, inputval=inputval)
         expected_results_calculations[calc.pk] = expected_result
 
     # Submitting the Workchains
     print('Submitting {} workchains to the daemon'.format(NUMBER_WORKCHAINS))
     for index in range(NUMBER_WORKCHAINS):
         inp = Int(index)
-        _, node = run_get_node(NestedWorkChain, inp=inp)
+        _, node = run.get_node(NestedWorkChain, inp=inp)
         expected_results_workchains[node.pk] = index
 
     print("Submitting a workchain with 'submit'.")
@@ -378,7 +472,7 @@ def main():
         with enable_caching(identifier='aiida.calculations:templatereplacer'):
             for counter in range(1, NUMBER_CALCULATIONS + 1):
                 inputval = counter
-                calc, expected_result = run_calculation(code=code, counter=counter, inputval=inputval)
+                calc, expected_result = run_calculation(code=code_doubler, counter=counter, inputval=inputval)
                 cached_calcs.append(calc)
                 expected_results_calculations[calc.pk] = expected_result
 

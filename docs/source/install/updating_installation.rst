@@ -3,45 +3,47 @@
 **************
 Updating AiiDA
 **************
-
 .. _updating_instructions:
 
-Instructions
-============
+Generic update instructions
+===========================
+
+1. Enter the python environment where AiiDA is installed
+2. Finish all running calculations. After migrating your database, you will not be able to resume unfinished calculations. Data of finished calculations will of course be automatically migrated.
+3. Stop the daemon using ``verdi daemon stop``
+4. :ref:`Create a backup of your database and repository<backup>`
 
 .. warning::
 
-    The following instructions are how to update from ``v0.12.*`` to ``v1.0.0``.
-    Each version increase may come with its own necessary migrations and you should only ever update the version by one at a time.
-    To find the instructions for older versions, refer to the :ref:`table below<update_older_versions>`.
+    Once you have migrated your database, you can no longer go back to an older version of ``aiida-core`` (unless you restore your database and repository from a backup).
 
-1. Finish all running calculations. After migrating your database, you will not be able to resume unfinished calculations. Data of finished calculations will of course be automatically migrated.
-2. Finish all running legacy workflows. The legacy workflows are completely deprecated and all data will be removed from your database, so make sure to create a backup (see point 5).
-3. Enter the python environment where AiiDA is installed
-4. Stop the daemon using ``verdi daemon stop``
-5. Create a backup of your :ref:`database and repository<backup>`
-
-.. warning::
-
-    Once you have migrated your database, you can no longer go back to an older version of ``aiida-core``, unless you restore your database and repository from a backup of course.
-    In addition, the data migration can take quite some time depending on the size of your database, so please be patient.
-    Big databases of multiple millions of nodes can take up to a few hours to migrate.
-
-6. Update your ``aiida-core`` installation
+5. Update your ``aiida-core`` installation
 
     - If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``
     - If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch.
 
-7. Finally, after having upgraded the installation, migrate your database with ``verdi -p <profile_name> database migrate``
+6. Migrate your database with ``verdi -p <profile_name> database migrate``.
+   Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
 
 After the database migration finishes, you will be able to continue working with your existing data.
-However, :ref:`backwards incompatible changes<updating_backward_incompatible_changes>` were introduced in the python API, so you probably will have to update your code and installed plugins.
 
+.. note::
+    If your update involved a change in the major version number of ``aiida-core``, expect :ref:`backwards incompatible changes<updating_backward_incompatible_changes>` and check whether you also need to update your installed plugin packages.
+
+
+Updating from 0.12.* to 1.*
+===========================
+
+Besides the generic update instructions, the following applies:
+
+ * Finish all running legacy workflows.
+   The legacy workflows are completely deprecated and all data will be removed from your database, so make sure to create a backup (see point 5).
+ * The upgrade involves several long-running migrations. Migrating databases containing millions of nodes can take a few hours.
 
 .. _updating_backward_incompatible_changes:
 
-Backwards incompatible changes
-==============================
+Breaking changes from 0.12.* to 1.*
+===================================
 
 The following list covers the most important backward incompatible changes between ``aiida-core==0.12.*`` and ``aiida-core==1.0.0``.
 
@@ -268,6 +270,7 @@ Update instructions for older versions can be found in the documentation of the 
 * `0.6.* SqlAlchemy`_
 * `0.5.* Django`_
 * `0.4.* Django`_
+
 
 .. _0.11.*: https://aiida-core.readthedocs.io/en/v0.12.2/installation/updating.html#updating-from-0-11-to-0-12-0
 .. _0.10.*: http://aiida-core.readthedocs.io/en/v0.10.0/installation/updating.html#updating-from-0-9-to-0-10-0

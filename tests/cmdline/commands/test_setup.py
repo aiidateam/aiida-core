@@ -121,7 +121,7 @@ email: 123@234.de""".format(self.backend)
 
     @with_temporary_config_instance
     def test_setup(self):
-        """Test `verdi setup`."""
+        """Test `verdi setup` (non-interactive)."""
         postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
         postgres.determine_setup()
         db_name = 'aiida_test_setup'

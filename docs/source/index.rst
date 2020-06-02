@@ -1,98 +1,112 @@
-.. aiida documentation master file, created by
-       sphinx-quickstart on Wed Oct 24 11:33:37 2012.
-       You can adapt this file completely to your liking, but it should at least
-       contain the root `toctree` directive.
-
-**aiida-core version:** |release|
-
-.. figure:: images/AiiDA_transparent_logo.png
-    :width: 250px
-    :align: center
-
-    Automated Interactive Infrastructure and Database for Computational Science
-
 #################################
 Welcome to AiiDA's documentation!
 #################################
 
-`AiiDA`_ is a python framework that aims to help researchers with managing complex workflows and making them fully reproducible.
+**aiida-core version:** |release|
 
-.. _AiiDA: http://www.aiida.net
+`AiiDA`_ is an open-source framework implemented in Python that aims to help researchers with managing simple to complex workflows and making them fully reproducible.
+
+Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's features.
+
+.. _AiiDA: https://www.aiida.net
+
+.. panels::
+   :body: bg-light text-center
+   :footer: bg-light border-0
 
 
-************
-Features
-************
+   :fa:`rocket,mr-1` **Getting Started**
 
- * **Workflows:** Write complex, auto-documenting workflows in python, linked to arbitrary executables on local and remote computers. The event-based workflow engine supports tens of thousands of processes per hour with full checkpointing.
- * **Data provenance:** Automatically track inputs, outpus & metadata of all calculations in a provenance graph for full reproducibility. Perform fast queries on graphs containing millions of nodes.
- * **HPC interface:** Move your calculations to a different computer by changing one line of code. AiiDA is compatible with schedulers like `SLURM <https://slurm.schedmd.com>`_, `PBS Pro <https://www.pbspro.org/>`_, `torque <http://www.adaptivecomputing.com/products/torque/>`_, `SGE <http://gridscheduler.sourceforge.net/>`_ or `LSF <https://www.ibm.com/support/knowledgecenter/SSETD4/product_welcome_platform_lsf.html>`_ out of the box.
- * **Plugin interface:** Extend AiiDA with `plugins <https://aiidateam.github.io/aiida-registry/>`_ for new simulation codes (input generation & parsing), data types, schedulers, transport modes and more.
- * **Open Science:** Export subsets of your provenance graph and share them with peers or make them available online for everyone on the `Materials Cloud <https://www.materialscloud.org>`_.
- * **Open source:** AiiDA is released under the `MIT open source license <https://github.com/aiidateam/aiida-core/blob/develop/LICENSE.txt>`_.
+   First time user or are looking for installation instructions? Start here!
 
-See also the `AiiDA home page`_.
+   +++++++++++++++++++++++++++++++++++++++++++++
 
-.. _AiiDA home page: http://www.aiida.net
+   .. link-button:: intro/get_started
+      :type: ref
+      :text: To the installation guides
+      :classes: btn-outline-primary btn-block stretched-link
 
-***************
-Getting started
-***************
+   ----------------------------------------------
 
- * The `AiiDA tutorials <https://aiida-tutorials.readthedocs.io/en/latest/>`_ are a good place to get started with using AiiDA.
- * Afterwards, you might want to :ref:`install AiiDA<installation>` on your machine.
- * For setting up a production environment, you may find the :ref:`configuration <configure_aiida>` section helpful.
- * For the advanced, there is the complete :doc:`AiiDA API reference<apidoc/aiida>` (including a :ref:`modindex`), and of course you can always peek into the code on the `AiiDA git repository <https://github.com/aiidateam/aiida-core>`_.
+   :fa:`info-circle,mr-1` **Tutorial**
 
-**************
-For developers
-**************
+   Get your feet wet with a brief introduction to the basics of AiiDA.
 
- * If you wish to start developing a plugin for AiiDA the :ref:`plugin_development` section is a good place to start.
- * Practical information concerning how to set up your development environment and how to contribute to aiida core can be found on the `AiiDA Wiki <https://github.com/aiidateam/aiida-core/wiki>`_.
- * You are also more than welcome to join the `AiiDA mailing list <http://www.aiida.net/mailing-list/>`_ or contribute to aiida-core on `GitHub <https://github.com/aiidateam/aiida-core>`_.
+   +++++++++++++++++++++++++++++++++++++++++++++
+
+   .. link-button:: intro/tutorial
+      :type: ref
+      :text: To the tutorials
+      :classes: btn-outline-primary btn-block stretched-link
+
+   ----------------------------------------------
+
+   :fa:`question-circle,mr-1` **How-To Guides**
+
+   Learn how to use AiiDA to power your own work.
+
+   +++++++++++++++++++++++++++++++++++++++++++++
+
+   .. link-button:: howto/index
+      :type: ref
+      :text: To the how-to guides
+      :classes: btn-outline-primary btn-block stretched-link
+
+   ----------------------------------------------
+
+   :fa:`bookmark,mr-1` **Topics**
+
+   Comprehensive background information for those who want to learn more about AiiDA's underlying concepts.
+
+   +++++++++++++++++++++++++++++++++++++++++++++
+
+   .. link-button:: topics/index
+      :type: ref
+      :text: To the topics
+      :classes: btn-outline-primary btn-block stretched-link
+
+   ----------------------------------------------
+
+   :fa:`cogs,mr-1` **API Reference**
+
+   Comprehensive description of all AiiDA components and APIs, including the command-line-interface, the Python interface, and the RESTful API.
+
+   +++++++++++++++++++++++++++++++++++++++++++++
+
+   .. link-button:: reference/index
+      :type: ref
+      :text: To the reference guide
+      :classes: btn-outline-primary btn-block stretched-link
+
+   ----------------------------------------------
+
+   :fa:`sitemap,mr-1` **Internal Architecture**
+
+   Detailed information and rationale for the design and architecture of AiiDA and its components.
+
+   +++++++++++++++++++++++++++++++++++++++++++++
+
+   .. link-button:: internals/index
+      :type: ref
+      :text: To the architecture guide
+      :classes: btn-outline-primary btn-block stretched-link
+
+.. admonition:: Development Contributions
+   :class: title-icon-code-fork
+
+   Saw a typo in the documentation? Want to improve existing functionalities?
+   The contributing guidelines are hosted on the `aiida-core wiki <https://github.com/aiidateam/aiida-core/wiki>`__ and will guide you through the process of improving AiiDA.
+
 
 .. toctree::
-    :maxdepth: 1
-    :caption: Installation
-    :hidden:
-
-    install/quick_installation
-    install/prerequisites
-    install/installation
-    install/configuration
-    install/updating_installation
-    install/troubleshooting
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Working with AiiDA
-    :hidden:
-
-    working_with_aiida/index
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Reference Guide
-    :hidden:
-
-    reference/index
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Development
+   :maxdepth: 2
    :hidden:
 
-   developer_guide/plugins
-   developer_guide/core
-
-.. toctree::
-    :maxdepth: 1
-    :caption: API reference
-    :hidden:
-
-    apidoc/aiida
-    restapi/index
+   intro/index
+   howto/index
+   topics/index
+   reference/index
+   internals/index
 
 ***********
 How to cite
@@ -111,6 +125,7 @@ Acknowledgements
 ****************
 
 This work is supported by:
+
 * the `MARVEL National Centre for Competency in Research`_ funded by the `Swiss National Science Foundation`_;
 * the `MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598;
 * the `swissuniversities P-5 project "Materials Cloud"`_.

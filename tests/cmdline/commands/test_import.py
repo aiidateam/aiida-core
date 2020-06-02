@@ -209,11 +209,11 @@ class TestVerdiImport(AiidaTestCase):
 
     def test_import_url_timeout(self):
         """Test a timeout to valid URL is correctly errored"""
-        from aiida.cmdline.params.types import ImportPath
+        from aiida.cmdline.params.types import PathOrUrl
 
         timeout_url = 'http://www.google.com:81'
 
-        test_timeout_path = ImportPath(exists=True, readable=True, timeout_seconds=0)
+        test_timeout_path = PathOrUrl(exists=True, readable=True, timeout_seconds=0)
         with self.assertRaises(BadParameter) as cmd_exc:
             test_timeout_path(timeout_url)
 
@@ -229,7 +229,7 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNotNone(result.exception, result.output)
         self.assertNotEqual(result.exit_code, 0, result.output)
 
-        error_message = 'It may be neither a valid path nor a valid URL.'
+        error_message = 'Is it a valid path or URL?'
         self.assertIn(error_message, result.output, result.exception)
 
     def test_non_interactive_and_migration(self):

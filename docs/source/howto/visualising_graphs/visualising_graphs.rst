@@ -209,7 +209,7 @@ If you wish to highlight specific node classes, then the ``highlight_classes`` o
 
    graph = Graph(graph_attr={"size": "20,20", "rankdir": "LR"})
    graph.recurse_descendants(
-       dict1_uuid, 
+       dict1_uuid,
        highlight_classes=['Dict']
    )
    graph.graphviz

@@ -202,3 +202,18 @@ The link types can also be filtered, to view only the ‘data’ or
 .. figure:: visualising_graphs_files/output_22_0.svg
     :alt: output_22_0
     :align: center
+
+If you wish to highlight specific node classes, then the ``highlight_classes`` option can be used to only color specified nodes:
+
+.. code:: python
+
+   graph = Graph(graph_attr={"size": "20,20", "rankdir": "LR"})
+   graph.recurse_descendants(
+       dict1_uuid, 
+       highlight_classes=['Dict']
+   )
+   graph.graphviz
+
+.. figure:: visualising_graphs_files/output_23_0.svg
+    :alt: output_23_0
+    :align: center

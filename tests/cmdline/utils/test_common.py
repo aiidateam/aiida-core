@@ -78,7 +78,7 @@ class TestCommonUtilities(AiidaTestCase):
         """Test the `print_process_info` method."""
         from aiida.cmdline.utils.common import print_process_info
         from aiida.common.utils import Capturing
-        from aiida.engine import Process
+        from aiida.engine import Process, calcfunction
 
         class TestProcessWithoutDocstring(Process):
             # pylint: disable=missing-docstring
@@ -96,7 +96,17 @@ class TestCommonUtilities(AiidaTestCase):
                 super().define(spec)
                 spec.input('some_input')
 
+        @calcfunction
+        def test_without_docstring():
+            pass
+
+        @calcfunction
+        def test_with_docstring():
+            """Some docstring."""
+
         # We are just checking that the command does not except
         with Capturing():
             print_process_info(TestProcessWithoutDocstring)
             print_process_info(TestProcessWithDocstring)
+            print_process_info(test_without_docstring)
+            print_process_info(test_with_docstring)

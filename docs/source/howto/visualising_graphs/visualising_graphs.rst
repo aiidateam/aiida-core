@@ -158,6 +158,7 @@ methods can be used to construct a full provenance graph.
     graph = Graph(graph_attr={"size": "8,8!", "rankdir": "LR"})
     graph.recurse_descendants(
         dict1_uuid,
+        origin_style=None,
         include_process_inputs=True,
         annotate_links="both"
     )
@@ -175,6 +176,7 @@ The link types can also be filtered, to view only the ‘data’ or
     graph = Graph(graph_attr={"size": "8,8!", "rankdir": "LR"})
     graph.recurse_descendants(
         dict1_uuid,
+        origin_style=None,
         include_process_inputs=True,
         annotate_links="both",
         link_types=("input_calc", "create")
@@ -190,6 +192,7 @@ The link types can also be filtered, to view only the ‘data’ or
     graph = Graph(graph_attr={"size": "8,8!", "rankdir": "LR"})
     graph.recurse_descendants(
         dict1_uuid,
+        origin_style=None,
         include_process_inputs=True,
         annotate_links="both",
         link_types=("input_work", "return")

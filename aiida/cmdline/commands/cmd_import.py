@@ -17,7 +17,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
-from aiida.cmdline.params.types import GroupParamType, ImportPath
+from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
@@ -186,7 +186,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
 
 
 @verdi.command('import')
-@click.argument('archives', nargs=-1, type=ImportPath(exists=True, readable=True))
+@click.argument('archives', nargs=-1, type=PathOrUrl(exists=True, readable=True))
 @click.option(
     '-w',
     '--webpages',

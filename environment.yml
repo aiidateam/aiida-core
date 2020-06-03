@@ -10,7 +10,7 @@ dependencies:
 - alembic~=1.2
 - circus~=0.16.1
 - click-completion~=0.5.1
-- click-config-file~=0.5.0
+- click-config-file~=0.6.0
 - click-spinner~=0.1.8
 - click~=7.0
 - django~=2.2

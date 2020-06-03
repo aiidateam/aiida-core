@@ -533,7 +533,7 @@ class Graph:
             )
 
         # incoming nodes are found traversing backwards
-        node_pk = node if isinstance(node, int) else node.pk
+        node_pk = self._load_node(node).pk
         valid_link_types = self._default_link_types(link_types)
         valid_link_types = self._convert_link_types(valid_link_types)
         traversed_graph = traverse_graph(
@@ -590,7 +590,7 @@ class Graph:
             )
 
         # outgoing nodes are found traversing forwards
-        node_pk = node if isinstance(node, int) else node.pk
+        node_pk = self._load_node(node).pk
         valid_link_types = self._default_link_types(link_types)
         valid_link_types = self._convert_link_types(valid_link_types)
         traversed_graph = traverse_graph(
@@ -671,7 +671,7 @@ class Graph:
 
         # Get graph traversal rules where the given link types and direction are all set to True,
         # and all others are set to False
-        origin_pk = origin if isinstance(origin, int) else origin.pk
+        origin_pk = self._load_node(origin).pk
         valid_link_types = self._default_link_types(link_types)
         valid_link_types = self._convert_link_types(valid_link_types)
         traversed_graph = traverse_graph(
@@ -774,7 +774,7 @@ class Graph:
 
         # Get graph traversal rules where the given link types and direction are all set to True,
         # and all others are set to False
-        origin_pk = origin if isinstance(origin, int) else origin.pk
+        origin_pk = self._load_node(origin).pk
         valid_link_types = self._default_link_types(link_types)
         valid_link_types = self._convert_link_types(valid_link_types)
         traversed_graph = traverse_graph(

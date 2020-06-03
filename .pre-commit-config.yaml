@@ -166,6 +166,7 @@
       (?x)^(
         aiida/cmdline/commands/.*|
         aiida/cmdline/params/.*|
+        aiida/cmdline/params/types/.*|
         utils/validate_consistency.py|
       )$
     pass_filenames: false

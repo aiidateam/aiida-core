@@ -13,6 +13,7 @@ import os
 import subprocess as sp
 from textwrap import dedent
 
+from unittest import mock
 from click.testing import CliRunner
 import pytest
 
@@ -69,31 +70,45 @@ class TestVerdiCodeSetup(AiidaTestCase):
         self.assertIsInstance(orm.Code.get_from_string('{}'.format(label)), orm.Code)
 
     def test_from_config(self):
-        """Test setting up a code from a config file"""
+        """Test setting up a code from a config file.
+
+        Try loading from local file and from URL.
+        """
         import tempfile
 
-        label = 'noninteractive_config'
-
-        with tempfile.NamedTemporaryFile('w') as handle:
-            handle.write(
-                dedent(
-                    """
+        config_file_template = dedent(
+            """
                     ---
                     label: {label}
                     input_plugin: arithmetic.add
                     computer: {computer}
                     remote_abs_path: /remote/abs/path
                     """
-                ).format(label=label, computer=self.computer.name)
-            )
+        )
+
+        # local file
+        label = 'noninteractive_config'
+        with tempfile.NamedTemporaryFile('w') as handle:
+            handle.write(config_file_template.format(label=label, computer=self.computer.name))
             handle.flush()
             result = self.cli_runner.invoke(
                 setup_code,
                 ['--non-interactive', '--config', os.path.realpath(handle.name)]
             )
-
         self.assertClickResultNoException(result)
         self.assertIsInstance(orm.Code.get_from_string('{}'.format(label)), orm.Code)
+
+        # url
+        label = 'noninteractive_config_url'
+        fake_url = 'https://my.url.com'
+        with mock.patch(
+            'urllib.request.urlopen',
+            return_value=config_file_template.format(label=label, computer=self.computer.name)
+        ):
+            result = self.cli_runner.invoke(setup_code, ['--non-interactive', '--config', fake_url])
+
+            self.assertClickResultNoException(result)
+            self.assertIsInstance(orm.Code.get_from_string('{}'.format(label)), orm.Code)
 
 
 class TestVerdiCodeCommands(AiidaTestCase):

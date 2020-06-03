@@ -186,6 +186,7 @@ def process_function(node_class):
         decorated_function.run_get_node = run_get_node
         decorated_function.is_process_function = True
         decorated_function.node_class = node_class
+        decorated_function.spec = process_class.spec
 
         return decorated_function
 

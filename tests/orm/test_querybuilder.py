@@ -114,6 +114,22 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(classifiers['ormclass_type_string'], 'process.calculation.calcjob.CalcJobNode.')
         self.assertEqual(classifiers['process_type_string'], 'aiida.calculations:arithmetic.add')
 
+    def test_get_group_type_filter(self):
+        """Test the `aiida.orm.querybuilder.get_group_type_filter` function."""
+        from aiida.orm.querybuilder import get_group_type_filter
+
+        classifiers = {'ormclass_type_string': 'group.core'}
+        self.assertEqual(get_group_type_filter(classifiers, False), {'==': 'core'})
+        self.assertEqual(get_group_type_filter(classifiers, True), {'like': '%'})
+
+        classifiers = {'ormclass_type_string': 'group.core.auto'}
+        self.assertEqual(get_group_type_filter(classifiers, False), {'==': 'core.auto'})
+        self.assertEqual(get_group_type_filter(classifiers, True), {'like': 'core.auto%'})
+
+        classifiers = {'ormclass_type_string': 'group.pseudo.family'}
+        self.assertEqual(get_group_type_filter(classifiers, False), {'==': 'pseudo.family'})
+        self.assertEqual(get_group_type_filter(classifiers, True), {'like': 'pseudo.family%'})
+
     def test_process_query(self):
         """
         Test querying for a process class.

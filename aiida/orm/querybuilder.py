@@ -282,7 +282,7 @@ def get_group_type_filter(classifiers, subclassing):
     """
     from aiida.common.escaping import escape_for_sql_like
 
-    value = classifiers['ormclass_type_string'].lstrip(GROUP_ENTITY_TYPE_PREFIX)
+    value = classifiers['ormclass_type_string'][len(GROUP_ENTITY_TYPE_PREFIX):]
 
     if not subclassing:
         filters = {'==': value}

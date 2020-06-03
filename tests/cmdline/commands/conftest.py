@@ -1,4 +1,5 @@
 """Pytest fixtures for command line interface tests."""
+import click
 import pytest
 
 
@@ -6,22 +7,25 @@ import pytest
 def run_cli_command():
     """Run a `click` command with the given options.
 
-    The call will raise if the command triggered an exception or the exit code returned is non-zero
+    The call will raise if the command triggered an exception or the exit code returned is non-zero.
     """
+    from click.testing import Result
 
-    def _run_cli_command(command, options=None, raises=None):
+    def _run_cli_command(command: click.Command, options: list = None, raises: bool = False) -> Result:
         """Run the command and check the result.
 
+        .. note:: the `output_lines` attribute is added to return value containing list of stripped output lines.
+
         :param options: the list of command line options to pass to the command invocation
-        :param raises: optionally an exception class that is expected to be raised
+        :param raises: whether the command is expected to raise an exception
+        :return: test result
         """
         import traceback
-        from click.testing import CliRunner
 
-        runner = CliRunner()
+        runner = click.testing.CliRunner()
         result = runner.invoke(command, options or [])
 
-        if raises is not None:
+        if raises:
             assert result.exception is not None, result.output
             assert result.exit_code != 0
         else:

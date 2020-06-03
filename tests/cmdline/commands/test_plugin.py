@@ -3,25 +3,31 @@ import pytest
 
 from aiida.cmdline.commands import cmd_plugin
 from aiida.plugins import CalculationFactory, WorkflowFactory
+from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
 
 
 def test_plugin_list(run_cli_command):
-    """Test the `verdi plugin list` command."""
-    from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
+    """Test the `verdi plugin list` command.
 
-    # Call base command without parameters and check that all entry point groups are listed
+    Call base command without parameters and check that all entry point groups are listed.
+    """
     result = run_cli_command(cmd_plugin.plugin_list, [])
     for key in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP:
         assert key in result.output
 
 
 def test_plugin_list_group(run_cli_command):
-    """Test the `verdi plugin list` command for entry point group."""
-    from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
+    """Test the `verdi plugin list` command for entry point group.
 
-    # Call for each entry point group and just check it doesn't except
+    Call for each entry point group and just check it doesn't except.
+    """
     for key in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP:
         run_cli_command(cmd_plugin.plugin_list, [key])
+
+
+def test_plugin_list_non_existing(run_cli_command):
+    """Test the `verdi plugin list` command for a non-existing entry point."""
+    run_cli_command(cmd_plugin.plugin_list, ['aiida.calculations', 'non_existing'], raises=True)
 
 
 @pytest.mark.parametrize(

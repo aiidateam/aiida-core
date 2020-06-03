@@ -424,11 +424,20 @@ def verdi_graph():
     default='dot'
 )
 @click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
+@click.option(
+    '-c',
+    '--highlight-classes',
+    help=
+    "Only color nodes of specific class label (as displayed in the graph, e.g. 'StructureData', 'FolderData', etc.).",
+    type=click.STRING,
+    default=None,
+    multiple=True
+)
 @click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
 @decorators.with_dbenv()
 def graph_generate(
     root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
-    output_format, show
+    output_format, highlight_classes, show
 ):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
@@ -441,12 +450,14 @@ def graph_generate(
     echo.echo_info('Initiating graphviz engine: {}'.format(engine))
     graph = Graph(engine=engine, node_id_type=identifier)
     echo.echo_info('Recursing ancestors, max depth={}'.format(ancestor_depth))
+
     graph.recurse_ancestors(
         root_node,
         depth=ancestor_depth,
         link_types=link_types,
         annotate_links='both',
         include_process_outputs=process_out,
+        highlight_classes=highlight_classes,
         print_func=print_func
     )
     echo.echo_info('Recursing descendants, max depth={}'.format(descendant_depth))
@@ -456,6 +467,7 @@ def graph_generate(
         link_types=link_types,
         annotate_links='both',
         include_process_inputs=process_in,
+        highlight_classes=highlight_classes,
         print_func=print_func
     )
     output_file_name = graph.graphviz.render(

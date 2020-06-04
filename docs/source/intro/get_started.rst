@@ -85,22 +85,22 @@ Install Software
 
     :fa:`download,mr-1` **Install from Conda**
 
-    .. code-block:: console
+    .. parsed-literal::
 
-        $ conda create -n aiida -c conda-forge aiida-core aiida-core.services
-        $ conda activate aiida
-        $ reentry scan
+        conda create -n aiida -c conda-forge aiida-core=\ |release|\  aiida-core.services=\ |release|
+        conda activate aiida
+        reentry scan
 
-    `Conda <https://docs.conda.io>`__ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment:
+    `Conda <https://docs.conda.io>`__ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment.
 
     ----------------------------------------------
 
     :fa:`download,mr-1` **Install with pip**
 
-    .. code-block:: console
+    .. parsed-literal::
 
-        $ pip install aiida-core
-        $ reentry scan
+        pip install aiida-core==\ |release|
+        reentry scan
 
     ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`__.
     It is strongly recommended that you install into a :ref:`virtual environment <intro:install:virtual_environments>`.

@@ -104,7 +104,7 @@ In Linux / Mac OSX you can also check which ports a PID has open using:
 
 If a connection cannot be found, try starting ``rabbitmq-server`` in non-detached mode.
 If you encounter an output similar to that below, it may be that your versions of RabbitMQ and erlang (the programming language which RabbitMQ is written in) are incompatible.
-See ` RabbitMQ Erlang Version Requirements <https://www.rabbitmq.com/which-erlang.html>`__ for further information. 
+See ` RabbitMQ Erlang Version Requirements <https://www.rabbitmq.com/which-erlang.html>`__ for further information.
 
 .. code-block:: console
 

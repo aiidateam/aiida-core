@@ -302,6 +302,7 @@ class Manager:
         import plumpy
         from aiida.engine import persistence
         from aiida.manage.external import rmq
+
         runner = self.create_runner(rmq_submit=True, loop=loop)
         runner_loop = runner.loop
 
@@ -313,10 +314,7 @@ class Manager:
             loader=persistence.get_object_loader()
         )
 
-        def callback(*args, **kwargs):
-            return plumpy.create_task(functools.partial(task_receiver, *args, **kwargs), loop=runner_loop)
-
-        runner.communicator.add_task_subscriber(callback)
+        runner.communicator.add_task_subscriber(task_receiver)
 
         return runner
 

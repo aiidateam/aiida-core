@@ -43,10 +43,9 @@ class Runner:  # pylint: disable=too-many-public-methods
     _closed = False
 
     def __init__(self, poll_interval=0, loop=None, communicator=None, rmq_submit=False, persister=None):
-        """
-        Construct a new runner
+        """Construct a new runner.
 
-        :param poll_interval: interval in seconds between polling for status of active calculations
+        :param poll_interval: interval in seconds between polling for status of active sub processes
         :param loop: an event loop to use, if none is suppled a new one will be created
         :type loop: :class:`tornado.ioloop.IOLoop`
         :param communicator: the communicator to use
@@ -67,7 +66,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         self._plugin_version_provider = PluginVersionProvider()
 
         if communicator is not None:
-            self._communicator = communicator
+            self._communicator = plumpy.wrap_communicator(communicator, self._loop)
             self._controller = plumpy.RemoteProcessThreadController(communicator)
         elif self._rmq_submit:
             LOGGER.warning('Disabling RabbitMQ submission, no communicator provided')

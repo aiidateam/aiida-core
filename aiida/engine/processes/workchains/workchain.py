@@ -234,7 +234,7 @@ class WorkChain(Process):
             self.call_soon(self.resume)
 
     def action_awaitables(self):
-        """Handle the awaitables that are currently registered with the work chain
+        """Handle the awaitables that are currently registered with the work chain.
 
         Depending on the class type of the awaitable's target a different callback
         function will be bound with the awaitable and the runner will be asked to
@@ -243,24 +243,24 @@ class WorkChain(Process):
         for awaitable in self._awaitables:
             if awaitable.target == AwaitableTarget.PROCESS:
                 callback = functools.partial(self._run_task, self.on_process_finished, awaitable)
-                self.runner.call_on_calculation_finish(awaitable.pk, callback)
+                self.runner.call_on_process_finish(awaitable.pk, callback)
             else:
                 assert "invalid awaitable target '{}'".format(awaitable.target)
 
-    def on_process_finished(self, awaitable, pk):
+    def on_process_finished(self, awaitable):
         """Callback function called by the runner when the process instance identified by pk is completed.
 
         The awaitable will be effectuated on the context of the work chain and removed from the internal list. If all
         awaitables have been dealt with, the work chain process is resumed.
 
         :param awaitable: an Awaitable instance
-        :param pk: the pk of the awaitable's target
-        :type pk: int
         """
+        self.logger.info('received callback that awaitable %d has terminated', awaitable.pk)
+
         try:
-            node = load_node(pk)
+            node = load_node(awaitable.pk)
         except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-            raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(pk))
+            raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(awaitable.pk))
 
         if awaitable.outputs:
             value = {entry.link_label: entry.node for entry in node.get_outgoing()}
@@ -275,5 +275,6 @@ class WorkChain(Process):
             assert "invalid awaitable action '{}'".format(awaitable.action)
 
         self.remove_awaitable(awaitable)
+
         if self.state == ProcessState.WAITING and not self._awaitables:
             self.resume()

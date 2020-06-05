@@ -799,7 +799,7 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         """Validate adding a link of the given type from a given node to ourself.
 
         This function will first validate the types of the inputs, followed by the node and link types and validate
-        whether in principle a link of that type between the nodes of these types is allowed.the
+        whether in principle a link of that type between the nodes of these types is allowed.
 
         Subsequently, the validity of the "degree" of the proposed link is validated, which means validating the
         number of links of the given type from the given node type is allowed.

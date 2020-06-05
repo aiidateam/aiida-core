@@ -165,7 +165,7 @@ class Manager:
         return self._communicator
 
     def create_communicator(self, task_prefetch_count=None, with_orm=True):
-        """Create a Communicator
+        """Create a Communicator.
 
         :param task_prefetch_count: optional specify how many tasks this communicator take simultaneously
         :param with_orm: if True, use ORM (de)serializers. If false, use json.

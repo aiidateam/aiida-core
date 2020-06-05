@@ -45,7 +45,7 @@ class TestProcessControl(AiidaTestCase):
         @gen.coroutine
         def do_submit():
             calc_node = submit(test_processes.DummyProcess)
-            yield self.wait_for_calc(calc_node)
+            yield self.wait_for_process(calc_node)
 
             self.assertTrue(calc_node.is_finished_ok)
             self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
@@ -61,7 +61,7 @@ class TestProcessControl(AiidaTestCase):
             term_b = Int(10)
 
             calc_node = submit(test_processes.AddProcess, a=term_a, b=term_b)
-            yield self.wait_for_calc(calc_node)
+            yield self.wait_for_process(calc_node)
             self.assertTrue(calc_node.is_finished_ok)
             self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
 
@@ -77,7 +77,7 @@ class TestProcessControl(AiidaTestCase):
         @gen.coroutine
         def do_exception():
             calc_node = submit(test_processes.ExceptionProcess)
-            yield self.wait_for_calc(calc_node)
+            yield self.wait_for_process(calc_node)
 
             self.assertFalse(calc_node.is_finished_ok)
             self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.EXCEPTED.value)
@@ -147,15 +147,15 @@ class TestProcessControl(AiidaTestCase):
             result = yield self.wait_future(future)
             self.assertTrue(result)
 
-            self.wait_for_calc(calc_node)
+            self.wait_for_process(calc_node)
             self.assertTrue(calc_node.is_killed)
             self.assertEqual(calc_node.process_status, kill_message)
 
         self.runner.loop.run_sync(do_kill)
 
     @gen.coroutine
-    def wait_for_calc(self, calc_node, timeout=2.):
-        future = self.runner.get_calculation_future(calc_node.pk)
+    def wait_for_process(self, calc_node, timeout=2.):
+        future = self.runner.get_process_future(calc_node.pk)
         raise gen.Return((yield with_timeout(future, timeout)))
 
     @staticmethod

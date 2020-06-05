@@ -14,26 +14,24 @@ import tornado.gen
 import plumpy
 import kiwipy
 
-__all__ = ('CalculationFuture',)
+__all__ = ('ProcessFuture',)
 
 
-class CalculationFuture(plumpy.Future):
-    """
-    A future that waits for a calculation to complete using both polling and
-    listening for broadcast events if possible
-    """
+class ProcessFuture(plumpy.Future):
+    """Future that waits for a process to complete using both polling and listening for broadcast events if possible."""
+
     _filtered = None
 
     def __init__(self, pk, loop=None, poll_interval=None, communicator=None):
-        """
-        Get a future for a calculation node being finished.  If a None poll_interval is
-        supplied polling will not be used.  If a communicator is supplied it will be used
+        """Construct a future for a process node being finished.
+
+        If a None poll_interval is supplied polling will not be used. If a communicator is supplied it will be used
         to listen for broadcast messages.
 
-        :param pk: The calculation pk
+        :param pk: process pk
         :param loop: An event loop
-        :param poll_interval: The polling interval.  Can be None in which case no polling.
-        :param communicator: A communicator.   Can be None in which case no broadcast listens.
+        :param poll_interval: optional polling interval, if None, polling is not activated.
+        :param communicator: optional communicator, if None, will not subscribe to broadcasts.
         """
         from aiida.orm import load_node
         from .process import ProcessState
@@ -41,37 +39,37 @@ class CalculationFuture(plumpy.Future):
         super().__init__()
         assert not (poll_interval is None and communicator is None), 'Must poll or have a communicator to use'
 
-        calc_node = load_node(pk=pk)
+        node = load_node(pk=pk)
 
-        if calc_node.is_terminated:
-            self.set_result(calc_node)
+        if node.is_terminated:
+            self.set_result(node)
         else:
             self._communicator = communicator
             self.add_done_callback(lambda _: self.cleanup())
 
             # Try setting up a filtered broadcast subscriber
             if self._communicator is not None:
-                self._filtered = kiwipy.BroadcastFilter(lambda *args, **kwargs: self.set_result(calc_node), sender=pk)
+                broadcast_filter = kiwipy.BroadcastFilter(lambda *args, **kwargs: self.set_result(node), sender=pk)
                 for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
-                    self._filtered.add_subject_filter('state_changed.*.{}'.format(state.value))
-                self._communicator.add_broadcast_subscriber(self._filtered)
+                    broadcast_filter.add_subject_filter('state_changed.*.{}'.format(state.value))
+                self._broadcast_identifier = self._communicator.add_broadcast_subscriber(broadcast_filter)
 
             # Start polling
             if poll_interval is not None:
-                loop.add_callback(self._poll_calculation, calc_node, poll_interval)
+                loop.add_callback(self._poll_process, node, poll_interval)
 
     def cleanup(self):
         """Clean up the future by removing broadcast subscribers from the communicator if it still exists."""
         if self._communicator is not None:
-            self._communicator.remove_broadcast_subscriber(self._filtered)
-            self._filtered = None
+            self._communicator.remove_broadcast_subscriber(self._broadcast_identifier)
             self._communicator = None
+            self._broadcast_identifier = None
 
     @tornado.gen.coroutine
-    def _poll_calculation(self, calc_node, poll_interval):
-        """Poll whether the calculation node has reached a terminal state."""
-        while not self.done() and not calc_node.is_terminated:
+    def _poll_process(self, node, poll_interval):
+        """Poll whether the process node has reached a terminal state."""
+        while not self.done() and not node.is_terminated:
             yield tornado.gen.sleep(poll_interval)
 
         if not self.done():
-            self.set_result(calc_node)
+            self.set_result(node)

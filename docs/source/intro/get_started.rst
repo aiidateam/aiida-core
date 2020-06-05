@@ -99,7 +99,7 @@ Install Software
 
     .. parsed-literal::
 
-        pip install aiida-core==\ |release|
+        pip install aiida-core
         reentry scan
 
     ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`__.

@@ -23,7 +23,7 @@ cryptography==2.8
 cycler==0.10.0
 decorator==4.4.2
 defusedxml==0.6.0
-Django==2.2.11
+Django==2.2.13
 docutils==0.15.2
 entrypoints==0.3
 ete3==3.1.1

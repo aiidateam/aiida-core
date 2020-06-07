@@ -140,10 +140,9 @@ def process_function(node_class):
 
                 def kill_process(_num, _frame):
                     """Send the kill signal to the process in the current scope."""
-                    from tornado import gen
                     LOGGER.critical('runner received interrupt, killing process %s', process.pid)
                     result = process.kill(msg='Process was killed because the runner received an interrupt')
-                    raise gen.Return(result)
+                    return result
 
                 # Store the current handler on the signal such that it can be restored after process has terminated
                 original_handler = signal.getsignal(kill_signal)

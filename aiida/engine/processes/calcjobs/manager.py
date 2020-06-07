@@ -175,13 +175,17 @@ class JobsList:
             await self._update_job_info()
             # Any outstanding requests?
             if self._update_requests_outstanding():
-                self._update_handle = self._loop.call_later(self._get_next_update_delay(), updating)
+                self._update_handle = self._loop.call_later(
+                    self._get_next_update_delay(), asyncio.ensure_future, updating()
+                )
             else:
                 self._update_handle = None
 
         # Check if we're already updating
         if self._update_handle is None:
-            self._update_handle = self._loop.call_later(self._get_next_update_delay(), updating)
+            self._update_handle = self._loop.call_later(
+                self._get_next_update_delay(), asyncio.ensure_future, updating()
+            )
 
     @staticmethod
     def _has_job_state_changed(old, new):

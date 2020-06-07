@@ -13,11 +13,12 @@ import collections
 import functools
 import logging
 import signal
+import threading
+import uuid
 import asyncio
 
 import kiwipy
 import plumpy
-import tornado.ioloop
 
 from aiida.common import exceptions
 from aiida.orm import load_node
@@ -85,8 +86,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         """
         Get the event loop of this runner
 
-        :return: the event loop
-        :rtype: :class:`tornado.ioloop.IOLoop`
+        :return: the asyncio event loop
         """
         return self._loop
 
@@ -134,7 +134,7 @@ class Runner:  # pylint: disable=too-many-public-methods
 
     def start(self):
         """Start the internal event loop."""
-        self._loop.start()
+        self._loop.run_forever()
 
     def stop(self):
         """Stop the internal event loop."""
@@ -180,7 +180,7 @@ class Runner:  # pylint: disable=too-many-public-methods
             process.close()
             self.controller.continue_process(process.pid, nowait=False, no_reply=True)
         else:
-            self.loop.add_callback(process.step_until_terminated)
+            self.loop.create_task(process.step_until_terminated())
 
         return process.node
 
@@ -196,7 +196,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not self._closed
 
         process = self.instantiate_process(process, *args, **inputs)
-        self.loop.add_callback(process.step_until_terminated)
+        self.loop.create_task(process.step_until_terminated())
         return process.node
 
     def _run(self, process, *args, **inputs):
@@ -319,6 +319,6 @@ class Runner:  # pylint: disable=too-many-public-methods
         if node.is_terminated:
             args = [node.__class__.__name__, node.pk]
             LOGGER.info('%s<%d> confirmed to be terminated by backup polling mechanism', *args)
-            self._loop.add_callback(callback)
+            self._loop.call_soon(callback)
         else:
             self._loop.call_later(self._poll_interval, self._poll_process, node, callback)

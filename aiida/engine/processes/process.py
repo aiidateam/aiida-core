@@ -282,7 +282,7 @@ class Process(plumpy.Process):
 
             if killing:
                 # We are waiting for things to be killed, so return the 'gathered' future
-                result = plumpy.gather(killing)
+                result = plumpy.gather(*killing)
 
         return result
 

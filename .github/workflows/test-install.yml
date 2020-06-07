@@ -142,7 +142,13 @@ jobs:
 
     - name: Install aiida-core
       run: |
+<<<<<<< HEAD
         pip install -e .[atomic_tools,docs,notebook,rest,tests]
+=======
+        pip install -e .[atomic_tools,docs,notebook,rest,testing]
+        pip install --upgrade git+https://github.com/unkcpz/plumpy.git@asyncio
+        pip install --upgrade git+https://github.com/unkcpz/nest_asyncio.git@master
+>>>>>>> 5e461b715... process working with asyncio plumpy
         reentry scan
 
     - run: pip freeze

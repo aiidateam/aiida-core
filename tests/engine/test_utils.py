@@ -118,7 +118,7 @@ class TestInterruptable(AiidaTestCase):
         loop = asyncio.get_event_loop()
 
         interruptable = InterruptableFuture()
-        loop.call_soon(interruptable.interrupt(RuntimeError('STOP')))
+        loop.call_soon(interruptable.interrupt, RuntimeError('STOP'))
         try:
             loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(10.)))
         except RuntimeError as err:

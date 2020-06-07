@@ -270,7 +270,7 @@ class WorkChain(Process):
         """
         for awaitable in self._awaitables:
             if awaitable.target == AwaitableTarget.PROCESS:
-                callback = functools.partial(self._run_task, self.on_process_finished, awaitable)
+                callback = functools.partial(self.call_soon, self.on_process_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
             else:
                 assert "invalid awaitable target '{}'".format(awaitable.target)

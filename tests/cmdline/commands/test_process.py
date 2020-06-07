@@ -8,16 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi process`."""
-import datetime
 import subprocess
 import sys
 import time
+import asyncio
 from concurrent.futures import Future
 
 from click.testing import CliRunner
-from tornado import gen
-import kiwipy
 import plumpy
+import kiwipy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
@@ -107,7 +106,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         # that we have the latest state of the node as it is in the database, we force refresh it by reloading it.
         calc = load_node(calc.pk)
         if calc.process_state != plumpy.ProcessState.WAITING:
-            self.runner.loop.run_sync(lambda: with_timeout(waiting_future))
+            self.runner.loop.run_until_complete(asyncio.wait_for(waiting_future, timeout=5.0))
 
         # Here we now that the process is with the daemon runner and in the waiting state so we can starting running
         # the `verdi process` commands that we want to test

@@ -27,6 +27,7 @@ dependencies:
 - psutil~=5.6
 - psycopg2>=2.8.3,~=2.8
 - python-dateutil~=2.8
+- pytest-asyncio~=0.12.0
 - pytz~=2019.3
 - pyyaml~=5.1.2
 - reentry~=1.3

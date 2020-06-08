@@ -69,7 +69,7 @@ For a list of other open source components included in AiiDA, see [`open_source_
 
 This work is supported by:
 * the [MARVEL National Centre for Competency in Research](http://nccr-marvel.ch) funded by the [Swiss National Science Foundation](http://www.snf.ch/en);
-* the [MaX European Centre of Excellence](http://www.max-centre.eu/) funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598;
+* the [MaX European Centre of Excellence](http://www.max-centre.eu/) funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598 (2015-2018) and the Horizon 2020 INFRAEDI-2018-1 program, Grant No. 824143 (2018-2021);
 * the [swissuniversities P-5 project "Materials Cloud"](https://www.materialscloud.org/swissuniversities).
 
 <img src="docs/source/images/MARVEL.png" alt="MARVEL" style="padding:10px;" width="150"/>

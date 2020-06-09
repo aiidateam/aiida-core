@@ -31,10 +31,12 @@ class ArithmeticAddCalculation(CalcJob):
         spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
+        # start exit codes - marker for docs
         spec.exit_code(300, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved output node does not exist.')
         spec.exit_code(310, 'ERROR_READING_OUTPUT_FILE', message='The output file could not be read.')
         spec.exit_code(320, 'ERROR_INVALID_OUTPUT', message='The output file contains invalid output.')
         spec.exit_code(410, 'ERROR_NEGATIVE_NUMBER', message='The sum of the operands is a negative number.')
+        # end exit codes - marker for docs
 
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation for submission.

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=inconsistent-return-statements,no-member
+# start-marker for docs
 """Implementation of the MultiplyAddWorkChain for testing and demonstration purposes."""
 from aiida.orm import Code, Int
 from aiida.engine import calcfunction, WorkChain, ToContext

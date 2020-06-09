@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# start-marker for docs
 """Basic calcfunction-based workflows for demonstration purposes."""
 from aiida.engine import calcfunction, workfunction
 

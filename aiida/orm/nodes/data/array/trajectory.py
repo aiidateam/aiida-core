@@ -351,9 +351,9 @@ class TrajectoryData(ArrayData):
         time = self.get_times()
         if time is not None:
             time = time[index]
-        cells = self.get_cells()
-        if cells is not None:
-            cell = cells[index, :, :]
+        cell = self.get_cells()
+        if cell is not None:
+            cell = cell[index, :, :]
         return (self.get_stepids()[index], time, cell, self.symbols, self.get_positions()[index, :, :], vel)
 
     def get_step_structure(self, index, custom_kinds=None):

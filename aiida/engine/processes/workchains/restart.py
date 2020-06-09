@@ -255,7 +255,7 @@ class BaseRestartWorkChain(WorkChain):
 
             self.report(template.format(*report_args))
 
-            return report.exit_code
+            return last_report.exit_code
 
         # Otherwise the process was successful and no handler returned anything so we consider the work done
         self.ctx.is_finished = True

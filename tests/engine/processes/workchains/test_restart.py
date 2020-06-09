@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `aiida.engine.processes.workchains.restart` module."""
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,inconsistent-return-statements,no-self-use,no-member
 import pytest
 
 from aiida.engine import CalcJob, BaseRestartWorkChain, process_handler, ProcessState, ProcessHandlerReport, ExitCode
@@ -19,12 +19,16 @@ class SomeWorkChain(BaseRestartWorkChain):
 
     _process_class = CalcJob
 
-    @process_handler()
-    def handler_a(self, node):  # pylint: disable=inconsistent-return-statements,no-self-use
+    @process_handler(priority=200)
+    def handler_a(self, node):
         if node.exit_status == 400:
-            return ProcessHandlerReport()
+            return ProcessHandlerReport(do_break=False, exit_code=ExitCode(418, 'IMATEAPOT'))
 
-    def not_a_handler(self, node):
+    @process_handler(priority=100)
+    def handler_b(self, _):
+        return
+
+    def not_a_handler(self, _):
         pass
 
 
@@ -37,7 +41,7 @@ def test_is_process_handler():
 
 def test_get_process_handler():
     """Test the `BaseRestartWorkChain.get_process_handlers` class method."""
-    assert [handler.__name__ for handler in SomeWorkChain.get_process_handlers()] == ['handler_a']
+    assert [handler.__name__ for handler in SomeWorkChain.get_process_handlers()] == ['handler_a', 'handler_b']
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -46,7 +50,7 @@ def test_excepted_process(generate_work_chain, generate_calculation_node):
     process = generate_work_chain(SomeWorkChain, {})
     process.setup()
     process.ctx.children = [generate_calculation_node(ProcessState.EXCEPTED)]
-    assert process.inspect_process() == BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_EXCEPTED  # pylint: disable=no-member
+    assert process.inspect_process() == BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_EXCEPTED
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -55,7 +59,7 @@ def test_killed_process(generate_work_chain, generate_calculation_node):
     process = generate_work_chain(SomeWorkChain, {})
     process.setup()
     process.ctx.children = [generate_calculation_node(ProcessState.KILLED)]
-    assert process.inspect_process() == BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_KILLED  # pylint: disable=no-member
+    assert process.inspect_process() == BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_KILLED
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -94,13 +98,17 @@ def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a handled failed process."""
     process = generate_work_chain(SomeWorkChain, {})
     process.setup()
-    process.ctx.children = [generate_calculation_node(exit_status=0)]
+    process.ctx.children = [generate_calculation_node(exit_status=300)]
     assert process.inspect_process() is None
-    assert process.ctx.unhandled_failure is False
+    assert process.ctx.unhandled_failure is True
 
     # Exit status 400 of the last calculation job will be handled and so should reset the flag
     process.ctx.children.append(generate_calculation_node(exit_status=400))
     result = process.inspect_process()
+
+    # Even though `handler_a` was followed by `handler_b`, we should retrieve the exit_code from `handler_a` because
+    # `handler_b` returned `None` which should not overwrite the last report.
     assert isinstance(result, ExitCode)
-    assert result.status == 0
+    assert result.status == 418
+    assert result.message == 'IMATEAPOT'
     assert process.ctx.unhandled_failure is False

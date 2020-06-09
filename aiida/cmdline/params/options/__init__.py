@@ -497,8 +497,8 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
 
 CONFIG_FILE = ConfigFileOption(
     '--config',
-    type=click.Path(exists=True, dir_okay=False),
-    help='Load option values from configuration file in yaml format.'
+    type=types.FileOrUrl(),
+    help='Load option values from configuration file in yaml format (local path or URL).'
 )
 
 IDENTIFIER = OverridableOption(

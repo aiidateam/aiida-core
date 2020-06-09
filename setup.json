@@ -25,7 +25,7 @@
     "alembic~=1.2",
     "circus~=0.16.1",
     "click-completion~=0.5.1",
-    "click-config-file~=0.5.0",
+    "click-config-file~=0.6.0",
     "click-spinner~=0.1.8",
     "click~=7.0",
     "django~=2.2",
@@ -72,10 +72,11 @@
     "docs": [
       "docutils==0.15.2",
       "pygments~=2.5",
-      "sphinx-rtd-theme~=0.4.3",
+      "pydata-sphinx-theme~=0.3.0",
       "sphinx~=2.2",
-      "sphinxcontrib-contentui~=0.2.4",
-      "sphinxcontrib-details-directive~=0.1.0"
+      "sphinxcontrib-details-directive~=0.1.0",
+      "sphinx-panels~=0.4.0",
+      "sphinx-copybutton~=0.2.11"
     ],
     "atomic_tools": [
       "PyCifRW~=4.4",

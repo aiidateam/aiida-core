@@ -91,3 +91,56 @@ def generate_calc_job():
         return calc_info
 
     return _generate_calc_job
+
+
+@pytest.fixture
+def generate_work_chain():
+    """Generate an instance of a `WorkChain`."""
+
+    def _generate_work_chain(entry_point, inputs=None):
+        """Generate an instance of a `WorkChain` with the given entry point and inputs.
+
+        :param entry_point: entry point name of the work chain subclass.
+        :param inputs: inputs to be passed to process construction.
+        :return: a `WorkChain` instance.
+        """
+        from aiida.engine.utils import instantiate_process
+        from aiida.manage.manager import get_manager
+        from aiida.plugins import WorkflowFactory
+
+        inputs = inputs or {}
+        process_class = WorkflowFactory(entry_point) if isinstance(entry_point, str) else entry_point
+        runner = get_manager().get_runner()
+        process = instantiate_process(runner, process_class, **inputs)
+
+        return process
+
+    return _generate_work_chain
+
+
+@pytest.fixture
+def generate_calculation_node():
+    """Generate an instance of a `CalculationNode`."""
+    from aiida.engine import ProcessState
+
+    def _generate_calculation_node(process_state=ProcessState.FINISHED, exit_status=None):
+        """Generate an instance of a `CalculationNode`..
+
+        :param process_state: state to set
+        :param exit_status: optional exit status, will be set to `0` if `process_state` is `ProcessState.FINISHED`
+        :return: a `CalculationNode` instance.
+        """
+        from aiida.orm import CalculationNode
+
+        if process_state is ProcessState.FINISHED and exit_status is None:
+            exit_status = 0
+
+        node = CalculationNode()
+        node.set_process_state(process_state)
+
+        if exit_status is not None:
+            node.set_exit_status(exit_status)
+
+        return node
+
+    return _generate_calculation_node

@@ -12,10 +12,23 @@ import os
 # See https://stackoverflow.com/a/41217363/1069467
 import urllib.request
 import urllib.error
-
+from socket import timeout
 import click
 
 URL_TIMEOUT_SECONDS = 10
+
+
+def _check_timeout_seconds(timeout_seconds):
+    """Raise if timeout is not within range [0;60]"""
+    try:
+        timeout_seconds = int(timeout_seconds)
+    except ValueError:
+        raise TypeError('timeout_seconds should be an integer but got: {}'.format(type(timeout_seconds)))
+
+    if timeout_seconds < 0 or timeout_seconds > 60:
+        raise ValueError('timeout_seconds needs to be in the range [0;60].')
+
+    return timeout_seconds
 
 
 class AbsolutePathParamType(click.Path):
@@ -52,22 +65,23 @@ class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
         return 'ABSOLUTEPATHEMPTY'
 
 
-class ImportPath(click.Path):
-    """AiiDA extension of Click's Path-type to include URLs
-    An ImportPath can either be a `click.Path`-type or a URL.
+class PathOrUrl(click.Path):
+    """Extension of click's Path-type to include URLs.
 
-    :param timeout_seconds: Timeout time in seconds that a URL response is expected.
-    :value timeout_seconds: Must be an int in the range [0;60], extrema included.
-      If an int outside the range [0;60] is given, the value will be set to the respective extremum value.
-      If any other type than int is given a TypeError will be raised.
+    A PathOrUrl can either be a `click.Path`-type or a URL.
+
+    :param int timeout_seconds: Maximum timeout accepted for URL response.
+        Must be an integer in the range [0;60].
     """
 
     # pylint: disable=protected-access
 
+    name = 'PathOrUrl'
+
     def __init__(self, timeout_seconds=URL_TIMEOUT_SECONDS, **kwargs):
         super().__init__(**kwargs)
 
-        self.timeout_seconds = timeout_seconds
+        self.timeout_seconds = _check_timeout_seconds(timeout_seconds)
 
     def convert(self, value, param, ctx):
         """Overwrite `convert`
@@ -80,38 +94,57 @@ class ImportPath(click.Path):
             # Check if URL
             return self.checks_url(value, param, ctx)
 
-    def checks_url(self, value, param, ctx):
-        """Do checks for possible URL path"""
-        from socket import timeout
-
-        url = value
-
+    def checks_url(self, url, param, ctx):
+        """Check whether URL is reachable within timeout."""
         try:
-            urllib.request.urlopen(url, data=None, timeout=self.timeout_seconds)
+            urllib.request.urlopen(url, timeout=self.timeout_seconds)
         except (urllib.error.URLError, urllib.error.HTTPError, timeout):
             self.fail(
                 '{0} "{1}" could not be reached within {2} s.\n'
-                'It may be neither a valid {3} nor a valid URL.'.format(
+                'Is it a valid {3} or URL?'.format(
                     self.path_type, click._compat.filename_to_ui(url), self.timeout_seconds, self.name
                 ), param, ctx
             )
 
         return url
 
-    @property
-    def timeout_seconds(self):
-        return self._timeout_seconds
 
-    # pylint: disable=attribute-defined-outside-init
-    @timeout_seconds.setter
-    def timeout_seconds(self, value):
+class FileOrUrl(click.File):
+    """Extension of click's File-type to include URLs.
+
+    Returns handle either to local file or to remote file fetched from URL.
+
+    :param int timeout_seconds: Maximum timeout accepted for URL response.
+        Must be an integer in the range [0;60].
+    """
+
+    name = 'FileOrUrl'
+
+    # pylint: disable=protected-access
+
+    def __init__(self, timeout_seconds=URL_TIMEOUT_SECONDS, **kwargs):
+        super().__init__(**kwargs)
+
+        self.timeout_seconds = _check_timeout_seconds(timeout_seconds)
+
+    def convert(self, value, param, ctx):
+        """Return file handle.
+        """
         try:
-            self._timeout_seconds = int(value)
-        except ValueError:
-            raise TypeError('timeout_seconds should be an integer but got: {}'.format(type(value)))
+            # Check if `click.File`-type
+            return super().convert(value, param, ctx)
+        except click.exceptions.BadParameter:
+            # Check if URL
+            handle = self.get_url(value, param, ctx)
+        return handle
 
-        if self._timeout_seconds < 0:
-            self._timeout_seconds = 0
-
-        if self._timeout_seconds > 60:
-            self._timeout_seconds = 60
+    def get_url(self, url, param, ctx):
+        """Retrieve file from URL."""
+        try:
+            return urllib.request.urlopen(url, timeout=self.timeout_seconds)
+        except (urllib.error.URLError, urllib.error.HTTPError, timeout):
+            self.fail(
+                '"{0}" could not be reached within {1} s.\n'
+                'Is it a valid {2} or URL?.'.format(click._compat.filename_to_ui(url), self.timeout_seconds, self.name),
+                param, ctx
+            )

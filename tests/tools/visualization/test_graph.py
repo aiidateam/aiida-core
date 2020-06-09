@@ -183,6 +183,36 @@ class TestVisGraph(AiidaTestCase):
                  (nodes.pd1.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input2'))])
         )
 
+    def test_graph_recurse_spot_highlight_classes(self):
+        """ test adding nodes and all its (recursed) incoming nodes to a graph"""
+        import difflib
+
+        nodes = self.create_provenance()
+
+        graph = graph_mod.Graph()
+        graph.recurse_ancestors(nodes.pd0)
+        graph.recurse_descendants(nodes.pd0)
+
+        graph_highlight = graph_mod.Graph()
+        graph_highlight.recurse_ancestors(nodes.pd0, highlight_classes=['Dict'])
+        graph_highlight.recurse_descendants(nodes.pd0, highlight_classes=['Dict', 'CalcJobNode', 'Dummy'])
+
+        diff = difflib.unified_diff(
+            graph.graphviz.source.splitlines(keepends=True), graph_highlight.graphviz.source.splitlines(keepends=True)
+        )
+        got_diff = ''.join([l for l in diff if l.startswith('+')])
+
+        expected_diff = """\
+        +State: running" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
+        +@localhost" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
+        +Exit Code: 200" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
+        +\tN{fd1} [label="FolderData ({fd1})" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
+        +++""".format(**{k: v.pk for k, v in nodes.items()})
+
+        self.assertEqual(
+            sorted([l.strip() for l in got_diff.splitlines()]), sorted([l.strip() for l in expected_diff.splitlines()])
+        )
+
     def test_graph_recurse_ancestors_filter_links(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph, but filter link types"""
         nodes = self.create_provenance()
@@ -228,7 +258,7 @@ class TestVisGraph(AiidaTestCase):
 
         expected = """\
         digraph {{
-                N{pd0} [label="Dict ({pd0})" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
+                N{pd0} [label="Dict ({pd0})" color=red fillcolor="#8cd499ff" penwidth=6 shape=ellipse style=filled]
                 N{calc1} [label="CalcJobNode ({calc1})
                     State: finished
                     Exit Code: 0" fillcolor="#de707fff" penwidth=0 shape=rectangle style=filled]
@@ -272,7 +302,7 @@ class TestVisGraph(AiidaTestCase):
 
         expected = """\
         digraph {{
-                N{pd0} [label="Dict ({pd0})" pencolor=black shape=rectangle]
+                N{pd0} [label="Dict ({pd0})" color=red pencolor=black penwidth=6 shape=rectangle]
                 N{calc1} [label="CalcJobNode ({calc1})
                     State: finished
                     Exit Code: 0" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]

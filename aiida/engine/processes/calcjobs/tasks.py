@@ -322,6 +322,7 @@ class Waiting(plumpy.Waiting):
         node = self.process.node
         transport_queue = self.process.runner.transport
         command = self.data
+        result = self
 
         process_status = 'Waiting for transport task: {}'.format(command)
 
@@ -330,12 +331,12 @@ class Waiting(plumpy.Waiting):
             if command == UPLOAD_COMMAND:
                 node.set_process_status(process_status)
                 await self._launch_task(task_upload_job, self.process, transport_queue)
-                return self.submit()
+                result = self.submit()
 
             elif command == SUBMIT_COMMAND:
                 node.set_process_status(process_status)
                 await self._launch_task(task_submit_job, node, transport_queue)
-                return self.update()
+                result = self.update()
 
             elif self.data == UPDATE_COMMAND:
                 job_done = False
@@ -347,14 +348,14 @@ class Waiting(plumpy.Waiting):
                     node.set_process_status(process_status)
                     job_done = await self._launch_task(task_update_job, node, self.process.runner.job_manager)
 
-                return self.retrieve()
+                result = self.retrieve()
 
             elif self.data == RETRIEVE_COMMAND:
                 node.set_process_status(process_status)
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
                 temp_folder = tempfile.mkdtemp()
                 await self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)
-                return self.parse(temp_folder)
+                result = self.parse(temp_folder)
 
             else:
                 raise RuntimeError('Unknown waiting command')
@@ -369,7 +370,8 @@ class Waiting(plumpy.Waiting):
             node.set_process_status('Transport task {} was interrupted'.format(command))
             raise
         else:
-            node.set_process_state(None)
+            node.set_process_status(None)
+            return result
         finally:
             # If we were trying to kill but we didn't deal with it, make sure it's set here
             if self._killing and not self._killing.done():

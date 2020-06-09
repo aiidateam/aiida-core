@@ -47,7 +47,6 @@ def verdi_status():
     # pylint: disable=broad-except,too-many-statements
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
     from aiida.common.utils import Capturing
-    from aiida.manage.external.rmq import get_rmq_url
     from aiida.manage.manager import get_manager
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
@@ -63,7 +62,7 @@ def verdi_status():
         profile = manager.get_profile()
         print_status(ServiceStatus.UP, 'profile', 'On profile {}'.format(profile.name))
 
-    except Exception as exc:
+    except Exception:
         print_status(ServiceStatus.ERROR, 'profile', 'Unable to read AiiDA profile')
         sys.exit(ExitCode.CRITICAL)  # stop here - without a profile we cannot access anything
 
@@ -99,7 +98,7 @@ def verdi_status():
         print_status(ServiceStatus.ERROR, 'rabbitmq', 'Unable to connect to rabbitmq', exception=exc)
         exit_code = ExitCode.CRITICAL
     else:
-        print_status(ServiceStatus.UP, 'rabbitmq', 'Connected to {}'.format(get_rmq_url()))
+        print_status(ServiceStatus.UP, 'rabbitmq', 'Connected as {}'.format(profile.get_rmq_url()))
 
     # getting the daemon status
     try:

@@ -15,7 +15,7 @@ __all__ = ('CURRENT_CONFIG_VERSION', 'OLDEST_COMPATIBLE_CONFIG_VERSION')
 # If the configuration file format is changed, the current version number should be upped and a migration added.
 # When the configuration file format is changed in a backwards-incompatible way, the oldest compatible version should
 # be set to the new current version.
-CURRENT_CONFIG_VERSION = 3
+CURRENT_CONFIG_VERSION = 4
 OLDEST_COMPATIBLE_CONFIG_VERSION = 3
 
 

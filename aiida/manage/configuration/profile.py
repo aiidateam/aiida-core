@@ -318,6 +318,16 @@ class Profile:  # pylint: disable=too-many-public-methods
 
         return parts.scheme, os.path.expanduser(parts.path)
 
+    def get_rmq_url(self):
+        from aiida.manage.external.rmq import get_rmq_url
+        return get_rmq_url(
+            protocol=self.broker_protocol,
+            username=self.broker_username,
+            password=self.broker_password,
+            host=self.broker_host,
+            port=self.broker_port
+        )
+
     def configure_repository(self):
         """Validates the configured repository and in the case of a file system repo makes sure the folder exists."""
         import errno

@@ -17,9 +17,7 @@ def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
 
     # Check the attributes of the returned `CalcInfo`
     assert isinstance(calc_info, datastructures.CalcInfo)
-    assert sorted(calc_info.local_copy_list) == sorted([])
     assert sorted(calc_info.retrieve_list) == sorted([options['output_filename'].default])
-    assert sorted(calc_info.remote_copy_list) == sorted([])
 
     codes_info = calc_info.codes_info
     assert isinstance(codes_info, list)

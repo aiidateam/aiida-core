@@ -286,7 +286,6 @@ def run_base_restart_workchain():
             'x': Int(1),
             'y': Int(2),
             'code': code,
-            'settings': Dict(dict={'allow_negative': False}),
         }
     }
 

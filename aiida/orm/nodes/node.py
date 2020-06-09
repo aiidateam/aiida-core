@@ -56,7 +56,7 @@ class Node(Entity, metaclass=AbstractNodeMeta):
     # pylint: disable=too-many-public-methods
 
     class Collection(EntityCollection):
-        """The collection of AuthInfo entries."""
+        """The collection of nodes."""
 
         def delete(self, node_id):
             """Delete a `Node` from the collection with the given id
@@ -68,8 +68,15 @@ class Node(Entity, metaclass=AbstractNodeMeta):
             if not node.is_stored:
                 return
 
+            if node.get_incoming().all():
+                raise exceptions.InvalidOperation(
+                    'cannot delete Node<{}> because it has incoming links'.format(node.pk)
+                )
+
             if node.get_outgoing().all():
-                raise exceptions.InvalidOperation('cannot delete Node<{}> because it has output links'.format(node.pk))
+                raise exceptions.InvalidOperation(
+                    'cannot delete Node<{}> because it has outgoing links'.format(node.pk)
+                )
 
             repository = node._repository  # pylint: disable=protected-access
             self._backend.nodes.delete(node_id)

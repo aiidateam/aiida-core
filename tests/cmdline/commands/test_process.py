@@ -490,8 +490,3 @@ class TestVerdiProcessCallRoot(AiidaTestCase):
         self.assertIn('No callers found', get_result_lines(result)[0])
         self.assertIn(str(self.node_root.pk), get_result_lines(result)[1])
         self.assertIn(str(self.node_root.pk), get_result_lines(result)[2])
-
-
-@gen.coroutine
-def with_timeout(what, timeout=5.0):
-    raise gen.Return((yield gen.with_timeout(datetime.timedelta(seconds=timeout), what)))

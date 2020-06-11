@@ -119,6 +119,21 @@ def _parse_working_set(entries):
         yield _Entry(req)
 
 
+def _generate_rtd_requirement_set():
+    """Generate content of docs/requirements_for_rtd.txt file."""
+
+    # Read the requirements from 'setup.json'
+    setup_cfg = _load_setup_cfg()
+    install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+    for key in ('testing', 'docs', 'rest', 'atomic_tools'):
+        install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
+
+    # add requirement for "search as you type"
+    install_requirements.update({Requirement.parse('readthedocs-sphinx-search==0.1.0rc1')})
+
+    return install_requirements
+
+
 @click.group()
 def cli():
     """Manage dependencies of the aiida-core package."""
@@ -165,11 +180,7 @@ def generate_environment_yml():
 def generate_requirements_for_rtd():
     """Generate 'docs/requirements_for_rtd.txt' file."""
 
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
-    for key in ('testing', 'docs', 'rest', 'atomic_tools'):
-        install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
+    install_requirements = _generate_rtd_requirement_set()
 
     # pylint: disable=bad-continuation
     with open(ROOT / Path('docs', 'requirements_for_rtd.txt'), 'w') as reqs_file:
@@ -287,15 +298,13 @@ def validate_requirements_for_rtd():
     """Validate that 'docs/requirements_for_rtd.txt' is consistent with 'setup.json'."""
 
     # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
-    for key in ('testing', 'docs', 'rest', 'atomic_tools'):
-        install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
+    install_requirements = _generate_rtd_requirement_set()
 
     with open(ROOT / Path('docs', 'requirements_for_rtd.txt')) as reqs_file:
         reqs = {Requirement.parse(r) for r in reqs_file}
 
     if reqs != install_requirements:
+        click.echo('{}'.format(reqs - install_requirements))
         raise DependencySpecificationError("The requirements for RTD are inconsistent with 'setup.json'.")
 
     click.secho('RTD requirements specification is consistent.', fg='green')

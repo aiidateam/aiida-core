@@ -12,6 +12,7 @@ AiiDA class to deal with crystal structure trajectories.
 """
 
 import collections
+import warnings
 
 from .array import ArrayData
 
@@ -318,14 +319,14 @@ class TrajectoryData(ArrayData):
             raise ValueError('{} not among the stepids'.format(stepid))
 
     def get_step_data(self, index):
-        r"""
-        Return a tuple with all information concerning
-        the stepid with given index (0 is the first step, 1 the second step
-        and so on). If you know only the step value, use the
-        :py:meth:`.get_index_from_stepid`  method to get the
-        corresponding index.
+        """
+        Return a tuple with all information concerning the stepid with given
+        index (0 is the first step, 1 the second step and so on). If you know
+        only the step value, use the :py:meth:`.get_index_from_stepid` method
+        to get the corresponding index.
 
-        If no velocities were specified, None is returned as the last element.
+        If no velocities, cells, or times were specified, None is returned as
+        the corresponding element.
 
         :return: A tuple in the format
           ``(stepid, time, cell, symbols, positions, velocities)``,
@@ -341,8 +342,7 @@ class TrajectoryData(ArrayData):
         """
         if index >= self.numsteps:
             raise IndexError(
-                'You have only {} steps, but you are looking beyond'
-                ' (index={})'.format(self.numsteps, index)
+                'You have only {} steps, but you are looking beyond (index={})'.format(self.numsteps, index)
             )
 
         vel = self.get_velocities()
@@ -356,7 +356,7 @@ class TrajectoryData(ArrayData):
             cell = cell[index, :, :]
         return (self.get_stepids()[index], time, cell, self.symbols, self.get_positions()[index, :, :], vel)
 
-    def get_step_structure(self, index, custom_kinds=None):
+    def get_step_structure(self, index, custom_kinds=None, custom_cell=None):
         """
         Return an AiiDA :py:class:`aiida.orm.nodes.data.structure.StructureData` node
         (not stored yet!) with the coordinates of the given step, identified by
@@ -378,6 +378,12 @@ class TrajectoryData(ArrayData):
           :py:class:`aiida.orm.nodes.data.structure.StructureData` nodes is used,
           meaning that the strings in the ``symbols`` array must be valid
           chemical symbols.
+        :param custom_cell: (Optional) The cell matrix of the structure.
+          If omitted, the cell will be read from the trajectory, if present,
+          otherwise the default cell of
+          :py:class:`aiida.orm.nodes.data.structure.StructureData` will be used.
+
+        :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
         """
         from aiida.orm.nodes.data.structure import StructureData, Kind, Site
 
@@ -402,6 +408,18 @@ class TrajectoryData(ArrayData):
                     'that is present in the trajectory. You '
                     'passed {}, but the symbols are {}'.format(sorted(kind_names), sorted(symbols))
                 )
+
+        if custom_cell is not None:
+            cell = custom_cell
+        # If cell is not specified, StructureData will use the default value [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        # This might not be the expected behavior
+        if cell is None:
+            warnings.warn(
+                UserWarning(
+                    'No cell parameters have been supplied for TrajectoryData. '
+                    'The StructureData will use the default cell.'
+                )
+            )
 
         struc = StructureData(cell=cell)
         if custom_kinds is not None:
@@ -480,9 +498,23 @@ class TrajectoryData(ArrayData):
         .. versionadded:: 1.0
             Renamed from _get_aiida_structure
 
-        :param converter: specify the converter. Default 'ase'.
         :param store: If True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
+        :param index: The index of the step that you want to retrieve, from
+           0 to ``self.numsteps- 1``.
+        :param custom_kinds: (Optional) If passed must be a list of
+          :py:class:`aiida.orm.nodes.data.structure.Kind` objects. There must be one
+          kind object for each different string in the ``symbols`` array, with
+          ``kind.name`` set to this string.
+          If this parameter is omitted, the automatic kind generation of AiiDA
+          :py:class:`aiida.orm.nodes.data.structure.StructureData` nodes is used,
+          meaning that the strings in the ``symbols`` array must be valid
+          chemical symbols.
+        :param custom_cell: (Optional) The cell matrix of the structure.
+          If omitted, the cell will be read from the trajectory, if present,
+          otherwise the default cell of
+          :py:class:`aiida.orm.nodes.data.structure.StructureData` will be used.
+
         :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
         """
         from aiida.orm.nodes.data.dict import Dict

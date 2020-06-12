@@ -28,7 +28,7 @@ class TestTrajectoryData(AiidaTestCase):
         cls.positions = np.arange(6000, dtype=float).reshape((200, 10, 3))
         cls.velocities = -np.arange(6000, dtype=float).reshape((200, 10, 3))
         cls.cells = np.array([[[3., 0.1, 0.3], [-0.05, 3., -0.2], [0.02, -0.08, 3.]]] * 200
-                            ) + np.arange(0, 0.2, 0.001)[:, np.newaxis, np.newaxis]
+                             ) + np.arange(0, 0.2, 0.001)[:, np.newaxis, np.newaxis]
 
     def test_trajectory_get_index_from_stepid(self):
         """Test the `get_index_from_stepid` method."""
@@ -104,3 +104,42 @@ class TestTrajectoryData(AiidaTestCase):
 
         with pytest.raises(IndexError):
             structure = traj.get_step_structure(500)
+
+    def test_trajectory_get_step_structure_nocell(self):
+        """Test the `get_step_structure` method when custom_cell is specified."""
+        traj = TrajectoryData()
+        traj.set_trajectory(
+            symbols=self.symbols,
+            positions=self.positions,
+            stepids=self.stepids,
+            times=self.times,
+            velocities=self.velocities
+        )
+
+        custom_cell = np.array([[5., 0., 0.], [0., 5., 0.], [0., 0., 5.]])
+        structure = traj.get_step_structure(50, custom_cell=custom_cell)
+        # is there a better way to compare StructureData nodes?
+        self.assertIsInstance(structure, StructureData)
+        self.assertListEqual(structure.cell, custom_cell.tolist())
+        for site, kind, pos in zip(structure.sites, self.symbols, self.positions[50, :, :]):
+            # note: this may depend on the ordering of the sites
+            self.assertEqual(site.kind_name, kind)
+            self.assertListEqual(list(site.position), pos.tolist())
+
+        with pytest.raises(IndexError):
+            structure = traj.get_step_structure(500)
+
+        # check that cell is overridden even if present in the trajectory
+        traj = TrajectoryData()
+        traj.set_trajectory(
+            symbols=self.symbols,
+            positions=self.positions,
+            cells=self.cells,
+            stepids=self.stepids,
+            times=self.times,
+            velocities=self.velocities
+        )
+
+        custom_cell = np.array([[5., 0., 0.], [0., 5., 0.], [0., 0., 5.]])
+        structure = traj.get_step_structure(50, custom_cell=custom_cell)
+        self.assertListEqual(structure.cell, custom_cell.tolist())

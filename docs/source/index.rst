@@ -127,7 +127,7 @@ Acknowledgements
 This work is supported by:
 
 * the `MARVEL National Centre for Competency in Research`_ funded by the `Swiss National Science Foundation`_;
-* the `MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598;
+* the `MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598 (2015-2018) and the Horizon 2020 INFRAEDI-2018-1 program, Grant No. 824143 (2018-2021);
 * the `swissuniversities P-5 project "Materials Cloud"`_.
 
 AiiDA is a NumFOCUS Affiliated Project. Visit `numfocus.org`_ for more information.

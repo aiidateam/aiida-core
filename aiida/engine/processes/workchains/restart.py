@@ -240,7 +240,7 @@ class BaseRestartWorkChain(WorkChain):
 
         # Here either the process finished successful or at least one handler returned a report so it can no longer be
         # considered to be an unhandled failed process and therefore we reset the flag
-        self.ctx.unhandled_failure = True
+        self.ctx.unhandled_failure = False
 
         # If at least one handler returned a report, the action depends on its exit code and that of the process itself
         if last_report:
@@ -255,7 +255,7 @@ class BaseRestartWorkChain(WorkChain):
 
             self.report(template.format(*report_args))
 
-            return report.exit_code
+            return last_report.exit_code
 
         # Otherwise the process was successful and no handler returned anything so we consider the work done
         self.ctx.is_finished = True

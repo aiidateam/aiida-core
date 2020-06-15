@@ -77,8 +77,8 @@ A way to do it is to add a line similar to the following to the ``~/.bashrc`` an
 
 .. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
 
-RabbitMQ Installation
-.....................
+RabbitMQ Installation (Unix)
+.............................
 
 If in ``verdi status`` RabbitMQ is not connected, first check that RabbitMQ is actually running:
 
@@ -104,7 +104,6 @@ In Linux / Mac OSX you can also check which ports a PID has open using:
 
 If a connection cannot be found, try starting ``rabbitmq-server`` in non-detached mode.
 If you encounter an output similar to that below, it may be that your versions of RabbitMQ and erlang (the programming language which RabbitMQ is written in) are incompatible.
-See `RabbitMQ Erlang Version Requirements <https://www.rabbitmq.com/which-erlang.html>`__ and `RabbitMQ Troubleshooting <https://www.rabbitmq.com/troubleshooting.html>`__ for further information.
 
 .. code-block:: console
 
@@ -134,6 +133,23 @@ See `RabbitMQ Erlang Version Requirements <https://www.rabbitmq.com/which-erlang
 
    Crash dump is being written to: erl_crash.dump...done
 
+You can check your version of erlang using:
+
+.. code-block:: console
+
+   $ erl -eval '{ok, Version} = file:read_file(filename:join([code:root_dir(), "releases", erlang:system_info(otp_release), "OTP_VERSION"])), io:fwrite(Version), halt().' -noshell
+   21.3
+
+and your version of rabbitmq-server with:
+
+.. code-block:: console
+
+   $ rabbitmqctl --version
+   3.7.16
+
+Then see `RabbitMQ Erlang Version Requirements <https://www.rabbitmq.com/which-erlang.html>`__, to check if these are compatible, and reinstall as appropriate.
+
+See also the `RabbitMQ Troubleshooting <https://www.rabbitmq.com/troubleshooting.html>`__ for further information.
 
 Ensuring a UTF-8 locale
 .......................

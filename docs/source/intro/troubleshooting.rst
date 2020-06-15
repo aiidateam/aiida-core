@@ -84,7 +84,7 @@ If in ``verdi status`` RabbitMQ is not connected, first check that RabbitMQ is a
 
 .. code-block:: console
 
-   $ rabbitmqctl status
+   $ sudo rabbitmqctl status
    Status of node rabbit@ph-tsm15-025 ...
    [{pid,86960},
    ...
@@ -95,7 +95,7 @@ In Linux / Mac OSX you can also check which ports a PID has open using:
 
 .. code-block:: console
 
-   $ lsof -Pan -p 86960 -i
+   $ sudo lsof -Pan -p 86960 -i
    COMMAND    PID  USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
    beam.smp 98979 user1   75u  IPv4 0x9d838dc03d5a2485      0t0  TCP *:25672 (LISTEN)
    beam.smp 98979 user1   76u  IPv4 0x9d838dc047588625      0t0  TCP 127.0.0.1:58316->127.0.0.1:4369 (ESTABLISHED)

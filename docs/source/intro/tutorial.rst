@@ -499,62 +499,9 @@ You can see the code below:
 
 .. dropdown:: MultiplyAddWorkChain code
 
-    .. code-block:: python
-
-        from aiida.orm import Code, Int
-        from aiida.engine import calcfunction, WorkChain, ToContext
-        from aiida.plugins.factories import CalculationFactory
-
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
-
-
-        @calcfunction
-        def multiply(x, y):
-            return x * y
-
-
-        class MultiplyAddWorkChain(WorkChain):
-            """WorkChain to multiply two numbers and add a third, for testing and demonstration purposes."""
-
-            @classmethod
-            def define(cls, spec):
-                """Specify inputs and outputs."""
-                # yapf: disable
-                super().define(spec)
-                spec.input('x', valid_type=Int)
-                spec.input('y', valid_type=Int)
-                spec.input('z', valid_type=Int)
-                spec.input('code', valid_type=Code)
-                spec.outline(
-                    cls.multiply,
-                    cls.add,
-                    cls.validate_result,
-                    cls.result
-                )
-                spec.output('result', valid_type=Int)
-                spec.exit_code(400, 'ERROR_NEGATIVE_NUMBER', message='The result is a negative number.')
-
-            def multiply(self):
-                """Multiply two integers."""
-                self.ctx.product = multiply(self.inputs.x, self.inputs.y)
-
-            def add(self):
-                """Add two numbers using the `ArithmeticAddCalculation` calculation job plugin."""
-                inputs = {'x': self.ctx.product, 'y': self.inputs.z, 'code': self.inputs.code}
-                future = self.submit(ArithmeticAddCalculation, **inputs)
-
-                return ToContext(addition=future)
-
-            def validate_result(self):  # pylint: disable=inconsistent-return-statements
-                """Make sure the result is not negative."""
-                result = self.ctx.addition.outputs.sum
-
-                if result.value < 0:
-                    return self.exit_codes.ERROR_NEGATIVE_NUMBER  # pylint: disable=no-member
-
-            def result(self):
-                """Add the result to the outputs."""
-                self.out('result', self.ctx.addition.outputs.sum)
+    .. literalinclude:: ../../../aiida/workflows/arithmetic/multiply_add.py
+        :language: python
+        :start-after: start-marker
 
     First, we recognize the ``multiply`` function we have used earlier, decorated as a ``calcfunction``.
     The ``define`` class method specifies the ``input`` and ``output`` of the ``WorkChain``, as well as the ``outline``, which are the steps of the workflow.

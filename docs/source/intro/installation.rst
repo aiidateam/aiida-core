@@ -463,7 +463,7 @@ In order to install any of these package groups, simply append them as a comma s
 
     $ pip install -e aiida-core[atomic_tools,docs]
 
-.. admonition:: Keberos on Ubuntu
+.. admonition:: Kerberos on Ubuntu
    :class: note title-icon-troubleshoot
 
    If you are installing the optional ``ssh_kerberos`` and you are on Ubuntu you might encounter an error related to the ``gss`` package.

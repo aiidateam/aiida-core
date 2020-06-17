@@ -52,7 +52,8 @@ extensions = [
 ]
 ipython_mplbackend = ''
 copybutton_selector = 'div:not(.no-copy)>div.highlight pre'
-copybutton_prompt_text = '$ '
+copybutton_prompt_text = '>>> |\\\\$ |In \\\\[\\\\d\\\\]: |\\\\s+\\.\\.\\.: '
+copybutton_prompt_is_regexp = True
 
 todo_include_todos = False
 

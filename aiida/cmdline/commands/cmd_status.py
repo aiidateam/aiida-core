@@ -42,7 +42,9 @@ STATUS_SYMBOLS = {
 
 
 @verdi.command('status')
-def verdi_status():
+@click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
+@click.option('--no-daemon', is_flag=True, help='Do not check daemon status')
+def verdi_status(no_rmq, no_daemon):
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
@@ -90,33 +92,35 @@ def verdi_status():
         print_status(ServiceStatus.UP, 'postgres', 'Connected as {}@{}:{}'.format(*database_data))
 
     # getting the rmq status
-    try:
-        with Capturing(capture_stderr=True):
-            with override_log_level():  # temporarily suppress noisy logging
-                comm = manager.create_communicator(with_orm=False)
-                comm.stop()
-    except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'rabbitmq', 'Unable to connect to rabbitmq', exception=exc)
-        exit_code = ExitCode.CRITICAL
-    else:
-        print_status(ServiceStatus.UP, 'rabbitmq', 'Connected to {}'.format(get_rmq_url()))
+    if not no_rmq:
+        try:
+            with Capturing(capture_stderr=True):
+                with override_log_level():  # temporarily suppress noisy logging
+                    comm = manager.create_communicator(with_orm=False)
+                    comm.stop()
+        except Exception as exc:
+            print_status(ServiceStatus.ERROR, 'rabbitmq', 'Unable to connect to rabbitmq', exception=exc)
+            exit_code = ExitCode.CRITICAL
+        else:
+            print_status(ServiceStatus.UP, 'rabbitmq', 'Connected to {}'.format(get_rmq_url()))
 
     # getting the daemon status
-    try:
-        client = manager.get_daemon_client()
-        delete_stale_pid_file(client)
-        daemon_status = get_daemon_status(client)
+    if not no_daemon:
+        try:
+            client = manager.get_daemon_client()
+            delete_stale_pid_file(client)
+            daemon_status = get_daemon_status(client)
 
-        daemon_status = daemon_status.split('\n')[0]  # take only the first line
-        if client.is_daemon_running:
-            print_status(ServiceStatus.UP, 'daemon', daemon_status)
-        else:
-            print_status(ServiceStatus.DOWN, 'daemon', daemon_status)
+            daemon_status = daemon_status.split('\n')[0]  # take only the first line
+            if client.is_daemon_running:
+                print_status(ServiceStatus.UP, 'daemon', daemon_status)
+            else:
+                print_status(ServiceStatus.DOWN, 'daemon', daemon_status)
+                exit_code = ExitCode.CRITICAL
+
+        except Exception as exc:
+            print_status(ServiceStatus.ERROR, 'daemon', 'Error getting daemon status', exception=exc)
             exit_code = ExitCode.CRITICAL
-
-    except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'daemon', 'Error getting daemon status', exception=exc)
-        exit_code = ExitCode.CRITICAL
 
     # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747
     sys.exit(exit_code)

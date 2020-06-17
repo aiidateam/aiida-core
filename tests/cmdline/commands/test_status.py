@@ -25,6 +25,7 @@ class TestVerdiStatus(AiidaTestCase):
     """
 
     def setUp(self):
+        super().setUp()
         self.cli_runner = CliRunner()
 
     @with_temporary_config_instance

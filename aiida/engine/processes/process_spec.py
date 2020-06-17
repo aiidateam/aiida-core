@@ -8,11 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA specific implementation of plumpy's ProcessSpec."""
-
 import plumpy
 
 from .exit_code import ExitCode, ExitCodesNamespace
 from .ports import InputPort, PortNamespace, CalcJobOutputPort
+
+__all__ = ('ProcessSpec', 'CalcJobProcessSpec')
 
 
 class ProcessSpec(plumpy.ProcessSpec):

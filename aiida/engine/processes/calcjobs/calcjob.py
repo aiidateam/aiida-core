@@ -14,6 +14,8 @@ import plumpy
 
 from aiida import orm
 from aiida.common import exceptions, AttributeDict
+from aiida.common.datastructures import CalcInfo
+from aiida.common.folders import Folder
 from aiida.common.lang import override, classproperty
 from aiida.common.links import LinkType
 
@@ -111,8 +113,12 @@ class CalcJob(Process):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def define(cls, spec):
+    def define(cls, spec: CalcJobProcessSpec):
         # yapf: disable
+        """Define the process specification, including its inputs, outputs and known exit codes.
+
+        :param spec: the calculation job process spec to define.
+        """
         super().define(spec)
         spec.inputs.validator = validate_calc_job
         spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
@@ -246,8 +252,17 @@ class CalcJob(Process):
         # Launch the upload operation
         return plumpy.Wait(msg='Waiting to upload', data=UPLOAD_COMMAND)
 
-    def prepare_for_submission(self, folder):
-        """Prepare files for submission of calculation."""
+    def prepare_for_submission(self, folder: Folder) -> CalcInfo:
+        """Prepare the calculation for submission.
+
+        Convert the input nodes into the corresponding input files in the format that the code will expect. In addition,
+        define and return a `CalcInfo` instance, which is a simple data structure that contains  information for the
+        engine, for example, on what files to copy to the remote machine, what files to retrieve once it has completed,
+        specific scheduler settings and more.
+
+        :param folder: a temporary folder on the local file system.
+        :returns: the `CalcInfo` instance
+        """
         raise NotImplementedError
 
     def parse(self, retrieved_temporary_folder=None):

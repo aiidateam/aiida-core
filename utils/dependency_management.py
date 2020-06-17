@@ -128,9 +128,6 @@ def _generate_rtd_requirement_set():
     for key in ('testing', 'docs', 'rest', 'atomic_tools'):
         install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
 
-    # add requirement for "search as you type"
-    install_requirements.update({Requirement.parse('readthedocs-sphinx-search==0.1.0rc1')})
-
     return install_requirements
 
 

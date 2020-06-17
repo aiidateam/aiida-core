@@ -53,7 +53,7 @@ class TestVerdiStatus(AiidaTestCase):
         options = ['--no-daemon']
         result = self.cli_runner.invoke(cmd_status.verdi_status, options)
         # This will not raise an exception, assuming a rabbitmq server is active
-        self.assertIsInstance(result.exception, None)
+        self.assertIsNone(result.exception)
         for string in ['config', 'profile', 'postgres', 'rabbitmq']:
             self.assertIn(string, result.output)
         self.assertNotIn('daemon', result.output)

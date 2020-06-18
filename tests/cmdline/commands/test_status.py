@@ -8,52 +8,30 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi status`."""
-from click.testing import CliRunner
-
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_status
+from aiida.cmdline.utils.echo import ExitCode
 
-from tests.utils.configuration import with_temporary_config_instance
+
+def test_status(run_cli_command):
+    """Test running verdi status."""
+    options = []
+    result = run_cli_command(cmd_status.verdi_status, options)
+
+    # Even though the daemon should not be running, the return value should still be 0 corresponding to success
+    assert 'The daemon is not running' in result.output
+    assert result.exit_code is ExitCode.SUCCESS
+
+    for string in ['config', 'profile', 'postgres', 'rabbitmq', 'daemon']:
+        assert string in result.output
 
 
-class TestVerdiStatus(AiidaTestCase):
-    """Tests for `verdi status`.
+def test_status_no_rmq(run_cli_command):
+    """Test running verdi status, with no rmq check"""
+    options = ['--no-rmq']
+    result = run_cli_command(cmd_status.verdi_status, options)
 
-    Note: The exit status may differ depending on the environment in which the tests are run.
-        Also cannot check for the exit status to see if connecting to all services worked, because
-        the profile might not be properly setup in this temporary config instance unittest.
-    """
+    assert 'rabbitmq' not in result.output
+    assert result.exit_code is ExitCode.SUCCESS
 
-    def setUp(self):
-        super().setUp()
-        self.cli_runner = CliRunner()
-
-    @with_temporary_config_instance
-    def test_status_1(self):
-        """Test running verdi status."""
-        options = []
-        result = self.cli_runner.invoke(cmd_status.verdi_status, options)
-        self.assertIsInstance(result.exception, SystemExit)
-        for string in ['config', 'profile', 'postgres', 'rabbitmq', 'daemon']:
-            self.assertIn(string, result.output)
-
-    @with_temporary_config_instance
-    def test_status_no_rmq(self):
-        """Test running verdi status, with no rmq check"""
-        options = ['--no-rmq']
-        result = self.cli_runner.invoke(cmd_status.verdi_status, options)
-        self.assertIsInstance(result.exception, SystemExit)
-        for string in ['config', 'profile', 'postgres', 'daemon']:
-            self.assertIn(string, result.output)
-        self.assertNotIn('rabbitmq', result.output)
-
-    @with_temporary_config_instance
-    def test_status_no_daemon(self):
-        """Test running verdi status, with no daemon check"""
-        options = ['--no-daemon']
-        result = self.cli_runner.invoke(cmd_status.verdi_status, options)
-        # This will not raise an exception if rabbitmq server is active
-        # self.assertIsInstance(result.exception, SystemExit)
-        for string in ['config', 'profile', 'postgres', 'rabbitmq']:
-            self.assertIn(string, result.output)
-        self.assertNotIn('daemon', result.output)
+    for string in ['config', 'profile', 'postgres', 'daemon']:
+        assert string in result.output

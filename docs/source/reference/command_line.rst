@@ -664,9 +664,8 @@ Below is a list with all available subcommands.
       Print status of AiiDA services.
 
     Options:
-      --no-rmq     Do not check RabbitMQ status
-      --no-daemon  Do not check daemon status
-      --help       Show this message and exit.
+      --no-rmq  Do not check RabbitMQ status
+      --help    Show this message and exit.
 
 
 .. _reference:command-line:verdi-user:

@@ -122,7 +122,7 @@ six==1.14.0
 snowballstemmer==2.0.0
 spglib==1.14.1.post0
 Sphinx==2.4.4
-sphinx-copybutton==0.2.11
+sphinx-copybutton==0.2.12
 sphinx-panels==0.4.0
 sphinxcontrib-applehelp==1.0.2
 sphinxcontrib-contentui==0.2.4

@@ -45,7 +45,7 @@ reentry~=1.3
 seekpath>=1.9.3,~=1.9
 simplejson~=3.16
 spglib~=1.14
-sphinx-copybutton~=0.2.11
+sphinx-copybutton~=0.2.12
 sphinx-panels~=0.4.0
 sphinxcontrib-details-directive~=0.1.0
 sphinx~=2.2

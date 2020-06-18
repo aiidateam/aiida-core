@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Components for the WorkChain concept of the workflow engine."""
-
 import collections
 import functools
 
@@ -25,7 +24,7 @@ from aiida.orm.utils import load_node
 from ..exit_code import ExitCode
 from ..process_spec import ProcessSpec
 from ..process import Process, ProcessState
-from .awaitable import AwaitableTarget, AwaitableAction, construct_awaitable
+from .awaitable import Awaitable, AwaitableTarget, AwaitableAction, construct_awaitable
 
 __all__ = ('WorkChain', 'if_', 'while_', 'return_')
 
@@ -124,16 +123,45 @@ class WorkChain(Process):
         :type awaitable: :class:`aiida.engine.processes.workchains.awaitable.Awaitable`
         """
         self._awaitables.append(awaitable)
+
+        # Already assign the awaitable itself to the location in the context container where it is supposed to end up
+        # once it is resolved. This is especially important for the `APPEND` action, since it needs to maintain the
+        # order, but the awaitables will not necessarily be resolved in the order in which they are added. By using the
+        # awaitable as a placeholder, in the `resolve_awaitable`, it can be found and replaced by the resolved value.
+        if awaitable.action == AwaitableAction.ASSIGN:
+            self.ctx[awaitable.key] = awaitable
+        elif awaitable.action == AwaitableAction.APPEND:
+            self.ctx.setdefault(awaitable.key, []).append(awaitable)
+        else:
+            assert 'Unknown awaitable action: {}'.format(awaitable.action)
+
         self._update_process_status()
 
-    def remove_awaitable(self, awaitable):
-        """Remove an awaitable.
+    def resolve_awaitable(self, awaitable, value):
+        """Resolve an awaitable.
 
         Precondition: must be an awaitable that was previously inserted.
 
-        :param awaitable: the awaitable to remove
+        :param awaitable: the awaitable to resolve
         """
         self._awaitables.remove(awaitable)
+
+        if awaitable.action == AwaitableAction.ASSIGN:
+            self.ctx[awaitable.key] = value
+        elif awaitable.action == AwaitableAction.APPEND:
+            # Find the same awaitable inserted in the context
+            container = self.ctx[awaitable.key]
+            for index, placeholder in enumerate(container):
+                if placeholder.pk == awaitable.pk and isinstance(placeholder, Awaitable):
+                    container[index] = value
+                    break
+            else:
+                assert 'Awaitable `{} was not found in `ctx.{}`'.format(awaitable.pk, awaitable.pk)
+        else:
+            assert 'Unknown awaitable action: {}'.format(awaitable.action)
+
+        awaitable.resolved = True
+
         self._update_process_status()
 
     def to_context(self, **kwargs):
@@ -234,7 +262,7 @@ class WorkChain(Process):
             self.call_soon(self.resume)
 
     def action_awaitables(self):
-        """Handle the awaitables that are currently registered with the work chain
+        """Handle the awaitables that are currently registered with the work chain.
 
         Depending on the class type of the awaitable's target a different callback
         function will be bound with the awaitable and the runner will be asked to
@@ -243,37 +271,31 @@ class WorkChain(Process):
         for awaitable in self._awaitables:
             if awaitable.target == AwaitableTarget.PROCESS:
                 callback = functools.partial(self._run_task, self.on_process_finished, awaitable)
-                self.runner.call_on_calculation_finish(awaitable.pk, callback)
+                self.runner.call_on_process_finish(awaitable.pk, callback)
             else:
                 assert "invalid awaitable target '{}'".format(awaitable.target)
 
-    def on_process_finished(self, awaitable, pk):
+    def on_process_finished(self, awaitable):
         """Callback function called by the runner when the process instance identified by pk is completed.
 
         The awaitable will be effectuated on the context of the work chain and removed from the internal list. If all
         awaitables have been dealt with, the work chain process is resumed.
 
         :param awaitable: an Awaitable instance
-        :param pk: the pk of the awaitable's target
-        :type pk: int
         """
+        self.logger.info('received callback that awaitable %d has terminated', awaitable.pk)
+
         try:
-            node = load_node(pk)
+            node = load_node(awaitable.pk)
         except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-            raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(pk))
+            raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(awaitable.pk))
 
         if awaitable.outputs:
             value = {entry.link_label: entry.node for entry in node.get_outgoing()}
         else:
             value = node
 
-        if awaitable.action == AwaitableAction.ASSIGN:
-            self.ctx[awaitable.key] = value
-        elif awaitable.action == AwaitableAction.APPEND:
-            self.ctx.setdefault(awaitable.key, []).append(value)
-        else:
-            assert "invalid awaitable action '{}'".format(awaitable.action)
+        self.resolve_awaitable(awaitable, value)
 
-        self.remove_awaitable(awaitable)
         if self.state == ProcessState.WAITING and not self._awaitables:
             self.resume()

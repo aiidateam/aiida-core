@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=too-few-public-methods
 """Enums and function for the awaitables of Processes."""
-
 from enum import Enum
 
 from plumpy.utils import AttributesDict

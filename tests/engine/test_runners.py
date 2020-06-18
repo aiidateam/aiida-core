@@ -7,13 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name
 """Module to test process runners."""
-import plumpy
+import threading
 
-from aiida.backends.testbase import AiidaTestCase
+import plumpy
+import pytest
+
 from aiida.engine import Process
 from aiida.manage.manager import get_manager
 from aiida.orm import WorkflowNode
+
+
+@pytest.fixture
+def create_runner():
+    """Construct and return a `Runner`."""
+
+    def _create_runner(poll_interval=0.5):
+        return get_manager().create_runner(poll_interval=poll_interval)
+
+    return _create_runner
 
 
 class Proc(Process):
@@ -29,33 +42,29 @@ def the_hans_klok_comeback(loop):
     loop.stop()
 
 
-class TestWorkchain(AiidaTestCase):
-    """Test running work chains."""
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_call_on_process_finish(create_runner):
+    """Test call on calculation finish."""
+    runner = create_runner()
+    loop = runner.loop
+    proc = Proc(runner=runner)
+    future = plumpy.Future()
+    event = threading.Event()
 
-    def setUp(self):
-        super().setUp()
-        self.runner = get_manager().get_runner()
+    def calc_done():
+        if event.is_set():
+            future.set_exc_info(AssertionError('the callback was called twice, which should never happen'))
 
-    def test_call_on_calculation_finish(self):
-        """Test call on calculation finish."""
-        loop = self.runner.loop
-        proc = Proc(runner=self.runner)
-        future = plumpy.Future()
+        future.set_result(True)
+        event.set()
+        loop.stop()
 
-        def calc_done(pk):
-            self.assertEqual(pk, proc.node.pk)
-            loop.stop()
-            future.set_result(True)
+    runner.call_on_process_finish(proc.node.pk, calc_done)
 
-        self.runner.call_on_calculation_finish(proc.node.pk, calc_done)
+    # Run the calculation
+    runner.loop.add_callback(proc.step_until_terminated)
+    loop.call_later(5, the_hans_klok_comeback, runner.loop)
+    loop.start()
 
-        # Run the calculation
-        self.runner.loop.add_callback(proc.step_until_terminated)
-        self._run_loop_for(5.)
-
-        self.assertTrue(future.result())
-
-    def _run_loop_for(self, seconds):
-        loop = self.runner.loop
-        loop.call_later(seconds, the_hans_klok_comeback, self.runner.loop)
-        loop.start()
+    assert not future.exc_info()
+    assert future.result()

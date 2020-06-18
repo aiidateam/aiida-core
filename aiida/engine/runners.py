@@ -9,19 +9,22 @@
 ###########################################################################
 # pylint: disable=global-statement
 """Runners that can run and submit processes."""
-
 import collections
+import functools
 import logging
 import signal
-import tornado.ioloop
+import threading
+import uuid
 
+import kiwipy
 import plumpy
+import tornado.ioloop
 
 from aiida.common import exceptions
 from aiida.orm import load_node
 from aiida.plugins.utils import PluginVersionProvider
 
-from .processes import futures
+from .processes import futures, ProcessState
 from .processes.calcjobs import manager
 from . import transports
 from . import utils
@@ -43,10 +46,9 @@ class Runner:  # pylint: disable=too-many-public-methods
     _closed = False
 
     def __init__(self, poll_interval=0, loop=None, communicator=None, rmq_submit=False, persister=None):
-        """
-        Construct a new runner
+        """Construct a new runner.
 
-        :param poll_interval: interval in seconds between polling for status of active calculations
+        :param poll_interval: interval in seconds between polling for status of active sub processes
         :param loop: an event loop to use, if none is suppled a new one will be created
         :type loop: :class:`tornado.ioloop.IOLoop`
         :param communicator: the communicator to use
@@ -67,7 +69,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         self._plugin_version_provider = PluginVersionProvider()
 
         if communicator is not None:
-            self._communicator = communicator
+            self._communicator = plumpy.wrap_communicator(communicator, self._loop)
             self._controller = plumpy.RemoteProcessThreadController(communicator)
         elif self._rmq_submit:
             LOGGER.warning('Disabling RabbitMQ submission, no communicator provided')
@@ -263,27 +265,61 @@ class Runner:  # pylint: disable=too-many-public-methods
         result, node = self._run(process, *args, **inputs)
         return ResultAndPk(result, node.pk)
 
-    def call_on_calculation_finish(self, pk, callback):
-        """
-        Callback to be called when the calculation of the given pk is terminated
+    def call_on_process_finish(self, pk, callback):
+        """Schedule a callback when the process of the given pk is terminated.
 
-        :param pk: the pk of the calculation
-        :param callback: the function to be called upon calculation termination
-        """
-        calculation = load_node(pk=pk)
-        self._poll_calculation(calculation, callback)
+        This method will add a broadcast subscriber that will listen for state changes of the target process to be
+        terminated. As a fail-safe, a polling-mechanism is used to check the state of the process, should the broadcast
+        message be missed by the subscriber, in order to prevent the caller to wait indefinitely.
 
-    def get_calculation_future(self, pk):
+        :param pk: pk of the process
+        :param callback: function to be called upon process termination
         """
-        Get a future for an orm Calculation. The future will have the calculation node
-        as the result when finished.
+        node = load_node(pk=pk)
+        subscriber_identifier = str(uuid.uuid4())
+        event = threading.Event()
 
-        :return: A future representing the completion of the calculation node
+        def inline_callback(event, *args, **kwargs):  # pylint: disable=unused-argument
+            """Callback to wrap the actual callback, that will always remove the subscriber that will be registered.
+
+            As soon as the callback is called successfully once, the `event` instance is toggled, such that if this
+            inline callback is called a second time, the actual callback is not called again.
+            """
+            if event.is_set():
+                return
+
+            try:
+                callback()
+            finally:
+                event.set()
+                self._communicator.remove_broadcast_subscriber(subscriber_identifier)
+
+        broadcast_filter = kiwipy.BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
+        for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
+            broadcast_filter.add_subject_filter('state_changed.*.{}'.format(state.value))
+
+        LOGGER.info('adding subscriber for broadcasts of %d', pk)
+        self._communicator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
+        self._poll_process(node, functools.partial(inline_callback, event))
+
+    def get_process_future(self, pk):
+        """Return a future for a process.
+
+        The future will have the process node as the result when finished.
+
+        :return: A future representing the completion of the process node
         """
-        return futures.CalculationFuture(pk, self._loop, self._poll_interval, self._communicator)
+        return futures.ProcessFuture(pk, self._loop, self._poll_interval, self._communicator)
 
-    def _poll_calculation(self, calc_node, callback):
-        if calc_node.is_terminated:
-            self._loop.add_callback(callback, calc_node.pk)
+    def _poll_process(self, node, callback):
+        """Check whether the process state of the node is terminated and call the callback or reschedule it.
+
+        :param node: the process node
+        :param callback: callback to be called when process is terminated
+        """
+        if node.is_terminated:
+            args = [node.__class__.__name__, node.pk]
+            LOGGER.info('%s<%d> confirmed to be terminated by backup polling mechanism', *args)
+            self._loop.add_callback(callback)
         else:
-            self._loop.call_later(self._poll_interval, self._poll_calculation, calc_node, callback)
+            self._loop.call_later(self._poll_interval, self._poll_process, node, callback)

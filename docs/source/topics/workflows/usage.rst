@@ -413,14 +413,7 @@ Consider the example from the previous section, but now we will use the ``append
 Notice that in the ``submit_workchains`` step we no longer have to generate a unique key based on the index but we simply wrap the future in the ``append_`` function and assign it to the generic key ``workchains``.
 The engine will see the ``append_`` function and instead of assigning the node corresponding to the future to the key ``workchains``, it will append it to the list stored under that key.
 If the list did not yet exist, it will automatically be created.
-The ``self.ctx.workchains`` now contains a list with the nodes of the completed work chains and so in the ``inspect_workchains`` step we can simply iterate over it to access all of them.
-
-.. warning::
-
-    The process nodes of the completed processes will **not necessarily** be added to the list in the context in the same order as the ``to_context`` calls.
-    This is because the futures may not necessarily be resolved in the same order as they were submitted.
-    Therefore it is dangerous to depend on the order when using the append method.
-
+The ``self.ctx.workchains`` now contains a list with the nodes of the completed work chains, with the same order as they had been inserted, and so in the ``inspect_workchains`` step we can simply iterate over it to access all of them.
 Note that the use of ``append_`` is not just limited to the ``to_context`` method.
 You can also use it in exactly the same way with ``ToContext`` to append a process to a list in the context in multiple outline steps.
 

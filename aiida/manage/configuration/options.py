@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of known configuration options and methods to parse and get option values."""
-
 import collections
 
 __all__ = ('get_option', 'get_option_names', 'parse_option')
@@ -28,7 +27,7 @@ CONFIG_OPTIONS = {
         'key': 'runner_poll_interval',
         'valid_type': 'int',
         'valid_values': None,
-        'default': 1,
+        'default': 60,
         'description': 'The polling interval in seconds to be used by process runners',
         'global_only': False,
     },

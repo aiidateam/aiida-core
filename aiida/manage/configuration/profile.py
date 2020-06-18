@@ -46,6 +46,8 @@ class Profile:  # pylint: disable=too-many-public-methods
     KEY_BROKER_PASSWORD = 'broker_password'  # noqa
     KEY_BROKER_HOST = 'broker_host'
     KEY_BROKER_PORT = 'broker_port'
+    KEY_BROKER_VIRTUAL_HOST = 'broker_virtual_host'
+    KEY_BROKER_PARAMETERS = 'broker_parameters'
     KEY_REPOSITORY_URI = 'AIIDADB_REPOSITORY_URI'
 
     # A mapping of valid attributes to the key under which they are stored in the configuration dictionary
@@ -65,6 +67,8 @@ class Profile:  # pylint: disable=too-many-public-methods
         KEY_BROKER_PASSWORD: 'broker_password',
         KEY_BROKER_HOST: 'broker_host',
         KEY_BROKER_PORT: 'broker_port',
+        KEY_BROKER_VIRTUAL_HOST: 'broker_virtual_host',
+        KEY_BROKER_PARAMETERS: 'broker_parameters',
         KEY_REPOSITORY_URI: 'repository_uri',
     }
 
@@ -226,6 +230,22 @@ class Profile:  # pylint: disable=too-many-public-methods
         self._attributes[self.KEY_BROKER_PASSWORD] = value
 
     @property
+    def broker_virtual_host(self):
+        return self._attributes[self.KEY_BROKER_VIRTUAL_HOST]
+
+    @broker_virtual_host.setter
+    def broker_virtual_host(self, value):
+        self._attributes[self.KEY_BROKER_VIRTUAL_HOST] = value
+
+    @property
+    def broker_parameters(self):
+        return self._attributes.get(self.KEY_BROKER_PARAMETERS, {})
+
+    @broker_parameters.setter
+    def broker_parameters(self, value):
+        self._attributes[self.KEY_BROKER_PARAMETERS] = value
+
+    @property
     def repository_uri(self):
         return self._attributes[self.KEY_REPOSITORY_URI]
 
@@ -325,7 +345,9 @@ class Profile:  # pylint: disable=too-many-public-methods
             username=self.broker_username,
             password=self.broker_password,
             host=self.broker_host,
-            port=self.broker_port
+            port=self.broker_port,
+            virtual_host=self.broker_virtual_host,
+            **self.broker_parameters
         )
 
     def configure_repository(self):

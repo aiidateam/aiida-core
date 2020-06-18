@@ -29,16 +29,28 @@ CommunicationTimeout = communications.TimeoutError  # pylint: disable=invalid-na
 _LAUNCH_QUEUE = 'process.queue'
 _MESSAGE_EXCHANGE = 'messages'
 _TASK_EXCHANGE = 'tasks'
+
+BROKER_VALID_PARAMETERS = [
+    'heartbeat',  # heartbeat timeout in seconds
+    'cafile',  # string containing path to ca certificate file
+    'capath',  # string containing path to ca certificates
+    'cadata',  # base64 encoded ca certificate data
+    'keyfile',  # string containing path to key file
+    'certfile',  # string containing path to certificate file
+    'no_verify_ssl',  # boolean disables certificates validation
+]
 BROKER_DEFAULTS = AttributeDict({
     'protocol': 'amqp',
     'username': 'guest',
     'password': 'guest',
     'host': '127.0.0.1',
     'port': 5672,
+    'virtual_host': '/',
+    'heartbeat': 600,
 })
 
 
-def get_rmq_url(protocol=None, username=None, password=None, host=None, port=None, heartbeat_timeout=600):
+def get_rmq_url(protocol=None, username=None, password=None, host=None, port=None, virtual_host=None, **kwargs):
     """Return the URL to connect to RabbitMQ.
 
     .. note::
@@ -51,18 +63,32 @@ def get_rmq_url(protocol=None, username=None, password=None, host=None, port=Non
     :param password: the password for authentication
     :param host: the hostname of the RabbitMQ server
     :param port: the port of the RabbitMQ server
-    :param heartbeat_timeout: the interval in seconds for the heartbeat timeout, default of 600 is maximum that can be
-        set by client, with default RabbitMQ server configuration.
+    :param virtual_host: the virtual host to connect to
     :returns: the connection URL string
     """
-    return '{protocol}://{username}:{password}@{host}:{port}?heartbeat={heartbeat_timeout}'.format(
+    import urllib.parse
+
+    url = '{protocol}://{username}:{password}@{host}:{port}/{virtual_host}'.format(
         protocol=protocol or BROKER_DEFAULTS.protocol,
         username=username or BROKER_DEFAULTS.username,
         password=password or BROKER_DEFAULTS.password,
         host=host or BROKER_DEFAULTS.host,
         port=port or BROKER_DEFAULTS.port,
-        heartbeat_timeout=heartbeat_timeout
+        virtual_host=virtual_host or BROKER_DEFAULTS.virtual_host,
     )
+
+    if 'heartbeat' not in kwargs:
+        kwargs['heartbeat'] = BROKER_DEFAULTS.heartbeat
+
+    if kwargs:
+        # for parameter in kwargs:
+        #     if parameter not in BROKER_VALID_PARAMETERS:
+        #         raise ValueError('keyword `{}` is not a valid broker URL parameter'.format(parameter))
+
+        # url += '?{}'.format('&'.join(['{}={}'.format(parameter, value) for parameter, value in kwargs.items()]))
+        url += '?{}'.format(urllib.parse.urlencode(kwargs))
+
+    return url
 
 
 def get_launch_queue_name(prefix=None):

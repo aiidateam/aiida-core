@@ -841,7 +841,10 @@ Below is a list with all available subcommands.
       Print status of AiiDA services.
 
     Options:
-      --help  Show this message and exit.
+      -t, --print-traceback  Print the full traceback in case an exception is
+                             raised
+
+      --help                 Show this message and exit.
 
 
 .. _verdi_user:

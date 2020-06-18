@@ -8,12 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi status` command."""
+import enum
 import sys
 
-import enum
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.utils import echo
 from aiida.common.log import override_log_level
 from ..utils.echo import ExitCode
 
@@ -42,7 +43,13 @@ STATUS_SYMBOLS = {
 
 
 @verdi.command('status')
-def verdi_status():
+@click.option(
+    '-t',
+    '--print-traceback',
+    is_flag=True,
+    help='Print the full traceback in case an exception is raised',
+)
+def verdi_status(print_traceback):
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
@@ -95,7 +102,8 @@ def verdi_status():
                 comm = manager.create_communicator(with_orm=False)
                 comm.stop()
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'rabbitmq', 'Unable to connect to rabbitmq', exception=exc)
+        message = 'Unable to connect to rabbitmq with URL: {}'.format(profile.get_rmq_url())
+        print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     else:
         print_status(ServiceStatus.UP, 'rabbitmq', 'Connected as {}'.format(profile.get_rmq_url()))
@@ -121,7 +129,7 @@ def verdi_status():
     sys.exit(exit_code)
 
 
-def print_status(status, service, msg='', exception=None):
+def print_status(status, service, msg='', exception=None, print_traceback=False):
     """Print status message.
 
     Includes colored indicator.
@@ -134,4 +142,7 @@ def print_status(status, service, msg='', exception=None):
     click.secho(' {} '.format(symbol['string']), fg=symbol['color'], nl=False)
     click.secho('{:12s} {}'.format(service + ':', msg))
     if exception is not None:
-        click.echo(exception, err=True)
+        echo.echo_error('{}: {}'.format(type(exception).__name__, exception))
+    if print_traceback:
+        import traceback
+        traceback.print_exc()

@@ -14,7 +14,6 @@ import copy
 import io
 import tempfile
 
-
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
@@ -41,6 +40,7 @@ class TestNodeIsStorable(AiidaTestCase):
 
     def test_unregistered_sub_class(self):
         """Sub classes without a registered entry point are not storable."""
+
         class SubData(orm.Data):
             pass
 
@@ -117,7 +117,7 @@ class TestNodeHashing(AiidaTestCase):
         f1 = self.create_folderdata_with_empty_file().store()
         f2 = self.create_folderdata_with_empty_folder().store()
 
-        assert (f1.list_object_names('path') == f2.list_object_names('path'))
+        assert f1.list_object_names('path') == f2.list_object_names('path')
         assert f1.get_hash() != f2.get_hash()
 
     def test_updatable_attributes(self):
@@ -204,28 +204,28 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         # Query by calculation
         qb = orm.QueryBuilder()
         qb.append(orm.CalcJobNode, filters={'extras': {'has_key': extra_name}})
-        results = [_ for [_] in qb.all()]
+        results = qb.all(flat=True)
         # a3, a4 should not be found because they are not CalcJobNodes.
         # a6, a7 should not be found because they have not the attribute set.
-        self.assertEqual(set([i.pk for i in results]), set([a1.pk]))
+        self.assertEqual({i.pk for i in results}, {a1.pk})
 
         # Same query, but by the generic Node class
         qb = orm.QueryBuilder()
         qb.append(orm.Node, filters={'extras': {'has_key': extra_name}})
-        results = [_ for [_] in qb.all()]
-        self.assertEqual(set([i.pk for i in results]), set([a1.pk, a3.pk, a4.pk]))
+        results = qb.all(flat=True)
+        self.assertEqual({i.pk for i in results}, {a1.pk, a3.pk, a4.pk})
 
         # Same query, but by the Data class
         qb = orm.QueryBuilder()
         qb.append(orm.Data, filters={'extras': {'has_key': extra_name}})
-        results = [_ for [_] in qb.all()]
-        self.assertEqual(set([i.pk for i in results]), set([a3.pk, a4.pk]))
+        results = qb.all(flat=True)
+        self.assertEqual({i.pk for i in results}, {a3.pk, a4.pk})
 
         # Same query, but by the Dict subclass
         qb = orm.QueryBuilder()
         qb.append(orm.Dict, filters={'extras': {'has_key': extra_name}})
-        results = [_ for [_] in qb.all()]
-        self.assertEqual(set([i.pk for i in results]), set([a4.pk]))
+        results = qb.all(flat=True)
+        self.assertEqual({i.pk for i in results}, {a4.pk})
 
 
 class TestNodeBasic(AiidaTestCase):
@@ -424,8 +424,6 @@ class TestNodeBasic(AiidaTestCase):
             b.store()
 
     def test_attributes_on_clone(self):
-        import copy
-
         a = orm.Data()
         attrs_to_set = {
             'none': None,
@@ -455,7 +453,7 @@ class TestNodeBasic(AiidaTestCase):
         # I check before storing that the attributes are ok
         self.assertEqual(b.attributes, b_expected_attributes)
         # Note that during copy, I do not copy the extras!
-        self.assertEqual({k: v for k, v in b.extras.items()}, {})
+        self.assertEqual(b.extras, {})
 
         # I store now
         b.store()
@@ -464,15 +462,13 @@ class TestNodeBasic(AiidaTestCase):
         b_expected_extras = {'meta': 'textofext', '_aiida_hash': AnyValue()}
 
         # Now I check that the attributes of the original node have not changed
-        self.assertEqual({k: v for k, v in a.attributes.items()}, attrs_to_set)
+        self.assertEqual(a.attributes, attrs_to_set)
 
         # I check then on the 'b' copy
-        self.assertEqual({k: v for k, v in b.attributes.items()}, b_expected_attributes)
-        self.assertEqual({k: v for k, v in b.extras.items()}, b_expected_extras)
+        self.assertEqual(b.attributes, b_expected_attributes)
+        self.assertEqual(b.extras, b_expected_extras)
 
     def test_files(self):
-        import tempfile
-
         a = orm.Data()
 
         file_content = 'some text ABCDE'
@@ -762,7 +758,8 @@ class TestNodeBasic(AiidaTestCase):
 
         self.assertEqual(a.get_extra('c', 'def'), 'def')
 
-    def test_attr_and_extras_multikey(self):
+    @staticmethod
+    def test_attr_and_extras_multikey():
         """
         Multiple nodes with the same key. This should not be a problem
 
@@ -832,7 +829,7 @@ class TestNodeBasic(AiidaTestCase):
         for k, v in extras_to_set.items():
             a.set_extra(k, v)
 
-        self.assertEqual({k: v for k, v in a.extras.items()}, all_extras)
+        self.assertEqual(a.extras, all_extras)
 
         # I pregenerate it, it cannot change during iteration
         list_keys = list(extras_to_set.keys())
@@ -841,7 +838,7 @@ class TestNodeBasic(AiidaTestCase):
             # performed correctly
             a.delete_extra(k)
             del all_extras[k]
-            self.assertEqual({k: v for k, v in a.extras.items()}, all_extras)
+            self.assertEqual(a.extras, all_extras)
 
     def test_replace_extras_1(self):
         """
@@ -1030,7 +1027,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEqual(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
 
         # Test that the code2 can be loaded correctly with its label
-        q_code_2 = orm.Code.get_from_string(code2.label + '@' + self.computer.get_name())
+        q_code_2 = orm.Code.get_from_string(code2.label + '@' + self.computer.label)  # pylint: disable=no-member
         self.assertEqual(q_code_2.id, code2.id)
         self.assertEqual(q_code_2.label, code2.label)
         self.assertEqual(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
@@ -1083,7 +1080,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEqual(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
 
         # Test that the code2 can be loaded correctly with its label and computername
-        q_code_2 = orm.Code.get(label=code2.label, machinename=self.computer.get_name())
+        q_code_2 = orm.Code.get(label=code2.label, machinename=self.computer.label)  # pylint: disable=no-member
         self.assertEqual(q_code_2.id, code2.id)
         self.assertEqual(q_code_2.label, code2.label)
         self.assertEqual(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
@@ -1219,36 +1216,29 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Try also reverse storage
         endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
-        self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]), set([('N1', n1.uuid), ('N2', n2.uuid)])
-        )
+        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()}, {('N1', n1.uuid),
+                                                                                         ('N2', n2.uuid)})
 
         # Endnode not stored yet, n3 and n4 already stored
         endcalc.add_incoming(n3, LinkType.INPUT_CALC, 'N3')
         # Try also reverse storage
         endcalc.add_incoming(n4, LinkType.INPUT_CALC, 'N4')
 
-        self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)])
-        )
+        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()},
+                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)})
 
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
             endcalc.store()
 
-        self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)])
-        )
+        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()},
+                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)})
 
         # This will also store n1 and n2!
         endcalc.store_all()
 
-        self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
-            set([('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)])
-        )
+        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()},
+                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)})
 
     def test_store_with_unstored_parents(self):
         """
@@ -1269,9 +1259,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Now I can store
         endcalc.store()
 
-        self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]), set([('N1', n1.uuid), ('N2', n2.uuid)])
-        )
+        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()}, {('N1', n1.uuid),
+                                                                                         ('N2', n2.uuid)})
 
     def test_storeall_with_unstored_grandparents(self):
         """
@@ -1293,8 +1282,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endcalc.store_all()
 
         # Check the parents...
-        self.assertEqual(set([(i.link_label, i.node.uuid) for i in n2.get_incoming()]), set([('N1', n1.uuid)]))
-        self.assertEqual(set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]), set([('N2', n2.uuid)]))
+        self.assertEqual({(i.link_label, i.node.uuid) for i in n2.get_incoming()}, {('N1', n1.uuid)})
+        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()}, {('N2', n2.uuid)})
 
     # pylint: disable=unused-variable,no-member,no-self-use
     def test_calculation_load(self):
@@ -1394,7 +1383,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
             n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='CREATE')
 
     def test_valid_links(self):
-        import tempfile
         from aiida.plugins import DataFactory
 
         SinglefileData = DataFactory('singlefile')
@@ -1552,15 +1540,18 @@ class TestNodeDeletion(AiidaTestCase):
             with self.assertRaises(NotExistent):
                 orm.load_node(uuid)
 
-    def test_deletion_non_existing_pk(self):
+    @staticmethod
+    def test_deletion_non_existing_pk():
         """Verify that passing a non-existing pk should not raise."""
         non_existing_pk = -1
         with Capturing():
             delete_nodes([non_existing_pk], force=True)
 
+
 #   TEST BASIC CASES
 
-    def _create_simple_graph(self):
+    @staticmethod
+    def _create_simple_graph():
         """
         Creates a simple graph which has one parent workflow (WN2) that calls a child
         workflow (WN1) and then a calculation (CN2). The child workflow (WN1) calls
@@ -1766,7 +1757,8 @@ class TestNodeDeletion(AiidaTestCase):
             delete_nodes([w2.pk], force=True, call_work_forward=False, call_calc_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-    def _create_indep2w_graph(self):
+    @staticmethod
+    def _create_indep2w_graph():
         """
         Creates a simple graph with one workflow handling two independent workflows
         (with one simple calculation each). It was designed and used mainly to point
@@ -1913,7 +1905,8 @@ class TestNodeDeletion(AiidaTestCase):
             delete_nodes((pwa.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence2, uuids_check_deleted2)
 
-    def _create_looped_graph(self):
+    @staticmethod
+    def _create_looped_graph():
         """
         Creates a basic graph with one parent workflow (PWM) which first calls a child
         workflow (PWS) to choose one input from a set (DI1 from DI1-DI3), and then use
@@ -2011,8 +2004,8 @@ class TestNodeDeletion(AiidaTestCase):
             delete_nodes([pws.pk], force=True, create_forward=True, call_calc_forward=False, call_work_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
-
-    def _create_long_graph(self, total_calcs):
+    @staticmethod
+    def _create_long_graph(total_calcs):
         """
         Creates a straighforward graph with the required number of calculation nodes.
         All these calculation nodes are connected through a series of data nodes,

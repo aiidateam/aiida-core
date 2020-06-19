@@ -616,10 +616,10 @@ def computer_config_show(computer, user, defaults, as_option_string):
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
                     option_value = option.opts[-1] if config.get(option.name
-                                                                ) else '--no-{}'.format(option.name.replace('_', '-'))
+                                                                 ) else '--no-{}'.format(option.name.replace('_', '-'))
                 elif t_opt.get('is_flag'):
                     is_default = config.get(option.name
-                                           ) == transport_cli.transport_option_default(option.name, computer)
+                                            ) == transport_cli.transport_option_default(option.name, computer)
                     option_value = option.opts[-1] if is_default else ''
                 else:
                     option_value = '{}={}'.format(option.opts[-1], option.type(config[option.name]))

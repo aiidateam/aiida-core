@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pylint: disable=global-statement,too-many-branches
 """Have a single tqdm progress bar instance that should be handled using the functions in this module"""
 from typing import Iterable

@@ -1,4 +1,5 @@
 #!/usr/bin/env runaiida
+# -*- coding: utf-8 -*-
 from aiida.engine import run
 
 from serialize_workchain import SerializeWorkChain

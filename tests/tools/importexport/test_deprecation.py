@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test deprecated parts still work and emit deprecations warnings"""
 # pylint: disable=invalid-name
 import os

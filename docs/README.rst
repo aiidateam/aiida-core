@@ -18,4 +18,3 @@ in html format.
   using::
 
     sudo pip install sphinx_rtd_theme
-

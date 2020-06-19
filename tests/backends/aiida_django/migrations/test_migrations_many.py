@@ -418,7 +418,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
 
         # Getting the serialized Dict logs
         param_data = DbLog.objects.filter(objpk=param.pk).filter(objname='something.else.'
-                                                                ).values(*update_024.values_to_export)[:1]
+                                                                 ).values(*update_024.values_to_export)[:1]
         serialized_param_data = dumps_json(list(param_data))
         # Getting the serialized logs for the unknown entity logs (as the export migration fuction
         # provides them) - this should coincide to the above
@@ -472,10 +472,10 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
 
         # Get the node id of the log record referencing the node and verify that it is the correct one
         dbnode_id_1 = DbLog.objects.filter(pk=self.to_check['CalculationNode'][1]
-                                          ).values('dbnode_id')[:1].get()['dbnode_id']
+                                           ).values('dbnode_id')[:1].get()['dbnode_id']
         self.assertEqual(dbnode_id_1, self.to_check['CalculationNode'][0], 'referenced node is not the expected one')
         dbnode_id_2 = DbLog.objects.filter(pk=self.to_check['CalculationNode'][3]
-                                          ).values('dbnode_id')[:1].get()['dbnode_id']
+                                           ).values('dbnode_id')[:1].get()['dbnode_id']
         self.assertEqual(dbnode_id_2, self.to_check['CalculationNode'][2], 'referenced node is not the expected one')
 
     def test_dblog_correct_export_of_logs(self):

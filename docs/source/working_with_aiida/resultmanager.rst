@@ -107,4 +107,3 @@ Suppose that ``calc`` has an output ``FolderData`` with linkname ``retrieved``, 
   calc.outputs.retrieved
 
 returns the ``FolderData`` object.
-

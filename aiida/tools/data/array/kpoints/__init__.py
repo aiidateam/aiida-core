@@ -225,7 +225,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     if args_unknown:
         raise ValueError('unknown arguments {}'.format(args_unknown))
 
-    point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(
+    point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(  # pylint: disable=unbalanced-tuple-unpacking
         cell=structure.cell, pbc=structure.pbc, **kwargs
     )
 

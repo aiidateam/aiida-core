@@ -65,4 +65,3 @@ then
 else
     load_singlesshagent
 fi
-

@@ -102,8 +102,8 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     import uuid
     from aiida.orm import Code, Int, Str
     from aiida.engine import run_get_node, submit
-    from lib.expression import generate, validate, evaluate
-    from lib.workchain import generate_outlines, format_outlines, write_workchain
+    from lib.expression import generate, validate, evaluate  # pylint: disable=import-error
+    from lib.workchain import generate_outlines, format_outlines, write_workchain  # pylint: disable=import-error
 
     if use_calculations and not isinstance(code, Code):
         raise click.BadParameter('if you specify the -C flag, you have to specify a code as well')

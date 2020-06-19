@@ -49,4 +49,3 @@ After this, the AiiDA daemon should start together with your system.
 To remove the service again::
 
   sudo systemctl disable aiida-daemon@profile.service
-

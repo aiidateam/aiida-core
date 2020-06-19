@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for the `Code` class."""
 # pylint: disable=redefined-outer-name
 import pytest

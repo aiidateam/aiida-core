@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """pytest fixtures for use with the aiida.restapi tests"""
 import pytest
 

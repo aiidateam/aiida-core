@@ -32,8 +32,7 @@ class ServerInfo(Resource):
         It returns the general info about the REST API
         :return: returns current AiiDA version defined in aiida/__init__.py
         """
-
-        ## Decode url parts
+        # Decode url parts
         path = unquote(request.path)
         url = unquote(request.url)
         url_root = unquote(request.url_root)
@@ -121,7 +120,7 @@ class BaseResource(Resource):
         from aiida.orm import load_node
         node = load_node(node_id)
 
-        if not isinstance(node, self.trans._aiida_class):  # pylint: disable=protected-access
+        if not isinstance(node, self.trans._aiida_class):  # pylint: disable=protected-access,isinstance-second-argument-not-valid-type
             raise RestInputValidationError(
                 'node {} is not of the required type {}'.format(node_id, self.trans._aiida_class)  # pylint: disable=protected-access
             )

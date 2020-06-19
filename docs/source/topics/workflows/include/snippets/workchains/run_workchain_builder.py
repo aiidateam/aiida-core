@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.engine import submit
 from aiida.orm import Int
 

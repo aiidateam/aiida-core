@@ -62,8 +62,8 @@ def dump_setup_json(data):
     :param data: the dictionary to write to the `setup.json`
     """
     with open(FILEPATH_SETUP_JSON, 'w') as handle:
-        # Write with indentation of two spaces and explicitly define separators to not have spaces at end of lines
-        return json.dump(data, handle, indent=2, separators=(',', ': '))
+        # Write with indentation of four spaces and explicitly define separators to not have spaces at end of lines
+        return json.dump(data, handle, indent=4, separators=(',', ': '))
 
 
 def determine_block_positions(lines, block_start_marker, block_end_marker):

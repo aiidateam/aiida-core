@@ -139,7 +139,7 @@ jobs:
 
     - name: Install aiida-core
       run: |
-        pip install -e .[atomic_tools,docs,notebook,rest,testing]
+        pip install -e .[atomic_tools,docs,notebook,rest,tests]
         reentry scan
 
     - run: pip freeze

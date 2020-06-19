@@ -147,4 +147,3 @@ to change it, you can do it passing the ``prettify_format`` parameter to the
 * ``gnuplot_simple``: format for GNUPlot (Unicode for Greek letters, LaTeX syntax `without` dollar signs for underscores), using ``seekpath`` raw label syntax
 * ``gnuplot_seekpath``: format for GNUPlot (Unicode for Greek letters, LaTeX syntax `without` dollar signs for underscores), using ``simple`` raw label syntax
 * ``pass``: no-op prettifier: leaves all strings unchanged to their raw value
-

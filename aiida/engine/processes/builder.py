@@ -60,7 +60,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
 
             fgetter.__doc__ = str(port)
             getter = property(fgetter)
-            getter.setter(fsetter)
+            getter.setter(fsetter)  # pylint: disable=too-many-function-args
             setattr(self.__class__, name, getter)
 
     def __setattr__(self, attr, value):

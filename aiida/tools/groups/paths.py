@@ -248,7 +248,10 @@ class GroupPath:
                     yield sub_child
 
     def walk_nodes(
-        self, filters: Optional[dict] = None, node_class: Optional[orm.Node] = None, query_batch: Optional[int] = None
+        self,
+        filters: Optional[dict] = None,
+        node_class: Optional[orm.Node] = None,
+        query_batch: Optional[int] = None
     ) -> Iterator[WalkNodeResult]:
         """Recursively iterate through all nodes of this path and its children.
 

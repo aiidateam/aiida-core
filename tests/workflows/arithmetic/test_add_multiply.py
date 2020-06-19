@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for the `aiida.workflows.arithmetic.add_multiply` work function."""
 import pytest
 

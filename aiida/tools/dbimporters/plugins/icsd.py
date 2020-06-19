@@ -720,4 +720,3 @@ def correct_cif(cif):
             else:
                 lines[author_index + inc] = "'" + lines[author_index + inc] + "'"
                 inc = inc + 1
-

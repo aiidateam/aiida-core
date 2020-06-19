@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Pytest fixtures for command line interface tests."""
 import click
 import pytest

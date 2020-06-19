@@ -554,8 +554,9 @@ class TestQueryBuilder(AiidaTestCase):
 
         # Now I am testing the default tags,
         qb = orm.QueryBuilder().append(orm.StructureData
-                                      ).append(orm.ProcessNode).append(orm.StructureData
-                                                                      ).append(orm.Dict, with_outgoing=orm.ProcessNode)
+                                       ).append(orm.ProcessNode
+                                                ).append(orm.StructureData
+                                                         ).append(orm.Dict, with_outgoing=orm.ProcessNode)
         self.assertEqual(
             qb.get_used_tags(), [
                 'StructureData_1', 'ProcessNode_1', 'StructureData_1--ProcessNode_1', 'StructureData_2',

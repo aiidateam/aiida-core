@@ -12,4 +12,3 @@ Core development
     core/caching
     core/plugin_system
     design/changes
-

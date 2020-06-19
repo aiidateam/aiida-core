@@ -26,7 +26,7 @@ class VerdiRunner(CliRunner):
         super().__init__(**kwargs)
         self.obj = AttributeDict({'config': config, 'profile': profile})
 
-    def invoke(self, *args, **extra):  # pylint: disable=arguments-differ
+    def invoke(self, *args, **extra):  # pylint: disable=signature-differs
         """Invoke the command but add the `obj` to the `extra` keywords.
 
         The `**extra` keywords will be forwarded all the way to the `Context` that finally invokes the command. Some

@@ -162,7 +162,7 @@ def export(
         raise exc
 
     if len(times) == 2:
-        export_start, export_end = times
+        export_start, export_end = times  # pylint: disable=unbalanced-tuple-unpacking
         EXPORT_LOGGER.debug('Exported in %6.2g s.', export_end - export_start)
     elif len(times) == 4:
         export_start, export_end, compress_start, compress_end = times

@@ -31,7 +31,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         DbSetting.set_value(key='pippo', value=[1, 2, 3])
 
         # s_1 = DbSetting.objects.get(key='pippo')
-        s_1 = DbSetting.query.filter_by(key='pippo').first()
+        s_1 = DbSetting.query.filter_by(key='pippo').first()  # pylint: disable=no-member
 
         self.assertEqual(s_1.getvalue(), [1, 2, 3])
 
@@ -44,7 +44,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         # Should replace pippo
         DbSetting.set_value(key='pippo', value='a')
-        s_1 = DbSetting.query.filter_by(key='pippo').first()
+        s_1 = DbSetting.query.filter_by(key='pippo').first()  # pylint: disable=no-member
 
         self.assertEqual(s_1.getvalue(), 'a')
 

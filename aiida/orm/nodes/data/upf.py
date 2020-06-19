@@ -304,9 +304,8 @@ class UpfData(SinglefileData):
 
         return (pseudos[0], False)
 
-    def store(self, *args, **kwargs):
+    def store(self, *args, **kwargs):  # pylint: disable=signature-differs
         """Store the node, reparsing the file so that the md5 and the element are correctly reset."""
-        # pylint: disable=arguments-differ
         from aiida.common.exceptions import ParsingError
         from aiida.common.files import md5_from_filelike
 

@@ -72,7 +72,7 @@ class BackupSetup:
 
         # Setting the days_to_backup
         backup_variables[AbstractBackup.DAYS_TO_BACKUP_KEY
-                        ] = utils.ask_question('Please provide the number of days to backup: ', int, True)
+                         ] = utils.ask_question('Please provide the number of days to backup: ', int, True)
 
         # Setting the end date
         end_date_of_backup_key = utils.ask_question(
@@ -86,11 +86,11 @@ class BackupSetup:
 
         # Setting the backup periodicity
         backup_variables[AbstractBackup.PERIODICITY_KEY
-                        ] = utils.ask_question('Please provide the periodicity (in days): ', int, False)
+                         ] = utils.ask_question('Please provide the periodicity (in days): ', int, False)
 
         # Setting the backup threshold
         backup_variables[AbstractBackup.BACKUP_LENGTH_THRESHOLD_KEY
-                        ] = utils.ask_question('Please provide the backup threshold (in hours): ', int, False)
+                         ] = utils.ask_question('Please provide the backup threshold (in hours): ', int, False)
 
         return backup_variables
 

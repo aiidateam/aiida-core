@@ -99,7 +99,7 @@ class Orbital:
     # len-2 tuples, with name and validator function
     _base_fields_required = (('position', validate_len3_list),
                              #NOTE: _orbital_type is internally used to manage the orbital type
-                            )
+                             )
 
     # len-3 tuples, with (name, validator, default_value)
     # See how it is defined in the RealhydrogenOrbital class

@@ -128,4 +128,3 @@ Some notes on the ``proxy_command`` option
   AiiDA will remove the redirection when it automatically reads the
   ``~/.ssh/config`` file, but be careful if entering manually the
   content in this field.
-

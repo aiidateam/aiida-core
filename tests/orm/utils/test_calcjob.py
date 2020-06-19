@@ -73,7 +73,7 @@ def test_iterator(get_calcjob_node):
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_getitem(get_calcjob_node):
-    """Test that the manager support getitem operator."""
+    """Test that the manager supports the getitem operator."""
     node, dictionary = get_calcjob_node
     manager = CalcJobResultManager(node)
 
@@ -85,8 +85,18 @@ def test_getitem(get_calcjob_node):
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
+def test_getitem_no_results(generate_calculation_node):
+    """Test that `getitem` raises `KeyError` if no results can be retrieved whatsoever e.g. there is no output."""
+    node = generate_calculation_node()
+    manager = CalcJobResultManager(node)
+
+    with pytest.raises(KeyError):
+        assert manager['key']
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
 def test_getattr(get_calcjob_node):
-    """Test that the manager support getattr operator."""
+    """Test that the manager supports the getattr operator."""
     node, dictionary = get_calcjob_node
     manager = CalcJobResultManager(node)
 
@@ -95,6 +105,16 @@ def test_getattr(get_calcjob_node):
 
     with pytest.raises(AttributeError):
         assert getattr(manager, 'non-existent-key')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_getattr_no_results(generate_calculation_node):
+    """Test that `getattr` raises `AttributeError` if no results can be retrieved whatsoever e.g. there is no output."""
+    node = generate_calculation_node()
+    manager = CalcJobResultManager(node)
+
+    with pytest.raises(AttributeError):
+        assert getattr(manager, 'key')
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

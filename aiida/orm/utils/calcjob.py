@@ -93,10 +93,12 @@ class CalcJobResultManager:
 
         :param name: name of the result return
         :return: value of the attribute
-        :raises AttributeError: if the results dictionary does not contain an attribute with the given name
+        :raises AttributeError: if the results node cannot be retrieved or it does not contain the `name` attribute
         """
         try:
             return self.get_results()[name]
+        except ValueError as exception:
+            raise AttributeError from exception
         except KeyError:
             raise AttributeError("Default result node<{}> does not contain key '{}'".format(self._result_node.pk, name))
 
@@ -105,9 +107,11 @@ class CalcJobResultManager:
 
         :param name: name of the result return
         :return: value of the attribute
-        :raises KeyError: if the results dictionary does not contain an attribute with the given name
+        :raises KeyError: if the results node cannot be retrieved or it does not contain the `name` attribute
         """
         try:
             return self.get_results()[name]
+        except ValueError as exception:
+            raise KeyError from exception
         except KeyError:
             raise KeyError("Default result node<{}> does not contain key '{}'".format(self._result_node.pk, name))

@@ -81,7 +81,7 @@ class CalcJobResultManager:
 
     def __dir__(self):
         """Add the keys of the results dictionary such that they can be autocompleted."""
-        return sorted(set(list(dir(type(self))) + list(self.get_results().keys())))
+        return sorted(list(self.get_results().keys()))
 
     def __iter__(self):
         """Return an iterator over the keys of the result dictionary."""
@@ -97,7 +97,7 @@ class CalcJobResultManager:
         """
         try:
             return self.get_results()[name]
-        except AttributeError:
+        except KeyError:
             raise AttributeError("Default result node<{}> does not contain key '{}'".format(self._result_node.pk, name))
 
     def __getitem__(self, name):
@@ -105,9 +105,9 @@ class CalcJobResultManager:
 
         :param name: name of the result return
         :return: value of the attribute
-        :raises AttributeError: if the results dictionary does not contain an attribute with the given name
+        :raises KeyError: if the results dictionary does not contain an attribute with the given name
         """
         try:
             return self.get_results()[name]
-        except AttributeError:
-            raise AttributeError("Default result node<{}> does not contain key '{}'".format(self._result_node.pk, name))
+        except KeyError:
+            raise KeyError("Default result node<{}> does not contain key '{}'".format(self._result_node.pk, name))

@@ -9,13 +9,14 @@
 ###########################################################################
 # pylint: disable=too-many-public-methods
 """Tests for the Node ORM class."""
-
 import os
 import tempfile
 
+import pytest
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, LinkType
-from aiida.orm import Data, Node, User, CalculationNode, WorkflowNode, load_node
+from aiida.orm import Data, Log, Node, User, CalculationNode, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
 
 
@@ -732,13 +733,85 @@ class TestNodeLinks(AiidaTestCase):
             _ = workflow.outputs.some_label
 
 
-# Clearing the DB is needed because other parts of the tests (not using
-# the fixture infrastructure) delete the User.
-def test_store_from_cache(clear_database_before_test):  # pylint: disable=unused-argument
-    """
-    Regression test for storing a Node with (nested) repository
-    content with caching.
-    """
+class TestNodeDelete:
+    """Tests for deleting nodes."""
+    # pylint: disable=no-member,no-self-use
+
+    @pytest.mark.usefixtures('clear_database_before_test')
+    def test_delete_through_utility_method(self):
+        """Test deletion works correctly through the `aiida.backends.utils.delete_nodes_and_connections`."""
+        from aiida.common import timezone
+        from aiida.backends.utils import delete_nodes_and_connections
+
+        data_one = Data().store()
+        data_two = Data().store()
+        calculation = CalculationNode()
+        calculation.add_incoming(data_one, LinkType.INPUT_CALC, 'input_one')
+        calculation.add_incoming(data_two, LinkType.INPUT_CALC, 'input_two')
+        calculation.store()
+
+        log_one = Log(timezone.now(), 'test', 'INFO', data_one.pk).store()
+        log_two = Log(timezone.now(), 'test', 'INFO', data_two.pk).store()
+
+        assert len(Log.objects.get_logs_for(data_one)) == 1
+        assert Log.objects.get_logs_for(data_one)[0].pk == log_one.pk
+        assert len(Log.objects.get_logs_for(data_two)) == 1
+        assert Log.objects.get_logs_for(data_two)[0].pk == log_two.pk
+
+        delete_nodes_and_connections([data_two.pk])
+
+        assert len(Log.objects.get_logs_for(data_one)) == 1
+        assert Log.objects.get_logs_for(data_one)[0].pk == log_one.pk
+        assert len(Log.objects.get_logs_for(data_two)) == 0
+
+    @pytest.mark.usefixtures('clear_database_before_test')
+    def test_delete_collection_logs(self):
+        """Test deletion works correctly through objects collection."""
+        from aiida.common import timezone
+
+        data_one = Data().store()
+        data_two = Data().store()
+
+        log_one = Log(timezone.now(), 'test', 'INFO', data_one.pk).store()
+        log_two = Log(timezone.now(), 'test', 'INFO', data_two.pk).store()
+
+        assert len(Log.objects.get_logs_for(data_one)) == 1
+        assert Log.objects.get_logs_for(data_one)[0].pk == log_one.pk
+        assert len(Log.objects.get_logs_for(data_two)) == 1
+        assert Log.objects.get_logs_for(data_two)[0].pk == log_two.pk
+
+        Node.objects.delete(data_two.pk)
+
+        assert len(Log.objects.get_logs_for(data_one)) == 1
+        assert Log.objects.get_logs_for(data_one)[0].pk == log_one.pk
+        assert len(Log.objects.get_logs_for(data_two)) == 0
+
+    @pytest.mark.usefixtures('clear_database_before_test')
+    def test_delete_collection_incoming_link(self):
+        """Test deletion through objects collection raises when there are incoming links."""
+        data = Data().store()
+        calculation = CalculationNode()
+        calculation.add_incoming(data, LinkType.INPUT_CALC, 'input')
+        calculation.store()
+
+        with pytest.raises(exceptions.InvalidOperation):
+            Node.objects.delete(calculation.pk)
+
+    @pytest.mark.usefixtures('clear_database_before_test')
+    def test_delete_collection_outgoing_link(self):
+        """Test deletion through objects collection raises when there are outgoing links."""
+        calculation = CalculationNode().store()
+        data = Data()
+        data.add_incoming(calculation, LinkType.CREATE, 'output')
+        data.store()
+
+        with pytest.raises(exceptions.InvalidOperation):
+            Node.objects.delete(calculation.pk)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_store_from_cache():
+    """Regression test for storing a Node with (nested) repository content with caching."""
     data = Data()
     with tempfile.TemporaryDirectory() as tmpdir:
         dir_path = os.path.join(tmpdir, 'directory')

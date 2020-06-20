@@ -971,7 +971,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             raise OSError('Cannot copy a directory into a file')
 
         if not os.path.isdir(localpath):  # in this case copy things in the remotepath directly
-            os.mkdir(localpath)  # and make a directory at its place
+            os.makedirs(localpath, exist_ok=True)  # and make a directory at its place
         else:  # localpath exists already: copy the folder inside of it!
             localpath = os.path.join(localpath, os.path.split(remotepath)[1])
             os.mkdir(localpath)  # create a nested folder

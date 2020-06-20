@@ -22,27 +22,33 @@ class ServiceStatus(enum.IntEnum):
     """Describe status of services for 'verdi status' command."""
     UP = 0  # pylint: disable=invalid-name
     ERROR = 1
-    DOWN = 2
+    WARNING = 2
+    DOWN = 3
 
 
 STATUS_SYMBOLS = {
     ServiceStatus.UP: {
         'color': 'green',
-        'string': '\u2713',
+        'string': '\u2714',
     },
     ServiceStatus.ERROR: {
         'color': 'red',
-        'string': '\u2717',
+        'string': '\u2718',
+    },
+    ServiceStatus.WARNING: {
+        'color': 'yellow',
+        'string': '\u23FA',
     },
     ServiceStatus.DOWN: {
         'color': 'red',
-        'string': '\u2717',
+        'string': '\u2718',
     },
 }
 
 
 @verdi.command('status')
-def verdi_status():
+@click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
+def verdi_status(no_rmq):
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
@@ -53,7 +59,6 @@ def verdi_status():
 
     exit_code = ExitCode.SUCCESS
 
-    # path to configuration file
     print_status(ServiceStatus.UP, 'config dir', AIIDA_CONFIG_FOLDER)
 
     manager = get_manager()
@@ -62,12 +67,11 @@ def verdi_status():
     try:
         profile = manager.get_profile()
         print_status(ServiceStatus.UP, 'profile', 'On profile {}'.format(profile.name))
-
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'profile', 'Unable to read AiiDA profile')
+        print_status(ServiceStatus.ERROR, 'profile', 'Unable to read AiiDA profile', exception=exc)
         sys.exit(ExitCode.CRITICAL)  # stop here - without a profile we cannot access anything
 
-    # getting the repository
+    # Getting the repository
     repo_folder = 'undefined'
     try:
         repo_folder = profile.repository_path
@@ -89,19 +93,20 @@ def verdi_status():
     else:
         print_status(ServiceStatus.UP, 'postgres', 'Connected as {}@{}:{}'.format(*database_data))
 
-    # getting the rmq status
-    try:
-        with Capturing(capture_stderr=True):
-            with override_log_level():  # temporarily suppress noisy logging
-                comm = manager.create_communicator(with_orm=False)
-                comm.stop()
-    except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'rabbitmq', 'Unable to connect to rabbitmq', exception=exc)
-        exit_code = ExitCode.CRITICAL
-    else:
-        print_status(ServiceStatus.UP, 'rabbitmq', 'Connected to {}'.format(get_rmq_url()))
+    # Getting the rmq status
+    if not no_rmq:
+        try:
+            with Capturing(capture_stderr=True):
+                with override_log_level():  # temporarily suppress noisy logging
+                    comm = manager.create_communicator(with_orm=False)
+                    comm.stop()
+        except Exception as exc:
+            print_status(ServiceStatus.ERROR, 'rabbitmq', 'Unable to connect to rabbitmq', exception=exc)
+            exit_code = ExitCode.CRITICAL
+        else:
+            print_status(ServiceStatus.UP, 'rabbitmq', 'Connected to {}'.format(get_rmq_url()))
 
-    # getting the daemon status
+    # Getting the daemon status
     try:
         client = manager.get_daemon_client()
         delete_stale_pid_file(client)
@@ -111,8 +116,8 @@ def verdi_status():
         if client.is_daemon_running:
             print_status(ServiceStatus.UP, 'daemon', daemon_status)
         else:
-            print_status(ServiceStatus.DOWN, 'daemon', daemon_status)
-            exit_code = ExitCode.CRITICAL
+            print_status(ServiceStatus.WARNING, 'daemon', daemon_status)
+            exit_code = ExitCode.SUCCESS  # A daemon that is not running is not a failure
 
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'daemon', 'Error getting daemon status', exception=exc)

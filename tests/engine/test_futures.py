@@ -30,7 +30,7 @@ class TestWf(AiidaTestCase):
         process = test_processes.DummyProcess()
 
         # No polling
-        future = processes.futures.CalculationFuture(
+        future = processes.futures.ProcessFuture(
             pk=process.pid, poll_interval=None, communicator=manager.get_communicator()
         )
 
@@ -46,7 +46,7 @@ class TestWf(AiidaTestCase):
         process = test_processes.DummyProcess()
 
         # No communicator
-        future = processes.futures.CalculationFuture(pk=process.pid, loop=runner.loop, poll_interval=0)
+        future = processes.futures.ProcessFuture(pk=process.pid, loop=runner.loop, poll_interval=0)
 
         runner.run(process)
         calc_node = runner.run_until_complete(gen.with_timeout(self.TIMEOUT, future))

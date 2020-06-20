@@ -4,7 +4,7 @@ Welcome to AiiDA's documentation!
 
 **aiida-core version:** |release|
 
-`AiiDA`_ is an open-source framework implemented in Python that aims to help researchers with managing simple to complex workflows and making them fully reproducible (see :ref:`features<intro:about>`).
+`AiiDA`_ is an open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`features<intro:about>`).
 
 .. panels::
    :body: bg-light text-center
@@ -123,29 +123,13 @@ If you use AiiDA for your research, please cite the following work:
 Acknowledgements
 ****************
 
-This work is supported by:
-
-* the `MARVEL National Centre of Competence in Research`_ funded by the `Swiss National Science Foundation`_;
-* the `MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598 (2015-2018) and the Horizon 2020 INFRAEDI-2018-1 program, Grant No. 824143 (2018-2021);
-* the `swissuniversities P-5 project "Materials Cloud"`_.
+AiiDA is supported by the `MARVEL National Centre of Competence in Research`_, the `MaX European Centre of Excellence`_ and by a number of other supporting projects, partners and institutions, whose complete list is available on the `AiiDA website acknowledgements page`_.
 
 AiiDA is a NumFOCUS Affiliated Project. Visit `numfocus.org`_ for more information.
 
-.. image:: images/MARVEL.png
-   :height: 75px
-   :target: `MARVEL National Centre of Competence in Research`_
-
-.. image:: images/MaX.png
-   :height: 65px
-   :target: `MaX European Centre of Excellence`_
-
-.. image:: images/swissuniversities.png
-   :height: 30px
-   :target: `swissuniversities P-5 project "Materials Cloud"`_
 
 .. _AiiDA: http://www.aiida.net
 .. _MARVEL National Centre of Competence in Research: http://www.marvel-nccr.ch
-.. _Swiss National Science Foundation: http://www.snf.ch/en
 .. _MaX European Centre of Excellence: http://www.max-centre.eu
-.. _swissuniversities P-5 project "Materials Cloud": https://www.materialscloud.org/swissuniversities
+.. _AiiDA website acknowledgements page: http://www.aiida.net/acknowledgements/
 .. _numfocus.org: https://www.numfocus.org

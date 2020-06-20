@@ -1240,6 +1240,22 @@ class TestPutGetTree(unittest.TestCase):
             t.chdir('..')
             t.rmdir(directory)
 
+    @run_for_all_plugins
+    def test_gettree_nested_directory(self, custom_transport):
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as dir_remote, tempfile.TemporaryDirectory() as dir_local:
+            content = b'dummy\ncontent'
+            filepath = os.path.join(dir_remote, 'sub', 'path', 'filename.txt')
+            os.makedirs(os.path.dirname(filepath))
+
+            with open(filepath, 'wb') as handle:
+                handle.write(content)
+
+            with custom_transport as transport:
+                transport.gettree(os.path.join(dir_remote, 'sub/path'), os.path.join(dir_local, 'sub/path'))
+
 
 class TestExecuteCommandWait(unittest.TestCase):
     """

@@ -25,7 +25,7 @@ pg8000~=1.13
 pgsu~=0.1.0
 pgtest>=1.3.1,~=1.3
 pika~=1.1
-plumpy~=0.14.5
+plumpy~=0.15.0
 psutil~=5.6
 psycopg2-binary>=2.8.3,~=2.8
 pyblake2~=1.1; python_version < "3.6"
@@ -41,12 +41,11 @@ python-dateutil~=2.8
 python-memcached~=1.59
 pytz~=2019.3
 pyyaml~=5.1.2
-readthedocs-sphinx-search==0.1.0rc1
 reentry~=1.3
 seekpath>=1.9.3,~=1.9
 simplejson~=3.16
 spglib~=1.14
-sphinx-copybutton~=0.2.11
+sphinx-copybutton~=0.2.12
 sphinx-panels~=0.4.0
 sphinxcontrib-details-directive~=0.1.0
 sphinx~=2.2

@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Function that starts a daemon runner."""
-
 import logging
 import signal
 
@@ -28,7 +27,7 @@ def start_daemon():
         manager = get_manager()
         runner = manager.create_daemon_runner()
         manager.set_runner(runner)
-    except Exception as exception:
+    except Exception:
         LOGGER.exception('daemon runner failed to start')
         raise
 

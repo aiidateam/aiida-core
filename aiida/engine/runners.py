@@ -69,7 +69,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         self._plugin_version_provider = PluginVersionProvider()
 
         if communicator is not None:
-            self._communicator = plumpy.wrap_communicator(communicator, self._loop)
+            self._communicator = communicator
             self._controller = plumpy.RemoteProcessThreadController(communicator)
         elif self._rmq_submit:
             LOGGER.warning('Disabling RabbitMQ submission, no communicator provided')
@@ -299,7 +299,11 @@ class Runner:  # pylint: disable=too-many-public-methods
             broadcast_filter.add_subject_filter('state_changed.*.{}'.format(state.value))
 
         LOGGER.info('adding subscriber for broadcasts of %d', pk)
-        self._communicator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
+
+        def broadcast_cb(*args, **kwargs):
+            return plumpy.create_task(functools.partial(broadcast_filter, *args, **kwargs), loop=self.loop)
+
+        self._communicator.add_broadcast_subscriber(broadcast_cb, subscriber_identifier)
         self._poll_process(node, functools.partial(inline_callback, event))
 
     def get_process_future(self, pk):

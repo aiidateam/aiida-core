@@ -314,7 +314,10 @@ class Manager:
             loader=persistence.get_object_loader()
         )
 
-        runner.communicator.add_task_subscriber(task_receiver)
+        def callback(*args, **kwargs):
+            return plumpy.create_task(functools.partial(task_receiver, *args, **kwargs), loop=runner_loop)
+
+        runner.communicator.add_task_subscriber(callback)
 
         return runner
 

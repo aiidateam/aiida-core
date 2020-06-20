@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
+import functools
+
 import tornado.gen
 
 import plumpy
@@ -52,7 +54,11 @@ class ProcessFuture(plumpy.Future):
                 broadcast_filter = kiwipy.BroadcastFilter(lambda *args, **kwargs: self.set_result(node), sender=pk)
                 for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
                     broadcast_filter.add_subject_filter('state_changed.*.{}'.format(state.value))
-                self._broadcast_identifier = self._communicator.add_broadcast_subscriber(broadcast_filter)
+
+                def broadcast_cb(*args, **kwargs):
+                    return plumpy.create_task(functools.partial(broadcast_filter, *args, **kwargs), loop=loop)
+
+                self._broadcast_identifier = self._communicator.add_broadcast_subscriber(broadcast_cb)
 
             # Start polling
             if poll_interval is not None:

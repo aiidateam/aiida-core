@@ -31,7 +31,7 @@ class TestWf(AiidaTestCase):
 
         # No polling
         future = processes.futures.ProcessFuture(
-            pk=process.pid, poll_interval=None, communicator=manager.get_communicator()
+            pk=process.pid, loop=runner.loop, poll_interval=None, communicator=manager.get_communicator()
         )
 
         run(process)

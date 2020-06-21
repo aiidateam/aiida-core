@@ -44,6 +44,15 @@ class Scheduler:
     # The class to be used for the job resource.
     _job_resource_class = None
 
+    @classmethod
+    def validate_resources(cls, **resources):
+        """Validate the resources against the job resource class of this scheduler.
+
+        :param resources: keyword arguments to define the job resources
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+        cls._job_resource_class.validate_resources(**resources)
+
     def __init__(self):
         self._transport = None
 

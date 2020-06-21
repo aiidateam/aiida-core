@@ -15,11 +15,11 @@ the data structure to be filled for job submission (JobTemplate), and
 the data structure that is returned when querying for jobs in the scheduler
 (JobInfo).
 """
-
+from abc import abstractclassmethod
 from enum import Enum
 
 from aiida.common import AIIDA_LOGGER
-from aiida.common.extendeddicts import DefaultFieldsAttributeDict
+from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
 
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
 
@@ -66,6 +66,15 @@ class JobResource(DefaultFieldsAttributeDict):
     """
     _default_fields = tuple()
 
+    @abstractclassmethod
+    def validate_resources(cls, **kwargs):
+        """Validate the resources against the job resource class of this scheduler.
+
+        :param kwargs: dictionary of values to define the job resources
+        :raises ValueError: if the resources are invalid or incomplete
+        :return: optional tuple of parsed resource settings
+        """
+
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
         """
@@ -103,28 +112,14 @@ class NodeNumberJobResource(JobResource):
     )
 
     @classmethod
-    def get_valid_keys(cls):
-        """
-        Return a list of valid keys to be passed to the __init__
-        """
-        return super().get_valid_keys() + ['tot_num_mpiprocs', 'default_mpiprocs_per_machine']
+    def validate_resources(cls, **kwargs):  # pylint: disable=too-many-branches,too-many-statements
+        """Validate the resources against the job resource class of this scheduler.
 
-    @classmethod
-    def accepts_default_mpiprocs_per_machine(cls):
+        :param kwargs: dictionary of values to define the job resources
+        :raises ValueError: if the resources are invalid or incomplete
+        :return: tuple (num_machines, num_mpiprocs_per_machine, num_cores_per_machine, num_cores_per_mpiproc)
         """
-        Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
-        key, False otherwise.
-        """
-        return True
-
-    def __init__(self, **kwargs):  # pylint: disable=too-many-branches,too-many-statements
-        """
-        Initialize the job resources from the passed arguments (the valid keys can be
-        obtained with the function self.get_valid_keys()).
-
-        Should raise only ValueError or TypeError on invalid parameters.
-        """
-        super().__init__()
+        params = AttributeDict()
 
         try:
             num_machines = int(kwargs.pop('num_machines'))
@@ -157,16 +152,16 @@ class NodeNumberJobResource(JobResource):
             raise ValueError('tot_num_mpiprocs must an integer')
 
         try:
-            self.num_cores_per_machine = int(kwargs.pop('num_cores_per_machine'))
+            params.num_cores_per_machine = int(kwargs.pop('num_cores_per_machine'))
         except KeyError:
-            self.num_cores_per_machine = None
+            params.num_cores_per_machine = None
         except ValueError:
             raise ValueError('num_cores_per_machine must an integer')
 
         try:
-            self.num_cores_per_mpiproc = int(kwargs.pop('num_cores_per_mpiproc'))
+            params.num_cores_per_mpiproc = int(kwargs.pop('num_cores_per_mpiproc'))
         except KeyError:
-            self.num_cores_per_mpiproc = None
+            params.num_cores_per_mpiproc = None
         except ValueError:
             raise ValueError('num_cores_per_mpiproc must an integer')
 
@@ -212,11 +207,11 @@ class NodeNumberJobResource(JobResource):
                         raise ValueError('num_machines must be >= 1')
                     num_mpiprocs_per_machine = tot_num_mpiprocs // num_machines
 
-        self.num_machines = num_machines
-        self.num_mpiprocs_per_machine = num_mpiprocs_per_machine
+        params.num_machines = num_machines
+        params.num_mpiprocs_per_machine = num_mpiprocs_per_machine
 
         if tot_num_mpiprocs is not None:
-            if tot_num_mpiprocs != self.num_mpiprocs_per_machine * self.num_machines:
+            if tot_num_mpiprocs != params.num_mpiprocs_per_machine * params.num_machines:
                 raise ValueError(
                     'tot_num_mpiprocs must be equal to '
                     'num_mpiprocs_per_machine * num_machines, and in particular it '
@@ -224,10 +219,38 @@ class NodeNumberJobResource(JobResource):
                     'num_machines'
                 )
 
-        if self.num_mpiprocs_per_machine <= 0:
+        if params.num_mpiprocs_per_machine <= 0:
             raise ValueError('num_mpiprocs_per_machine must be >= 1')
-        if self.num_machines <= 0:
+        if params.num_machines <= 0:
             raise ValueError('num_machine must be >= 1')
+
+        return params.num_machines, params.num_mpiprocs_per_machine, \
+            params.num_cores_per_machine, params.num_cores_per_mpiproc
+
+    def __init__(self, **kwargs):
+        """Initialize the job resources from the passed arguments.
+
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+        super().__init__()
+        resources = self.validate_resources(**kwargs)
+        self.num_machines, self.num_mpiprocs_per_machine, \
+        self.num_cores_per_machine, self.num_cores_per_mpiproc = resources
+
+    @classmethod
+    def get_valid_keys(cls):
+        """
+        Return a list of valid keys to be passed to the __init__
+        """
+        return super().get_valid_keys() + ['tot_num_mpiprocs', 'default_mpiprocs_per_machine']
+
+    @classmethod
+    def accepts_default_mpiprocs_per_machine(cls):
+        """
+        Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
+        key, False otherwise.
+        """
+        return True
 
     def get_tot_num_mpiprocs(self):
         """
@@ -247,38 +270,40 @@ class ParEnvJobResource(JobResource):
         'default_mpiprocs_per_machine',
     )
 
+    @classmethod
+    def validate_resources(cls, **kwargs):
+        """Validate the resources against the job resource class of this scheduler.
+
+        :param kwargs: dictionary of values to define the job resources
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+        try:
+            str(kwargs.pop('parallel_env'))
+        except (KeyError, TypeError, ValueError):
+            raise ValueError('`parallel_env` must be specified and must be a string')
+
+        try:
+            tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
+        except (KeyError, ValueError):
+            raise ValueError('`tot_num_mpiprocs` must be specified and must be an integer')
+
+        if tot_num_mpiprocs <= 0:
+            raise ValueError('`tot_num_mpiprocs` must be greater or equal than one.')
+
+        if kwargs.pop('default_mpiprocs_per_machine', None) is not None:
+            raise ValueError('`default_mpiprocs_per_machine` cannot be set for schedulers that use `ParEnvJobResource`')
+
     def __init__(self, **kwargs):
         """
         Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
 
-        :raise ValueError: on invalid parameters.
-        :raise TypeError: on invalid parameters.
-        :raise aiida.common.ConfigurationError: if default_mpiprocs_per_machine was set for this
-            computer, since ParEnvJobResource cannot accept this parameter.
+        :raises ValueError: if the resources are invalid or incomplete
         """
-        from aiida.common.exceptions import ConfigurationError
         super().__init__()
-
-        try:
-            self.parallel_env = str(kwargs.pop('parallel_env'))
-        except (KeyError, TypeError, ValueError):
-            raise TypeError("'parallel_env' must be specified and must be a string")
-
-        try:
-            self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
-        except (KeyError, ValueError):
-            raise TypeError('tot_num_mpiprocs must be specified and must be an integer')
-
-        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
-        if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError(
-                'default_mpiprocs_per_machine cannot be set '
-                'for schedulers that use ParEnvJobResource'
-            )
-
-        if self.tot_num_mpiprocs <= 0:
-            raise ValueError('tot_num_mpiprocs must be >= 1')
+        self.validate_resources(**kwargs)
+        self.parallel_env = kwargs['parallel_env']
+        self.tot_num_mpiprocs = kwargs['tot_num_mpiprocs']
 
     def get_tot_num_mpiprocs(self):
         """

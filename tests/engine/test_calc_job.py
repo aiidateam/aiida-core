@@ -163,7 +163,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
         inputs['metadata']['computer'] = orm.Computer('different', 'localhost', 'desc', 'local', 'direct')
 
-        with self.assertRaises(exceptions.InputValidationError):
+        with self.assertRaises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     def test_remote_code_set_computer_explicit(self):
@@ -176,7 +176,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
 
         # Setting explicitly a computer that is not the same as that of the `code` should raise
-        with self.assertRaises(exceptions.InputValidationError):
+        with self.assertRaises(ValueError):
             inputs['metadata']['computer'] = orm.Computer('different', 'localhost', 'desc', 'local', 'direct').store()
             process = ArithmeticAddCalculation(inputs=inputs)
 
@@ -201,7 +201,7 @@ class TestCalcJob(AiidaTestCase):
         inputs = deepcopy(self.inputs)
         inputs['code'] = self.local_code
 
-        with self.assertRaises(exceptions.InputValidationError):
+        with self.assertRaises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     def test_invalid_parser_name(self):
@@ -210,7 +210,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
         inputs['metadata']['options']['parser_name'] = 'invalid_parser'
 
-        with self.assertRaises(exceptions.InputValidationError):
+        with self.assertRaises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     def test_invalid_resources(self):
@@ -219,7 +219,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
         inputs['metadata']['options']['resources'] = {'num_machines': 'invalid_type'}
 
-        with self.assertRaises(exceptions.InputValidationError):
+        with self.assertRaises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     @pytest.mark.timeout(5)

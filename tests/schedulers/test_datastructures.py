@@ -7,105 +7,147 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Datastructures test
-"""
-import unittest
+"""Tests for the :mod:`aiida.schedulers.test_datastructures` module."""
+import pytest
+
+from aiida.schedulers.datastructures import NodeNumberJobResource, ParEnvJobResource
 
 
-class TestNodeNumberJobResource(unittest.TestCase):
-    """Unit tests for the NodeNumberJobResource class."""
+class TestNodeNumberJobResource:
+    """Tests for the :class:`~aiida.schedulers.datastructures.NodeNumberJobResource`."""
 
-    def test_init(self):
-        """
-        Test the __init__ of the NodeNumberJobResource class
-        """
-        from aiida.schedulers.datastructures import NodeNumberJobResource
+    @staticmethod
+    def test_validate_resources():
+        """Test the `validate_resources` method."""
+        cls = NodeNumberJobResource
 
-        # No empty initialization
-        with self.assertRaises(TypeError):
-            _ = NodeNumberJobResource()
+        with pytest.raises(ValueError):
+            cls.validate_resources()
 
         # Missing required field
-        with self.assertRaises(TypeError):
-            _ = NodeNumberJobResource(num_machines=1)
-        with self.assertRaises(TypeError):
-            _ = NodeNumberJobResource(num_mpiprocs_per_machine=1)
-        with self.assertRaises(TypeError):
-            _ = NodeNumberJobResource(tot_num_mpiprocs=1)
+        with pytest.raises(ValueError):
+            cls.validate_resources(num_machines=1)
+        with pytest.raises(ValueError):
+            cls.validate_resources(num_mpiprocs_per_machine=1)
+        with pytest.raises(ValueError):
+            cls.validate_resources(tot_num_mpiprocs=1)
 
-        # Standard info
-        job_resource = NodeNumberJobResource(num_machines=2, num_mpiprocs_per_machine=8)
-        self.assertEqual(job_resource.num_machines, 2)
-        self.assertEqual(job_resource.num_mpiprocs_per_machine, 8)
-        self.assertEqual(job_resource.get_tot_num_mpiprocs(), 16)
-        # redundant but consistent information
-        job_resource = NodeNumberJobResource(num_machines=2, num_mpiprocs_per_machine=8, tot_num_mpiprocs=16)
-        self.assertEqual(job_resource.num_machines, 2)
-        self.assertEqual(job_resource.num_mpiprocs_per_machine, 8)
-        self.assertEqual(job_resource.get_tot_num_mpiprocs(), 16)
-        # other equivalent ways of specifying the information
-        job_resource = NodeNumberJobResource(num_mpiprocs_per_machine=8, tot_num_mpiprocs=16)
-        self.assertEqual(job_resource.num_machines, 2)
-        self.assertEqual(job_resource.num_mpiprocs_per_machine, 8)
-        self.assertEqual(job_resource.get_tot_num_mpiprocs(), 16)
-        # other equivalent ways of specifying the information
-        job_resource = NodeNumberJobResource(num_machines=2, tot_num_mpiprocs=16)
-        self.assertEqual(job_resource.num_machines, 2)
-        self.assertEqual(job_resource.num_mpiprocs_per_machine, 8)
-        self.assertEqual(job_resource.get_tot_num_mpiprocs(), 16)
+        # Wrong field name
+        with pytest.raises(ValueError):
+            cls.validate_resources(num_machines=2, num_mpiprocs_per_machine=8, wrong_name=16)
 
-        # wrong field name
-        with self.assertRaises(TypeError):
-            _ = NodeNumberJobResource(num_machines=2, num_mpiprocs_per_machine=8, wrong_name=16)
-
-        # Examples of wrong informaton (e.g., number of machines or of nodes < 0
-        with self.assertRaises(ValueError):
-            _ = NodeNumberJobResource(num_machines=0, num_mpiprocs_per_machine=8)
-        with self.assertRaises(ValueError):
-            _ = NodeNumberJobResource(num_machines=1, num_mpiprocs_per_machine=0)
-        with self.assertRaises(ValueError):
-            _ = NodeNumberJobResource(num_machines=1, tot_num_mpiprocs=0)
-        with self.assertRaises(ValueError):
-            _ = NodeNumberJobResource(num_mpiprocs_per_machine=1, tot_num_mpiprocs=0)
+        # Examples of wrong information (e.g., number of machines or of nodes < 0
+        with pytest.raises(ValueError):
+            cls.validate_resources(num_machines=0, num_mpiprocs_per_machine=8)
+        with pytest.raises(ValueError):
+            cls.validate_resources(num_machines=1, num_mpiprocs_per_machine=0)
+        with pytest.raises(ValueError):
+            cls.validate_resources(num_machines=1, tot_num_mpiprocs=0)
+        with pytest.raises(ValueError):
+            cls.validate_resources(num_mpiprocs_per_machine=1, tot_num_mpiprocs=0)
 
         # Examples of inconsistent information
-        with self.assertRaises(ValueError):
-            _ = NodeNumberJobResource(num_mpiprocs_per_machine=8, num_machines=2, tot_num_mpiprocs=32)
+        with pytest.raises(ValueError):
+            cls.validate_resources(num_mpiprocs_per_machine=8, num_machines=2, tot_num_mpiprocs=32)
 
-        with self.assertRaises(ValueError):
-            _ = NodeNumberJobResource(num_mpiprocs_per_machine=8, tot_num_mpiprocs=15)
+        with pytest.raises(ValueError):
+            cls.validate_resources(num_mpiprocs_per_machine=8, tot_num_mpiprocs=15)
 
-    def test_serialization(self):
-        """Test the serialization/deserialization of JobInfo classes."""
-        from aiida.schedulers.datastructures import JobInfo, JobState
-        from datetime import datetime
+    @staticmethod
+    def test_constructor():
+        """Test that constructor defines all valid keys even if not all defined explicitly."""
+        # Standard info
+        job_resource = NodeNumberJobResource(num_machines=2, num_mpiprocs_per_machine=8)
+        assert job_resource.num_machines == 2
+        assert job_resource.num_mpiprocs_per_machine == 8
+        assert job_resource.get_tot_num_mpiprocs() == 16
 
-        dict_serialized_content = {
-            'job_id': '12723',
-            'title': 'some title',
-            'queue_name': 'some_queue',
-            'account': 'my_account'
-        }
+        # Redundant but consistent information
+        job_resource = NodeNumberJobResource(num_machines=2, num_mpiprocs_per_machine=8, tot_num_mpiprocs=16)
+        assert job_resource.num_machines == 2
+        assert job_resource.num_mpiprocs_per_machine == 8
+        assert job_resource.get_tot_num_mpiprocs() == 16
 
-        to_serialize = {'job_state': (JobState.QUEUED, 'job_state'), 'submission_time': (datetime.now(), 'date')}
+        # Other equivalent ways of specifying the information
+        job_resource = NodeNumberJobResource(num_mpiprocs_per_machine=8, tot_num_mpiprocs=16)
+        assert job_resource.num_machines == 2
+        assert job_resource.num_mpiprocs_per_machine == 8
+        assert job_resource.get_tot_num_mpiprocs() == 16
 
-        job_info = JobInfo()
-        for key, val in dict_serialized_content.items():
-            setattr(job_info, key, val)
+        # Other equivalent ways of specifying the information
+        job_resource = NodeNumberJobResource(num_machines=2, tot_num_mpiprocs=16)
+        assert job_resource.num_machines == 2
+        assert job_resource.num_mpiprocs_per_machine == 8
+        assert job_resource.get_tot_num_mpiprocs() == 16
 
-        for key, (val, field_type) in to_serialize.items():
-            setattr(job_info, key, val)
-            # Also append to the dictionary for easier comparison later
-            dict_serialized_content[key] = JobInfo.serialize_field(value=val, field_type=field_type)
 
-        self.assertEqual(job_info.get_dict(), dict_serialized_content)
-        # Full loop via JSON, moving data from job_info to job_info2;
-        # we check that the content is fully preserved
-        job_info2 = JobInfo.load_from_serialized(job_info.serialize())
-        self.assertEqual(job_info2.get_dict(), dict_serialized_content)
+class TestParEnvJobResource:
+    """Tests for the :class:`~aiida.schedulers.datastructures.ParEnvJobResource`."""
 
-        # Check that fields are properly re-serialized with the correct type
-        self.assertEqual(job_info2.job_state, to_serialize['job_state'][0])
-        # Check that fields are properly re-serialized with the correct type
-        self.assertEqual(job_info2.submission_time, to_serialize['submission_time'][0])
+    @staticmethod
+    def test_validate_resources():
+        """Test the `validate_resources` method."""
+        cls = ParEnvJobResource
+
+        with pytest.raises(ValueError):
+            cls.validate_resources()
+
+        # Missing required field
+        with pytest.raises(ValueError):
+            cls.validate_resources(parallel_env='env')
+        with pytest.raises(ValueError):
+            cls.validate_resources(tot_num_mpiprocs=1)
+
+        # Wrong types
+        with pytest.raises(ValueError):
+            cls.validate_resources(parallel_env={}, tot_num_mpiprocs=1)
+        with pytest.raises(ValueError):
+            cls.validate_resources(parallel_env='env', tot_num_mpiprocs='test')
+        with pytest.raises(ValueError):
+            cls.validate_resources(parallel_env='env', tot_num_mpiprocs=0)
+
+        # Wrong field name
+        with pytest.raises(ValueError):
+            cls.validate_resources(parallel_env='env', tot_num_mpiprocs=1, wrong_name=16)
+
+    @staticmethod
+    def test_constructor():
+        """Test that constructor defines all valid keys even if not all defined explicitly."""
+        job_resource = ParEnvJobResource(parallel_env='env', tot_num_mpiprocs=1)
+        assert job_resource.parallel_env == 'env'
+        assert job_resource.tot_num_mpiprocs == 1
+
+
+def test_serialization():
+    """Test the serialization/deserialization of JobInfo classes."""
+    from aiida.schedulers.datastructures import JobInfo, JobState
+    from datetime import datetime
+
+    dict_serialized_content = {
+        'job_id': '12723',
+        'title': 'some title',
+        'queue_name': 'some_queue',
+        'account': 'my_account'
+    }
+
+    to_serialize = {'job_state': (JobState.QUEUED, 'job_state'), 'submission_time': (datetime.now(), 'date')}
+
+    job_info = JobInfo()
+    for key, val in dict_serialized_content.items():
+        setattr(job_info, key, val)
+
+    for key, (val, field_type) in to_serialize.items():
+        setattr(job_info, key, val)
+        # Also append to the dictionary for easier comparison later
+        dict_serialized_content[key] = JobInfo.serialize_field(value=val, field_type=field_type)
+
+    assert job_info.get_dict() == dict_serialized_content
+    # Full loop via JSON, moving data from job_info to job_info2;
+    # we check that the content is fully preserved
+    job_info2 = JobInfo.load_from_serialized(job_info.serialize())
+    assert job_info2.get_dict() == dict_serialized_content
+
+    # Check that fields are properly re-serialized with the correct type
+    assert job_info2.job_state == to_serialize['job_state'][0]
+    # Check that fields are properly re-serialized with the correct type
+    assert job_info2.submission_time == to_serialize['submission_time'][0]

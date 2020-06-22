@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions for command line commands operating on the repository."""
-
 import click
 
 
@@ -23,8 +22,5 @@ def list_repository_contents(node, path, color):
 
     for entry in node.list_objects(path):
         bold = bool(entry.type == FileType.DIRECTORY)
-
-        if color:
-            click.secho(entry.name, bold=bold, fg='blue')
-        else:
-            click.secho(entry.name, bold=bold)
+        fg = 'blue' if color and entry.type == FileType.DIRECTORY else None
+        click.secho(entry.name, bold=bold, fg=fg)

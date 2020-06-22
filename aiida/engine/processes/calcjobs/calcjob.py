@@ -81,8 +81,15 @@ def validate_calc_job(inputs, ctx):  # pylint: disable=inconsistent-return-state
     except KeyError:
         return 'input `metadata.options.resources` is required but is not specified'
 
+    default_mpiprocs_per_machine = computer.get_default_mpiprocs_per_machine()
+    num_mpiprocs_per_machine = resources.get('num_mpiprocs_per_machine', None)
+    tot_num_mpiprocs = resources.get('tot_num_mpiprocs', None)
+    if num_mpiprocs_per_machine is None and tot_num_mpiprocs is None and default_mpiprocs_per_machine is not None:
+        # Only set the default value if tot_num_mpiprocs is not provided. Otherwise, it means that the user provided
+        # both `num_machines` and `tot_num_mpiprocs`, and we have to ignore the `num_mpiprocs_per_machine` default.
+        resources['num_mpiprocs_per_machine'] = default_mpiprocs_per_machine
+
     try:
-        resources['default_mpiprocs_per_machine'] = computer.get_default_mpiprocs_per_machine()
         scheduler.validate_resources(**resources)
     except (ValueError, TypeError) as exception:
         return 'input `metadata.options.resources` is not valid for the {} scheduler: {}'.format(scheduler, exception)
@@ -398,9 +405,13 @@ class CalcJob(Process):
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.node.get_option('resources')
-        def_cpus_machine = computer.get_default_mpiprocs_per_machine()
-        if def_cpus_machine is not None:
-            resources['default_mpiprocs_per_machine'] = def_cpus_machine
+        default_mpiprocs_per_machine = computer.get_default_mpiprocs_per_machine()
+        num_mpiprocs_per_machine = resources.get('num_mpiprocs_per_machine', None)
+        tot_num_mpiprocs = resources.get('tot_num_mpiprocs', None)
+        if num_mpiprocs_per_machine is None and tot_num_mpiprocs is None and default_mpiprocs_per_machine is not None:
+            # Only set the default value if tot_num_mpiprocs is not provided. Otherwise, it means that the user provided
+            # both `num_machines` and `tot_num_mpiprocs`, and we have to ignore the `num_mpiprocs_per_machine` default.
+            resources['num_mpiprocs_per_machine'] = default_mpiprocs_per_machine
         job_tmpl.job_resource = scheduler.create_job_resource(**resources)
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}

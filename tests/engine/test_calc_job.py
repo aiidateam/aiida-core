@@ -222,6 +222,22 @@ class TestCalcJob(AiidaTestCase):
         with self.assertRaises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
+    def test_par_env_resources_computer(self):
+        """Test launching a `CalcJob` an a computer with a scheduler using `ParEnvJobResource` as resources.
+
+        Even though the computer defines a default number of MPI procs per machine, it should not raise when the
+        scheduler that is defined does not actually support it, for example SGE or LSF.
+        """
+        inputs = deepcopy(self.inputs)
+        computer = orm.Computer('sge_computer', 'localhost', 'desc', 'local', 'sge').store()
+        computer.set_default_mpiprocs_per_machine(1)
+
+        inputs['code'] = orm.Code(remote_computer_exec=(computer, '/bin/bash')).store()
+        inputs['metadata']['options']['resources'] = {'parallel_env': 'environment', 'tot_num_mpiprocs': 10}
+
+        # Just checking that instantiating does not raise, meaning the inputs were valid
+        ArithmeticAddCalculation(inputs=inputs)
+
     @pytest.mark.timeout(5)
     @patch.object(CalcJob, 'presubmit', partial(raise_exception, exceptions.InputValidationError))
     def test_exception_presubmit(self):

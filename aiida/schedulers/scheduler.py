@@ -42,6 +42,25 @@ class Scheduler(metaclass=abc.ABCMeta):
     _job_resource_class = None
 
     @classmethod
+    def preprocess_resources(cls, resources, default_mpiprocs_per_machine=None):
+        """Pre process the resources.
+
+        Add the `num_mpiprocs_per_machine` key to the `resources` if it is not already defined and it cannot be deduced
+        from the `num_machines` and `tot_num_mpiprocs` being defined. The value is also not added if the job resource
+        class of this scheduler does not accept the `num_mpiprocs_per_machine` keyword. Note that the changes are made
+        in place to the `resources` argument passed.
+        """
+        num_machines = resources.get('num_machines', None)
+        tot_num_mpiprocs = resources.get('tot_num_mpiprocs', None)
+        num_mpiprocs_per_machine = resources.get('num_mpiprocs_per_machine', None)
+
+        if (
+            num_mpiprocs_per_machine is None and cls.job_resource_class.accepts_default_mpiprocs_per_machine()  # pylint: disable=no-member
+            and (num_machines is None or tot_num_mpiprocs is None)
+        ):
+            resources['num_mpiprocs_per_machine'] = default_mpiprocs_per_machine
+
+    @classmethod
     def validate_resources(cls, **resources):
         """Validate the resources against the job resource class of this scheduler.
 

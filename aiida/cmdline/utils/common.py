@@ -455,7 +455,7 @@ def print_process_spec(process_spec):
         click.secho('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))
 
 
-def get_num_workers():  #pylint: disable=inconsistent-return-statements
+def get_num_workers():
     """
     Get the number of active daemon workers from the circus client
     """

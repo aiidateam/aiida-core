@@ -110,6 +110,7 @@ class DjangoQueryManager(AbstractQueryManager):
 
     def get_bands_and_parents_structure(self, args):
         """Returns bands and closest parent structure."""
+        # pylint: disable=too-many-locals
         from django.db.models import Q
         from aiida.backends.djsite.db import models
         from aiida.common.utils import grouper

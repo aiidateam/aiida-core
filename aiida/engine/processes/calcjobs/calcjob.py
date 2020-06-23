@@ -26,7 +26,7 @@ from .tasks import Waiting, UPLOAD_COMMAND
 __all__ = ('CalcJob',)
 
 
-def validate_calc_job(inputs, ctx):  # pylint: disable=inconsistent-return-statements,too-many-return-statements
+def validate_calc_job(inputs, ctx):  # pylint: disable=too-many-return-statements
     """Validate the entire set of inputs passed to the `CalcJob` constructor.
 
     Reasons that will cause this validation to raise an `InputValidationError`:
@@ -88,7 +88,7 @@ def validate_calc_job(inputs, ctx):  # pylint: disable=inconsistent-return-state
         return 'input `metadata.options.resources` is not valid for the {} scheduler: {}'.format(scheduler, exception)
 
 
-def validate_parser(parser_name, _):  # pylint: disable=inconsistent-return-statements
+def validate_parser(parser_name, _):
     """Validate the parser.
 
     :return: string with error message in case the inputs are invalid

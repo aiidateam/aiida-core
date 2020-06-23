@@ -165,7 +165,7 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # p
         structure.append_kind(k)
     abs_pos = np.dot(rel_pos, cell)
     if len(abs_pos) != len(site_kinds):
-        raise ValueError('The length of the positions array is different from the ' 'length of the element numbers')
+        raise ValueError('The length of the positions array is different from the length of the element numbers')
 
     for kind, pos in zip(site_kinds, abs_pos):
         structure.append_site(Site(kind_name=kind.name, position=pos))

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Data plugin to represet arrays of projected wavefunction components."""
 import copy
 import numpy as np
 
@@ -27,6 +27,7 @@ class ProjectionData(OrbitalData, ArrayData):
     s, n, and k. E.g. the elements are the projections described as
     < orbital | Bloch wavefunction (s,n,k) >
     """
+
     def _check_projections_bands(self, projection_array):
         """
         Checks to make sure that a reference bandsdata is already set, and that
@@ -46,9 +47,7 @@ class ProjectionData(OrbitalData, ArrayData):
         # The [0:2] is so that each array, and not collection of arrays
         # is used to make the comparison
         if np.shape(projection_array) != shape_bands:
-            raise AttributeError('These arrays are not the same shape as'
-                                 ' the bands')
-        return None
+            raise AttributeError('These arrays are not the same shape as' ' the bands')
 
     def set_reference_bandsdata(self, value):
         """
@@ -65,17 +64,19 @@ class ProjectionData(OrbitalData, ArrayData):
         else:
             try:
                 pk = int(value)
-                bands = load_node(pk=pk, type=BandsData)
+                bands = load_node(pk=pk)
                 uuid = bands.uuid
             except ValueError:
                 uuid = str(value)
                 try:
-                    bands = load_node(uuid=uuid, type=BandsData)
+                    bands = load_node(uuid=uuid)
                     uuid = bands.uuid
-                except :
-                    raise exceptions.NotExistent('The value passed to '
-                                      'set_reference_bandsdata was not '
-                                      'associated to any bandsdata')
+                except Exception:  # pylint: disable=bare-except
+                    raise exceptions.NotExistent(
+                        'The value passed to '
+                        'set_reference_bandsdata was not '
+                        'associated to any bandsdata'
+                    )
 
         self.set_attribute('reference_bandsdata_uuid', uuid)
 
@@ -94,12 +95,9 @@ class ProjectionData(OrbitalData, ArrayData):
         except AttributeError:
             raise AttributeError('BandsData has not been set for this instance')
         try:
-            #bands = load_node(uuid=uuid, type=BandsData)
-            bands = load_node(uuid=uuid) #TODO switch to above once type
-                                         # has been implemented for load_node
+            bands = load_node(uuid=uuid)
         except exceptions.NotExistent:
-            raise exceptions.NotExistent('The bands referenced to this class have not been '
-                              'found in this database.')
+            raise exceptions.NotExistent('The bands referenced to this class have not been found in this database.')
         return bands
 
     def _find_orbitals_and_indices(self, **kwargs):
@@ -112,16 +110,12 @@ class ProjectionData(OrbitalData, ArrayData):
                  to the kwargs
         :return: all_orbitals, list of orbitals to which the indexes correspond
         """
-        # index_and_orbitals = self._get_orbitals_and_index()
-        index_and_orbitals = []
         selected_orbitals = self.get_orbitals(**kwargs)
-        selected_orb_dicts = [orb.get_orbital_dict() for orb
-                              in selected_orbitals]
+        selected_orb_dicts = [orb.get_orbital_dict() for orb in selected_orbitals]
         all_orbitals = self.get_orbitals()
         all_orb_dicts = [orb.get_orbital_dict() for orb in all_orbitals]
-        retrieve_indices = [i for i in range(len(all_orb_dicts))
-                            if all_orb_dicts[i] in selected_orb_dicts]
-        return  retrieve_indices, all_orbitals
+        retrieve_indices = [i for i in range(len(all_orb_dicts)) if all_orb_dicts[i] in selected_orb_dicts]
+        return retrieve_indices, all_orbitals
 
     def get_pdos(self, **kwargs):
         """
@@ -134,12 +128,10 @@ class ProjectionData(OrbitalData, ArrayData):
 
         """
         retrieve_indices, all_orbitals = self._find_orbitals_and_indices(**kwargs)
-        out_list = [(all_orbitals[i],
-                    self.get_array('pdos_{}'.format(
-                    self._from_index_to_arrayname(i))),
-                    self.get_array('energy_{}'.format(
-                    self._from_index_to_arrayname(i))) )
-                    for i in retrieve_indices]
+        out_list = [(
+            all_orbitals[i], self.get_array('pdos_{}'.format(self._from_index_to_arrayname(i))),
+            self.get_array('energy_{}'.format(self._from_index_to_arrayname(i)))
+        ) for i in retrieve_indices]
         return out_list
 
     def get_projections(self, **kwargs):
@@ -153,21 +145,26 @@ class ProjectionData(OrbitalData, ArrayData):
 
         """
         retrieve_indices, all_orbitals = self._find_orbitals_and_indices(**kwargs)
-        out_list = [(all_orbitals[i],
-                    self.get_array('proj_{}'.format(
-                    self._from_index_to_arrayname(i))))
+        out_list = [(all_orbitals[i], self.get_array('proj_{}'.format(self._from_index_to_arrayname(i))))
                     for i in retrieve_indices]
         return out_list
 
-    def _from_index_to_arrayname(self, index):
+    @staticmethod
+    def _from_index_to_arrayname(index):
         """
         Used internally to determine the array names.
         """
         return 'array_{}'.format(index)
 
-    def set_projectiondata(self,list_of_orbitals, list_of_projections=None,
-                             list_of_energy=None, list_of_pdos=None,
-                             tags = None, bands_check=True):
+    def set_projectiondata(
+        self,
+        list_of_orbitals,
+        list_of_projections=None,
+        list_of_energy=None,
+        list_of_pdos=None,
+        tags=None,
+        bands_check=True
+    ):
         """
         Stores the projwfc_array using the projwfc_label, after validating both.
 
@@ -196,6 +193,9 @@ class ProjectionData(OrbitalData, ArrayData):
                             been stored and therefore get_reference_bandsdata
                             cannot be called
         """
+
+        # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
+
         def single_to_list(item):
             """
             Checks if the item is a list or tuple, and converts it to a list
@@ -207,8 +207,8 @@ class ProjectionData(OrbitalData, ArrayData):
             """
             if isinstance(item, (list, tuple)):
                 return item
-            else:
-                return [item]
+
+            return [item]
 
         def array_list_checker(array_list, array_name, orb_length):
             """
@@ -217,12 +217,13 @@ class ProjectionData(OrbitalData, ArrayData):
             required_length, raises exception using array_name if there is
             a failure
             """
-            if not all([isinstance(_,np.ndarray) for _ in array_list]):
-                raise exceptions.ValidationError('{} was not composed '
-                                      'entirely of ndarrays'.format(array_name))
+            if not all([isinstance(_, np.ndarray) for _ in array_list]):
+                raise exceptions.ValidationError('{} was not composed entirely of ndarrays'.format(array_name))
             if len(array_list) != orb_length:
-                raise exceptions.ValidationError('{} did not have the same length as the '
-                                      'list of orbitals'.format(array_name))
+                raise exceptions.ValidationError(
+                    '{} did not have the same length as the '
+                    'list of orbitals'.format(array_name)
+                )
 
         ##############
         list_of_orbitals = single_to_list(list_of_orbitals)
@@ -232,22 +233,21 @@ class ProjectionData(OrbitalData, ArrayData):
         if not list_of_pdos and not list_of_projections:
             raise exceptions.ValidationError('Must set either pdos or projections')
         if bool(list_of_energy) != bool(list_of_pdos):
-            raise exceptions.ValidationError('list_of_pdos and list_of_energy must always '
-                                  'be set together')
+            raise exceptions.ValidationError('list_of_pdos and list_of_energy must always be set together')
 
         orb_length = len(list_of_orbitals)
 
         # verifies and sets the orbital dicts
         list_of_orbital_dicts = []
-        for i in range(len(list_of_orbitals)):
+        for i, _ in enumerate(list_of_orbitals):
             this_orbital = list_of_orbitals[i]
             orbital_dict = this_orbital.get_orbital_dict()
             try:
                 orbital_type = orbital_dict.pop('_orbital_type')
             except KeyError:
-                raise ValidationError('No _orbital_type key found in dictionary: {}'.format(orbital_dict))
-            OrbitalClass = OrbitalFactory(orbital_type)
-            test_orbital = OrbitalClass(**orbital_dict)
+                raise exceptions.ValidationError('No _orbital_type key found in dictionary: {}'.format(orbital_dict))
+            cls = OrbitalFactory(orbital_type)
+            test_orbital = cls(**orbital_dict)
             list_of_orbital_dicts.append(test_orbital.get_orbital_dict())
         self.set_attribute('orbital_dicts', list_of_orbital_dicts)
 
@@ -255,7 +255,7 @@ class ProjectionData(OrbitalData, ArrayData):
         if list_of_projections:
             list_of_projections = single_to_list(list_of_projections)
             array_list_checker(list_of_projections, 'projections', orb_length)
-            for i in range(len(list_of_projections)):
+            for i, _ in enumerate(list_of_projections):
                 this_projection = list_of_projections[i]
                 array_name = self._from_index_to_arrayname(i)
                 if bands_check:
@@ -268,7 +268,7 @@ class ProjectionData(OrbitalData, ArrayData):
             list_of_energy = single_to_list(list_of_energy)
             array_list_checker(list_of_pdos, 'pdos', orb_length)
             array_list_checker(list_of_energy, 'energy', orb_length)
-            for i in range(len(list_of_pdos)):
+            for i, _ in enumerate(list_of_pdos):
                 this_pdos = list_of_pdos[i]
                 this_energy = list_of_energy[i]
                 array_name = self._from_index_to_arrayname(i)
@@ -285,15 +285,17 @@ class ProjectionData(OrbitalData, ArrayData):
             except IndexError:
                 return exceptions.ValidationError('tags must be a list')
 
-            if not all([isinstance(_,str) for _ in tags]):
+            if not all([isinstance(_, str) for _ in tags]):
                 raise exceptions.ValidationError('Tags must set a list of strings')
             self.set_attribute('tags', tags)
 
-    def set_orbitals(self, **kwargs):
+    def set_orbitals(self, **kwargs):  # pylint: disable=arguments-differ
         """
         This method is inherited from OrbitalData, but is blocked here.
         If used will raise a NotImplementedError
         """
-        raise NotImplementedError('You cannot set orbitals using this class!'
-                                  ' This class is for setting orbitals and '
-                                  ' projections only!')
+        raise NotImplementedError(
+            'You cannot set orbitals using this class!'
+            ' This class is for setting orbitals and '
+            ' projections only!'
+        )

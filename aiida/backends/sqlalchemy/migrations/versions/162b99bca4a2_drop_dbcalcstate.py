@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Drop the DbCalcState table
 
 Revision ID: 162b99bca4a2
@@ -35,10 +36,10 @@ def downgrade():
         sa.Column('dbnode_id', sa.INTEGER(), autoincrement=False, nullable=True),
         sa.Column('state', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
         sa.Column('time', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
-        sa.ForeignKeyConstraint(
-            ['dbnode_id'], ['db_dbnode.id'],
-            name='db_dbcalcstate_dbnode_id_fkey',
-            ondelete='CASCADE',
-            initially='DEFERRED',
-            deferrable=True), sa.PrimaryKeyConstraint('id', name='db_dbcalcstate_pkey'),
-        sa.UniqueConstraint('dbnode_id', 'state', name='db_dbcalcstate_dbnode_id_state_key'))
+        sa.ForeignKeyConstraint(['dbnode_id'], ['db_dbnode.id'],
+                                name='db_dbcalcstate_dbnode_id_fkey',
+                                ondelete='CASCADE',
+                                initially='DEFERRED',
+                                deferrable=True), sa.PrimaryKeyConstraint('id', name='db_dbcalcstate_pkey'),
+        sa.UniqueConstraint('dbnode_id', 'state', name='db_dbcalcstate_dbnode_id_state_key')
+    )

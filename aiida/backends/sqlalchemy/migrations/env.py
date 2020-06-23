@@ -55,7 +55,7 @@ def run_migrations_online():
 
     if connectable is None:
         from aiida.common.exceptions import ConfigurationError
-        raise ConfigurationError('An initialized connection is expected ' 'for the AiiDA online migrations.')
+        raise ConfigurationError('An initialized connection is expected for the AiiDA online migrations.')
 
     with connectable.connect() as connection:
         context.configure(

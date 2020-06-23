@@ -7,11 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-
-
-from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
-                                                 CifEntry)
+# pylint: disable=no-self-use
+""""Implementation of `DbImporter` for the MPOD database."""
+from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults, CifEntry)
 
 
 class MpodDbImporter(DbImporter):
@@ -24,15 +22,16 @@ class MpodDbImporter(DbImporter):
         Returns part of HTTP GET query for querying string fields.
         """
         if not isinstance(values, str) and not isinstance(values, int):
-            raise ValueError("incorrect value for keyword '" + alias + \
-                             "' -- only strings and integers are accepted")
+            raise ValueError("incorrect value for keyword '" + alias + "' -- only strings and integers are accepted")
         return '{}={}'.format(key, values)
 
-    _keywords = {'phase_name': ['phase_name', _str_clause],
-                 'formula': ['formula', _str_clause],
-                 'element': ['element', None],
-                 'cod_id': ['cod_code', _str_clause],
-                 'authors': ['publ_author', _str_clause]}
+    _keywords = {
+        'phase_name': ['phase_name', _str_clause],
+        'formula': ['formula', _str_clause],
+        'element': ['element', None],
+        'cod_id': ['cod_code', _str_clause],
+        'authors': ['publ_author', _str_clause]
+    }
 
     def __init__(self, **kwargs):
         self._query_url = 'http://mpod.cimav.edu.mx/data/search/'
@@ -46,8 +45,7 @@ class MpodDbImporter(DbImporter):
         :return: a list containing strings for HTTP GET statement.
         """
         if 'formula' in kwargs.keys() and 'element' in kwargs.keys():
-            raise ValueError('can not query both formula and elements '
-                             'in MPOD')
+            raise ValueError('can not query both formula and elements ' 'in MPOD')
 
         elements = []
         if 'element' in kwargs.keys():
@@ -56,25 +54,18 @@ class MpodDbImporter(DbImporter):
             elements = [elements]
 
         get_parts = []
-        for key in self._keywords.keys():
-            if key in kwargs.keys():
+        for key in self._keywords:
+            if key in kwargs:
                 values = kwargs.pop(key)
-                get_parts.append(
-                    self._keywords[key][1](self,
-                                           self._keywords[key][0],
-                                           key,
-                                           values))
+                get_parts.append(self._keywords[key][1](self, self._keywords[key][0], key, values))
 
-        if kwargs.keys():
-            raise NotImplementedError("search keyword(s) '"
-                                      "', '".join(kwargs.keys()) + "' "
-                                                                   'is(are) not implemented for MPOD')
+        if kwargs:
+            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
 
         queries = []
-        for e in elements:
-            queries.append(self._query_url + '?' +
-                           '&'.join(get_parts +
-                                    [self._str_clause('formula', 'element', e)]))
+        for element in elements:
+            clauses = [self._str_clause('formula', 'element', element)]
+            queries.append(self._query_url + '?' + '&'.join(get_parts + clauses))
         if not queries:
             queries.append(self._query_url + '?' + '&'.join(get_parts))
 
@@ -103,18 +94,15 @@ class MpodDbImporter(DbImporter):
 
         return MpodSearchResults([{'id': x} for x in results])
 
-    def setup_db(self, query_url=None, **kwargs):
+    def setup_db(self, query_url=None, **kwargs):  # pylint: disable=arguments-differ
         """
         Changes the database connection details.
         """
         if query_url:
             self._query_url = query_url
 
-        if kwargs.keys():
-            raise NotImplementedError( \
-                "unknown database connection parameter(s): '" + \
-                "', '".join(kwargs.keys()) + \
-                "', available parameters: 'query_url'")
+        if kwargs:
+            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
 
     def get_supported_keywords(self):
         """
@@ -125,7 +113,7 @@ class MpodDbImporter(DbImporter):
         return self._keywords.keys()
 
 
-class MpodSearchResults(DbSearchResults):
+class MpodSearchResults(DbSearchResults):  # pylint: disable=abstract-method
     """
     Results of the search, performed on MPOD.
     """
@@ -156,7 +144,7 @@ class MpodSearchResults(DbSearchResults):
         return self._base_url + result_dict['id'] + '.mpod'
 
 
-class MpodEntry(CifEntry):
+class MpodEntry(CifEntry):  # pylint: disable=abstract-method
     """
     Represents an entry from MPOD.
     """
@@ -167,7 +155,6 @@ class MpodEntry(CifEntry):
         :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodEntry`, related
         to the supplied URI.
         """
-        super().__init__(db_name='Material Properties Open Database',
-                                        db_uri='http://mpod.cimav.edu.mx',
-                                        uri=uri,
-                                        **kwargs)
+        super().__init__(
+            db_name='Material Properties Open Database', db_uri='http://mpod.cimav.edu.mx', uri=uri, **kwargs
+        )

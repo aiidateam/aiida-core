@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Updating link types - This is a copy of the Django migration script
 
 Revision ID: a6048f0ffca8
@@ -25,6 +26,7 @@ depends_on = None
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     conn = op.get_bind()
 
     # I am first migrating the wrongly declared returnlinks out of
@@ -40,7 +42,8 @@ def upgrade():
     #   - joins a Data (or subclass) as output
     #   - is marked as a returnlink.
     # 2) set for these links the type to 'createlink'
-    stmt1 = text("""
+    stmt1 = text(
+        """
         UPDATE db_dblink set type='createlink' WHERE db_dblink.id IN (
             SELECT db_dblink_1.id
             FROM db_dbnode AS db_dbnode_1
@@ -50,7 +53,8 @@ def upgrade():
                 AND db_dbnode_2.type LIKE 'data.%'
                 AND db_dblink_1.type = 'returnlink'
         )
-    """)
+    """
+    )
     conn.execute(stmt1)
     # Now I am updating the link-types that are null because of either an export and subsequent import
     # https://github.com/aiidateam/aiida-core/issues/685
@@ -63,7 +67,8 @@ def upgrade():
     #   - joins Calculation (or subclass) as output. This includes WorkCalculation, InlineCalcuation, JobCalculations...
     #   - has no type (null)
     # 2) set for these links the type to 'inputlink'
-    stmt2 = text("""
+    stmt2 = text(
+        """
          UPDATE db_dblink set type='inputlink' where id in (
             SELECT db_dblink_1.id
             FROM db_dbnode AS db_dbnode_1
@@ -73,7 +78,8 @@ def upgrade():
                 AND db_dbnode_2.type LIKE 'calculation.%'
                 AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
         );
-    """)
+    """
+    )
     conn.execute(stmt2)
     #
     # The following sql statement:
@@ -82,7 +88,8 @@ def upgrade():
     #   - joins Data (or subclass) as output.
     #   - has no type (null)
     # 2) set for these links the type to 'createlink'
-    stmt3 = text("""
+    stmt3 = text(
+        """
          UPDATE db_dblink set type='createlink' where id in (
             SELECT db_dblink_1.id
             FROM db_dbnode AS db_dbnode_1
@@ -96,7 +103,8 @@ def upgrade():
                 )
                 AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
         )
-    """)
+    """
+    )
     conn.execute(stmt3)
     # The following sql statement:
     # 1) selects all links that
@@ -104,7 +112,8 @@ def upgrade():
     #   - join Data (or subclass) as output.
     #   - has no type (null)
     # 2) set for these links the type to 'returnlink'
-    stmt4 = text("""
+    stmt4 = text(
+        """
          UPDATE db_dblink set type='returnlink' where id in (
             SELECT db_dblink_1.id
             FROM db_dbnode AS db_dbnode_1
@@ -114,7 +123,8 @@ def upgrade():
                 AND db_dbnode_1.type = 'calculation.work.WorkCalculation.'
                 AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
         )
-    """)
+    """
+    )
     conn.execute(stmt4)
     # Now I update links that are CALLS:
     # The following sql statement:
@@ -123,7 +133,8 @@ def upgrade():
     #   - join Calculation (or subclass) as output. Includes JobCalculation and WorkCalculations and all subclasses.
     #   - has no type (null)
     # 2) set for these links the type to 'calllink'
-    stmt5 = text("""
+    stmt5 = text(
+        """
          UPDATE db_dblink set type='calllink' where id in (
             SELECT db_dblink_1.id
             FROM db_dbnode AS db_dbnode_1
@@ -133,9 +144,11 @@ def upgrade():
                 AND db_dbnode_2.type LIKE 'calculation.%'
                 AND ( db_dblink_1.type = null  OR db_dblink_1.type = '')
         )
-    """)
+    """
+    )
     conn.execute(stmt5)
 
 
 def downgrade():
+    """Migrations for the downgrade."""
     print('There is no downgrade for the link types')

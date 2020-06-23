@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Parser for the `TemplatereplacerCalculation` calculation job doubling a number."""
 import os
 
 from aiida.common import exceptions
@@ -19,6 +19,7 @@ TemplatereplacerCalculation = CalculationFactory('templatereplacer')
 
 
 class TemplatereplacerDoublerParser(Parser):
+    """Parser for the `TemplatereplacerCalculation` calculation job doubling a number."""
 
     def parse(self, **kwargs):
         """Parse the contents of the output files retrieved in the `FolderData`."""
@@ -57,8 +58,11 @@ class TemplatereplacerDoublerParser(Parser):
                 file_path = os.path.join(retrieved_temporary_folder, retrieved_file)
 
                 if not os.path.isfile(file_path):
-                    self.logger.error('the file {} was not found in the temporary retrieved folder {}'.format(
-                        retrieved_file, retrieved_temporary_folder))
+                    self.logger.error(
+                        'the file {} was not found in the temporary retrieved folder {}'.format(
+                            retrieved_file, retrieved_temporary_folder
+                        )
+                    )
                     return self.exit_codes.ERROR_READING_TEMPORARY_RETRIEVED_FILE
 
                 with open(file_path, 'r', encoding='utf8') as handle:

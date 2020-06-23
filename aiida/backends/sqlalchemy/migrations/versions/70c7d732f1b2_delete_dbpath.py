@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Deleting dbpath table and triggers
 
 Revision ID: 70c7d732f1b2
@@ -16,7 +17,6 @@ Create Date: 2017-10-17 10:30:23.327195
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm.session import Session
 from aiida.backends.sqlalchemy.utils import install_tc
 
@@ -28,6 +28,7 @@ depends_on = None
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     op.drop_table('db_dbpath')
     conn = op.get_bind()
     conn.execute('DROP TRIGGER IF EXISTS autoupdate_tc ON db_dblink')
@@ -35,17 +36,23 @@ def upgrade():
 
 
 def downgrade():
-    op.create_table('db_dbpath',
-    sa.Column('id', sa.INTEGER(), nullable=False),
-    sa.Column('parent_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('child_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('depth', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('entry_edge_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('direct_edge_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('exit_edge_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['child_id'], ['db_dbnode.id'], name='db_dbpath_child_id_fkey', initially='DEFERRED', deferrable=True),
-    sa.ForeignKeyConstraint(['parent_id'], ['db_dbnode.id'], name='db_dbpath_parent_id_fkey', initially='DEFERRED', deferrable=True),
-    sa.PrimaryKeyConstraint('id', name='db_dbpath_pkey')
+    """Migrations for the downgrade."""
+    op.create_table(
+        'db_dbpath', sa.Column('id', sa.INTEGER(), nullable=False),
+        sa.Column('parent_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('child_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('depth', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('entry_edge_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('direct_edge_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('exit_edge_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['child_id'], ['db_dbnode.id'],
+                                name='db_dbpath_child_id_fkey',
+                                initially='DEFERRED',
+                                deferrable=True),
+        sa.ForeignKeyConstraint(['parent_id'], ['db_dbnode.id'],
+                                name='db_dbpath_parent_id_fkey',
+                                initially='DEFERRED',
+                                deferrable=True), sa.PrimaryKeyConstraint('id', name='db_dbpath_pkey')
     )
     # I get the session using the alembic connection
     # (Keep in mind that alembic uses the AiiDA SQLA

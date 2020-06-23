@@ -7,22 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tool to automatically determine k-points for a given structure using SeeK-path."""
+import seekpath
 
 from aiida.orm import KpointsData, Dict
 
-__all__ = ('check_seekpath_is_installed', 'get_explicit_kpoints_path', 'get_kpoints_path')
-
-
-def check_seekpath_is_installed():
-    """
-    Tries to import the Seekpath module. Raise ImportError if it cannot be imported
-
-    :raises: ImportError
-    """
-    try:
-        import seekpath
-    except ImportError:
-        raise ImportError("Seekpath is not installed, please install with 'pip install seekpath'")
+__all__ = ('get_explicit_kpoints_path', 'get_kpoints_path')
 
 
 def get_explicit_kpoints_path(structure, parameters):
@@ -65,10 +55,8 @@ def get_explicit_kpoints_path(structure, parameters):
 
         - ``conv_structure``: A StructureData with the primitive structure
     """
+    # pylint: disable=too-many-locals
     from aiida.tools.data.structure import spglib_tuple_to_structure, structure_to_spglib_tuple
-
-    check_seekpath_is_installed()
-    import seekpath
 
     structure_tuple, kind_info, kinds = structure_to_spglib_tuple(structure)
 
@@ -92,7 +80,6 @@ def get_explicit_kpoints_path(structure, parameters):
     # Remove reciprocal_primitive_lattice, recalculated by kpoints class
     rawdict.pop('reciprocal_primitive_lattice')
     kpoints_abs = rawdict.pop('explicit_kpoints_abs')
-    kpoints_rel = rawdict.pop('explicit_kpoints_rel')
     kpoints_labels = rawdict.pop('explicit_kpoints_labels')
 
     # set_kpoints expects labels like [[0,'X'],[34,'L'],...], so generate it here skipping empty labels
@@ -145,9 +132,6 @@ def get_kpoints_path(structure, parameters):
         - ``conv_structure``: A StructureData with the primitive structure
     """
     from aiida.tools.data.structure import spglib_tuple_to_structure, structure_to_spglib_tuple
-
-    check_seekpath_is_installed()
-    import seekpath
 
     structure_tuple, kind_info, kinds = structure_to_spglib_tuple(structure)
 

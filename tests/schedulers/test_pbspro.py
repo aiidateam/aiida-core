@@ -7,10 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=invalid-name,protected-access,too-many-lines
+"""Tests for the `PbsProScheduler` plugin."""
 import unittest
 import uuid
-from aiida.schedulers.plugins.pbspro import *
+
+from aiida.schedulers.plugins.pbspro import PbsproScheduler
 from aiida.schedulers.datastructures import JobState
 
 text_qstat_f_to_test = """Job Id: 68350.mycluster
@@ -337,8 +339,8 @@ Job Id: 74165.mycluster
 
 """
 
-## This contains in the 10-th job unexpected newlines
-## in the sched_hint field. Still, it should parse correctly.
+# This contains in the 10-th job unexpected newlines
+# in the sched_hint field. Still, it should parse correctly.
 text_qstat_f_to_test_with_unexpected_newlines = """Job Id: 549159
     Job_Name = somejob
     Job_Owner = user_549159
@@ -762,6 +764,7 @@ class TestParserQstat(unittest.TestCase):
         """
         Test whether _parse_joblist can parse the qstat -f output
         """
+        # pylint: disable=too-many-locals
         scheduler = PbsproScheduler()
 
         retval = 0
@@ -776,28 +779,23 @@ class TestParserQstat(unittest.TestCase):
         self.assertEqual(job_parsed, job_on_cluster)
 
         job_running = 2
-        job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JobState.RUNNING])
+        job_running_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.RUNNING])
         self.assertEqual(job_running, job_running_parsed)
 
         job_held = 2
-        job_held_parsed = len([j for j in job_list if j.job_state \
-                               and j.job_state == JobState.QUEUED_HELD])
+        job_held_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED_HELD])
         self.assertEqual(job_held, job_held_parsed)
 
         job_queued = 2
-        job_queued_parsed = len([j for j in job_list if j.job_state \
-                                 and j.job_state == JobState.QUEUED])
+        job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
         self.assertEqual(job_queued, job_queued_parsed)
 
         running_users = ['user02', 'user3']
-        parsed_running_users = [j.job_owner for j in job_list if j.job_state \
-                                and j.job_state == JobState.RUNNING]
+        parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(running_users), set(parsed_running_users))
 
         running_jobs = ['69301.mycluster', '74164.mycluster']
-        parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
-                               and j.job_state == JobState.RUNNING]
+        parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(running_jobs), set(parsed_running_jobs))
 
         for j in job_list:
@@ -810,13 +808,13 @@ class TestParserQstat(unittest.TestCase):
 
                 self.assertTrue(j.num_machines == num_machines)
                 self.assertTrue(j.num_cpus == num_cpus)
-                # TODO : parse the env_vars
 
     def test_parse_with_unexpected_newlines(self):
         """
         Test whether _parse_joblist can parse the qstat -f output
         also when there are unexpected newlines
         """
+        # pylint: disable=too-many-locals
         scheduler = PbsproScheduler()
 
         retval = 0
@@ -831,28 +829,23 @@ class TestParserQstat(unittest.TestCase):
         self.assertEqual(job_parsed, job_on_cluster)
 
         job_running = 2
-        job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JobState.RUNNING])
+        job_running_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.RUNNING])
         self.assertEqual(job_running, job_running_parsed)
 
         job_held = 1
-        job_held_parsed = len([j for j in job_list if j.job_state \
-                               and j.job_state == JobState.QUEUED_HELD])
+        job_held_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED_HELD])
         self.assertEqual(job_held, job_held_parsed)
 
         job_queued = 5
-        job_queued_parsed = len([j for j in job_list if j.job_state \
-                                 and j.job_state == JobState.QUEUED])
+        job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
         self.assertEqual(job_queued, job_queued_parsed)
 
         running_users = ['somebody', 'user_556491']
-        parsed_running_users = [j.job_owner for j in job_list if j.job_state \
-                                and j.job_state == JobState.RUNNING]
+        parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(running_users), set(parsed_running_users))
 
         running_jobs = ['555716', '556491']
-        parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
-                               and j.job_state == JobState.RUNNING]
+        parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(running_jobs), set(parsed_running_jobs))
 
         for j in job_list:
@@ -865,10 +858,9 @@ class TestParserQstat(unittest.TestCase):
 
                 self.assertTrue(j.num_machines == num_machines)
                 self.assertTrue(j.num_cpus == num_cpus)
-                # TODO : parse the env_vars
 
 
-# TODO: WHEN WE USE THE CORRECT ERROR MANAGEMENT, REIMPLEMENT THIS TEST
+# TODO: WHEN WE USE THE CORRECT ERROR MANAGEMENT, REIMPLEMENT THIS TEST  # pylint: disable=fixme
 #        def test_parse_with_error_retval(self):
 #            """
 #            The qstat -f command has received a retval != 0
@@ -898,6 +890,7 @@ class TestParserQstat(unittest.TestCase):
 
 
 class TestSubmitScript(unittest.TestCase):
+    """Test the submit script."""
 
     def test_submit_script(self):
         """
@@ -968,7 +961,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = scheduler.create_job_resource(
-            num_machines=1, num_mpiprocs_per_machine=2, num_cores_per_machine=24)
+            num_machines=1, num_mpiprocs_per_machine=2, num_cores_per_machine=24
+        )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -1000,7 +994,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = scheduler.create_job_resource(
-            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_mpiproc=24)
+            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_mpiproc=24
+        )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -1034,7 +1029,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = scheduler.create_job_resource(
-            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=24)
+            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=24
+        )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -1066,4 +1062,5 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         with self.assertRaises(ValueError):
             job_tmpl.job_resource = scheduler.create_job_resource(
-                num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23)
+                num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
+            )

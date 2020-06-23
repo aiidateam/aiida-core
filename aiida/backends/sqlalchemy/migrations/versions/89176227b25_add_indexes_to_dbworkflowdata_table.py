@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Add indexes to dbworkflowdata table
 
 Revision ID: 89176227b25
@@ -24,10 +25,8 @@ depends_on = None
 
 
 def upgrade():
-    op.create_index('ix_db_dbworkflowdata_aiida_obj_id', 'db_dbworkflowdata',
-                    ['aiida_obj_id'])
-    op.create_index('ix_db_dbworkflowdata_parent_id', 'db_dbworkflowdata',
-                    ['parent_id'])
+    op.create_index('ix_db_dbworkflowdata_aiida_obj_id', 'db_dbworkflowdata', ['aiida_obj_id'])
+    op.create_index('ix_db_dbworkflowdata_parent_id', 'db_dbworkflowdata', ['parent_id'])
 
 
 def downgrade():

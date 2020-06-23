@@ -7,9 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tests for the `LocalTransport`."""
 import unittest
 
-from aiida.transports.plugins.local import *
+from aiida.transports.plugins.local import LocalTransport
+from aiida.transports.transport import TransportInternalError
 
 # This will be used by test_all_plugins
 
@@ -22,10 +24,11 @@ class TestGeneric(unittest.TestCase):
     """
 
     def test_whoami(self):
+        """Test the `whoami` command."""
         import getpass
 
-        with LocalTransport() as t:
-            self.assertEqual(t.whoami(), getpass.getuser())
+        with LocalTransport() as transport:
+            self.assertEqual(transport.whoami(), getpass.getuser())
 
 
 class TestBasicConnection(unittest.TestCase):
@@ -34,16 +37,14 @@ class TestBasicConnection(unittest.TestCase):
     """
 
     def test_closed_connection(self):
-        from aiida.transports.transport import TransportInternalError
+        """Test running a command on a closed connection."""
 
         with self.assertRaises(TransportInternalError):
-            t = LocalTransport()
-            t.listdir()
+            transport = LocalTransport()
+            transport.listdir()
 
-    def test_basic(self):
+    @staticmethod
+    def test_basic():
+        """Test constructor."""
         with LocalTransport():
             pass
-
-
-if __name__ == '__main__':
-    unittest.main()

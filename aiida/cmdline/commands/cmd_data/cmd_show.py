@@ -10,7 +10,6 @@
 """
 This allows to manage showfunctionality to all data types.
 """
-
 import click
 
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
@@ -209,7 +208,7 @@ def _show_xmgrace(exec_name, list_bands):
     import sys
     import subprocess
     import tempfile
-    from aiida.orm.nodes.data.array.bands import max_num_agr_colors
+    from aiida.orm.nodes.data.array.bands import MAX_NUM_AGR_COLORS
 
     list_files = []
     current_band_number = 0
@@ -218,7 +217,7 @@ def _show_xmgrace(exec_name, list_bands):
         nbnds = bnds.get_bands().shape[1]
         # pylint: disable=protected-access
         text, _ = bnds._exportcontent(
-            'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % max_num_agr_colors)
+            'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % MAX_NUM_AGR_COLORS)
         )
         # write a tempfile
         tempf = tempfile.NamedTemporaryFile('w+b', suffix='.agr')

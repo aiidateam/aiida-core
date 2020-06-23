@@ -1034,14 +1034,14 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         qb = orm.QueryBuilder()
         qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
         qb.append(orm.Group, with_user='user', filters={'id': {'==': group.id}})
-        self.assertEqual(qb.count(), 1, 'The expected group that belongs to ' 'the selected user was not found.')
+        self.assertEqual(qb.count(), 1, 'The expected group that belongs to the selected user was not found.')
 
         # Search for the user that owns a group
         qb = orm.QueryBuilder()
         qb.append(orm.Group, tag='group', filters={'id': {'==': group.id}})
         qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
 
-        self.assertEqual(qb.count(), 1, 'The expected user that owns the ' 'selected group was not found.')
+        self.assertEqual(qb.count(), 1, 'The expected user that owns the selected group was not found.')
 
     def test_joins_group_node(self):
         """

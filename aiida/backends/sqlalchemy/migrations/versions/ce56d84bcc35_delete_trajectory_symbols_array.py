@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Delete trajectory symbols array from the repository and the reference in the attributes
 
 Revision ID: ce56d84bcc35
@@ -14,8 +15,6 @@ Revises: 12536798d4d3
 Create Date: 2019-01-21 15:35:07.280805
 
 """
-# pylint: disable=invalid-name
-
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-member,no-name-in-module,import-error
 

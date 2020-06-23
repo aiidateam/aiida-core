@@ -206,7 +206,7 @@ The snippet of the previous section on :ref:`parsing the outputs<how-to:codes:pa
 
 .. literalinclude:: ../../../aiida/parsers/plugins/arithmetic/add.py
     :language: python
-    :lines: 28-34
+    :lines: 27-33
     :dedent: 8
 
 If the ``read()`` call fails to read the output file, for example because the calculation failed to run entirely and did not write anything, it will raise an ``OSError``, which the parser catches and returns the ``ERROR_READING_OUTPUT_FILE`` exit code.

@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ Utility functions for import of AiiDA entities """
-# pylint: disable=inconsistent-return-statements,too-many-branches
+# pylint: disable=too-many-branches
 import os
 
 import click

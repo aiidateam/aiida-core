@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Data migration for `Data` nodes after it was moved in the `aiida.orm.node` module changing the type string.
 
 Revision ID: 6a5c2ea1439d

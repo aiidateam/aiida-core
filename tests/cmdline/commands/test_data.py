@@ -341,7 +341,7 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         options = [str(self.ids[DummyVerdiDataListable.NODE_ID_STR])]
         res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
-        self.assertIn(b'[1.0, 3.0]', res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands' 'export')
+        self.assertIn(b'[1.0, 3.0]', res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands export')
 
     def test_bandsexport_single_kp(self):
         """

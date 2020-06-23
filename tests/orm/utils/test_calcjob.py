@@ -7,86 +7,125 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=unused-argument,redefined-outer-name,invalid-name
 """Tests for the `CalcJob` utils."""
+import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.orm import Dict, CalcJobNode
+from aiida.orm import Dict
 from aiida.orm.utils.calcjob import CalcJobResultManager
-from aiida.plugins import CalculationFactory
-from aiida.plugins.entry_point import get_entry_point_string_from_class
 
 
-class TestCalcJobResultManager(AiidaTestCase):
-    """Tests for the `CalcJobResultManager` utility class."""
+@pytest.fixture
+def get_calcjob_node(clear_database_before_test, generate_calculation_node):
+    """Return a calculation node with `Dict` output with default output label and the dictionary it contains."""
+    node = generate_calculation_node(entry_point='aiida.calculations:templatereplacer').store()
+    dictionary = {
+        'key_one': 'val_one',
+        'key_two': 'val_two',
+    }
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """Define a useful CalcJobNode to test the CalcJobResultManager.
+    results = Dict(dict=dictionary).store()
+    results.add_incoming(node, link_type=LinkType.CREATE, link_label=node.process_class.spec().default_output_node)
 
-        We emulate a node for the `TemplateReplacer` calculation job class. To do this we have to make sure the
-        process type is set correctly and an output parameter node is created.
-        """
-        super().setUpClass(*args, **kwargs)
-        cls.process_class = CalculationFactory('templatereplacer')
-        cls.process_type = get_entry_point_string_from_class(cls.process_class.__module__, cls.process_class.__name__)
-        cls.node = CalcJobNode(computer=cls.computer, process_type=cls.process_type)
-        cls.node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        cls.node.store()
+    return node, dictionary
 
-        cls.key_one = 'key_one'
-        cls.key_two = 'key_two'
-        cls.val_one = 'val_one'
-        cls.val_two = 'val_two'
-        cls.keys = [cls.key_one, cls.key_two]
 
-        cls.result_node = Dict(dict={
-            cls.key_one: cls.val_one,
-            cls.key_two: cls.val_two,
-        }).store()
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_no_process_type(generate_calculation_node):
+    """`get_results` should raise `ValueError` if `CalcJobNode` has no `process_type`"""
+    node = generate_calculation_node()
+    manager = CalcJobResultManager(node)
 
-        cls.result_node.add_incoming(cls.node, LinkType.CREATE, cls.process_class.spec().default_output_node)
+    with pytest.raises(ValueError):
+        manager.get_results()
 
-    def test_no_process_type(self):
-        """`get_results` should raise `ValueError` if `CalcJobNode` has no `process_type`"""
-        node = CalcJobNode(computer=self.computer)
-        manager = CalcJobResultManager(node)
 
-        with self.assertRaises(ValueError):
-            manager.get_results()
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_invalid_process_type(generate_calculation_node):
+    """`get_results` should raise `ValueError` if `CalcJobNode` has invalid `process_type`"""
+    node = generate_calculation_node(entry_point='aiida.calculations:invalid')
+    manager = CalcJobResultManager(node)
 
-    def test_invalid_process_type(self):
-        """`get_results` should raise `ValueError` if `CalcJobNode` has invalid `process_type`"""
-        node = CalcJobNode(computer=self.computer, process_type='aiida.calculations:not_existent')
-        manager = CalcJobResultManager(node)
+    with pytest.raises(ValueError):
+        manager.get_results()
 
-        with self.assertRaises(ValueError):
-            manager.get_results()
 
-    def test_process_class_no_default_node(self):
-        """`get_results` should raise `ValueError` if process class does not define default output node."""
-        # This is a valid process class however ArithmeticAddCalculation does define a default output node
-        process_class = CalculationFactory('arithmetic.add')
-        process_type = get_entry_point_string_from_class(process_class.__module__, process_class.__name__)
-        node = CalcJobNode(computer=self.computer, process_type=process_type)
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_process_class_no_default_node(generate_calculation_node):
+    """`get_results` should raise `ValueError` if process class does not define default output node."""
+    # This is a valid process class however ArithmeticAddCalculation does define a default output node
+    node = generate_calculation_node(entry_point='aiida.calculations:arithmetic.add')
+    manager = CalcJobResultManager(node)
 
-        manager = CalcJobResultManager(node)
+    with pytest.raises(ValueError):
+        manager.get_results()
 
-        with self.assertRaises(ValueError):
-            manager.get_results()
 
-    def test_iterator(self):
-        """Test that the manager can be iterated over."""
-        manager = CalcJobResultManager(self.node)
-        for key in manager:
-            self.assertIn(key, self.keys)
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_iterator(get_calcjob_node):
+    """Test that the manager can be iterated over."""
+    node, dictionary = get_calcjob_node
+    manager = CalcJobResultManager(node)
+    for key in manager:
+        assert key in dictionary.keys()
 
-    def test_getitem(self):
-        """Test that the manager support getitem operator."""
-        manager = CalcJobResultManager(self.node)
-        self.assertEqual(manager[self.key_one], self.val_one)
 
-    def test_getattr(self):
-        """Test that the manager support getattr operator."""
-        manager = CalcJobResultManager(self.node)
-        self.assertEqual(getattr(manager, self.key_one), self.val_one)
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_getitem(get_calcjob_node):
+    """Test that the manager supports the getitem operator."""
+    node, dictionary = get_calcjob_node
+    manager = CalcJobResultManager(node)
+
+    for key, value in dictionary.items():
+        assert manager[key] == value
+
+    with pytest.raises(KeyError):
+        assert manager['non-existent-key']
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_getitem_no_results(generate_calculation_node):
+    """Test that `getitem` raises `KeyError` if no results can be retrieved whatsoever e.g. there is no output."""
+    node = generate_calculation_node()
+    manager = CalcJobResultManager(node)
+
+    with pytest.raises(KeyError):
+        assert manager['key']
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_getattr(get_calcjob_node):
+    """Test that the manager supports the getattr operator."""
+    node, dictionary = get_calcjob_node
+    manager = CalcJobResultManager(node)
+
+    for key, value in dictionary.items():
+        assert getattr(manager, key) == value
+
+    with pytest.raises(AttributeError):
+        assert getattr(manager, 'non-existent-key')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_getattr_no_results(generate_calculation_node):
+    """Test that `getattr` raises `AttributeError` if no results can be retrieved whatsoever e.g. there is no output."""
+    node = generate_calculation_node()
+    manager = CalcJobResultManager(node)
+
+    with pytest.raises(AttributeError):
+        assert getattr(manager, 'key')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_dir(get_calcjob_node):
+    """Test that `dir` returns all keys of the dictionary and nothing else."""
+    node, dictionary = get_calcjob_node
+    manager = CalcJobResultManager(node)
+
+    assert len(dir(manager)) == len(dictionary)
+    assert set(dir(manager)) == set(dictionary)
+
+    # Check that it works also as an iterator
+    assert len(list(manager)) == len(dictionary)
+    assert set(manager) == set(dictionary)
